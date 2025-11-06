@@ -28,28 +28,41 @@ const DEFAULT_CONFIG: KlingServiceConfig = {
   concurrentRequests: 3
 };
 
+// Configure fal.ai client with credentials resolver function
+// This ensures the API key is read at runtime, not at module load time
+// This is critical for serverless/edge environments
+fal.config({
+  credentials: () => {
+    const apiKey = process.env.FAL_KEY;
+    if (!apiKey) {
+      console.error("[Kling Service] FAL_KEY not found in credentials resolver");
+    }
+    return apiKey;
+  }
+});
+
 /**
- * Get API key and ensure fal.ai client is configured
- * This is called on each request to ensure env vars are loaded in serverless environments
+ * Validate that API key is available
+ * This is called on each request to ensure configuration is correct
  */
 function ensureFalConfigured(): string {
   const apiKey = process.env.FAL_KEY || "";
 
   if (!apiKey) {
-    console.error("[Kling Service] FAL_KEY environment variable is not set");
+    console.error("[Kling Service] ❌ FAL_KEY environment variable is not set");
+    console.error("[Kling Service] Process.env exists:", typeof process !== 'undefined' && typeof process.env !== 'undefined');
     console.error(
-      "[Kling Service] Available env vars:",
-      Object.keys(process.env).filter((k) => k.startsWith("FAL"))
+      "[Kling Service] Available env vars starting with FAL:",
+      Object.keys(process.env || {}).filter((k) => k.startsWith("FAL"))
     );
-    throw new Error("FAL_KEY environment variable is not set");
+    console.error(
+      "[Kling Service] All env var keys:",
+      Object.keys(process.env || {}).slice(0, 10)
+    );
+    throw new Error("FAL_KEY environment variable is not set. Please configure it in your deployment environment.");
   }
 
-  // Configure fal.ai client with the current API key
-  fal.config({
-    credentials: apiKey
-  });
-
-  console.log("[Kling Service] FAL client configured successfully");
+  console.log("[Kling Service] ✓ FAL_KEY is configured");
   return apiKey;
 }
 
