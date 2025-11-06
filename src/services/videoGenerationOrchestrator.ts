@@ -84,18 +84,33 @@ export async function startVideoGeneration(
   onProgress?: (progress: VideoGenerationProgress) => void
 ): Promise<VideoGenerationResult> {
   console.log(
+    `[Video Generation] ========================================`
+  );
+  console.log(
     `[Video Generation] Starting generation for project: ${projectId}`
+  );
+  console.log(
+    `[Video Generation] User: ${userId}, Rooms: ${videoSettings.roomOrder.length}`
   );
 
   try {
     // Step 1: Fetch project data and images
+    console.log(`[Video Generation] Step 1: Fetching project rooms...`);
     const rooms = await fetchProjectRooms(projectId, videoSettings.roomOrder);
+    console.log(`[Video Generation] ✓ Fetched ${rooms.length} rooms`);
 
     if (rooms.length === 0) {
+      console.error(`[Video Generation] ❌ No rooms found!`);
       throw new Error("No rooms found for video generation");
     }
 
+    // Log room details
+    rooms.forEach((room, idx) => {
+      console.log(`[Video Generation] Room ${idx + 1}: ${room.name} (${room.type}) - ${room.imageUrls.length} images, ${room.sceneDescriptions?.length || 0} descriptions`);
+    });
+
     // Step 2: Process room videos
+    console.log(`[Video Generation] Step 2: Processing room videos...`);
     const roomResults = await processRoomVideos(
       projectId,
       userId,
@@ -103,6 +118,7 @@ export async function startVideoGeneration(
       videoSettings,
       onProgress
     );
+    console.log(`[Video Generation] ✓ Completed room video processing`);
 
     const failedRooms = roomResults
       .filter((r) => r.status === "failed")
@@ -193,10 +209,17 @@ async function processRoomVideos(
   const startTime = Date.now();
 
   // Step 1: Submit all requests concurrently
+  console.log(`[Video Generation] Step 1.1: Submitting ${rooms.length} room video requests to Kling API...`);
+
   for (const room of rooms) {
     let videoRecordId: string | null = null;
     try {
+      console.log(`[Video Generation] Processing room: ${room.name}`);
+      console.log(`[Video Generation]   - Images: ${room.imageUrls.length}`);
+      console.log(`[Video Generation]   - Scene descriptions: ${room.sceneDescriptions?.length || 0}`);
+
       // Create video record in database (pending)
+      console.log(`[Video Generation]   - Creating video record in database...`);
       const videoRecord = await createVideoRecord({
         projectId,
         roomId: room.id,
@@ -206,9 +229,12 @@ async function processRoomVideos(
         status: "pending"
       });
       videoRecordId = videoRecord.id;
+      console.log(`[Video Generation]   - ✓ Video record created: ${videoRecord.id}`);
 
       // Update to processing
+      console.log(`[Video Generation]   - Updating status to processing...`);
       await updateVideoStatus(videoRecord.id, "processing");
+      console.log(`[Video Generation]   - ✓ Status updated`);
 
       // Submit video generation request (non-blocking)
       const roomRequest: RoomVideoRequest = {
@@ -225,7 +251,9 @@ async function processRoomVideos(
         }
       };
 
+      console.log(`[Video Generation]   - 🚀 Calling submitRoomVideoGeneration for ${room.name}...`);
       const requestId = await submitRoomVideoGeneration(roomRequest);
+      console.log(`[Video Generation]   - ✓ Received requestId: ${requestId}`);
 
       roomRequests.set(room.id, {
         room,
@@ -235,13 +263,17 @@ async function processRoomVideos(
       });
 
       console.log(
-        `[Video Generation] Submitted request for room: ${room.name}`
+        `[Video Generation] ✅ Successfully submitted request for room: ${room.name} (requestId: ${requestId})`
       );
     } catch (error) {
       console.error(
-        `[Video Generation] Error submitting room ${room.name}:`,
+        `[Video Generation] ❌ Error submitting room ${room.name}:`,
         error
       );
+      console.error(`[Video Generation] Error type:`, error instanceof Error ? error.constructor.name : typeof error);
+      console.error(`[Video Generation] Error message:`, error instanceof Error ? error.message : String(error));
+      console.error(`[Video Generation] Error stack:`, error instanceof Error ? error.stack : 'No stack');
+
 
       // Use videoRecordId if available, otherwise generate a unique ID
       const uniqueId = videoRecordId || `failed-${room.id}-${Date.now()}`;

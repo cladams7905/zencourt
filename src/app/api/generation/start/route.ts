@@ -65,7 +65,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate video settings
-    if (!videoSettings.duration || !["5", "10"].includes(videoSettings.duration)) {
+    if (
+      !videoSettings.duration ||
+      !["5", "10"].includes(videoSettings.duration)
+    ) {
       return NextResponse.json(
         {
           error: "Invalid request",
@@ -102,7 +105,10 @@ export async function POST(request: NextRequest) {
     const project = projectResult[0];
     if (project.userId !== user.id) {
       return NextResponse.json(
-        { error: "Forbidden", message: "You don't have access to this project" },
+        {
+          error: "Forbidden",
+          message: "You don't have access to this project"
+        },
         { status: 403 }
       );
     }
@@ -117,14 +123,26 @@ export async function POST(request: NextRequest) {
       .where(eq(projects.id, projectId));
 
     console.log(
-      `[API] Starting video generation for project ${projectId} with ${videoSettings.roomOrder.length} rooms`
+      `[API] ✓ Starting video generation for project ${projectId} with ${videoSettings.roomOrder.length} rooms`
     );
 
     // Start video generation in background (don't await - let it run async)
     // The client will poll for progress
     startVideoGeneration(projectId, user.id, videoSettings).catch((error) => {
-      console.error(`[API] Video generation failed for project ${projectId}:`, error);
+      console.error(
+        `[API] ❌ Video generation failed for project ${projectId}:`,
+        error
+      );
+      console.error(
+        `[API] Error stack:`,
+        error instanceof Error ? error.stack : "No stack trace"
+      );
+      console.error(`[API] Error details:`, JSON.stringify(error, null, 2));
     });
+
+    console.log(
+      `[API] ✓ Video generation background task initiated for project ${projectId}`
+    );
 
     // Calculate estimated completion time
     // 60 seconds per room + 90 seconds for composition
