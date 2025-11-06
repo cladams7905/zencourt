@@ -2,10 +2,11 @@
  * Kling API Service
  *
  * Handles all interactions with the Kling AI video generation API via fal.ai
+ * Using @fal-ai/client (the new package, not the deprecated serverless-client)
  */
 "use server";
 
-import * as fal from "@fal-ai/serverless-client";
+import { fal } from "@fal-ai/client";
 import type {
   KlingApiRequest,
   KlingApiResponse,
@@ -124,13 +125,29 @@ export async function submitRoomVideoGeneration(
     console.log(`[Kling API] Endpoint: fal-ai/kling-video/v1.6/standard/elements`);
     console.log(`[Kling API] Full request:`, JSON.stringify(request, null, 2));
 
-    let result;
+    let result: { request_id: string };
     try {
       console.log(`[Kling API] 🔵 Calling fal.queue.submit NOW...`);
-      result = await fal.queue.submit(
-        "fal-ai/kling-video/v1.6/standard/elements",
-        { input: request }
-      );
+
+      // Create a timeout promise (30 seconds)
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => {
+          console.error(`[Kling API] ⏱️  TIMEOUT: fal.queue.submit took longer than 30 seconds`);
+          reject(new Error('fal.queue.submit timed out after 30 seconds'));
+        }, 30000);
+      });
+
+      // Race between the actual call and timeout
+      const submitResult = await Promise.race([
+        fal.queue.submit(
+          "fal-ai/kling-video/v1.6/standard/elements",
+          { input: request }
+        ),
+        timeoutPromise
+      ]);
+
+      result = submitResult as { request_id: string };
+
       console.log(`[Kling API] ✅ fal.queue.submit returned successfully`);
       console.log(`[Kling API] Result type:`, typeof result);
       console.log(`[Kling API] Result keys:`, Object.keys(result || {}));
@@ -140,22 +157,31 @@ export async function submitRoomVideoGeneration(
       console.error(`[Kling API] Error type:`, submitError instanceof Error ? submitError.constructor.name : typeof submitError);
       console.error(`[Kling API] Error message:`, submitError instanceof Error ? submitError.message : String(submitError));
       console.error(`[Kling API] Error stack:`, submitError instanceof Error ? submitError.stack : 'No stack');
+
+      // Log additional debugging info about fal module
+      console.error(`[Kling API] fal module debug:`, {
+        hasQueue: !!fal.queue,
+        hasSubmit: typeof fal.queue?.submit,
+        queueKeys: fal.queue ? Object.keys(fal.queue).slice(0, 5) : []
+      });
+
       throw submitError;
     }
 
-    const { request_id } = result;
+    // Extract request_id from the result
+    const requestId = result.request_id;
 
-    if (!request_id) {
+    if (!requestId) {
       console.error(`[Kling API] ❌ No request_id in response!`);
       console.error(`[Kling API] Full result:`, JSON.stringify(result, null, 2));
       throw new Error("No request_id returned from fal.queue.submit");
     }
 
     console.log(
-      `[Kling API] ✓ Successfully submitted request for room ${roomData.roomName}, requestId: ${request_id}`
+      `[Kling API] ✓ Successfully submitted request for room ${roomData.roomName}, requestId: ${requestId}`
     );
 
-    return request_id;
+    return requestId;
   } catch (error) {
     console.error(
       `[Kling API] Error submitting video generation for room ${roomData.roomName}:`,
