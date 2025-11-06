@@ -120,10 +120,36 @@ export async function submitRoomVideoGeneration(
     });
 
     // Submit to queue (non-blocking)
-    const { request_id } = await fal.queue.submit(
-      "fal-ai/kling-video/v1.6/standard/elements",
-      { input: request }
-    );
+    console.log(`[Kling API] 🔵 About to call fal.queue.submit...`);
+    console.log(`[Kling API] Endpoint: fal-ai/kling-video/v1.6/standard/elements`);
+    console.log(`[Kling API] Full request:`, JSON.stringify(request, null, 2));
+
+    let result;
+    try {
+      console.log(`[Kling API] 🔵 Calling fal.queue.submit NOW...`);
+      result = await fal.queue.submit(
+        "fal-ai/kling-video/v1.6/standard/elements",
+        { input: request }
+      );
+      console.log(`[Kling API] ✅ fal.queue.submit returned successfully`);
+      console.log(`[Kling API] Result type:`, typeof result);
+      console.log(`[Kling API] Result keys:`, Object.keys(result || {}));
+      console.log(`[Kling API] Full result:`, JSON.stringify(result, null, 2));
+    } catch (submitError) {
+      console.error(`[Kling API] ❌ fal.queue.submit threw an error:`, submitError);
+      console.error(`[Kling API] Error type:`, submitError instanceof Error ? submitError.constructor.name : typeof submitError);
+      console.error(`[Kling API] Error message:`, submitError instanceof Error ? submitError.message : String(submitError));
+      console.error(`[Kling API] Error stack:`, submitError instanceof Error ? submitError.stack : 'No stack');
+      throw submitError;
+    }
+
+    const { request_id } = result;
+
+    if (!request_id) {
+      console.error(`[Kling API] ❌ No request_id in response!`);
+      console.error(`[Kling API] Full result:`, JSON.stringify(result, null, 2));
+      throw new Error("No request_id returned from fal.queue.submit");
+    }
 
     console.log(
       `[Kling API] ✓ Successfully submitted request for room ${roomData.roomName}, requestId: ${request_id}`
