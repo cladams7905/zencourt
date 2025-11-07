@@ -4,8 +4,6 @@
  * Handles all interactions with the Kling AI video generation API via fal.ai
  * Using @fal-ai/client (the new package, not the deprecated serverless-client)
  */
-"use server";
-
 import { fal } from "@fal-ai/client";
 import type {
   KlingApiRequest,
@@ -14,36 +12,6 @@ import type {
   VideoGenerationError,
   PromptBuilderContext
 } from "@/types/video-generation";
-
-/**
- * Validate that API key is available
- * This is called on each request to ensure configuration is correct
- */
-function ensureFalConfigured(): string {
-  const apiKey = process.env.FAL_KEY || "";
-
-  if (!apiKey) {
-    console.error("[Kling Service] ❌ FAL_KEY environment variable is not set");
-    console.error(
-      "[Kling Service] Process.env exists:",
-      typeof process !== "undefined" && typeof process.env !== "undefined"
-    );
-    console.error(
-      "[Kling Service] Available env vars starting with FAL:",
-      Object.keys(process.env || {}).filter((k) => k.startsWith("FAL"))
-    );
-    console.error(
-      "[Kling Service] All env var keys:",
-      Object.keys(process.env || {}).slice(0, 10)
-    );
-    throw new Error(
-      "FAL_KEY environment variable is not set. Please configure it in your deployment environment."
-    );
-  }
-
-  console.log("[Kling Service] ✓ FAL_KEY is configured");
-  return apiKey;
-}
 
 // ============================================================================
 // Main API Functions
@@ -56,10 +24,6 @@ export async function generateRoomVideo(
   roomData: RoomVideoRequest
 ): Promise<KlingApiResponse> {
   try {
-    // Ensure fal.ai client is configured with API key
-    console.log("[Kling Service] Ensuring FAL client is configured...");
-    ensureFalConfigured();
-
     // Select best images (up to 4 for elements endpoint)
     const selectedImages = selectBestImages(roomData.images, 4);
 
@@ -102,7 +66,8 @@ export async function generateRoomVideo(
     const result = await fal.subscribe(
       "fal-ai/kling-video/v1.6/standard/elements",
       {
-        input,
+        input: input,
+        pollInterval: 5000,
         logs: true,
         onQueueUpdate: (update) => {
           if (update.status === "IN_PROGRESS") {
