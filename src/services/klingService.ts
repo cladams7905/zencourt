@@ -113,7 +113,7 @@ export async function submitRoomVideoRequest(
 
 /**
  * Get result of a previously submitted video generation request
- * Uses fal.queue.status() to poll until complete, then fal.queue.result() to get the output
+ * Uses fal.queue.subscribeToStatus() to wait for completion, then fal.queue.result() to get the output
  */
 export async function getVideoResult(requestId: string): Promise<KlingApiResponse> {
   try {
@@ -121,24 +121,19 @@ export async function getVideoResult(requestId: string): Promise<KlingApiRespons
 
     const endpointId = "fal-ai/kling-video/v1.6/standard/elements";
 
-    // Poll the status until completion
-    let status = await fal.queue.status(endpointId, { requestId, logs: true });
-
-    while (status.status !== "COMPLETED") {
-      console.log(`[Kling API] Queue status: ${status.status}`);
-
-      if (status.status === "IN_PROGRESS" && status.logs) {
-        status.logs.forEach((log) => {
-          console.log(`[Kling API]   ${log.message}`);
-        });
-      }
-
-      // Wait 2 seconds before checking again
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // Check status again
-      status = await fal.queue.status(endpointId, { requestId, logs: true });
-    }
+    // Subscribe to status updates until completion (uses streaming or polling internally)
+    await fal.queue.subscribeToStatus(endpointId, {
+      requestId,
+      logs: true,
+      onQueueUpdate: (update) => {
+        console.log(`[Kling API] Queue status: ${update.status}`);
+        if (update.status === "IN_PROGRESS" && update.logs) {
+          update.logs.forEach((log) => {
+            console.log(`[Kling API]   ${log.message}`);
+          });
+        }
+      },
+    });
 
     console.log(`[Kling API] ✓ Video generation completed for request: ${requestId}`);
 

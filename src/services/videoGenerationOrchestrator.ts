@@ -10,6 +10,7 @@
 
 "use server";
 
+import { fal } from "@fal-ai/client";
 import { generateRoomVideo, submitRoomVideoRequest, getVideoResult } from "./klingService";
 import { combineRoomVideos } from "./videoCompositionService";
 import {
@@ -35,7 +36,8 @@ import type {
   VideoCompositionSettings,
   VideoGenerationProgress,
   VideoProgressStep,
-  VideoGenerationStatus
+  VideoGenerationStatus,
+  KlingApiResponse
 } from "@/types/video-generation";
 
 // ============================================================================
@@ -117,17 +119,9 @@ export async function startVideoGeneration(
     );
     console.log(`[Video Generation] ✓ Submitted all room videos to fal.ai`);
 
-    // Step 3: Start background processing (don't await - let it run async)
-    console.log(`[Video Generation] Step 3: Starting background processing...`);
-    processRoomVideosCompletion(
-      projectId,
-      userId,
-      rooms,
-      videoSettings,
-      onProgress
-    ).catch((error) => {
-      console.error(`[Video Generation] ❌ Background processing failed:`, error);
-    });
+    // Note: Background processing now happens in the /api/generation/progress endpoint
+    // which gets called by frontend polling. This ensures processing continues even
+    // after this function returns (Vercel serverless limitation workaround).
 
     console.log(
       `[Video Generation] ✓ Video generation initiated successfully`
@@ -669,16 +663,73 @@ export async function retryFailedRoomVideos(
 
 /**
  * Get current generation progress for a project
+ * Also checks fal.ai status and processes completed videos
  */
 export async function getGenerationProgress(
-  projectId: string
+  projectId: string,
+  userId: string
 ): Promise<VideoGenerationProgress> {
   const videoRecords = await getVideosByProject(projectId);
   const finalVideo = await getFinalVideo(projectId);
 
   const roomVideos = videoRecords.filter((v) => v.roomId !== null);
 
-  const roomResults: RoomVideoResult[] = roomVideos.map((video) => ({
+  // Process any pending videos that have fal request IDs
+  for (const video of roomVideos) {
+    if (video.status === "processing" && video.falRequestId) {
+      try {
+        // Check fal.ai status
+        const endpointId = "fal-ai/kling-video/v1.6/standard/elements";
+        const status = await fal.queue.status(endpointId, {
+          requestId: video.falRequestId,
+          logs: false
+        });
+
+        console.log(`[Progress] Video ${video.id} status: ${status.status}`);
+
+        // If completed, download and process the video
+        if (status.status === "COMPLETED") {
+          console.log(`[Progress] Processing completed video: ${video.id}`);
+
+          // Get the result
+          const result = await fal.queue.result(endpointId, { requestId: video.falRequestId });
+          const responseData = result.data as KlingApiResponse;
+
+          if (responseData.video && responseData.video.url) {
+            // Download from fal.ai
+            const videoBlob = await downloadVideoFromUrl(responseData.video.url);
+
+            // Upload to Vercel Blob
+            const videoUrl = await executeStorageWithRetry(() =>
+              uploadRoomVideo(
+                videoBlob,
+                {
+                  userId,
+                  projectId,
+                  videoId: video.id,
+                  roomId: video.roomId || undefined
+                },
+                video.roomName || "video"
+              )
+            );
+
+            // Mark as completed
+            await markVideoCompleted(video.id, videoUrl);
+            console.log(`[Progress] ✓ Video ${video.id} completed and uploaded`);
+          }
+        }
+      } catch (error) {
+        console.error(`[Progress] Error processing video ${video.id}:`, error);
+        // Don't mark as failed yet - might be transient error, will retry on next poll
+      }
+    }
+  }
+
+  // Re-fetch video records to get updated status
+  const updatedVideoRecords = await getVideosByProject(projectId);
+  const updatedRoomVideos = updatedVideoRecords.filter((v) => v.roomId !== null);
+
+  const roomResults: RoomVideoResult[] = updatedRoomVideos.map((video) => ({
     roomId: video.id, // Use unique video record ID instead of room category
     roomName: video.roomName!,
     videoUrl: video.videoUrl,
