@@ -15,24 +15,6 @@ import type {
   PromptBuilderContext
 } from "@/types/video-generation";
 
-// ============================================================================
-// Configuration
-// ============================================================================
-
-// Configure fal.ai client for server-side usage
-// The server proxy at /api/fal/proxy is for client-side calls
-// Server-side calls use credentials directly from environment variables
-// See: https://docs.fal.ai/model-apis/integrations/nextjs
-fal.config({
-  credentials: () => {
-    const apiKey = process.env.FAL_KEY;
-    if (!apiKey) {
-      console.error("[Kling Service] FAL_KEY not found in credentials resolver");
-    }
-    return apiKey;
-  }
-});
-
 /**
  * Validate that API key is available
  * This is called on each request to ensure configuration is correct
@@ -42,7 +24,10 @@ function ensureFalConfigured(): string {
 
   if (!apiKey) {
     console.error("[Kling Service] ❌ FAL_KEY environment variable is not set");
-    console.error("[Kling Service] Process.env exists:", typeof process !== 'undefined' && typeof process.env !== 'undefined');
+    console.error(
+      "[Kling Service] Process.env exists:",
+      typeof process !== "undefined" && typeof process.env !== "undefined"
+    );
     console.error(
       "[Kling Service] Available env vars starting with FAL:",
       Object.keys(process.env || {}).filter((k) => k.startsWith("FAL"))
@@ -51,7 +36,9 @@ function ensureFalConfigured(): string {
       "[Kling Service] All env var keys:",
       Object.keys(process.env || {}).slice(0, 10)
     );
-    throw new Error("FAL_KEY environment variable is not set. Please configure it in your deployment environment.");
+    throw new Error(
+      "FAL_KEY environment variable is not set. Please configure it in your deployment environment."
+    );
   }
 
   console.log("[Kling Service] ✓ FAL_KEY is configured");
@@ -112,18 +99,23 @@ export async function generateRoomVideo(
     });
 
     // Use fal.subscribe which handles queue submission and polling internally
-    const result = await fal.subscribe("fal-ai/kling-video/v1.6/standard/elements", {
-      input,
-      logs: true,
-      onQueueUpdate: (update) => {
-        if (update.status === "IN_PROGRESS") {
-          update.logs.map((log) => log.message).forEach((msg) => {
-            console.log(`[Kling API] ${msg}`);
-          });
+    const result = await fal.subscribe(
+      "fal-ai/kling-video/v1.6/standard/elements",
+      {
+        input,
+        logs: true,
+        onQueueUpdate: (update) => {
+          if (update.status === "IN_PROGRESS") {
+            update.logs
+              .map((log) => log.message)
+              .forEach((msg) => {
+                console.log(`[Kling API] ${msg}`);
+              });
+          }
+          console.log(`[Kling API] Queue status: ${update.status}`);
         }
-        console.log(`[Kling API] Queue status: ${update.status}`);
-      },
-    });
+      }
+    );
 
     console.log(`[Kling API] ✓ Video generation completed`);
     console.log(`[Kling API] Request ID:`, result.requestId);
@@ -157,7 +149,6 @@ export async function generateRoomVideo(
     throw error;
   }
 }
-
 
 // ============================================================================
 // Image Selection Functions
