@@ -37,25 +37,14 @@ async function initializeServerModules() {
     ffmpeg = fluentFfmpeg.default;
 
     // Import platform-specific binaries for Vercel/Linux
-    // In production (Vercel), use linux-x64 binaries
-    // In development, use the auto-detected platform binaries
-    if (process.env.VERCEL || process.platform === "linux") {
-      console.log("[Video Composition] Loading linux-x64 binaries for Vercel");
-      // @ts-expect-error - linux-x64 packages don't have TypeScript definitions
-      const ffmpegInstaller = await import("@ffmpeg-installer/linux-x64");
-      ffmpegPath = ffmpegInstaller.default;
+    // The auto-detected packages (@ffmpeg-installer/ffmpeg) include platform-specific binaries
+    // and will work in both development and production
+    console.log("[Video Composition] Loading ffmpeg/ffprobe binaries...");
+    const ffmpegInstaller = await import("@ffmpeg-installer/ffmpeg");
+    ffmpegPath = ffmpegInstaller.default;
 
-      // @ts-expect-error - linux-x64 packages don't have TypeScript definitions
-      const ffprobeInstaller = await import("@ffprobe-installer/linux-x64");
-      ffprobePath = ffprobeInstaller.default;
-    } else {
-      console.log("[Video Composition] Loading platform-auto-detected binaries");
-      const ffmpegInstaller = await import("@ffmpeg-installer/ffmpeg");
-      ffmpegPath = ffmpegInstaller.default;
-
-      const ffprobeInstaller = await import("@ffprobe-installer/ffprobe");
-      ffprobePath = ffprobeInstaller.default;
-    }
+    const ffprobeInstaller = await import("@ffprobe-installer/ffprobe");
+    ffprobePath = ffprobeInstaller.default;
 
     const fsPromises = await import("fs/promises");
     writeFile = fsPromises.writeFile;
