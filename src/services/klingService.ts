@@ -19,9 +19,9 @@ import type {
 // Configuration
 // ============================================================================
 
-// Configure fal.ai client with credentials resolver function
-// This ensures the API key is read at runtime, not at module load time
-// This is critical for serverless/edge environments
+// Configure fal.ai client for Vercel serverless environment
+// Uses the proxy route at /api/fal/proxy for proper serverless handling
+// See: https://vercel.com/docs/ai/fal
 fal.config({
   credentials: () => {
     const apiKey = process.env.FAL_KEY;
@@ -29,7 +29,9 @@ fal.config({
       console.error("[Kling Service] FAL_KEY not found in credentials resolver");
     }
     return apiKey;
-  }
+  },
+  // Use the serverless proxy for Vercel
+  proxyUrl: "/api/fal/proxy"
 });
 
 /**
