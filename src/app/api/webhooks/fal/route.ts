@@ -36,11 +36,13 @@ interface FalWebhookPayload {
 export async function POST(request: NextRequest) {
   try {
     console.log("[FAL Webhook] ========================================");
-    console.log("[FAL Webhook] Received callback");
+    console.log("[FAL Webhook] Received callback at:", new Date().toISOString());
+    console.log("[FAL Webhook] Headers:", Object.fromEntries(request.headers.entries()));
 
     // Parse the webhook payload
     const body: FalWebhookPayload = await request.json();
 
+    console.log("[FAL Webhook] Full payload:", JSON.stringify(body, null, 2));
     console.log("[FAL Webhook] Request ID:", body.request_id);
     console.log("[FAL Webhook] Status:", body.status);
 

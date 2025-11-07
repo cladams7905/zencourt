@@ -6,9 +6,10 @@ export async function middleware(request: NextRequest) {
 
   const isAuthPage = request.nextUrl.pathname.startsWith("/auth");
   const isHandlerPage = request.nextUrl.pathname.startsWith("/handler");
+  const isWebhook = request.nextUrl.pathname.startsWith("/api/webhooks");
 
-  // Allow auth and handler pages without authentication
-  if (isAuthPage || isHandlerPage) {
+  // Allow auth, handler, and webhook pages without authentication
+  if (isAuthPage || isHandlerPage || isWebhook) {
     // If already authenticated and trying to access /auth, redirect to home
     if (isAuthPage && user) {
       return NextResponse.redirect(new URL("/", request.url));
