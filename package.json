@@ -83,5 +83,9 @@
     "eslint-config-next": "15.5.5",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "optionalDependencies": {
+    "@ffmpeg-installer/linux-x64": "^4.1.0",
+    "@ffprobe-installer/linux-x64": "^5.2.0"
   }
 }

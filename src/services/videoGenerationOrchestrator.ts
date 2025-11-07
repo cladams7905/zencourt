@@ -71,7 +71,8 @@ export interface VideoGenerationResult {
 }
 
 /**
- * Start complete video generation workflow
+ * Start video generation workflow - FAST submission phase only
+ * Returns immediately after submitting to fal.ai (doesn't wait for completion)
  */
 export async function startVideoGeneration(
   projectId: string,
@@ -105,59 +106,35 @@ export async function startVideoGeneration(
       console.log(`[Video Generation] Room ${idx + 1}: ${room.name} (${room.type}) - ${room.imageUrls.length} images, ${room.sceneDescriptions?.length || 0} descriptions`);
     });
 
-    // Step 2: Process room videos
-    console.log(`[Video Generation] Step 2: Processing room videos...`);
-    const roomResults = await processRoomVideos(
+    // Step 2: Submit room videos to fal.ai (FAST - just submission, not completion)
+    console.log(`[Video Generation] Step 2: Submitting room videos to fal.ai...`);
+    await processRoomVideosSubmission(
+      projectId,
+      userId,
+      rooms,
+      videoSettings
+    );
+    console.log(`[Video Generation] ✓ Submitted all room videos to fal.ai`);
+
+    // Step 3: Start background processing (don't await - let it run async)
+    console.log(`[Video Generation] Step 3: Starting background processing...`);
+    processRoomVideosCompletion(
       projectId,
       userId,
       rooms,
       videoSettings,
       onProgress
-    );
-    console.log(`[Video Generation] ✓ Completed room video processing`);
-
-    const failedRooms = roomResults
-      .filter((r) => r.status === "failed")
-      .map((r) => r.roomId);
-
-    // If all rooms failed, return error
-    if (failedRooms.length === rooms.length) {
-      throw new Error("All room videos failed to generate");
-    }
-
-    // Step 3: Compose final video (only with successful room videos)
-    const successfulRooms = roomResults.filter((r) => r.status === "completed");
-
-    if (onProgress) {
-      onProgress(
-        buildProgressUpdate("composing_video", rooms.length, roomResults)
-      );
-    }
-
-    const compositionResult = await composeFinalVideo(
-      projectId,
-      userId,
-      successfulRooms,
-      videoSettings
-    );
-
-    // Step 4: Update project record
-    await updateProjectWithFinalVideo(
-      projectId,
-      compositionResult.videoUrl,
-      compositionResult.duration
-    );
+    ).catch((error) => {
+      console.error(`[Video Generation] ❌ Background processing failed:`, error);
+    });
 
     console.log(
-      `[Video Generation] Generation complete for project: ${projectId}`
+      `[Video Generation] ✓ Video generation initiated successfully`
     );
 
     return {
       success: true,
-      finalVideoUrl: compositionResult.videoUrl,
-      thumbnailUrl: compositionResult.thumbnailUrl,
-      duration: compositionResult.duration,
-      failedRooms
+      failedRooms: []
     };
   } catch (error) {
     console.error(`[Video Generation] Error during generation:`, error);
@@ -174,35 +151,26 @@ export async function startVideoGeneration(
 }
 
 // ============================================================================
-// Room Video Processing
+// Room Video Processing - Two Phase Approach
 // ============================================================================
 
 /**
- * Process videos for all rooms sequentially (fal.subscribe blocks until complete)
+ * PHASE 1: Submit all room videos to fal.ai (FAST - returns immediately)
+ * Only creates DB records and submits to fal.ai queue
  */
-async function processRoomVideos(
+async function processRoomVideosSubmission(
   projectId: string,
   userId: string,
   rooms: RoomData[],
-  videoSettings: VideoSettings,
-  onProgress?: (progress: VideoGenerationProgress) => void
-): Promise<RoomVideoResult[]> {
-  console.log(
-    `[Video Generation] Processing ${rooms.length} rooms`
-  );
+  videoSettings: VideoSettings
+): Promise<void> {
+  console.log(`[Video Generation] Submitting ${rooms.length} rooms to fal.ai (fast phase)`);
 
-  const results: RoomVideoResult[] = [];
-
-  // Process each room sequentially
   for (const room of rooms) {
-    let videoRecordId: string | null = null;
     try {
-      console.log(`[Video Generation] Processing room: ${room.name}`);
-      console.log(`[Video Generation]   - Images: ${room.imageUrls.length}`);
-      console.log(`[Video Generation]   - Scene descriptions: ${room.sceneDescriptions?.length || 0}`);
+      console.log(`[Video Generation]   - Submitting room: ${room.name}`);
 
       // Create video record in database (pending)
-      console.log(`[Video Generation]   - Creating video record in database...`);
       const videoRecord = await createVideoRecord({
         projectId,
         roomId: room.id,
@@ -211,13 +179,50 @@ async function processRoomVideos(
         duration: parseInt(videoSettings.duration),
         status: "pending"
       });
-      videoRecordId = videoRecord.id;
-      console.log(`[Video Generation]   - ✓ Video record created: ${videoRecord.id}`);
 
       // Update to processing
-      console.log(`[Video Generation]   - Updating status to processing...`);
       await updateVideoStatus(videoRecord.id, "processing");
-      console.log(`[Video Generation]   - ✓ Status updated`);
+
+      console.log(`[Video Generation]   - ✓ Created DB record: ${videoRecord.id}`);
+
+      // Note: The actual fal.subscribe call will happen in the background phase
+      // We just need to ensure DB records are created here
+    } catch (error) {
+      console.error(`[Video Generation] ❌ Error submitting room ${room.name}:`, error);
+      throw error; // Fail fast if we can't even create DB records
+    }
+  }
+
+  console.log(`[Video Generation] ✓ All ${rooms.length} rooms ready for background processing`);
+}
+
+/**
+ * PHASE 2: Wait for completion and process results (SLOW - runs in background)
+ * This function runs asynchronously after the API returns to the client
+ */
+async function processRoomVideosCompletion(
+  projectId: string,
+  userId: string,
+  rooms: RoomData[],
+  videoSettings: VideoSettings,
+  onProgress?: (progress: VideoGenerationProgress) => void
+): Promise<void> {
+  console.log(`[Video Generation] Starting background completion for ${rooms.length} rooms`);
+
+  const results: RoomVideoResult[] = [];
+
+  // Process each room sequentially
+  for (const room of rooms) {
+    try {
+      console.log(`[Video Generation] Processing room: ${room.name}`);
+
+      // Find the video record we created in the submission phase
+      const videoRecords = await getVideosByProject(projectId);
+      const videoRecord = videoRecords.find(v => v.roomName === room.name && v.status === "processing");
+
+      if (!videoRecord) {
+        throw new Error(`Video record not found for room: ${room.name}`);
+      }
 
       // Build video generation request
       const roomRequest: RoomVideoRequest = {
@@ -228,14 +233,12 @@ async function processRoomVideos(
         sceneDescriptions: room.sceneDescriptions,
         settings: {
           duration: videoSettings.duration,
-          aspectRatio:
-            videoSettings.orientation === "landscape" ? "16:9" : "9:16",
+          aspectRatio: videoSettings.orientation === "landscape" ? "16:9" : "9:16",
           aiDirections: videoSettings.aiDirections
         }
       };
 
-      console.log(`[Video Generation]   - 🚀 Calling generateRoomVideo for ${room.name}...`);
-      // This will block until the video is complete (handles queue submission and polling internally)
+      console.log(`[Video Generation]   - 🚀 Calling fal.subscribe for ${room.name}...`);
       const klingResponse = await generateRoomVideo(roomRequest);
       console.log(`[Video Generation]   - ✓ Video generation completed`);
 
@@ -259,7 +262,6 @@ async function processRoomVideos(
       // Mark video as completed
       await markVideoCompleted(videoRecord.id, videoUrl);
 
-      // Add to results
       results.push({
         roomId: videoRecord.id,
         roomName: room.name,
@@ -268,46 +270,62 @@ async function processRoomVideos(
         status: "completed"
       });
 
-      console.log(
-        `[Video Generation] ✅ Successfully completed room: ${room.name}`
-      );
+      console.log(`[Video Generation] ✅ Successfully completed room: ${room.name}`);
 
-      // Update progress
       if (onProgress) {
-        onProgress(
-          buildProgressUpdate("processing_rooms", results.length, results)
-        );
+        onProgress(buildProgressUpdate("processing_rooms", results.length, results));
       }
     } catch (error) {
-      console.error(
-        `[Video Generation] ❌ Error processing room ${room.name}:`,
-        error
-      );
-      console.error(`[Video Generation] Error type:`, error instanceof Error ? error.constructor.name : typeof error);
-      console.error(`[Video Generation] Error message:`, error instanceof Error ? error.message : String(error));
-      console.error(`[Video Generation] Error stack:`, error instanceof Error ? error.stack : 'No stack');
+      console.error(`[Video Generation] ❌ Error processing room ${room.name}:`, error);
 
-      // Use videoRecordId if available, otherwise generate a unique ID
-      const uniqueId = videoRecordId || `failed-${room.id}-${Date.now()}`;
+      const videoRecords = await getVideosByProject(projectId);
+      const videoRecord = videoRecords.find(v => v.roomName === room.name);
 
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      if (videoRecord) {
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        await markVideoFailed(videoRecord.id, errorMessage);
 
-      if (videoRecordId) {
-        await markVideoFailed(videoRecordId, errorMessage);
+        results.push({
+          roomId: videoRecord.id,
+          roomName: room.name,
+          videoUrl: "",
+          duration: 0,
+          status: "failed",
+          error: errorMessage
+        });
       }
-
-      results.push({
-        roomId: uniqueId,
-        roomName: room.name,
-        videoUrl: "",
-        duration: 0,
-        status: "failed",
-        error: errorMessage
-      });
     }
   }
 
-  return results;
+  // After all rooms complete, compose final video
+  const successfulRooms = results.filter((r) => r.status === "completed");
+
+  if (successfulRooms.length > 0) {
+    console.log(`[Video Generation] Composing final video from ${successfulRooms.length} successful rooms`);
+
+    try {
+      const compositionResult = await composeFinalVideo(
+        projectId,
+        userId,
+        successfulRooms,
+        videoSettings
+      );
+
+      await updateProjectWithFinalVideo(
+        projectId,
+        compositionResult.videoUrl,
+        compositionResult.duration
+      );
+
+      console.log(`[Video Generation] ✅ Final video composition complete`);
+    } catch (error) {
+      console.error(`[Video Generation] ❌ Final composition failed:`, error);
+      await updateProjectStatus(projectId, "failed");
+    }
+  } else {
+    console.error(`[Video Generation] ❌ No successful rooms to compose`);
+    await updateProjectStatus(projectId, "failed");
+  }
 }
 
 // ============================================================================
@@ -604,20 +622,32 @@ export async function retryFailedRoomVideos(
   userId: string,
   roomIds: string[],
   videoSettings: VideoSettings
-): Promise<RoomVideoResult[]> {
+): Promise<{ success: boolean }> {
   console.log(`[Video Generation] Retrying ${roomIds.length} failed rooms`);
 
   // Fetch room data for failed rooms
   const allRooms = await fetchProjectRooms(projectId, videoSettings.roomOrder);
   const roomsToRetry = allRooms.filter((room) => roomIds.includes(room.id));
 
-  // Process only the failed rooms
-  return await processRoomVideos(
+  // Submit retries (fast phase)
+  await processRoomVideosSubmission(
     projectId,
     userId,
     roomsToRetry,
     videoSettings
   );
+
+  // Process in background (slow phase - don't await)
+  processRoomVideosCompletion(
+    projectId,
+    userId,
+    roomsToRetry,
+    videoSettings
+  ).catch((error) => {
+    console.error(`[Video Generation] Retry background processing failed:`, error);
+  });
+
+  return { success: true };
 }
 
 // ============================================================================

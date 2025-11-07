@@ -2,21 +2,8 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: false,
-  serverExternalPackages: [
-    'fluent-ffmpeg',
-    '@ffmpeg-installer/ffmpeg',
-    '@ffmpeg-installer/darwin-arm64',
-    '@ffmpeg-installer/darwin-x64',
-    '@ffmpeg-installer/linux-arm64',
-    '@ffmpeg-installer/linux-x64',
-    '@ffmpeg-installer/win32-x64',
-    '@ffprobe-installer/ffprobe',
-    '@ffprobe-installer/darwin-arm64',
-    '@ffprobe-installer/darwin-x64',
-    '@ffprobe-installer/linux-arm64',
-    '@ffprobe-installer/linux-x64',
-    '@ffprobe-installer/win32-x64'
-  ],
+  // Don't externalize ffmpeg/ffprobe - let webpack bundle them properly
+  serverExternalPackages: ['fluent-ffmpeg'],
   webpack: (config, { isServer }) => {
     if (isServer) {
       // Exclude ffmpeg/ffprobe binaries from being processed
