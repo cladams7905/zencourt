@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@fal-ai/client": "^1.7.2",
-    "@fal-ai/serverless-proxy": "^0.10.0",
+    "@fal-ai/server-proxy": "^1.1.1",
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
     "@ffprobe-installer/ffprobe": "^2.1.2",
     "@neondatabase/serverless": "^1.0.2",
