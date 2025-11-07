@@ -15,6 +15,9 @@ import {
   type VideoSettings
 } from "@/services/videoGenerationOrchestrator";
 
+// Force Node.js runtime (not Edge) - required for fal.ai SDK
+export const runtime = 'nodejs';
+
 // Allow longer execution time for video generation
 export const maxDuration = 300; // 5 minutes
 
