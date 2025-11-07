@@ -11,23 +11,13 @@ import type {
   KlingApiRequest,
   KlingApiResponse,
   RoomVideoRequest,
-  KlingServiceConfig,
   VideoGenerationError,
-  ImageSelectionResult,
   PromptBuilderContext
 } from "@/types/video-generation";
-import type { ProcessedImage } from "@/types/images";
 
 // ============================================================================
 // Configuration
 // ============================================================================
-
-const DEFAULT_CONFIG: KlingServiceConfig = {
-  apiKey: "", // Will be loaded dynamically
-  maxRetries: 3,
-  timeoutMs: 60000, // 60 seconds
-  concurrentRequests: 3
-};
 
 // Configure fal.ai client with credentials resolver function
 // This ensures the API key is read at runtime, not at module load time
@@ -72,11 +62,11 @@ function ensureFalConfigured(): string {
 // ============================================================================
 
 /**
- * Submit video generation request for a single room (non-blocking)
+ * Generate video for a single room using fal.subscribe (blocking call with internal polling)
  */
-export async function submitRoomVideoGeneration(
+export async function generateRoomVideo(
   roomData: RoomVideoRequest
-): Promise<string> {
+): Promise<KlingApiResponse> {
   try {
     // Ensure fal.ai client is configured with API key
     console.log("[Kling Service] Ensuring FAL client is configured...");
@@ -102,7 +92,7 @@ export async function submitRoomVideoGeneration(
     });
 
     // Construct Kling API request for v1.6/standard/elements
-    const request: KlingApiRequest = {
+    const input: KlingApiRequest = {
       prompt,
       input_image_urls: selectedImages,
       duration: roomData.settings.duration,
@@ -111,166 +101,35 @@ export async function submitRoomVideoGeneration(
     };
 
     console.log(
-      `[Kling API] Submitting video generation for room: ${roomData.roomName} with ${selectedImages.length} images`
+      `[Kling API] Starting video generation for room: ${roomData.roomName} with ${selectedImages.length} images`
     );
     console.log(`[Kling API] Request payload:`, {
       prompt: prompt.substring(0, 100) + "...",
       imageCount: selectedImages.length,
-      duration: request.duration,
-      aspectRatio: request.aspect_ratio
+      duration: input.duration,
+      aspectRatio: input.aspect_ratio
     });
 
-    // Submit to queue (non-blocking)
-    console.log(`[Kling API] 🔵 About to call fal.queue.submit...`);
-    console.log(`[Kling API] Endpoint: fal-ai/kling-video/v1.6/standard/elements`);
-    console.log(`[Kling API] Full request:`, JSON.stringify(request, null, 2));
-
-    let result: { request_id: string };
-    try {
-      console.log(`[Kling API] 🔵 Calling fal.queue.submit NOW...`);
-
-      // Create a timeout promise (30 seconds)
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => {
-          console.error(`[Kling API] ⏱️  TIMEOUT: fal.queue.submit took longer than 30 seconds`);
-          reject(new Error('fal.queue.submit timed out after 30 seconds'));
-        }, 30000);
-      });
-
-      // Get webhook URL from environment (Vercel deployment URL)
-      const webhookUrl = process.env.NEXT_PUBLIC_APP_URL
-        ? `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/fal`
-        : process.env.VERCEL_URL
-        ? `https://${process.env.VERCEL_URL}/api/webhooks/fal`
-        : undefined;
-
-      console.log(`[Kling API] Webhook URL:`, webhookUrl || 'NOT CONFIGURED - REQUIRED!');
-
-      if (!webhookUrl) {
-        throw new Error("Webhook URL is required for production. Set NEXT_PUBLIC_APP_URL or VERCEL_URL.");
-      }
-
-      // Use SDK with webhookUrl - this should return immediately without blocking
-      console.log(`[Kling API] Calling fal.queue.submit WITH webhookUrl...`);
-
-      const submitPromise = fal.queue.submit(
-        "fal-ai/kling-video/v1.6/standard/elements",
-        {
-          input: request,
-          webhookUrl: webhookUrl
+    // Use fal.subscribe which handles queue submission and polling internally
+    const result = await fal.subscribe("fal-ai/kling-video/v1.6/standard/elements", {
+      input,
+      logs: true,
+      onQueueUpdate: (update) => {
+        if (update.status === "IN_PROGRESS") {
+          update.logs.map((log) => log.message).forEach((msg) => {
+            console.log(`[Kling API] ${msg}`);
+          });
         }
-      );
+        console.log(`[Kling API] Queue status: ${update.status}`);
+      },
+    });
 
-      // Race between SDK call and timeout
-      const submitResult = await Promise.race([submitPromise, timeoutPromise]);
+    console.log(`[Kling API] ✓ Video generation completed`);
+    console.log(`[Kling API] Request ID:`, result.requestId);
+    console.log(`[Kling API] Result:`, JSON.stringify(result.data, null, 2));
 
-      result = submitResult as { request_id: string };
-
-      console.log(`[Kling API] ✅ fal.queue.submit returned successfully`);
-      console.log(`[Kling API] Result type:`, typeof result);
-      console.log(`[Kling API] Result keys:`, Object.keys(result || {}));
-      console.log(`[Kling API] Full result:`, JSON.stringify(result, null, 2));
-    } catch (submitError) {
-      console.error(`[Kling API] ❌ fal.queue.submit threw an error:`, submitError);
-      console.error(`[Kling API] Error type:`, submitError instanceof Error ? submitError.constructor.name : typeof submitError);
-      console.error(`[Kling API] Error message:`, submitError instanceof Error ? submitError.message : String(submitError));
-      console.error(`[Kling API] Error stack:`, submitError instanceof Error ? submitError.stack : 'No stack');
-
-      // Log additional debugging info about fal module
-      console.error(`[Kling API] fal module debug:`, {
-        hasQueue: !!fal.queue,
-        hasSubmit: typeof fal.queue?.submit,
-        queueKeys: fal.queue ? Object.keys(fal.queue).slice(0, 5) : []
-      });
-
-      throw submitError;
-    }
-
-    // Extract request_id from the result
-    const requestId = result.request_id;
-
-    if (!requestId) {
-      console.error(`[Kling API] ❌ No request_id in response!`);
-      console.error(`[Kling API] Full result:`, JSON.stringify(result, null, 2));
-      throw new Error("No request_id returned from fal.queue.submit");
-    }
-
-    console.log(
-      `[Kling API] ✓ Successfully submitted request for room ${roomData.roomName}, requestId: ${requestId}`
-    );
-
-    return requestId;
-  } catch (error) {
-    console.error(
-      `[Kling API] Error submitting video generation for room ${roomData.roomName}:`,
-      error
-    );
-    throw error;
-  }
-}
-
-/**
- * Poll the status of a video generation request
- */
-export async function pollRoomVideoStatus(
-  requestId: string
-): Promise<{ status: string; completed: boolean }> {
-  try {
-    // Ensure fal.ai client is configured
-    ensureFalConfigured();
-
-    const status = await fal.queue.status(
-      "fal-ai/kling-video/v1.6/standard/elements",
-      { requestId, logs: true }
-    );
-
-    return {
-      status: status.status,
-      completed: status.status === "COMPLETED"
-    };
-  } catch (error) {
-    console.error(
-      `[Kling API] Error polling status for request ${requestId}:`,
-      error
-    );
-    throw error;
-  }
-}
-
-/**
- * Get the result of a completed video generation request
- */
-export async function getRoomVideoResult(
-  requestId: string
-): Promise<KlingApiResponse> {
-  try {
-    // Ensure fal.ai client is configured
-    ensureFalConfigured();
-
-    const result = (await fal.queue.result(
-      "fal-ai/kling-video/v1.6/standard/elements",
-      { requestId }
-    )) as { data?: KlingApiResponse } | KlingApiResponse;
-
-    console.log(
-      `[Kling API] Retrieved result for request ${requestId}:`,
-      JSON.stringify(result, null, 2)
-    );
-
-    // Handle both possible response structures:
-    // 2. { video: { url, ... } } (direct)
-    let responseData: KlingApiResponse;
-
-    if ("video" in result) {
-      // Direct response
-      responseData = result as KlingApiResponse;
-    } else {
-      throw createError(
-        "Invalid response from Kling API: missing video data",
-        "KLING_API_ERROR",
-        result
-      );
-    }
+    // Validate response structure
+    const responseData = result.data as KlingApiResponse;
 
     if (!responseData.video) {
       throw createError(
@@ -291,12 +150,13 @@ export async function getRoomVideoResult(
     return responseData;
   } catch (error) {
     console.error(
-      `[Kling API] Error getting result for request ${requestId}:`,
+      `[Kling API] Error generating video for room ${roomData.roomName}:`,
       error
     );
     throw error;
   }
 }
+
 
 // ============================================================================
 // Image Selection Functions
@@ -319,51 +179,6 @@ function selectBestImages(imageUrls: string[], maxCount: number = 4): string[] {
   // Otherwise, take the first maxCount images
   // (assumes images are already ordered by confidence or user preference)
   return imageUrls.slice(0, maxCount);
-}
-
-/**
- * Select best images from ProcessedImage array
- */
-function selectBestImagesFromProcessed(
-  images: ProcessedImage[],
-  maxCount: number = 4
-): ImageSelectionResult {
-  if (images.length === 0) {
-    return {
-      selectedUrls: [],
-      totalImages: 0,
-      confidenceScores: []
-    };
-  }
-
-  // Filter out images without upload URLs
-  const uploadedImages = images.filter((img) => img.uploadUrl);
-
-  if (uploadedImages.length === 0) {
-    return {
-      selectedUrls: [],
-      totalImages: images.length,
-      confidenceScores: []
-    };
-  }
-
-  // Sort by confidence score (descending)
-  const sortedImages = [...uploadedImages].sort((a, b) => {
-    const confidenceA = a.classification?.confidence || 0;
-    const confidenceB = b.classification?.confidence || 0;
-    return confidenceB - confidenceA;
-  });
-
-  // Take top maxCount images
-  const selectedImages = sortedImages.slice(0, maxCount);
-
-  return {
-    selectedUrls: selectedImages.map((img) => img.uploadUrl!),
-    totalImages: images.length,
-    confidenceScores: selectedImages.map(
-      (img) => img.classification?.confidence || 0
-    )
-  };
 }
 
 // ============================================================================
@@ -420,53 +235,6 @@ function buildKlingPrompt(context: PromptBuilderContext): string {
 // ============================================================================
 
 /**
- * Execute a function with retry logic
- */
-async function executeWithRetry<T>(
-  operation: () => Promise<T>,
-  options: {
-    maxRetries: number;
-    backoff: "exponential" | "linear";
-    onRetry?: (attempt: number, error: Error) => void;
-  }
-): Promise<T> {
-  let lastError: Error;
-
-  for (let attempt = 0; attempt <= options.maxRetries; attempt++) {
-    try {
-      return await operation();
-    } catch (error) {
-      lastError = error as Error;
-
-      // Don't retry on certain error types
-      if (
-        lastError.message.includes("VALIDATION_ERROR") ||
-        lastError.message.includes("Invalid")
-      ) {
-        throw lastError;
-      }
-
-      if (attempt < options.maxRetries) {
-        const delay =
-          options.backoff === "exponential"
-            ? Math.min(1000 * Math.pow(2, attempt), 30000)
-            : 1000 * (attempt + 1);
-
-        // For rate limiting, wait longer
-        const finalDelay = lastError.message.includes("KLING_RATE_LIMIT")
-          ? Math.max(delay, 10000)
-          : delay;
-
-        options.onRetry?.(attempt + 1, lastError);
-        await new Promise((resolve) => setTimeout(resolve, finalDelay));
-      }
-    }
-  }
-
-  throw lastError!;
-}
-
-/**
  * Create a VideoGenerationError with proper typing
  */
 function createError(
@@ -480,9 +248,3 @@ function createError(
   error.name = "VideoGenerationError";
   return error;
 }
-
-// ============================================================================
-// Export Configuration
-// ============================================================================
-
-const klingConfig = DEFAULT_CONFIG;

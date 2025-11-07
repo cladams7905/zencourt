@@ -10,11 +10,7 @@
 
 "use server";
 
-import {
-  submitRoomVideoGeneration,
-  pollRoomVideoStatus,
-  getRoomVideoResult
-} from "./klingService";
+import { generateRoomVideo } from "./klingService";
 import { combineRoomVideos } from "./videoCompositionService";
 import {
   downloadVideoFromUrl,
@@ -24,7 +20,6 @@ import {
 import {
   createVideoRecord,
   updateVideoStatus,
-  updateVideoFalRequestId,
   markVideoCompleted,
   markVideoFailed,
   getVideosByProject,
@@ -183,7 +178,7 @@ export async function startVideoGeneration(
 // ============================================================================
 
 /**
- * Process videos for all rooms concurrently with polling
+ * Process videos for all rooms sequentially (fal.subscribe blocks until complete)
  */
 async function processRoomVideos(
   projectId: string,
@@ -193,25 +188,12 @@ async function processRoomVideos(
   onProgress?: (progress: VideoGenerationProgress) => void
 ): Promise<RoomVideoResult[]> {
   console.log(
-    `[Video Generation] Processing ${rooms.length} rooms concurrently`
+    `[Video Generation] Processing ${rooms.length} rooms`
   );
 
   const results: RoomVideoResult[] = [];
-  const roomRequests: Map<
-    string,
-    {
-      room: RoomData;
-      videoRecordId: string;
-      requestId: string;
-      submittedAt: number;
-    }
-  > = new Map();
 
-  const startTime = Date.now();
-
-  // Step 1: Submit all requests concurrently
-  console.log(`[Video Generation] Step 1.1: Submitting ${rooms.length} room video requests to Kling API...`);
-
+  // Process each room sequentially
   for (const room of rooms) {
     let videoRecordId: string | null = null;
     try {
@@ -237,7 +219,7 @@ async function processRoomVideos(
       await updateVideoStatus(videoRecord.id, "processing");
       console.log(`[Video Generation]   - ✓ Status updated`);
 
-      // Submit video generation request (non-blocking)
+      // Build video generation request
       const roomRequest: RoomVideoRequest = {
         roomId: room.id,
         roomName: room.name,
@@ -252,37 +234,67 @@ async function processRoomVideos(
         }
       };
 
-      console.log(`[Video Generation]   - 🚀 Calling submitRoomVideoGeneration for ${room.name}...`);
-      const requestId = await submitRoomVideoGeneration(roomRequest);
-      console.log(`[Video Generation]   - ✓ Received requestId: ${requestId}`);
+      console.log(`[Video Generation]   - 🚀 Calling generateRoomVideo for ${room.name}...`);
+      // This will block until the video is complete (handles queue submission and polling internally)
+      const klingResponse = await generateRoomVideo(roomRequest);
+      console.log(`[Video Generation]   - ✓ Video generation completed`);
 
-      // Store the fal request ID in the database for webhook matching
-      console.log(`[Video Generation]   - Storing fal request ID in database...`);
-      await updateVideoFalRequestId(videoRecord.id, requestId);
-      console.log(`[Video Generation]   - ✓ Stored fal request ID`);
+      // Download video from Kling API
+      const videoBlob = await downloadVideoFromUrl(klingResponse.video.url);
 
-      roomRequests.set(room.id, {
-        room,
-        videoRecordId: videoRecord.id,
-        requestId,
-        submittedAt: Date.now()
+      // Upload to our storage
+      const videoUrl = await executeStorageWithRetry(() =>
+        uploadRoomVideo(
+          videoBlob,
+          {
+            userId,
+            projectId,
+            videoId: videoRecord.id,
+            roomId: room.id
+          },
+          room.name
+        )
+      );
+
+      // Mark video as completed
+      await markVideoCompleted(videoRecord.id, videoUrl);
+
+      // Add to results
+      results.push({
+        roomId: videoRecord.id,
+        roomName: room.name,
+        videoUrl,
+        duration: parseInt(videoSettings.duration),
+        status: "completed"
       });
 
       console.log(
-        `[Video Generation] ✅ Successfully submitted request for room: ${room.name} (requestId: ${requestId})`
+        `[Video Generation] ✅ Successfully completed room: ${room.name}`
       );
+
+      // Update progress
+      if (onProgress) {
+        onProgress(
+          buildProgressUpdate("processing_rooms", results.length, results)
+        );
+      }
     } catch (error) {
       console.error(
-        `[Video Generation] ❌ Error submitting room ${room.name}:`,
+        `[Video Generation] ❌ Error processing room ${room.name}:`,
         error
       );
       console.error(`[Video Generation] Error type:`, error instanceof Error ? error.constructor.name : typeof error);
       console.error(`[Video Generation] Error message:`, error instanceof Error ? error.message : String(error));
       console.error(`[Video Generation] Error stack:`, error instanceof Error ? error.stack : 'No stack');
 
-
       // Use videoRecordId if available, otherwise generate a unique ID
       const uniqueId = videoRecordId || `failed-${room.id}-${Date.now()}`;
+
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+
+      if (videoRecordId) {
+        await markVideoFailed(videoRecordId, errorMessage);
+      }
 
       results.push({
         roomId: uniqueId,
@@ -290,101 +302,8 @@ async function processRoomVideos(
         videoUrl: "",
         duration: 0,
         status: "failed",
-        error: error instanceof Error ? error.message : "Unknown error"
+        error: errorMessage
       });
-    }
-  }
-
-  // Step 2: Wait 1 minute before starting to poll
-  console.log("[Video Generation] Waiting 60 seconds before polling...");
-  await new Promise((resolve) => setTimeout(resolve, 60000));
-
-  // Step 3: Poll every 15 seconds until all complete
-  const pendingRequests = new Set(roomRequests.keys());
-
-  while (pendingRequests.size > 0) {
-    console.log(
-      `[Video Generation] Polling ${pendingRequests.size} pending requests...`
-    );
-
-    for (const roomId of Array.from(pendingRequests)) {
-      const requestData = roomRequests.get(roomId)!;
-
-      try {
-        const { completed } = await pollRoomVideoStatus(requestData.requestId);
-
-        if (completed) {
-          // Get the result
-          const klingResponse = await getRoomVideoResult(requestData.requestId);
-
-          // Download video from Kling API
-          const videoBlob = await downloadVideoFromUrl(klingResponse.video.url);
-
-          // Upload to our storage
-          const videoUrl = await executeStorageWithRetry(() =>
-            uploadRoomVideo(
-              videoBlob,
-              {
-                userId,
-                projectId,
-                videoId: requestData.videoRecordId,
-                roomId: requestData.room.id
-              },
-              requestData.room.name
-            )
-          );
-
-          // Mark video as completed
-          await markVideoCompleted(requestData.videoRecordId, videoUrl);
-
-          // Add to results - use videoRecordId as unique identifier
-          results.push({
-            roomId: requestData.videoRecordId,
-            roomName: requestData.room.name,
-            videoUrl,
-            duration: parseInt(videoSettings.duration),
-            status: "completed"
-          });
-
-          pendingRequests.delete(roomId);
-          console.log(
-            `[Video Generation] Completed room: ${requestData.room.name}`
-          );
-
-          // Update progress
-          if (onProgress) {
-            onProgress(
-              buildProgressUpdate("processing_rooms", results.length, results)
-            );
-          }
-        }
-      } catch (error) {
-        console.error(
-          `[Video Generation] Error processing room ${requestData.room.name}:`,
-          error
-        );
-
-        const errorMessage =
-          error instanceof Error ? error.message : "Unknown error";
-        await markVideoFailed(requestData.videoRecordId, errorMessage);
-
-        results.push({
-          roomId: requestData.videoRecordId,
-          roomName: requestData.room.name,
-          videoUrl: "",
-          duration: 0,
-          status: "failed",
-          error: errorMessage
-        });
-
-        pendingRequests.delete(roomId);
-      }
-    }
-
-    // Wait 5 seconds before next poll
-    if (pendingRequests.size > 0) {
-      console.log("[Video Generation] Waiting 5 seconds before next poll...");
-      await new Promise((resolve) => setTimeout(resolve, 5000));
     }
   }
 
