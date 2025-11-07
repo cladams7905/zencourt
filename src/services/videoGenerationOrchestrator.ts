@@ -24,6 +24,7 @@ import {
 import {
   createVideoRecord,
   updateVideoStatus,
+  updateVideoFalRequestId,
   markVideoCompleted,
   markVideoFailed,
   getVideosByProject,
@@ -254,6 +255,11 @@ async function processRoomVideos(
       console.log(`[Video Generation]   - 🚀 Calling submitRoomVideoGeneration for ${room.name}...`);
       const requestId = await submitRoomVideoGeneration(roomRequest);
       console.log(`[Video Generation]   - ✓ Received requestId: ${requestId}`);
+
+      // Store the fal request ID in the database for webhook matching
+      console.log(`[Video Generation]   - Storing fal request ID in database...`);
+      await updateVideoFalRequestId(videoRecord.id, requestId);
+      console.log(`[Video Generation]   - ✓ Stored fal request ID`);
 
       roomRequests.set(room.id, {
         room,

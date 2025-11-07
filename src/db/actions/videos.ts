@@ -265,6 +265,29 @@ export async function updateVideoStatus(
 }
 
 /**
+ * Update video with fal.ai request ID
+ */
+export async function updateVideoFalRequestId(
+  videoId: string,
+  falRequestId: string
+): Promise<void> {
+  try {
+    await db
+      .update(videos)
+      .set({
+        falRequestId,
+        updatedAt: new Date()
+      })
+      .where(eq(videos.id, videoId));
+
+    console.log(`Updated video ${videoId} with fal request ID: ${falRequestId}`);
+  } catch (error) {
+    console.error("Error updating fal request ID:", error);
+    throw new Error("Failed to update fal request ID");
+  }
+}
+
+/**
  * Mark video as completed with URL
  */
 export async function markVideoCompleted(

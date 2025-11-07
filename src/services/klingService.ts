@@ -144,46 +144,25 @@ export async function submitRoomVideoGeneration(
         ? `https://${process.env.VERCEL_URL}/api/webhooks/fal`
         : undefined;
 
-      console.log(`[Kling API] Webhook URL:`, webhookUrl || 'Not configured');
+      console.log(`[Kling API] Webhook URL:`, webhookUrl || 'NOT CONFIGURED - REQUIRED!');
 
-      // BYPASS SDK: Use direct HTTP fetch instead of fal.queue.submit
-      // The SDK is hanging in production, so we'll call the REST API directly
-      console.log(`[Kling API] Using direct HTTP fetch (bypassing SDK)...`);
-
-      const apiKey = process.env.FAL_KEY;
-      if (!apiKey) {
-        throw new Error("FAL_KEY not available");
+      if (!webhookUrl) {
+        throw new Error("Webhook URL is required for production. Set NEXT_PUBLIC_APP_URL or VERCEL_URL.");
       }
 
-      const apiUrl = webhookUrl
-        ? `https://queue.fal.run/fal-ai/kling-video/v1.6/standard/elements?fal_webhook=${encodeURIComponent(webhookUrl)}`
-        : `https://queue.fal.run/fal-ai/kling-video/v1.6/standard/elements`;
+      // Use SDK with webhookUrl - this should return immediately without blocking
+      console.log(`[Kling API] Calling fal.queue.submit WITH webhookUrl...`);
 
-      console.log(`[Kling API] POST to:`, apiUrl);
-
-      const fetchPromise = fetch(apiUrl, {
-        method: "POST",
-        headers: {
-          "Authorization": `Key ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(request),
-      }).then(async (response) => {
-        console.log(`[Kling API] HTTP Response status:`, response.status);
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error(`[Kling API] Error response:`, errorText);
-          throw new Error(`fal.ai API error: ${response.status} - ${errorText}`);
+      const submitPromise = fal.queue.submit(
+        "fal-ai/kling-video/v1.6/standard/elements",
+        {
+          input: request,
+          webhookUrl: webhookUrl
         }
+      );
 
-        const data = await response.json();
-        console.log(`[Kling API] Response data:`, JSON.stringify(data, null, 2));
-        return data;
-      });
-
-      // Race between fetch and timeout
-      const submitResult = await Promise.race([fetchPromise, timeoutPromise]);
+      // Race between SDK call and timeout
+      const submitResult = await Promise.race([submitPromise, timeoutPromise]);
 
       result = submitResult as { request_id: string };
 
