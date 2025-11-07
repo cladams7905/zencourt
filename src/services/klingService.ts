@@ -93,13 +93,29 @@ export async function submitRoomVideoRequest(
       `[Kling API] Submitting video request for room: ${roomData.roomName} with ${selectedImages.length} images`
     );
 
-    // Use queue.submit for NON-BLOCKING submission (returns request ID immediately)
+    // Get webhook URL from environment
+    const webhookUrl = process.env.NEXT_PUBLIC_APP_URL
+      ? `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/fal`
+      : process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}/api/webhooks/fal`
+      : undefined;
+
+    if (!webhookUrl) {
+      console.warn("[Kling API] ⚠️  No webhook URL configured (NEXT_PUBLIC_APP_URL or VERCEL_URL)");
+    } else {
+      console.log(`[Kling API] Using webhook URL: ${webhookUrl}`);
+    }
+
+    // Use queue.submit with webhook URL for async callback when complete
     const { request_id } = await fal.queue.submit(
       "fal-ai/kling-video/v1.6/standard/elements",
-      { input }
+      {
+        input,
+        webhookUrl
+      }
     );
 
-    console.log(`[Kling API] ✓ Submitted to queue, request ID: ${request_id}`);
+    console.log(`[Kling API] ✓ Submitted to queue with webhook, request ID: ${request_id}`);
 
     return request_id;
   } catch (error) {
@@ -107,61 +123,6 @@ export async function submitRoomVideoRequest(
       `[Kling API] Error submitting video for room ${roomData.roomName}:`,
       error
     );
-    throw error;
-  }
-}
-
-/**
- * Get result of a previously submitted video generation request
- * Uses fal.queue.subscribeToStatus() to wait for completion, then fal.queue.result() to get the output
- */
-export async function getVideoResult(requestId: string): Promise<KlingApiResponse> {
-  try {
-    console.log(`[Kling API] Getting result for request: ${requestId}`);
-
-    const endpointId = "fal-ai/kling-video/v1.6/standard/elements";
-
-    // Subscribe to status updates until completion (uses streaming or polling internally)
-    await fal.queue.subscribeToStatus(endpointId, {
-      requestId,
-      logs: true,
-      onQueueUpdate: (update) => {
-        console.log(`[Kling API] Queue status: ${update.status}`);
-        if (update.status === "IN_PROGRESS" && update.logs) {
-          update.logs.forEach((log) => {
-            console.log(`[Kling API]   ${log.message}`);
-          });
-        }
-      },
-    });
-
-    console.log(`[Kling API] ✓ Video generation completed for request: ${requestId}`);
-
-    // Now get the actual result
-    const result = await fal.queue.result(endpointId, { requestId });
-
-    // Validate response structure
-    const responseData = result.data as KlingApiResponse;
-
-    if (!responseData.video) {
-      throw createError(
-        "Invalid response from Kling API: missing video property",
-        "KLING_API_ERROR",
-        result
-      );
-    }
-
-    if (!responseData.video.url) {
-      throw createError(
-        "Invalid response from Kling API: missing video URL",
-        "KLING_API_ERROR",
-        result
-      );
-    }
-
-    return responseData;
-  } catch (error) {
-    console.error(`[Kling API] Error getting result for request ${requestId}:`, error);
     throw error;
   }
 }

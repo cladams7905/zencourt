@@ -61,8 +61,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get generation progress (this will also process any pending videos)
-    const progress = await getGenerationProgress(projectId, user.id);
+    // Get generation progress (webhooks update database automatically)
+    const progress = await getGenerationProgress(projectId);
 
     // Check if complete or failed
     const isComplete = progress.status === "completed";

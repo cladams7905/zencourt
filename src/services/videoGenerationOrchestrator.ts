@@ -10,20 +10,13 @@
 
 "use server";
 
-import { fal } from "@fal-ai/client";
-import { generateRoomVideo, submitRoomVideoRequest, getVideoResult } from "./klingService";
+import { submitRoomVideoRequest } from "./klingService";
 import { combineRoomVideos } from "./videoCompositionService";
-import {
-  downloadVideoFromUrl,
-  uploadRoomVideo,
-  executeStorageWithRetry
-} from "./storage";
 import {
   createVideoRecord,
   updateVideoStatus,
   updateVideoFalRequestId,
   markVideoCompleted,
-  markVideoFailed,
   getVideosByProject,
   getFinalVideo
 } from "@/db/actions/videos";
@@ -36,8 +29,7 @@ import type {
   VideoCompositionSettings,
   VideoGenerationProgress,
   VideoProgressStep,
-  VideoGenerationStatus,
-  KlingApiResponse
+  VideoGenerationStatus
 } from "@/types/video-generation";
 
 // ============================================================================
@@ -210,129 +202,6 @@ async function processRoomVideosSubmission(
   }
 
   console.log(`[Video Generation] ✓ All ${rooms.length} rooms submitted to fal.ai`);
-}
-
-/**
- * PHASE 2: Wait for completion and process results (SLOW - runs in background)
- * This function runs asynchronously after the API returns to the client
- */
-async function processRoomVideosCompletion(
-  projectId: string,
-  userId: string,
-  rooms: RoomData[],
-  videoSettings: VideoSettings,
-  onProgress?: (progress: VideoGenerationProgress) => void
-): Promise<void> {
-  console.log(`[Video Generation] Starting background completion for ${rooms.length} rooms`);
-
-  const results: RoomVideoResult[] = [];
-
-  // Process each room sequentially
-  for (const room of rooms) {
-    try {
-      console.log(`[Video Generation] Processing room: ${room.name}`);
-
-      // Find the video record we created in the submission phase
-      const videoRecords = await getVideosByProject(projectId);
-      const videoRecord = videoRecords.find(v => v.roomName === room.name && v.status === "processing");
-
-      if (!videoRecord) {
-        throw new Error(`Video record not found for room: ${room.name}`);
-      }
-
-      if (!videoRecord.falRequestId) {
-        throw new Error(`No fal request ID found for room: ${room.name}`);
-      }
-
-      // Wait for the video generation to complete using the request ID from phase 1
-      console.log(`[Video Generation]   - 🚀 Waiting for fal.ai result for ${room.name} (request: ${videoRecord.falRequestId})...`);
-      const klingResponse = await getVideoResult(videoRecord.falRequestId);
-      console.log(`[Video Generation]   - ✓ Video generation completed`);
-
-      // Download video from Kling API
-      const videoBlob = await downloadVideoFromUrl(klingResponse.video.url);
-
-      // Upload to our storage
-      const videoUrl = await executeStorageWithRetry(() =>
-        uploadRoomVideo(
-          videoBlob,
-          {
-            userId,
-            projectId,
-            videoId: videoRecord.id,
-            roomId: room.id
-          },
-          room.name
-        )
-      );
-
-      // Mark video as completed
-      await markVideoCompleted(videoRecord.id, videoUrl);
-
-      results.push({
-        roomId: videoRecord.id,
-        roomName: room.name,
-        videoUrl,
-        duration: parseInt(videoSettings.duration),
-        status: "completed"
-      });
-
-      console.log(`[Video Generation] ✅ Successfully completed room: ${room.name}`);
-
-      if (onProgress) {
-        onProgress(buildProgressUpdate("processing_rooms", results.length, results));
-      }
-    } catch (error) {
-      console.error(`[Video Generation] ❌ Error processing room ${room.name}:`, error);
-
-      const videoRecords = await getVideosByProject(projectId);
-      const videoRecord = videoRecords.find(v => v.roomName === room.name);
-
-      if (videoRecord) {
-        const errorMessage = error instanceof Error ? error.message : "Unknown error";
-        await markVideoFailed(videoRecord.id, errorMessage);
-
-        results.push({
-          roomId: videoRecord.id,
-          roomName: room.name,
-          videoUrl: "",
-          duration: 0,
-          status: "failed",
-          error: errorMessage
-        });
-      }
-    }
-  }
-
-  // After all rooms complete, compose final video
-  const successfulRooms = results.filter((r) => r.status === "completed");
-
-  if (successfulRooms.length > 0) {
-    console.log(`[Video Generation] Composing final video from ${successfulRooms.length} successful rooms`);
-
-    try {
-      const compositionResult = await composeFinalVideo(
-        projectId,
-        userId,
-        successfulRooms,
-        videoSettings
-      );
-
-      await updateProjectWithFinalVideo(
-        projectId,
-        compositionResult.videoUrl,
-        compositionResult.duration
-      );
-
-      console.log(`[Video Generation] ✅ Final video composition complete`);
-    } catch (error) {
-      console.error(`[Video Generation] ❌ Final composition failed:`, error);
-      await updateProjectStatus(projectId, "failed");
-    }
-  } else {
-    console.error(`[Video Generation] ❌ No successful rooms to compose`);
-    await updateProjectStatus(projectId, "failed");
-  }
 }
 
 // ============================================================================
@@ -636,7 +505,7 @@ export async function retryFailedRoomVideos(
   const allRooms = await fetchProjectRooms(projectId, videoSettings.roomOrder);
   const roomsToRetry = allRooms.filter((room) => roomIds.includes(room.id));
 
-  // Submit retries (fast phase)
+  // Submit retries (webhooks will handle completion automatically)
   await processRoomVideosSubmission(
     projectId,
     userId,
@@ -644,15 +513,7 @@ export async function retryFailedRoomVideos(
     videoSettings
   );
 
-  // Process in background (slow phase - don't await)
-  processRoomVideosCompletion(
-    projectId,
-    userId,
-    roomsToRetry,
-    videoSettings
-  ).catch((error) => {
-    console.error(`[Video Generation] Retry background processing failed:`, error);
-  });
+  console.log(`[Video Generation] ✓ Retry requests submitted, webhooks will process completion`);
 
   return { success: true };
 }
@@ -663,73 +524,17 @@ export async function retryFailedRoomVideos(
 
 /**
  * Get current generation progress for a project
- * Also checks fal.ai status and processes completed videos
+ * Reads database status (webhooks update the database automatically)
  */
 export async function getGenerationProgress(
-  projectId: string,
-  userId: string
+  projectId: string
 ): Promise<VideoGenerationProgress> {
   const videoRecords = await getVideosByProject(projectId);
   const finalVideo = await getFinalVideo(projectId);
 
   const roomVideos = videoRecords.filter((v) => v.roomId !== null);
 
-  // Process any pending videos that have fal request IDs
-  for (const video of roomVideos) {
-    if (video.status === "processing" && video.falRequestId) {
-      try {
-        // Check fal.ai status
-        const endpointId = "fal-ai/kling-video/v1.6/standard/elements";
-        const status = await fal.queue.status(endpointId, {
-          requestId: video.falRequestId,
-          logs: false
-        });
-
-        console.log(`[Progress] Video ${video.id} status: ${status.status}`);
-
-        // If completed, download and process the video
-        if (status.status === "COMPLETED") {
-          console.log(`[Progress] Processing completed video: ${video.id}`);
-
-          // Get the result
-          const result = await fal.queue.result(endpointId, { requestId: video.falRequestId });
-          const responseData = result.data as KlingApiResponse;
-
-          if (responseData.video && responseData.video.url) {
-            // Download from fal.ai
-            const videoBlob = await downloadVideoFromUrl(responseData.video.url);
-
-            // Upload to Vercel Blob
-            const videoUrl = await executeStorageWithRetry(() =>
-              uploadRoomVideo(
-                videoBlob,
-                {
-                  userId,
-                  projectId,
-                  videoId: video.id,
-                  roomId: video.roomId || undefined
-                },
-                video.roomName || "video"
-              )
-            );
-
-            // Mark as completed
-            await markVideoCompleted(video.id, videoUrl);
-            console.log(`[Progress] ✓ Video ${video.id} completed and uploaded`);
-          }
-        }
-      } catch (error) {
-        console.error(`[Progress] Error processing video ${video.id}:`, error);
-        // Don't mark as failed yet - might be transient error, will retry on next poll
-      }
-    }
-  }
-
-  // Re-fetch video records to get updated status
-  const updatedVideoRecords = await getVideosByProject(projectId);
-  const updatedRoomVideos = updatedVideoRecords.filter((v) => v.roomId !== null);
-
-  const roomResults: RoomVideoResult[] = updatedRoomVideos.map((video) => ({
+  const roomResults: RoomVideoResult[] = roomVideos.map((video) => ({
     roomId: video.id, // Use unique video record ID instead of room category
     roomName: video.roomName!,
     videoUrl: video.videoUrl,

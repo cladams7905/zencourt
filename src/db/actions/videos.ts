@@ -131,6 +131,26 @@ export async function getVideoByRoom(
 }
 
 /**
+ * Get video by fal.ai request ID (for webhook processing)
+ */
+export async function getVideoByFalRequestId(
+  falRequestId: string
+): Promise<Video | null> {
+  try {
+    const [video] = await db
+      .select()
+      .from(videos)
+      .where(eq(videos.falRequestId, falRequestId))
+      .limit(1);
+
+    return (video as Video) || null;
+  } catch (error) {
+    console.error("Error getting video by fal request ID:", error);
+    throw new Error("Failed to get video by fal request ID");
+  }
+}
+
+/**
  * Get the final combined video for a project (roomId is NULL)
  */
 export async function getFinalVideo(projectId: string): Promise<Video | null> {
