@@ -16,7 +16,7 @@ import {
 } from "@/services/videoGenerationOrchestrator";
 
 // Force Node.js runtime (not Edge) - required for fal.ai SDK
-export const runtime = 'nodejs';
+export const runtime = "nodejs";
 
 // Allow longer execution time for video generation
 export const maxDuration = 300; // 5 minutes
@@ -125,43 +125,21 @@ export async function POST(request: NextRequest) {
       })
       .where(eq(projects.id, projectId));
 
-    // ========================================================================
-    // DIAGNOSTIC: Log environment variable status
-    // ========================================================================
-    const falKeyExists = !!process.env.FAL_KEY;
-    const falKeyLength = process.env.FAL_KEY?.length || 0;
-    const falKeyPreview = process.env.FAL_KEY
-      ? `${process.env.FAL_KEY.substring(0, 10)}...${process.env.FAL_KEY.substring(process.env.FAL_KEY.length - 4)}`
-      : 'NOT SET';
-
-    console.log(`[API] ========================================`);
-    console.log(`[API] Environment Diagnostics:`);
-    console.log(`[API]   - FAL_KEY exists: ${falKeyExists}`);
-    console.log(`[API]   - FAL_KEY length: ${falKeyLength}`);
-    console.log(`[API]   - FAL_KEY preview: ${falKeyPreview}`);
-    console.log(`[API]   - OPENAI_API_KEY exists: ${!!process.env.OPENAI_API_KEY}`);
-    console.log(`[API]   - Node.js version: ${process.version}`);
-    console.log(`[API]   - Runtime config: nodejs`);
-    console.log(`[API]   - All env vars count: ${Object.keys(process.env).length}`);
-    console.log(`[API] ========================================`);
-
-    console.log(
-      `[API] ✓ Starting video generation for project ${projectId} with ${videoSettings.roomOrder.length} rooms`
-    );
-
     // Start video generation in background (don't await - let it run async)
     // The client will poll for progress
-    startVideoGeneration(projectId, user.id, videoSettings).catch((error) => {
-      console.error(
-        `[API] ❌ Video generation failed for project ${projectId}:`,
-        error
-      );
-      console.error(
-        `[API] Error stack:`,
-        error instanceof Error ? error.stack : "No stack trace"
-      );
-      console.error(`[API] Error details:`, JSON.stringify(error, null, 2));
-    });
+    await startVideoGeneration(projectId, user.id, videoSettings).catch(
+      (error) => {
+        console.error(
+          `[API] ❌ Video generation failed for project ${projectId}:`,
+          error
+        );
+        console.error(
+          `[API] Error stack:`,
+          error instanceof Error ? error.stack : "No stack trace"
+        );
+        console.error(`[API] Error details:`, JSON.stringify(error, null, 2));
+      }
+    );
 
     console.log(
       `[API] ✓ Video generation background task initiated for project ${projectId}`

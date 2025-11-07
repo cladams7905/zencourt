@@ -4,6 +4,8 @@
  * Handles all interactions with the Kling AI video generation API via fal.ai
  * Using @fal-ai/client (the new package, not the deprecated serverless-client)
  */
+"use server";
+
 import { fal } from "@fal-ai/client";
 import type {
   KlingApiRequest,
