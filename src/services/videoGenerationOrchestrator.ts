@@ -10,7 +10,7 @@
 
 "use server";
 
-import { generateRoomVideo, submitRoomVideoRequest } from "./klingService";
+import { generateRoomVideo, submitRoomVideoRequest, getVideoResult } from "./klingService";
 import { combineRoomVideos } from "./videoCompositionService";
 import {
   downloadVideoFromUrl,
@@ -20,6 +20,7 @@ import {
 import {
   createVideoRecord,
   updateVideoStatus,
+  updateVideoFalRequestId,
   markVideoCompleted,
   markVideoFailed,
   getVideosByProject,
@@ -204,6 +205,10 @@ async function processRoomVideosSubmission(
       const requestId = await submitRoomVideoRequest(roomRequest);
       console.log(`[Video Generation]   - ✓ Submitted! Request ID: ${requestId}`);
 
+      // Store the request ID so we can poll for it later
+      await updateVideoFalRequestId(videoRecord.id, requestId);
+      console.log(`[Video Generation]   - ✓ Stored request ID in database`);
+
     } catch (error) {
       console.error(`[Video Generation] ❌ Error submitting room ${room.name}:`, error);
       throw error; // Fail fast on submission errors
@@ -241,22 +246,13 @@ async function processRoomVideosCompletion(
         throw new Error(`Video record not found for room: ${room.name}`);
       }
 
-      // Build video generation request
-      const roomRequest: RoomVideoRequest = {
-        roomId: room.id,
-        roomName: room.name,
-        roomType: room.type,
-        images: room.imageUrls,
-        sceneDescriptions: room.sceneDescriptions,
-        settings: {
-          duration: videoSettings.duration,
-          aspectRatio: videoSettings.orientation === "landscape" ? "16:9" : "9:16",
-          aiDirections: videoSettings.aiDirections
-        }
-      };
+      if (!videoRecord.falRequestId) {
+        throw new Error(`No fal request ID found for room: ${room.name}`);
+      }
 
-      console.log(`[Video Generation]   - 🚀 Calling fal.subscribe for ${room.name}...`);
-      const klingResponse = await generateRoomVideo(roomRequest);
+      // Wait for the video generation to complete using the request ID from phase 1
+      console.log(`[Video Generation]   - 🚀 Waiting for fal.ai result for ${room.name} (request: ${videoRecord.falRequestId})...`);
+      const klingResponse = await getVideoResult(videoRecord.falRequestId);
       console.log(`[Video Generation]   - ✓ Video generation completed`);
 
       // Download video from Kling API

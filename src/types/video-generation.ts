@@ -180,6 +180,7 @@ export interface Video {
   duration: number;
   status: VideoStatus;
   generationSettings: Record<string, unknown> | null;
+  falRequestId: string | null;
   errorMessage: string | null;
   createdAt: Date;
   updatedAt: Date;

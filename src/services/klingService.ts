@@ -112,6 +112,66 @@ export async function submitRoomVideoRequest(
 }
 
 /**
+ * Get result of a previously submitted video generation request
+ * Uses fal.queue.status() to poll until complete, then fal.queue.result() to get the output
+ */
+export async function getVideoResult(requestId: string): Promise<KlingApiResponse> {
+  try {
+    console.log(`[Kling API] Getting result for request: ${requestId}`);
+
+    const endpointId = "fal-ai/kling-video/v1.6/standard/elements";
+
+    // Poll the status until completion
+    let status = await fal.queue.status(endpointId, { requestId, logs: true });
+
+    while (status.status !== "COMPLETED") {
+      console.log(`[Kling API] Queue status: ${status.status}`);
+
+      if (status.status === "IN_PROGRESS" && status.logs) {
+        status.logs.forEach((log) => {
+          console.log(`[Kling API]   ${log.message}`);
+        });
+      }
+
+      // Wait 2 seconds before checking again
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Check status again
+      status = await fal.queue.status(endpointId, { requestId, logs: true });
+    }
+
+    console.log(`[Kling API] ✓ Video generation completed for request: ${requestId}`);
+
+    // Now get the actual result
+    const result = await fal.queue.result(endpointId, { requestId });
+
+    // Validate response structure
+    const responseData = result.data as KlingApiResponse;
+
+    if (!responseData.video) {
+      throw createError(
+        "Invalid response from Kling API: missing video property",
+        "KLING_API_ERROR",
+        result
+      );
+    }
+
+    if (!responseData.video.url) {
+      throw createError(
+        "Invalid response from Kling API: missing video URL",
+        "KLING_API_ERROR",
+        result
+      );
+    }
+
+    return responseData;
+  } catch (error) {
+    console.error(`[Kling API] Error getting result for request ${requestId}:`, error);
+    throw error;
+  }
+}
+
+/**
  * Generate video for a single room using fal.subscribe (blocking call with internal polling)
  */
 export async function generateRoomVideo(
