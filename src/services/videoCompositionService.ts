@@ -36,15 +36,27 @@ async function initializeServerModules() {
     const fluentFfmpeg = await import("fluent-ffmpeg");
     ffmpeg = fluentFfmpeg.default;
 
-    // Import platform-specific binaries for Vercel/Linux
-    // The auto-detected packages (@ffmpeg-installer/ffmpeg) include platform-specific binaries
-    // and will work in both development and production
-    console.log("[Video Composition] Loading ffmpeg/ffprobe binaries...");
-    const ffmpegInstaller = await import("@ffmpeg-installer/ffmpeg");
-    ffmpegPath = ffmpegInstaller.default;
+    // Import static binaries (work in both development and Vercel serverless)
+    // These are precompiled binaries optimized for serverless environments
+    console.log("[Video Composition] Loading ffmpeg/ffprobe static binaries...");
+    const ffmpegStatic = await import("ffmpeg-static");
+    // @ts-expect-error - ffprobe-static doesn't have TypeScript definitions
+    const ffprobeStatic = await import("ffprobe-static");
 
-    const ffprobeInstaller = await import("@ffprobe-installer/ffprobe");
-    ffprobePath = ffprobeInstaller.default;
+    // ffmpeg-static and ffprobe-static export the path directly as a string
+    const ffmpegBinaryPath = ffmpegStatic.default;
+    const ffprobeBinaryPath = ffprobeStatic.default as string;
+
+    if (!ffmpegBinaryPath || !ffprobeBinaryPath) {
+      throw new Error("Failed to load ffmpeg/ffprobe binaries");
+    }
+
+    console.log("[Video Composition] FFmpeg path:", ffmpegBinaryPath);
+    console.log("[Video Composition] FFprobe path:", ffprobeBinaryPath);
+
+    // Wrap in the format expected by our code
+    ffmpegPath = { path: ffmpegBinaryPath };
+    ffprobePath = { path: ffprobeBinaryPath };
 
     const fsPromises = await import("fs/promises");
     writeFile = fsPromises.writeFile;
@@ -63,8 +75,6 @@ async function initializeServerModules() {
     tmpdir = osModule.tmpdir;
 
     // Configure FFmpeg and FFprobe paths
-    console.log("[Video Composition] FFmpeg path:", ffmpegPath.path);
-    console.log("[Video Composition] FFprobe path:", ffprobePath.path);
     ffmpeg.setFfmpegPath(ffmpegPath.path);
     ffmpeg.setFfprobePath(ffprobePath.path);
   }

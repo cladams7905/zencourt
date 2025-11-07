@@ -6,26 +6,24 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ['fluent-ffmpeg'],
   webpack: (config, { isServer }) => {
     if (isServer) {
-      // Exclude ffmpeg/ffprobe binaries from being processed
+      // Exclude ffmpeg/ffprobe binaries from being processed by webpack
       config.externals = config.externals || [];
       config.externals.push({
         'fluent-ffmpeg': 'commonjs fluent-ffmpeg',
-        '@ffmpeg-installer/ffmpeg': 'commonjs @ffmpeg-installer/ffmpeg',
-        '@ffprobe-installer/ffprobe': 'commonjs @ffprobe-installer/ffprobe',
-        '@ffmpeg-installer/linux-x64': 'commonjs @ffmpeg-installer/linux-x64',
-        '@ffprobe-installer/linux-x64': 'commonjs @ffprobe-installer/linux-x64',
+        'ffmpeg-static': 'commonjs ffmpeg-static',
+        'ffprobe-static': 'commonjs ffprobe-static',
       });
 
-      // Ignore binary files in ffmpeg/ffprobe installer packages
+      // Ignore binary files in ffmpeg/ffprobe packages
       config.module = config.module || {};
       config.module.rules = config.module.rules || [];
       config.module.rules.push({
-        test: /node_modules\/@ffmpeg-installer\/.*\/ffmpeg$/,
-        use: 'ignore-loader',
+        test: /node_modules\/ffmpeg-static\/.*$/,
+        type: 'asset/resource',
       });
       config.module.rules.push({
-        test: /node_modules\/@ffprobe-installer\/.*\/ffprobe$/,
-        use: 'ignore-loader',
+        test: /node_modules\/ffprobe-static\/.*$/,
+        type: 'asset/resource',
       });
     }
     return config;
