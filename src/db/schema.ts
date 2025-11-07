@@ -105,6 +105,7 @@ export const videos = pgTable(
     duration: integer("duration").notNull(), // in seconds
     status: varchar("status", { length: 50 }).notNull(), // pending, processing, completed, failed
     generationSettings: jsonb("generation_settings"), // Store Kling API request params
+    falRequestId: text("fal_request_id"), // fal.ai request ID for webhook matching
     errorMessage: text("error_message"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull()
@@ -114,6 +115,7 @@ export const videos = pgTable(
     index("videos_project_id_idx").on(table.projectId),
     index("videos_room_id_idx").on(table.roomId),
     index("videos_status_idx").on(table.status),
+    index("videos_fal_request_id_idx").on(table.falRequestId), // Index for webhook lookup
     // RLS Policy: Users can only access videos from their own projects
     crudPolicy({
       role: authenticatedRole,
