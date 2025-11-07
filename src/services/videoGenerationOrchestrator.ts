@@ -10,7 +10,7 @@
 
 "use server";
 
-import { generateRoomVideo } from "./klingService";
+import { generateRoomVideo, submitRoomVideoRequest } from "./klingService";
 import { combineRoomVideos } from "./videoCompositionService";
 import {
   downloadVideoFromUrl,
@@ -155,8 +155,8 @@ export async function startVideoGeneration(
 // ============================================================================
 
 /**
- * PHASE 1: Submit all room videos to fal.ai (FAST - returns immediately)
- * Only creates DB records and submits to fal.ai queue
+ * PHASE 1: Submit all room videos to fal.ai (Blocks until fal.subscribe() returns)
+ * Creates DB records AND calls fal.subscribe() - returns when videos are queued
  */
 async function processRoomVideosSubmission(
   projectId: string,
@@ -164,7 +164,7 @@ async function processRoomVideosSubmission(
   rooms: RoomData[],
   videoSettings: VideoSettings
 ): Promise<void> {
-  console.log(`[Video Generation] Submitting ${rooms.length} rooms to fal.ai (fast phase)`);
+  console.log(`[Video Generation] Submitting ${rooms.length} rooms to fal.ai`);
 
   for (const room of rooms) {
     try {
@@ -185,15 +185,32 @@ async function processRoomVideosSubmission(
 
       console.log(`[Video Generation]   - ✓ Created DB record: ${videoRecord.id}`);
 
-      // Note: The actual fal.subscribe call will happen in the background phase
-      // We just need to ensure DB records are created here
+      // Build video generation request
+      const roomRequest: RoomVideoRequest = {
+        roomId: room.id,
+        roomName: room.name,
+        roomType: room.type,
+        images: room.imageUrls,
+        sceneDescriptions: room.sceneDescriptions,
+        settings: {
+          duration: videoSettings.duration,
+          aspectRatio: videoSettings.orientation === "landscape" ? "16:9" : "9:16",
+          aiDirections: videoSettings.aiDirections
+        }
+      };
+
+      // CRITICAL: Submit to fal.ai queue (FAST - just submits, doesn't wait for completion)
+      console.log(`[Video Generation]   - 🚀 Submitting to fal.ai queue for ${room.name}...`);
+      const requestId = await submitRoomVideoRequest(roomRequest);
+      console.log(`[Video Generation]   - ✓ Submitted! Request ID: ${requestId}`);
+
     } catch (error) {
       console.error(`[Video Generation] ❌ Error submitting room ${room.name}:`, error);
-      throw error; // Fail fast if we can't even create DB records
+      throw error; // Fail fast on submission errors
     }
   }
 
-  console.log(`[Video Generation] ✓ All ${rooms.length} rooms ready for background processing`);
+  console.log(`[Video Generation] ✓ All ${rooms.length} rooms submitted to fal.ai`);
 }
 
 /**

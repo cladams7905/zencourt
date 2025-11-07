@@ -16,8 +16,100 @@ import type {
 } from "@/types/video-generation";
 
 // ============================================================================
+// Configuration
+// ============================================================================
+
+// Configure fal.ai client for server-side usage
+// Server-side calls use credentials directly from environment variables
+// See: https://docs.fal.ai/model-apis/integrations/nextjs
+fal.config({
+  credentials: () => {
+    const apiKey = process.env.FAL_KEY;
+    if (!apiKey) {
+      console.error("[Kling Service] FAL_KEY not found in credentials resolver");
+    }
+    return apiKey;
+  }
+});
+
+/**
+ * Validate that API key is available
+ */
+function ensureFalConfigured(): string {
+  const apiKey = process.env.FAL_KEY || "";
+
+  if (!apiKey) {
+    console.error("[Kling Service] ❌ FAL_KEY environment variable is not set");
+    throw new Error("FAL_KEY environment variable is not set. Please configure it in your deployment environment.");
+  }
+
+  console.log("[Kling Service] ✓ FAL_KEY is configured");
+  return apiKey;
+}
+
+// ============================================================================
 // Main API Functions
 // ============================================================================
+
+/**
+ * Submit video generation request to queue (FAST - returns request ID immediately)
+ */
+export async function submitRoomVideoRequest(
+  roomData: RoomVideoRequest
+): Promise<string> {
+  try {
+    // Ensure fal.ai client is configured with API key
+    console.log("[Kling Service] Ensuring FAL client is configured...");
+    ensureFalConfigured();
+
+    // Select best images (up to 4 for elements endpoint)
+    const selectedImages = selectBestImages(roomData.images, 4);
+
+    if (selectedImages.length === 0) {
+      throw createError(
+        `No images available for room: ${roomData.roomName}`,
+        "VALIDATION_ERROR"
+      );
+    }
+
+    // Build prompt for this room
+    const prompt = buildKlingPrompt({
+      roomName: roomData.roomName,
+      roomType: roomData.roomType,
+      aiDirections: roomData.settings.aiDirections,
+      imageCount: selectedImages.length,
+      sceneDescriptions: roomData.sceneDescriptions
+    });
+
+    // Construct Kling API request for v1.6/standard/elements
+    const input: KlingApiRequest = {
+      prompt,
+      input_image_urls: selectedImages,
+      duration: roomData.settings.duration,
+      aspect_ratio: roomData.settings.aspectRatio
+    };
+
+    console.log(
+      `[Kling API] Submitting video request for room: ${roomData.roomName} with ${selectedImages.length} images`
+    );
+
+    // Use queue.submit for NON-BLOCKING submission (returns request ID immediately)
+    const { request_id } = await fal.queue.submit(
+      "fal-ai/kling-video/v1.6/standard/elements",
+      { input }
+    );
+
+    console.log(`[Kling API] ✓ Submitted to queue, request ID: ${request_id}`);
+
+    return request_id;
+  } catch (error) {
+    console.error(
+      `[Kling API] Error submitting video for room ${roomData.roomName}:`,
+      error
+    );
+    throw error;
+  }
+}
 
 /**
  * Generate video for a single room using fal.subscribe (blocking call with internal polling)
