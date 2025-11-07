@@ -19,9 +19,10 @@ import type {
 // Configuration
 // ============================================================================
 
-// Configure fal.ai client for Vercel serverless environment
-// Uses the proxy route at /api/fal/proxy for proper serverless handling
-// See: https://vercel.com/docs/ai/fal
+// Configure fal.ai client for server-side usage
+// The server proxy at /api/fal/proxy is for client-side calls
+// Server-side calls use credentials directly from environment variables
+// See: https://docs.fal.ai/model-apis/integrations/nextjs
 fal.config({
   credentials: () => {
     const apiKey = process.env.FAL_KEY;
@@ -29,9 +30,7 @@ fal.config({
       console.error("[Kling Service] FAL_KEY not found in credentials resolver");
     }
     return apiKey;
-  },
-  // Use the serverless proxy for Vercel
-  proxyUrl: "/api/fal/proxy"
+  }
 });
 
 /**
