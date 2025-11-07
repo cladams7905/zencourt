@@ -12,6 +12,8 @@ const nextConfig: NextConfig = {
         'fluent-ffmpeg': 'commonjs fluent-ffmpeg',
         '@ffmpeg-installer/ffmpeg': 'commonjs @ffmpeg-installer/ffmpeg',
         '@ffprobe-installer/ffprobe': 'commonjs @ffprobe-installer/ffprobe',
+        '@ffmpeg-installer/linux-x64': 'commonjs @ffmpeg-installer/linux-x64',
+        '@ffprobe-installer/linux-x64': 'commonjs @ffprobe-installer/linux-x64',
       });
 
       // Ignore binary files in ffmpeg/ffprobe installer packages
