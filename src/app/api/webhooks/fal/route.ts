@@ -112,13 +112,28 @@ export async function POST(request: NextRequest) {
         console.log("[FAL Webhook] ✓ Uploaded to:", videoUrl);
 
         // Mark video as completed
+        console.log("[FAL Webhook] Marking video as completed in database...");
+        console.log("[FAL Webhook]   videoId:", videoRecord.id);
+        console.log("[FAL Webhook]   videoUrl:", videoUrl);
+
         await markVideoCompleted(videoRecord.id, videoUrl);
-        console.log("[FAL Webhook] ✓ Marked video as completed");
+
+        console.log("[FAL Webhook] ✓ Marked video as completed in database");
+
+        // Verify the update by reading it back
+        const { getVideosByProject } = await import("@/db/actions/videos");
+        const updatedRecords = await getVideosByProject(videoRecord.projectId);
+        const updatedVideo = updatedRecords.find(v => v.id === videoRecord.id);
+
+        console.log("[FAL Webhook] Verification - Updated video status:", updatedVideo?.status);
+        console.log("[FAL Webhook] Verification - Updated video URL:", updatedVideo?.videoUrl ? "present" : "missing");
 
         return NextResponse.json({
           success: true,
           message: "Video processed successfully",
-          videoId: videoRecord.id
+          videoId: videoRecord.id,
+          videoUrl: videoUrl,
+          verifiedStatus: updatedVideo?.status
         });
 
       } catch (error) {

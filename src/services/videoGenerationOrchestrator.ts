@@ -475,7 +475,7 @@ async function updateProjectWithFinalVideo(
  */
 async function updateProjectStatus(
   projectId: string,
-  status: "processing" | "completed" | "failed"
+  status: "processing" | "completed" | "failed" | "composing"
 ): Promise<void> {
   await db
     .update(projects)
@@ -519,6 +519,73 @@ export async function retryFailedRoomVideos(
 }
 
 // ============================================================================
+// Video Composition Trigger
+// ============================================================================
+
+/**
+ * Trigger video composition when all room videos are complete
+ * This runs asynchronously and creates the final combined video
+ */
+async function triggerVideoComposition(
+  projectId: string,
+  roomResults: RoomVideoResult[]
+): Promise<void> {
+  try {
+    console.log(`[Composition] Starting composition for ${roomResults.length} room videos`);
+
+    // Get project details to find userId
+    const projectResult = await db
+      .select({ userId: projects.userId })
+      .from(projects)
+      .where(eq(projects.id, projectId))
+      .limit(1);
+
+    if (projectResult.length === 0) {
+      throw new Error("Project not found");
+    }
+
+    const userId = projectResult[0].userId;
+
+    // Get video settings from the first video record (they all share same project settings)
+    // For now, use default settings - in the future, we could store these in the project
+    const videoSettings: VideoSettings = {
+      orientation: "landscape",
+      roomOrder: roomResults.map((r, idx) => ({
+        id: r.roomId,
+        name: r.roomName,
+        imageCount: 0
+      })),
+      logoPosition: "bottom-right",
+      scriptText: "",
+      enableSubtitles: false,
+      subtitleFont: "Arial",
+      aiDirections: "",
+      duration: "5"
+    };
+
+    // Compose final video
+    const compositionResult = await composeFinalVideo(
+      projectId,
+      userId,
+      roomResults,
+      videoSettings
+    );
+
+    // Update project with final video
+    await updateProjectWithFinalVideo(
+      projectId,
+      compositionResult.videoUrl,
+      compositionResult.duration
+    );
+
+    console.log(`[Composition] ✅ Final video composition complete`);
+  } catch (error) {
+    console.error(`[Composition] ❌ Composition failed:`, error);
+    await updateProjectStatus(projectId, "failed");
+  }
+}
+
+// ============================================================================
 // Get Generation Progress
 // ============================================================================
 
@@ -529,10 +596,19 @@ export async function retryFailedRoomVideos(
 export async function getGenerationProgress(
   projectId: string
 ): Promise<VideoGenerationProgress> {
+  console.log(`[Progress] Getting progress for project: ${projectId}`);
+
   const videoRecords = await getVideosByProject(projectId);
   const finalVideo = await getFinalVideo(projectId);
 
+  console.log(`[Progress] Found ${videoRecords.length} video records`);
+
   const roomVideos = videoRecords.filter((v) => v.roomId !== null);
+
+  // Log each video's status for debugging
+  roomVideos.forEach((video) => {
+    console.log(`[Progress]   - ${video.roomName}: status=${video.status}, videoUrl=${video.videoUrl ? 'present' : 'empty'}, falRequestId=${video.falRequestId}`);
+  });
 
   const roomResults: RoomVideoResult[] = roomVideos.map((video) => ({
     roomId: video.id, // Use unique video record ID instead of room category
@@ -551,11 +627,47 @@ export async function getGenerationProgress(
   const completedCount = roomResults.filter(
     (r) => r.status === "completed"
   ).length;
+
+  console.log(`[Progress] Completed: ${completedCount}/${roomResults.length}`);
+
+  // Check if all videos are completed and we need to compose
+  const allCompleted = completedCount === roomResults.length && roomResults.length > 0;
+  const needsComposition = allCompleted && !finalVideo;
+
+  if (needsComposition) {
+    console.log(`[Progress] All videos completed, checking if composition needed...`);
+
+    // Check if composition is already in progress (to avoid duplicate triggers)
+    const project = await db
+      .select({ videoGenerationStatus: projects.videoGenerationStatus })
+      .from(projects)
+      .where(eq(projects.id, projectId))
+      .limit(1);
+
+    const currentStatus = project[0]?.videoGenerationStatus;
+
+    if (currentStatus !== "composing") {
+      console.log(`[Progress] Triggering composition (current status: ${currentStatus})...`);
+
+      // Mark as composing to prevent duplicate triggers
+      await updateProjectStatus(projectId, "composing");
+
+      // Trigger composition asynchronously (don't await to avoid blocking progress response)
+      triggerVideoComposition(projectId, roomResults).catch((error) => {
+        console.error(`[Progress] Composition trigger failed:`, error);
+      });
+    } else {
+      console.log(`[Progress] Composition already in progress, skipping trigger`);
+    }
+  }
+
   const status: VideoGenerationStatus = finalVideo
     ? "completed"
-    : completedCount === roomResults.length && roomResults.length > 0
+    : allCompleted
     ? "composing_video"
     : "processing_rooms";
+
+  console.log(`[Progress] Overall status: ${status}`);
 
   return buildProgressUpdate(status, completedCount, roomResults);
 }
