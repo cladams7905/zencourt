@@ -11,7 +11,11 @@
 "use server";
 
 import { submitRoomVideoRequest } from "./klingService";
-import { combineRoomVideos } from "./videoCompositionService";
+// TODO: MIGRATION TO VIDEO-SERVER
+// This import has been removed as video composition now happens in the video-server
+// The orchestrator needs to be updated to call the video-server API instead of direct composition
+// See: video-server/src/services/videoCompositionService.ts
+// import { combineRoomVideos } from "./videoCompositionService";
 import {
   createVideoRecord,
   updateVideoStatus,
@@ -266,25 +270,35 @@ async function composeFinalVideo(
     status: "processing"
   });
 
-  // Compose video
-  const result = await combineRoomVideos(
-    roomResults.map((r) => r.videoUrl),
-    compositionSettings,
-    userId,
-    projectId,
-    finalVideoRecord.id, // Use video record ID for storage folder
-    projectName
-  );
+  // TODO: MIGRATION TO VIDEO-SERVER
+  // Video composition now happens via the video-server (Express API)
+  // Instead of calling combineRoomVideos directly, this should:
+  // 1. Make a POST request to video-server: POST /video/process
+  // 2. Send job data: { jobId, projectId, userId, roomVideoUrls, compositionSettings, webhookUrl }
+  // 3. Video-server will process async via Bull queue and send webhook when complete
+  // 4. Webhook handler will update the video record with final URL
+  // For now, this function is temporarily disabled until the API integration is complete
+  throw new Error("Video composition has been migrated to video-server. API integration pending.");
 
-  // Update final video record with URL, thumbnail, and duration
-  await markVideoCompleted(
-    finalVideoRecord.id,
-    result.videoUrl,
-    result.thumbnailUrl,
-    result.duration
-  );
+  // COMMENTED OUT - OLD DIRECT COMPOSITION CODE
+  // const result = await combineRoomVideos(
+  //   roomResults.map((r) => r.videoUrl),
+  //   compositionSettings,
+  //   userId,
+  //   projectId,
+  //   finalVideoRecord.id, // Use video record ID for storage folder
+  //   projectName
+  // );
 
-  return result;
+  // // Update final video record with URL, thumbnail, and duration
+  // await markVideoCompleted(
+  //   finalVideoRecord.id,
+  //   result.videoUrl,
+  //   result.thumbnailUrl,
+  //   result.duration
+  // );
+
+  // return result;
 }
 
 // ============================================================================

@@ -1,0 +1,241 @@
+/**
+ * Webhook Service Tests
+ */
+
+import { webhookService } from '../webhookService';
+import axios, { AxiosError } from 'axios';
+import { QueueError } from '@/types/queue';
+
+jest.mock('axios');
+jest.mock('@/config/logger', () => ({
+  logger: {
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+    debug: jest.fn(),
+  },
+}));
+
+const mockAxios = axios as jest.Mocked<typeof axios>;
+
+// Helper to create AxiosError
+const createAxiosError = (status: number, message: string): AxiosError => {
+  const error = new Error(message) as any;
+  error.isAxiosError = true;
+  error.response = { status };
+  error.constructor = AxiosError;
+  Object.setPrototypeOf(error, AxiosError.prototype);
+  return error;
+};
+
+describe('WebhookService', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  describe('sendWebhook', () => {
+    const baseOptions = {
+      url: 'https://example.com/webhook',
+      secret: 'test-secret',
+      payload: {
+        jobId: 'test-job-123',
+        status: 'completed' as const,
+        timestamp: '2025-01-01T00:00:00.000Z',
+        result: {
+          videoUrl: 'https://s3.amazonaws.com/video.mp4',
+          thumbnailUrl: 'https://s3.amazonaws.com/thumb.jpg',
+          duration: 120,
+          fileSize: 5000000,
+        },
+      },
+      maxRetries: 3,
+      backoffMs: 100,
+    };
+
+    it('should send webhook successfully on first attempt', async () => {
+      mockAxios.post.mockResolvedValueOnce({
+        status: 200,
+        data: { success: true },
+      });
+
+      await webhookService.sendWebhook(baseOptions);
+
+      expect(mockAxios.post).toHaveBeenCalledTimes(1);
+      expect(mockAxios.post).toHaveBeenCalledWith(
+        baseOptions.url,
+        baseOptions.payload,
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            'Content-Type': 'application/json',
+            'X-Webhook-Signature': expect.any(String),
+            'X-Webhook-Timestamp': baseOptions.payload.timestamp,
+          }),
+          timeout: 10000,
+        })
+      );
+    });
+
+    it('should retry on retryable errors (500)', async () => {
+      mockAxios.post
+        .mockRejectedValueOnce(createAxiosError(500, 'Internal Server Error'))
+        .mockResolvedValueOnce({
+          status: 200,
+          data: { success: true },
+        });
+
+      await webhookService.sendWebhook(baseOptions);
+
+      expect(mockAxios.post).toHaveBeenCalledTimes(2);
+    });
+
+    it('should retry on retryable errors (429 rate limit)', async () => {
+      mockAxios.post
+        .mockRejectedValueOnce(createAxiosError(429, 'Too Many Requests'))
+        .mockResolvedValueOnce({
+          status: 200,
+          data: { success: true },
+        });
+
+      await webhookService.sendWebhook(baseOptions);
+
+      expect(mockAxios.post).toHaveBeenCalledTimes(2);
+    });
+
+    it('should retry on network errors', async () => {
+      mockAxios.post
+        .mockRejectedValueOnce(new Error('Network error'))
+        .mockResolvedValueOnce({
+          status: 200,
+          data: { success: true },
+        });
+
+      await webhookService.sendWebhook(baseOptions);
+
+      expect(mockAxios.post).toHaveBeenCalledTimes(2);
+    });
+
+    it('should not retry on non-retryable errors (400)', async () => {
+      mockAxios.post.mockRejectedValue(createAxiosError(400, 'Bad Request'));
+
+      await expect(webhookService.sendWebhook(baseOptions)).rejects.toThrow(QueueError);
+      expect(mockAxios.post).toHaveBeenCalledTimes(1);
+    });
+
+    it('should not retry on non-retryable errors (404)', async () => {
+      mockAxios.post.mockRejectedValue(createAxiosError(404, 'Not Found'));
+
+      await expect(webhookService.sendWebhook(baseOptions)).rejects.toThrow(QueueError);
+      expect(mockAxios.post).toHaveBeenCalledTimes(1);
+    });
+
+    it('should throw after max retries exhausted', async () => {
+      mockAxios.post.mockRejectedValue(createAxiosError(500, 'Internal Server Error'));
+
+      await expect(webhookService.sendWebhook(baseOptions)).rejects.toThrow(QueueError);
+      expect(mockAxios.post).toHaveBeenCalledTimes(3); // maxRetries
+    });
+
+    it('should send failure webhook with error details', async () => {
+      const failureOptions = {
+        ...baseOptions,
+        payload: {
+          jobId: 'test-job-123',
+          status: 'failed' as const,
+          timestamp: '2025-01-01T00:00:00.000Z',
+          error: {
+            message: 'Processing failed',
+            code: 'PROCESSING_ERROR',
+          },
+        },
+      };
+
+      mockAxios.post.mockResolvedValueOnce({
+        status: 200,
+        data: { success: true },
+      });
+
+      await webhookService.sendWebhook(failureOptions);
+
+      expect(mockAxios.post).toHaveBeenCalledWith(
+        failureOptions.url,
+        expect.objectContaining({
+          error: expect.objectContaining({
+            message: 'Processing failed',
+            code: 'PROCESSING_ERROR',
+          }),
+        }),
+        expect.any(Object)
+      );
+    });
+  });
+
+  describe('verifySignature', () => {
+    const payload = JSON.stringify({ test: 'data' });
+    const secret = 'test-secret';
+
+    it('should verify valid signature', () => {
+      const signature = require('crypto')
+        .createHmac('sha256', secret)
+        .update(payload)
+        .digest('hex');
+
+      const result = webhookService.verifySignature(payload, signature, secret);
+      expect(result).toBe(true);
+    });
+
+    it('should reject invalid signature', () => {
+      const invalidSignature = 'invalid-signature';
+
+      const result = webhookService.verifySignature(payload, invalidSignature, secret);
+      expect(result).toBe(false);
+    });
+
+    it('should reject signature with wrong secret', () => {
+      const signature = require('crypto')
+        .createHmac('sha256', 'wrong-secret')
+        .update(payload)
+        .digest('hex');
+
+      const result = webhookService.verifySignature(payload, signature, secret);
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('Type definitions', () => {
+    it('should have correct WebhookPayload type', () => {
+      const payload: import('@/types/queue').WebhookPayload = {
+        jobId: 'test',
+        status: 'completed',
+        timestamp: new Date().toISOString(),
+        result: {
+          videoUrl: 'https://example.com/video.mp4',
+          thumbnailUrl: 'https://example.com/thumb.jpg',
+          duration: 120,
+          fileSize: 5000000,
+        },
+      };
+
+      expect(payload).toBeDefined();
+    });
+
+    it('should have correct WebhookDeliveryOptions type', () => {
+      const options: import('@/types/queue').WebhookDeliveryOptions = {
+        url: 'https://example.com/webhook',
+        secret: 'test-secret',
+        payload: {
+          jobId: 'test',
+          status: 'failed',
+          timestamp: new Date().toISOString(),
+          error: {
+            message: 'Test error',
+            code: 'TEST_ERROR',
+          },
+        },
+        maxRetries: 5,
+        backoffMs: 1000,
+      };
+
+      expect(options).toBeDefined();
+    });
+  });
+});

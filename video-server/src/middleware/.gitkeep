@@ -1,0 +1,5 @@
+# Middleware directory
+# Will contain:
+# - auth.ts (Task 9)
+# - errorHandler.ts (Task 12)
+# - requestLogger.ts (implemented in server.ts using pino-http)
