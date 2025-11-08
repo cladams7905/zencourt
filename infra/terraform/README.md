@@ -5,7 +5,7 @@ This directory contains Terraform configurations for deploying ZenCourt's AWS in
 ## Directory Structure
 
 ```
-terraform/
+infra/terraform/
 ├── modules/               # Reusable Terraform modules
 │   ├── s3/               # S3 bucket configuration
 │   ├── iam/              # IAM roles and users

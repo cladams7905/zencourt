@@ -5,7 +5,7 @@ This is a monorepo containing the ZenCourt application suite.
 ## Structure
 
 ```
-zencourt-web/
+zencourt/
 ├── apps/
 │   ├── web/              # Next.js web application
 │   ├── db/               # Shared database package
