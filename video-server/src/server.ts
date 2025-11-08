@@ -4,6 +4,7 @@ import { validateEnv, env } from './config/env';
 import logger from './config/logger';
 import videoRoutes from './routes/video';
 import healthRoutes from './routes/health';
+import storageRoutes from './routes/storage';
 import { errorHandler } from './middleware/errorHandler';
 import { closeQueue } from './queues/videoQueue';
 
@@ -51,6 +52,9 @@ app.get('/', (_req: Request, res: Response) => {
 
 // Video processing routes
 app.use('/video', videoRoutes);
+
+// Storage routes (S3 upload/delete)
+app.use('/storage', storageRoutes);
 
 // Health check endpoint
 app.use('/health', healthRoutes);

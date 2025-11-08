@@ -6,10 +6,10 @@
  * This keeps the API key secure on the server side.
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { classifyRoom, classifyRoomBatch } from '@/services/aiVision';
+import { NextRequest, NextResponse } from "next/server";
+import { classifyRoom, classifyRoomBatch } from "@/services/aiVision";
 
-export const runtime = 'nodejs';
+export const runtime = "nodejs";
 export const maxDuration = 300; // 5 minutes max execution time for batch
 
 interface ClassifyRequestSingle {
@@ -31,11 +31,11 @@ type ClassifyRequest = ClassifyRequestSingle | ClassifyRequestBatch;
  * Type guard to check if request is for batch classification
  */
 function isBatchRequest(body: ClassifyRequest): body is ClassifyRequestBatch {
-  return 'imageUrls' in body && Array.isArray(body.imageUrls);
+  return "imageUrls" in body && Array.isArray(body.imageUrls);
 }
 
 /**
- * POST /api/classify-images
+ * POST /api/v1/classify
  *
  * Classifies single or multiple images using OpenAI Vision API
  *
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
       // Validate batch request
       if (!body.imageUrls || body.imageUrls.length === 0) {
         return NextResponse.json(
-          { error: 'imageUrls must be a non-empty array' },
+          { error: "imageUrls must be a non-empty array" },
           { status: 400 }
         );
       }
@@ -72,12 +72,12 @@ export async function POST(request: NextRequest) {
       const results = await classifyRoomBatch(body.imageUrls, {
         concurrency: body.concurrency || 10,
         timeout: body.timeout || 30000,
-        maxRetries: body.maxRetries || 2,
+        maxRetries: body.maxRetries || 2
       });
 
       return NextResponse.json({
         success: true,
-        results,
+        results
       });
     }
 
@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
     // Validate single request
     if (!singleBody.imageUrl) {
       return NextResponse.json(
-        { error: 'imageUrl is required' },
+        { error: "imageUrl is required" },
         { status: 400 }
       );
     }
@@ -95,20 +95,20 @@ export async function POST(request: NextRequest) {
     // Classify the image
     const classification = await classifyRoom(singleBody.imageUrl, {
       timeout: singleBody.timeout || 30000,
-      maxRetries: singleBody.maxRetries || 2,
+      maxRetries: singleBody.maxRetries || 2
     });
 
     return NextResponse.json({
       success: true,
-      classification,
+      classification
     });
   } catch (error) {
-    console.error('Classification error:', error);
+    console.error("Classification error:", error);
 
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Classification failed',
+        error: error instanceof Error ? error.message : "Classification failed"
       },
       { status: 500 }
     );

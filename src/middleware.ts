@@ -6,7 +6,7 @@ export async function middleware(request: NextRequest) {
 
   const isAuthPage = request.nextUrl.pathname.startsWith("/auth");
   const isHandlerPage = request.nextUrl.pathname.startsWith("/handler");
-  const isWebhook = request.nextUrl.pathname.startsWith("/api/webhooks");
+  const isWebhook = request.nextUrl.pathname.startsWith("/api/v1/webhooks");
 
   // Allow auth, handler, and webhook pages without authentication
   if (isAuthPage || isHandlerPage || isWebhook) {

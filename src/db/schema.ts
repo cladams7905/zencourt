@@ -124,3 +124,51 @@ export const videos = pgTable(
     })
   ]
 );
+
+/**
+ * Video Jobs table
+ * Tracks video processing jobs sent to AWS Express server
+ */
+export const videoJobs = pgTable(
+  "video_jobs",
+  {
+    id: text("id").primaryKey(), // Job ID from nanoid
+    projectId: text("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull(), // From Stack Auth
+    status: varchar("status", { length: 50 })
+      .notNull()
+      .default("pending"), // pending, processing, completed, failed
+    progress: integer("progress").default(0), // 0-100
+    // Video processing result
+    videoUrl: text("video_url"), // Final composed video URL
+    thumbnailUrl: text("thumbnail_url"), // Video thumbnail URL
+    duration: integer("duration"), // Video duration in seconds
+    resolution: jsonb("resolution").$type<{ width: number; height: number }>(), // Video resolution
+    // Error tracking
+    errorMessage: text("error_message"),
+    errorType: varchar("error_type", { length: 100 }),
+    errorRetryable: jsonb("error_retryable").$type<boolean>(),
+    // Processing metadata
+    compositionSettings: jsonb("composition_settings"), // Store composition settings
+    estimatedDuration: integer("estimated_duration"), // Estimated processing time in seconds
+    queuePosition: integer("queue_position"), // Position in processing queue
+    startedAt: timestamp("started_at"), // When processing actually started
+    completedAt: timestamp("completed_at"), // When processing completed (success or failure)
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull()
+  },
+  (table) => [
+    // Indexes for performance
+    index("video_jobs_project_id_idx").on(table.projectId),
+    index("video_jobs_user_id_idx").on(table.userId),
+    index("video_jobs_status_idx").on(table.status),
+    // RLS Policy: Users can only access their own video jobs
+    crudPolicy({
+      role: authenticatedRole,
+      read: authUid(table.userId),
+      modify: authUid(table.userId)
+    })
+  ]
+);

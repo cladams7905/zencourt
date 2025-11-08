@@ -15,6 +15,13 @@
       "when": 1762473831441,
       "tag": "0001_wonderful_dazzler",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1762585692811,
+      "tag": "0002_bitter_boom_boom",
+      "breakpoints": true
     }
   ]
 }

@@ -31,7 +31,7 @@ variable "vercel_to_aws_api_key" {
 variable "vercel_webhook_url" {
   description = "Vercel webhook URL for video completion callbacks"
   type        = string
-  default     = "https://zencourt.com/api/webhooks/video-complete"
+  default     = "https://zencourt.com/api/v1/webhooks/video"
 }
 
 variable "redis_password" {

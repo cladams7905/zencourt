@@ -34,10 +34,6 @@ import type {
   GenerationProgress,
   GenerationStep
 } from "@/types/workflow";
-import {
-  startGeneration,
-  createProgressPoller
-} from "@/services/generationService";
 import { useRef } from "react";
 import { updateProject } from "@/db/actions/projects";
 
@@ -340,22 +336,36 @@ export function ProjectWorkflowModal({
         throw new Error("Video settings are required");
       }
 
-      // Start generation
-      const result = await startGeneration({
-        projectId: currentProject.id,
-        videoSettings: videoSettings
+      // Call the new video generation API
+      const response = await fetch("/api/v1/video/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          projectId: currentProject.id,
+          compositionSettings: {
+            roomOrder: videoSettings.roomOrder.map((room) => room.id),
+            musicUrl: null, // TODO: Add music support
+            musicVolume: 0.5,
+            transitions: null // TODO: Add transitions support
+          }
+        })
       });
 
-      if (!result.success) {
-        throw new Error(result.error || "Failed to start generation");
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to start video generation");
       }
+
+      const result = await response.json();
 
       // Initialize generation progress with single video generation step
       const steps: GenerationStep[] = [
         {
-          id: result.jobIds[0] || "job-0",
+          id: result.jobId || "job-0",
           label: `Generating ${videoSettings.orientation} video`,
-          status: "waiting" as const
+          status: "in-progress" as const
         }
       ];
 
@@ -363,50 +373,74 @@ export function ProjectWorkflowModal({
         currentStep: steps[0]?.label || "Starting...",
         totalSteps: steps.length,
         currentStepIndex: 0,
-        estimatedTimeRemaining: result.estimatedCompletionTime,
+        estimatedTimeRemaining: result.estimatedDuration,
         overallProgress: 0,
         steps
       });
 
-      setGenerationJobIds(result.jobIds);
+      setGenerationJobIds([result.jobId]);
       setCurrentStage("generate");
 
-      // Start polling for progress
-      const cleanup = createProgressPoller(
-        result.jobIds,
-        (progress) => {
-          setGenerationProgress(progress);
-        },
-        () => {
-          // Generation complete
-          toast.success("Generation complete!", {
-            description: "Your content has been successfully generated."
+      // Start polling for status
+      const pollInterval = setInterval(async () => {
+        try {
+          const statusResponse = await fetch(
+            `/api/v1/video/status/${result.jobId}?projectId=${currentProject.id}`
+          );
+
+          if (!statusResponse.ok) {
+            throw new Error("Failed to fetch status");
+          }
+
+          const statusData = await statusResponse.json();
+
+          // Update progress
+          setGenerationProgress((prev) => {
+            if (!prev) return null;
+
+            const updatedSteps = [...prev.steps];
+            if (updatedSteps[0]) {
+              updatedSteps[0].status =
+                statusData.status === "completed"
+                  ? "completed"
+                  : statusData.status === "failed"
+                  ? "failed"
+                  : "in-progress";
+            }
+
+            return {
+              ...prev,
+              overallProgress: statusData.progress || 0,
+              estimatedTimeRemaining: statusData.estimatedTimeRemaining,
+              steps: updatedSteps
+            };
           });
 
-          // Don't call onProjectCreated here - let user view the results first
-          // The modal should stay open to show the video preview
-
-          // Cleanup polling
-          if (pollingCleanupRef.current) {
-            pollingCleanupRef.current();
+          // Handle completion
+          if (statusData.status === "completed") {
+            clearInterval(pollInterval);
             pollingCleanupRef.current = null;
-          }
-        },
-        (error) => {
-          // Generation error
-          toast.error("Generation failed", {
-            description: error.message
-          });
 
-          // Cleanup polling
-          if (pollingCleanupRef.current) {
-            pollingCleanupRef.current();
-            pollingCleanupRef.current = null;
+            toast.success("Generation complete!", {
+              description: "Your content has been successfully generated."
+            });
           }
+
+          // Handle failure
+          if (statusData.status === "failed") {
+            clearInterval(pollInterval);
+            pollingCleanupRef.current = null;
+
+            toast.error("Generation failed", {
+              description: statusData.error?.message || "Please try again."
+            });
+          }
+        } catch (error) {
+          console.error("Status polling error:", error);
         }
-      );
+      }, 2000); // Poll every 2 seconds
 
-      pollingCleanupRef.current = cleanup;
+      pollingCleanupRef.current = () => clearInterval(pollInterval);
     } catch (error) {
       console.error("Generation failed:", error);
       toast.error("Generation failed", {

@@ -1,7 +1,16 @@
-import { GenerationJob } from "@/db/actions/generation";
+import { VideoGenerationJob } from "@/types/video-generation";
 
 export type ProjectStatus = "uploading" | "analyzing" | "draft" | "published";
 
 export type ProjectMetadata = {
-  generationJobs: GenerationJob[];
+  generationJobs?: VideoGenerationJob[];
+  videoThumbnailUrl?: string;
+  videoResolution?: { width: number; height: number };
+  completedAt?: string;
+  error?: {
+    message: string;
+    type: string;
+    retryable: boolean;
+    failedAt: string;
+  };
 };

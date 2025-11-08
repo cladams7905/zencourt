@@ -62,7 +62,7 @@ export function GenerateStage({
 
       setIsLoadingVideo(true);
       try {
-        const res = await fetch(`/api/generation/video/${projectId}`);
+        const res = await fetch(`/api/v1/generation/video/${projectId}`);
         const data = await res.json();
 
         // Check both data.video.videoUrl (API format) and data.videoUrl (fallback)
@@ -130,7 +130,7 @@ export function GenerateStage({
         // Fetch the video as a blob to handle cross-origin URLs properly
         const response = await fetch(videoData.videoUrl);
         if (!response.ok) {
-          throw new Error('Failed to fetch video');
+          throw new Error("Failed to fetch video");
         }
 
         const blob = await response.blob();
@@ -146,9 +146,9 @@ export function GenerateStage({
         document.body.removeChild(link);
         window.URL.revokeObjectURL(blobUrl);
       } catch (error) {
-        console.error('Failed to download video:', error);
+        console.error("Failed to download video:", error);
         // Fallback to direct link if fetch fails
-        window.open(videoData.videoUrl, '_blank');
+        window.open(videoData.videoUrl, "_blank");
       }
     }
   };

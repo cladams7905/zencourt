@@ -588,7 +588,7 @@ async function classifyRoomBatchViaAPI(
     const startTime = Date.now();
 
     try {
-      const response = await fetch("/api/classify-images", {
+      const response = await fetch("/api/v1/classify", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
