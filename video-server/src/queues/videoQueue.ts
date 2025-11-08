@@ -82,24 +82,32 @@ async function processVideoJob(jobData: VideoJob): Promise<VideoJobResult> {
       fileSize: result.fileSize,
     }, 'Video job completed successfully');
 
-    // Send success webhook
-    await webhookService.sendWebhook({
-      url: webhookUrl,
-      secret: webhookSecret,
-      payload: {
-        jobId,
-        status: 'completed',
-        timestamp: new Date().toISOString(),
-        result: {
-          videoUrl: result.videoUrl,
-          thumbnailUrl: result.thumbnailUrl,
-          duration: result.duration,
-          fileSize: result.fileSize,
+    // Send success webhook (handle gracefully - don't fail job if webhook fails)
+    try {
+      await webhookService.sendWebhook({
+        url: webhookUrl,
+        secret: webhookSecret,
+        payload: {
+          jobId,
+          status: 'completed',
+          timestamp: new Date().toISOString(),
+          result: {
+            videoUrl: result.videoUrl,
+            thumbnailUrl: result.thumbnailUrl,
+            duration: result.duration,
+            fileSize: result.fileSize,
+          },
         },
-      },
-      maxRetries: env.webhookRetryAttempts,
-      backoffMs: env.webhookRetryBackoffMs,
-    });
+        maxRetries: env.webhookRetryAttempts,
+        backoffMs: env.webhookRetryBackoffMs,
+      });
+    } catch (webhookError) {
+      // Log webhook failure but don't fail the job (requirement 8.4)
+      logger.error({
+        jobId,
+        error: webhookError instanceof Error ? webhookError.message : String(webhookError),
+      }, 'Failed to send success webhook - job completed but notification failed');
+    }
 
     return result;
   } catch (error) {
@@ -311,23 +319,16 @@ export async function checkRedisHealth(): Promise<boolean> {
 
 /**
  * Gracefully close the queue connection
+ * Pauses new jobs and waits for active jobs to complete
  */
 export async function closeQueue(): Promise<void> {
   logger.info('Closing video queue...');
+
+  // Pause queue to prevent accepting new jobs
+  await videoQueue.pause();
+  logger.info('Queue paused - no longer accepting new jobs');
+
+  // Wait for active jobs to complete (with Bull's built-in wait)
   await videoQueue.close();
-  logger.info('Video queue closed');
+  logger.info('Video queue closed - all active jobs completed or timeout reached');
 }
-
-// ============================================================================
-// Graceful Shutdown
-// ============================================================================
-
-process.on('SIGTERM', async () => {
-  logger.info('SIGTERM received, closing queue gracefully...');
-  await closeQueue();
-});
-
-process.on('SIGINT', async () => {
-  logger.info('SIGINT received, closing queue gracefully...');
-  await closeQueue();
-});

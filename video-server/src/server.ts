@@ -1,7 +1,11 @@
-import express, { Express, Request, Response, NextFunction } from 'express';
+import express, { Express, Request, Response } from 'express';
 import pinoHttp from 'pino-http';
 import { validateEnv, env } from './config/env';
 import logger from './config/logger';
+import videoRoutes from './routes/video';
+import healthRoutes from './routes/health';
+import { errorHandler } from './middleware/errorHandler';
+import { closeQueue } from './queues/videoQueue';
 
 /**
  * Main Express server for video processing
@@ -35,7 +39,7 @@ app.use(
   })
 );
 
-// Routes will be added here
+// Routes
 app.get('/', (_req: Request, res: Response) => {
   res.json({
     service: 'ZenCourt Video Processor',
@@ -45,18 +49,11 @@ app.get('/', (_req: Request, res: Response) => {
   });
 });
 
-// Health check endpoint (placeholder - will be implemented in task 10)
-app.get('/health', (_req: Request, res: Response) => {
-  res.json({
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    checks: {
-      ffmpeg: true,
-      s3: true,
-      redis: true,
-    },
-  });
-});
+// Video processing routes
+app.use('/video', videoRoutes);
+
+// Health check endpoint
+app.use('/health', healthRoutes);
 
 // 404 handler
 app.use((req: Request, res: Response) => {
@@ -68,36 +65,58 @@ app.use((req: Request, res: Response) => {
 });
 
 // Global error handler
-app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
-  logger.error({ err, req: { method: req.method, url: req.url } }, 'Unhandled error');
-
-  res.status(500).json({
-    success: false,
-    error: 'Internal Server Error',
-    message: env.nodeEnv === 'development' ? err.message : 'An unexpected error occurred',
-  });
-});
+app.use(errorHandler);
 
 // Graceful shutdown handler
 let server: ReturnType<typeof app.listen> | null = null;
+let isShuttingDown = false;
 
-function gracefulShutdown(signal: string): void {
-  logger.info({ signal }, 'Received shutdown signal');
+async function gracefulShutdown(signal: string): Promise<void> {
+  if (isShuttingDown) {
+    logger.warn('Shutdown already in progress, ignoring signal');
+    return;
+  }
 
-  if (server) {
-    logger.info('Closing HTTP server...');
-    server.close(() => {
-      logger.info('HTTP server closed');
-      process.exit(0);
-    });
+  isShuttingDown = true;
+  logger.info({ signal }, 'Received shutdown signal - starting graceful shutdown');
 
-    // Force shutdown after 30 seconds
-    setTimeout(() => {
-      logger.error('Forced shutdown after timeout');
-      process.exit(1);
-    }, 30000);
-  } else {
+  // Force shutdown after 30 seconds (requirement 3.5)
+  const forceShutdownTimer = setTimeout(() => {
+    logger.error('Graceful shutdown timeout - forcing exit');
+    process.exit(1);
+  }, 30000);
+
+  try {
+    // Step 1: Stop accepting new HTTP connections
+    if (server) {
+      logger.info('Stopping HTTP server from accepting new connections...');
+      await new Promise<void>((resolve) => {
+        server!.close(() => {
+          logger.info('HTTP server stopped accepting new connections');
+          resolve();
+        });
+      });
+    }
+
+    // Step 2: Wait for active jobs to complete and close queue
+    logger.info('Waiting for active jobs to complete and closing queue...');
+    await closeQueue();
+    logger.info('Queue closed successfully');
+
+    // Step 3: Exit successfully
+    clearTimeout(forceShutdownTimer);
+    logger.info('Graceful shutdown completed successfully');
     process.exit(0);
+  } catch (error) {
+    clearTimeout(forceShutdownTimer);
+    logger.error(
+      {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      },
+      'Error during graceful shutdown'
+    );
+    process.exit(1);
   }
 }
 

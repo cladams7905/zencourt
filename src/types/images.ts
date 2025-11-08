@@ -103,7 +103,7 @@ export interface ProcessingProgress {
 export type ProgressCallback = (progress: ProcessingProgress) => void;
 
 /**
- * Result of calling the /api/blob endpoint
+ * Result of calling the storage API (S3-backed)
  */
 export interface UploadResult {
   id: string;

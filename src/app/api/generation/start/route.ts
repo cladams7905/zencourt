@@ -6,7 +6,6 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { stackServerApp } from "@/lib/stack/server";
 import { db } from "@/db";
 import { projects } from "@/db/schema";
 import { eq } from "drizzle-orm";
@@ -14,6 +13,12 @@ import {
   startVideoGeneration,
   type VideoSettings
 } from "@/services/videoGenerationOrchestrator";
+import {
+  ApiError,
+  requireAuthenticatedUser,
+  requireProjectAccess,
+  validateVideoSettings
+} from "../_utils";
 
 // Force Node.js runtime (not Edge) - required for fal.ai SDK
 export const runtime = "nodejs";
@@ -36,85 +41,13 @@ interface StartGenerationRequest {
 
 export async function POST(request: NextRequest) {
   try {
-    // Authenticate user
-    const user = await stackServerApp.getUser();
-    if (!user) {
-      return NextResponse.json(
-        { error: "Unauthorized", message: "Please sign in to continue" },
-        { status: 401 }
-      );
-    }
-
     // Parse request body
     const body: StartGenerationRequest = await request.json();
-    const { projectId, videoSettings } = body;
+    const { projectId } = body;
+    const user = await requireAuthenticatedUser();
+    const videoSettings = validateVideoSettings(body.videoSettings);
 
-    // Validate request
-    if (!projectId) {
-      return NextResponse.json(
-        { error: "Invalid request", message: "Project ID is required" },
-        { status: 400 }
-      );
-    }
-
-    if (!videoSettings) {
-      return NextResponse.json(
-        {
-          error: "Invalid request",
-          message: "Video settings are required"
-        },
-        { status: 400 }
-      );
-    }
-
-    // Validate video settings
-    if (
-      !videoSettings.duration ||
-      !["5", "10"].includes(videoSettings.duration)
-    ) {
-      return NextResponse.json(
-        {
-          error: "Invalid request",
-          message: "Duration must be 5 or 10 seconds"
-        },
-        { status: 400 }
-      );
-    }
-
-    if (!videoSettings.roomOrder || videoSettings.roomOrder.length === 0) {
-      return NextResponse.json(
-        {
-          error: "Invalid request",
-          message: "At least one room is required"
-        },
-        { status: 400 }
-      );
-    }
-
-    // Verify project ownership
-    const projectResult = await db
-      .select()
-      .from(projects)
-      .where(eq(projects.id, projectId))
-      .limit(1);
-
-    if (projectResult.length === 0) {
-      return NextResponse.json(
-        { error: "Not found", message: "Project not found" },
-        { status: 404 }
-      );
-    }
-
-    const project = projectResult[0];
-    if (project.userId !== user.id) {
-      return NextResponse.json(
-        {
-          error: "Forbidden",
-          message: "You don't have access to this project"
-        },
-        { status: 403 }
-      );
-    }
+    await requireProjectAccess(projectId, user.id);
 
     // Update project status to processing
     await db
@@ -156,6 +89,9 @@ export async function POST(request: NextRequest) {
       message: "Video generation started successfully"
     });
   } catch (error) {
+    if (error instanceof ApiError) {
+      return NextResponse.json(error.body, { status: error.status });
+    }
     console.error("[API] Error starting generation:", error);
     return NextResponse.json(
       {

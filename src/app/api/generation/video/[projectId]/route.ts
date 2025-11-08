@@ -6,61 +6,25 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { stackServerApp } from "@/lib/stack/server";
-import { db } from "@/db";
-import { projects } from "@/db/schema";
-import { eq } from "drizzle-orm";
 import { getFinalVideo } from "@/db/actions/videos";
+import {
+  ApiError,
+  requireAuthenticatedUser,
+  requireProjectAccess
+} from "../../_utils";
 
 // ============================================================================
 // GET Handler
 // ============================================================================
 
 export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ projectId: string }> }
+  _request: NextRequest,
+  { params }: { params: { projectId: string } }
 ) {
   try {
-    // Authenticate user
-    const user = await stackServerApp.getUser();
-    if (!user) {
-      return NextResponse.json(
-        { error: "Unauthorized", message: "Please sign in to continue" },
-        { status: 401 }
-      );
-    }
-
-    const { projectId } = await params;
-
-    // Validate request
-    if (!projectId) {
-      return NextResponse.json(
-        { error: "Invalid request", message: "Project ID is required" },
-        { status: 400 }
-      );
-    }
-
-    // Verify project ownership
-    const projectResult = await db
-      .select()
-      .from(projects)
-      .where(eq(projects.id, projectId))
-      .limit(1);
-
-    if (projectResult.length === 0) {
-      return NextResponse.json(
-        { error: "Not found", message: "Project not found" },
-        { status: 404 }
-      );
-    }
-
-    const project = projectResult[0];
-    if (project.userId !== user.id) {
-      return NextResponse.json(
-        { error: "Forbidden", message: "You don't have access to this project" },
-        { status: 403 }
-      );
-    }
+    const { projectId } = params;
+    const user = await requireAuthenticatedUser();
+    const project = await requireProjectAccess(projectId, user.id);
 
     // Get final video
     const finalVideo = await getFinalVideo(projectId);
@@ -90,6 +54,9 @@ export async function GET(
       }
     });
   } catch (error) {
+    if (error instanceof ApiError) {
+      return NextResponse.json(error.body, { status: error.status });
+    }
     console.error("[API] Error getting final video:", error);
     return NextResponse.json(
       {

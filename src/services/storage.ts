@@ -1,13 +1,12 @@
 /**
  * Storage Service
  *
- * Handles file uploads via API routes or directly to Vercel Blob Storage.
+ * Handles file uploads via the server-side S3 API route.
  * Includes support for images and videos.
  */
 
 import { UploadResult } from "@/types/images";
 import type { VideoStorageConfig } from "@/types/video-generation";
-import { put } from "@vercel/blob";
 
 export interface StorageService {
   uploadFile(file: File, folder: string): Promise<string>;
@@ -45,24 +44,6 @@ function getBaseUrl(): string {
  */
 export async function uploadFile(file: File, folder: string): Promise<string> {
   try {
-    // Server-side: Use Vercel Blob directly to avoid middleware auth issues
-    if (typeof window === "undefined") {
-      const token = process.env.BLOB_READ_WRITE_TOKEN;
-
-      if (!token) {
-        throw new Error("BLOB_READ_WRITE_TOKEN not configured");
-      }
-
-      const blob = await put(`${folder}/${file.name}`, file, {
-        access: "public",
-        token,
-        addRandomSuffix: true
-      });
-
-      return blob.url;
-    }
-
-    // Client-side: Use API route
     const formData = new FormData();
     formData.append("file", file);
     formData.append("folder", folder);

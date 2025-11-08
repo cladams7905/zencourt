@@ -6,14 +6,16 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { stackServerApp } from "@/lib/stack/server";
-import { db } from "@/db";
-import { projects } from "@/db/schema";
-import { eq } from "drizzle-orm";
 import {
   retryFailedRoomVideos,
   type VideoSettings
 } from "@/services/videoGenerationOrchestrator";
+import {
+  ApiError,
+  requireAuthenticatedUser,
+  requireProjectAccess,
+  validateVideoSettings
+} from "../_utils";
 
 // Allow longer execution time for retries
 export const maxDuration = 300; // 5 minutes
@@ -34,27 +36,13 @@ interface RetryRequest {
 
 export async function POST(request: NextRequest) {
   try {
-    // Authenticate user
-    const user = await stackServerApp.getUser();
-    if (!user) {
-      return NextResponse.json(
-        { error: "Unauthorized", message: "Please sign in to continue" },
-        { status: 401 }
-      );
-    }
-
     // Parse request body
     const body: RetryRequest = await request.json();
-    const { projectId, roomIds, videoSettings } = body;
+    const { projectId, roomIds } = body;
+    const user = await requireAuthenticatedUser();
+    const videoSettings = validateVideoSettings(body.videoSettings);
 
     // Validate request
-    if (!projectId) {
-      return NextResponse.json(
-        { error: "Invalid request", message: "Project ID is required" },
-        { status: 400 }
-      );
-    }
-
     if (!roomIds || roomIds.length === 0) {
       return NextResponse.json(
         {
@@ -65,37 +53,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!videoSettings) {
-      return NextResponse.json(
-        {
-          error: "Invalid request",
-          message: "Video settings are required"
-        },
-        { status: 400 }
-      );
-    }
-
-    // Verify project ownership
-    const projectResult = await db
-      .select()
-      .from(projects)
-      .where(eq(projects.id, projectId))
-      .limit(1);
-
-    if (projectResult.length === 0) {
-      return NextResponse.json(
-        { error: "Not found", message: "Project not found" },
-        { status: 404 }
-      );
-    }
-
-    const project = projectResult[0];
-    if (project.userId !== user.id) {
-      return NextResponse.json(
-        { error: "Forbidden", message: "You don't have access to this project" },
-        { status: 403 }
-      );
-    }
+    await requireProjectAccess(projectId, user.id);
 
     console.log(
       `[API] Retrying ${roomIds.length} failed rooms for project ${projectId}`
@@ -113,6 +71,9 @@ export async function POST(request: NextRequest) {
       message: `Retrying ${roomIds.length} room(s)`
     });
   } catch (error) {
+    if (error instanceof ApiError) {
+      return NextResponse.json(error.body, { status: error.status });
+    }
     console.error("[API] Error retrying generation:", error);
     return NextResponse.json(
       {

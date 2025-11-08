@@ -6,66 +6,25 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { stackServerApp } from "@/lib/stack/server";
-import { db } from "@/db";
-import { projects } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { updateGenerationJobProgress } from "@/db/actions/generation";
 import {
-  getGenerationJobStatus,
-  updateGenerationJobProgress
-} from "@/db/actions/generation";
+  ApiError,
+  requireAuthenticatedUser,
+  requireJobAccess
+} from "../../_utils";
 
 // ============================================================================
 // POST Handler
 // ============================================================================
 
 export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ jobId: string }> }
+  _request: NextRequest,
+  { params }: { params: { jobId: string } }
 ) {
   try {
-    // Authenticate user
-    const user = await stackServerApp.getUser();
-    if (!user) {
-      return NextResponse.json(
-        { error: "Unauthorized", message: "Please sign in to continue" },
-        { status: 401 }
-      );
-    }
-
-    const { jobId } = await params;
-
-    // Get job status
-    const job = await getGenerationJobStatus(jobId);
-
-    if (!job) {
-      return NextResponse.json(
-        { error: "Not found", message: "Job not found" },
-        { status: 404 }
-      );
-    }
-
-    // Verify ownership
-    const projectResult = await db
-      .select()
-      .from(projects)
-      .where(eq(projects.id, job.projectId))
-      .limit(1);
-
-    if (projectResult.length === 0) {
-      return NextResponse.json(
-        { error: "Not found", message: "Project not found" },
-        { status: 404 }
-      );
-    }
-
-    const project = projectResult[0];
-    if (project.userId !== user.id) {
-      return NextResponse.json(
-        { error: "Forbidden", message: "You don't have access to this job" },
-        { status: 403 }
-      );
-    }
+    const { jobId } = params;
+    const user = await requireAuthenticatedUser();
+    const { job } = await requireJobAccess(jobId, user.id);
 
     // Check if job can be cancelled
     if (job.status === "completed" || job.status === "failed") {
@@ -91,6 +50,9 @@ export async function POST(
       message: "Job cancelled successfully"
     });
   } catch (error) {
+    if (error instanceof ApiError) {
+      return NextResponse.json(error.body, { status: error.status });
+    }
     console.error("Error cancelling job:", error);
     return NextResponse.json(
       {

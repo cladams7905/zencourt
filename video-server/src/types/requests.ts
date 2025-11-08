@@ -2,16 +2,9 @@
  * Type definitions for API requests and responses
  */
 
-export interface VideoCompositionSettings {
-  transition?: 'fade' | 'crossfade' | 'slide' | 'zoom';
-  transitionDuration?: number;
-  videoDuration?: number;
-  includeSubtitles?: boolean;
-  includeWatermark?: boolean;
-  watermarkPosition?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
-  outputFormat?: 'mp4' | 'webm';
-  outputQuality?: 'low' | 'medium' | 'high';
-}
+import type { VideoCompositionSettings } from '@/services/videoCompositionService';
+
+export type { VideoCompositionSettings };
 
 export interface VideoProcessRequest {
   jobId: string;

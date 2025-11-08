@@ -45,6 +45,7 @@ class WebhookService {
           headers: {
             'Content-Type': 'application/json',
             'X-Webhook-Signature': signature,
+            'X-Webhook-Delivery-Attempt': attempt.toString(),
             'X-Webhook-Timestamp': payload.timestamp,
             'User-Agent': 'ZenCourt-Video-Server/1.0',
           },
@@ -139,13 +140,24 @@ class WebhookService {
 
   /**
    * Calculate exponential backoff delay
+   * For 5 retries over ~1 hour: 1s, 2s, 4s, 8s, 16s (total ~31s base)
+   * Then scaled up to spread over 1 hour: ~116s per base unit
+   * Final delays: ~2min, ~4min, ~8min, ~15min, ~30min (total ~59min)
    */
   private calculateBackoff(attempt: number, baseMs: number): number {
     // Exponential backoff: baseMs * 2^(attempt-1)
-    // With jitter: +/- 25%
-    const exponentialDelay = baseMs * Math.pow(2, attempt - 1);
-    const jitter = exponentialDelay * 0.25 * (Math.random() * 2 - 1);
-    return Math.floor(exponentialDelay + jitter);
+    // Scale up by factor of ~116 to spread 5 attempts over 1 hour
+    const scaleFactor = 116;
+    const exponentialDelay = baseMs * scaleFactor * Math.pow(2, attempt - 1);
+
+    // Cap at 30 minutes max for any single delay
+    const maxDelay = 30 * 60 * 1000; // 30 minutes
+    const cappedDelay = Math.min(exponentialDelay, maxDelay);
+
+    // Add jitter: +/- 10% to avoid thundering herd
+    const jitter = cappedDelay * 0.1 * (Math.random() * 2 - 1);
+
+    return Math.floor(cappedDelay + jitter);
   }
 
   /**
