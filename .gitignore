@@ -12,7 +12,6 @@
 
 # testing
 /coverage
-/demo-images
 
 # claude
 .claude/

@@ -144,13 +144,6 @@ Creates IAM roles and users for application access.
 - **Glacier Archival**: Disabled
 - **Purpose**: Local development and testing
 
-### Staging (`envs/staging`)
-
-- **Bucket**: `zencourt-media-staging`
-- **CORS**: Vercel domains only
-- **Glacier Archival**: Disabled
-- **Purpose**: Pre-production testing
-
 ### Production (`envs/prod`)
 
 - **Bucket**: `zencourt-media-prod`
@@ -163,11 +156,6 @@ Creates IAM roles and users for application access.
 ```bash
 # Deploy development
 cd envs/dev
-terraform init
-terraform apply
-
-# Deploy staging
-cd ../staging
 terraform init
 terraform apply
 
