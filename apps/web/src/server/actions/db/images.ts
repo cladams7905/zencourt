@@ -1,80 +1,63 @@
 "use server";
 
 import { eq, sql } from "drizzle-orm";
-import { getUser } from "./users";
 import { db, images } from "@db/client";
-import {
-  DBImage,
-  InsertDBImage,
-  SerializableImageData
-} from "@shared/types/models/db.image";
+import { DBImage, InsertDBImage } from "@shared/types/models";
+import { withDbErrorHandling } from "../_utils";
 
 /**
  * Save processed images to database
  * Server action that saves multiple images with their classifications
  *
  * @param projectId - The project ID these images belong to
- * @param imageData - Array of serializable image data
+ * @param imageData - Array of image data to insert (uses DBImage structure)
  * @returns Promise<DBImage[]> - Array of saved images
  * @throws Error if user is not authenticated or save fails
  */
 export async function saveImages(
   projectId: string,
-  imageData: SerializableImageData[]
+  imageData: InsertDBImage[]
 ): Promise<DBImage[]> {
-  await getUser();
+  if (!projectId || projectId.trim() === "") {
+    throw new Error("Project ID is required");
+  }
 
-  // Map SerializableImageData to database Image format
-  const imageRecords: InsertDBImage[] = imageData.map((img, index) => ({
-    id: img.id,
-    projectId,
-    filename: img.filename,
-    url: img.uploadUrl,
-    category: img.classification?.category || null,
-    confidence: img.classification?.confidence
-      ? Math.round(img.classification.confidence * 100)
-      : null,
-    features: img.classification?.features || null,
-    sceneDescription: img.sceneDescription || null,
-    order: index,
-    metadata: {
-      width: img.metadata?.width || 0,
-      height: img.metadata?.height || 0,
-      format: img.metadata?.format || "",
-      size: img.metadata?.size || 0,
-      lastModified: img.metadata?.lastModified || 0
+  if (!imageData || imageData.length === 0) {
+    throw new Error("At least one image is required");
+  }
+
+  return withDbErrorHandling(
+    async () => {
+      const imageRecords: InsertDBImage[] = imageData.map((img, index) => ({
+        ...img,
+        projectId,
+        order: img.order ?? index
+      }));
+
+      const savedImages = await db
+        .insert(images)
+        .values(imageRecords)
+        .onConflictDoUpdate({
+          target: images.id,
+          set: {
+            category: sql`excluded.category`,
+            confidence: sql`excluded.confidence`,
+            features: sql`excluded.features`,
+            sceneDescription: sql`excluded.scene_description`,
+            order: sql`excluded.order`,
+            metadata: sql`excluded.metadata`
+          }
+        })
+        .returning();
+
+      return savedImages;
+    },
+    {
+      actionName: "saveImages",
+      context: { projectId, imageCount: imageData.length },
+      errorMessage: "Failed to save images to database. Please try again."
     }
-  }));
-
-  // Debug: Log scene descriptions being saved
-  console.log(
-    "[DB Actions] Saving images with scene descriptions:",
-    imageRecords.map((img) => ({
-      id: img.id,
-      category: img.category,
-      hasSceneDesc: !!img.sceneDescription,
-      sceneDescLength: img.sceneDescription?.length || 0
-    }))
   );
-
-  // Upsert images into database (insert or update on conflict)
-  const savedImages = await db
-    .insert(images)
-    .values(imageRecords)
-    .onConflictDoUpdate({
-      target: images.id,
-      set: {
-        category: sql`excluded.category`,
-        confidence: sql`excluded.confidence`,
-        features: sql`excluded.features`,
-        sceneDescription: sql`excluded.scene_description`,
-        order: sql`excluded.order`,
-        metadata: sql`excluded.metadata`
-      }
-    })
-    .returning();
-
-  return savedImages as DBImage[];
 }
 
 /**
@@ -86,14 +69,24 @@ export async function saveImages(
  * @throws Error if user is not authenticated
  */
 export async function getProjectImages(projectId: string): Promise<DBImage[]> {
-  await getUser();
+  if (!projectId || projectId.trim() === "") {
+    throw new Error("Project ID is required");
+  }
 
-  const projectImages = await db
-    .select()
-    .from(images)
-    .where(eq(images.projectId, projectId));
-
-  return projectImages as DBImage[];
+  return withDbErrorHandling(
+    async () => {
+      const projectImages = await db
+        .select()
+        .from(images)
+        .where(eq(images.projectId, projectId));
+      return projectImages as DBImage[];
+    },
+    {
+      actionName: "getProjectImages",
+      context: { projectId },
+      errorMessage: "Failed to fetch images from database. Please try again."
+    }
+  );
 }
 
 /**
@@ -105,7 +98,18 @@ export async function getProjectImages(projectId: string): Promise<DBImage[]> {
  * @throws Error if user is not authenticated or deletion fails
  */
 export async function deleteProjectImages(projectId: string): Promise<void> {
-  await getUser();
+  if (!projectId || projectId.trim() === "") {
+    throw new Error("Project ID is required");
+  }
 
-  await db.delete(images).where(eq(images.projectId, projectId));
+  return withDbErrorHandling(
+    async () => {
+      await db.delete(images).where(eq(images.projectId, projectId));
+    },
+    {
+      actionName: "deleteProjectImages",
+      context: { projectId },
+      errorMessage: "Failed to delete images from database. Please try again."
+    }
+  );
 }

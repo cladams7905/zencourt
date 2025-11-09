@@ -12,16 +12,16 @@ import { updateProject } from "../../../server/actions/db/projects";
 import { saveImages } from "../../../server/actions/db/images";
 import type {
   ProcessedImage,
-  ProcessingProgress,
-  SerializableImageData
+  ProcessingProgress
 } from "../../../types/images";
 import type { CategorizedGroup } from "../../../types/roomCategory";
-import type { Project } from "../../../types/schema";
+import type { InsertDBImage } from "@shared/types/models/db.image";
+import type { DBProject } from "@shared/types/models/db.project";
 
 interface CategorizeStageProps {
   images: ProcessedImage[];
   setImages: React.Dispatch<React.SetStateAction<ProcessedImage[]>>;
-  currentProject: Project | null;
+  currentProject: DBProject | null;
   categorizedGroups: CategorizedGroup[];
   setCategorizedGroups: React.Dispatch<
     React.SetStateAction<CategorizedGroup[]>
@@ -55,12 +55,12 @@ export function CategorizeStage({
   // Check if we need to process images on mount
   const alreadyAnalyzed = images.filter(
     (img) =>
-      img.classification &&
+      img.category &&
       (img.status === "uploaded" || img.status === "analyzed")
   );
   const needsAnalysis = images.filter(
     (img) =>
-      !img.classification &&
+      !img.category &&
       (img.status === "uploaded" || img.status === "analyzed") &&
       !img.error
   );
@@ -156,29 +156,33 @@ export function CategorizeStage({
 
       // Save images to database
       try {
-        const serializableImages: SerializableImageData[] = finalImages
-          .filter((img) => img.uploadUrl && img.classification)
-          .map((img) => ({
+        const imagesToSave: InsertDBImage[] = finalImages
+          .filter((img) => img.url && img.category)
+          .map((img, index) => ({
             id: img.id,
-            filename: img.file.name,
-            uploadUrl: img.uploadUrl!,
-            classification: img.classification!,
-            sceneDescription: img.sceneDescription,
-            metadata: img.metadata || undefined
+            projectId: currentProject.id,
+            filename: img.filename || img.file.name,
+            url: img.url!,
+            category: img.category!,
+            confidence: img.confidence ?? null,
+            features: img.features ?? null,
+            sceneDescription: img.sceneDescription ?? null,
+            order: img.order ?? index,
+            metadata: img.metadata ?? null
           }));
 
         // Debug: Log scene descriptions before saving
         console.log(
           "[CategorizeStage] Images with scene descriptions:",
-          serializableImages.map((img) => ({
+          imagesToSave.map((img) => ({
             id: img.id,
             hasSceneDesc: !!img.sceneDescription,
             sceneDescLength: img.sceneDescription?.length || 0
           }))
         );
 
-        if (serializableImages.length > 0) {
-          await saveImages(currentProject.id, serializableImages);
+        if (imagesToSave.length > 0) {
+          await saveImages(currentProject.id, imagesToSave);
         }
       } catch (error) {
         console.error("Error saving images to database:", error);
@@ -251,13 +255,10 @@ export function CategorizeStage({
 
     const movedImage = fromGroup.images[imageIndex];
 
-    // Update the image's classification to match new category
+    // Update the image's category to match new group
     const updatedImage: ProcessedImage = {
       ...movedImage,
-      classification: {
-        ...movedImage.classification!,
-        category: toGroup.category
-      }
+      category: toGroup.category
     };
 
     // Create new groups array with updated images
@@ -275,7 +276,7 @@ export function CategorizeStage({
       images: [...toGroup.images, updatedImage],
       avgConfidence:
         [...toGroup.images, updatedImage].reduce(
-          (sum, img) => sum + (img.classification?.confidence || 0),
+          (sum, img) => sum + (img.confidence || 0),
           0
         ) /
         (toGroup.images.length + 1)

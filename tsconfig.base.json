@@ -24,7 +24,8 @@
     "paths": {
       "@db/*": ["packages/db/*"],
       "@shared/*": ["packages/shared/*"],
-      "@apps/*": ["apps/*"]
+      "@web/*": ["apps/web/*"],
+      "@video-server/*": ["apps/video-server/*"]
     }
   },
   "exclude": ["node_modules", "dist"]

@@ -17,11 +17,41 @@ import { generateSceneDescription } from "../actions/api/ai";
 import type {
   ProcessedImage,
   ProcessingPhase,
-  ProgressCallback,
-  ProcessingResult,
-  CategorizedImages,
-  ImageMetadata
+  ProcessingProgress
 } from "../../types/images";
+import { ImageMetadata } from "@shared/types/models";
+
+/**
+ * Images grouped by category
+ */
+interface CategorizedImages {
+  [category: string]: ProcessedImage[];
+}
+
+/**
+ * Progress callback function type
+ */
+type ProgressCallback = (progress: ProcessingProgress) => void;
+
+/**
+ * Final processing result
+ */
+interface ProcessingResult {
+  /** All processed images */
+  images: ProcessedImage[];
+  /** Processing statistics */
+  stats: {
+    total: number;
+    uploaded: number;
+    analyzed: number;
+    failed: number;
+    successRate: number;
+    avgConfidence: number;
+    totalDuration: number;
+  };
+  /** Categorized images by room type */
+  categorized: CategorizedImages;
+}
 
 // ============================================================================
 // Error Classes
