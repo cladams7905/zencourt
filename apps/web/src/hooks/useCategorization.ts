@@ -14,14 +14,12 @@ interface CategorizationOptions {
   lowConfidenceThreshold?: number;
 }
 
-export interface CategorizationResult {
+interface CategorizationResult {
   groups: CategorizedGroup[];
   totalImages: number;
   categoryCount: number;
   byCategory: Record<string, ProcessedImage[]>;
 }
-
-const LOG_PREFIX = "[useCategorization]";
 
 export function useCategorization() {
   const categorizeImages = useCallback(
@@ -29,15 +27,8 @@ export function useCategorization() {
       images: ProcessedImage[],
       options: CategorizationOptions = {}
     ): CategorizationResult => {
-      log("Starting categorization", { totalImages: images.length, options });
-
       const groupedByCategory = groupImagesByCategory(images, options);
-      log("Grouped images", {
-        categories: Object.keys(groupedByCategory).length
-      });
-
       const groups = buildCategorizedGroups(groupedByCategory);
-      log("Built categorized groups", { groups: groups.length });
 
       const totalImages = images.filter((img) => img.classification).length;
       const categoryCount = Object.keys(groupedByCategory).length;
@@ -48,12 +39,6 @@ export function useCategorization() {
         categoryCount,
         byCategory: groupedByCategory
       };
-
-      log("Categorization complete", {
-        totalImages,
-        categoryCount,
-        groupCount: groups.length
-      });
 
       return result;
     },
@@ -111,7 +96,6 @@ function buildCategorizedGroups(
     const metadata = ROOM_CATEGORIES[category as RoomCategory];
 
     if (!metadata) {
-      log("Encountered unknown category", { category });
       return;
     }
 
@@ -159,12 +143,4 @@ function buildCategorizedGroups(
   });
 
   return groups;
-}
-
-function log(message: string, data?: Record<string, unknown>) {
-  if (data) {
-    console.log(`${LOG_PREFIX} ${message}`, data);
-  } else {
-    console.log(`${LOG_PREFIX} ${message}`);
-  }
 }
