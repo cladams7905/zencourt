@@ -6,7 +6,7 @@
 
 "use server";
 
-import { db, videos } from "@zencourt/db";
+import { db, videos } from "@/db";
 import { eq, and, isNull } from "drizzle-orm";
 import type {
   CreateVideoParams,

@@ -1,6 +1,6 @@
 import { stackServerApp } from "../../../server/lib/stack/server";
-import { db } from "@zencourt/db";
-import { projects } from "@zencourt/db";
+import { db } from "@/db";
+import { projects } from "@/db";
 import { eq } from "drizzle-orm";
 
 type Project = typeof projects.$inferSelect;

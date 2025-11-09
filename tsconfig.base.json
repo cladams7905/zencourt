@@ -23,7 +23,8 @@
     "baseUrl": ".",
     "paths": {
       "@db/*": ["packages/db/*"],
-      "@shared/*": ["packages/shared/*"]
+      "@shared/*": ["packages/shared/*"],
+      "@apps/*": ["apps/*"]
     }
   },
   "exclude": ["node_modules", "dist"]

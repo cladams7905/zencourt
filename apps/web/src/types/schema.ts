@@ -1,7 +1,7 @@
 /**
  * DB Entity Types
  */
-import { projects, images } from "@zencourt/db";
+import { projects, images } from "@/db";
 
 export type Project = typeof projects.$inferSelect;
 export type NewProject = typeof projects.$inferInsert;

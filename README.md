@@ -30,6 +30,12 @@ npm install
 
 ### Development
 
+Install environment vars locally:
+
+```bash
+npm run env:pull
+```
+
 Run the web app in development mode:
 
 ```bash

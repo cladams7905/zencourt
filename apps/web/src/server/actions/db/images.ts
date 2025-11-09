@@ -1,7 +1,7 @@
 "use server";
 
-import { db } from "@zencourt/db";
-import { images } from "@zencourt/db";
+import { db } from "@/db";
+import { images } from "@/db";
 import { eq, sql } from "drizzle-orm";
 import type { Image, NewImage } from "../../../types/schema";
 import { getUser } from "./users";

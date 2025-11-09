@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "workspaces": [
-    "apps/*"
+    "apps/*",
+    "packages/*"
   ],
   "scripts": {
     "dev": "npm run dev --workspace=@zencourt/web",
@@ -13,6 +14,7 @@
     "build:web": "npm run build --workspace=@zencourt/web",
     "build:video": "npm run build --workspace=@zencourt/video-server",
     "lint": "npm run lint --workspaces --if-present",
+    "env:pull": "cd apps/web && vercel env pull ../../.env.local",
     "db:generate": "npm run db:generate --workspace=@zencourt/db",
     "db:migrate": "npm run db:migrate --workspace=@zencourt/db",
     "db:push": "npm run db:push --workspace=@zencourt/db",
@@ -20,6 +22,7 @@
   },
   "devDependencies": {
     "@types/node": "^20",
+    "dotenv-cli": "^11.0.0",
     "typescript": "^5"
   },
   "engines": {

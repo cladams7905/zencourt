@@ -1,7 +1,7 @@
 "use server";
 
-import { db } from "@zencourt/db";
-import { projects } from "@zencourt/db";
+import { db } from "@/db";
+import { projects } from "@/db";
 import { eq, and, like, desc } from "drizzle-orm";
 import type { Project } from "../../../types/schema";
 import { getUser } from "./users";

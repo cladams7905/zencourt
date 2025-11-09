@@ -5,10 +5,10 @@
   "main": "./index.ts",
   "types": "./index.ts",
   "scripts": {
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
-    "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio"
+    "db:generate": "dotenv -e ../../.env.local -- drizzle-kit generate --config=drizzle/drizzle.config.ts",
+    "db:migrate": "dotenv -e ../../.env.local -- drizzle-kit migrate --config=drizzle/drizzle.config.ts",
+    "db:push": "dotenv -e ../../.env.local -- drizzle-kit push --config=drizzle/drizzle.config.ts",
+    "db:studio": "dotenv -e ../../.env.local -- drizzle-kit studio --config=drizzle/drizzle.config.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",

@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
         console.log("[FAL Webhook] ✓ Downloaded video, size:", videoBlob.size);
 
         // Get project info to find userId
-        const { db, projects } = await import("@zencourt/db");
+        const { db, projects } = await import("@/db");
         const { eq } = await import("drizzle-orm");
 
         const projectResult = await db

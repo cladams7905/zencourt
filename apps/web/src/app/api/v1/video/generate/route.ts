@@ -7,8 +7,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { nanoid } from "nanoid";
-import { db } from "@zencourt/db";
-import { projects, videos } from "@zencourt/db";
+import { db } from "@/db";
+import { projects, videos } from "@/db";
 import { eq, and } from "drizzle-orm";
 import {
   ApiError,
