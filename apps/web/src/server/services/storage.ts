@@ -6,7 +6,7 @@
  */
 
 import { UploadResult } from "@/types/images";
-import type { VideoStorageConfig } from "@/types/video-generation";
+import type { VideoStorageConfig } from "@shared/types/interfaces/common";
 import {
   getProjectFolder,
   getRoomVideoFolder,

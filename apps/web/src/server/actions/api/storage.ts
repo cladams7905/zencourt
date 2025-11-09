@@ -17,7 +17,7 @@ import {
   getProjectImagePath,
   getGenericUploadPath,
   extractS3KeyFromUrl
-} from "../../lib/storage-paths";
+} from "@shared/utils/storage-paths";
 
 // Validate required environment variables
 const requiredEnvVars = {

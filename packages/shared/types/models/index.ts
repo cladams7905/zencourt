@@ -5,3 +5,10 @@ export type {
   ProjectStatus,
   ProjectMetadata
 } from "./db.project";
+export type {
+  DBVideo,
+  InsertDBVideo,
+  VideoStatus,
+  DBVideoJob,
+  InsertDBVideoJob
+} from "./db.video";

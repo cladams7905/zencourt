@@ -1,96 +1,51 @@
-/**
- * Video Database Actions
- *
- * CRUD operations for managing video records
- */
-
 "use server";
 
-import { db, videos } from "@/db";
-import { eq, and, isNull } from "drizzle-orm";
+import { eq, and, isNull, isNotNull } from "drizzle-orm";
 import type {
-  CreateVideoParams,
-  UpdateVideoParams,
-  Video,
+  InsertDBVideo,
+  DBVideo as Video,
   VideoStatus
-} from "../../../types/video-generation";
-
-// ============================================================================
-// Create Operations
-// ============================================================================
+} from "@shared/types/models";
+import { db, videos } from "@db/client";
+import { withDbErrorHandling } from "../_utils";
+import { getUser } from "./users";
 
 /**
  * Create a new video record
  */
-export async function createVideoRecord(
-  params: CreateVideoParams
-): Promise<Video> {
-  try {
-    const videoId = `video-${params.projectId}-${Date.now()}-${Math.random()
-      .toString(36)
-      .substring(7)}`;
-
-    const [video] = await db
-      .insert(videos)
-      .values({
-        id: videoId,
-        projectId: params.projectId,
-        roomId: params.roomId ?? null,
-        roomName: params.roomName ?? null,
-        videoUrl: params.videoUrl,
-        duration: params.duration,
-        status: params.status,
-        generationSettings: params.generationSettings ?? null,
-        errorMessage: null,
-        thumbnailUrl: null
-      })
-      .returning();
-
-    if (!video) {
-      throw new Error("Failed to create video record");
-    }
-
-    console.log(`Created video record: ${videoId}`);
-    return video as Video;
-  } catch (error) {
-    console.error("Error creating video record:", error);
-    throw new Error("Failed to create video record");
+export async function createVideoRecord(params: InsertDBVideo): Promise<Video> {
+  if (!params.projectId) {
+    throw new Error("Project ID is required");
   }
+
+  const [video] = await createVideoRecords([params]);
+  return video;
 }
 
 /**
  * Create multiple video records (for batch room processing)
  */
 export async function createVideoRecords(
-  params: CreateVideoParams[]
+  params: InsertDBVideo[]
 ): Promise<Video[]> {
-  try {
-    const videoRecords = params.map((param) => ({
-      id: `video-${param.projectId}-${Date.now()}-${Math.random()
-        .toString(36)
-        .substring(7)}`,
-      projectId: param.projectId,
-      roomId: param.roomId ?? null,
-      roomName: param.roomName ?? null,
-      videoUrl: param.videoUrl,
-      duration: param.duration,
-      status: param.status,
-      generationSettings: param.generationSettings ?? null,
-      errorMessage: null,
-      thumbnailUrl: null
-    }));
-
-    const createdVideos = await db
-      .insert(videos)
-      .values(videoRecords)
-      .returning();
-
-    console.log(`Created ${createdVideos.length} video records`);
-    return createdVideos as Video[];
-  } catch (error) {
-    console.error("Error creating video records:", error);
-    throw new Error("Failed to create video records");
+  if (!params || params.length === 0) {
+    throw new Error("At least one video record is required");
   }
+
+  return withDbErrorHandling(
+    async () => {
+      await getUser();
+
+      const createdVideos = await db.insert(videos).values(params).returning();
+
+      return createdVideos as Video[];
+    },
+    {
+      actionName: "createVideoRecords",
+      context: { count: params.length },
+      errorMessage: "Failed to create video records. Please try again."
+    }
+  );
 }
 
 // ============================================================================
@@ -101,18 +56,28 @@ export async function createVideoRecords(
  * Get all videos for a project
  */
 export async function getVideosByProject(projectId: string): Promise<Video[]> {
-  try {
-    const projectVideos = await db
-      .select()
-      .from(videos)
-      .where(eq(videos.projectId, projectId))
-      .orderBy(videos.createdAt);
-
-    return projectVideos as Video[];
-  } catch (error) {
-    console.error("Error getting videos by project:", error);
-    throw new Error("Failed to get videos by project");
+  if (!projectId) {
+    throw new Error("Project ID is required");
   }
+
+  return withDbErrorHandling(
+    async () => {
+      await getUser();
+
+      const projectVideos = await db
+        .select()
+        .from(videos)
+        .where(eq(videos.projectId, projectId))
+        .orderBy(videos.createdAt);
+
+      return projectVideos as Video[];
+    },
+    {
+      actionName: "getVideosByProject",
+      context: { projectId },
+      errorMessage: "Failed to get videos. Please try again."
+    }
+  );
 }
 
 /**
@@ -122,18 +87,28 @@ export async function getVideoByRoom(
   projectId: string,
   roomId: string
 ): Promise<Video | null> {
-  try {
-    const [video] = await db
-      .select()
-      .from(videos)
-      .where(and(eq(videos.projectId, projectId), eq(videos.roomId, roomId)))
-      .limit(1);
-
-    return (video as Video) || null;
-  } catch (error) {
-    console.error("Error getting video by room:", error);
-    throw new Error("Failed to get video by room");
+  if (!projectId || !roomId) {
+    throw new Error("Project ID and Room ID are required");
   }
+
+  return withDbErrorHandling(
+    async () => {
+      await getUser();
+
+      const [video] = await db
+        .select()
+        .from(videos)
+        .where(and(eq(videos.projectId, projectId), eq(videos.roomId, roomId)))
+        .limit(1);
+
+      return (video as Video) || null;
+    },
+    {
+      actionName: "getVideoByRoom",
+      context: { projectId, roomId },
+      errorMessage: "Failed to get video. Please try again."
+    }
+  );
 }
 
 /**
@@ -142,79 +117,110 @@ export async function getVideoByRoom(
 export async function getVideoByFalRequestId(
   falRequestId: string
 ): Promise<Video | null> {
-  try {
-    const [video] = await db
-      .select()
-      .from(videos)
-      .where(eq(videos.falRequestId, falRequestId))
-      .limit(1);
-
-    return (video as Video) || null;
-  } catch (error) {
-    console.error("Error getting video by fal request ID:", error);
-    throw new Error("Failed to get video by fal request ID");
+  if (!falRequestId) {
+    throw new Error("Fal request ID is required");
   }
+
+  return withDbErrorHandling(
+    async () => {
+      const [video] = await db
+        .select()
+        .from(videos)
+        .where(eq(videos.falRequestId, falRequestId))
+        .limit(1);
+
+      return (video as Video) || null;
+    },
+    {
+      actionName: "getVideoByFalRequestId",
+      context: { falRequestId },
+      errorMessage: "Failed to get video by request ID. Please try again."
+    }
+  );
 }
 
 /**
  * Get the final combined video for a project (roomId is NULL)
  */
 export async function getFinalVideo(projectId: string): Promise<Video | null> {
-  try {
-    const [video] = await db
-      .select()
-      .from(videos)
-      .where(and(eq(videos.projectId, projectId), isNull(videos.roomId)))
-      .limit(1);
-
-    return (video as Video) || null;
-  } catch (error) {
-    console.error("Error getting final video:", error);
-    throw new Error("Failed to get final video");
+  if (!projectId) {
+    throw new Error("Project ID is required");
   }
+
+  return withDbErrorHandling(
+    async () => {
+      await getUser();
+
+      const [video] = await db
+        .select()
+        .from(videos)
+        .where(and(eq(videos.projectId, projectId), isNull(videos.roomId)))
+        .limit(1);
+
+      return (video as Video) || null;
+    },
+    {
+      actionName: "getFinalVideo",
+      context: { projectId },
+      errorMessage: "Failed to get final video. Please try again."
+    }
+  );
 }
 
 /**
  * Get a specific video by ID
  */
 export async function getVideoById(videoId: string): Promise<Video | null> {
-  try {
-    const [video] = await db
-      .select()
-      .from(videos)
-      .where(eq(videos.id, videoId))
-      .limit(1);
-
-    return (video as Video) || null;
-  } catch (error) {
-    console.error("Error getting video by ID:", error);
-    throw new Error("Failed to get video by ID");
+  if (!videoId) {
+    throw new Error("Video ID is required");
   }
+
+  return withDbErrorHandling(
+    async () => {
+      await getUser();
+
+      const [video] = await db
+        .select()
+        .from(videos)
+        .where(eq(videos.id, videoId))
+        .limit(1);
+
+      return (video as Video) || null;
+    },
+    {
+      actionName: "getVideoById",
+      context: { videoId },
+      errorMessage: "Failed to get video. Please try again."
+    }
+  );
 }
 
 /**
  * Get room videos only (exclude final video)
  */
 export async function getRoomVideos(projectId: string): Promise<Video[]> {
-  try {
-    const roomVideos = await db
-      .select()
-      .from(videos)
-      .where(
-        and(
-          eq(videos.projectId, projectId),
-          // Only get videos where roomId is NOT NULL
-          eq(videos.roomId, videos.roomId)
-        )
-      )
-      .orderBy(videos.createdAt);
-
-    // Filter out null roomIds in application layer for type safety
-    return roomVideos.filter((v) => v.roomId !== null) as Video[];
-  } catch (error) {
-    console.error("Error getting room videos:", error);
-    throw new Error("Failed to get room videos");
+  if (!projectId) {
+    throw new Error("Project ID is required");
   }
+
+  return withDbErrorHandling(
+    async () => {
+      await getUser();
+
+      const roomVideos = await db
+        .select()
+        .from(videos)
+        .where(and(eq(videos.projectId, projectId), isNotNull(videos.roomId)))
+        .orderBy(videos.createdAt);
+
+      return roomVideos as Video[];
+    },
+    {
+      actionName: "getRoomVideos",
+      context: { projectId },
+      errorMessage: "Failed to get room videos. Please try again."
+    }
+  );
 }
 
 /**
@@ -224,18 +230,28 @@ export async function getVideosByStatus(
   projectId: string,
   status: VideoStatus
 ): Promise<Video[]> {
-  try {
-    const statusVideos = await db
-      .select()
-      .from(videos)
-      .where(and(eq(videos.projectId, projectId), eq(videos.status, status)))
-      .orderBy(videos.createdAt);
-
-    return statusVideos as Video[];
-  } catch (error) {
-    console.error("Error getting videos by status:", error);
-    throw new Error("Failed to get videos by status");
+  if (!projectId) {
+    throw new Error("Project ID is required");
   }
+
+  return withDbErrorHandling(
+    async () => {
+      await getUser();
+
+      const statusVideos = await db
+        .select()
+        .from(videos)
+        .where(and(eq(videos.projectId, projectId), eq(videos.status, status)))
+        .orderBy(videos.createdAt);
+
+      return statusVideos as Video[];
+    },
+    {
+      actionName: "getVideosByStatus",
+      context: { projectId, status },
+      errorMessage: "Failed to get videos by status. Please try again."
+    }
+  );
 }
 
 // ============================================================================
@@ -247,135 +263,30 @@ export async function getVideosByStatus(
  */
 export async function updateVideoRecord(
   videoId: string,
-  updates: UpdateVideoParams
+  updates: InsertDBVideo
 ): Promise<void> {
-  try {
-    await db
-      .update(videos)
-      .set({
-        ...updates,
-        updatedAt: new Date()
-      })
-      .where(eq(videos.id, videoId));
-
-    console.log(`Updated video record: ${videoId}`);
-  } catch (error) {
-    console.error("Error updating video record:", error);
-    throw new Error("Failed to update video record");
+  if (!videoId) {
+    throw new Error("Video ID is required");
   }
-}
 
-/**
- * Update video status
- */
-export async function updateVideoStatus(
-  videoId: string,
-  status: VideoStatus,
-  errorMessage?: string
-): Promise<void> {
-  try {
-    await db
-      .update(videos)
-      .set({
-        status,
-        errorMessage: errorMessage ?? null,
-        updatedAt: new Date()
-      })
-      .where(eq(videos.id, videoId));
+  return withDbErrorHandling(
+    async () => {
+      await getUser();
 
-    console.log(`Updated video status: ${videoId} -> ${status}`);
-  } catch (error) {
-    console.error("Error updating video status:", error);
-    throw new Error("Failed to update video status");
-  }
-}
-
-/**
- * Update video with fal.ai request ID
- */
-export async function updateVideoFalRequestId(
-  videoId: string,
-  falRequestId: string
-): Promise<void> {
-  try {
-    await db
-      .update(videos)
-      .set({
-        falRequestId,
-        updatedAt: new Date()
-      })
-      .where(eq(videos.id, videoId));
-
-    console.log(
-      `Updated video ${videoId} with fal request ID: ${falRequestId}`
-    );
-  } catch (error) {
-    console.error("Error updating fal request ID:", error);
-    throw new Error("Failed to update fal request ID");
-  }
-}
-
-/**
- * Mark video as completed with URL
- */
-export async function markVideoCompleted(
-  videoId: string,
-  videoUrl: string,
-  thumbnailUrl?: string,
-  duration?: number
-): Promise<void> {
-  try {
-    const updateData: {
-      status: string;
-      videoUrl: string;
-      thumbnailUrl: string | null;
-      errorMessage: string | null;
-      updatedAt: Date;
-      duration?: number;
-    } = {
-      status: "completed",
-      videoUrl,
-      thumbnailUrl: thumbnailUrl ?? null,
-      errorMessage: null,
-      updatedAt: new Date()
-    };
-
-    // Only update duration if provided
-    if (duration !== undefined) {
-      updateData.duration = Math.round(duration);
+      await db
+        .update(videos)
+        .set({
+          ...updates,
+          updatedAt: new Date()
+        })
+        .where(eq(videos.id, videoId));
+    },
+    {
+      actionName: "updateVideoRecord",
+      context: { videoId },
+      errorMessage: "Failed to update video record. Please try again."
     }
-
-    await db.update(videos).set(updateData).where(eq(videos.id, videoId));
-
-    console.log(`Marked video as completed: ${videoId}`);
-  } catch (error) {
-    console.error("Error marking video as completed:", error);
-    throw new Error("Failed to mark video as completed");
-  }
-}
-
-/**
- * Mark video as failed with error
- */
-export async function markVideoFailed(
-  videoId: string,
-  errorMessage: string
-): Promise<void> {
-  try {
-    await db
-      .update(videos)
-      .set({
-        status: "failed",
-        errorMessage,
-        updatedAt: new Date()
-      })
-      .where(eq(videos.id, videoId));
-
-    console.log(`Marked video as failed: ${videoId}`);
-  } catch (error) {
-    console.error("Error marking video as failed:", error);
-    throw new Error("Failed to mark video as failed");
-  }
+  );
 }
 
 // ============================================================================
@@ -386,28 +297,44 @@ export async function markVideoFailed(
  * Delete all videos for a project (cascade on project delete handles this automatically)
  */
 export async function deleteVideos(projectId: string): Promise<void> {
-  try {
-    await db.delete(videos).where(eq(videos.projectId, projectId));
-
-    console.log(`Deleted all videos for project: ${projectId}`);
-  } catch (error) {
-    console.error("Error deleting videos:", error);
-    throw new Error("Failed to delete videos");
+  if (!projectId) {
+    throw new Error("Project ID is required");
   }
+
+  return withDbErrorHandling(
+    async () => {
+      await getUser();
+
+      await db.delete(videos).where(eq(videos.projectId, projectId));
+    },
+    {
+      actionName: "deleteVideos",
+      context: { projectId },
+      errorMessage: "Failed to delete videos. Please try again."
+    }
+  );
 }
 
 /**
  * Delete a specific video by ID
  */
 export async function deleteVideo(videoId: string): Promise<void> {
-  try {
-    await db.delete(videos).where(eq(videos.id, videoId));
-
-    console.log(`Deleted video: ${videoId}`);
-  } catch (error) {
-    console.error("Error deleting video:", error);
-    throw new Error("Failed to delete video");
+  if (!videoId) {
+    throw new Error("Video ID is required");
   }
+
+  return withDbErrorHandling(
+    async () => {
+      await getUser();
+
+      await db.delete(videos).where(eq(videos.id, videoId));
+    },
+    {
+      actionName: "deleteVideo",
+      context: { videoId },
+      errorMessage: "Failed to delete video. Please try again."
+    }
+  );
 }
 
 // ============================================================================
@@ -424,22 +351,36 @@ export async function getVideoGenerationStats(projectId: string): Promise<{
   processing: number;
   pending: number;
 }> {
-  try {
-    const projectVideos = await getVideosByProject(projectId);
-
-    const stats = {
-      total: projectVideos.length,
-      completed: projectVideos.filter((v) => v.status === "completed").length,
-      failed: projectVideos.filter((v) => v.status === "failed").length,
-      processing: projectVideos.filter((v) => v.status === "processing").length,
-      pending: projectVideos.filter((v) => v.status === "pending").length
-    };
-
-    return stats;
-  } catch (error) {
-    console.error("Error getting video generation stats:", error);
-    throw new Error("Failed to get video generation stats");
+  if (!projectId) {
+    throw new Error("Project ID is required");
   }
+
+  return withDbErrorHandling(
+    async () => {
+      await getUser();
+
+      const projectVideos = await db
+        .select()
+        .from(videos)
+        .where(eq(videos.projectId, projectId));
+
+      const stats = {
+        total: projectVideos.length,
+        completed: projectVideos.filter((v) => v.status === "completed").length,
+        failed: projectVideos.filter((v) => v.status === "failed").length,
+        processing: projectVideos.filter((v) => v.status === "processing")
+          .length,
+        pending: projectVideos.filter((v) => v.status === "pending").length
+      };
+
+      return stats;
+    },
+    {
+      actionName: "getVideoGenerationStats",
+      context: { projectId },
+      errorMessage: "Failed to get video statistics. Please try again."
+    }
+  );
 }
 
 /**
@@ -448,16 +389,29 @@ export async function getVideoGenerationStats(projectId: string): Promise<{
 export async function areAllRoomVideosCompleted(
   projectId: string
 ): Promise<boolean> {
-  try {
-    const roomVideos = await getRoomVideos(projectId);
-
-    if (roomVideos.length === 0) {
-      return false;
-    }
-
-    return roomVideos.every((v) => v.status === "completed");
-  } catch (error) {
-    console.error("Error checking room videos completion:", error);
-    return false;
+  if (!projectId) {
+    throw new Error("Project ID is required");
   }
+
+  return withDbErrorHandling(
+    async () => {
+      await getUser();
+
+      const roomVideos = await db
+        .select()
+        .from(videos)
+        .where(and(eq(videos.projectId, projectId), isNotNull(videos.roomId)));
+
+      if (roomVideos.length === 0) {
+        return false;
+      }
+
+      return roomVideos.every((v) => v.status === "completed");
+    },
+    {
+      actionName: "areAllRoomVideosCompleted",
+      context: { projectId },
+      errorMessage: "Failed to check video completion status. Please try again."
+    }
+  );
 }

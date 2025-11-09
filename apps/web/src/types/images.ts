@@ -10,7 +10,7 @@ import { DBImage } from "@shared/types/models/db.image";
  * - status: Current processing state
  * - error: Runtime error message if processing failed
  */
-export interface ProcessedImage extends Partial<Omit<DBImage, "uploadedAt">> {
+export type ProcessedImage = Partial<Omit<DBImage, "uploadedAt">> & {
   /** Unique identifier - required */
   id: string;
   /** Original file object - needed for upload and processing */
@@ -21,7 +21,7 @@ export interface ProcessedImage extends Partial<Omit<DBImage, "uploadedAt">> {
   status: ImageProcessingStatus;
   /** Error message if processing failed */
   error?: string;
-}
+};
 
 /**
  * Processing status for images throughout the workflow
@@ -37,7 +37,7 @@ type ImageProcessingStatus =
 /**
  * Progress update during image processing
  */
-export interface ProcessingProgress {
+export type ProcessingProgress = {
   /** Current processing phase */
   phase: ProcessingPhase;
   /** Number of completed items in current phase */
@@ -48,7 +48,7 @@ export interface ProcessingProgress {
   overallProgress: number;
   /** Current image being processed (optional) */
   currentImage?: ProcessedImage;
-}
+};
 
 /**
  * Processing phase for tracking overall progress

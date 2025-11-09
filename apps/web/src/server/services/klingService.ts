@@ -9,11 +9,34 @@
 import { fal } from "@fal-ai/client";
 import type {
   KlingApiRequest,
-  KlingApiResponse,
-  RoomVideoRequest,
-  VideoGenerationError,
-  PromptBuilderContext
-} from "../../types/video-generation";
+  KlingApiResponse
+} from "@shared/types/api/kling";
+import { VideoGenerationError } from "@shared/types/errors/video";
+
+// ============================================================================
+// Interfaces
+// ============================================================================
+
+interface RoomVideoRequest {
+  roomId: string;
+  roomName: string;
+  roomType: string;
+  images: string[]; // Image URLs
+  sceneDescriptions?: string[]; // Detailed scene descriptions from OpenAI vision for each image
+  settings: {
+    duration: "5" | "10";
+    aspectRatio: "16:9" | "9:16" | "1:1";
+    aiDirections: string;
+  };
+}
+
+interface PromptBuilderContext {
+  roomName: string;
+  roomType: string;
+  aiDirections: string;
+  imageCount: number;
+  sceneDescriptions?: string[]; // Detailed descriptions from OpenAI vision for each image
+}
 
 // ============================================================================
 // Configuration

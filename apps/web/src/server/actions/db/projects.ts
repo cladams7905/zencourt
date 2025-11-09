@@ -1,39 +1,40 @@
 "use server";
 
-import { db } from "@/db";
-import { projects } from "@/db";
+import { randomUUID } from "crypto";
 import { eq, and, like, desc } from "drizzle-orm";
-import type { Project } from "../../../types/schema";
 import { getUser } from "./users";
+import { db, projects } from "@db/client";
+import { DBProject, InsertDBProject } from "@shared/types/models";
+import { withDbErrorHandling } from "../_utils";
 
 /**
  * Create a new project
  * Server action that creates a project in the database
  *
- * @returns Promise<Project> - The created project
+ * @returns Promise<DBProject> - The created project
  * @throws Error if user is not authenticated or project creation fails
  */
-export async function createProject(): Promise<Project> {
-  const user = await getUser();
+export async function createProject(): Promise<DBProject> {
+  return withDbErrorHandling(
+    async () => {
+      const user = await getUser();
 
-  // Generate unique project ID
-  const projectId = `${user.id}_${Date.now()}`;
+      const [newProject] = await db
+        .insert(projects)
+        .values({
+          id: randomUUID(),
+          userId: user.id,
+          status: "uploading"
+        })
+        .returning();
 
-  // Insert project into database
-  const [newProject] = await db
-    .insert(projects)
-    .values({
-      id: projectId,
-      userId: user.id,
-      status: "uploading"
-    })
-    .returning();
-
-  if (!newProject) {
-    throw new Error("Failed to create project");
-  }
-
-  return newProject as Project;
+      return newProject;
+    },
+    {
+      actionName: "createProject",
+      errorMessage: "Failed to create project. Please try again."
+    }
+  );
 }
 
 /**
@@ -42,49 +43,69 @@ export async function createProject(): Promise<Project> {
  *
  * @param projectId - The ID of the project to update
  * @param updates - Partial project object with fields to update
- * @returns Promise<Project> - The updated project
+ * @returns Promise<DBProject> - The updated project
  * @throws Error if user is not authenticated or update fails
  */
 export async function updateProject(
   projectId: string,
-  updates: Partial<Omit<Project, "id" | "userId" | "createdAt">>
-): Promise<Project> {
-  await getUser();
-
-  // Update project in database
-  const [updatedProject] = await db
-    .update(projects)
-    .set({
-      ...updates,
-      updatedAt: new Date()
-    })
-    .where(eq(projects.id, projectId))
-    .returning();
-
-  if (!updatedProject) {
-    throw new Error("Failed to update project");
+  updates: Partial<Omit<InsertDBProject, "id" | "userId" | "createdAt">>
+): Promise<DBProject> {
+  if (!projectId || projectId.trim() === "") {
+    throw new Error("Project ID is required");
   }
 
-  return updatedProject as Project;
+  return withDbErrorHandling(
+    async () => {
+      await getUser();
+
+      const [updatedProject] = await db
+        .update(projects)
+        .set({
+          ...updates,
+          updatedAt: new Date()
+        })
+        .where(eq(projects.id, projectId))
+        .returning();
+
+      if (!updatedProject) {
+        throw new Error("Project not found");
+      }
+
+      return updatedProject;
+    },
+    {
+      actionName: "updateProject",
+      context: { projectId },
+      errorMessage: "Failed to update project. Please try again."
+    }
+  );
 }
 
 /**
  * Get all projects for the current user
  * Server action that retrieves all projects belonging to the authenticated user
  *
- * @returns Promise<Project[]> - Array of user's projects
+ * @returns Promise<DBProject[]> - Array of user's projects
  * @throws Error if user is not authenticated
  */
-export async function getUserProjects(): Promise<Project[]> {
-  const user = await getUser();
+export async function getUserProjects(): Promise<DBProject[]> {
+  return withDbErrorHandling(
+    async () => {
+      const user = await getUser();
 
-  const userProjects = await db
-    .select()
-    .from(projects)
-    .where(eq(projects.userId, user.id))
-    .orderBy(desc(projects.createdAt));
+      const userProjects = await db
+        .select()
+        .from(projects)
+        .where(eq(projects.userId, user.id))
+        .orderBy(desc(projects.createdAt));
 
-  return userProjects as Project[];
+      return userProjects;
+    },
+    {
+      actionName: "getUserProjects",
+      errorMessage: "Failed to fetch projects. Please try again."
+    }
+  );
 }
 
 /**
@@ -95,24 +116,34 @@ export async function getUserProjects(): Promise<Project[]> {
  * @throws Error if user is not authenticated
  */
 export async function getNextDraftNumber(): Promise<number> {
-  const user = await getUser();
+  return withDbErrorHandling(
+    async () => {
+      const user = await getUser();
 
-  // Get all projects with titles starting with "Draft "
-  const draftProjects = await db
-    .select()
-    .from(projects)
-    .where(and(eq(projects.userId, user.id), like(projects.title, "Draft %")));
+      // Get all projects with titles starting with "Draft "
+      const draftProjects = await db
+        .select()
+        .from(projects)
+        .where(
+          and(eq(projects.userId, user.id), like(projects.title, "Draft %"))
+        );
 
-  // Extract draft numbers and find the highest
-  const draftNumbers = draftProjects
-    .map((p) => {
-      const match = p.title?.match(/^Draft (\d+)$/);
-      return match ? parseInt(match[1], 10) : 0;
-    })
-    .filter((num) => !isNaN(num));
+      // Extract draft numbers and find the highest
+      const draftNumbers = draftProjects
+        .map((p) => {
+          const match = p.title?.match(/^Draft (\d+)$/);
+          return match ? parseInt(match[1], 10) : 0;
+        })
+        .filter((num) => !isNaN(num));
 
-  const maxDraftNumber =
-    draftNumbers.length > 0 ? Math.max(...draftNumbers) : 0;
+      const maxDraftNumber =
+        draftNumbers.length > 0 ? Math.max(...draftNumbers) : 0;
 
-  return maxDraftNumber + 1;
+      return maxDraftNumber + 1;
+    },
+    {
+      actionName: "getNextDraftNumber",
+      errorMessage: "Failed to get draft number. Please try again."
+    }
+  );
 }

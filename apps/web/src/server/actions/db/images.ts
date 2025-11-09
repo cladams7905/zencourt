@@ -4,6 +4,7 @@ import { eq, sql } from "drizzle-orm";
 import { db, images } from "@db/client";
 import { DBImage, InsertDBImage } from "@shared/types/models";
 import { withDbErrorHandling } from "../_utils";
+import { getUser } from "./users";
 
 /**
  * Save processed images to database
@@ -28,6 +29,8 @@ export async function saveImages(
 
   return withDbErrorHandling(
     async () => {
+      await getUser();
+
       const imageRecords: InsertDBImage[] = imageData.map((img, index) => ({
         ...img,
         projectId,
@@ -75,6 +78,8 @@ export async function getProjectImages(projectId: string): Promise<DBImage[]> {
 
   return withDbErrorHandling(
     async () => {
+      await getUser();
+
       const projectImages = await db
         .select()
         .from(images)
@@ -104,6 +109,7 @@ export async function deleteProjectImages(projectId: string): Promise<void> {
 
   return withDbErrorHandling(
     async () => {
+      await getUser();
       await db.delete(images).where(eq(images.projectId, projectId));
     },
     {

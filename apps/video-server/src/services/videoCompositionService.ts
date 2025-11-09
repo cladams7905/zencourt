@@ -38,33 +38,15 @@ ffmpeg.setFfprobePath(ffprobeBinaryPath);
 // Types
 // ============================================================================
 
-export type LogoPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+import type {
+  LogoPosition,
+  VideoCompositionSettings,
+  ComposedVideoResult,
+  SubtitleData
+} from '@shared/types/interfaces/video-composition';
 
-export interface VideoCompositionSettings {
-  logo?: {
-    s3Url: string; // S3 URL of uploaded logo
-    position: LogoPosition;
-  };
-  subtitles?: {
-    enabled: boolean;
-    text: string;
-    font: string;
-  };
-  transitions: boolean;
-}
-
-export interface ComposedVideoResult {
-  videoUrl: string;
-  thumbnailUrl: string;
-  duration: number;
-  fileSize: number;
-}
-
-interface SubtitleData {
-  startTime: number; // in seconds
-  endTime: number; // in seconds
-  text: string;
-}
+// Re-export for convenience
+export type { LogoPosition, VideoCompositionSettings, ComposedVideoResult, SubtitleData };
 
 // ============================================================================
 // Main Composition Class
