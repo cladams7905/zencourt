@@ -15,30 +15,11 @@ import {
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { authenticatedRole, authUid, crudPolicy } from "drizzle-orm/neon";
-
-// Type definitions for metadata
-export type ImageMetadata = {
-  width: number;
-  height: number;
-  format: string;
-  size: number;
-  lastModified: number;
-};
-
-export type ProjectStatus = "uploading" | "analyzing" | "draft" | "published";
-
-export type ProjectMetadata = {
-  generationJobs?: any[];
-  videoThumbnailUrl?: string;
-  videoResolution?: { width: number; height: number };
-  completedAt?: string;
-  error?: {
-    message: string;
-    type: string;
-    retryable: boolean;
-    failedAt: string;
-  };
-};
+import {
+  ImageMetadata,
+  ProjectMetadata,
+  ProjectStatus
+} from "@shared/types/db";
 
 /**
  * Projects table
