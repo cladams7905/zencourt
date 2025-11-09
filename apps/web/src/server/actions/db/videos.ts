@@ -13,19 +13,18 @@ import { getUser } from "./users";
 /**
  * Create a new video record
  */
-export async function createVideoRecord(params: InsertDBVideo): Promise<Video> {
+export async function createVideo(params: InsertDBVideo): Promise<Video> {
   if (!params.projectId) {
     throw new Error("Project ID is required");
   }
-
-  const [video] = await createVideoRecords([params]);
+  const [video] = await createVideosBatch([params]);
   return video;
 }
 
 /**
  * Create multiple video records (for batch room processing)
  */
-export async function createVideoRecords(
+export async function createVideosBatch(
   params: InsertDBVideo[]
 ): Promise<Video[]> {
   if (!params || params.length === 0) {
@@ -35,9 +34,7 @@ export async function createVideoRecords(
   return withDbErrorHandling(
     async () => {
       await getUser();
-
       const createdVideos = await db.insert(videos).values(params).returning();
-
       return createdVideos as Video[];
     },
     {
@@ -261,7 +258,7 @@ export async function getVideosByStatus(
 /**
  * Update a video record
  */
-export async function updateVideoRecord(
+export async function updateVideo(
   videoId: string,
   updates: InsertDBVideo
 ): Promise<void> {
@@ -414,4 +411,32 @@ export async function areAllRoomVideosCompleted(
       errorMessage: "Failed to check video completion status. Please try again."
     }
   );
+}
+
+/**
+ * Download a video from a URL (e.g., from Kling API response)
+ */
+export async function downloadVideoFromUrl(url: string): Promise<Blob> {
+  try {
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error(`Failed to download video: ${response.statusText}`);
+    }
+
+    const blob = await response.blob();
+
+    if (blob.size === 0) {
+      throw new Error("Downloaded video is empty");
+    }
+
+    return blob;
+  } catch (error) {
+    console.error("Error downloading video:", error);
+    throw new Error(
+      `Failed to download video from URL: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`
+    );
+  }
 }

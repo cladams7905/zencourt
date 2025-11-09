@@ -10,12 +10,9 @@ import { imageProcessorService } from "../../../server/services/imageProcessor";
 import { categorizeAndOrganizeImages } from "../../../server/services/categorization";
 import { updateProject } from "../../../server/actions/db/projects";
 import { saveImages } from "../../../server/actions/db/images";
-import type {
-  ProcessedImage,
-  ProcessingProgress
-} from "../../../types/images";
+import type { ProcessedImage, ProcessingProgress } from "../../../types/images";
 import type { CategorizedGroup } from "../../../types/roomCategory";
-import type { InsertDBImage } from "@shared/types/models/db.image";
+import type { InsertDBImage } from "@shared/types/models/image";
 import type { DBProject } from "@shared/types/models/db.project";
 
 interface CategorizeStageProps {
@@ -55,8 +52,7 @@ export function CategorizeStage({
   // Check if we need to process images on mount
   const alreadyAnalyzed = images.filter(
     (img) =>
-      img.category &&
-      (img.status === "uploaded" || img.status === "analyzed")
+      img.category && (img.status === "uploaded" || img.status === "analyzed")
   );
   const needsAnalysis = images.filter(
     (img) =>

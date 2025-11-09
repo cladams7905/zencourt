@@ -8,7 +8,7 @@
 import {
   generateSceneDescription as generateSceneDescriptionAPI,
   type SceneDescription
-} from "../../services/aiVision";
+} from "../../services/visionService";
 
 /**
  * Generate scene description for an image (server action)

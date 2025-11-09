@@ -11,8 +11,8 @@
  * a unified interface for processing property images.
  */
 
-import { uploadFiles, getProjectFolder } from "./storage";
-import { classifyRoomBatch } from "./aiVision";
+import { uploadFiles, getProjectFolder } from "./s3Service";
+import { classifyRoomBatch } from "./visionService";
 import { generateSceneDescription } from "../actions/api/ai";
 import type {
   ProcessedImage,

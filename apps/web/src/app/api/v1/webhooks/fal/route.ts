@@ -10,7 +10,7 @@ import {
   markVideoFailed,
   getVideoByFalRequestId
 } from "../../../../../server/actions/db/videos";
-import { downloadVideoFromUrl } from "../../../../../server/services/storage";
+import { downloadVideoFromUrl } from "../../../../../server/services/s3Service";
 
 export const runtime = "nodejs";
 export const maxDuration = 300; // 5 minutes for download/upload

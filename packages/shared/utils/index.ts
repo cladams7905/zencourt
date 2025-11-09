@@ -1,2 +1,2 @@
-export { createLogger, createChildLogger } from "./logger";
-export type { LoggerOptions } from "./logger";
+export * from "./logger";
+export * from "./storagePaths";

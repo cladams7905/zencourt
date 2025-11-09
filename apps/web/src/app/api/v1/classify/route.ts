@@ -10,7 +10,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   classifyRoom,
   classifyRoomBatch
-} from "../../../../server/services/aiVision";
+} from "../../../../server/services/visionService";
 
 export const runtime = "nodejs";
 export const maxDuration = 300; // 5 minutes max execution time for batch

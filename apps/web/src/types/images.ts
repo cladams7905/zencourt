@@ -1,4 +1,4 @@
-import { DBImage } from "@shared/types/models/db.image";
+import { DBImage } from "@shared/types/models/image";
 
 /**
  * Image during client-side processing workflow

@@ -10,20 +10,7 @@ import type {
   RoomCategory,
   RoomClassification
 } from "../../types/roomCategory";
-
-/**
- * Error types that can occur during AI vision processing
- */
-export class AIVisionError extends Error {
-  constructor(
-    message: string,
-    public code: "API_ERROR" | "TIMEOUT" | "INVALID_RESPONSE" | "RATE_LIMIT",
-    public details?: unknown
-  ) {
-    super(message);
-    this.name = "AIVisionError";
-  }
-}
+import { AIVisionError } from "@shared/types/errors";
 
 // ============================================================================
 // Configuration

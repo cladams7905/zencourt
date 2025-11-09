@@ -10,7 +10,7 @@ import { imageProcessorService } from "../../../server/services/imageProcessor";
 import {
   uploadFiles,
   getProjectFolder
-} from "../../../server/services/storage";
+} from "../../../server/services/s3Service";
 import { createProject } from "../../../server/actions/db/projects";
 import type { ProcessedImage } from "../../../types/images";
 import type { Project } from "../../../types/schema";

@@ -1,10 +1,30 @@
 /**
+ * Error types that can occur during AI vision processing
+ */
+type AIVisionErrorCode =
+  | "API_ERROR"
+  | "TIMEOUT"
+  | "INVALID_RESPONSE"
+  | "RATE_LIMIT";
+
+export class AIVisionError extends Error {
+  constructor(
+    message: string,
+    public code: AIVisionErrorCode,
+    public details?: unknown
+  ) {
+    super(message);
+    this.name = "AIVisionError";
+  }
+}
+
+/**
  * Video Generation Error Types
  *
  * Error types and codes for video generation operations
  */
 
-export type VideoGenerationErrorCode =
+type VideoGenerationErrorCode =
   | "KLING_API_ERROR"
   | "KLING_RATE_LIMIT"
   | "KLING_TIMEOUT"
