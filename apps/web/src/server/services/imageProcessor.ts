@@ -12,8 +12,8 @@
  */
 
 import { uploadFiles, getProjectFolder } from "./s3Service";
-import { classifyRoomBatch } from "./visionService";
-import { generateSceneDescription } from "../actions/api/ai";
+import visionService from "./visionService";
+import { generateSceneDescription } from "../actions/api/vision";
 import type {
   ProcessedImage,
   ProcessingPhase,
@@ -340,7 +340,7 @@ async function analyzeImages(
   const imageUrls = uploadedImages.map((img) => img.uploadUrl!);
 
   // Classify in batch
-  await classifyRoomBatch(imageUrls, {
+  await visionService.classifyRoomBatch(imageUrls, {
     concurrency,
     onProgress: (completed, total, batchResult) => {
       // Find corresponding image

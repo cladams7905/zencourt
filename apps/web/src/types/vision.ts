@@ -1,8 +1,5 @@
 import { ProcessedImage } from "./images";
 
-/**
- * Supported room categories for property image classification
- */
 export type RoomCategory =
   | "exterior-front"
   | "exterior-backyard"
@@ -17,19 +14,32 @@ export type RoomCategory =
   | "basement"
   | "other";
 
-/**
- * AI classification result for a room/image
- */
 export interface RoomClassification {
-  /** Detected room category */
   category: RoomCategory;
-  /** Confidence score (0-1) */
   confidence: number;
-  /** Brief explanation of the classification decision */
   reasoning?: string;
-  /** Key features detected in the image */
   features?: string[];
 }
+
+export interface SceneDescription {
+  description: string;
+  roomType: string;
+  keyFeatures: string[];
+}
+
+export interface BatchClassificationResult {
+  imageUrl: string;
+  success: boolean;
+  classification: RoomClassification | null;
+  error: string | null;
+  duration: number;
+}
+
+export type BatchProgressCallback = (
+  completed: number,
+  total: number,
+  result: BatchClassificationResult
+) => void;
 
 /**
  * Category metadata for display and organization

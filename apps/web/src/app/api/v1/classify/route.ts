@@ -7,10 +7,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import {
-  classifyRoom,
-  classifyRoomBatch
-} from "../../../../server/services/visionService";
+import visionService from "../../../../server/services/visionService";
 
 export const runtime = "nodejs";
 export const maxDuration = 300; // 5 minutes max execution time for batch
@@ -72,7 +69,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Classify the images in batch
-      const results = await classifyRoomBatch(body.imageUrls, {
+      const results = await visionService.classifyRoomBatch(body.imageUrls, {
         concurrency: body.concurrency || 10,
         timeout: body.timeout || 30000,
         maxRetries: body.maxRetries || 2
@@ -96,10 +93,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Classify the image
-    const classification = await classifyRoom(singleBody.imageUrl, {
-      timeout: singleBody.timeout || 30000,
-      maxRetries: singleBody.maxRetries || 2
-    });
+    const classification = await visionService.classifyRoom(
+      singleBody.imageUrl,
+      {
+        timeout: singleBody.timeout || 30000,
+        maxRetries: singleBody.maxRetries || 2
+      }
+    );
 
     return NextResponse.json({
       success: true,

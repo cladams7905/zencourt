@@ -263,4 +263,6 @@ export class s3Service {
   }
 }
 
-export const s3StorageService = new s3Service();
+const s3StorageService = new s3Service();
+
+export default s3StorageService;

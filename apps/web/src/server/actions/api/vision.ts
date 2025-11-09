@@ -1,14 +1,15 @@
 "use server";
 
 /**
- * Server actions for AI-related operations
+ * Server actions for vision AI-related operations
  * These must run server-side to access API keys securely
  */
 
-import {
-  generateSceneDescription as generateSceneDescriptionAPI,
-  type SceneDescription
-} from "../../services/visionService";
+import visionService from "../../services/visionService";
+import { SceneDescription } from "@web/src/types/vision";
+import { createChildLogger, logger as baseLogger } from "../../lib/logger";
+
+const logger = createChildLogger(baseLogger, { module: "vision-actions" });
 
 /**
  * Generate scene description for an image (server action)
@@ -27,7 +28,8 @@ export async function generateSceneDescription(
   }
 ): Promise<SceneDescription> {
   try {
-    const result = await generateSceneDescriptionAPI(
+    logger.info({ imageUrl, roomType }, "Generating scene description");
+    const result = await visionService.generateSceneDescription(
       imageUrl,
       roomType,
       options || {
@@ -36,9 +38,21 @@ export async function generateSceneDescription(
       }
     );
 
+    logger.info({ imageUrl, roomType }, "Scene description generated");
+
     return result;
   } catch (error) {
-    console.error("[AI Actions] Failed to generate scene description:", error);
+    logger.error(
+      {
+        imageUrl,
+        roomType,
+        error:
+          error instanceof Error
+            ? { name: error.name, message: error.message }
+            : error
+      },
+      "Scene description failed"
+    );
     throw new Error(
       `Failed to generate scene description: ${
         error instanceof Error ? error.message : "Unknown error"
@@ -56,9 +70,10 @@ export async function generateSceneDescription(
 export async function generateSceneDescriptionsBatch(
   images: Array<{ imageUrl: string; roomType: string }>
 ): Promise<Array<SceneDescription | null>> {
+  logger.info({ total: images.length }, "Generating batch scene descriptions");
   const results = await Promise.allSettled(
     images.map(({ imageUrl, roomType }) =>
-      generateSceneDescriptionAPI(imageUrl, roomType, {
+      visionService.generateSceneDescription(imageUrl, roomType, {
         timeout: 30000,
         maxRetries: 2
       })
@@ -69,7 +84,15 @@ export async function generateSceneDescriptionsBatch(
     if (result.status === "fulfilled") {
       return result.value;
     } else {
-      console.error("[AI Actions] Scene description failed:", result.reason);
+      logger.error(
+        {
+          error:
+            result.reason instanceof Error
+              ? { name: result.reason.name, message: result.reason.message }
+              : result.reason
+        },
+        "Scene description in batch failed"
+      );
       return null;
     }
   });
