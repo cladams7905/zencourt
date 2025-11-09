@@ -7,7 +7,7 @@ import { Button } from "../../ui/button";
 import { Progress } from "../../ui/progress";
 import { CategorizedImageGrid } from "../../image-grid/CategorizedImageGrid";
 import { imageProcessorService } from "../../../server/services/imageProcessor";
-import { categorizeAndOrganizeImages } from "../../../server/services/categorization";
+import { useCategorization } from "../../../hooks/useCategorization";
 import { updateProject } from "../../../server/actions/db/projects";
 import { saveImages } from "../../../server/actions/db/images";
 import type { ProcessedImage, ProcessingProgress } from "../../../types/images";
@@ -46,6 +46,7 @@ export function CategorizeStage({
   const [isCategorizing, setIsCategorizing] = useState(false);
   const [processingProgress, setProcessingProgress] =
     useState<ProcessingProgress | null>(null);
+  const { categorizeImages } = useCategorization();
   // Use state instead of ref so it persists across modal close/reopen
   const [hasInitiatedProcessing, setHasInitiatedProcessing] = useState(false);
 
@@ -147,7 +148,7 @@ export function CategorizeStage({
 
       setImages(finalImages);
 
-      const organized = categorizeAndOrganizeImages(finalImages);
+      const organized = categorizeImages(finalImages);
       setCategorizedGroups(organized.groups);
 
       // Save images to database
