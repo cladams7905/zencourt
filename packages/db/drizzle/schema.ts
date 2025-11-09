@@ -16,10 +16,10 @@ import {
 import { sql } from "drizzle-orm";
 import { authenticatedRole, authUid, crudPolicy } from "drizzle-orm/neon";
 import {
-  ImageMetadata,
   ProjectMetadata,
   ProjectStatus
-} from "@shared/types/db";
+} from "@shared/types/models/db.project";
+import { ImageMetadata } from "@shared/types/models/db.image";
 
 /**
  * Projects table

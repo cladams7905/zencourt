@@ -1,11 +1,8 @@
-// Type definitions for metadata
-export type ImageMetadata = {
-  width: number;
-  height: number;
-  format: string;
-  size: number;
-  lastModified: number;
-};
+import { projects } from "@db/client";
+
+export type DBProject = typeof projects.$inferSelect;
+
+export type InsertDBProject = typeof projects.$inferInsert;
 
 export type ProjectStatus = "uploading" | "analyzing" | "draft" | "published";
 

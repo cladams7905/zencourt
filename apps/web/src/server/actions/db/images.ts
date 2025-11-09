@@ -1,11 +1,13 @@
 "use server";
 
-import { db } from "@/db";
-import { images } from "@/db";
 import { eq, sql } from "drizzle-orm";
-import type { Image, NewImage } from "../../../types/schema";
 import { getUser } from "./users";
-import { SerializableImageData } from "../../../types/images";
+import { db, images } from "@db/client";
+import {
+  DBImage,
+  InsertDBImage,
+  SerializableImageData
+} from "@shared/types/models/db.image";
 
 /**
  * Save processed images to database
@@ -13,17 +15,17 @@ import { SerializableImageData } from "../../../types/images";
  *
  * @param projectId - The project ID these images belong to
  * @param imageData - Array of serializable image data
- * @returns Promise<Image[]> - Array of saved images
+ * @returns Promise<DBImage[]> - Array of saved images
  * @throws Error if user is not authenticated or save fails
  */
 export async function saveImages(
   projectId: string,
   imageData: SerializableImageData[]
-): Promise<Image[]> {
+): Promise<DBImage[]> {
   await getUser();
 
   // Map SerializableImageData to database Image format
-  const imageRecords: NewImage[] = imageData.map((img, index) => ({
+  const imageRecords: InsertDBImage[] = imageData.map((img, index) => ({
     id: img.id,
     projectId,
     filename: img.filename,
@@ -72,7 +74,7 @@ export async function saveImages(
     })
     .returning();
 
-  return savedImages as Image[];
+  return savedImages as DBImage[];
 }
 
 /**
@@ -80,10 +82,10 @@ export async function saveImages(
  * Server action that retrieves all images belonging to a project
  *
  * @param projectId - The project ID to get images for
- * @returns Promise<Image[]> - Array of images
+ * @returns Promise<DBImage[]> - Array of images
  * @throws Error if user is not authenticated
  */
-export async function getProjectImages(projectId: string): Promise<Image[]> {
+export async function getProjectImages(projectId: string): Promise<DBImage[]> {
   await getUser();
 
   const projectImages = await db
@@ -91,7 +93,7 @@ export async function getProjectImages(projectId: string): Promise<Image[]> {
     .from(images)
     .where(eq(images.projectId, projectId));
 
-  return projectImages as Image[];
+  return projectImages as DBImage[];
 }
 
 /**

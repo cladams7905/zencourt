@@ -12,6 +12,10 @@
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src/**/*"],
+  "include": [
+    "src/**/*",
+    "../../packages/shared/**/*.ts",
+    "../../packages/db/**/*.ts"
+  ],
   "exclude": ["node_modules", "dist"]
 }

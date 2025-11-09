@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // Shared package specific overrides
+    "module": "commonjs",
+    "outDir": "./dist"
+  },
+  "include": ["**/*.ts", "../db/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}

@@ -1,5 +1,5 @@
-import { Image } from "./schema";
 import { RoomCategory, RoomClassification } from "./roomCategory";
+import { DBImage, ImageMetadata } from "@shared/types/models/db.image";
 
 /**
  * Processing status for images throughout the workflow
@@ -27,7 +27,7 @@ export type ProcessingPhase =
  * Combines file information, upload state, and AI analysis results
  */
 export interface ProcessedImage
-  extends Partial<Omit<Image, "id" | "project_id" | "uploaded_at">> {
+  extends Partial<Omit<DBImage, "id" | "project_id" | "uploaded_at">> {
   /** Unique identifier */
   id: string;
   /** Original file */
@@ -61,17 +61,6 @@ export interface SerializableImageData {
   };
   sceneDescription?: string;
   metadata?: ImageMetadata;
-}
-
-/**
- * Image file metadata extracted from File object
- */
-export interface ImageMetadata {
-  width: number;
-  height: number;
-  format: string;
-  size: number;
-  lastModified: number;
 }
 
 /**
