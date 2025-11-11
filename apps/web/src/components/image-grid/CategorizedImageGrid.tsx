@@ -549,7 +549,7 @@ function ImageThumbnail({
   const isLoading =
     image.status === "analyzing" || image.status === "uploading";
   const isError = image.status === "error";
-  const confidence = image.classification?.confidence || 0;
+  const confidence = image?.confidence || 0;
 
   return (
     <div
@@ -583,7 +583,7 @@ function ImageThumbnail({
         } ${isSelected ? "ring-4 ring-blue-500" : ""}`}
       >
         <Image
-          src={image.uploadUrl || image.previewUrl}
+          src={image.url || image.previewUrl}
           alt={category}
           fill
           sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"

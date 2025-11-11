@@ -30,11 +30,7 @@ import type {
 import { useRef } from "react";
 import { updateProject } from "../../server/actions/db/projects";
 import { DBProject } from "@shared/types/models";
-import {
-  CategorizedGroup,
-  RoomCategory,
-  RoomClassification
-} from "@web/src/types/vision";
+import { CategorizedGroup, RoomCategory } from "@web/src/types/vision";
 
 interface ProjectWorkflowModalProps {
   isOpen: boolean;
@@ -121,7 +117,6 @@ export function ProjectWorkflowModal({
             id: img.id,
             file: new File([], img.filename, { type: "image/*" }), // Mock file for existing images
             previewUrl: img.url,
-            uploadUrl: img.url,
             status: "uploaded" as const,
             url: img.url,
             filename: img.filename,
@@ -129,13 +124,7 @@ export function ProjectWorkflowModal({
             confidence: img.confidence,
             features: img.features,
             order: img.order,
-            metadata: img.metadata,
-            classification: img.category
-              ? ({
-                  category: img.category as RoomCategory,
-                  confidence: img.confidence || 0
-                } as RoomClassification)
-              : undefined
+            metadata: img.metadata
           };
           return processed;
         });
@@ -144,13 +133,13 @@ export function ProjectWorkflowModal({
 
         // If images are already categorized, move to categorize stage
         const categorizedImages = processedImages.filter(
-          (img) => img.classification
+          (img) => img.category
         );
         if (categorizedImages.length > 0) {
           // Group images by category
           const groups = new Map<string, ProcessedImage[]>();
           categorizedImages.forEach((img) => {
-            const category = img.classification!.category;
+            const category = img.category!;
             if (!groups.has(category)) {
               groups.set(category, []);
             }
@@ -162,10 +151,8 @@ export function ProjectWorkflowModal({
             groups.entries()
           ).map(([category, images], index) => {
             const avgConfidence =
-              images.reduce(
-                (sum, img) => sum + (img.classification?.confidence || 0),
-                0
-              ) / images.length;
+              images.reduce((sum, img) => sum + (img?.confidence || 0), 0) /
+              images.length;
 
             return {
               category: category as RoomCategory,
@@ -473,8 +460,8 @@ export function ProjectWorkflowModal({
 
   // Available categories for plan stage
   const availableCategories = images
-    .filter((img) => img.classification?.category)
-    .map((img) => img.classification!.category)
+    .filter((img) => img?.category)
+    .map((img) => img!.category!)
     .filter((category, index, self) => self.indexOf(category) === index);
 
   return (
@@ -515,7 +502,7 @@ export function ProjectWorkflowModal({
                     </h2>
                     <p className="text-sm text-muted-foreground mt-1">
                       {categorizedGroups.length} categories found with{" "}
-                      {images.filter((img) => img.classification).length} images
+                      {images.filter((img) => img.category).length} images
                     </p>
                   </>
                 )}
@@ -653,20 +640,8 @@ export function ProjectWorkflowModal({
           <ImagePreviewModal
             isOpen={!!previewImage}
             onClose={handlePreviewClose}
-            currentImage={{
-              id: previewImage.id,
-              file: previewImage.file,
-              previewUrl: previewImage.previewUrl,
-              uploadUrl: previewImage.uploadUrl,
-              status: "uploaded"
-            }}
-            allImages={images.map((img) => ({
-              id: img.id,
-              file: img.file,
-              previewUrl: img.previewUrl,
-              uploadUrl: img.uploadUrl,
-              status: "uploaded"
-            }))}
+            currentImage={previewImage}
+            allImages={images}
             currentIndex={images.findIndex((img) => img.id === previewImage.id)}
             onNavigate={(index) => {
               const newImage = images[index];
@@ -701,7 +676,7 @@ export function ProjectWorkflowModal({
               }
             }}
             categoryInfo={
-              previewImageFromGrid.classification
+              previewImageFromGrid.category
                 ? {
                     displayLabel:
                       categorizedGroups.find((g) =>

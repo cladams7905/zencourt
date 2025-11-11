@@ -55,12 +55,11 @@ export function CategorizeStage({
   const categorizeImages = useCallback((images: ProcessedImage[]) => {
     const groupedByCategory = images.reduce<Record<string, ProcessedImage[]>>(
       (acc, image) => {
-        const classification = image.classification;
-        if (!classification) {
+        const category = image.category;
+        if (!category) {
           return acc;
         }
 
-        const category = classification.category;
         if (!acc[category]) {
           acc[category] = [];
         }
@@ -81,10 +80,8 @@ export function CategorizeStage({
       }
 
       const avgConfidence =
-        images.reduce(
-          (sum, img) => sum + (img.classification?.confidence || 0),
-          0
-        ) / images.length;
+        images.reduce((sum, img) => sum + (img.confidence || 0), 0) /
+        images.length;
 
       if (metadata.allowNumbering && images.length > 1) {
         images.forEach((image, index) => {
@@ -96,7 +93,7 @@ export function CategorizeStage({
             roomNumber,
             metadata,
             images: [image],
-            avgConfidence: image.classification?.confidence || 0
+            avgConfidence: image.confidence || 0
           });
         });
       } else {
@@ -125,7 +122,7 @@ export function CategorizeStage({
 
     return {
       groups,
-      totalImages: images.filter((img) => img.classification).length,
+      totalImages: images.filter((img) => img.category).length,
       categoryCount: Object.keys(groupedByCategory).length,
       byCategory: groupedByCategory
     };

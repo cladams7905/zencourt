@@ -150,7 +150,7 @@ export class imageProcessorService {
   ): Promise<ProcessedImage[]> {
     const uploadedImages = images.filter(
       (img) =>
-        img.uploadUrl &&
+        img.url &&
         (img.status === "uploaded" ||
           img.status === "analyzed" ||
           img.status === "analyzing")
@@ -167,20 +167,21 @@ export class imageProcessorService {
       img.status = "analyzing";
     });
 
-    const imageUrls = uploadedImages.map((img) => img.uploadUrl!);
+    const imageUrls = uploadedImages.map((img) => img.url!);
 
     await visionService.classifyRoomBatch(imageUrls, {
       concurrency,
       onProgress: (completed, total, batchResult) => {
         const image = uploadedImages.find(
-          (img) => img.uploadUrl === batchResult.imageUrl
+          (img) => img.url === batchResult.imageUrl
         );
         if (!image) {
           return;
         }
 
         if (batchResult.success && batchResult.classification) {
-          image.classification = batchResult.classification;
+          image.category = batchResult.classification.category;
+          image.confidence = batchResult.classification.confidence;
           image.status = "analyzed";
         } else {
           image.status = "error";
@@ -199,8 +200,8 @@ export class imageProcessorService {
     const categorized: CategorizedImages = {};
 
     images.forEach((image) => {
-      if (image.classification) {
-        const category = image.classification.category;
+      if (image.category) {
+        const category = image.category;
         if (!categorized[category]) {
           categorized[category] = [];
         }
@@ -222,13 +223,13 @@ export class imageProcessorService {
   }
 
   private calculateStats(images: ProcessedImage[], duration: number) {
-    const uploaded = images.filter((img) => img.uploadUrl).length;
-    const analyzed = images.filter((img) => img.classification).length;
+    const uploaded = images.filter((img) => img.url).length;
+    const analyzed = images.filter((img) => img.category).length;
     const failed = images.filter((img) => img.status === "error").length;
 
     const confidences = images
-      .filter((img) => img.classification)
-      .map((img) => img.classification!.confidence);
+      .filter((img) => img.category)
+      .map((img) => img.confidence || 0);
 
     const avgConfidence =
       confidences.length > 0
@@ -250,7 +251,7 @@ export class imageProcessorService {
   }
 
   private async generateSceneDescriptions(images: ProcessedImage[]) {
-    const classifiedImages = images.filter((img) => img.classification);
+    const classifiedImages = images.filter((img) => img.category);
     this.logger.info(
       { total: classifiedImages.length },
       "Generating scene descriptions for analyzed images"
@@ -258,14 +259,14 @@ export class imageProcessorService {
 
     for (const image of classifiedImages) {
       try {
-        const roomType = image.classification!.category.replace(/-/g, " ");
+        const roomType = image.category!.replace(/-/g, " ");
         this.logger.debug(
           { imageId: image.id, roomType },
           "Requesting scene description"
         );
 
         const sceneDesc = await visionService.generateSceneDescription(
-          image.uploadUrl!,
+          image.url!,
           roomType,
           { timeout: 30000, maxRetries: 2 }
         );

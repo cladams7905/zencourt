@@ -10,7 +10,7 @@ import { useState } from "react";
 import { EmptyState } from "./EmptyState";
 import { ProjectWorkflowModal } from "./modals/ProjectWorkflowModal";
 import Image from "next/image";
-import HouseFallback from "@/../public/house_fallback.png";
+import HouseFallback from "../../public/house_fallback.png";
 import { DBProject } from "@shared/types/models";
 
 interface ProjectsViewProps {

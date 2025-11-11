@@ -4,9 +4,9 @@
  * Type definitions for the multi-stage project creation workflow
  */
 
+import { DBProject } from "@shared/types/models";
 import type { ProcessedImage } from "./images";
-import type { CategorizedGroup } from "./roomCategory";
-import type { Project } from "./schema";
+import { CategorizedGroup } from "./vision";
 
 // ============================================================================
 // Workflow Stage Types
@@ -72,7 +72,7 @@ export interface WorkflowState {
 
   // Project information
   projectName: string;
-  currentProject: Project | null;
+  currentProject: DBProject | null;
 
   // Image data
   images: ProcessedImage[];
@@ -90,7 +90,7 @@ export interface WorkflowState {
 /**
  * Project with workflow-specific fields
  */
-export interface ProjectWithWorkflow extends Project {
+export interface ProjectWithWorkflow extends DBProject {
   workflowStage?: WorkflowStage;
 }
 

@@ -133,7 +133,7 @@ export function ImagePreviewModal({
   // Download image
   const handleDownload = () => {
     const link = document.createElement("a");
-    link.href = currentImage.uploadUrl || currentImage.previewUrl;
+    link.href = currentImage.url || currentImage.previewUrl;
     link.download = currentImage.file.name;
     document.body.appendChild(link);
     link.click();
@@ -230,7 +230,7 @@ export function ImagePreviewModal({
 
         {/* Image */}
         <Image
-          src={currentImage.uploadUrl || currentImage.previewUrl}
+          src={currentImage.url || currentImage.previewUrl}
           alt={currentImage.file.name}
           width={1920}
           height={1080}
@@ -268,14 +268,11 @@ export function ImagePreviewModal({
                   )}
 
                   {/* Classification */}
-                  {currentImage.classification && (
+                  {currentImage.confidence && (
                     <div>
                       <span className="text-gray-400">AI Confidence:</span>
                       <div className="mt-1">
-                        {(currentImage.classification.confidence * 100).toFixed(
-                          0
-                        )}
-                        %
+                        {(currentImage.confidence * 100).toFixed(0)}%
                       </div>
                     </div>
                   )}
@@ -300,26 +297,25 @@ export function ImagePreviewModal({
                 </div>
 
                 {/* Features */}
-                {currentImage.classification?.features &&
-                  currentImage.classification.features.length > 0 && (
-                    <div className="mt-3">
-                      <span className="text-gray-400 text-sm">
-                        Detected Features:
-                      </span>
-                      <div className="flex flex-wrap gap-2 mt-1">
-                        {currentImage.classification.features.map(
-                          (feature: string, index: number) => (
-                            <span
-                              key={index}
-                              className="px-2 py-1 bg-white text-black bg-opacity/10 rounded text-xs"
-                            >
-                              {feature}
-                            </span>
-                          )
-                        )}
-                      </div>
+                {currentImage?.features && currentImage.features.length > 0 && (
+                  <div className="mt-3">
+                    <span className="text-gray-400 text-sm">
+                      Detected Features:
+                    </span>
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      {currentImage.features.map(
+                        (feature: string, index: number) => (
+                          <span
+                            key={index}
+                            className="px-2 py-1 bg-white text-black bg-opacity/10 rounded text-xs"
+                          >
+                            {feature}
+                          </span>
+                        )
+                      )}
                     </div>
-                  )}
+                  </div>
+                )}
               </div>
 
               {/* Keyboard Shortcuts */}

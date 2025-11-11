@@ -1,7 +1,7 @@
 /**
  * API Route: Video Status Polling
  *
- * GET /api/video/status/:jobId
+ * GET /api/v1/video/status/:jobId
  * Polls the current status of a video generation job
  */
 
