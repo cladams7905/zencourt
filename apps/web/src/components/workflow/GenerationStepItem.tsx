@@ -13,7 +13,7 @@ export function GenerationStepItem({ step }: GenerationStepItemProps) {
   return (
     <div className="flex items-start gap-4">
       {/* Status Icon */}
-      <div className="flex-shrink-0 relative">
+      <div className="shrink-0 relative">
         {step.status === "completed" && (
           <div className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
             <Check className="w-5 h-5" />

@@ -286,6 +286,69 @@ export async function updateVideo(
   );
 }
 
+/**
+ * Mark a video as completed with the final video URL
+ */
+export async function markVideoCompleted(
+  videoId: string,
+  videoUrl: string
+): Promise<void> {
+  if (!videoId) {
+    throw new Error("Video ID is required");
+  }
+  if (!videoUrl) {
+    throw new Error("Video URL is required");
+  }
+
+  return withDbErrorHandling(
+    async () => {
+      await db
+        .update(videos)
+        .set({
+          status: "completed",
+          videoUrl: videoUrl,
+          updatedAt: new Date()
+        })
+        .where(eq(videos.id, videoId));
+    },
+    {
+      actionName: "markVideoCompleted",
+      context: { videoId, videoUrl },
+      errorMessage: "Failed to mark video as completed. Please try again."
+    }
+  );
+}
+
+/**
+ * Mark a video as failed with an error message
+ */
+export async function markVideoFailed(
+  videoId: string,
+  errorMessage: string
+): Promise<void> {
+  if (!videoId) {
+    throw new Error("Video ID is required");
+  }
+
+  return withDbErrorHandling(
+    async () => {
+      await db
+        .update(videos)
+        .set({
+          status: "failed",
+          errorMessage,
+          updatedAt: new Date()
+        })
+        .where(eq(videos.id, videoId));
+    },
+    {
+      actionName: "markVideoFailed",
+      context: { videoId, errorMessage },
+      errorMessage: "Failed to mark video as failed. Please try again."
+    }
+  );
+}
+
 // ============================================================================
 // Delete Operations
 // ============================================================================

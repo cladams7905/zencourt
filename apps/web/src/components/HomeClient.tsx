@@ -6,17 +6,17 @@ import { ProjectsView } from "./ProjectsView";
 import { VideoEditor } from "./VideoEditor";
 import { SocialMediaView } from "./SocialMediaView";
 import { SettingsView } from "./SettingsView";
-import type { Project } from "../types/schema";
+import { DBProject } from "@shared/types/models";
 
 interface HomeClientProps {
-  initialProjects: Project[];
+  initialProjects: DBProject[];
 }
 
 export function HomeClient({ initialProjects }: HomeClientProps) {
   const [activeTab, setActiveTab] = useState("projects");
 
   return (
-    <div className="size-full flex bg-gradient-to-br from-[#e8ddd3] via-white to-[#d4c4b0] relative">
+    <div className="size-full flex bg-linear-to-br from-[#e8ddd3] via-white to-[#d4c4b0] relative">
       {/* Grain texture overlay */}
       <div
         className="absolute inset-0 opacity-30 pointer-events-none"

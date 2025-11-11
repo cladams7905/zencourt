@@ -100,7 +100,7 @@ export function GenerateStage({
         clearInterval(pollInterval);
       }
     };
-  }, [isComplete, projectId]); // Removed videoData and isLoadingVideo from deps to prevent re-triggering
+  }, [isComplete, isLoadingVideo, videoData, projectId]);
 
   const handleCancelClick = () => {
     setShowCancelDialog(true);

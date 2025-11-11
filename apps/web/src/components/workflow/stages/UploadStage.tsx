@@ -153,9 +153,9 @@ export function UploadStage({
 
         try {
           const uploadResult = await uploadFilesBatch([imageData.file], folder);
-          const result = uploadResult[0];
+          const [result] = uploadResult.results;
 
-          if (result.status === "success") {
+          if (result?.success && result.url) {
             setImages((prev) =>
               prev.map((img) =>
                 img.id === imageData.id
@@ -168,13 +168,15 @@ export function UploadStage({
               )
             );
           } else {
+            const errorMessage =
+              result?.error ?? uploadResult.error ?? "Upload failed";
             setImages((prev) =>
               prev.map((img) =>
                 img.id === imageData.id
                   ? {
                       ...img,
                       status: "error" as const,
-                      error: result.error
+                      error: errorMessage
                     }
                   : img
               )
@@ -266,9 +268,9 @@ export function UploadStage({
 
     try {
       const uploadResult = await uploadFilesBatch([imageToRetry.file], folder);
-      const result = uploadResult[0];
+      const [result] = uploadResult.results;
 
-      if (result.status === "success") {
+      if (result?.success && result.url) {
         setImages((prev) =>
           prev.map((img) =>
             img.id === imageId
@@ -281,10 +283,12 @@ export function UploadStage({
           )
         );
       } else {
+        const errorMessage =
+          result?.error ?? uploadResult.error ?? "Upload failed";
         setImages((prev) =>
           prev.map((img) =>
             img.id === imageId
-              ? { ...img, status: "error" as const, error: result.error }
+              ? { ...img, status: "error" as const, error: errorMessage }
               : img
           )
         );

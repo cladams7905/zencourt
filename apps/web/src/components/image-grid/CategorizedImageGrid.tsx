@@ -17,7 +17,7 @@ import type { ProcessedImage } from "../../types/images";
 import { ImagePreviewModal } from "../modals/ImagePreviewModal";
 import { EditableCategoryLabel } from "../shared/EditableCategoryLabel";
 import Image from "next/image";
-import { CategorizedGroup, RoomCategory } from "../../types/roomCategory";
+import { CategorizedGroup, RoomCategory } from "@web/src/types/vision";
 
 // ============================================================================
 // Types and Interfaces
@@ -319,7 +319,7 @@ export function CategorizedImageGrid({
         {/* Drag Instructions */}
         {enableDragDrop && (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-start gap-3">
-            <Icons.Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+            <Icons.Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
             <div className="text-sm text-blue-800">
               <strong>Tip:</strong> Drag and drop images between categories to
               re-categorize.
@@ -470,7 +470,7 @@ function CategoryHeader({
     >
       <div className="flex items-center gap-3">
         <div
-          className="w-4 h-4 rounded-full flex-shrink-0"
+          className="w-4 h-4 rounded-full shrink-0"
           style={{ backgroundColor: group.metadata.color }}
         />
         <IconComponent className="w-5 h-5 text-gray-600" />

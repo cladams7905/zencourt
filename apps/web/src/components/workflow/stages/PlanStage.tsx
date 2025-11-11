@@ -29,7 +29,6 @@ import {
   DrawerTitle,
   DrawerTrigger
 } from "../../ui/drawer";
-import type { CategorizedGroup } from "../../../types/roomCategory";
 import {
   GripVertical,
   Upload,
@@ -40,6 +39,7 @@ import {
   Eye
 } from "lucide-react";
 import Image from "next/image";
+import { CategorizedGroup } from "@web/src/types/vision";
 
 export interface VideoSettings {
   orientation: "landscape" | "vertical";
@@ -108,11 +108,11 @@ function PreviewContent({
           className={`relative ${
             orientation === "landscape"
               ? "w-full aspect-video"
-              : "w-48 aspect-[9/16] mx-auto"
+              : "w-48 aspect-9/16 mx-auto"
           }`}
         >
           {/* Placeholder for demo video */}
-          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900">
+          <div className="absolute inset-0 flex items-center justify-center bg-linear-to-br from-gray-800 to-gray-900">
             <div className="text-center text-white">
               <Monitor className="h-12 w-12 mx-auto mb-2 opacity-50" />
               <p className="text-sm opacity-75">Demo Video Preview</p>
@@ -277,7 +277,7 @@ export function PlanStage({
       {/* Main Content Area */}
       <div className="flex flex-1s">
         {/* Left side - Configuration (2/3 width) */}
-        <div className="flex-[2] min-w-0">
+        <div className="flex-2 min-w-0">
           <div className="p-6 space-y-6">
             {/* Orientation Toggle */}
             <Card>

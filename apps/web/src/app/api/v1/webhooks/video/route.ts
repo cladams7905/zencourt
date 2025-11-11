@@ -7,8 +7,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createHmac } from "crypto";
-import { db } from "@/db";
-import { projects } from "@/db";
+import { db } from "@db/client";
+import { projects } from "@db/client";
 import { eq } from "drizzle-orm";
 
 // Force Node.js runtime for crypto support

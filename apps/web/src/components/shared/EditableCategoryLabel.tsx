@@ -9,7 +9,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Check, X, Edit2, ChevronDown } from "lucide-react";
-import { ROOM_CATEGORIES, type RoomCategory } from "../../types/roomCategory";
+import { ROOM_CATEGORIES, RoomCategory } from "@web/src/types/vision";
 
 // ============================================================================
 // Types and Interfaces
@@ -256,7 +256,7 @@ export function EditableCategoryLabel({
                                 disabled={category.id === categoryId}
                               >
                                 <div
-                                  className="w-3 h-3 rounded-full flex-shrink-0"
+                                  className="w-3 h-3 rounded-full shrink-0"
                                   style={{ backgroundColor: category.color }}
                                 />
                                 <span className="text-left">

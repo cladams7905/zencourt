@@ -148,7 +148,7 @@ export function SocialMediaView() {
       </div>
 
       {/* Publish Section */}
-      <div className="bg-gradient-to-br from-[#d4c4b0] to-[#e8ddd3] rounded-xl p-4 sm:p-6 lg:p-8">
+      <div className="bg-linear-to-br from-[#d4c4b0] to-[#e8ddd3] rounded-xl p-4 sm:p-6 lg:p-8">
         <h3 className="mb-4 sm:mb-6 text-lg sm:text-xl">Publish Video</h3>
 
         <div className="grid md:grid-cols-2 gap-6 sm:gap-8">
@@ -292,7 +292,7 @@ export function SocialMediaView() {
                 className="flex flex-col sm:flex-row sm:items-center justify-between p-4 hover:bg-secondary/50 transition-colors gap-3"
               >
                 <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <div className="p-2 bg-secondary rounded-lg flex-shrink-0">
+                  <div className="p-2 bg-secondary rounded-lg flex-linear-0">
                     <Video size={20} />
                   </div>
                   <div className="min-w-0 flex-1">
@@ -310,7 +310,7 @@ export function SocialMediaView() {
                     </div>
                   </div>
                 </div>
-                <div className="text-left sm:text-right flex-shrink-0">
+                <div className="text-left sm:text-right flex-linear-0">
                   <div className="text-sm mb-1 flex flex-wrap sm:justify-end items-center gap-2 sm:gap-3">
                     {post.views !== "-" && (
                       <span className="text-muted-foreground text-xs sm:text-sm">

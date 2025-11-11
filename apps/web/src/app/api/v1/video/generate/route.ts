@@ -7,14 +7,13 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { nanoid } from "nanoid";
-import { db } from "@/db";
-import { projects, videos } from "@/db";
 import { eq, and } from "drizzle-orm";
 import {
   ApiError,
   requireAuthenticatedUser,
   requireProjectAccess
 } from "../../_utils";
+import { db, projects, videos } from "@db/client";
 
 // Force Node.js runtime
 export const runtime = "nodejs";

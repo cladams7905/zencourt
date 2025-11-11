@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import type { ProcessedImage } from "../../../types/images";
-import type { CategorizedGroup } from "../../../types/roomCategory";
+import { CategorizedGroup } from "@web/src/types/vision";
 
 export interface VideoSettings {
   orientation: "landscape" | "vertical";

@@ -12,7 +12,7 @@ export function AuthSurface({
   children
 }: AuthSurfaceProps) {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#e8ddd3] via-white to-[#d4c4b0] p-4">
+    <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-[#e8ddd3] via-white to-[#d4c4b0] p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <h1 className="text-4xl mb-2">{title}</h1>

@@ -179,7 +179,7 @@ export function DragDropZone({
             ${
               isDragging
                 ? "bg-black text-white"
-                : "bg-gradient-to-br from-[#e8ddd3] to-[#d4c4b0]"
+                : "bg-linear-to-br from-[#e8ddd3] to-[#d4c4b0]"
             }
           `}
         >

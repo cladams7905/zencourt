@@ -96,9 +96,9 @@ export function VideoEditor() {
           {/* Video Preview */}
           <div className="flex justify-center mb-4">
             <div
-              className={`bg-gradient-to-br from-[#d4c4b0] to-[#e8ddd3] rounded-xl relative overflow-hidden ${
+              className={`bg-linear-to-br from-[#d4c4b0] to-[#e8ddd3] rounded-xl relative overflow-hidden ${
                 aspectRatio === "vertical"
-                  ? "aspect-[9/16] max-h-[400px] sm:max-h-[500px] lg:h-[600px]"
+                  ? "aspect-9/16 max-h-[400px] sm:max-h-[500px] lg:h-[600px]"
                   : "aspect-video w-full"
               }`}
             >
@@ -145,7 +145,7 @@ export function VideoEditor() {
           </div>
 
           {/* Timeline */}
-          <div className="bg-white rounded-xl border border-border p-3 sm:p-4 flex-shrink-0">
+          <div className="bg-white rounded-xl border border-border p-3 sm:p-4 shrink-0">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-base sm:text-lg">Timeline</h3>
               <div className="flex gap-1 sm:gap-2">
@@ -199,7 +199,7 @@ export function VideoEditor() {
 
               {/* Subtitle Track */}
               {subtitlesEnabled && (
-                <div className="h-10 bg-gradient-to-r from-purple-100 to-purple-50 rounded-lg flex items-center px-2 gap-1 overflow-hidden">
+                <div className="h-10 bg-linear-to-r from-purple-100 to-purple-50 rounded-lg flex items-center px-2 gap-1 overflow-hidden">
                   <div
                     className="bg-purple-500/30 h-6 rounded px-2 flex items-center text-xs whitespace-nowrap"
                     style={{ width: "96px" }}
@@ -216,7 +216,7 @@ export function VideoEditor() {
               )}
 
               {/* Audio Track */}
-              <div className="h-12 bg-gradient-to-r from-black/5 to-black/10 rounded-lg flex items-center px-2">
+              <div className="h-12 bg-linear-to-r from-black/5 to-black/10 rounded-lg flex items-center px-2">
                 <div className="flex gap-0.5 h-6 items-end w-full">
                   {Array.from({ length: 50 }).map((_, i) => (
                     <div
@@ -245,7 +245,7 @@ export function VideoEditor() {
         </div>
 
         {/* Sidebar Tools */}
-        <div className="w-full lg:w-72 bg-white rounded-xl border border-border p-4 flex-shrink-0 overflow-y-auto order-1 lg:order-2">
+        <div className="w-full lg:w-72 bg-white rounded-xl border border-border p-4 shrink-0 overflow-y-auto order-1 lg:order-2">
           <h3 className="mb-4">Properties</h3>
 
           <div className="space-y-4">

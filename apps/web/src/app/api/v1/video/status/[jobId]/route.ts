@@ -9,7 +9,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, projects } from "@db/client";
 import { eq } from "drizzle-orm";
 import { ApiError, requireAuthenticatedUser } from "../../../_utils";
-import { ProjectMetadata } from "../../../../../../types/projects";
+import { ProjectMetadata } from "@shared/types/models";
 
 // Force Node.js runtime
 export const runtime = "nodejs";

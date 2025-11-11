@@ -21,13 +21,7 @@ import { PlanStage } from "../workflow/stages/PlanStage";
 import { ReviewStage } from "../workflow/stages/ReviewStage";
 import { GenerateStage } from "../workflow/stages/GenerateStage";
 import { ImagePreviewModal } from "./ImagePreviewModal";
-import { Project } from "../../types/schema";
 import type { ProcessedImage } from "../../types/images";
-import type {
-  CategorizedGroup,
-  RoomCategory,
-  RoomClassification
-} from "../../types/roomCategory";
 import type {
   WorkflowStage,
   GenerationProgress,
@@ -35,12 +29,18 @@ import type {
 } from "../../types/workflow";
 import { useRef } from "react";
 import { updateProject } from "../../server/actions/db/projects";
+import { DBProject } from "@shared/types/models";
+import {
+  CategorizedGroup,
+  RoomCategory,
+  RoomClassification
+} from "@web/src/types/vision";
 
 interface ProjectWorkflowModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onProjectCreated?: (project: Project) => void;
-  existingProject?: Project | null;
+  onProjectCreated?: (project: DBProject) => void;
+  existingProject?: DBProject | null;
 }
 
 export function ProjectWorkflowModal({
@@ -55,7 +55,7 @@ export function ProjectWorkflowModal({
   const [isSavingName, setIsSavingName] = useState(false);
 
   // Project and image state
-  const [currentProject, setCurrentProject] = useState<Project | null>(null);
+  const [currentProject, setCurrentProject] = useState<DBProject | null>(null);
   const [images, setImages] = useState<ProcessedImage[]>([]);
   const [categorizedGroups, setCategorizedGroups] = useState<
     CategorizedGroup[]

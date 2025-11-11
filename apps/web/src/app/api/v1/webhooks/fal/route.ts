@@ -6,11 +6,13 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import {
+  downloadVideoFromUrl,
+  getVideoByFalRequestId,
   markVideoCompleted,
-  markVideoFailed,
-  getVideoByFalRequestId
+  markVideoFailed
 } from "../../../../../server/actions/db/videos";
-import { downloadVideoFromUrl } from "../../../../../server/services/s3Service";
+import { db, projects } from "@db/client";
+import { eq } from "drizzle-orm";
 
 export const runtime = "nodejs";
 export const maxDuration = 300; // 5 minutes for download/upload
@@ -84,10 +86,6 @@ export async function POST(request: NextRequest) {
         console.log("[FAL Webhook] Downloading video from fal.ai...");
         const videoBlob = await downloadVideoFromUrl(body.payload.video.url);
         console.log("[FAL Webhook] ✓ Downloaded video, size:", videoBlob.size);
-
-        // Get project info to find userId
-        const { db, projects } = await import("@/db");
-        const { eq } = await import("drizzle-orm");
 
         const projectResult = await db
           .select({ userId: projects.userId })

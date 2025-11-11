@@ -10,11 +10,11 @@ import { useState } from "react";
 import { EmptyState } from "./EmptyState";
 import { ProjectWorkflowModal } from "./modals/ProjectWorkflowModal";
 import Image from "next/image";
-import { Project } from "../types/schema";
 import HouseFallback from "@/../public/house_fallback.png";
+import { DBProject } from "@shared/types/models";
 
 interface ProjectsViewProps {
-  initialProjects: Project[];
+  initialProjects: DBProject[];
 }
 
 export function ProjectsView({ initialProjects }: ProjectsViewProps) {
@@ -22,16 +22,18 @@ export function ProjectsView({ initialProjects }: ProjectsViewProps) {
     "projects"
   );
   const [filter, setFilter] = useState<"all" | "vertical" | "landscape">("all");
-  const [projects, setProjects] = useState<Project[]>(initialProjects);
+  const [projects, setProjects] = useState<DBProject[]>(initialProjects);
   const [isWorkflowModalOpen, setIsWorkflowModalOpen] = useState(false);
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [selectedProject, setSelectedProject] = useState<DBProject | null>(
+    null
+  );
 
   const handleCreateProject = () => {
     setSelectedProject(null);
     setIsWorkflowModalOpen(true);
   };
 
-  const handleOpenProject = (project: Project) => {
+  const handleOpenProject = (project: DBProject) => {
     setSelectedProject(project);
     setIsWorkflowModalOpen(true);
   };
@@ -41,7 +43,7 @@ export function ProjectsView({ initialProjects }: ProjectsViewProps) {
     setSelectedProject(null);
   };
 
-  const handleProjectCreated = (project: Project) => {
+  const handleProjectCreated = (project: DBProject) => {
     // Check if project already exists and update it, otherwise add it
     const existingIndex = projects.findIndex((p) => p.id === project.id);
     if (existingIndex >= 0) {
@@ -140,7 +142,7 @@ export function ProjectsView({ initialProjects }: ProjectsViewProps) {
           <div className="mb-6 flex gap-2 overflow-x-auto pb-2">
             <button
               onClick={() => setFilter("all")}
-              className={`px-3 sm:px-4 py-2 rounded-lg transition-colors whitespace-nowrap flex-shrink-0 text-sm sm:text-base ${
+              className={`px-3 sm:px-4 py-2 rounded-lg transition-colors whitespace-nowrap shrink-0 text-sm sm:text-base ${
                 filter === "all"
                   ? "bg-black text-white"
                   : "bg-white border border-border hover:bg-secondary"
@@ -150,7 +152,7 @@ export function ProjectsView({ initialProjects }: ProjectsViewProps) {
             </button>
             <button
               onClick={() => setFilter("vertical")}
-              className={`px-3 sm:px-4 py-2 rounded-lg transition-colors flex items-center gap-2 whitespace-nowrap flex-shrink-0 text-sm sm:text-base ${
+              className={`px-3 sm:px-4 py-2 rounded-lg transition-colors flex items-center gap-2 whitespace-nowrap shrink-0 text-sm sm:text-base ${
                 filter === "vertical"
                   ? "bg-black text-white"
                   : "bg-white border border-border hover:bg-secondary"
@@ -162,7 +164,7 @@ export function ProjectsView({ initialProjects }: ProjectsViewProps) {
             </button>
             <button
               onClick={() => setFilter("landscape")}
-              className={`px-3 sm:px-4 py-2 rounded-lg transition-colors flex items-center gap-2 whitespace-nowrap flex-shrink-0 text-sm sm:text-base ${
+              className={`px-3 sm:px-4 py-2 rounded-lg transition-colors flex items-center gap-2 whitespace-nowrap shrink-0 text-sm sm:text-base ${
                 filter === "landscape"
                   ? "bg-black text-white"
                   : "bg-white border border-border hover:bg-secondary"
@@ -181,7 +183,7 @@ export function ProjectsView({ initialProjects }: ProjectsViewProps) {
                 onClick={() => handleOpenProject(project)}
                 className="bg-white rounded-xl overflow-hidden border border-border hover:shadow-lg transition-shadow group cursor-pointer"
               >
-                <div className="relative aspect-video bg-gradient-to-br from-[#d4c4b0] to-[#e8ddd3] overflow-hidden">
+                <div className="relative aspect-video bg-linear-to-br from-[#d4c4b0] to-[#e8ddd3] overflow-hidden">
                   {project.format === "vertical" ? (
                     <>
                       {/* Blurred background - TikTok style */}

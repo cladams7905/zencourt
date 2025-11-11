@@ -144,7 +144,7 @@ export function ImagePreviewModal({
 
   return (
     <div
-      className="fixed inset-0 !z-[60] bg-black bg-opacity-95 flex items-center justify-center"
+      className="fixed inset-0 z-60! bg-black bg-opacity-95 flex items-center justify-center"
       onClick={onClose}
     >
       {/* Close Button */}
@@ -308,7 +308,7 @@ export function ImagePreviewModal({
                       </span>
                       <div className="flex flex-wrap gap-2 mt-1">
                         {currentImage.classification.features.map(
-                          (feature, index) => (
+                          (feature: string, index: number) => (
                             <span
                               key={index}
                               className="px-2 py-1 bg-white text-black bg-opacity/10 rounded text-xs"

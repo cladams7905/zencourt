@@ -9,7 +9,7 @@ export function EmptyState({ onCreateProject }: EmptyStateProps) {
     <div className="flex flex-col items-center justify-center min-h-[60vh] px-4 text-center">
       <div className="mb-6 relative">
         {/* Icon container with gradient background */}
-        <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full bg-gradient-to-br from-[#e8ddd3] to-[#d4c4b0] flex items-center justify-center mx-auto mb-4">
+        <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full bg-linear-to-br from-[#e8ddd3] to-[#d4c4b0] flex items-center justify-center mx-auto mb-4">
           <Video size={48} className="text-black/70" strokeWidth={1.5} />
         </div>
       </div>

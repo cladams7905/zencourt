@@ -5,9 +5,8 @@ import { QueryProvider } from "../components/providers/QueryProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "ZenCourt - SaaS Dashboard",
-  description:
-    "Modern SaaS dashboard for video editing and social media management"
+  title: "ZenCourt - Home",
+  description: "AI Marketing Studio for Real Estate Professionals"
 };
 
 const customTheme = {

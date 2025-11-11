@@ -1,9 +1,9 @@
 import { getUserProjects } from "../server/actions/db/projects";
 import { HomeClient } from "../components/HomeClient";
-import type { Project } from "../types/schema";
+import { DBProject } from "@shared/types/models";
 
 export default async function Home() {
-  let projects: Project[] = [];
+  let projects: DBProject[] = [];
   try {
     projects = await getUserProjects();
   } catch (error) {

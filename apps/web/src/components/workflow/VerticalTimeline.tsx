@@ -25,7 +25,7 @@ export function VerticalTimeline({ steps, className }: VerticalTimelineProps) {
                     "absolute left-5 top-10 bottom-0 w-0.5 -mb-6",
                     step.status === "completed" && "bg-primary",
                     step.status === "in-progress" &&
-                      "bg-gradient-to-b from-primary to-muted",
+                      "bg-linear-to-b from-primary to-muted",
                     (step.status === "waiting" || step.status === "failed") &&
                       "bg-muted border-l border-dashed"
                   )}
