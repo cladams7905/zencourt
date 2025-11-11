@@ -1,12 +1,9 @@
 import type { NextConfig } from "next";
-import path from "path";
 
 const nextConfig: NextConfig = {
   reactStrictMode: false,
   // Transpile workspace packages to include their dependencies in the bundle
   transpilePackages: ["@zencourt/db", "@zencourt/shared"],
-  // Set the root for file tracing to include monorepo packages
-  outputFileTracingRoot: path.join(__dirname, "../../"),
   // Don't externalize ffmpeg/ffprobe - let webpack bundle them properly
   serverExternalPackages: ["fluent-ffmpeg"],
   webpack: (config, { isServer }) => {
