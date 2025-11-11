@@ -2,6 +2,8 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: false,
+  // Transpile workspace packages to include their dependencies in the bundle
+  transpilePackages: ['@zencourt/db', '@zencourt/shared'],
   // Don't externalize ffmpeg/ffprobe - let webpack bundle them properly
   serverExternalPackages: ['fluent-ffmpeg'],
   webpack: (config, { isServer }) => {
