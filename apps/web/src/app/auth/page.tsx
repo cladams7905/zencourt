@@ -1,3 +1,5 @@
+"use client";
+
 import { SignIn } from "@stackframe/stack";
 import { AuthSurface } from "../../components/AuthSurface";
 
