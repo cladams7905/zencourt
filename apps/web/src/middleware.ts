@@ -5,9 +5,11 @@ export async function middleware(request: NextRequest) {
   const isAuthPage = request.nextUrl.pathname.startsWith("/auth");
   const isHandlerPage = request.nextUrl.pathname.startsWith("/handler");
   const isWebhook = request.nextUrl.pathname.startsWith("/api/v1/webhooks");
+  const isNotFound = request.nextUrl.pathname === "/_not-found";
+  const isNextInternal = request.nextUrl.pathname.startsWith("/_next");
 
-  // Allow auth, handler, and webhook pages without authentication check
-  if (isAuthPage || isHandlerPage || isWebhook) {
+  // Allow auth, handler, webhook, and Next.js internal pages without authentication check
+  if (isAuthPage || isHandlerPage || isWebhook || isNotFound || isNextInternal) {
     // Try to get user for auth page redirect logic
     try {
       const user = await stackServerApp.getUser();
