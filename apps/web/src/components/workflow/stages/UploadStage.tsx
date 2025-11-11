@@ -1,25 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useUser } from "@stackframe/stack";
 import { toast } from "sonner";
 import { DragDropZone } from "../DragDropZone";
 import { ImageUploadGrid } from "../../shared/ImageUploadGrid";
 import { Button } from "../../ui/button";
-import { imageProcessorService } from "../../../server/services/imageProcessor";
-import {
-  uploadFiles,
-  getProjectFolder
-} from "../../../server/services/s3Service";
 import { createProject } from "../../../server/actions/db/projects";
 import type { ProcessedImage } from "../../../types/images";
-import type { Project } from "../../../types/schema";
+import { DBProject } from "@shared/types/models";
+import { getProjectFolder } from "@shared/utils";
+import { uploadFilesBatch } from "@web/src/server/actions/api/storage";
 
 interface UploadStageProps {
   images: ProcessedImage[];
   setImages: React.Dispatch<React.SetStateAction<ProcessedImage[]>>;
-  currentProject: Project | null;
-  setCurrentProject: React.Dispatch<React.SetStateAction<Project | null>>;
+  currentProject: DBProject | null;
+  setCurrentProject: React.Dispatch<React.SetStateAction<DBProject | null>>;
   onImageClick: (imageId: string) => void;
   onContinue: () => void;
 }
@@ -46,6 +43,48 @@ export function UploadStage({
         img.status === "analyzed" ||
         img.status === "error"
     );
+
+  // Cleanup object URLs when component unmounts or images change
+  useEffect(() => {
+    return () => {
+      // Cleanup object URLs to prevent memory leaks
+      images.forEach((img) => {
+        if (img.previewUrl.startsWith("blob:")) {
+          URL.revokeObjectURL(img.previewUrl);
+        }
+      });
+    };
+  }, [images]);
+
+  /**
+   * Generate a preview URL using createObjectURL
+   * More efficient than FileReader - creates reference instead of data URL
+   */
+  const generatePreviewUrl = (file: File): string => {
+    return URL.createObjectURL(file);
+  };
+
+  /**
+   * Create a single ProcessedImage from a File
+   */
+  const createImageData = (file: File): ProcessedImage => {
+    const id = crypto.randomUUID();
+    const previewUrl = generatePreviewUrl(file);
+
+    return {
+      id,
+      file,
+      previewUrl,
+      status: "pending"
+    };
+  };
+
+  /**
+   * Create an array of ProcessedImage objects from File array
+   */
+  const createImageDataArray = (files: File[]): ProcessedImage[] => {
+    return files.map((file) => createImageData(file));
+  };
 
   // ============================================================================
   // Upload Handlers
@@ -113,7 +152,7 @@ export function UploadStage({
         );
 
         try {
-          const uploadResult = await uploadFiles([imageData.file], folder);
+          const uploadResult = await uploadFilesBatch([imageData.file], folder);
           const result = uploadResult[0];
 
           if (result.status === "success") {
@@ -175,9 +214,8 @@ export function UploadStage({
 
     setIsLoadingPreviews(true);
     try {
-      const imageDataArray = await imageProcessorService.createImageDataArray(
-        files
-      );
+      // Create image data synchronously (now uses URL.createObjectURL)
+      const imageDataArray = createImageDataArray(files);
 
       setImages((prev) => {
         const existingFilenames = new Set(prev.map((img) => img.file.name));
@@ -227,7 +265,7 @@ export function UploadStage({
     );
 
     try {
-      const uploadResult = await uploadFiles([imageToRetry.file], folder);
+      const uploadResult = await uploadFilesBatch([imageToRetry.file], folder);
       const result = uploadResult[0];
 
       if (result.status === "success") {

@@ -6,14 +6,16 @@ import { toast } from "sonner";
 import { Button } from "../../ui/button";
 import { Progress } from "../../ui/progress";
 import { CategorizedImageGrid } from "../../image-grid/CategorizedImageGrid";
-import { imageProcessorService } from "../../../server/services/imageProcessor";
-import { useCategorization } from "../../../hooks/useCategorization";
+import { analyzeImagesWorkflow } from "../../../server/actions/api/vision";
 import { updateProject } from "../../../server/actions/db/projects";
 import { saveImages } from "../../../server/actions/db/images";
 import type { ProcessedImage, ProcessingProgress } from "../../../types/images";
-import type { CategorizedGroup } from "../../../types/roomCategory";
-import type { InsertDBImage } from "@shared/types/models/image";
-import type { DBProject } from "@shared/types/models/db.project";
+import type { DBProject, InsertDBImage } from "@shared/types/models";
+import {
+  CategorizedGroup,
+  ROOM_CATEGORIES,
+  RoomCategory
+} from "@web/src/types/vision";
 
 interface CategorizeStageProps {
   images: ProcessedImage[];
@@ -46,9 +48,88 @@ export function CategorizeStage({
   const [isCategorizing, setIsCategorizing] = useState(false);
   const [processingProgress, setProcessingProgress] =
     useState<ProcessingProgress | null>(null);
-  const { categorizeImages } = useCategorization();
   // Use state instead of ref so it persists across modal close/reopen
   const [hasInitiatedProcessing, setHasInitiatedProcessing] = useState(false);
+
+  // Categorize images into groups by category
+  const categorizeImages = useCallback((images: ProcessedImage[]) => {
+    const groupedByCategory = images.reduce<Record<string, ProcessedImage[]>>(
+      (acc, image) => {
+        const classification = image.classification;
+        if (!classification) {
+          return acc;
+        }
+
+        const category = classification.category;
+        if (!acc[category]) {
+          acc[category] = [];
+        }
+
+        acc[category].push(image);
+        return acc;
+      },
+      {}
+    );
+
+    const groups: CategorizedGroup[] = [];
+
+    Object.entries(groupedByCategory).forEach(([category, images]) => {
+      const metadata = ROOM_CATEGORIES[category as RoomCategory];
+
+      if (!metadata) {
+        return;
+      }
+
+      const avgConfidence =
+        images.reduce(
+          (sum, img) => sum + (img.classification?.confidence || 0),
+          0
+        ) / images.length;
+
+      if (metadata.allowNumbering && images.length > 1) {
+        images.forEach((image, index) => {
+          const roomNumber = index + 1;
+          groups.push({
+            category: category as RoomCategory,
+            displayLabel: `${metadata.label} ${roomNumber}`,
+            baseLabel: metadata.label,
+            roomNumber,
+            metadata,
+            images: [image],
+            avgConfidence: image.classification?.confidence || 0
+          });
+        });
+      } else {
+        groups.push({
+          category: category as RoomCategory,
+          displayLabel: metadata.label,
+          baseLabel: metadata.label,
+          metadata,
+          images,
+          avgConfidence
+        });
+      }
+    });
+
+    groups.sort((a, b) => {
+      if (a.metadata.order !== b.metadata.order) {
+        return a.metadata.order - b.metadata.order;
+      }
+
+      if (a.roomNumber && b.roomNumber) {
+        return a.roomNumber - b.roomNumber;
+      }
+
+      return 0;
+    });
+
+    return {
+      groups,
+      totalImages: images.filter((img) => img.classification).length,
+      categoryCount: Object.keys(groupedByCategory).length,
+      byCategory: groupedByCategory
+    };
+  }, []);
 
   // Check if we need to process images on mount
   const alreadyAnalyzed = images.filter(
@@ -95,43 +176,18 @@ export function CategorizeStage({
           overallProgress: 0
         });
 
-        const result = await imageProcessorService.processImages(
-          needsAnalysis,
-          currentProject.id,
-          {
-            userId: user.id,
-            onProgress: (progress) => {
-              // Remap progress to use full 0-100% range for analysis
-              // The service uses 50-95% for analysis when images are already uploaded
-              let adjustedProgress = progress.overallProgress;
-              if (progress.phase === "analyzing") {
-                // Map 50-95 to 0-90
-                adjustedProgress = ((progress.overallProgress - 50) / 45) * 90;
-              } else if (progress.phase === "categorizing") {
-                // Map 95 to 90
-                adjustedProgress = 90;
-              } else if (progress.phase === "complete") {
-                // Keep at 95 (we'll finish at 100 after organizing)
-                adjustedProgress = 95;
-              }
+        // Call server action directly
+        const result = await analyzeImagesWorkflow(needsAnalysis, {
+          aiConcurrency: 10
+        });
 
-              setProcessingProgress({
-                ...progress,
-                overallProgress: Math.max(0, adjustedProgress)
-              });
-
-              if (progress.currentImage) {
-                setImages((prev) =>
-                  prev.map((img) =>
-                    img.id === progress.currentImage?.id
-                      ? progress.currentImage
-                      : img
-                  )
-                );
-              }
-            }
-          }
-        );
+        // Update progress to show completion
+        setProcessingProgress({
+          phase: "complete",
+          completed: result.images.length,
+          total: result.images.length,
+          overallProgress: 95
+        });
 
         finalImages = [...alreadyAnalyzed, ...result.images];
       } else {
@@ -165,7 +221,7 @@ export function CategorizeStage({
             features: img.features ?? null,
             sceneDescription: img.sceneDescription ?? null,
             order: img.order ?? index,
-            metadata: img.metadata ?? null
+            metadata: null // Image metadata not collected
           }));
 
         // Debug: Log scene descriptions before saving
@@ -218,6 +274,7 @@ export function CategorizeStage({
     setCategorizedGroups,
     setImages,
     setHasInitiatedProcessing,
+    categorizeImages,
     user
   ]);
 
