@@ -1,3 +1,4 @@
 .vercel
 .next
 demo-images/
+node_modules/
