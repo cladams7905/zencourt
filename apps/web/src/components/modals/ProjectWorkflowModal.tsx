@@ -225,12 +225,20 @@ export function ProjectWorkflowModal({
     if (hasWorkInProgress && currentStage !== "generate") {
       setShowCloseConfirm(true);
     } else {
+      // Call onProjectCreated callback if project exists before closing
+      if (currentProject && onProjectCreated) {
+        onProjectCreated(currentProject);
+      }
       onClose();
     }
   };
 
   const handleConfirmClose = () => {
     setShowCloseConfirm(false);
+    // Call onProjectCreated callback if project exists before closing
+    if (currentProject && onProjectCreated) {
+      onProjectCreated(currentProject);
+    }
     onClose();
   };
 
