@@ -45,6 +45,7 @@
     "@stackframe/stack": "^2.8.51",
     "@supabase/postgrest-js": "^2.75.0",
     "@tanstack/react-query": "^5.90.5",
+    "drizzle-orm": "^0.44.6",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
