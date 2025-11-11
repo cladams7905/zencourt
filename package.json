@@ -11,6 +11,7 @@
     "dev:web": "npm run dev --workspace=@zencourt/web",
     "dev:video": "npm run dev --workspace=@zencourt/video-server",
     "build": "npm run build --workspaces --if-present",
+    "build:local": "npm run build:local --workspace=@zencourt/web",
     "build:web": "npm run build --workspace=@zencourt/web",
     "build:video": "npm run build --workspace=@zencourt/video-server",
     "lint": "npm run lint --workspaces --if-present",

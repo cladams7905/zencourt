@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "vercel dev --turbopack",
-    "build": "dotenv -e ../../.env.local -- next build",
+    "build": "next build",
+    "build:local": "dotenv -e ../../.env.local -- next build",
     "start": "next start",
     "lint": "eslint"
   },
