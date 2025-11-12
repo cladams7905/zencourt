@@ -24,7 +24,7 @@ async function handle(request: Request, { params }: RouteParams) {
   const projectId = process.env.NEXT_PUBLIC_STACK_PROJECT_ID;
   const secretServerKey = process.env.STACK_SECRET_SERVER_KEY;
   if (projectId && secretServerKey) {
-    headers.set("x-stack-access-type", "server");
+    headers.set("x-stack-access-type", "client");
     headers.set("x-stack-project-id", projectId);
     headers.set("x-stack-secret-server-key", secretServerKey);
   }
