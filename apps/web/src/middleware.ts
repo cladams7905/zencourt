@@ -6,12 +6,21 @@ export async function middleware(request: NextRequest) {
   const isWebhook = request.nextUrl.pathname.startsWith("/api/v1/webhooks");
   const isNotFound = request.nextUrl.pathname === "/_not-found";
   const isNextInternal = request.nextUrl.pathname.startsWith("/_next");
+  const isStackProxy =
+    request.nextUrl.pathname.startsWith("/api/v1/stack-auth");
   const hasStackSession =
     Boolean(request.cookies.get("stack-access")?.value) ||
     Boolean(request.cookies.get("stack-refresh")?.value);
 
   // Allow auth, handler, webhook, and Next.js internal pages without authentication check
-  if (isAuthPage || isHandlerPage || isWebhook || isNotFound || isNextInternal) {
+  if (
+    isAuthPage ||
+    isHandlerPage ||
+    isWebhook ||
+    isNotFound ||
+    isNextInternal ||
+    isStackProxy
+  ) {
     // If already authenticated and trying to access /auth, redirect to home
     if (isAuthPage && hasStackSession) {
       return NextResponse.redirect(new URL("/", request.url));
