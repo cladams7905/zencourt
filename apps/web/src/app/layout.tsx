@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { StackProvider, StackTheme } from "@stackframe/stack";
 import { stackClientApp } from "../lib/stack/client";
+import { Toaster } from "../components/ui/sonner";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -18,6 +19,7 @@ export default function RootLayout({
       <body className="antialiased">
         <StackProvider app={stackClientApp}>
           <StackTheme>{children}</StackTheme>
+          <Toaster />
         </StackProvider>
       </body>
     </html>

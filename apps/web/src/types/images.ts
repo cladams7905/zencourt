@@ -21,6 +21,8 @@ export type ProcessedImage = Partial<Omit<DBImage, "uploadedAt">> & {
   status: ImageProcessingStatus;
   /** Error message if processing failed */
   error?: string;
+  /** Direct S3 URL once uploaded (alias for DB url) */
+  uploadUrl?: string;
 };
 
 /**

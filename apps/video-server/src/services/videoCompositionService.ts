@@ -148,8 +148,9 @@ export class VideoCompositionService {
       // Step 7: Upload to S3
       logger.info({ projectId, finalVideoId }, '[VideoComposition] Uploading final video and thumbnail to S3');
 
-      const videoKey = `users/${userId}/projects/${projectId}/videos/${finalVideoId}/final.mp4`;
-      const thumbnailKey = `users/${userId}/projects/${projectId}/videos/${finalVideoId}/thumbnail.jpg`;
+      const baseVideoPath = `user_${userId}/projects/project_${projectId}/videos/video_${finalVideoId}`;
+      const videoKey = `${baseVideoPath}/final.mp4`;
+      const thumbnailKey = `${baseVideoPath}/thumbnail.jpg`;
 
       const [videoUrl, thumbnailUrl] = await Promise.all([
         s3Service.uploadFile({

@@ -82,7 +82,7 @@ resource "aws_iam_user_policy" "vercel_api_s3" {
           "s3:PutObject",
           "s3:DeleteObject"
         ]
-        Resource = "${var.s3_bucket_arn}/users/*"
+        Resource = "${var.s3_bucket_arn}/user_*/*"
       },
       {
         Effect = "Allow"
@@ -92,7 +92,7 @@ resource "aws_iam_user_policy" "vercel_api_s3" {
         Resource = var.s3_bucket_arn
         Condition = {
           StringLike = {
-            "s3:prefix" = ["users/*"]
+            "s3:prefix" = ["user_*/*"]
           }
         }
       }

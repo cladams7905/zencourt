@@ -63,25 +63,6 @@ resource "aws_s3_bucket_lifecycle_configuration" "media" {
       noncurrent_days = 1
     }
   }
-
-  rule {
-    id     = "ArchiveOldRoomVideos"
-    status = var.enable_glacier_archival ? "Enabled" : "Disabled"
-
-    filter {
-      prefix = "users/"
-    }
-
-    transition {
-      days          = var.glacier_transition_days
-      storage_class = "GLACIER"
-    }
-
-    noncurrent_version_transition {
-      noncurrent_days = 30
-      storage_class   = "GLACIER"
-    }
-  }
 }
 
 # Bucket policy

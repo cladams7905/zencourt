@@ -7,7 +7,8 @@
 import {
   S3Client,
   PutObjectCommand,
-  DeleteObjectCommand
+  DeleteObjectCommand,
+  ServerSideEncryption
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import {
@@ -48,7 +49,8 @@ const s3Client = new S3Client({
 
 const AWS_CONFIG = {
   region: requiredEnvVars.AWS_REGION!,
-  bucket: requiredEnvVars.AWS_S3_BUCKET!
+  bucket: requiredEnvVars.AWS_S3_BUCKET!,
+  serverSideEncryption: process.env.AWS_S3_SERVER_SIDE_ENCRYPTION || "AES256"
 } as const;
 
 type UploadContext = {
@@ -139,6 +141,17 @@ export class s3Service {
     );
 
     const successCount = results.filter((result) => result.success).length;
+    const failedResults = results.filter((result) => !result.success);
+    const aggregateError =
+      failedResults.length > 0
+        ? failedResults
+            .map(
+              (result) =>
+                `${result.filename}: ${result.error ?? "Upload failed"}`
+            )
+            .join("; ")
+        : undefined;
+
     logger.info(
       { total: uploadRequests.length, successCount },
       "Batch upload completed"
@@ -146,7 +159,8 @@ export class s3Service {
 
     return {
       success: successCount === uploadRequests.length,
-      results
+      results,
+      ...(aggregateError && { error: aggregateError })
     };
   }
 
@@ -223,7 +237,9 @@ export class s3Service {
         Key: context.key,
         Body: context.buffer,
         ContentType: context.contentType,
-        Metadata: context.metadata
+        Metadata: context.metadata,
+        ServerSideEncryption:
+          AWS_CONFIG.serverSideEncryption as ServerSideEncryption
       })
     );
 

@@ -163,7 +163,7 @@ describe('VideoCompositionService', () => {
 
     it('should download room videos from S3', async () => {
       const roomVideoUrls = [
-        'https://bucket.s3.us-east-1.amazonaws.com/users/user1/videos/video1.mp4',
+        'https://bucket.s3.us-east-1.amazonaws.com/user_user1/projects/project_project456/videos/video_videoRoom1/room.mp4',
       ];
 
       await service.combineRoomVideos(
@@ -176,7 +176,7 @@ describe('VideoCompositionService', () => {
 
       expect(mockS3Service.downloadFile).toHaveBeenCalledWith(
         'test-bucket',
-        'users/user1/videos/video1.mp4'
+        'user_user1/projects/project_project456/videos/video_videoRoom1/room.mp4'
       );
     });
 
@@ -354,7 +354,7 @@ describe('VideoCompositionService', () => {
   describe('S3 URL Parsing', () => {
     it('should extract S3 key from standard S3 URL', async () => {
       const service = new VideoCompositionService();
-      const url = 'https://bucket.s3.us-east-1.amazonaws.com/users/user123/video.mp4';
+      const url = 'https://bucket.s3.us-east-1.amazonaws.com/user_user123/projects/project_proj1/videos/video_video123/source.mp4';
 
       // We'll test this indirectly through the downloadFile calls
       mockS3Service.downloadFile.mockResolvedValue(Buffer.from('test'));

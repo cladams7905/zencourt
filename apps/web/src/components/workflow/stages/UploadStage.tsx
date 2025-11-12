@@ -9,8 +9,14 @@ import { Button } from "../../ui/button";
 import { createProject } from "../../../server/actions/db/projects";
 import type { ProcessedImage } from "../../../types/images";
 import { DBProject } from "@shared/types/models";
-import { getProjectFolder } from "@shared/utils";
-import { uploadFilesBatch } from "@web/src/server/actions/api/storage";
+import {
+  uploadFilesBatch,
+  deleteFile
+} from "@web/src/server/actions/api/storage";
+import {
+  saveImages,
+  deleteImage as deleteImageRecord
+} from "@web/src/server/actions/db/images";
 
 interface UploadStageProps {
   images: ProcessedImage[];
@@ -74,6 +80,7 @@ export function UploadStage({
     return {
       id,
       file,
+      filename: file.name,
       previewUrl,
       status: "pending"
     };
@@ -113,6 +120,29 @@ export function UploadStage({
     }
   };
 
+  const persistImageRecord = async (
+    projectId: string,
+    image: ProcessedImage,
+    url: string
+  ) => {
+    try {
+      await saveImages(projectId, [
+        {
+          id: image.id,
+          projectId,
+          filename: image.filename || image.file.name,
+          url
+        }
+      ]);
+    } catch (error) {
+      console.error("Failed to save image metadata:", error);
+      toast.error("Failed to save image", {
+        description:
+          error instanceof Error ? error.message : "Unknown error occurred"
+      });
+    }
+  };
+
   const handleUploadImages = async (imageDataArray: ProcessedImage[]) => {
     if (!user) {
       toast.error("Authentication required", {
@@ -138,8 +168,6 @@ export function UploadStage({
     setIsUploading(true);
 
     try {
-      const folder = getProjectFolder(project.id, user.id);
-
       for (let i = 0; i < imageDataArray.length; i++) {
         const imageData = imageDataArray[i];
 
@@ -152,17 +180,25 @@ export function UploadStage({
         );
 
         try {
-          const uploadResult = await uploadFilesBatch([imageData.file], folder);
+          const uploadResult = await uploadFilesBatch(
+            [imageData.file],
+            "images",
+            user.id,
+            project.id
+          );
           const [result] = uploadResult.results;
 
           if (result?.success && result.url) {
+            await persistImageRecord(project.id, imageData, result.url);
+
             setImages((prev) =>
               prev.map((img) =>
                 img.id === imageData.id
                   ? {
                       ...img,
                       status: "uploaded" as const,
-                      uploadUrl: result.url
+                      url: result.url || undefined,
+                      filename: img.filename || imageData.file.name
                     }
                   : img
               )
@@ -170,27 +206,38 @@ export function UploadStage({
           } else {
             const errorMessage =
               result?.error ?? uploadResult.error ?? "Upload failed";
+
+            // Show error toast instead of storing in image state
+            toast.error("Image upload failed", {
+              description: `${imageData.file.name}: ${errorMessage}`
+            });
+
             setImages((prev) =>
               prev.map((img) =>
                 img.id === imageData.id
                   ? {
                       ...img,
-                      status: "error" as const,
-                      error: errorMessage
+                      status: "error" as const
                     }
                   : img
               )
             );
           }
         } catch (error) {
+          const errorMessage =
+            error instanceof Error ? error.message : "Upload failed";
+
+          // Show error toast instead of storing in image state
+          toast.error("Image upload failed", {
+            description: `${imageData.file.name}: ${errorMessage}`
+          });
+
           setImages((prev) =>
             prev.map((img) =>
               img.id === imageData.id
                 ? {
                     ...img,
-                    status: "error" as const,
-                    error:
-                      error instanceof Error ? error.message : "Upload failed"
+                    status: "error" as const
                   }
                 : img
             )
@@ -256,8 +303,6 @@ export function UploadStage({
     const imageToRetry = images.find((img) => img.id === imageId);
     if (!imageToRetry || !currentProject || !user) return;
 
-    const folder = getProjectFolder(currentProject.id, user.id);
-
     setImages((prev) =>
       prev.map((img) =>
         img.id === imageId
@@ -267,17 +312,25 @@ export function UploadStage({
     );
 
     try {
-      const uploadResult = await uploadFilesBatch([imageToRetry.file], folder);
+      const uploadResult = await uploadFilesBatch(
+        [imageToRetry.file],
+        "images",
+        user.id,
+        currentProject.id
+      );
       const [result] = uploadResult.results;
 
       if (result?.success && result.url) {
+        await persistImageRecord(currentProject.id, imageToRetry, result.url);
+
         setImages((prev) =>
           prev.map((img) =>
             img.id === imageId
               ? {
                   ...img,
                   status: "uploaded" as const,
-                  uploadUrl: result.url
+                  url: result?.url || undefined,
+                  filename: img.filename || imageToRetry.file.name
                 }
               : img
           )
@@ -285,22 +338,33 @@ export function UploadStage({
       } else {
         const errorMessage =
           result?.error ?? uploadResult.error ?? "Upload failed";
+
+        // Show error toast instead of storing in image state
+        toast.error("Image upload failed", {
+          description: `${imageToRetry.file.name}: ${errorMessage}`
+        });
+
         setImages((prev) =>
           prev.map((img) =>
-            img.id === imageId
-              ? { ...img, status: "error" as const, error: errorMessage }
-              : img
+            img.id === imageId ? { ...img, status: "error" as const } : img
           )
         );
       }
     } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Upload failed";
+
+      // Show error toast instead of storing in image state
+      toast.error("Image upload failed", {
+        description: `${imageToRetry.file.name}: ${errorMessage}`
+      });
+
       setImages((prev) =>
         prev.map((img) =>
           img.id === imageId
             ? {
                 ...img,
-                status: "error" as const,
-                error: error instanceof Error ? error.message : "Upload failed"
+                status: "error" as const
               }
             : img
         )
@@ -308,8 +372,37 @@ export function UploadStage({
     }
   };
 
-  const handleRemoveImage = (imageId: string) => {
+  const handleRemoveImage = async (imageId: string) => {
+    const imageToRemove = images.find((img) => img.id === imageId);
     setImages((prev) => prev.filter((img) => img.id !== imageId));
+
+    if (!imageToRemove) {
+      return;
+    }
+
+    const imageUrl = imageToRemove.url || imageToRemove.uploadUrl;
+
+    if (imageUrl) {
+      try {
+        await deleteFile(imageUrl);
+      } catch (error) {
+        console.error("Failed to delete image from storage:", error);
+        toast.error("Failed to delete image from storage", {
+          description:
+            error instanceof Error ? error.message : "Unknown error occurred"
+        });
+      }
+    }
+
+    try {
+      await deleteImageRecord(imageId);
+    } catch (error) {
+      console.error("Failed to delete image from database:", error);
+      toast.error("Failed to delete image record", {
+        description:
+          error instanceof Error ? error.message : "Unknown error occurred"
+      });
+    }
   };
 
   return (

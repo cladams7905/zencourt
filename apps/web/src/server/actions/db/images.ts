@@ -119,3 +119,24 @@ export async function deleteProjectImages(projectId: string): Promise<void> {
     }
   );
 }
+
+/**
+ * Delete a single image by ID
+ */
+export async function deleteImage(imageId: string): Promise<void> {
+  if (!imageId || imageId.trim() === "") {
+    throw new Error("Image ID is required");
+  }
+
+  return withDbErrorHandling(
+    async () => {
+      await getUser();
+      await db.delete(images).where(eq(images.id, imageId));
+    },
+    {
+      actionName: "deleteImage",
+      context: { imageId },
+      errorMessage: "Failed to delete image. Please try again."
+    }
+  );
+}

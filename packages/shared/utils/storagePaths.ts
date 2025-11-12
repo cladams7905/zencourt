@@ -40,7 +40,7 @@ export function getProjectFolder(projectId: string, userId: string): string {
 
 /**
  * Get the full S3 key/path for a project image
- * Format: user_{userId}/projects/project_{projectId}/{filename}
+ * Format: user_{userId}/projects/project_{projectId}/images/{filename}
  *
  * @param userId - User ID
  * @param projectId - Project ID
@@ -53,51 +53,53 @@ export function getProjectImagePath(
   filename: string
 ): string {
   const sanitized = sanitizeFilename(filename);
-  return `${getProjectFolder(projectId, userId)}/${sanitized}`;
+  return `${getProjectFolder(projectId, userId)}/images/${sanitized}`;
 }
 
 /**
  * Get the folder path for room videos
- * Format: user_{userId}/videos/{videoId}
+ * Format: user_{userId}/projects/project_{projectId}/videos/video_{videoId}
  */
-export function getRoomVideoFolder(userId: string, videoId: string): string {
-  if (!userId || !videoId) {
-    throw new Error("User ID and Video ID are required for video storage");
+export function getRoomVideoFolder(userId: string, projectId: string, videoId: string): string {
+  if (!userId || !projectId || !videoId) {
+    throw new Error("User ID, Project ID, and Video ID are required for video storage");
   }
-  return `user_${userId}/videos/${videoId}`;
+  return `user_${userId}/projects/project_${projectId}/videos/video_${videoId}`;
 }
 
 /**
  * Get the full S3 key/path for a room video
- * Format: user_{userId}/videos/{videoId}/room_{roomName}_{timestamp}.mp4
+ * Format: user_{userId}/projects/project_{projectId}/videos/video_{videoId}/room_{roomName}_{timestamp}.mp4
  */
 export function getRoomVideoPath(
   userId: string,
+  projectId: string,
   videoId: string,
   roomName: string
 ): string {
   const timestamp = Date.now();
   const sanitized = sanitizeFilename(roomName);
-  return `${getRoomVideoFolder(userId, videoId)}/room_${sanitized}_${timestamp}.mp4`;
+  return `${getRoomVideoFolder(userId, projectId, videoId)}/room_${sanitized}_${timestamp}.mp4`;
 }
 
 /**
  * Get the folder path for final composed video
- * Format: user_{userId}/videos/{videoId}
+ * Format: user_{userId}/projects/project_{projectId}/videos/video_{videoId}
  */
-export function getFinalVideoFolder(userId: string, videoId: string): string {
-  if (!userId || !videoId) {
-    throw new Error("User ID and Video ID are required for video storage");
+export function getFinalVideoFolder(userId: string, projectId: string, videoId: string): string {
+  if (!userId || !projectId || !videoId) {
+    throw new Error("User ID, Project ID, and Video ID are required for video storage");
   }
-  return `user_${userId}/videos/${videoId}`;
+  return `user_${userId}/projects/project_${projectId}/videos/video_${videoId}`;
 }
 
 /**
  * Get the full S3 key/path for final video
- * Format: user_{userId}/videos/{videoId}/final_{timestamp}.mp4
+ * Format: user_{userId}/projects/project_{projectId}/videos/video_{videoId}/final_{timestamp}.mp4
  */
 export function getFinalVideoPath(
   userId: string,
+  projectId: string,
   videoId: string,
   projectName?: string
 ): string {
@@ -105,27 +107,27 @@ export function getFinalVideoPath(
   const filename = projectName
     ? `final_${sanitizeFilename(projectName)}_${timestamp}.mp4`
     : `final_${timestamp}.mp4`;
-  return `${getFinalVideoFolder(userId, videoId)}/${filename}`;
+  return `${getFinalVideoFolder(userId, projectId, videoId)}/${filename}`;
 }
 
 /**
  * Get the full S3 key/path for video thumbnail
- * Format: user_{userId}/videos/{videoId}/thumb_{timestamp}.jpg
+ * Format: user_{userId}/projects/project_{projectId}/videos/video_{videoId}/thumb_{timestamp}.jpg
  */
-export function getThumbnailPath(userId: string, videoId: string): string {
+export function getThumbnailPath(userId: string, projectId: string, videoId: string): string {
   const timestamp = Date.now();
-  return `${getFinalVideoFolder(userId, videoId)}/thumb_${timestamp}.jpg`;
+  return `${getFinalVideoFolder(userId, projectId, videoId)}/thumb_${timestamp}.jpg`;
 }
 
 /**
  * Get the folder path for temporary video files during composition
- * Format: user_{userId}/videos/{videoId}/temp
+ * Format: user_{userId}/projects/project_{projectId}/videos/video_{videoId}/temp
  */
-export function getTempVideoFolder(userId: string, videoId: string): string {
-  if (!userId || !videoId) {
-    throw new Error("User ID and Video ID are required for temp storage");
+export function getTempVideoFolder(userId: string, projectId: string, videoId: string): string {
+  if (!userId || !projectId || !videoId) {
+    throw new Error("User ID, Project ID, and Video ID are required for temp storage");
   }
-  return `user_${userId}/videos/${videoId}/temp`;
+  return `user_${userId}/projects/project_${projectId}/videos/video_${videoId}/temp`;
 }
 
 /**

@@ -125,6 +125,7 @@ export async function POST(request: NextRequest) {
         formData.append("folder", "videos");
         formData.append("userId", userId);
         formData.append("projectId", videoRecord.projectId);
+        formData.append("videoId", videoRecord.id);
 
         // Upload to video-server
         const uploadResponse = await fetch(`${videoServerUrl}/storage/upload`, {
