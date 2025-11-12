@@ -1,4 +1,34 @@
-import { DBImage } from "@shared/types/models";
+import { DBImage, InsertDBImage } from "@shared/types/models";
+
+/**
+ * Data Flow Through Image Types
+1. USER UPLOADS FILE
+   └→ ProcessedImage created with File object
+      { file: File, previewUrl: blob:..., status: "pending" }
+
+2. UPLOAD TO S3
+   └→ toSerializable() → SerializableImageData
+      Removes: file, previewUrl
+   └→ Server Action processes upload
+   └→ Returns with url populated
+      { url: "https://s3...", status: "uploaded" }
+
+3. AI ANALYSIS
+   └→ toSerializable() → SerializableImageData
+   └→ Server Action analyzes images
+   └→ Returns with AI data populated
+      { category: "bedroom", confidence: 0.95, features: [...] }
+
+4. SAVE TO DATABASE
+   └→ toInsertDBImage() → InsertDBImage
+      { id, projectId, filename, url, category, confidence, features, ... }
+   └→ Database insert
+   └→ Returns DBImage with uploadedAt
+
+5. LOAD FROM DATABASE
+   └→ fromDBImage() → ProcessedImage
+      Creates dummy File object, uses url as previewUrl
+ */
 
 /**
  * Image during client-side processing workflow
@@ -26,6 +56,13 @@ export type ProcessedImage = Partial<Omit<DBImage, "uploadedAt">> & {
 };
 
 /**
+ * Serializable image data for server actions
+ * ProcessedImage without non-serializable fields (File, blob URLs)
+ * Safe to pass across client/server boundaries
+ */
+export type SerializableImageData = Omit<ProcessedImage, "file" | "previewUrl">;
+
+/**
  * Processing status for images throughout the workflow
  */
 type ImageProcessingStatus =
@@ -48,8 +85,8 @@ export type ProcessingProgress = {
   total: number;
   /** Overall progress percentage (0-100) */
   overallProgress: number;
-  /** Current image being processed (optional) */
-  currentImage?: ProcessedImage;
+  /** Current image being processed (optional) - can be either client or server format */
+  currentImage?: ProcessedImage | SerializableImageData;
 };
 
 /**
@@ -61,3 +98,63 @@ export type ProcessingPhase =
   | "categorizing"
   | "complete"
   | "error";
+
+/**
+ * Helper functions for type conversions
+ */
+
+/**
+ * Convert ProcessedImage to serializable format for server actions
+ * Removes non-serializable fields (File, blob URLs)
+ */
+export function toSerializable(image: ProcessedImage): SerializableImageData {
+  return {
+    id: image.id,
+    projectId: image.projectId,
+    url: image.url,
+    filename: image.filename,
+    category: image.category,
+    confidence: image.confidence,
+    features: image.features,
+    sceneDescription: image.sceneDescription,
+    status: image.status,
+    order: image.order,
+    metadata: image.metadata,
+    error: image.error,
+    uploadUrl: image.uploadUrl
+  };
+}
+
+/**
+ * Convert ProcessedImage to InsertDBImage for database operations
+ */
+export function toInsertDBImage(
+  image: ProcessedImage,
+  projectId: string
+): InsertDBImage {
+  return {
+    id: image.id,
+    projectId,
+    filename: image.filename || image.file?.name || "image",
+    url: image.url!,
+    category: image.category ?? null,
+    confidence: image.confidence ?? null,
+    features: image.features ?? null,
+    sceneDescription: image.sceneDescription ?? null,
+    order: image.order ?? null,
+    metadata: image.metadata ?? null
+  };
+}
+
+/**
+ * Convert DBImage to ProcessedImage for client workflow
+ * Used when loading existing images from database
+ */
+export function fromDBImage(db: DBImage, file?: File): ProcessedImage {
+  return {
+    ...db,
+    file: file ?? new File([], db.filename, { type: "image/jpeg" }),
+    previewUrl: db.url,
+    status: "analyzed" as const
+  };
+}

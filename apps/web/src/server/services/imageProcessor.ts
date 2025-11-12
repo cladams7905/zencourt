@@ -12,6 +12,7 @@ import visionService from "./visionService";
 import s3StorageService from "./s3Service";
 import type {
   ProcessedImage,
+  SerializableImageData,
   ProcessingPhase,
   ProcessingProgress
 } from "../../types/images";
@@ -20,11 +21,11 @@ import { createChildLogger, logger as baseLogger } from "../../lib/logger";
 type ProgressCallback = (progress: ProcessingProgress) => void;
 
 export interface CategorizedImages {
-  [category: string]: ProcessedImage[];
+  [category: string]: SerializableImageData[];
 }
 
 export interface ProcessingResult {
-  images: ProcessedImage[];
+  images: SerializableImageData[];
   stats: {
     total: number;
     uploaded: number;
@@ -57,10 +58,11 @@ export class imageProcessorService {
 
   /**
    * Analyze images workflow: Classification → Scene Descriptions → Categorization
-   * Expects images to already be uploaded with uploadUrl set
+   * Expects images to already be uploaded with url set
+   * Accepts serializable image data (no File objects or blob URLs)
    */
   public async analyzeImagesWorkflow(
-    imageDataList: ProcessedImage[],
+    imageDataList: SerializableImageData[],
     options: {
       onProgress?: ProgressCallback;
       aiConcurrency?: number;
@@ -99,23 +101,31 @@ export class imageProcessorService {
 
       // Create completely new objects to avoid React Server Actions reference reuse
       // This ensures that mutations made during analysis are preserved in the return value
-      const normalizedImages = analyzedImages.map((image) => {
-        return {
+      const normalizedImages: SerializableImageData[] = analyzedImages.map(
+        (image) => ({
           id: image.id,
+          projectId: image.projectId,
           url: image.url,
           filename: image.filename,
           category: image.category,
           confidence: image.confidence,
-          features: Array.isArray(image.features) ? [...image.features] : image.features,
+          features: Array.isArray(image.features)
+            ? [...image.features]
+            : image.features,
           sceneDescription: image.sceneDescription,
           status: image.status,
           order: image.order,
-          error: image.error
-        };
-      });
+          metadata: image.metadata,
+          error: image.error,
+          uploadUrl: image.uploadUrl
+        })
+      );
 
       const categorized = this.categorizeImages(normalizedImages);
-      const stats = this.calculateStats(normalizedImages, Date.now() - startTime);
+      const stats = this.calculateStats(
+        normalizedImages,
+        Date.now() - startTime
+      );
 
       onProgress?.({
         phase: "complete",
@@ -158,14 +168,14 @@ export class imageProcessorService {
   }
 
   private async analyzeImages(
-    images: ProcessedImage[],
+    images: SerializableImageData[],
     concurrency: number,
     onProgress?: (
       completed: number,
       total: number,
-      result: ProcessedImage
+      result: SerializableImageData
     ) => void
-  ): Promise<ProcessedImage[]> {
+  ): Promise<SerializableImageData[]> {
     const uploadedImages = images.filter(
       (img) =>
         img.url &&
@@ -195,8 +205,7 @@ export class imageProcessorService {
 
           if (!signedUrl) {
             image.status = "error";
-            image.error =
-              image.error || "Unable to access image for analysis";
+            image.error = image.error || "Unable to access image for analysis";
             return null;
           }
 
@@ -228,6 +237,7 @@ export class imageProcessorService {
         if (batchResult.success && batchResult.classification) {
           image.category = batchResult.classification.category;
           image.confidence = batchResult.classification.confidence;
+          image.features = batchResult.classification.features;
           image.status = "analyzed";
         } else {
           image.status = "error";
@@ -243,7 +253,7 @@ export class imageProcessorService {
   }
 
   private async getSignedImageUrl(
-    image: ProcessedImage,
+    image: SerializableImageData,
     purpose: "classification" | "scene-description",
     expiresInSeconds = 600
   ): Promise<string | null> {
@@ -271,7 +281,7 @@ export class imageProcessorService {
     return result.url;
   }
 
-  private categorizeImages(images: ProcessedImage[]): CategorizedImages {
+  private categorizeImages(images: SerializableImageData[]): CategorizedImages {
     const categorized: CategorizedImages = {};
 
     images.forEach((image) => {
@@ -297,7 +307,7 @@ export class imageProcessorService {
     return categorized;
   }
 
-  private calculateStats(images: ProcessedImage[], duration: number) {
+  private calculateStats(images: SerializableImageData[], duration: number) {
     const uploaded = images.filter((img) => img.url).length;
     const analyzed = images.filter((img) => img.category).length;
     const failed = images.filter((img) => img.status === "error").length;
@@ -325,7 +335,7 @@ export class imageProcessorService {
     };
   }
 
-  private async generateSceneDescriptions(images: ProcessedImage[]) {
+  private async generateSceneDescriptions(images: SerializableImageData[]) {
     const classifiedImages = images.filter((img) => img.category);
     this.logger.info(
       { total: classifiedImages.length },

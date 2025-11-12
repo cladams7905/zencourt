@@ -9,13 +9,85 @@ import { CategorizedImageGrid } from "../../image-grid/CategorizedImageGrid";
 import { analyzeImagesWorkflow } from "../../../server/actions/api/vision";
 import { updateProject } from "../../../server/actions/db/projects";
 import { saveImages } from "../../../server/actions/db/images";
-import type { ProcessedImage, ProcessingProgress } from "../../../types/images";
-import type { DBProject, InsertDBImage } from "@shared/types/models";
+import type {
+  ProcessedImage,
+  ProcessingProgress,
+  SerializableImageData
+} from "../../../types/images";
+import { toSerializable, toInsertDBImage } from "../../../types/images";
+import type { DBProject } from "@shared/types/models";
 import {
   CategorizedGroup,
   ROOM_CATEGORIES,
   RoomCategory
 } from "@web/src/types/vision";
+
+/**
+ * Helper Functions
+ */
+
+/**
+ * Convert SerializableImageData back to ProcessedImage
+ * Creates dummy File object and uses url as previewUrl
+ */
+function convertToProcessedImage(
+  serializable: SerializableImageData
+): ProcessedImage {
+  return {
+    ...serializable,
+    file: new File([], serializable.filename || "image", {
+      type: "image/jpeg"
+    }),
+    previewUrl: serializable.url || "",
+    status: serializable.status
+  } as ProcessedImage;
+}
+
+/**
+ * Merge server analysis results with original client images
+ * Preserves file and previewUrl from original, adds AI data from server
+ */
+function mergeAnalysisResults(
+  originalImages: ProcessedImage[],
+  serverResults: SerializableImageData[]
+): ProcessedImage[] {
+  const resultById = new Map(serverResults.map((image) => [image.id, image]));
+  const originalIds = new Set(originalImages.map((img) => img.id));
+
+  const mergedImages = originalImages.map((original) => {
+    const serverData = resultById.get(original.id);
+    if (serverData) {
+      return {
+        ...original,
+        ...serverData,
+        file: original.file,
+        previewUrl: original.previewUrl
+      } as ProcessedImage;
+    }
+    return original;
+  });
+
+  const additionalImages = serverResults
+    .filter((img) => !originalIds.has(img.id))
+    .map(convertToProcessedImage);
+
+  return [...mergedImages, ...additionalImages];
+}
+
+async function saveImagesToDatabase(
+  images: ProcessedImage[],
+  projectId: string
+): Promise<void> {
+  const imagesToSave = images
+    .filter((img) => img.url && img.category)
+    .map((img, index) =>
+      toInsertDBImage({ ...img, order: img.order ?? index }, projectId)
+    );
+
+  if (imagesToSave.length > 0) {
+    await saveImages(projectId, imagesToSave);
+  }
+}
 
 interface CategorizeStageProps {
   images: ProcessedImage[];
@@ -48,10 +120,8 @@ export function CategorizeStage({
   const [isCategorizing, setIsCategorizing] = useState(false);
   const [processingProgress, setProcessingProgress] =
     useState<ProcessingProgress | null>(null);
-  // Use state instead of ref so it persists across modal close/reopen
   const [hasInitiatedProcessing, setHasInitiatedProcessing] = useState(false);
 
-  // Categorize images into groups by category
   const categorizeImages = useCallback((images: ProcessedImage[]) => {
     const groupedByCategory = images.reduce<Record<string, ProcessedImage[]>>(
       (acc, image) => {
@@ -155,7 +225,6 @@ export function CategorizeStage({
       return;
     }
 
-    // Mark that processing has been initiated
     setHasInitiatedProcessing(true);
     setIsCategorizing(true);
 
@@ -165,7 +234,6 @@ export function CategorizeStage({
       let finalImages: ProcessedImage[];
 
       if (needsAnalysis.length > 0) {
-        // Set initial progress state immediately - start with analyzing since images are already uploaded
         setProcessingProgress({
           phase: "analyzing",
           completed: 0,
@@ -173,32 +241,11 @@ export function CategorizeStage({
           overallProgress: 0
         });
 
-        // Prepare serializable image data for server action (exclude File objects)
-        const serializableImages = needsAnalysis.map((img) => ({
-          id: img.id,
-          url: img.url,
-          filename: img.filename,
-          category: img.category,
-          confidence: img.confidence,
-          features: img.features,
-          sceneDescription: img.sceneDescription,
-          status: img.status,
-          order: img.order
-        })) as ProcessedImage[];
+        const result = await analyzeImagesWorkflow(
+          needsAnalysis.map(toSerializable),
+          { aiConcurrency: 10 }
+        );
 
-        // Call server action directly
-        const result = await analyzeImagesWorkflow(serializableImages, {
-          aiConcurrency: 10
-        });
-
-        // Debug: Log what came back from the server
-        console.log("[CategorizeStage] Result from analyzeImagesWorkflow:", {
-          totalImages: result.images.length,
-          firstImage: result.images[0],
-          stats: result.stats
-        });
-
-        // Update progress to show completion
         setProcessingProgress({
           phase: "complete",
           completed: result.images.length,
@@ -206,47 +253,16 @@ export function CategorizeStage({
           overallProgress: 95
         });
 
-        const processedById = new Map(
-          result.images.map((image) => [image.id, image])
-        );
-        const needsAnalysisIds = new Set(needsAnalysis.map((img) => img.id));
-
-        console.log("[CategorizeStage] Merge debug:", {
-          needsAnalysisFirst: needsAnalysis[0],
-          processedFirst: result.images[0],
-          processedFromMap: processedById.get(needsAnalysis[0]?.id)
-        });
-
-        const mergedAnalyzed = needsAnalysis.map((image) => {
-          const processed = processedById.get(image.id);
-          const merged = processed ? { ...image, ...processed } : image;
-          console.log("[CategorizeStage] Merging image:", {
-            originalId: image.id,
-            processedId: processed?.id,
-            merged: {
-              id: merged.id,
-              category: merged.category,
-              confidence: merged.confidence,
-              status: merged.status
-            }
-          });
-          return merged;
-        });
-
-        const additionalProcessed = result.images.filter(
-          (image) => !needsAnalysisIds.has(image.id)
+        const analyzedImages = mergeAnalysisResults(
+          needsAnalysis,
+          result.images
         );
 
-        finalImages = [
-          ...alreadyAnalyzed,
-          ...mergedAnalyzed,
-          ...additionalProcessed
-        ];
+        finalImages = [...alreadyAnalyzed, ...analyzedImages];
       } else {
         finalImages = alreadyAnalyzed;
       }
 
-      // Show organizing/categorizing phase
       setProcessingProgress({
         phase: "categorizing",
         completed: finalImages.length,
@@ -254,80 +270,21 @@ export function CategorizeStage({
         overallProgress: 95
       });
 
-      // Debug: Log final images before setting state
-      console.log(
-        "[CategorizeStage] Final images before setting state:",
-        finalImages.map((img) => ({
-          id: img.id,
-          category: img.category,
-          confidence: img.confidence,
-          status: img.status,
-          url: img.url,
-          previewUrl: img.previewUrl,
-          hasFile: !!img.file
-        }))
-      );
-
       setImages(finalImages);
 
       const organized = categorizeImages(finalImages);
 
-      // Debug: Log organized groups
-      console.log(
-        "[CategorizeStage] Organized groups:",
-        organized.groups.map((g) => ({
-          category: g.category,
-          displayLabel: g.displayLabel,
-          imageCount: g.images.length,
-          images: g.images.map((img) => ({
-            id: img.id,
-            url: img.url,
-            previewUrl: img.previewUrl
-          }))
-        }))
-      );
-
       setCategorizedGroups(organized.groups);
 
-      // Save images to database
       try {
-        const imagesToSave: InsertDBImage[] = finalImages
-          .filter((img) => img.url && img.category)
-          .map((img, index) => ({
-            id: img.id,
-            projectId: currentProject.id,
-            filename: img.filename || img.file?.name || "image",
-            url: img.url!,
-            category: img.category!,
-            confidence: img.confidence ?? null,
-            features: img.features ?? null,
-            sceneDescription: img.sceneDescription ?? null,
-            order: img.order ?? index,
-            metadata: null // Image metadata not collected
-          }));
-
-        // Debug: Log scene descriptions before saving
-        console.log(
-          "[CategorizeStage] Images with scene descriptions:",
-          imagesToSave.map((img) => ({
-            id: img.id,
-            hasSceneDesc: !!img.sceneDescription,
-            sceneDescLength: img.sceneDescription?.length || 0
-          }))
-        );
-
-        if (imagesToSave.length > 0) {
-          await saveImages(currentProject.id, imagesToSave);
-        }
+        await saveImagesToDatabase(finalImages, currentProject.id);
       } catch (error) {
         console.error("Error saving images to database:", error);
         toast.error("Error saving images to database", {
           description: "Please try uploading images again."
         });
-        // Don't fail the whole process if DB save fails, just log it
       }
 
-      // Show completion
       setProcessingProgress({
         phase: "complete",
         completed: finalImages.length,
@@ -472,11 +429,14 @@ export function CategorizeStage({
 
           {processingProgress?.currentImage && (
             <div className="text-xs text-center text-muted-foreground">
-              Processing:
-              {" "}
-              {processingProgress.currentImage.file?.name ||
-                processingProgress.currentImage.filename ||
-                processingProgress.currentImage.id}
+              Processing:{" "}
+              {(() => {
+                const img = processingProgress.currentImage;
+                if ("file" in img) {
+                  return img.file?.name || img.filename || img.id;
+                }
+                return img.filename || img.id;
+              })()}
             </div>
           )}
         </div>

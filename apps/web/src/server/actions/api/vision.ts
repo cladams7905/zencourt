@@ -10,7 +10,7 @@ import imageProcessorService, {
   type ProcessingResult
 } from "../../services/imageProcessor";
 import { SceneDescription } from "@web/src/types/vision";
-import type { ProcessedImage } from "@web/src/types/images";
+import type { SerializableImageData } from "@web/src/types/images";
 import { createChildLogger, logger as baseLogger } from "../../../lib/logger";
 
 const logger = createChildLogger(baseLogger, { module: "vision-actions" });
@@ -106,12 +106,12 @@ export async function generateSceneDescriptionsBatch(
  * Analyze images workflow (server action)
  * Orchestrates classification → scene descriptions → categorization
  *
- * @param images - Array of ProcessedImage objects with uploadUrl set
+ * @param images - Array of SerializableImageData objects with url set
  * @param options - Configuration for concurrency
  * @returns Processing result with analyzed images, stats, and categorized groups
  */
 export async function analyzeImagesWorkflow(
-  images: ProcessedImage[],
+  images: SerializableImageData[],
   options: {
     aiConcurrency?: number;
   } = {}
