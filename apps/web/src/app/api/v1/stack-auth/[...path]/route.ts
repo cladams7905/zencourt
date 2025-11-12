@@ -15,12 +15,16 @@ function toRouteParams(context: unknown): RouteParams {
 async function handle(request: Request, { params }: RouteParams) {
   let path = params.path.join("/");
 
-  // Strip /api/v1 prefix if present - Stack's API doesn't use it
+  // Map SDK paths to Stack API endpoints
   // SDK sends: /api/v1/stack-auth/api/v1/current-user
-  // We want to forward: https://api.stack-auth.com/api/v1/current-user
-  // But Stack actually expects: https://api.stack-auth.com/current-user
+  // Stack expects: https://api.stack-auth.com/users/me
   if (path.startsWith("api/v1/")) {
-    path = path.substring(7); // Remove "api/v1/"
+    path = path.substring(7); // Remove "api/v1/" prefix
+  }
+
+  // Map current-user to users/me
+  if (path === "current-user") {
+    path = "users/me";
   }
 
   const requestUrl = new URL(request.url);
