@@ -21,13 +21,6 @@ async function handle(request: Request, { params }: RouteParams) {
   headers.delete("host");
   headers.delete("content-length");
 
-  const projectId = process.env.NEXT_PUBLIC_STACK_PROJECT_ID;
-  const secretServerKey = process.env.STACK_SECRET_SERVER_KEY;
-  if (projectId && secretServerKey) {
-    headers.set("x-stack-access-type", "client");
-    headers.set("x-stack-project-id", projectId);
-    headers.set("x-stack-secret-server-key", secretServerKey);
-  }
   let body: BodyInit | undefined;
   if (!["GET", "HEAD"].includes(request.method)) {
     const contentType = request.headers.get("content-type");
