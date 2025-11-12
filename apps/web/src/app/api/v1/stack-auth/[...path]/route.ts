@@ -13,9 +13,20 @@ function toRouteParams(context: unknown): RouteParams {
 }
 
 async function handle(request: Request, { params }: RouteParams) {
-  const path = params.path.join("/");
+  let path = params.path.join("/");
+
+  // Strip /api/v1 prefix if present - Stack's API doesn't use it
+  // SDK sends: /api/v1/stack-auth/api/v1/current-user
+  // We want to forward: https://api.stack-auth.com/api/v1/current-user
+  // But Stack actually expects: https://api.stack-auth.com/current-user
+  if (path.startsWith("api/v1/")) {
+    path = path.substring(7); // Remove "api/v1/"
+  }
+
   const requestUrl = new URL(request.url);
   const targetUrl = `${STACK_API_BASE}/${path}${requestUrl.search}`;
+
+  console.log('Proxying to:', targetUrl);
 
   const headers = new Headers(request.headers);
   headers.delete("host");
@@ -52,6 +63,12 @@ async function handle(request: Request, { params }: RouteParams) {
     headers,
     body,
     redirect: "manual"
+  });
+
+  console.log('Stack response:', {
+    status: upstream.status,
+    statusText: upstream.statusText,
+    headers: Object.fromEntries(upstream.headers.entries())
   });
 
   const responseHeaders = new Headers(upstream.headers);

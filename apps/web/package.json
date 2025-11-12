@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "vercel dev --turbopack",
+    "dev": "next dev",
     "build": "next build",
     "build:local": "dotenv -e ../../.env.local -- next build",
     "start": "next start",
