@@ -4,6 +4,7 @@ import { StackClientApp } from "@stackframe/stack";
 // This ensures all workers see the same Stack client configuration
 // Note: uniqueIdentifier and checkString are internal options not exposed in public types
 type StackClientAppConstructor = new (options: {
+  baseUrl: string;
   tokenStore: "nextjs-cookie";
   projectId: string;
   publishableClientKey: string;
@@ -15,6 +16,7 @@ type StackClientAppConstructor = new (options: {
 const STACK_CLIENT_CHECK_STRING = `zencourt-client-check-${process.env.NEXT_PUBLIC_STACK_PROJECT_ID}`;
 
 export const stackClientApp: StackClientApp<true, string> = new (StackClientApp as unknown as StackClientAppConstructor)({
+  baseUrl: process.env.NEXT_PUBLIC_STACK_URL || "https://api.stack-auth.com",
   tokenStore: "nextjs-cookie",
   projectId: process.env.NEXT_PUBLIC_STACK_PROJECT_ID!,
   publishableClientKey: process.env.NEXT_PUBLIC_STACK_PUBLISHABLE_CLIENT_KEY!,

@@ -6,6 +6,7 @@ import { StackServerApp } from "@stackframe/stack";
 // This ensures all workers see the same Stack server configuration
 // Note: uniqueIdentifier and checkString are internal options not exposed in public types
 type StackServerAppConstructor = new (options: {
+  baseUrl: string;
   tokenStore: "nextjs-cookie";
   projectId: string;
   publishableClientKey: string;
@@ -18,6 +19,7 @@ type StackServerAppConstructor = new (options: {
 const STACK_SERVER_CHECK_STRING = `zencourt-server-check-${process.env.NEXT_PUBLIC_STACK_PROJECT_ID}`;
 
 export const stackServerApp: StackServerApp<true, string> = new (StackServerApp as unknown as StackServerAppConstructor)({
+  baseUrl: process.env.NEXT_PUBLIC_STACK_URL || "https://api.stack-auth.com",
   tokenStore: "nextjs-cookie",
   projectId: process.env.NEXT_PUBLIC_STACK_PROJECT_ID!,
   publishableClientKey: process.env.NEXT_PUBLIC_STACK_PUBLISHABLE_CLIENT_KEY!,
