@@ -17,20 +17,13 @@ async function handle(request: Request, { params }: RouteParams) {
 
   // Map SDK paths to Stack API endpoints
   // SDK sends: /api/v1/stack-auth/api/v1/current-user
-  // Stack expects: https://api.stack-auth.com/users/me
-  if (path.startsWith("api/v1/")) {
-    path = path.substring(7); // Remove "api/v1/" prefix
-  }
-
-  // Map current-user to users/me
-  if (path === "current-user") {
-    path = "users/me";
-  }
+  // Stack expects: https://api.stack-auth.com/api/v1/users/me
+  path = path.replace("api/v1/current-user", "api/v1/users/me");
 
   const requestUrl = new URL(request.url);
   const targetUrl = `${STACK_API_BASE}/${path}${requestUrl.search}`;
 
-  console.log('Proxying to:', targetUrl);
+  console.log("Proxying to:", targetUrl);
 
   const headers = new Headers(request.headers);
   headers.delete("host");
@@ -42,10 +35,12 @@ async function handle(request: Request, { params }: RouteParams) {
     headers.set("x-stack-access-type", "client");
   }
 
-  console.log('Incoming headers:', {
-    'x-stack-access-type': headers.get('x-stack-access-type'),
-    'x-stack-project-id': headers.get('x-stack-project-id'),
-    'x-stack-publishable-client-key': headers.get('x-stack-publishable-client-key'),
+  console.log("Incoming headers:", {
+    "x-stack-access-type": headers.get("x-stack-access-type"),
+    "x-stack-project-id": headers.get("x-stack-project-id"),
+    "x-stack-publishable-client-key": headers.get(
+      "x-stack-publishable-client-key"
+    )
   });
 
   let body: BodyInit | undefined;
@@ -69,7 +64,7 @@ async function handle(request: Request, { params }: RouteParams) {
     redirect: "manual"
   });
 
-  console.log('Stack response:', {
+  console.log("Stack response:", {
     status: upstream.status,
     statusText: upstream.statusText,
     headers: Object.fromEntries(upstream.headers.entries())
