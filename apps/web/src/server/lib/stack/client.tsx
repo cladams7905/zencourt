@@ -4,7 +4,7 @@ const globalForStack = globalThis as typeof globalThis & {
   stackClientApp?: StackClientApp<true, string>;
 };
 
-const baseUrl = "/api/stack-auth";
+const baseUrl = "/api/v1/stack-auth";
 const projectId = process.env.NEXT_PUBLIC_STACK_PROJECT_ID!;
 const publishableClientKey =
   process.env.NEXT_PUBLIC_STACK_PUBLISHABLE_CLIENT_KEY!;
