@@ -44,7 +44,7 @@ export function CategorizeStage({
   onContinue,
   onBack
 }: CategorizeStageProps) {
-  const user = useUser();
+  const user = useUser({ or: "redirect" });
   const [isCategorizing, setIsCategorizing] = useState(false);
   const [processingProgress, setProcessingProgress] =
     useState<ProcessingProgress | null>(null);

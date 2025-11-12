@@ -23,8 +23,6 @@ async function handle(request: Request, { params }: RouteParams) {
   const requestUrl = new URL(request.url);
   const targetUrl = `${STACK_API_BASE}/${path}${requestUrl.search}`;
 
-  console.log("Proxying to:", targetUrl);
-
   const headers = new Headers(request.headers);
   headers.delete("host");
   headers.delete("content-length");
@@ -34,14 +32,6 @@ async function handle(request: Request, { params }: RouteParams) {
   if (headers.has("x-stack-publishable-client-key")) {
     headers.set("x-stack-access-type", "client");
   }
-
-  console.log("Incoming headers:", {
-    "x-stack-access-type": headers.get("x-stack-access-type"),
-    "x-stack-project-id": headers.get("x-stack-project-id"),
-    "x-stack-publishable-client-key": headers.get(
-      "x-stack-publishable-client-key"
-    )
-  });
 
   let body: BodyInit | undefined;
   if (!["GET", "HEAD"].includes(request.method)) {
@@ -62,12 +52,6 @@ async function handle(request: Request, { params }: RouteParams) {
     headers,
     body,
     redirect: "manual"
-  });
-
-  console.log("Stack response:", {
-    status: upstream.status,
-    statusText: upstream.statusText,
-    headers: Object.fromEntries(upstream.headers.entries())
   });
 
   const responseHeaders = new Headers(upstream.headers);

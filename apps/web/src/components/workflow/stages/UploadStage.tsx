@@ -29,7 +29,7 @@ export function UploadStage({
   onImageClick,
   onContinue
 }: UploadStageProps) {
-  const user = useUser();
+  const user = useUser({ or: "redirect" });
   const [isLoadingPreviews, setIsLoadingPreviews] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
