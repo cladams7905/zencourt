@@ -1,13 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
 
 export async function middleware(request: NextRequest) {
+  // Intercept Stack Auth API requests and add missing headers
+  if (request.nextUrl.href.includes("api.stack-auth.com")) {
+    const headers = new Headers(request.headers);
+
+    // Add x-stack-access-type header if Stack key is present but access type is missing
+    if (headers.has("x-stack-publishable-client-key") && !headers.has("x-stack-access-type")) {
+      headers.set("x-stack-access-type", "client");
+    }
+
+    return NextResponse.next({
+      request: {
+        headers
+      }
+    });
+  }
+
   const isAuthPage = request.nextUrl.pathname.startsWith("/auth");
   const isHandlerPage = request.nextUrl.pathname.startsWith("/handler");
   const isWebhook = request.nextUrl.pathname.startsWith("/api/v1/webhooks");
   const isNotFound = request.nextUrl.pathname === "/_not-found";
   const isNextInternal = request.nextUrl.pathname.startsWith("/_next");
-  const isStackProxy =
-    request.nextUrl.pathname.startsWith("/api/v1/stack-auth");
   const hasStackSession =
     Boolean(request.cookies.get("stack-access")?.value) ||
     Boolean(request.cookies.get("stack-refresh")?.value);
@@ -18,8 +32,7 @@ export async function middleware(request: NextRequest) {
     isHandlerPage ||
     isWebhook ||
     isNotFound ||
-    isNextInternal ||
-    isStackProxy
+    isNextInternal
   ) {
     // If already authenticated and trying to access /auth, redirect to home
     if (isAuthPage && hasStackSession) {
