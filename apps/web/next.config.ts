@@ -41,6 +41,14 @@ const nextConfig: NextConfig = {
         pathname: "/**"
       }
     ]
+  },
+  async rewrites() {
+    return [
+      {
+        source: "/api/stack-auth/:path*",
+        destination: "https://api.stack-auth.com/:path*"
+      }
+    ];
   }
 };
 
