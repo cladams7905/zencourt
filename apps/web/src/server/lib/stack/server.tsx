@@ -6,7 +6,7 @@ const globalForStack = globalThis as typeof globalThis & {
   stackServerApp?: StackServerApp<true, string>;
 };
 
-const serverBaseUrl = process.env.NEXT_PUBLIC_STACK_URL || "https://app.stack-auth.com";
+const serverBaseUrl = "https://api.stack-auth.com";
 const serverProjectId = process.env.NEXT_PUBLIC_STACK_PROJECT_ID!;
 const publishableKey = process.env.NEXT_PUBLIC_STACK_PUBLISHABLE_CLIENT_KEY!;
 const secretServerKey = process.env.STACK_SECRET_SERVER_KEY!;
@@ -34,4 +34,7 @@ export const stackServerApp: StackServerApp<true, string> =
     urls: serverUrls,
     uniqueIdentifier: serverUniqueIdentifier,
     checkString: serverSerializedConfig
-  } as unknown as ConstructorParameters<typeof StackServerApp>[0]) as StackServerApp<true, string>);
+  } as unknown as ConstructorParameters<typeof StackServerApp>[0]) as StackServerApp<
+    true,
+    string
+  >);

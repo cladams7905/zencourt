@@ -4,9 +4,10 @@ const globalForStack = globalThis as typeof globalThis & {
   stackClientApp?: StackClientApp<true, string>;
 };
 
-const baseUrl = process.env.NEXT_PUBLIC_STACK_URL || "https://app.stack-auth.com";
+const baseUrl = "https://api.stack-auth.com";
 const projectId = process.env.NEXT_PUBLIC_STACK_PROJECT_ID!;
-const publishableClientKey = process.env.NEXT_PUBLIC_STACK_PUBLISHABLE_CLIENT_KEY!;
+const publishableClientKey =
+  process.env.NEXT_PUBLIC_STACK_PUBLISHABLE_CLIENT_KEY!;
 const tokenStore = "nextjs-cookie" as const;
 const urls = {};
 const uniqueIdentifier = `zencourt-client-${projectId}`;
@@ -29,4 +30,7 @@ export const stackClientApp: StackClientApp<true, string> =
     urls,
     uniqueIdentifier,
     checkString: serializedConfig
-  } as unknown as ConstructorParameters<typeof StackClientApp>[0]) as StackClientApp<true, string>);
+  } as unknown as ConstructorParameters<typeof StackClientApp>[0]) as StackClientApp<
+    true,
+    string
+  >);
