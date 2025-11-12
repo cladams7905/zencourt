@@ -14,7 +14,7 @@ import type {
   ProcessingPhase,
   ProcessingProgress
 } from "../../types/images";
-import { createChildLogger, logger as baseLogger } from "../lib/logger";
+import { createChildLogger, logger as baseLogger } from "../../lib/logger";
 
 type ProgressCallback = (progress: ProcessingProgress) => void;
 
@@ -313,7 +313,6 @@ export class imageProcessorService {
       "Scene description summary"
     );
   }
-
 }
 
 const imageProcessorServiceInstance = new imageProcessorService();

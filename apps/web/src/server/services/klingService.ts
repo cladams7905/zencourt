@@ -7,7 +7,7 @@
 import { fal } from "@fal-ai/client";
 import type { KlingApiRequest, KlingApiResponse } from "@shared/types/api";
 import { VideoGenerationError } from "@shared/types/errors";
-import { createChildLogger, logger as baseLogger } from "../lib/logger";
+import { createChildLogger, logger as baseLogger } from "../../lib/logger";
 
 interface RoomVideoRequest {
   roomId: string;

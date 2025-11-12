@@ -12,9 +12,11 @@ import {
   type SceneDescription
 } from "@web/src/types/vision";
 import { AIVisionError } from "@shared/types/errors";
-import { createChildLogger, logger as baseLogger } from "../lib/logger";
+import { createChildLogger, logger as baseLogger } from "../../lib/logger";
 
-const visionLogger = createChildLogger(baseLogger, { module: "vision-service" });
+const visionLogger = createChildLogger(baseLogger, {
+  module: "vision-service"
+});
 
 type RetryOptions = {
   timeout: number;
@@ -193,7 +195,9 @@ Now analyze the provided image and provide a SHORT, CONCISE scene description (1
             attempt: attempt + 1,
             context: failureContext,
             error:
-              error instanceof Error ? { name: error.name, message: error.message } : error
+              error instanceof Error
+                ? { name: error.name, message: error.message }
+                : error
           },
           "OpenAI operation failed"
         );

@@ -1,17 +1,10 @@
 import { StackHandler } from "@stackframe/stack";
-import { stackServerApp } from "../../../server/lib/stack/server";
-import { AuthSurface } from "../../../components/AuthSurface";
+import { AuthSurface } from "@web/src/components/AuthSurface";
 
-export default async function Handler(props: {
-  params: Promise<{ stack?: string[] }>;
-  searchParams?: Promise<Record<string, string>>;
-}) {
-  const params = await props.params;
-  const searchParams = props.searchParams ? await props.searchParams : undefined;
-
+export default function Handler() {
   return (
     <AuthSurface>
-      <StackHandler app={stackServerApp} params={params} searchParams={searchParams} />
+      <StackHandler fullPage={false} />
     </AuthSurface>
   );
 }

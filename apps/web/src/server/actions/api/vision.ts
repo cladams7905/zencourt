@@ -11,7 +11,7 @@ import imageProcessorService, {
 } from "../../services/imageProcessor";
 import { SceneDescription } from "@web/src/types/vision";
 import type { ProcessedImage } from "@web/src/types/images";
-import { createChildLogger, logger as baseLogger } from "../../lib/logger";
+import { createChildLogger, logger as baseLogger } from "../../../lib/logger";
 
 const logger = createChildLogger(baseLogger, { module: "vision-actions" });
 

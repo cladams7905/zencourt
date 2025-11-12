@@ -8,7 +8,7 @@
 import { S3UploadRequest } from "@shared/types/api/requests";
 import { S3UploadBatchResponse } from "@shared/types/api/responses";
 import s3StorageService from "../../services/s3Service";
-import { createChildLogger, logger as baseLogger } from "../../lib/logger";
+import { createChildLogger, logger as baseLogger } from "../../../lib/logger";
 
 const logger = createChildLogger(baseLogger, { module: "storage-actions" });
 

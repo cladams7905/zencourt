@@ -1,5 +1,6 @@
 import { db, projects } from "@db/client";
-import { stackServerApp } from "../../../server/lib/stack/server";
+import { getStackServerApp } from "../../../lib/stack/server";
+import type { StackServerApp } from "@stackframe/stack";
 import { eq } from "drizzle-orm";
 
 type Project = typeof projects.$inferSelect;
@@ -15,10 +16,11 @@ export class ApiError extends Error {
 }
 
 export type AuthenticatedUser = NonNullable<
-  Awaited<ReturnType<typeof stackServerApp.getUser>>
+  Awaited<ReturnType<StackServerApp<true>["getUser"]>>
 >;
 
 export async function requireAuthenticatedUser(): Promise<AuthenticatedUser> {
+  const stackServerApp = await getStackServerApp();
   const user = await stackServerApp.getUser();
 
   if (!user) {

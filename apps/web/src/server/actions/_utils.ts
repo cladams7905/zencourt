@@ -1,5 +1,5 @@
 import { DrizzleError } from "drizzle-orm";
-import { createChildLogger, logger as baseLogger } from "../lib/logger";
+import { createChildLogger, logger as baseLogger } from "../../lib/logger";
 
 const logger = createChildLogger(baseLogger, { module: "server-actions" });
 

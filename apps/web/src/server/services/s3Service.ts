@@ -20,7 +20,7 @@ import {
   getGenericUploadPath,
   extractS3KeyFromUrl
 } from "@shared/utils";
-import { createChildLogger, logger as baseLogger } from "../lib/logger";
+import { createChildLogger, logger as baseLogger } from "../../lib/logger";
 
 const logger = createChildLogger(baseLogger, { module: "s3-service" });
 

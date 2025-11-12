@@ -1,4 +1,5 @@
 .vercel
 .next
+.cursor
 demo-images/
 node_modules/

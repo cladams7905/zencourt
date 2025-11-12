@@ -1,7 +1,7 @@
 "use server";
 
-import { stackServerApp } from "../../lib/stack/server";
 import { CurrentUser } from "@stackframe/stack";
+import { stackServerApp } from "@web/src/lib/stack/server";
 
 /**
  * Gets the current authenticated user or throws an error if no user is found.
