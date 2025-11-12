@@ -1,3 +1,5 @@
+"use client";
+
 import {
   Play,
   MoreVertical,
@@ -44,22 +46,18 @@ export function ProjectsView({ initialProjects }: ProjectsViewProps) {
   };
 
   const handleProjectCreated = (project: DBProject) => {
-    // Check if project already exists and update it, otherwise add it
     const existingIndex = projects.findIndex((p) => p.id === project.id);
     if (existingIndex >= 0) {
-      // Update existing project
       const updatedProjects = [...projects];
       updatedProjects[existingIndex] = project;
       setProjects(updatedProjects);
     } else {
-      // Add new project
       setProjects([...projects, project]);
     }
     setIsWorkflowModalOpen(false);
     setSelectedProject(null);
   };
 
-  // Remove duplicates and apply filter
   const uniqueProjects = Array.from(
     new Map(projects.map((p) => [p.id, p])).values()
   );
@@ -68,7 +66,6 @@ export function ProjectsView({ initialProjects }: ProjectsViewProps) {
     return project.format === filter;
   });
 
-  // Show empty state if no projects exist
   if (projects.length === 0) {
     return (
       <div className="p-4 sm:p-6 lg:p-8 min-h-screen flex items-center justify-center">
@@ -105,7 +102,6 @@ export function ProjectsView({ initialProjects }: ProjectsViewProps) {
         </button>
       </div>
 
-      {/* View Mode Toggle */}
       <div className="mb-6 flex gap-2 border-b border-border">
         <button
           onClick={() => setViewMode("projects")}
@@ -138,7 +134,6 @@ export function ProjectsView({ initialProjects }: ProjectsViewProps) {
 
       {viewMode === "projects" && (
         <>
-          {/* Filter Tabs */}
           <div className="mb-6 flex gap-2 overflow-x-auto pb-2">
             <button
               onClick={() => setFilter("all")}
@@ -159,8 +154,7 @@ export function ProjectsView({ initialProjects }: ProjectsViewProps) {
               }`}
             >
               <Video size={16} />
-              <span className="hidden xs:inline">Vertical</span>{" "}
-              <span>(9:16)</span>
+              <span className="hidden xs:inline">Vertical</span> <span>(9:16)</span>
             </button>
             <button
               onClick={() => setFilter("landscape")}
@@ -171,8 +165,7 @@ export function ProjectsView({ initialProjects }: ProjectsViewProps) {
               }`}
             >
               <LayoutGrid size={16} />
-              <span className="hidden xs:inline">Landscape</span>{" "}
-              <span>(16:9)</span>
+              <span className="hidden xs:inline">Landscape</span> <span>(16:9)</span>
             </button>
           </div>
 
@@ -186,13 +179,11 @@ export function ProjectsView({ initialProjects }: ProjectsViewProps) {
                 <div className="relative aspect-video bg-linear-to-br from-[#d4c4b0] to-[#e8ddd3] overflow-hidden">
                   {project.format === "vertical" ? (
                     <>
-                      {/* Blurred background - TikTok style */}
                       <Image
                         src={project.thumbnailUrl || HouseFallback}
                         alt=""
                         className="absolute inset-0 w-full h-full object-cover blur-2xl scale-110 opacity-60"
                       />
-                      {/* Main centered vertical video */}
                       <div className="absolute inset-0 flex items-center justify-center">
                         <Image
                           src={project.thumbnailUrl || HouseFallback}

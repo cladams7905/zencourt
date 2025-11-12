@@ -47,8 +47,8 @@ export function ImageUploadGrid({
               }`}
             >
               <Image
-                src={image.previewUrl}
-                alt={image.file.name}
+                src={image.url || image.uploadUrl || image.previewUrl}
+                alt={image.filename || image.file?.name || "Image"}
                 fill
                 sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 25vw"
                 className="object-cover"
@@ -102,7 +102,7 @@ export function ImageUploadGrid({
             {/* Status Badge */}
             <div className="absolute bottom-2 left-2 right-2">
               <div className="text-xs font-medium text-white bg-black/60 rounded px-2 py-1 truncate">
-                {image.file.name}
+                {image.filename || image.file?.name || "Image"}
               </div>
             </div>
           </div>

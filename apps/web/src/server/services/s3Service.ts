@@ -8,6 +8,7 @@ import {
   S3Client,
   PutObjectCommand,
   DeleteObjectCommand,
+  GetObjectCommand,
   ServerSideEncryption
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
@@ -218,6 +219,42 @@ export class s3Service {
           ? error.message
           : "Failed to generate signed URL";
       logger.error({ err: error, key }, "Signed URL error");
+
+      return {
+        success: false,
+        error: message
+      };
+    }
+  }
+
+  /**
+   * Generate a signed download URL for an existing object.
+   * Accepts either a full S3 URL or a raw object key.
+   */
+  async getSignedDownloadUrl(
+    urlOrKey: string,
+    expiresIn: number = 900
+  ): Promise<{ success: true; url: string } | { success: false; error: string }> {
+    try {
+      const key = urlOrKey.startsWith("http")
+        ? extractS3KeyFromUrl(urlOrKey)
+        : urlOrKey;
+
+      const command = new GetObjectCommand({
+        Bucket: AWS_CONFIG.bucket,
+        Key: key
+      });
+
+      const signedUrl = await getSignedUrl(this.client, command, { expiresIn });
+      logger.info({ key, expiresIn }, "Generated signed download URL");
+
+      return { success: true, url: signedUrl };
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to generate signed download URL";
+      logger.error({ err: error, urlOrKey }, "Signed download URL error");
 
       return {
         success: false,

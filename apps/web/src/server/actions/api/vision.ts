@@ -42,7 +42,7 @@ export async function generateSceneDescription(
       }
     );
 
-    logger.info({ imageUrl, roomType }, "Scene description generated");
+    logger.info({ imageUrl, roomType, result }, "Scene description generated");
 
     return result;
   } catch (error) {
@@ -128,7 +128,8 @@ export async function analyzeImagesWorkflow(
       {
         total: result.images.length,
         analyzed: result.stats.analyzed,
-        failed: result.stats.failed
+        failed: result.stats.failed,
+        result: result.images
       },
       "Image analysis workflow completed"
     );

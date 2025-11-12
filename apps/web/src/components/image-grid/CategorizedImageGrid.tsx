@@ -550,6 +550,11 @@ function ImageThumbnail({
     image.status === "analyzing" || image.status === "uploading";
   const isError = image.status === "error";
   const confidence = image?.confidence || 0;
+  const displayName =
+    image.file?.name ||
+    image.filename ||
+    image.url?.split("/").pop() ||
+    "Image";
 
   return (
     <div
@@ -584,7 +589,7 @@ function ImageThumbnail({
       >
         <Image
           src={image.url || image.previewUrl}
-          alt={category}
+          alt={category || displayName}
           fill
           sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
           className={`object-cover transition-transform ${
@@ -638,7 +643,7 @@ function ImageThumbnail({
         )}
       </div>
 
-      <p className="mt-1 text-xs text-gray-500 truncate">{image.file.name}</p>
+      <p className="mt-1 text-xs text-gray-500 truncate">{displayName}</p>
     </div>
   );
 }

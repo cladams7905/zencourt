@@ -22,6 +22,13 @@
       "when": 1762585692811,
       "tag": "0002_bitter_boom_boom",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1762987259400,
+      "tag": "0003_normal_marauders",
+      "breakpoints": true
     }
   ]
 }

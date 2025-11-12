@@ -11,7 +11,8 @@ import {
   jsonb,
   integer,
   varchar,
-  index
+  index,
+  real
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { authenticatedRole, authUid, crudPolicy } from "drizzle-orm/neon";
@@ -73,7 +74,7 @@ export const images = pgTable(
     filename: text("filename").notNull(),
     url: text("url").notNull(), // Vercel Blob URL
     category: varchar("category", { length: 50 }), // room classification
-    confidence: integer("confidence"), // AI confidence score (0-100)
+    confidence: real("confidence"), // AI confidence score (0.0-1.0)
     features: jsonb("features").$type<string[]>(), // Detected features
     sceneDescription: text("scene_description"), // Detailed scene description for video generation
     order: integer("order"), // Display order in video

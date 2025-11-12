@@ -20,14 +20,14 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "media" {
   }
 }
 
-# Block all public access
+# Allow public read access via bucket policy, but block public ACLs
 resource "aws_s3_bucket_public_access_block" "media" {
   bucket = aws_s3_bucket.media.id
 
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
+  block_public_acls       = true  # Prevent setting ACLs to public
+  block_public_policy     = false # Allow bucket policy for public read
+  ignore_public_acls      = true  # Ignore any existing public ACLs
+  restrict_public_buckets = false # Allow public read via bucket policy
 }
 
 # CORS configuration
@@ -72,6 +72,13 @@ resource "aws_s3_bucket_policy" "media" {
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
+      {
+        Sid       = "PublicReadGetObject"
+        Effect    = "Allow"
+        Principal = "*"
+        Action    = "s3:GetObject"
+        Resource  = "${aws_s3_bucket.media.arn}/*"
+      },
       {
         Sid       = "DenyInsecureTransport"
         Effect    = "Deny"

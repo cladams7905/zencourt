@@ -9,6 +9,7 @@
  */
 
 import visionService from "./visionService";
+import s3StorageService from "./s3Service";
 import type {
   ProcessedImage,
   ProcessingPhase,
@@ -96,8 +97,25 @@ export class imageProcessorService {
         overallProgress: 95
       });
 
-      const categorized = this.categorizeImages(analyzedImages);
-      const stats = this.calculateStats(analyzedImages, Date.now() - startTime);
+      // Create completely new objects to avoid React Server Actions reference reuse
+      // This ensures that mutations made during analysis are preserved in the return value
+      const normalizedImages = analyzedImages.map((image) => {
+        return {
+          id: image.id,
+          url: image.url,
+          filename: image.filename,
+          category: image.category,
+          confidence: image.confidence,
+          features: Array.isArray(image.features) ? [...image.features] : image.features,
+          sceneDescription: image.sceneDescription,
+          status: image.status,
+          order: image.order,
+          error: image.error
+        };
+      });
+
+      const categorized = this.categorizeImages(normalizedImages);
+      const stats = this.calculateStats(normalizedImages, Date.now() - startTime);
 
       onProgress?.({
         phase: "complete",
@@ -107,7 +125,7 @@ export class imageProcessorService {
       });
 
       return {
-        images: analyzedImages,
+        images: normalizedImages,
         stats,
         categorized
       };
@@ -167,14 +185,42 @@ export class imageProcessorService {
       img.status = "analyzing";
     });
 
-    const imageUrls = uploadedImages.map((img) => img.url!);
+    const analyzableTargets = (
+      await Promise.all(
+        uploadedImages.map(async (image) => {
+          const signedUrl = await this.getSignedImageUrl(
+            image,
+            "classification"
+          );
 
-    await visionService.classifyRoomBatch(imageUrls, {
+          if (!signedUrl) {
+            image.status = "error";
+            image.error =
+              image.error || "Unable to access image for analysis";
+            return null;
+          }
+
+          return { image, signedUrl };
+        })
+      )
+    ).filter(Boolean) as { image: ProcessedImage; signedUrl: string }[];
+
+    if (analyzableTargets.length === 0) {
+      throw new ImageProcessingError(
+        "No accessible images available for analysis",
+        "analyzing"
+      );
+    }
+
+    const urlToImage = new Map(
+      analyzableTargets.map(({ signedUrl, image }) => [signedUrl, image])
+    );
+    const signedImageUrls = analyzableTargets.map((target) => target.signedUrl);
+
+    await visionService.classifyRoomBatch(signedImageUrls, {
       concurrency,
       onProgress: (completed, total, batchResult) => {
-        const image = uploadedImages.find(
-          (img) => img.url === batchResult.imageUrl
-        );
+        const image = urlToImage.get(batchResult.imageUrl);
         if (!image) {
           return;
         }
@@ -194,6 +240,35 @@ export class imageProcessorService {
 
     await this.generateSceneDescriptions(uploadedImages);
     return uploadedImages;
+  }
+
+  private async getSignedImageUrl(
+    image: ProcessedImage,
+    purpose: "classification" | "scene-description",
+    expiresInSeconds = 600
+  ): Promise<string | null> {
+    if (!image.url) {
+      this.logger.error(
+        { imageId: image.id, purpose },
+        "Missing image URL for signed access"
+      );
+      return null;
+    }
+
+    const result = await s3StorageService.getSignedDownloadUrl(
+      image.url,
+      expiresInSeconds
+    );
+
+    if (!result.success) {
+      this.logger.error(
+        { imageId: image.id, purpose, error: result.error },
+        "Failed to generate signed download URL"
+      );
+      return null;
+    }
+
+    return result.url;
   }
 
   private categorizeImages(images: ProcessedImage[]): CategorizedImages {
@@ -265,8 +340,21 @@ export class imageProcessorService {
           "Requesting scene description"
         );
 
+        const signedUrl = await this.getSignedImageUrl(
+          image,
+          "scene-description"
+        );
+
+        if (!signedUrl) {
+          this.logger.warn(
+            { imageId: image.id },
+            "Skipping scene description due to inaccessible image"
+          );
+          continue;
+        }
+
         const sceneDesc = await visionService.generateSceneDescription(
-          image.url!,
+          signedUrl,
           roomType,
           { timeout: 30000, maxRetries: 2 }
         );

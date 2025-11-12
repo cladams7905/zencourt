@@ -173,9 +173,29 @@ export function CategorizeStage({
           overallProgress: 0
         });
 
+        // Prepare serializable image data for server action (exclude File objects)
+        const serializableImages = needsAnalysis.map((img) => ({
+          id: img.id,
+          url: img.url,
+          filename: img.filename,
+          category: img.category,
+          confidence: img.confidence,
+          features: img.features,
+          sceneDescription: img.sceneDescription,
+          status: img.status,
+          order: img.order
+        })) as ProcessedImage[];
+
         // Call server action directly
-        const result = await analyzeImagesWorkflow(needsAnalysis, {
+        const result = await analyzeImagesWorkflow(serializableImages, {
           aiConcurrency: 10
+        });
+
+        // Debug: Log what came back from the server
+        console.log("[CategorizeStage] Result from analyzeImagesWorkflow:", {
+          totalImages: result.images.length,
+          firstImage: result.images[0],
+          stats: result.stats
         });
 
         // Update progress to show completion
@@ -186,7 +206,42 @@ export function CategorizeStage({
           overallProgress: 95
         });
 
-        finalImages = [...alreadyAnalyzed, ...result.images];
+        const processedById = new Map(
+          result.images.map((image) => [image.id, image])
+        );
+        const needsAnalysisIds = new Set(needsAnalysis.map((img) => img.id));
+
+        console.log("[CategorizeStage] Merge debug:", {
+          needsAnalysisFirst: needsAnalysis[0],
+          processedFirst: result.images[0],
+          processedFromMap: processedById.get(needsAnalysis[0]?.id)
+        });
+
+        const mergedAnalyzed = needsAnalysis.map((image) => {
+          const processed = processedById.get(image.id);
+          const merged = processed ? { ...image, ...processed } : image;
+          console.log("[CategorizeStage] Merging image:", {
+            originalId: image.id,
+            processedId: processed?.id,
+            merged: {
+              id: merged.id,
+              category: merged.category,
+              confidence: merged.confidence,
+              status: merged.status
+            }
+          });
+          return merged;
+        });
+
+        const additionalProcessed = result.images.filter(
+          (image) => !needsAnalysisIds.has(image.id)
+        );
+
+        finalImages = [
+          ...alreadyAnalyzed,
+          ...mergedAnalyzed,
+          ...additionalProcessed
+        ];
       } else {
         finalImages = alreadyAnalyzed;
       }
@@ -199,9 +254,39 @@ export function CategorizeStage({
         overallProgress: 95
       });
 
+      // Debug: Log final images before setting state
+      console.log(
+        "[CategorizeStage] Final images before setting state:",
+        finalImages.map((img) => ({
+          id: img.id,
+          category: img.category,
+          confidence: img.confidence,
+          status: img.status,
+          url: img.url,
+          previewUrl: img.previewUrl,
+          hasFile: !!img.file
+        }))
+      );
+
       setImages(finalImages);
 
       const organized = categorizeImages(finalImages);
+
+      // Debug: Log organized groups
+      console.log(
+        "[CategorizeStage] Organized groups:",
+        organized.groups.map((g) => ({
+          category: g.category,
+          displayLabel: g.displayLabel,
+          imageCount: g.images.length,
+          images: g.images.map((img) => ({
+            id: img.id,
+            url: img.url,
+            previewUrl: img.previewUrl
+          }))
+        }))
+      );
+
       setCategorizedGroups(organized.groups);
 
       // Save images to database
@@ -211,7 +296,7 @@ export function CategorizeStage({
           .map((img, index) => ({
             id: img.id,
             projectId: currentProject.id,
-            filename: img.filename || img.file.name,
+            filename: img.filename || img.file?.name || "image",
             url: img.url!,
             category: img.category!,
             confidence: img.confidence ?? null,
@@ -387,7 +472,11 @@ export function CategorizeStage({
 
           {processingProgress?.currentImage && (
             <div className="text-xs text-center text-muted-foreground">
-              Processing: {processingProgress.currentImage.file.name}
+              Processing:
+              {" "}
+              {processingProgress.currentImage.file?.name ||
+                processingProgress.currentImage.filename ||
+                processingProgress.currentImage.id}
             </div>
           )}
         </div>
