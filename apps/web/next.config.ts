@@ -8,7 +8,13 @@ const nextConfig: NextConfig = {
   // Set the root for file tracing to include monorepo packages
   outputFileTracingRoot: path.join(__dirname, "../../"),
   // Don't externalize ffmpeg/ffprobe - let webpack bundle them properly
-  serverExternalPackages: ["fluent-ffmpeg"],
+  serverExternalPackages: [
+    "fluent-ffmpeg",
+    // Prevent Next from bundling Pino and its worker-based transport so the worker file stays on disk
+    "pino",
+    "pino-pretty",
+    "thread-stream"
+  ],
   webpack: (config, { isServer }) => {
     if (isServer) {
       // Exclude ffmpeg/ffprobe binaries from being processed by webpack
