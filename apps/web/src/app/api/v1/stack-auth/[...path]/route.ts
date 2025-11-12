@@ -42,10 +42,14 @@ async function handle(request: Request, { params }: RouteParams) {
     redirect: "manual"
   });
 
+  const responseHeaders = new Headers(upstream.headers);
+  responseHeaders.delete("content-length");
+  responseHeaders.delete("content-encoding");
+
   return new Response(upstream.body, {
     status: upstream.status,
     statusText: upstream.statusText,
-    headers: upstream.headers
+    headers: responseHeaders
   });
 }
 
