@@ -1,4 +1,3 @@
-import { stackServerApp } from "./server/lib/stack/server";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function middleware(request: NextRequest) {
@@ -7,38 +6,23 @@ export async function middleware(request: NextRequest) {
   const isWebhook = request.nextUrl.pathname.startsWith("/api/v1/webhooks");
   const isNotFound = request.nextUrl.pathname === "/_not-found";
   const isNextInternal = request.nextUrl.pathname.startsWith("/_next");
+  const hasStackSession =
+    Boolean(request.cookies.get("stack-access")?.value) ||
+    Boolean(request.cookies.get("stack-refresh")?.value);
 
   // Allow auth, handler, webhook, and Next.js internal pages without authentication check
   if (isAuthPage || isHandlerPage || isWebhook || isNotFound || isNextInternal) {
-    // Try to get user for auth page redirect logic
-    try {
-      const user = await stackServerApp.getUser();
-      // If already authenticated and trying to access /auth, redirect to home
-      if (isAuthPage && user) {
-        return NextResponse.redirect(new URL("/", request.url));
-      }
-    } catch (error) {
-      // Log error but don't block access to auth/handler/webhook pages
-      console.error("Middleware: Error checking user authentication:", error);
+    // If already authenticated and trying to access /auth, redirect to home
+    if (isAuthPage && hasStackSession) {
+      return NextResponse.redirect(new URL("/", request.url));
     }
     return NextResponse.next();
   }
 
-  // Check authentication for all other pages
-  try {
-    const user = await stackServerApp.getUser();
-
-    if (!user) {
-      const redirectUrl = new URL("/auth", request.url);
-      redirectUrl.searchParams.set("callbackUrl", request.nextUrl.pathname);
-      return NextResponse.redirect(redirectUrl);
-    }
-  } catch (error) {
-    // Log error and redirect to auth page on authentication failure
-    console.error("Middleware: Failed to verify user authentication:", error);
+  // Check authentication for all other pages using Stack session cookies
+  if (!hasStackSession) {
     const redirectUrl = new URL("/auth", request.url);
     redirectUrl.searchParams.set("callbackUrl", request.nextUrl.pathname);
-    redirectUrl.searchParams.set("error", "auth_check_failed");
     return NextResponse.redirect(redirectUrl);
   }
 
