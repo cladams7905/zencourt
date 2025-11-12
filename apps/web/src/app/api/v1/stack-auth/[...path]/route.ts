@@ -27,6 +27,12 @@ async function handle(request: Request, { params }: RouteParams) {
     headers.set("x-stack-access-type", "client");
   }
 
+  console.log('Incoming headers:', {
+    'x-stack-access-type': headers.get('x-stack-access-type'),
+    'x-stack-project-id': headers.get('x-stack-project-id'),
+    'x-stack-publishable-client-key': headers.get('x-stack-publishable-client-key'),
+  });
+
   let body: BodyInit | undefined;
   if (!["GET", "HEAD"].includes(request.method)) {
     const contentType = request.headers.get("content-type");
