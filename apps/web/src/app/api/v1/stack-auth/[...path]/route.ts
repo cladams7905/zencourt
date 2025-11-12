@@ -21,6 +21,12 @@ async function handle(request: Request, { params }: RouteParams) {
   headers.delete("host");
   headers.delete("content-length");
 
+  // Stack requires x-stack-access-type when a key is present
+  // The SDK sends x-stack-publishable-client-key but not the access type
+  if (headers.has("x-stack-publishable-client-key")) {
+    headers.set("x-stack-access-type", "client");
+  }
+
   let body: BodyInit | undefined;
   if (!["GET", "HEAD"].includes(request.method)) {
     const contentType = request.headers.get("content-type");
