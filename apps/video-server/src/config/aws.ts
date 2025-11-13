@@ -1,6 +1,16 @@
 import { S3Client } from '@aws-sdk/client-s3';
 import { env } from './env';
 
+const s3Endpoint =
+  process.env.AWS_S3_ENDPOINT ||
+  process.env.AWS_ENDPOINT ||
+  process.env.AWS_S3_URL ||
+  undefined;
+
+const forcePathStyle =
+  (process.env.AWS_FORCE_PATH_STYLE || process.env.AWS_S3_FORCE_PATH_STYLE || '')
+    .toLowerCase() === 'true';
+
 /**
  * Create and configure AWS S3 client
  * Uses IAM role credentials in production (ECS task role)
@@ -8,6 +18,8 @@ import { env } from './env';
  */
 export const s3Client = new S3Client({
   region: env.awsRegion,
+  endpoint: s3Endpoint,
+  forcePathStyle,
   // In production (ECS), credentials are automatically loaded from IAM role
   // In development, can use AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY env vars
   // or AWS CLI credentials
@@ -19,4 +31,7 @@ export const AWS_CONFIG = {
 } as const;
 
 console.log('[AWS] S3 client initialized for region:', env.awsRegion);
+if (s3Endpoint) {
+  console.log('[AWS] Using custom S3 endpoint:', s3Endpoint, 'forcePathStyle:', forcePathStyle);
+}
 console.log('[AWS] Default S3 bucket:', env.awsS3Bucket);

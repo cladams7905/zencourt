@@ -2,11 +2,11 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@/*": ["dist/*"],
-      "@db/*": ["../packages/db/*"],
-      "@shared/*": ["../packages/shared/*"],
-      "@web/*": ["../apps/web/*"],
-      "@video-server/*": ["../apps/video-server/*"]
+      "@/*": ["apps/video-server/dist/apps/video-server/src/*"],
+      "@db/*": ["apps/video-server/dist/packages/db/*"],
+      "@shared/*": ["apps/video-server/dist/packages/shared/*"],
+      "@web/*": ["apps/video-server/dist/apps/web/*"],
+      "@video-server/*": ["apps/video-server/dist/apps/video-server/*"]
     }
   }
 }

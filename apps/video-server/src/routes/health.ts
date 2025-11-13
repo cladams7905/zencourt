@@ -20,16 +20,9 @@ const router = Router();
 async function checkFFmpeg(): Promise<boolean> {
   try {
     const { stdout } = await execAsync('ffmpeg -version');
-    const isAvailable = stdout.includes('ffmpeg version');
-
-    logger.debug(
-      { available: isAvailable },
-      'FFmpeg health check'
-    );
-
-    return isAvailable;
+    return stdout.includes('ffmpeg version');
   } catch (error) {
-    logger.error(
+    logger.warn(
       {
         error: error instanceof Error ? error.message : String(error),
       },
@@ -44,16 +37,9 @@ async function checkFFmpeg(): Promise<boolean> {
  */
 async function checkS3(): Promise<boolean> {
   try {
-    const isAccessible = await s3Service.checkBucketAccess();
-
-    logger.debug(
-      { accessible: isAccessible },
-      'S3 health check'
-    );
-
-    return isAccessible;
+    return await s3Service.checkBucketAccess();
   } catch (error) {
-    logger.error(
+    logger.warn(
       {
         error: error instanceof Error ? error.message : String(error),
       },
@@ -68,16 +54,9 @@ async function checkS3(): Promise<boolean> {
  */
 async function checkRedis(): Promise<boolean> {
   try {
-    const isHealthy = await checkRedisHealth();
-
-    logger.debug(
-      { healthy: isHealthy },
-      'Redis health check'
-    );
-
-    return isHealthy;
+    return await checkRedisHealth();
   } catch (error) {
-    logger.error(
+    logger.warn(
       {
         error: error instanceof Error ? error.message : String(error),
       },
@@ -128,14 +107,24 @@ router.get('/', async (_req: Request, res: Response) => {
       },
     };
 
-    logger.info(
-      {
-        status,
-        checks: response.checks,
-        queueStats: response.queueStats,
-      },
-      'Health check performed'
-    );
+    if (allHealthy) {
+      logger.debug(
+        {
+          checks: response.checks,
+          queueStats: response.queueStats,
+        },
+        'Health check passed'
+      );
+    } else {
+      logger.warn(
+        {
+          status,
+          checks: response.checks,
+          queueStats: response.queueStats,
+        },
+        'Health check detected issues'
+      );
+    }
 
     // Return 503 if any service is unhealthy (requirement 12.3)
     const statusCode = allHealthy ? 200 : 503;

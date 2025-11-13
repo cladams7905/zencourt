@@ -8,6 +8,7 @@ node_modules
 
 dist
 **/dist
+!apps/video-server/dist/**
 apps/web/.next
 apps/web/out
 apps/web/.vercel

@@ -1,7 +1,6 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    // Node.js server specific overrides
     "target": "ES2022",
     "module": "commonjs",
     "lib": ["ES2022"],
@@ -14,15 +13,9 @@
     "paths": {
       "@/*": ["apps/video-server/src/*"],
       "@db/*": ["packages/db/*"],
-      "@shared/*": ["packages/shared/*"],
-      "@web/*": ["apps/web/*"],
-      "@video-server/*": ["apps/video-server/*"]
+      "@shared/*": ["packages/shared/*"]
     }
   },
-  "include": [
-    "src/**/*",
-    "../../packages/shared/**/*.ts",
-    "../../packages/db/**/*.ts"
-  ],
+  "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]
 }
