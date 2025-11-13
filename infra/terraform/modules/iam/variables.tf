@@ -21,6 +21,12 @@ variable "create_access_key" {
   default     = true
 }
 
+variable "create_ecs_task_role" {
+  description = "Whether to create the ECS task role (set false for local-only dev)"
+  type        = bool
+  default     = true
+}
+
 variable "common_tags" {
   description = "Common tags to apply to all resources"
   type        = map(string)

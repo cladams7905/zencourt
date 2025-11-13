@@ -62,7 +62,7 @@ See `.env.example` for all required and optional environment variables.
 - `REDIS_HOST` - Redis hostname for Bull queue
 - `REDIS_PORT` - Redis port (default: 6379)
 - `VERCEL_API_URL` - Vercel API URL for webhook callbacks
-- `AWS_API_KEY` - API key for Vercel <-> video-server authentication
+- `VERCEL_TO_AWS_API_KEY` - API key for Vercel <-> video-server authentication
 
 ### Optional Variables
 
@@ -119,6 +119,27 @@ npm run dev
 ```
 
 The server will start on `http://localhost:3001` with hot reload enabled.
+
+### Local-only development workflow
+
+Because the dev Terraform stack no longer provisions ECS/ALB resources, every developer should run the video server locally:
+
+1. Ensure `.env.local` in the repo root sets `AWS_VIDEO_SERVER_URL=http://localhost:3001` and that `VERCEL_TO_AWS_API_KEY` matches the value consumed by the Docker services.
+2. Boot the stack (video server + Redis + LocalStack S3):
+
+   ```bash
+   docker compose -f apps/video-server/docker-compose.yml up --build
+   ```
+
+3. Wait for `zencourt-video-server` logs to show it is listening, then verify with:
+
+   ```bash
+   curl http://localhost:3001/health
+   ```
+
+4. Start the Next.js app (`pnpm dev --filter @zencourt/web`, etc.); `/api/v1/video/*` routes will hit the local server automatically.
+
+When you are done developing, stop the containers with `Ctrl+C` or `docker compose -f apps/video-server/docker-compose.yml down`.
 
 ### Build
 
@@ -198,9 +219,9 @@ docker run --rm -p 3001:3001 \
   -e AWS_ACCESS_KEY_ID=your-access-key \
   -e AWS_SECRET_ACCESS_KEY=your-secret \
   -e REDIS_HOST=your-redis-host \
+  -e VERCEL_TO_AWS_API_KEY=your-secret-key \
   -e REDIS_PORT=6379 \
   -e VERCEL_API_URL=https://your-app.vercel.app \
-  -e AWS_API_KEY=your-secret-key \
   zencourt-video-server:latest
 ```
 

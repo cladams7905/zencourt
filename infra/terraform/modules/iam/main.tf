@@ -2,7 +2,8 @@
 
 # ECS Task Role
 resource "aws_iam_role" "ecs_task" {
-  name = var.ecs_task_role_name
+  count = var.create_ecs_task_role ? 1 : 0
+  name  = var.ecs_task_role_name
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -24,8 +25,9 @@ resource "aws_iam_role" "ecs_task" {
 
 # ECS Task Role - S3 Access Policy
 resource "aws_iam_role_policy" "ecs_task_s3" {
-  name = "S3MediaAccess"
-  role = aws_iam_role.ecs_task.id
+  count = var.create_ecs_task_role ? 1 : 0
+  name  = "S3MediaAccess"
+  role  = aws_iam_role.ecs_task[0].id
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -54,7 +56,8 @@ resource "aws_iam_role_policy" "ecs_task_s3" {
 
 # ECS Task Role - CloudWatch Logs Access
 resource "aws_iam_role_policy_attachment" "ecs_task_cloudwatch" {
-  role       = aws_iam_role.ecs_task.name
+  count      = var.create_ecs_task_role ? 1 : 0
+  role       = aws_iam_role.ecs_task[0].name
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
 }
 

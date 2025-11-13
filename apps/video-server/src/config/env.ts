@@ -56,25 +56,6 @@ function getEnvVarOptional(
   return process.env[name] || defaultValue;
 }
 
-function getEnvVarOneOf(names: string[], defaultValue?: string): string {
-  for (const name of names) {
-    const value = process.env[name];
-    if (value && value.length > 0) {
-      return value;
-    }
-  }
-
-  if (defaultValue !== undefined) {
-    return defaultValue;
-  }
-
-  throw new Error(
-    `Missing required environment variable. Expected one of: ${names.join(
-      ", "
-    )}`
-  );
-}
-
 function getEnvVarNumber(name: string, defaultValue?: number): number {
   const value = process.env[name];
   if (!value && defaultValue === undefined) {
@@ -112,7 +93,7 @@ export const env: EnvConfig = {
   tempDir: getEnvVar("TEMP_DIR", "/tmp/video-processing"),
 
   // API Authentication
-  awsApiKey: getEnvVarOneOf(["AWS_API_KEY", "VERCEL_TO_AWS_API_KEY"]),
+  awsApiKey: getEnvVar("VERCEL_TO_AWS_API_KEY"),
 
   // fal.ai
   falApiKey: getEnvVar("FAL_KEY"),

@@ -9,8 +9,8 @@ infra/terraform/
 ├── modules/               # Reusable Terraform modules
 │   ├── s3/               # S3 bucket configuration
 │   ├── iam/              # IAM roles and users
-│   ├── network/          # VPC and networking (future)
-│   └── ecs/              # ECS cluster and services (future)
+│   ├── network/          # VPC and networking
+│   └── ecs/              # ECS cluster and services
 │
 ├── envs/                 # Environment-specific configurations
 │   ├── dev/              # Development/Preview environments
@@ -23,10 +23,7 @@ infra/terraform/
 
 - Terraform >= 1.0
 - AWS CLI configured with appropriate credentials
-- AWS account with permissions to create:
-  - S3 buckets
-  - IAM roles and users
-  - (Future: VPC, ECS, ALB, etc.)
+- AWS account with permissions to create S3 buckets and IAM users/roles (prod also needs VPC/ECS/ALB access)
 
 ## Quick Start
 
@@ -113,11 +110,11 @@ Creates and configures S3 bucket for media storage.
 
 ### IAM Module (`modules/iam`)
 
-Creates IAM roles and users for application access.
+Creates IAM roles and users for application access. The ECS task role can be toggled off (as in the dev env) when compute runs locally.
 
 **Resources Created:**
 
-- ECS Task Role (for video processing containers)
+- Optional ECS Task Role (for video processing containers)
 - Vercel API User (for frontend uploads)
 - Associated policies and access keys
 
@@ -127,6 +124,7 @@ Creates IAM roles and users for application access.
 - `vercel_api_user_name` - Name of Vercel API user
 - `s3_bucket_arn` - ARN of S3 bucket to grant access to
 - `create_access_key` - Whether to create access key (default: true)
+- `create_ecs_task_role` - Whether to create the ECS task role (default: true)
 - `common_tags` - Tags to apply to resources
 
 **Outputs:**
@@ -142,7 +140,8 @@ Creates IAM roles and users for application access.
 - **Bucket**: `zencourt-media-dev`
 - **CORS**: Includes `http://localhost:3000`
 - **Glacier Archival**: Disabled
-- **Purpose**: Local development and testing
+- **Video Server**: Runs locally via Docker; `AWS_VIDEO_SERVER_URL` should be `http://localhost:3001`
+- **Purpose**: Local development and testing without provisioning ECS/ALB
 
 ### Production (`envs/prod`)
 

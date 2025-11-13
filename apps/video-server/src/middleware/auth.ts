@@ -1,6 +1,6 @@
 /**
  * Authentication middleware for API requests
- * Validates X-API-Key header against configured AWS_API_KEY
+ * Validates X-API-Key header against configured VERCEL_TO_AWS_API_KEY
  */
 
 import { Request, Response, NextFunction } from 'express';
