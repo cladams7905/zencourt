@@ -77,12 +77,18 @@ See `.env.example` for all required and optional environment variables.
 
 ### AWS Configuration
 
-For local development with LocalStack:
+For development against the real S3 bucket (recommended):
 
-- `AWS_ENDPOINT` - LocalStack endpoint (http://localstack:4566)
-- `AWS_FORCE_PATH_STYLE` - Use path-style S3 URLs (true for LocalStack)
-- `AWS_ACCESS_KEY_ID` - AWS access key (use "test" for LocalStack)
-- `AWS_SECRET_ACCESS_KEY` - AWS secret key (use "test" for LocalStack)
+- `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` - IAM user or role credentials with access to the dev bucket
+- `AWS_REGION` - Region for the dev bucket
+- `AWS_S3_BUCKET` - Dev bucket name
+
+Optional overrides if you ever point the server at a mock such as LocalStack:
+
+- `AWS_ENDPOINT`
+- `AWS_FORCE_PATH_STYLE`
+
+Note: The bucket policy enforces AES256 server-side encryption; the video server automatically sets `ServerSideEncryption=AES256` on uploads, so make sure any ad‑hoc scripts do the same.
 
 ## Development
 
@@ -106,10 +112,12 @@ cp .env.example .env
 # Edit .env with your configuration
 ```
 
-3. Start local development environment (Redis + LocalStack):
+3. Start the local development environment from the repo root (Redis + video-server; S3 traffic goes to your dev bucket):
 
 ```bash
-docker-compose up -d
+docker compose -f apps/video-server/docker-compose.yml down
+docker compose -f apps/video-server/docker-compose.yml build video-server
+docker compose -f apps/video-server/docker-compose.yml up -d
 ```
 
 4. Run development server:
@@ -125,7 +133,7 @@ The server will start on `http://localhost:3001` with hot reload enabled.
 Because the dev Terraform stack no longer provisions ECS/ALB resources, every developer should run the video server locally:
 
 1. Ensure `.env.local` in the repo root sets `AWS_VIDEO_SERVER_URL=http://localhost:3001` and that `VERCEL_TO_AWS_API_KEY` matches the value consumed by the Docker services.
-2. Boot the stack (video server + Redis + LocalStack S3):
+2. Boot the stack (video server + Redis). The server writes directly to your dev S3 bucket using the credentials from `.env.local`:
 
    ```bash
    docker compose -f apps/video-server/docker-compose.yml up --build

@@ -1,8 +1,54 @@
 import { config } from "dotenv";
+import * as fs from "fs";
+import * as path from "path";
 
-// Load environment variables from .env file in development
-if (process.env.NODE_ENV !== "production") {
+function loadLocalEnvFiles(): void {
+  const envFiles: string[] = [];
+
+  const resolveMaybeAbsolute = (filePath: string): string =>
+    path.isAbsolute(filePath)
+      ? filePath
+      : path.resolve(process.cwd(), filePath);
+
+  if (process.env.ENV_FILE) {
+    envFiles.push(resolveMaybeAbsolute(process.env.ENV_FILE));
+  }
+
+  const repoRoot = path.resolve(__dirname, "../../../..");
+  const searchDirs = [process.cwd(), repoRoot];
+  const baseFiles = [".env", ".env.local"];
+
+  for (const base of baseFiles) {
+    for (const dir of searchDirs) {
+      envFiles.push(path.resolve(dir, base));
+    }
+  }
+
+  const loaded: string[] = [];
+  const seen = new Set<string>();
+  for (const filePath of envFiles) {
+    if (seen.has(filePath)) {
+      continue;
+    }
+    seen.add(filePath);
+
+    if (fs.existsSync(filePath)) {
+      config({ path: filePath, override: true });
+      loaded.push(filePath);
+    }
+  }
+
+  if (loaded.length > 0) {
+    console.log("[Config] Loaded env files:", loaded);
+    return;
+  }
+
   config();
+}
+
+// Load environment variables from the repo-level .env/.env.local files in development
+if (process.env.NODE_ENV !== "production") {
+  loadLocalEnvFiles();
 }
 
 interface EnvConfig {

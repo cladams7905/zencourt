@@ -6,6 +6,7 @@
     "dev": "dotenv -e ../../.env.local -- next dev",
     "build": "next build",
     "build:local": "dotenv -e ../../.env.local -- next build",
+    "env:pull": "vercel env pull ../../.env.local",
     "start": "next start",
     "lint": "eslint"
   },

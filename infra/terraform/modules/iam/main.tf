@@ -90,6 +90,14 @@ resource "aws_iam_user_policy" "vercel_api_s3" {
       {
         Effect = "Allow"
         Action = [
+          "s3:ListBucket",
+          "s3:GetBucketLocation"
+        ]
+        Resource = var.s3_bucket_arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
           "s3:ListBucket"
         ]
         Resource = var.s3_bucket_arn

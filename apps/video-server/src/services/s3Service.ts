@@ -120,6 +120,7 @@ export class S3StorageService {
           Body: body,
           ContentType: contentType,
           Metadata: metadata,
+          ServerSideEncryption: 'AES256',
         });
 
         await this.client.send(command);

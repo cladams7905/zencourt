@@ -17,12 +17,6 @@ services:
       PORT: 3001
       LOG_LEVEL: debug
 
-      # AWS Configuration (using LocalStack)
-      AWS_ENDPOINT: http://localstack:4566
-      AWS_S3_ENDPOINT: http://localstack:4566
-      AWS_FORCE_PATH_STYLE: 'true'
-      AWS_S3_FORCE_PATH_STYLE: 'true'
-
       # Redis Configuration
       REDIS_HOST: redis
       REDIS_PORT: 6379
@@ -45,8 +39,6 @@ services:
     #   - ./dist:/app/dist
     depends_on:
       redis:
-        condition: service_healthy
-      localstack:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
@@ -73,34 +65,6 @@ services:
       timeout: 3s
       retries: 3
 
-  # ============================================================================
-  # LocalStack (S3 Simulation)
-  # ============================================================================
-  localstack:
-    image: localstack/localstack:latest
-    container_name: zencourt-localstack
-    ports:
-      - "4566:4566"
-      - "4571:4571"
-    environment:
-      SERVICES: s3
-      DEBUG: 1
-      DATA_DIR: /var/lib/localstack/data
-      DOCKER_HOST: unix:///var/run/docker.sock
-    volumes:
-      - localstack-data:/var/lib/localstack
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ./localstack-init.sh:/etc/localstack/init/ready.d/init-s3.sh
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
-      start_period: 15s
-
 volumes:
   redis-data:
-    driver: local
-  localstack-data:
     driver: local
