@@ -7,11 +7,19 @@ This is a monorepo containing the ZenCourt application suite.
 ```
 zencourt/
 ├── apps/
-│   ├── web/              # Next.js web application
-│   ├── db/               # Shared database package
-│   └── video-server/     # Express video processing server
-└── package.json          # Root workspace configuration
+│   ├── web/              # Next.js web client and dashboard
+│   └── video-server/     # Express + FFmpeg API for heavy media work
+├── packages/
+│   ├── db/               # Drizzle schema, migrations, and Neon client helpers
+│   └── shared/           # Reusable TypeScript utilities (logger, storage paths, etc.)
+├── infra/                # Terraform and deployment configuration
+├── demo-images/          # Reference assets for marketing/demo flows
+└── package.json          # Root workspace configuration and scripts
 ```
+
+- `apps` contains the deployable services.
+- `packages` hosts shared libraries consumed by the apps.
+- `infra` captures infrastructure-as-code kept alongside the app codebase.
 
 ## Getting Started
 
