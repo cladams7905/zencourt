@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { nanoid } from "nanoid";
-import { eq, asc } from "drizzle-orm";
+import { eq, asc, DrizzleQueryError } from "drizzle-orm";
 import { db, images, videos } from "@db/client";
 import {
   ApiError,
@@ -17,9 +17,11 @@ import { VideoGenerateRequest } from "@shared/types/api";
 import { getVideoServerConfig } from "../_config";
 import { ROOM_CATEGORIES, RoomCategory } from "@web/src/types/vision";
 import { archiveRoomVideosForProject } from "@web/src/server/services/videoArchive";
-
-type DbImage = typeof images.$inferSelect;
-type DbVideo = typeof videos.$inferSelect;
+import {
+  createChildLogger,
+  logger as baseLogger
+} from "../../../../../lib/logger";
+import { DBImage, DBVideo } from "@shared/types/models";
 
 interface RoomSelection {
   id: string;
@@ -35,6 +37,10 @@ interface RoomJob {
   imageUrls: string[];
   prompt: string;
 }
+
+const logger = createChildLogger(baseLogger, {
+  module: "video-generate-route"
+});
 
 const DEFAULT_DURATION: "5" | "10" = "5";
 
@@ -89,8 +95,10 @@ function buildPrompt(roomName: string, aiDirections?: string): string {
   return `${basePrompt} Additional creative direction: ${aiDirections}`;
 }
 
-function groupImagesByCategory(projectImages: DbImage[]): Map<string, DbImage[]> {
-  const grouped = new Map<string, DbImage[]>();
+function groupImagesByCategory(
+  projectImages: DBImage[]
+): Map<string, DBImage[]> {
+  const grouped = new Map<string, DBImage[]>();
 
   projectImages.forEach((image) => {
     if (!image.category || !image.url) {
@@ -118,7 +126,7 @@ function groupImagesByCategory(projectImages: DbImage[]): Map<string, DbImage[]>
 
 function selectImageUrlsForRoom(
   selection: RoomSelection,
-  groupedImages: Map<string, DbImage[]>
+  groupedImages: Map<string, DBImage[]>
 ): string[] {
   const availableImages = groupedImages.get(selection.category) || [];
   if (availableImages.length === 0) {
@@ -154,7 +162,7 @@ function selectImageUrlsForRoom(
     .map((image) => image.url!) as string[];
 }
 
-function mapVideosToResponse(videos: DbVideo[]) {
+function mapVideosToResponse(videos: DBVideo[]) {
   return videos.map((video) => ({
     id: video.id,
     roomId: video.roomId,
@@ -177,6 +185,19 @@ async function enqueueRoomJobs(
   const { baseUrl, apiKey } = getVideoServerConfig();
 
   for (const job of jobs) {
+    logger.info(
+      {
+        jobId: job.videoId,
+        projectId,
+        userId,
+        roomId: job.selection.id,
+        roomCategory: job.selection.category,
+        orientation,
+        duration
+      },
+      "Queuing room video generation job"
+    );
+
     const response = await fetch(`${baseUrl}/video/generate`, {
       method: "POST",
       headers: {
@@ -206,6 +227,16 @@ async function enqueueRoomJobs(
       const message =
         errorData.error || errorData.message || "Video server request failed";
 
+      logger.error(
+        {
+          jobId: job.videoId,
+          projectId,
+          responseStatus: response.status,
+          message
+        },
+        "Video server request failed while queuing room job"
+      );
+
       await db
         .update(videos)
         .set({
@@ -229,8 +260,21 @@ export async function POST(request: NextRequest) {
     const user = await requireAuthenticatedUser();
     const project = await requireProjectAccess(body.projectId, user.id);
 
+    logger.info(
+      {
+        userId: user.id,
+        projectId: project.id,
+        archiveLabel: body.archiveLabel
+      },
+      "Video generation request authorized"
+    );
+
     const rooms = normalizeRooms(body);
     if (!rooms.length) {
+      logger.warn(
+        { projectId: body.projectId },
+        "Video generation request missing rooms"
+      );
       throw new ApiError(400, {
         error: "Invalid request",
         message: "At least one room is required to generate videos"
@@ -251,6 +295,16 @@ export async function POST(request: NextRequest) {
     await archiveRoomVideosForProject(body.projectId, {
       label: body.archiveLabel
     });
+
+    logger.info(
+      {
+        projectId: body.projectId,
+        roomCount: rooms.length,
+        orientation,
+        duration
+      },
+      "Archived previous room videos and preparing new jobs"
+    );
 
     const jobs: RoomJob[] = rooms.map((selection) => {
       const imageUrls = selectImageUrlsForRoom(selection, groupedImages);
@@ -292,6 +346,15 @@ export async function POST(request: NextRequest) {
 
     await enqueueRoomJobs(jobs, project.id, user.id, orientation, duration);
 
+    logger.info(
+      {
+        projectId: project.id,
+        userId: user.id,
+        roomCount: rooms.length
+      },
+      "Successfully enqueued all room video generation jobs"
+    );
+
     return NextResponse.json(
       {
         success: true,
@@ -303,10 +366,21 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     if (error instanceof ApiError) {
+      logger.error(
+        {
+          status: error.status,
+          body: error.body
+        },
+        "Video generation request failed with ApiError"
+      );
       return NextResponse.json(error.body, { status: error.status });
+    } else if (error instanceof DrizzleQueryError) {
+      logger.error(
+        { err: error.message },
+        "Video generation request failed with DrizzleQueryError"
+      );
+      return NextResponse.json(error.message, { status: 500 });
     }
-
-    console.error("[video/generate] Unexpected error", error);
 
     return NextResponse.json(
       {

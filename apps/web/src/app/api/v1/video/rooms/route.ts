@@ -6,6 +6,14 @@ import {
   requireAuthenticatedUser,
   requireProjectAccess
 } from "../../_utils";
+import {
+  createChildLogger,
+  logger as baseLogger
+} from "../../../../../lib/logger";
+
+const logger = createChildLogger(baseLogger, {
+  module: "video-rooms-route"
+});
 
 function serializeRoomVideos(records: typeof videos.$inferSelect[]) {
   return records.map((video) => ({
@@ -23,6 +31,7 @@ export async function GET(request: NextRequest) {
   try {
     const projectId = request.nextUrl.searchParams.get("projectId");
     if (!projectId) {
+      logger.warn("Rooms request missing projectId query param");
       throw new ApiError(400, {
         error: "Invalid request",
         message: "projectId query parameter is required"
@@ -31,6 +40,10 @@ export async function GET(request: NextRequest) {
 
     const user = await requireAuthenticatedUser();
     await requireProjectAccess(projectId, user.id);
+    logger.info(
+      { projectId, userId: user.id },
+      "Fetching active room videos for project"
+    );
 
     const roomVideos = await db
       .select()
@@ -44,6 +57,11 @@ export async function GET(request: NextRequest) {
       )
       .orderBy(asc(videos.createdAt));
 
+    logger.info(
+      { projectId, roomCount: roomVideos.length },
+      "Fetched active room videos"
+    );
+
     return NextResponse.json({
       success: true,
       projectId,
@@ -51,10 +69,20 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     if (error instanceof ApiError) {
+      logger.warn(
+        {
+          status: error.status,
+          body: error.body
+        },
+        "Rooms request failed with ApiError"
+      );
       return NextResponse.json(error.body, { status: error.status });
     }
 
-    console.error("[video/rooms] Failed to fetch room statuses", error);
+    logger.error(
+      { err: error },
+      "Rooms request failed with unexpected error"
+    );
     return NextResponse.json(
       {
         error: "Internal server error",

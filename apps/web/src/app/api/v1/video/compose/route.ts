@@ -25,7 +25,7 @@ import {
 import { getVideoServerConfig } from "../_config";
 
 const logger = createChildLogger(baseLogger, {
-  module: "video-generate-route"
+  module: "video-compose-route"
 });
 
 // Force Node.js runtime
