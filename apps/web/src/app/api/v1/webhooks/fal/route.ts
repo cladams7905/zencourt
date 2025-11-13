@@ -13,6 +13,12 @@ import {
 } from "../../../../../server/actions/db/videos";
 import { db, projects } from "@db/client";
 import { eq } from "drizzle-orm";
+import {
+  createChildLogger,
+  logger as baseLogger
+} from "../../../../../lib/logger";
+
+const logger = createChildLogger(baseLogger, { module: "fal-webhook-route" });
 
 export const runtime = "nodejs";
 export const maxDuration = 300; // 5 minutes for download/upload
@@ -33,22 +39,24 @@ interface FalWebhookPayload {
 
 export async function POST(request: NextRequest) {
   try {
-    console.log("[FAL Webhook] ========================================");
-    console.log(
-      "[FAL Webhook] Received callback at:",
-      new Date().toISOString()
+    logger.info("========================================");
+    logger.info(
+      { receivedAt: new Date().toISOString() },
+      "Fal webhook callback received"
     );
-    console.log(
-      "[FAL Webhook] Headers:",
-      Object.fromEntries(request.headers.entries())
+    logger.info(
+      { headers: Object.fromEntries(request.headers.entries()) },
+      "Fal webhook headers"
     );
 
     // Parse the webhook payload
     const body: FalWebhookPayload = await request.json();
 
-    console.log("[FAL Webhook] Full payload:", JSON.stringify(body, null, 2));
-    console.log("[FAL Webhook] Request ID:", body.request_id);
-    console.log("[FAL Webhook] Status:", body.status);
+    logger.info({ payload: body }, "Fal webhook payload");
+    logger.info(
+      { requestId: body.request_id, status: body.status },
+      "Fal webhook metadata"
+    );
 
     // TODO: Implement webhook signature verification for security
     // See: https://docs.fal.ai/model-apis/model-endpoints/webhooks#security
@@ -59,9 +67,9 @@ export async function POST(request: NextRequest) {
     const videoRecord = await getVideoByFalRequestId(requestId);
 
     if (!videoRecord) {
-      console.error(
-        "[FAL Webhook] ❌ No video record found for request ID:",
-        requestId
+      logger.error(
+        { requestId },
+        "Fal webhook video record not found for request ID"
       );
       return NextResponse.json(
         {
@@ -72,20 +80,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log("[FAL Webhook] Found video record:", videoRecord.id);
-    console.log("[FAL Webhook] Project:", videoRecord.projectId);
-    console.log("[FAL Webhook] Room:", videoRecord.roomName);
+    logger.info(
+      {
+        videoId: videoRecord.id,
+        projectId: videoRecord.projectId,
+        roomName: videoRecord.roomName
+      },
+      "Fal webhook matched existing video record"
+    );
 
     if (body.status === "OK" && body.payload?.video) {
-      console.log("[FAL Webhook] ✓ Video generation successful");
-      console.log("[FAL Webhook] Video URL:", body.payload.video.url);
-      console.log("[FAL Webhook] File size:", body.payload.video.file_size);
+      logger.info(
+        {
+          videoUrl: body.payload.video.url,
+          fileSize: body.payload.video.file_size
+        },
+        "Fal webhook video generation successful"
+      );
 
       try {
         // Download video from fal.ai
-        console.log("[FAL Webhook] Downloading video from fal.ai...");
+        logger.info("Fal webhook downloading video from fal.ai");
         const videoBlob = await downloadVideoFromUrl(body.payload.video.url);
-        console.log("[FAL Webhook] ✓ Downloaded video, size:", videoBlob.size);
+        logger.info(
+          { size: videoBlob.size },
+          "Fal webhook downloaded video successfully"
+        );
 
         const projectResult = await db
           .select({ userId: projects.userId })
@@ -100,7 +120,7 @@ export async function POST(request: NextRequest) {
         const userId = projectResult[0].userId;
 
         // Upload to S3 via video-server
-        console.log("[FAL Webhook] Uploading to S3 via video-server...");
+        logger.info("Fal webhook uploading video to S3 via video-server");
 
         // Convert blob to buffer for upload
         const arrayBuffer = await videoBlob.arrayBuffer();
@@ -144,16 +164,20 @@ export async function POST(request: NextRequest) {
         const uploadResult = await uploadResponse.json();
         const videoUrl = uploadResult.url;
 
-        console.log("[FAL Webhook] ✓ Uploaded to:", videoUrl);
+        logger.info({ videoUrl }, "Fal webhook upload complete");
 
         // Mark video as completed
-        console.log("[FAL Webhook] Marking video as completed in database...");
-        console.log("[FAL Webhook]   videoId:", videoRecord.id);
-        console.log("[FAL Webhook]   videoUrl:", videoUrl);
+        logger.info(
+          { videoId: videoRecord.id, videoUrl },
+          "Fal webhook marking video as completed"
+        );
 
         await markVideoCompleted(videoRecord.id, videoUrl);
 
-        console.log("[FAL Webhook] ✓ Marked video as completed in database");
+        logger.info(
+          { videoId: videoRecord.id },
+          "Fal webhook successfully marked video as completed"
+        );
 
         // Verify the update by reading it back
         const { getVideosByProject } = await import(
@@ -164,13 +188,13 @@ export async function POST(request: NextRequest) {
           (v) => v.id === videoRecord.id
         );
 
-        console.log(
-          "[FAL Webhook] Verification - Updated video status:",
-          updatedVideo?.status
-        );
-        console.log(
-          "[FAL Webhook] Verification - Updated video URL:",
-          updatedVideo?.videoUrl ? "present" : "missing"
+        logger.info(
+          {
+            videoId: videoRecord.id,
+            verifiedStatus: updatedVideo?.status,
+            hasVideoUrl: Boolean(updatedVideo?.videoUrl)
+          },
+          "Fal webhook verification result"
         );
 
         return NextResponse.json({
@@ -181,7 +205,15 @@ export async function POST(request: NextRequest) {
           verifiedStatus: updatedVideo?.status
         });
       } catch (error) {
-        console.error("[FAL Webhook] ❌ Error processing video:", error);
+        logger.error(
+          {
+            error:
+              error instanceof Error
+                ? { name: error.name, message: error.message }
+                : error
+          },
+          "Fal webhook error processing video"
+        );
 
         const errorMessage =
           error instanceof Error ? error.message : "Unknown error";
@@ -197,8 +229,10 @@ export async function POST(request: NextRequest) {
         );
       }
     } else if (body.status === "ERROR") {
-      console.error("[FAL Webhook] ❌ Video generation failed");
-      console.error("[FAL Webhook] Error:", body.error);
+      logger.error(
+        { requestId: body.request_id, error: body.error },
+        "Fal webhook reported generation failure"
+      );
 
       await markVideoFailed(
         videoRecord.id,
@@ -213,7 +247,15 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("[FAL Webhook] ❌ Unhandled error:", error);
+    logger.error(
+      {
+        error:
+          error instanceof Error
+            ? { name: error.name, message: error.message, stack: error.stack }
+            : error
+      },
+      "Fal webhook unhandled error"
+    );
 
     // Return 200 to prevent retries for malformed requests
     return NextResponse.json(

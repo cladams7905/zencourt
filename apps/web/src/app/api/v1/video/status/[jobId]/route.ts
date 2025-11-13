@@ -10,6 +10,14 @@ import { db, projects } from "@db/client";
 import { eq } from "drizzle-orm";
 import { ApiError, requireAuthenticatedUser } from "../../../_utils";
 import { ProjectMetadata } from "@shared/types/models";
+import {
+  createChildLogger,
+  logger as baseLogger
+} from "../../../../../../lib/logger";
+
+const logger = createChildLogger(baseLogger, {
+  module: "video-status-route"
+});
 
 // Force Node.js runtime
 export const runtime = "nodejs";
@@ -160,7 +168,10 @@ export async function GET(
       );
     }
 
-    console.log(`[API] Video status check: jobId=${jobId}, status=${status}`);
+    logger.info(
+      { jobId, status: status || "pending", projectId: project.id },
+      "Video status check"
+    );
 
     return NextResponse.json(response);
   } catch (error) {
@@ -170,7 +181,15 @@ export async function GET(
     }
 
     // Handle unexpected errors
-    console.error("[API] ❌ Error checking video status:", error);
+    logger.error(
+      {
+        error:
+          error instanceof Error
+            ? { name: error.name, message: error.message, stack: error.stack }
+            : error
+      },
+      "Error checking video status"
+    );
     return NextResponse.json(
       {
         error: "Internal server error",

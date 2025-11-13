@@ -251,7 +251,7 @@ export function ReviewStage({
                             className="relative aspect-square rounded-md overflow-hidden bg-muted border"
                           >
                             <Image
-                              src={image.previewUrl}
+                              src={image.url || image.uploadUrl || image.previewUrl}
                               alt={image.file.name}
                               fill
                               className="object-cover"

@@ -14,50 +14,18 @@ import {
   requireProjectAccess
 } from "../../_utils";
 import { db, projects, videos } from "@db/client";
+import { VideoGenerateRequest, VideoProcessPayload } from "@shared/types/api";
+import {
+  createChildLogger,
+  logger as baseLogger
+} from "../../../../../lib/logger";
+
+const logger = createChildLogger(baseLogger, {
+  module: "video-generate-route"
+});
 
 // Force Node.js runtime
 export const runtime = "nodejs";
-
-// Allow longer execution time for API calls
-export const maxDuration = 60; // 1 minute
-
-// ============================================================================
-// Types
-// ============================================================================
-
-interface VideoGenerateRequest {
-  projectId: string;
-  compositionSettings: {
-    roomOrder: string[];
-    musicUrl?: string;
-    musicVolume?: number;
-    transitions?: {
-      type: string;
-      duration: number;
-    };
-  };
-}
-
-interface VideoProcessPayload {
-  jobId: string;
-  projectId: string;
-  userId: string;
-  roomVideoUrls: Array<{
-    roomId: string;
-    url: string;
-  }>;
-  compositionSettings: {
-    roomOrder: string[];
-    musicUrl?: string | null;
-    musicVolume?: number;
-    transitions?: {
-      type: string;
-      duration: number;
-    } | null;
-  };
-  webhookUrl: string;
-  webhookSecret: string;
-}
 
 // ============================================================================
 // Helper Functions
@@ -184,10 +152,14 @@ export async function POST(request: NextRequest) {
     };
 
     // Send request to AWS Express server
-    console.log(
-      `[API] Sending video generation request to AWS server: ${baseUrl}/video/process`
+    logger.info(
+      {
+        endpoint: `${baseUrl}/video/process`,
+        jobId,
+        projectId
+      },
+      "Sending video generation request to AWS server"
     );
-    console.log(`[API] Job ID: ${jobId}, Project ID: ${projectId}`);
 
     const response = await fetch(`${baseUrl}/video/process`, {
       method: "POST",
@@ -203,9 +175,9 @@ export async function POST(request: NextRequest) {
 
     // Handle server errors
     if (!response.ok) {
-      console.error(
-        `[API] ❌ AWS server returned error ${response.status}:`,
-        responseData
+      logger.error(
+        { status: response.status, response: responseData },
+        "AWS video server responded with error"
       );
 
       // Map AWS server errors to appropriate status codes
@@ -231,7 +203,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    console.log(`[API] ✓ Video generation job created: ${jobId}`);
+    logger.info({ jobId }, "Video generation job created");
 
     // Update project status to processing
     await db
@@ -262,9 +234,15 @@ export async function POST(request: NextRequest) {
 
     // Handle network errors
     if (error instanceof TypeError && error.message.includes("fetch")) {
-      console.error(
-        "[API] ❌ Failed to connect to video processing server:",
-        error
+      logger.error(
+        {
+          error: {
+            name: error.name,
+            message: error.message,
+            stack: error.stack
+          }
+        },
+        "Failed to connect to video processing server"
       );
       return NextResponse.json(
         {
@@ -278,7 +256,16 @@ export async function POST(request: NextRequest) {
 
     // Handle timeout errors
     if (error instanceof Error && error.name === "TimeoutError") {
-      console.error("[API] ❌ Video processing server timeout:", error);
+      logger.error(
+        {
+          error: {
+            name: error.name,
+            message: error.message,
+            stack: error.stack
+          }
+        },
+        "Video processing server timeout"
+      );
       return NextResponse.json(
         {
           error: "Video processing server timeout",
@@ -290,7 +277,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Handle unexpected errors
-    console.error("[API] ❌ Unexpected error in video generation:", error);
+    logger.error(
+      {
+        error:
+          error instanceof Error
+            ? { name: error.name, message: error.message, stack: error.stack }
+            : error
+      },
+      "Unexpected error in video generation"
+    );
     return NextResponse.json(
       {
         error: "Internal server error",

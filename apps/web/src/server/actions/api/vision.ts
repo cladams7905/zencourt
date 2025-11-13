@@ -128,8 +128,7 @@ export async function analyzeImagesWorkflow(
       {
         total: result.images.length,
         analyzed: result.stats.analyzed,
-        failed: result.stats.failed,
-        result: result.images
+        failed: result.stats.failed
       },
       "Image analysis workflow completed"
     );

@@ -10,6 +10,14 @@ import { createHmac } from "crypto";
 import { db } from "@db/client";
 import { projects } from "@db/client";
 import { eq } from "drizzle-orm";
+import {
+  createChildLogger,
+  logger as baseLogger
+} from "../../../../../lib/logger";
+
+const logger = createChildLogger(baseLogger, {
+  module: "video-webhook-route"
+});
 
 // Force Node.js runtime for crypto support
 export const runtime = "nodejs";
@@ -107,7 +115,7 @@ export async function POST(request: NextRequest) {
     const webhookTimestamp = request.headers.get("x-webhook-timestamp");
 
     if (!signature) {
-      console.error("[Webhook] Missing X-Webhook-Signature header");
+      logger.error("Video webhook missing X-Webhook-Signature header");
       return NextResponse.json(
         {
           error: "Missing webhook signature",
@@ -123,9 +131,10 @@ export async function POST(request: NextRequest) {
 
     // Verify signature
     if (!verifyWebhookSignature(rawPayload, signature, webhookSecret)) {
-      console.error("[Webhook] Invalid webhook signature");
-      console.error("[Webhook] Signature:", signature);
-      console.error("[Webhook] Payload length:", rawPayload.length);
+      logger.error(
+        { signature, payloadLength: rawPayload.length },
+        "Video webhook invalid signature"
+      );
       return NextResponse.json(
         {
           error: "Invalid signature",
@@ -140,16 +149,20 @@ export async function POST(request: NextRequest) {
     const { jobId, projectId, userId, status, timestamp, result, error } =
       payload;
 
-    console.log("[Webhook] ✓ Received video completion webhook");
-    console.log("[Webhook] Job ID:", jobId);
-    console.log("[Webhook] Project ID:", projectId);
-    console.log("[Webhook] Status:", status);
-    console.log("[Webhook] Delivery Attempt:", deliveryAttempt || "1");
-    console.log("[Webhook] Timestamp:", webhookTimestamp || timestamp);
+    logger.info(
+      {
+        jobId,
+        projectId,
+        status,
+        deliveryAttempt: deliveryAttempt || "1",
+        timestamp: webhookTimestamp || timestamp
+      },
+      "Video completion webhook received"
+    );
 
     // Validate required fields
     if (!jobId || !projectId || !userId || !status) {
-      console.error("[Webhook] Missing required fields in payload");
+      logger.error("Video webhook missing required fields in payload");
       return NextResponse.json(
         {
           error: "Invalid payload",
@@ -168,7 +181,7 @@ export async function POST(request: NextRequest) {
       .limit(1);
 
     if (!project) {
-      console.error(`[Webhook] Project not found: ${projectId}`);
+      logger.error({ projectId }, "Video webhook project not found");
       // Return 200 to prevent retries for non-existent projects
       return NextResponse.json({
         success: true,
@@ -178,8 +191,9 @@ export async function POST(request: NextRequest) {
 
     // Verify user owns the project
     if (project.userId !== userId) {
-      console.error(
-        `[Webhook] User mismatch: project userId=${project.userId}, webhook userId=${userId}`
+      logger.error(
+        { projectUserId: project.userId, webhookUserId: userId },
+        "Video webhook user mismatch"
       );
       // Return 200 to prevent retries
       return NextResponse.json({
@@ -190,11 +204,14 @@ export async function POST(request: NextRequest) {
 
     // Update project based on status
     if (status === "completed" && result) {
-      console.log(
-        `[Webhook] ✓ Video completed successfully for project ${projectId}`
+      logger.info(
+        {
+          projectId,
+          videoUrl: result.videoUrl,
+          duration: result.duration
+        },
+        "Video webhook reported successful completion"
       );
-      console.log(`[Webhook] Video URL: ${result.videoUrl}`);
-      console.log(`[Webhook] Duration: ${result.duration}s`);
 
       // TODO (Task 23): Update to use video_jobs table instead of projects table
       // For now, using existing fields in projects table
@@ -215,14 +232,20 @@ export async function POST(request: NextRequest) {
         })
         .where(eq(projects.id, projectId));
 
-      console.log(
-        `[Webhook] ✓ Project ${projectId} updated with video results`
+      logger.info(
+        { projectId },
+        "Video webhook project updated with video results"
       );
     } else if (status === "failed" && error) {
-      console.error(`[Webhook] ❌ Video failed for project ${projectId}`);
-      console.error(`[Webhook] Error: ${error.message}`);
-      console.error(`[Webhook] Error type: ${error.type}`);
-      console.error(`[Webhook] Retryable: ${error.retryable}`);
+      logger.error(
+        {
+          projectId,
+          errorMessage: error.message,
+          errorType: error.type,
+          retryable: error.retryable
+        },
+        "Video webhook reported failure"
+      );
 
       // TODO (Task 23): Update to use video_jobs table instead of projects table
       // For now, storing error in metadata
@@ -243,9 +266,12 @@ export async function POST(request: NextRequest) {
         })
         .where(eq(projects.id, projectId));
 
-      console.log(`[Webhook] ✓ Project ${projectId} updated with error status`);
+      logger.info(
+        { projectId },
+        "Video webhook project updated with error status"
+      );
     } else {
-      console.error(`[Webhook] Invalid webhook payload: status=${status}`);
+      logger.error({ status }, "Video webhook invalid payload");
       return NextResponse.json(
         {
           error: "Invalid payload",
@@ -266,10 +292,14 @@ export async function POST(request: NextRequest) {
       projectId
     });
   } catch (error) {
-    console.error("[Webhook] ❌ Error processing webhook:", error);
-    console.error(
-      "[Webhook] Error stack:",
-      error instanceof Error ? error.stack : "No stack trace"
+    logger.error(
+      {
+        error:
+          error instanceof Error
+            ? { name: error.name, message: error.message, stack: error.stack }
+            : error
+      },
+      "Video webhook failed to process request"
     );
 
     // Return 500 to trigger retries from the video server
