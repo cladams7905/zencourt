@@ -1,6 +1,5 @@
 import express, { Request, Response, Router } from "express";
 import multer from "multer";
-import { nanoid } from "nanoid";
 import {
   VideoProcessingError,
   VideoProcessingErrorType
@@ -8,6 +7,10 @@ import {
 import { validateApiKey } from "../middleware/auth";
 import logger from "../config/logger";
 import { s3Service } from "../services/s3Service";
+import {
+  buildGenericUploadKey,
+  buildUserProjectVideoKey
+} from "../lib/storagePaths";
 
 /**
  * Storage routes for handling S3 uploads/deletes
@@ -48,45 +51,6 @@ const upload = multer({
     }
   }
 });
-
-/**
- * Helper functions for S3 path generation
- */
-
-/**
- * Generate S3 key for a user scoped asset
- * Format:
- * - user_{userId}/projects/project_{projectId}/videos/video_{videoId}/{filename} when videoId provided
- * - user_{userId}/projects/project_{projectId}/{filename} otherwise
- *
- * NOTE: This must match the format in /src/lib/storage-paths.ts
- * to ensure consistent S3 organization across the application.
- */
-function getUserProjectAssetPath(
-  userId: string,
-  projectId: string,
-  filename: string,
-  videoId?: string
-): string {
-  const sanitizedFilename = filename.replace(/[^a-zA-Z0-9._-]/g, "_");
-  const sanitizedVideoId = videoId?.replace(/[^a-zA-Z0-9_-]/g, "_");
-  const videoSegment = sanitizedVideoId
-    ? `/videos/video_${sanitizedVideoId}`
-    : "";
-  return `user_${userId}/projects/project_${projectId}${videoSegment}/${sanitizedFilename}`;
-}
-
-/**
- * Generate S3 key for generic uploads
- * Format: {folder}/{timestamp}-{random}/{filename}
- */
-function getGenericUploadPath(folder: string, filename: string): string {
-  const timestamp = Date.now();
-  const random = nanoid(8);
-  const sanitizedFilename = filename.replace(/[^a-zA-Z0-9._-]/g, "_");
-  const sanitizedFolder = folder.replace(/[^a-zA-Z0-9/_-]/g, "_");
-  return `${sanitizedFolder}/${timestamp}-${random}/${sanitizedFilename}`;
-}
 
 // ============================================================================
 // Routes
@@ -130,7 +94,7 @@ router.post(
       // Generate S3 key based on provided metadata
       let key: string;
       if (userId && projectId) {
-        key = getUserProjectAssetPath(
+        key = buildUserProjectVideoKey(
           userId,
           projectId,
           file.originalname,
@@ -141,7 +105,7 @@ router.post(
           "[Storage] Uploading file with user/project path"
         );
       } else {
-        key = getGenericUploadPath(folder, file.originalname);
+        key = buildGenericUploadKey(folder, file.originalname);
         logger.info(
           { folder, filename: file.originalname, key },
           "[Storage] Uploading file with generic path"
@@ -395,13 +359,13 @@ router.post(
             // Generate S3 key based on provided metadata
             let key: string;
             if (userId && projectId) {
-              key = getUserProjectImagePath(
+              key = buildUserProjectVideoKey(
                 userId,
                 projectId,
                 file.originalname
               );
             } else {
-              key = getGenericUploadPath(folder, file.originalname);
+              key = buildGenericUploadKey(folder, file.originalname);
             }
 
             // Upload to S3

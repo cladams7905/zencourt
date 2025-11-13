@@ -1,3 +1,4 @@
+import 'tsconfig-paths/register';
 import express, { Express, Request, Response } from 'express';
 import pinoHttp from 'pino-http';
 import { validateEnv, env } from './config/env';
@@ -5,6 +6,7 @@ import logger from './config/logger';
 import videoRoutes from './routes/video';
 import healthRoutes from './routes/health';
 import storageRoutes from './routes/storage';
+import webhookRoutes from './routes/webhooks';
 import { errorHandler } from './middleware/errorHandler';
 import { closeQueue } from './queues/videoQueue';
 
@@ -25,7 +27,7 @@ app.use(express.urlencoded({ extended: true }));
 // Request logging with Pino
 app.use(
   pinoHttp({
-    logger,
+    logger: logger as any,
     customLogLevel: (_req, res, err) => {
       if (res.statusCode >= 500 || err) return 'error';
       if (res.statusCode >= 400) return 'warn';
@@ -55,6 +57,9 @@ app.use('/video', videoRoutes);
 
 // Storage routes (S3 upload/delete)
 app.use('/storage', storageRoutes);
+
+// Webhook routes (fal.ai callbacks)
+app.use('/webhooks', webhookRoutes);
 
 // Health check endpoint
 app.use('/health', healthRoutes);

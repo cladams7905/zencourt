@@ -4,7 +4,7 @@
  * Type definitions for the multi-stage project creation workflow
  */
 
-import { DBProject } from "@shared/types/models";
+import { DBProject, VideoStatus } from "@shared/types/models";
 import type { ProcessedImage } from "./images";
 import { CategorizedGroup } from "./vision";
 
@@ -57,6 +57,18 @@ export interface GenerationProgress {
   estimatedTimeRemaining: number; // in seconds
   overallProgress: number; // 0-100
   steps: GenerationStep[];
+}
+
+/**
+ * Per-room clip generation status used by the Generate stage UI
+ */
+export interface RoomGenerationStatus {
+  id: string;
+  roomId: string | null;
+  roomName: string | null;
+  status: VideoStatus;
+  videoUrl?: string | null;
+  errorMessage?: string | null;
 }
 
 // ============================================================================

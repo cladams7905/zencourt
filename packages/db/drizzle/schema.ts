@@ -104,13 +104,16 @@ export const videos = pgTable(
       .references(() => projects.id, { onDelete: "cascade" }),
     roomId: text("room_id"), // NULL for final combined video
     roomName: text("room_name"),
-    videoUrl: text("video_url").notNull(), // Vercel Blob URL
+    videoUrl: text("video_url"), // Vercel Blob URL
     thumbnailUrl: text("thumbnail_url"),
-    duration: integer("duration").notNull(), // in seconds
+    duration: integer("duration"), // in seconds
     status: varchar("status", { length: 50 }).notNull(), // pending, processing, completed, failed
     generationSettings: jsonb("generation_settings"), // Store Kling API request params
     falRequestId: text("fal_request_id"), // fal.ai request ID for webhook matching
     errorMessage: text("error_message"),
+    archivedAt: timestamp("archived_at"), // When the clip was archived (room videos only)
+    archiveBatchId: text("archive_batch_id"), // Batch identifier for grouped archives
+    archiveLabel: text("archive_label"), // Human-friendly version label
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull()
   },

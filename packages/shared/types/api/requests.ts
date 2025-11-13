@@ -29,7 +29,24 @@ export interface S3UploadRequest {
 // Video Generation
 // ============================================================================
 
+export type KlingDuration = "5" | "10";
+
 export interface VideoGenerateRequest {
+  projectId: string;
+  orientation: 'landscape' | 'vertical';
+  rooms: Array<{
+    id: string;
+    name: string;
+    category?: string;
+    roomNumber?: number;
+    imageCount?: number;
+  }>;
+  aiDirections?: string;
+  duration?: KlingDuration;
+  archiveLabel?: string;
+}
+
+export interface VideoComposeRequest {
   projectId: string;
   compositionSettings: {
     roomOrder: string[];
@@ -61,4 +78,9 @@ export interface VideoProcessPayload {
   };
   webhookUrl: string;
   webhookSecret: string;
+}
+
+export interface VideoArchiveRequest {
+  projectId: string;
+  label?: string;
 }

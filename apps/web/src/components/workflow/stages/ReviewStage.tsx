@@ -22,17 +22,7 @@ import {
 import Image from "next/image";
 import type { ProcessedImage } from "../../../types/images";
 import { CategorizedGroup } from "@web/src/types/vision";
-
-export interface VideoSettings {
-  orientation: "landscape" | "vertical";
-  roomOrder: Array<{ id: string; name: string; imageCount: number }>;
-  logoFile: File | null;
-  logoPosition: "top-left" | "top-right" | "bottom-left" | "bottom-right";
-  scriptText: string;
-  enableSubtitles: boolean;
-  subtitleFont: string;
-  aiDirections: string;
-}
+import type { VideoSettings } from "./PlanStage";
 
 interface ReviewStageProps {
   images: ProcessedImage[];

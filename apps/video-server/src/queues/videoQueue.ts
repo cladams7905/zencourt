@@ -15,6 +15,7 @@ import {
 } from '@/types/queue';
 import { videoCompositionService } from '@/services/videoCompositionService';
 import { webhookService } from '@/services/webhookService';
+import { projectRepository } from '@/services/db/projectRepository';
 
 // ============================================================================
 // Queue Configuration
@@ -50,6 +51,38 @@ export const videoQueue = new Queue<VideoJob>('video-processing', queueOptions);
 // Queue Processor
 // ============================================================================
 
+async function markProjectSuccess(projectId: string, result: VideoJobResult): Promise<void> {
+  const project = await projectRepository.findById(projectId);
+  if (!project) {
+    logger.warn({ projectId }, 'Project not found while marking success');
+    return;
+  }
+
+  await projectRepository.markVideoCompleted({
+    project,
+    videoUrl: result.videoUrl,
+    duration: result.duration,
+    thumbnailUrl: result.thumbnailUrl,
+    resolution: null,
+    completedAt: new Date().toISOString(),
+  });
+}
+
+async function markProjectFailure(projectId: string, errorMessage: string): Promise<void> {
+  const project = await projectRepository.findById(projectId);
+  if (!project) {
+    logger.warn({ projectId }, 'Project not found while marking failure');
+    return;
+  }
+
+  await projectRepository.markVideoFailed({
+    project,
+    errorMessage,
+    errorType: 'PROCESSING_ERROR',
+    retryable: true,
+  });
+}
+
 /**
  * Process a video job: download videos, compose them, upload result
  */
@@ -81,6 +114,8 @@ async function processVideoJob(jobData: VideoJob): Promise<VideoJobResult> {
       duration: result.duration,
       fileSize: result.fileSize,
     }, 'Video job completed successfully');
+
+    await markProjectSuccess(projectId, result);
 
     // Send success webhook (handle gracefully - don't fail job if webhook fails)
     try {
@@ -116,6 +151,8 @@ async function processVideoJob(jobData: VideoJob): Promise<VideoJobResult> {
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
     }, 'Video job processing failed');
+
+    await markProjectFailure(projectId, error instanceof Error ? error.message : 'Unknown error');
 
     // Send failure webhook
     try {

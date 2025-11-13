@@ -9,7 +9,15 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    "types": ["node", "jest"],
+    "paths": {
+      "@/*": ["apps/video-server/src/*"],
+      "@db/*": ["packages/db/*"],
+      "@shared/*": ["packages/shared/*"],
+      "@web/*": ["apps/web/*"],
+      "@video-server/*": ["apps/video-server/*"]
+    }
   },
   "include": [
     "src/**/*",

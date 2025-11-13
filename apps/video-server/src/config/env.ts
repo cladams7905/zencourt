@@ -11,6 +11,9 @@ interface EnvConfig {
   port: number;
   logLevel: string;
 
+  // Database
+  databaseUrl: string;
+
   // AWS
   awsRegion: string;
   awsS3Bucket: string;
@@ -32,6 +35,10 @@ interface EnvConfig {
 
   // API Authentication
   awsApiKey: string;
+
+  // fal.ai
+  falApiKey: string;
+  falWebhookUrl: string;
 }
 
 function getEnvVar(name: string, defaultValue?: string): string {
@@ -60,6 +67,9 @@ export const env: EnvConfig = {
   port: getEnvVarNumber('PORT', 3001),
   logLevel: getEnvVar('LOG_LEVEL', 'info'),
 
+  // Database
+  databaseUrl: getEnvVar('DATABASE_URL'),
+
   // AWS
   awsRegion: getEnvVar('AWS_REGION', 'us-east-1'),
   awsS3Bucket: getEnvVar('AWS_S3_BUCKET'),
@@ -81,6 +91,10 @@ export const env: EnvConfig = {
 
   // API Authentication
   awsApiKey: getEnvVar('AWS_API_KEY'),
+
+  // fal.ai
+  falApiKey: getEnvVar('FAL_KEY'),
+  falWebhookUrl: getEnvVar('FAL_WEBHOOK_URL'),
 };
 
 export function validateEnv(): void {
@@ -93,6 +107,9 @@ export function validateEnv(): void {
     'REDIS_HOST',
     'VERCEL_API_URL',
     'AWS_API_KEY',
+    'DATABASE_URL',
+    'FAL_KEY',
+    'FAL_WEBHOOK_URL',
   ];
 
   const missing: string[] = [];
@@ -128,6 +145,9 @@ export function validateEnv(): void {
     maxConcurrentJobs: env.maxConcurrentJobs,
     jobTimeoutMs: env.jobTimeoutMs,
     tempDir: env.tempDir,
+    databaseUrl: env.databaseUrl ? '***REDACTED***' : undefined,
     awsApiKey: '***REDACTED***',
+    falApiKey: '***REDACTED***',
+    falWebhookUrl: env.falWebhookUrl,
   });
 }

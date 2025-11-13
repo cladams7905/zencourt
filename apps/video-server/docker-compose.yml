@@ -1,13 +1,12 @@
-version: '3.8'
-
 services:
   # ============================================================================
   # Video Processing Server
   # ============================================================================
   video-server:
+    image: zencourt-video-server:latest
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ../..
+      dockerfile: apps/video-server/Dockerfile
     container_name: zencourt-video-server
     ports:
       - "3001:3001"
@@ -84,10 +83,10 @@ services:
     environment:
       SERVICES: s3
       DEBUG: 1
-      DATA_DIR: /tmp/localstack/data
+      DATA_DIR: /var/lib/localstack/data
       DOCKER_HOST: unix:///var/run/docker.sock
     volumes:
-      - localstack-data:/tmp/localstack
+      - localstack-data:/var/lib/localstack
       - /var/run/docker.sock:/var/run/docker.sock
     restart: unless-stopped
 

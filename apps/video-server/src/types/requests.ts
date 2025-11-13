@@ -6,6 +6,29 @@ import type { VideoCompositionSettings } from '@/services/videoCompositionServic
 
 export type { VideoCompositionSettings };
 
+export type KlingDuration = '5' | '10';
+export type KlingAspectRatio = '16:9' | '9:16' | '1:1';
+
+export interface RoomVideoGenerateRequest {
+  videoId: string;
+  projectId: string;
+  userId: string;
+  roomId: string;
+  roomName?: string;
+  roomType?: string;
+  prompt: string;
+  imageUrls: string[];
+  duration?: KlingDuration;
+  aspectRatio?: KlingAspectRatio;
+  metadata?: Record<string, unknown>;
+}
+
+export interface RoomVideoGenerateResponse {
+  success: boolean;
+  requestId: string;
+  videoId: string;
+}
+
 export interface VideoProcessRequest {
   jobId: string;
   projectId: string;
@@ -60,6 +83,22 @@ export interface WebhookPayload {
   duration?: number;
   error?: string;
   timestamp: string;
+}
+
+export interface FalWebhookPayload {
+  request_id: string;
+  status: 'OK' | 'ERROR';
+  payload?: {
+    video?: {
+      url: string;
+      file_size?: number;
+      content_type?: string;
+      metadata?: {
+        duration?: number;
+      };
+    };
+  };
+  error?: string;
 }
 
 export interface ErrorResponse {

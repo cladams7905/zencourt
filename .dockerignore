@@ -1,0 +1,27 @@
+.git
+.gitignore
+.DS_Store
+Thumbs.db
+
+node_modules
+**/node_modules
+
+dist
+**/dist
+apps/web/.next
+apps/web/out
+apps/web/.vercel
+apps/web/.turbo
+
+.env
+.env.*
+*.log
+
+coverage
+*.swp
+*.swo
+
+# Keep Docker and compose files available
+# (explicitly allow these paths; patterns above won't exclude them)
+!apps/video-server/Dockerfile
+!apps/video-server/docker-compose.yml

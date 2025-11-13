@@ -17,7 +17,7 @@ import { cn } from "../ui/utils";
 import { ProjectNameInput } from "../workflow/ProjectNameInput";
 import { UploadStage } from "../workflow/stages/UploadStage";
 import { CategorizeStage } from "../workflow/stages/CategorizeStage";
-import { PlanStage } from "../workflow/stages/PlanStage";
+import { PlanStage, VideoSettings } from "../workflow/stages/PlanStage";
 import { ReviewStage } from "../workflow/stages/ReviewStage";
 import { GenerateStage } from "../workflow/stages/GenerateStage";
 import { ImagePreviewModal } from "./ImagePreviewModal";
@@ -25,7 +25,9 @@ import type { ProcessedImage } from "../../types/images";
 import type {
   WorkflowStage,
   GenerationProgress,
-  GenerationStep
+  GenerationStep,
+  GenerationStepStatus,
+  RoomGenerationStatus
 } from "../../types/workflow";
 import { useRef } from "react";
 import { updateProject } from "../../server/actions/db/projects";
@@ -58,16 +60,9 @@ export function ProjectWorkflowModal({
   >([]);
 
   // Video settings state
-  const [videoSettings, setVideoSettings] = useState<{
-    orientation: "landscape" | "vertical";
-    roomOrder: Array<{ id: string; name: string; imageCount: number }>;
-    logoFile: File | null;
-    logoPosition: "top-left" | "top-right" | "bottom-left" | "bottom-right";
-    scriptText: string;
-    enableSubtitles: boolean;
-    subtitleFont: string;
-    aiDirections: string;
-  } | null>(null);
+  const [videoSettings, setVideoSettings] = useState<VideoSettings | null>(
+    null
+  );
 
   // Upload stage state
   const [previewImage, setPreviewImage] = useState<ProcessedImage | null>(null);
@@ -83,8 +78,33 @@ export function ProjectWorkflowModal({
   // Generate stage state
   const [generationProgress, setGenerationProgress] =
     useState<GenerationProgress | null>(null);
+  const [roomStatuses, setRoomStatuses] = useState<RoomGenerationStatus[]>([]);
   const [_generationJobIds, setGenerationJobIds] = useState<string[]>([]);
   const pollingCleanupRef = useRef<(() => void) | null>(null);
+  const activeIntervalsRef = useRef<NodeJS.Timeout[]>([]);
+  const ROOM_GENERATION_STEP_ID = "room-generation";
+  const FINAL_COMPOSE_STEP_ID = "final-compose";
+
+  const clearPollingIntervals = () => {
+    activeIntervalsRef.current.forEach((intervalId) => clearInterval(intervalId));
+    activeIntervalsRef.current = [];
+    pollingCleanupRef.current = null;
+  };
+
+  const registerInterval = (intervalId: NodeJS.Timeout) => {
+    activeIntervalsRef.current.push(intervalId);
+    pollingCleanupRef.current = clearPollingIntervals;
+  };
+
+  const removeInterval = (intervalId: NodeJS.Timeout) => {
+    clearInterval(intervalId);
+    activeIntervalsRef.current = activeIntervalsRef.current.filter(
+      (activeId) => activeId !== intervalId
+    );
+    if (activeIntervalsRef.current.length === 0) {
+      pollingCleanupRef.current = null;
+    }
+  };
 
   // Internal modal state
   const [internalIsOpen, setInternalIsOpen] = useState(isOpen);
@@ -187,11 +207,7 @@ export function ProjectWorkflowModal({
   // Reset state when modal closes
   useEffect(() => {
     if (!isOpen) {
-      // Stop polling if active
-      if (pollingCleanupRef.current) {
-        pollingCleanupRef.current();
-        pollingCleanupRef.current = null;
-      }
+      clearPollingIntervals();
 
       // Only reset if we're actually closing (not just switching stages)
       const timeout = setTimeout(() => {
@@ -202,6 +218,7 @@ export function ProjectWorkflowModal({
         setVideoSettings(null);
         setCurrentProject(null);
         setGenerationProgress(null);
+        setRoomStatuses([]);
         setGenerationJobIds([]);
       }, 300); // Wait for modal close animation
       return () => clearTimeout(timeout);
@@ -211,9 +228,7 @@ export function ProjectWorkflowModal({
   // Cleanup polling on unmount
   useEffect(() => {
     return () => {
-      if (pollingCleanupRef.current) {
-        pollingCleanupRef.current();
-      }
+      clearPollingIntervals();
     };
   }, []);
 
@@ -305,18 +320,334 @@ export function ProjectWorkflowModal({
   // Plan Stage Handlers
   // ============================================================================
 
-  const handleContinueFromPlan = (settings: {
-    orientation: "landscape" | "vertical";
-    roomOrder: Array<{ id: string; name: string; imageCount: number }>;
-    logoFile: File | null;
-    logoPosition: "top-left" | "top-right" | "bottom-left" | "bottom-right";
-    scriptText: string;
-    enableSubtitles: boolean;
-    subtitleFont: string;
-    aiDirections: string;
-  }) => {
+  const handleContinueFromPlan = (settings: VideoSettings) => {
     setVideoSettings(settings);
     setCurrentStage("review");
+  };
+
+  const initializeGenerationProgress = (roomCount: number) => {
+    const steps: GenerationStep[] = [
+      {
+        id: ROOM_GENERATION_STEP_ID,
+        label: "Generate Room Videos",
+        status: "in-progress" as GenerationStepStatus,
+        progress: roomCount > 0 ? 5 : 0
+      },
+      {
+        id: FINAL_COMPOSE_STEP_ID,
+        label: "Compose Final Video",
+        status: "waiting" as GenerationStepStatus,
+        progress: 0
+      }
+    ];
+
+    setGenerationProgress({
+      currentStep: steps[0].label,
+      totalSteps: steps.length,
+      currentStepIndex: 0,
+      estimatedTimeRemaining: Math.max(roomCount * 45, 60),
+      overallProgress: 5,
+      steps
+    });
+  };
+
+  const updateRoomGenerationStep = (completed: number, total: number) => {
+    setGenerationProgress((prev) => {
+      if (!prev) return prev;
+      const progressPercent =
+        total === 0 ? 100 : Math.min(100, Math.round((completed / total) * 100));
+
+      const steps = prev.steps.map((step) => {
+        if (step.id === ROOM_GENERATION_STEP_ID) {
+          return {
+            ...step,
+            status: (progressPercent >= 100
+              ? "completed"
+              : "in-progress") as GenerationStepStatus,
+            progress: progressPercent
+          };
+        }
+
+        if (
+          step.id === FINAL_COMPOSE_STEP_ID &&
+          progressPercent >= 100 &&
+          step.status === "waiting"
+        ) {
+          return {
+            ...step,
+            status: "in-progress" as GenerationStepStatus,
+            progress: step.progress ?? 5
+          };
+        }
+
+        return step;
+      });
+
+      const currentStepIndex =
+        progressPercent >= 100
+          ? steps.findIndex((step) => step.id === FINAL_COMPOSE_STEP_ID) || 0
+          : steps.findIndex((step) => step.id === ROOM_GENERATION_STEP_ID) || 0;
+
+      const currentStep = steps[currentStepIndex]?.label || prev.currentStep;
+
+      return {
+        ...prev,
+        steps,
+        currentStep,
+        currentStepIndex,
+        overallProgress:
+          progressPercent >= 100
+            ? Math.max(prev.overallProgress, 85)
+            : Math.max(
+                prev.overallProgress,
+                Math.round(progressPercent * 0.6)
+              )
+      };
+    });
+  };
+
+  const markRoomGenerationFailed = (message: string) => {
+    setGenerationProgress((prev) => {
+      if (!prev) return prev;
+    const steps = prev.steps.map((step) =>
+      step.id === ROOM_GENERATION_STEP_ID
+        ? { ...step, status: "failed" as GenerationStepStatus, error: message }
+        : step.id === FINAL_COMPOSE_STEP_ID
+        ? {
+            ...step,
+            status: "waiting" as GenerationStepStatus,
+            progress: 0
+          }
+        : step
+    );
+
+      return {
+        ...prev,
+        steps,
+        currentStep: steps[0]?.label || prev.currentStep,
+        currentStepIndex: 0
+      };
+    });
+  };
+
+  const markFinalStepInProgress = () => {
+    setGenerationProgress((prev) => {
+      if (!prev) return prev;
+      const steps = prev.steps.map((step) =>
+        step.id === FINAL_COMPOSE_STEP_ID
+          ? {
+              ...step,
+              status: "in-progress" as GenerationStepStatus,
+              progress: step.progress ?? 10
+            }
+          : step
+      );
+
+      return {
+        ...prev,
+        steps,
+        currentStep: steps[steps.length - 1]?.label || prev.currentStep,
+        currentStepIndex: steps.length - 1,
+        overallProgress: Math.max(prev.overallProgress, 90)
+      };
+    });
+  };
+
+  const markFinalStepCompleted = () => {
+    setGenerationProgress((prev) => {
+      if (!prev) return prev;
+      const steps = prev.steps.map((step) =>
+        step.id === FINAL_COMPOSE_STEP_ID
+          ? {
+              ...step,
+              status: "completed" as GenerationStepStatus,
+              progress: 100
+            }
+          : step
+      );
+
+      return {
+        ...prev,
+        steps,
+        currentStep: steps[steps.length - 1]?.label || prev.currentStep,
+        currentStepIndex: steps.length - 1,
+        overallProgress: 100
+      };
+    });
+  };
+
+  const markFinalStepFailed = (message: string) => {
+    setGenerationProgress((prev) => {
+      if (!prev) return prev;
+      const steps = prev.steps.map((step) =>
+        step.id === FINAL_COMPOSE_STEP_ID
+          ? { ...step, status: "failed" as GenerationStepStatus, error: message }
+          : step
+      );
+
+      return {
+        ...prev,
+        steps,
+        currentStep: steps[steps.length - 1]?.label || prev.currentStep,
+        currentStepIndex: steps.length - 1
+      };
+    });
+  };
+
+  const startFinalStatusPolling = (projectId: string, jobId: string) => {
+    const pollStatus = async () => {
+      try {
+        const statusResponse = await fetch(
+          `/api/v1/video/status/${jobId}?projectId=${projectId}`
+        );
+
+        if (!statusResponse.ok) {
+          throw new Error("Failed to fetch generation status");
+        }
+
+        const statusData = await statusResponse.json();
+
+        if (statusData.status === "completed") {
+          removeInterval(intervalId);
+          markFinalStepCompleted();
+          toast.success("Generation complete!", {
+            description: "Your property video is ready."
+          });
+        } else if (statusData.status === "failed") {
+          removeInterval(intervalId);
+          const errorMessage =
+            statusData.error?.message || "Final composition failed";
+          markFinalStepFailed(errorMessage);
+          toast.error("Generation failed", {
+            description: errorMessage
+          });
+        } else {
+          setGenerationProgress((prev) => {
+            if (!prev) return prev;
+            const steps = prev.steps.map((step) =>
+              step.id === FINAL_COMPOSE_STEP_ID
+                ? {
+                    ...step,
+                    status: "in-progress" as GenerationStepStatus,
+                    progress: Math.min(95, (step.progress ?? 10) + 5)
+                  }
+                : step
+            );
+            return {
+              ...prev,
+              steps,
+              overallProgress: Math.min(95, prev.overallProgress + 1),
+              currentStep: steps[steps.length - 1]?.label || prev.currentStep,
+              currentStepIndex: steps.length - 1
+            };
+          });
+        }
+      } catch (error) {
+        console.error("Status polling error:", error);
+      }
+    };
+
+    const intervalId = setInterval(pollStatus, 2000);
+    registerInterval(intervalId);
+    pollStatus();
+  };
+
+  const startFinalComposition = async (projectId: string) => {
+    if (!videoSettings) {
+      markFinalStepFailed("Missing video settings");
+      toast.error("Final composition failed", {
+        description: "Video settings were not found."
+      });
+      return;
+    }
+
+    try {
+      markFinalStepInProgress();
+
+      const response = await fetch("/api/v1/video/compose", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          projectId,
+          compositionSettings: {
+            roomOrder: videoSettings.roomOrder.map((room) => room.id),
+            musicUrl: null,
+            musicVolume: 0.5,
+            transitions: null
+          }
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to start final composition");
+      }
+
+      setGenerationJobIds([data.jobId]);
+      startFinalStatusPolling(projectId, data.jobId);
+    } catch (error) {
+      const description =
+        error instanceof Error ? error.message : "Please try again.";
+      markFinalStepFailed(description);
+      toast.error("Final composition failed", {
+        description
+      });
+    }
+  };
+
+  const startRoomStatusPolling = (
+    projectId: string,
+    totalRooms: number
+  ): void => {
+    const pollRooms = async () => {
+      try {
+        const response = await fetch(
+          `/api/v1/video/rooms?projectId=${projectId}`
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch room statuses");
+        }
+
+        const data = await response.json();
+        const rooms = (data.rooms || []) as RoomGenerationStatus[];
+
+        setRoomStatuses(rooms);
+
+        const completed = rooms.filter(
+          (room) => room.status === "completed"
+        ).length;
+        const failedRooms = rooms.filter((room) => room.status === "failed");
+
+        if (failedRooms.length > 0) {
+          removeInterval(intervalId);
+          const message =
+            failedRooms[0]?.errorMessage ||
+            "One or more rooms failed to generate.";
+          markRoomGenerationFailed(message);
+          toast.error("Room generation failed", {
+            description: message
+          });
+          return;
+        }
+
+        updateRoomGenerationStep(completed, totalRooms);
+
+        if (totalRooms > 0 && completed === totalRooms) {
+          removeInterval(intervalId);
+          await startFinalComposition(projectId);
+        }
+      } catch (error) {
+        console.error("Room status polling error:", error);
+      }
+    };
+
+    const intervalId = setInterval(pollRooms, 5000);
+    registerInterval(intervalId);
+    pollRooms();
   };
 
   const handleConfirmAndGenerate = async () => {
@@ -327,15 +658,30 @@ export function ProjectWorkflowModal({
       return;
     }
 
+    if (!videoSettings) {
+      toast.error("Missing video settings", {
+        description: "Please configure your video before generating."
+      });
+      return;
+    }
+
+    const totalRooms = videoSettings.roomOrder.length;
+    if (totalRooms === 0) {
+      toast.error("No rooms selected", {
+        description: "Add at least one room to generate video clips."
+      });
+      return;
+    }
+
     setIsConfirming(true);
+    setRoomStatuses([]);
 
     try {
-      // Validate video settings
-      if (!videoSettings) {
-        throw new Error("Video settings are required");
-      }
+      clearPollingIntervals();
+      setGenerationJobIds([]);
+      initializeGenerationProgress(totalRooms);
+      setCurrentStage("generate");
 
-      // Call the new video generation API
       const response = await fetch("/api/v1/video/generate", {
         method: "POST",
         headers: {
@@ -343,112 +689,30 @@ export function ProjectWorkflowModal({
         },
         body: JSON.stringify({
           projectId: currentProject.id,
-          compositionSettings: {
-            roomOrder: videoSettings.roomOrder.map((room) => room.id),
-            musicUrl: null, // TODO: Add music support
-            musicVolume: 0.5,
-            transitions: null // TODO: Add transitions support
-          }
+          orientation: videoSettings.orientation,
+          rooms: videoSettings.roomOrder,
+          aiDirections: videoSettings.aiDirections || undefined
         })
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(
-          errorData.message || "Failed to start video generation"
-        );
+        throw new Error(data.message || "Failed to start room generation");
       }
 
-      const result = await response.json();
-
-      // Initialize generation progress with single video generation step
-      const steps: GenerationStep[] = [
-        {
-          id: result.jobId || "job-0",
-          label: `Generating ${videoSettings.orientation} video`,
-          status: "in-progress" as const
-        }
-      ];
-
-      setGenerationProgress({
-        currentStep: steps[0]?.label || "Starting...",
-        totalSteps: steps.length,
-        currentStepIndex: 0,
-        estimatedTimeRemaining: result.estimatedDuration,
-        overallProgress: 0,
-        steps
-      });
-
-      setGenerationJobIds([result.jobId]);
-      setCurrentStage("generate");
-
-      // Start polling for status
-      const pollInterval = setInterval(async () => {
-        try {
-          const statusResponse = await fetch(
-            `/api/v1/video/status/${result.jobId}?projectId=${currentProject.id}`
-          );
-
-          if (!statusResponse.ok) {
-            throw new Error("Failed to fetch status");
-          }
-
-          const statusData = await statusResponse.json();
-
-          // Update progress
-          setGenerationProgress((prev) => {
-            if (!prev) return null;
-
-            const updatedSteps = [...prev.steps];
-            if (updatedSteps[0]) {
-              updatedSteps[0].status =
-                statusData.status === "completed"
-                  ? "completed"
-                  : statusData.status === "failed"
-                  ? "failed"
-                  : "in-progress";
-            }
-
-            return {
-              ...prev,
-              overallProgress: statusData.progress || 0,
-              estimatedTimeRemaining: statusData.estimatedTimeRemaining,
-              steps: updatedSteps
-            };
-          });
-
-          // Handle completion
-          if (statusData.status === "completed") {
-            clearInterval(pollInterval);
-            pollingCleanupRef.current = null;
-
-            toast.success("Generation complete!", {
-              description: "Your content has been successfully generated."
-            });
-          }
-
-          // Handle failure
-          if (statusData.status === "failed") {
-            clearInterval(pollInterval);
-            pollingCleanupRef.current = null;
-
-            toast.error("Generation failed", {
-              description: statusData.error?.message || "Please try again."
-            });
-          }
-        } catch (error) {
-          console.error("Status polling error:", error);
-        }
-      }, 2000); // Poll every 2 seconds
-
-      pollingCleanupRef.current = () => clearInterval(pollInterval);
+      setRoomStatuses(data.rooms || []);
+      startRoomStatusPolling(currentProject.id, totalRooms);
     } catch (error) {
+      clearPollingIntervals();
+      setGenerationProgress(null);
+      setCurrentStage("review");
+      setRoomStatuses([]);
       console.error("Generation failed:", error);
       toast.error("Generation failed", {
         description:
           error instanceof Error ? error.message : "Please try again."
       });
-      setCurrentStage("review");
     } finally {
       setIsConfirming(false);
     }
@@ -628,15 +892,13 @@ export function ProjectWorkflowModal({
               <GenerateStage
                 progress={generationProgress}
                 projectId={currentProject?.id}
+                rooms={roomStatuses}
                 onCancel={() => {
-                  // Stop polling
-                  if (pollingCleanupRef.current) {
-                    pollingCleanupRef.current();
-                    pollingCleanupRef.current = null;
-                  }
+                  clearPollingIntervals();
                   // Reset state
                   setCurrentStage("review");
                   setGenerationProgress(null);
+                  setRoomStatuses([]);
                 }}
               />
             )}

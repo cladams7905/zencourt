@@ -39,11 +39,11 @@ import {
   Eye
 } from "lucide-react";
 import Image from "next/image";
-import { CategorizedGroup } from "@web/src/types/vision";
+import { CategorizedGroup, RoomCategory } from "@web/src/types/vision";
 
 export interface VideoSettings {
   orientation: "landscape" | "vertical";
-  roomOrder: Array<{ id: string; name: string; imageCount: number }>;
+  roomOrder: RoomOrder[];
   logoFile: File | null;
   logoPosition: "top-left" | "top-right" | "bottom-left" | "bottom-right";
   scriptText: string;
@@ -72,6 +72,8 @@ type SubtitleFont =
 interface RoomOrder {
   id: string;
   name: string;
+  category: RoomCategory | string;
+  roomNumber?: number;
   imageCount: number;
 }
 
@@ -205,7 +207,11 @@ export function PlanStage({
 
     return categorizedGroups.map((group, index) => {
       const category = group.category || `room-${index}`;
-      const baseName = category || `Room ${index + 1}`;
+      const baseName =
+        group.displayLabel ||
+        group.metadata?.label ||
+        category ||
+        `Room ${index + 1}`;
 
       // Track how many times we've seen this room type
       if (!roomCounts[category]) {
@@ -217,10 +223,14 @@ export function PlanStage({
       const count = roomCounts[category];
       const uniqueId = count > 1 ? `${category}-${count}` : category;
       const displayName = count > 1 ? `${baseName} ${count}` : baseName;
+      const roomNumber =
+        group.metadata?.allowNumbering && count > 0 ? count : undefined;
 
       return {
         id: uniqueId,
         name: displayName,
+        category,
+        roomNumber,
         imageCount: group.images?.length || 0
       };
     });

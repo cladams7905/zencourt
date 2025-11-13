@@ -33,3 +33,26 @@ export interface S3UploadResponse extends ApiResponse {
 export interface S3UploadBatchResponse extends ApiResponse {
   results: (S3UploadResponse & { filename: string })[];
 }
+
+// ============================================================================
+// Video Generation
+// ============================================================================
+
+export interface RoomVideoSummary {
+  id: string;
+  roomId: string | null;
+  roomName: string | null;
+  status: string;
+  videoUrl?: string | null;
+  errorMessage?: string | null;
+}
+
+export interface RoomGenerationResponse extends ApiResponse {
+  projectId: string;
+  rooms: RoomVideoSummary[];
+}
+
+export interface RoomStatusResponse extends ApiResponse {
+  projectId: string;
+  rooms: RoomVideoSummary[];
+}

@@ -197,14 +197,13 @@ export class KlingService {
   }
 
   private resolveWebhookUrl(): string | undefined {
-    if (process.env.NEXT_PUBLIC_APP_URL) {
-      return `${process.env.NEXT_PUBLIC_APP_URL}/api/v1/webhooks/fal`;
+    if (process.env.FAL_WEBHOOK_URL) {
+      return process.env.FAL_WEBHOOK_URL;
     }
 
-    if (process.env.VERCEL_URL) {
-      return `https://${process.env.VERCEL_URL}/api/v1/webhooks/fal`;
-    }
-
+    this.logger.warn(
+      "FAL_WEBHOOK_URL is not configured. Webhook delivery will be handled by the video server."
+    );
     return undefined;
   }
 

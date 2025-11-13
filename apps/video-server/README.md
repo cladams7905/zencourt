@@ -171,7 +171,8 @@ npm run test:coverage
 ### Using Docker Compose (Local Testing)
 
 ```bash
-docker-compose up --build
+# from the repo root
+docker compose -f apps/video-server/docker-compose.yml up --build
 ```
 
 This starts:
@@ -182,23 +183,28 @@ This starts:
 
 ### Using Docker (Production)
 
-1. Build the image:
+1. Build the image (from the repo root):
 
 ```bash
-docker build -t zencourt-video-server:latest .
+docker build -f apps/video-server/Dockerfile -t zencourt-video-server:latest .
 ```
 
-2. Run the container:
+2. Run the container with the required environment variables:
 
 ```bash
-docker run -p 3001:3001 \
+docker run --rm -p 3001:3001 \
   -e AWS_REGION=us-east-1 \
   -e AWS_S3_BUCKET=your-bucket \
+  -e AWS_ACCESS_KEY_ID=your-access-key \
+  -e AWS_SECRET_ACCESS_KEY=your-secret \
   -e REDIS_HOST=your-redis-host \
+  -e REDIS_PORT=6379 \
   -e VERCEL_API_URL=https://your-app.vercel.app \
   -e AWS_API_KEY=your-secret-key \
   zencourt-video-server:latest
 ```
+
+You can also store those values in an env file (e.g. `apps/video-server/.env.docker`) and pass `--env-file apps/video-server/.env.docker` to keep secrets out of the command history.
 
 ### AWS ECS Deployment
 
@@ -255,7 +261,7 @@ Health check endpoint for container orchestration.
 }
 ```
 
-### POST /video/process
+### POST /video/compose
 
 Submit a video processing job.
 

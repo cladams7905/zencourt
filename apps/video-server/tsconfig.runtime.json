@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["dist/*"],
+      "@db/*": ["../packages/db/*"],
+      "@shared/*": ["../packages/shared/*"],
+      "@web/*": ["../apps/web/*"],
+      "@video-server/*": ["../apps/video-server/*"]
+    }
+  }
+}

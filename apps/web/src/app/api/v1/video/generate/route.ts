@@ -1,298 +1,318 @@
 /**
- * API Route: Generate Video via AWS Express Server
+ * API Route: Generate individual room videos via the video-server
  *
  * POST /api/v1/video/generate
- * Sends video processing request to AWS ECS-hosted Express server
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { nanoid } from "nanoid";
-import { eq, and } from "drizzle-orm";
+import { eq, asc } from "drizzle-orm";
+import { db, images, videos } from "@db/client";
 import {
   ApiError,
   requireAuthenticatedUser,
   requireProjectAccess
 } from "../../_utils";
-import { db, projects, videos } from "@db/client";
-import { VideoGenerateRequest, VideoProcessPayload } from "@shared/types/api";
-import {
-  createChildLogger,
-  logger as baseLogger
-} from "../../../../../lib/logger";
+import { VideoGenerateRequest } from "@shared/types/api";
+import { getVideoServerConfig } from "../_config";
+import { ROOM_CATEGORIES, RoomCategory } from "@web/src/types/vision";
+import { archiveRoomVideosForProject } from "@web/src/server/services/videoArchive";
 
-const logger = createChildLogger(baseLogger, {
-  module: "video-generate-route"
-});
+type DbImage = typeof images.$inferSelect;
+type DbVideo = typeof videos.$inferSelect;
 
-// Force Node.js runtime
-export const runtime = "nodejs";
-
-// ============================================================================
-// Helper Functions
-// ============================================================================
-
-/**
- * Get video server configuration from environment
- */
-function getVideoServerConfig() {
-  const baseUrl = process.env.VIDEO_SERVER_URL;
-  const apiKey = process.env.VIDEO_SERVER_API_KEY;
-  const webhookSecret = process.env.VIDEO_WEBHOOK_SECRET;
-
-  if (!baseUrl || !apiKey || !webhookSecret) {
-    throw new Error(
-      "VIDEO_SERVER_URL, VIDEO_SERVER_API_KEY, and VIDEO_WEBHOOK_SECRET must be configured"
-    );
-  }
-
-  return {
-    baseUrl: baseUrl.replace(/\/+$/, ""),
-    apiKey,
-    webhookSecret
-  };
+interface RoomSelection {
+  id: string;
+  name: string;
+  category: string;
+  roomNumber?: number;
+  imageCount?: number;
 }
 
-/**
- * Build webhook URL for video completion notifications
- */
-function getWebhookUrl(): string {
-  const vercelUrl = process.env.VERCEL_URL;
-  const baseUrl = vercelUrl
-    ? `https://${vercelUrl}`
-    : process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-
-  return `${baseUrl}/api/v1/webhooks/video`;
+interface RoomJob {
+  selection: RoomSelection;
+  videoId: string;
+  imageUrls: string[];
+  prompt: string;
 }
 
-// ============================================================================
-// POST Handler
-// ============================================================================
+const DEFAULT_DURATION: "5" | "10" = "5";
 
-export async function POST(request: NextRequest) {
-  try {
-    // Parse request body
-    const body: VideoGenerateRequest = await request.json();
-    const { projectId, compositionSettings } = body;
-
-    // Authenticate and authorize
-    const user = await requireAuthenticatedUser();
-    await requireProjectAccess(projectId, user.id);
-
-    // Validate composition settings
-    if (
-      !compositionSettings ||
-      !compositionSettings.roomOrder ||
-      compositionSettings.roomOrder.length === 0
-    ) {
-      throw new ApiError(400, {
-        error: "Invalid composition settings",
-        message:
-          "compositionSettings.roomOrder is required and must not be empty"
-      });
-    }
-
-    // Get project data
-    const [project] = await db
-      .select()
-      .from(projects)
-      .where(eq(projects.id, projectId))
-      .limit(1);
-
-    if (!project) {
-      throw new ApiError(404, {
-        error: "Project not found",
-        message: `Project ${projectId} not found`
-      });
-    }
-
-    // Fetch room videos from the videos table
-    const roomVideos = await db
-      .select()
-      .from(videos)
-      .where(
-        and(eq(videos.projectId, projectId), eq(videos.status, "completed"))
-      );
-
-    // Extract room video URLs based on composition settings
-    const roomVideoUrls = compositionSettings.roomOrder.map((roomId) => {
-      const roomVideo = roomVideos.find((v) => v.roomId === roomId);
-      if (!roomVideo || !roomVideo.videoUrl) {
-        throw new ApiError(400, {
-          error: "Missing room video",
-          message: `Room ${roomId} does not have a completed video URL`
-        });
-      }
+function normalizeRooms(body: VideoGenerateRequest): RoomSelection[] {
+  if (body.rooms && body.rooms.length > 0) {
+    return body.rooms.map((room) => {
+      const category =
+        room.category ||
+        deriveCategoryFromId(room.id) ||
+        room.id.replace(/-\d+$/, "");
       return {
-        roomId,
-        url: roomVideo.videoUrl
+        id: room.id,
+        name: room.name,
+        category,
+        roomNumber: room.roomNumber,
+        imageCount: room.imageCount
       };
     });
+  }
 
-    // Generate unique job ID
-    const jobId = nanoid();
+  // Backwards compatibility for older payloads that only provided roomOrder IDs
+  const legacyRooms =
+    (body as unknown as { compositionSettings?: { roomOrder?: string[] } })
+      .compositionSettings?.roomOrder || [];
 
-    // Get video server config
-    const { baseUrl, apiKey, webhookSecret } = getVideoServerConfig();
-    const webhookUrl = getWebhookUrl();
+  return legacyRooms.map((roomId) => ({
+    id: roomId,
+    name: roomId,
+    category: deriveCategoryFromId(roomId) || roomId.replace(/-\d+$/, "")
+  }));
+}
 
-    // Build request payload for Express server
-    const payload: VideoProcessPayload = {
-      jobId,
-      projectId,
-      userId: user.id,
-      roomVideoUrls,
-      compositionSettings: {
-        roomOrder: compositionSettings.roomOrder,
-        musicUrl: compositionSettings.musicUrl || null,
-        musicVolume: compositionSettings.musicVolume || 0.5,
-        transitions: compositionSettings.transitions || null
-      },
-      webhookUrl,
-      webhookSecret
-    };
+function deriveCategoryFromId(roomId: string): string | undefined {
+  if (ROOM_CATEGORIES[roomId as RoomCategory]) {
+    return roomId;
+  }
 
-    // Send request to AWS Express server
-    logger.info(
-      {
-        endpoint: `${baseUrl}/video/process`,
-        jobId,
-        projectId
-      },
-      "Sending video generation request to AWS server"
-    );
+  const trimmed = roomId.replace(/-\d+$/, "");
+  if (ROOM_CATEGORIES[trimmed as RoomCategory]) {
+    return trimmed;
+  }
 
-    const response = await fetch(`${baseUrl}/video/process`, {
+  return undefined;
+}
+
+function buildPrompt(roomName: string, aiDirections?: string): string {
+  const basePrompt = `Create a cinematic walkthrough video showcasing the ${roomName} inside a property listing. Highlight the key architectural details and ambience.`;
+  if (!aiDirections) {
+    return basePrompt;
+  }
+
+  return `${basePrompt} Additional creative direction: ${aiDirections}`;
+}
+
+function groupImagesByCategory(projectImages: DbImage[]): Map<string, DbImage[]> {
+  const grouped = new Map<string, DbImage[]>();
+
+  projectImages.forEach((image) => {
+    if (!image.category || !image.url) {
+      return;
+    }
+
+    const category = image.category;
+    if (!grouped.has(category)) {
+      grouped.set(category, []);
+    }
+
+    grouped.get(category)!.push(image);
+  });
+
+  grouped.forEach((imagesForCategory) => {
+    imagesForCategory.sort((a, b) => {
+      const orderA = a.order ?? 0;
+      const orderB = b.order ?? 0;
+      return orderA - orderB;
+    });
+  });
+
+  return grouped;
+}
+
+function selectImageUrlsForRoom(
+  selection: RoomSelection,
+  groupedImages: Map<string, DbImage[]>
+): string[] {
+  const availableImages = groupedImages.get(selection.category) || [];
+  if (availableImages.length === 0) {
+    throw new ApiError(400, {
+      error: "Missing images",
+      message: `No categorized images found for ${selection.name}`
+    });
+  }
+
+  const metadata = ROOM_CATEGORIES[selection.category as RoomCategory];
+  const maxImages = 4;
+
+  if (metadata?.allowNumbering) {
+    const index =
+      typeof selection.roomNumber === "number" && selection.roomNumber > 0
+        ? selection.roomNumber - 1
+        : parseInt(selection.id.split("-").pop() || "1", 10) - 1;
+
+    const image = availableImages[index];
+    if (!image || !image.url) {
+      throw new ApiError(400, {
+        error: "Missing images",
+        message: `Not enough ${selection.category} images for ${selection.name}`
+      });
+    }
+
+    return [image.url];
+  }
+
+  return availableImages
+    .filter((image) => Boolean(image.url))
+    .slice(0, maxImages)
+    .map((image) => image.url!) as string[];
+}
+
+function mapVideosToResponse(videos: DbVideo[]) {
+  return videos.map((video) => ({
+    id: video.id,
+    roomId: video.roomId,
+    roomName: video.roomName,
+    status: video.status,
+    videoUrl:
+      !video.videoUrl || video.videoUrl === "pending" ? null : video.videoUrl,
+    errorMessage: video.errorMessage
+  }));
+}
+
+async function enqueueRoomJobs(
+  jobs: RoomJob[],
+  projectId: string,
+  userId: string,
+  orientation: "landscape" | "vertical",
+  duration: "5" | "10"
+) {
+  const aspectRatio = orientation === "vertical" ? "9:16" : "16:9";
+  const { baseUrl, apiKey } = getVideoServerConfig();
+
+  for (const job of jobs) {
+    const response = await fetch(`${baseUrl}/video/generate`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "X-API-Key": apiKey
       },
-      body: JSON.stringify(payload),
-      signal: AbortSignal.timeout(30000) // 30 second timeout
+      body: JSON.stringify({
+        videoId: job.videoId,
+        projectId,
+        userId,
+        roomId: job.selection.category,
+        roomName: job.selection.name,
+        prompt: job.prompt,
+        imageUrls: job.imageUrls,
+        duration,
+        aspectRatio,
+        metadata: {
+          roomId: job.selection.id,
+          roomNumber: job.selection.roomNumber,
+          category: job.selection.category
+        }
+      })
     });
 
-    const responseData = await response.json().catch(() => ({}));
-
-    // Handle server errors
     if (!response.ok) {
-      logger.error(
-        { status: response.status, response: responseData },
-        "AWS video server responded with error"
-      );
+      const errorData = await response.json().catch(() => ({}));
+      const message =
+        errorData.error || errorData.message || "Video server request failed";
 
-      // Map AWS server errors to appropriate status codes
-      if (response.status === 503) {
-        throw new ApiError(503, {
-          error: "Video processing queue is full",
-          message:
-            "The video processing server is currently at capacity. Please try again later."
-        });
-      }
-
-      if (response.status >= 500) {
-        throw new ApiError(502, {
-          error: "Video processing server error",
-          message:
-            "The video processing server encountered an error. Please try again."
-        });
-      }
+      await db
+        .update(videos)
+        .set({
+          status: "failed",
+          errorMessage: message,
+          updatedAt: new Date()
+        })
+        .where(eq(videos.id, job.videoId));
 
       throw new ApiError(response.status, {
-        error: "Video processing request failed",
-        message: responseData.error || "Failed to start video processing"
+        error: "Video server error",
+        message
+      });
+    }
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const body: VideoGenerateRequest = await request.json();
+    const user = await requireAuthenticatedUser();
+    const project = await requireProjectAccess(body.projectId, user.id);
+
+    const rooms = normalizeRooms(body);
+    if (!rooms.length) {
+      throw new ApiError(400, {
+        error: "Invalid request",
+        message: "At least one room is required to generate videos"
       });
     }
 
-    logger.info({ jobId }, "Video generation job created");
+    const orientation = body.orientation || "landscape";
+    const duration = body.duration || DEFAULT_DURATION;
 
-    // Update project status to processing
-    await db
-      .update(projects)
-      .set({
-        videoGenerationStatus: "processing",
-        updatedAt: new Date()
-      })
-      .where(eq(projects.id, projectId));
+    const projectImages = await db
+      .select()
+      .from(images)
+      .where(eq(images.projectId, body.projectId))
+      .orderBy(asc(images.order));
 
-    // Return 202 Accepted with job ID
+    const groupedImages = groupImagesByCategory(projectImages);
+
+    await archiveRoomVideosForProject(body.projectId, {
+      label: body.archiveLabel
+    });
+
+    const jobs: RoomJob[] = rooms.map((selection) => {
+      const imageUrls = selectImageUrlsForRoom(selection, groupedImages);
+      const prompt = buildPrompt(selection.name, body.aiDirections);
+
+      return {
+        selection,
+        videoId: nanoid(),
+        imageUrls,
+        prompt
+      };
+    });
+
+    const videoRecords = jobs.map((job) => ({
+      id: job.videoId,
+      projectId: body.projectId,
+      roomId: job.selection.id,
+      roomName: job.selection.name,
+      videoUrl: null,
+      thumbnailUrl: null,
+      duration: null,
+      status: "processing" as const,
+      generationSettings: {
+        orientation,
+        aiDirections: body.aiDirections,
+        imageUrls: job.imageUrls,
+        prompt: job.prompt,
+        category: job.selection.category,
+        roomNumber: job.selection.roomNumber
+      },
+      falRequestId: null,
+      errorMessage: null
+    }));
+
+    const createdVideos = await db
+      .insert(videos)
+      .values(videoRecords)
+      .returning();
+
+    await enqueueRoomJobs(jobs, project.id, user.id, orientation, duration);
+
     return NextResponse.json(
       {
         success: true,
-        jobId,
-        projectId,
-        estimatedDuration: responseData.estimatedDuration,
-        queuePosition: responseData.queuePosition,
-        message: "Video generation request accepted"
+        message: "Room video generation started",
+        projectId: body.projectId,
+        rooms: mapVideosToResponse(createdVideos)
       },
       { status: 202 }
     );
   } catch (error) {
-    // Handle API errors
     if (error instanceof ApiError) {
       return NextResponse.json(error.body, { status: error.status });
     }
 
-    // Handle network errors
-    if (error instanceof TypeError && error.message.includes("fetch")) {
-      logger.error(
-        {
-          error: {
-            name: error.name,
-            message: error.message,
-            stack: error.stack
-          }
-        },
-        "Failed to connect to video processing server"
-      );
-      return NextResponse.json(
-        {
-          error: "Video processing server unreachable",
-          message:
-            "Unable to connect to the video processing server. Please try again later."
-        },
-        { status: 503 }
-      );
-    }
+    console.error("[video/generate] Unexpected error", error);
 
-    // Handle timeout errors
-    if (error instanceof Error && error.name === "TimeoutError") {
-      logger.error(
-        {
-          error: {
-            name: error.name,
-            message: error.message,
-            stack: error.stack
-          }
-        },
-        "Video processing server timeout"
-      );
-      return NextResponse.json(
-        {
-          error: "Video processing server timeout",
-          message:
-            "The video processing server did not respond in time. Please try again."
-        },
-        { status: 504 }
-      );
-    }
-
-    // Handle unexpected errors
-    logger.error(
-      {
-        error:
-          error instanceof Error
-            ? { name: error.name, message: error.message, stack: error.stack }
-            : error
-      },
-      "Unexpected error in video generation"
-    );
     return NextResponse.json(
       {
         error: "Internal server error",
         message:
-          error instanceof Error
-            ? error.message
-            : "Failed to start video generation. Please try again."
+          error instanceof Error ? error.message : "Unable to start generation"
       },
       { status: 500 }
     );

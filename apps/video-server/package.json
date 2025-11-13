@@ -26,6 +26,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.699.0",
     "@aws-sdk/s3-request-presigner": "^3.699.0",
+    "@fal-ai/client": "^1.7.2",
     "@types/fluent-ffmpeg": "^2.1.28",
     "@types/multer": "^2.0.0",
     "axios": "^1.7.9",
@@ -38,12 +39,14 @@
     "multer": "^2.0.2",
     "nanoid": "^5.1.6",
     "pino": "^9.5.0",
-    "pino-http": "^10.3.0"
+    "pino-http": "^10.3.0",
+    "tsconfig-paths": "^4.2.0"
   },
   "devDependencies": {
     "@types/express": "^5.0.0",
     "@types/ffmpeg-static": "^3.0.3",
     "@types/ffprobe-static": "^2.0.3",
+    "@types/jest": "^29.5.14",
     "@types/node": "^20.17.10",
     "@typescript-eslint/eslint-plugin": "^8.18.2",
     "@typescript-eslint/parser": "^8.18.2",

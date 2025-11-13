@@ -64,7 +64,7 @@ export async function getVideosByProject(projectId: string): Promise<Video[]> {
       const projectVideos = await db
         .select()
         .from(videos)
-        .where(eq(videos.projectId, projectId))
+        .where(and(eq(videos.projectId, projectId), isNull(videos.archivedAt)))
         .orderBy(videos.createdAt);
 
       return projectVideos as Video[];
@@ -95,7 +95,13 @@ export async function getVideoByRoom(
       const [video] = await db
         .select()
         .from(videos)
-        .where(and(eq(videos.projectId, projectId), eq(videos.roomId, roomId)))
+        .where(
+          and(
+            eq(videos.projectId, projectId),
+            eq(videos.roomId, roomId),
+            isNull(videos.archivedAt)
+          )
+        )
         .limit(1);
 
       return (video as Video) || null;
@@ -151,7 +157,13 @@ export async function getFinalVideo(projectId: string): Promise<Video | null> {
       const [video] = await db
         .select()
         .from(videos)
-        .where(and(eq(videos.projectId, projectId), isNull(videos.roomId)))
+        .where(
+          and(
+            eq(videos.projectId, projectId),
+            isNull(videos.roomId),
+            isNull(videos.archivedAt)
+          )
+        )
         .limit(1);
 
       return (video as Video) || null;
@@ -207,7 +219,13 @@ export async function getRoomVideos(projectId: string): Promise<Video[]> {
       const roomVideos = await db
         .select()
         .from(videos)
-        .where(and(eq(videos.projectId, projectId), isNotNull(videos.roomId)))
+        .where(
+          and(
+            eq(videos.projectId, projectId),
+            isNotNull(videos.roomId),
+            isNull(videos.archivedAt)
+          )
+        )
         .orderBy(videos.createdAt);
 
       return roomVideos as Video[];
@@ -238,7 +256,13 @@ export async function getVideosByStatus(
       const statusVideos = await db
         .select()
         .from(videos)
-        .where(and(eq(videos.projectId, projectId), eq(videos.status, status)))
+        .where(
+          and(
+            eq(videos.projectId, projectId),
+            eq(videos.status, status),
+            isNull(videos.archivedAt)
+          )
+        )
         .orderBy(videos.createdAt);
 
       return statusVideos as Video[];
@@ -422,7 +446,7 @@ export async function getVideoGenerationStats(projectId: string): Promise<{
       const projectVideos = await db
         .select()
         .from(videos)
-        .where(eq(videos.projectId, projectId));
+        .where(and(eq(videos.projectId, projectId), isNull(videos.archivedAt)));
 
       const stats = {
         total: projectVideos.length,
@@ -460,7 +484,13 @@ export async function areAllRoomVideosCompleted(
       const roomVideos = await db
         .select()
         .from(videos)
-        .where(and(eq(videos.projectId, projectId), isNotNull(videos.roomId)));
+        .where(
+          and(
+            eq(videos.projectId, projectId),
+            isNotNull(videos.roomId),
+            isNull(videos.archivedAt)
+          )
+        );
 
       if (roomVideos.length === 0) {
         return false;

@@ -8,12 +8,15 @@ import { logger } from '@/config/logger';
 import { validateApiKey } from '@/middleware/auth';
 import { addVideoJob, getJobStatus, getQueueStats } from '@/queues/videoQueue';
 import {
+  RoomVideoGenerateRequest,
+  RoomVideoGenerateResponse,
   VideoProcessRequest,
   VideoProcessResponse,
   JobStatusResponse,
   ErrorResponse,
 } from '@/types/requests';
 import { VideoJob } from '@/types/queue';
+import { roomVideoService } from '@/services/roomVideoService';
 
 const router = Router();
 
@@ -21,10 +24,92 @@ const router = Router();
 router.use(validateApiKey);
 
 /**
- * POST /video/process
+ * POST /video/generate
+ * Submit a room video generation job to fal.ai through the video server
+ */
+router.post('/generate', async (req: Request, res: Response) => {
+  try {
+    const requestData = req.body as RoomVideoGenerateRequest;
+
+    const requiredFields: (keyof RoomVideoGenerateRequest)[] = [
+      'videoId',
+      'projectId',
+      'userId',
+      'roomId',
+      'prompt',
+    ];
+
+    const missingFields = requiredFields.filter((field) => !requestData[field]);
+    if (missingFields.length > 0) {
+      const errorResponse: ErrorResponse = {
+        success: false,
+        error: 'Invalid request',
+        code: 'VALIDATION_ERROR',
+        details: {
+          message: 'Missing required fields',
+          fields: missingFields,
+        },
+      };
+
+      logger.warn(
+        {
+          missingFields,
+          videoId: requestData.videoId,
+          projectId: requestData.projectId,
+        },
+        'Invalid room video generation request'
+      );
+
+      res.status(400).json(errorResponse);
+      return;
+    }
+
+    if (!Array.isArray(requestData.imageUrls) || requestData.imageUrls.length === 0) {
+      const errorResponse: ErrorResponse = {
+        success: false,
+        error: 'Invalid request',
+        code: 'VALIDATION_ERROR',
+        details: { message: 'imageUrls must be a non-empty array' },
+      };
+
+      res.status(400).json(errorResponse);
+      return;
+    }
+
+    const { requestId } = await roomVideoService.startGeneration(requestData);
+
+    const successResponse: RoomVideoGenerateResponse = {
+      success: true,
+      requestId,
+      videoId: requestData.videoId,
+    };
+
+    res.status(202).json(successResponse);
+  } catch (error) {
+    logger.error(
+      {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      },
+      'Failed to start room video generation request'
+    );
+
+    const errorResponse: ErrorResponse = {
+      success: false,
+      error: 'Internal server error',
+      code: 'PROCESSING_ERROR',
+      details: error instanceof Error ? error.message : 'An unexpected error occurred',
+    };
+
+    res.status(500).json(errorResponse);
+  }
+});
+
+/**
+ * POST /video/compose
  * Submit a video processing job to the queue
  */
-router.post('/process', async (req: Request, res: Response) => {
+const handleVideoCompose = async (req: Request, res: Response) => {
   try {
     // Validate request body
     const requestData = req.body as VideoProcessRequest;
@@ -178,7 +263,9 @@ router.post('/process', async (req: Request, res: Response) => {
 
     res.status(500).json(errorResponse);
   }
-});
+};
+
+router.post('/compose', handleVideoCompose);
 
 /**
  * GET /video/status/:jobId

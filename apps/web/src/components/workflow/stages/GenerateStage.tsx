@@ -14,12 +14,24 @@ import {
   AlertDialogHeader,
   AlertDialogTitle
 } from "../../ui/alert-dialog";
-import type { GenerationProgress } from "../../../types/workflow";
-import { Clock, Download, Play } from "lucide-react";
+import type {
+  GenerationProgress,
+  RoomGenerationStatus
+} from "../../../types/workflow";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Clock,
+  Download,
+  Loader2,
+  Play
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 interface GenerateStageProps {
   progress: GenerationProgress;
   projectId?: string;
+  rooms?: RoomGenerationStatus[];
   onCancel?: () => void;
   onRetry?: () => void;
 }
@@ -27,6 +39,7 @@ interface GenerateStageProps {
 export function GenerateStage({
   progress,
   projectId,
+  rooms = [],
   onCancel,
   onRetry
 }: GenerateStageProps) {
@@ -37,6 +50,10 @@ export function GenerateStage({
     duration: number;
   } | null>(null);
   const [isLoadingVideo, setIsLoadingVideo] = useState(false);
+  const totalRooms = rooms.length;
+  const completedRooms = rooms.filter((room) => room.status === "completed").length;
+  const failedRooms = rooms.filter((room) => room.status === "failed");
+  const showRoomStatuses = totalRooms > 0;
 
   const isGenerating =
     progress.steps?.some((s) => s.status === "in-progress") ||
@@ -153,6 +170,10 @@ export function GenerateStage({
     }
   };
 
+  const handleOpenRoomVideo = (videoUrl: string) => {
+    window.open(videoUrl, "_blank", "noopener,noreferrer");
+  };
+
   return (
     <div className="flex flex-col h-full">
       {/* Content */}
@@ -197,6 +218,82 @@ export function GenerateStage({
           {!videoData && (
             <div className="max-w-2xl mx-auto">
               <VerticalTimeline steps={progress.steps || []} />
+            </div>
+          )}
+
+          {/* Room-Level Progress */}
+          {showRoomStatuses && (
+            <div className="mt-8 space-y-4">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h4 className="text-base font-semibold">Room Clip Progress</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Track each room&apos;s clip as it makes it through the queue.
+                  </p>
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {completedRooms}/{totalRooms} completed
+                  {failedRooms.length > 0 && (
+                    <span className="ml-2 text-red-600">
+                      {failedRooms.length} failed
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {rooms.map((room, index) => {
+                  const statusMeta = ROOM_STATUS_META[room.status] ?? ROOM_STATUS_META.processing;
+                  const StatusIcon = statusMeta.icon;
+                  const displayName = formatRoomDisplayName(room, index);
+
+                  return (
+                    <div
+                      key={room.id}
+                      className="rounded-lg border border-gray-200 bg-white/80 p-4 shadow-sm"
+                    >
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-foreground">
+                            {displayName}
+                          </p>
+                          {room.roomId && (
+                            <p className="text-xs text-muted-foreground">
+                              Room ID: {room.roomId}
+                            </p>
+                          )}
+                        </div>
+                        <span
+                          className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${statusMeta.className}`}
+                        >
+                          <StatusIcon
+                            className={`h-4 w-4 ${statusMeta.iconClasses || ""}`}
+                          />
+                          {statusMeta.label}
+                        </span>
+                      </div>
+
+                      {room.status === "failed" && room.errorMessage && (
+                        <p className="mt-3 text-sm text-red-600">
+                          {room.errorMessage}
+                        </p>
+                      )}
+
+                      {room.status === "completed" && room.videoUrl && (
+                        <Button
+                          onClick={() => handleOpenRoomVideo(room.videoUrl!)}
+                          variant="ghost"
+                          size="sm"
+                          className="mt-3 h-auto px-0 text-primary"
+                        >
+                          <Play className="h-4 w-4" />
+                          Preview clip
+                        </Button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
 
@@ -349,4 +446,59 @@ function formatTimeRemaining(seconds: number): string {
     return `${hours}h`;
   }
   return `${hours}h ${remainingMinutes}m`;
+}
+
+interface RoomStatusMeta {
+  label: string;
+  className: string;
+  icon: LucideIcon;
+  iconClasses?: string;
+}
+
+const ROOM_STATUS_META: Record<
+  RoomGenerationStatus["status"],
+  RoomStatusMeta
+> = {
+  completed: {
+    label: "Completed",
+    className: "border border-emerald-200 bg-emerald-50 text-emerald-700",
+    icon: CheckCircle2
+  },
+  processing: {
+    label: "Processing",
+    className: "border border-blue-200 bg-blue-50 text-blue-700",
+    icon: Loader2,
+    iconClasses: "animate-spin"
+  },
+  pending: {
+    label: "Queued",
+    className: "border border-slate-200 bg-slate-50 text-slate-600",
+    icon: Clock
+  },
+  failed: {
+    label: "Failed",
+    className: "border border-red-200 bg-red-50 text-red-600",
+    icon: AlertTriangle
+  }
+};
+
+function formatRoomDisplayName(
+  room: RoomGenerationStatus,
+  index: number
+): string {
+  if (room.roomName?.trim()) {
+    return room.roomName;
+  }
+
+  if (room.roomId?.trim()) {
+    return humanizeIdentifier(room.roomId);
+  }
+
+  return `Room ${index + 1}`;
+}
+
+function humanizeIdentifier(value: string): string {
+  return value
+    .replace(/[-_]+/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
 }
