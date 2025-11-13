@@ -1,0 +1,25 @@
+{
+  "folders": [
+    {
+      "name": ".",
+      "path": "."
+    },
+    {
+      "name": "web",
+      "path": "apps/web"
+    },
+    {
+      "name": "video-server",
+      "path": "apps/video-server"
+    },
+    {
+      "name": "packages",
+      "path": "packages"
+    },
+    {
+      "name": "infra",
+      "path": "infra"
+    }
+  ],
+  "settings": {}
+}
