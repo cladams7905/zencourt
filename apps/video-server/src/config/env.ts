@@ -1,7 +1,7 @@
-import { config } from 'dotenv';
+import { config } from "dotenv";
 
 // Load environment variables from .env file in development
-if (process.env.NODE_ENV !== 'production') {
+if (process.env.NODE_ENV !== "production") {
   config();
 }
 
@@ -49,8 +49,30 @@ function getEnvVar(name: string, defaultValue?: string): string {
   return value;
 }
 
-function getEnvVarOptional(name: string, defaultValue?: string): string | undefined {
+function getEnvVarOptional(
+  name: string,
+  defaultValue?: string
+): string | undefined {
   return process.env[name] || defaultValue;
+}
+
+function getEnvVarOneOf(names: string[], defaultValue?: string): string {
+  for (const name of names) {
+    const value = process.env[name];
+    if (value && value.length > 0) {
+      return value;
+    }
+  }
+
+  if (defaultValue !== undefined) {
+    return defaultValue;
+  }
+
+  throw new Error(
+    `Missing required environment variable. Expected one of: ${names.join(
+      ", "
+    )}`
+  );
 }
 
 function getEnvVarNumber(name: string, defaultValue?: number): number {
@@ -63,53 +85,52 @@ function getEnvVarNumber(name: string, defaultValue?: number): number {
 
 export const env: EnvConfig = {
   // Server
-  nodeEnv: getEnvVar('NODE_ENV', 'development'),
-  port: getEnvVarNumber('PORT', 3001),
-  logLevel: getEnvVar('LOG_LEVEL', 'info'),
+  nodeEnv: getEnvVar("NODE_ENV", "development"),
+  port: getEnvVarNumber("PORT", 3001),
+  logLevel: getEnvVar("LOG_LEVEL", "info"),
 
   // Database
-  databaseUrl: getEnvVar('DATABASE_URL'),
+  databaseUrl: getEnvVar("DATABASE_URL"),
 
   // AWS
-  awsRegion: getEnvVar('AWS_REGION', 'us-east-1'),
-  awsS3Bucket: getEnvVar('AWS_S3_BUCKET'),
+  awsRegion: getEnvVar("AWS_REGION", "us-east-1"),
+  awsS3Bucket: getEnvVar("AWS_S3_BUCKET"),
 
   // Redis
-  redisHost: getEnvVar('REDIS_HOST', 'localhost'),
-  redisPort: getEnvVarNumber('REDIS_PORT', 6379),
-  redisPassword: getEnvVarOptional('REDIS_PASSWORD'),
+  redisHost: getEnvVar("REDIS_HOST", "localhost"),
+  redisPort: getEnvVarNumber("REDIS_PORT", 6379),
+  redisPassword: getEnvVarOptional("REDIS_PASSWORD"),
 
   // Vercel Webhook
-  vercelApiUrl: getEnvVar('VERCEL_API_URL'),
-  webhookRetryAttempts: getEnvVarNumber('WEBHOOK_RETRY_ATTEMPTS', 5),
-  webhookRetryBackoffMs: getEnvVarNumber('WEBHOOK_RETRY_BACKOFF_MS', 1000),
+  vercelApiUrl: getEnvVar("VERCEL_API_URL"),
+  webhookRetryAttempts: getEnvVarNumber("WEBHOOK_RETRY_ATTEMPTS", 5),
+  webhookRetryBackoffMs: getEnvVarNumber("WEBHOOK_RETRY_BACKOFF_MS", 1000),
 
   // Processing
-  maxConcurrentJobs: getEnvVarNumber('MAX_CONCURRENT_JOBS', 1),
-  jobTimeoutMs: getEnvVarNumber('JOB_TIMEOUT_MS', 600000),
-  tempDir: getEnvVar('TEMP_DIR', '/tmp/video-processing'),
+  maxConcurrentJobs: getEnvVarNumber("MAX_CONCURRENT_JOBS", 1),
+  jobTimeoutMs: getEnvVarNumber("JOB_TIMEOUT_MS", 600000),
+  tempDir: getEnvVar("TEMP_DIR", "/tmp/video-processing"),
 
   // API Authentication
-  awsApiKey: getEnvVar('AWS_API_KEY'),
+  awsApiKey: getEnvVarOneOf(["AWS_API_KEY", "VERCEL_TO_AWS_API_KEY"]),
 
   // fal.ai
-  falApiKey: getEnvVar('FAL_KEY'),
-  falWebhookUrl: getEnvVar('FAL_WEBHOOK_URL'),
+  falApiKey: getEnvVar("FAL_KEY"),
+  falWebhookUrl: getEnvVar("FAL_WEBHOOK_URL")
 };
 
 export function validateEnv(): void {
-  console.log('[Config] Validating environment variables...');
+  console.log("[Config] Validating environment variables...");
 
   // List of required variables that must be set
   const requiredVars = [
-    'AWS_REGION',
-    'AWS_S3_BUCKET',
-    'REDIS_HOST',
-    'VERCEL_API_URL',
-    'AWS_API_KEY',
-    'DATABASE_URL',
-    'FAL_KEY',
-    'FAL_WEBHOOK_URL',
+    "AWS_REGION",
+    "AWS_S3_BUCKET",
+    "REDIS_HOST",
+    "VERCEL_API_URL",
+    "DATABASE_URL",
+    "FAL_KEY",
+    "FAL_WEBHOOK_URL"
   ];
 
   const missing: string[] = [];
@@ -120,18 +141,24 @@ export function validateEnv(): void {
     }
   }
 
+  if (!process.env.VERCEL_TO_AWS_API_KEY) {
+    missing.push("VERCEL_TO_AWS_API_KEY");
+  }
+
   if (missing.length > 0) {
-    console.error('[Config] ❌ Missing required environment variables:');
+    console.error("[Config] ❌ Missing required environment variables:");
     missing.forEach((varName) => {
       console.error(`  - ${varName}`);
     });
-    throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
+    throw new Error(
+      `Missing required environment variables: ${missing.join(", ")}`
+    );
   }
 
-  console.log('[Config] ✅ All required environment variables are set');
+  console.log("[Config] ✅ All required environment variables are set");
 
   // Log loaded configuration (redact secrets)
-  console.log('[Config] Loaded configuration:', {
+  console.log("[Config] Loaded configuration:", {
     nodeEnv: env.nodeEnv,
     port: env.port,
     logLevel: env.logLevel,
@@ -139,15 +166,15 @@ export function validateEnv(): void {
     awsS3Bucket: env.awsS3Bucket,
     redisHost: env.redisHost,
     redisPort: env.redisPort,
-    redisPassword: env.redisPassword ? '***REDACTED***' : undefined,
+    redisPassword: env.redisPassword ? "***REDACTED***" : undefined,
     vercelApiUrl: env.vercelApiUrl,
     webhookRetryAttempts: env.webhookRetryAttempts,
     maxConcurrentJobs: env.maxConcurrentJobs,
     jobTimeoutMs: env.jobTimeoutMs,
     tempDir: env.tempDir,
-    databaseUrl: env.databaseUrl ? '***REDACTED***' : undefined,
-    awsApiKey: '***REDACTED***',
-    falApiKey: '***REDACTED***',
-    falWebhookUrl: env.falWebhookUrl,
+    databaseUrl: env.databaseUrl ? "***REDACTED***" : undefined,
+    awsApiKey: "***REDACTED***",
+    falApiKey: "***REDACTED***",
+    falWebhookUrl: env.falWebhookUrl
   });
 }

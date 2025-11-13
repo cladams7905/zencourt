@@ -12,27 +12,27 @@ interface ConfigOptions {
   requireWebhookSecret?: boolean;
 }
 
-export function getVideoServerConfig(
-  options: { requireWebhookSecret: true }
-): VideoServerConfig & { webhookSecret: string };
+export function getVideoServerConfig(options: {
+  requireWebhookSecret: true;
+}): VideoServerConfig & { webhookSecret: string };
 export function getVideoServerConfig(
   options?: ConfigOptions
 ): VideoServerConfig;
 export function getVideoServerConfig(
   options: ConfigOptions = {}
 ): VideoServerConfig {
-  const baseUrl = process.env.VIDEO_SERVER_URL;
-  const apiKey = process.env.VIDEO_SERVER_API_KEY;
-  const webhookSecret = process.env.VIDEO_WEBHOOK_SECRET;
+  const baseUrl = "AWS_VIDEO_SERVER_URL";
+  const apiKey = "VERCEL_TO_AWS_API_KEY";
+  const webhookSecret = "VERCEL_WEBHOOK_SIGNING_KEY";
 
   if (!baseUrl || !apiKey) {
     throw new Error(
-      "VIDEO_SERVER_URL and VIDEO_SERVER_API_KEY must be configured"
+      "AWS_VIDEO_SERVER_URL and VERCEL_TO_AWS_API_KEY must be configured"
     );
   }
 
   if (options.requireWebhookSecret && !webhookSecret) {
-    throw new Error("VIDEO_WEBHOOK_SECRET must be configured");
+    throw new Error("VERCEL_WEBHOOK_SIGNING_KEY must be configured");
   }
 
   return {
