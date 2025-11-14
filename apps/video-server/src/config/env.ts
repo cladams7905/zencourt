@@ -1,6 +1,7 @@
 import { config } from "dotenv";
 import * as fs from "fs";
 import * as path from "path";
+import { logger } from "@/config/logger";
 
 function loadLocalEnvFiles(): void {
   const envFiles: string[] = [];
@@ -39,7 +40,7 @@ function loadLocalEnvFiles(): void {
   }
 
   if (loaded.length > 0) {
-    console.log("[Config] Loaded env files:", loaded);
+    logger.info(`[Config] Loaded env files: ${loaded}`);
     return;
   }
 
@@ -130,7 +131,7 @@ export const env: EnvConfig = {
 };
 
 export function validateEnv(): void {
-  console.log("[Config] Validating environment variables...");
+  logger.debug("[Config] Validating environment variables...");
 
   // List of required variables that must be set
   const requiredVars = [
@@ -164,23 +165,22 @@ export function validateEnv(): void {
     );
   }
 
-  console.log("[Config] ✅ All required environment variables are set");
-
-  // Log loaded configuration (redact secrets)
-  console.log("[Config] Loaded configuration:", {
-    nodeEnv: env.nodeEnv,
-    port: env.port,
-    logLevel: env.logLevel,
-    awsRegion: env.awsRegion,
-    awsS3Bucket: env.awsS3Bucket,
-    vercelApiUrl: env.vercelApiUrl,
-    webhookRetryAttempts: env.webhookRetryAttempts,
-    maxConcurrentJobs: env.maxConcurrentJobs,
-    jobTimeoutMs: env.jobTimeoutMs,
-    tempDir: env.tempDir,
-    databaseUrl: env.databaseUrl ? "***REDACTED***" : undefined,
-    awsApiKey: "***REDACTED***",
-    falApiKey: "***REDACTED***",
-    falWebhookUrl: env.falWebhookUrl
-  });
+  logger.info(
+    `[Config] ✅ Loaded configuration: ${{
+      nodeEnv: env.nodeEnv,
+      port: env.port,
+      logLevel: env.logLevel,
+      awsRegion: env.awsRegion,
+      awsS3Bucket: env.awsS3Bucket,
+      vercelApiUrl: env.vercelApiUrl,
+      webhookRetryAttempts: env.webhookRetryAttempts,
+      maxConcurrentJobs: env.maxConcurrentJobs,
+      jobTimeoutMs: env.jobTimeoutMs,
+      tempDir: env.tempDir,
+      databaseUrl: env.databaseUrl ? "***REDACTED***" : undefined,
+      awsApiKey: "***REDACTED***",
+      falApiKey: "***REDACTED***",
+      falWebhookUrl: env.falWebhookUrl
+    }}`
+  );
 }

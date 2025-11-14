@@ -79,14 +79,15 @@ export function ProjectWorkflowModal({
   const [generationProgress, setGenerationProgress] =
     useState<GenerationProgress | null>(null);
   const [roomStatuses, setRoomStatuses] = useState<RoomGenerationStatus[]>([]);
-  const [_generationJobIds, setGenerationJobIds] = useState<string[]>([]);
   const pollingCleanupRef = useRef<(() => void) | null>(null);
   const activeIntervalsRef = useRef<NodeJS.Timeout[]>([]);
   const ROOM_GENERATION_STEP_ID = "room-generation";
   const FINAL_COMPOSE_STEP_ID = "final-compose";
 
   const clearPollingIntervals = () => {
-    activeIntervalsRef.current.forEach((intervalId) => clearInterval(intervalId));
+    activeIntervalsRef.current.forEach((intervalId) =>
+      clearInterval(intervalId)
+    );
     activeIntervalsRef.current = [];
     pollingCleanupRef.current = null;
   };
@@ -152,9 +153,7 @@ export function ProjectWorkflowModal({
         setImages(processedImages);
 
         // If images are already categorized, move to categorize stage
-        const categorizedImages = processedImages.filter(
-          (img) => img.category
-        );
+        const categorizedImages = processedImages.filter((img) => img.category);
         if (categorizedImages.length > 0) {
           // Group images by category
           const groups = new Map<string, ProcessedImage[]>();
@@ -219,7 +218,6 @@ export function ProjectWorkflowModal({
         setCurrentProject(null);
         setGenerationProgress(null);
         setRoomStatuses([]);
-        setGenerationJobIds([]);
       }, 300); // Wait for modal close animation
       return () => clearTimeout(timeout);
     }
@@ -269,7 +267,6 @@ export function ProjectWorkflowModal({
     const timeoutId = setTimeout(async () => {
       try {
         await updateProject(currentProject.id, { title: projectName.trim() });
-        console.log("Project name saved:", projectName);
       } catch (error) {
         console.error("Failed to save project name:", error);
         toast.error("Failed to save project name", {
@@ -355,7 +352,9 @@ export function ProjectWorkflowModal({
     setGenerationProgress((prev) => {
       if (!prev) return prev;
       const progressPercent =
-        total === 0 ? 100 : Math.min(100, Math.round((completed / total) * 100));
+        total === 0
+          ? 100
+          : Math.min(100, Math.round((completed / total) * 100));
 
       const steps = prev.steps.map((step) => {
         if (step.id === ROOM_GENERATION_STEP_ID) {
@@ -398,10 +397,7 @@ export function ProjectWorkflowModal({
         overallProgress:
           progressPercent >= 100
             ? Math.max(prev.overallProgress, 85)
-            : Math.max(
-                prev.overallProgress,
-                Math.round(progressPercent * 0.6)
-              )
+            : Math.max(prev.overallProgress, Math.round(progressPercent * 0.6))
       };
     });
   };
@@ -409,17 +405,21 @@ export function ProjectWorkflowModal({
   const markRoomGenerationFailed = (message: string) => {
     setGenerationProgress((prev) => {
       if (!prev) return prev;
-    const steps = prev.steps.map((step) =>
-      step.id === ROOM_GENERATION_STEP_ID
-        ? { ...step, status: "failed" as GenerationStepStatus, error: message }
-        : step.id === FINAL_COMPOSE_STEP_ID
-        ? {
-            ...step,
-            status: "waiting" as GenerationStepStatus,
-            progress: 0
-          }
-        : step
-    );
+      const steps = prev.steps.map((step) =>
+        step.id === ROOM_GENERATION_STEP_ID
+          ? {
+              ...step,
+              status: "failed" as GenerationStepStatus,
+              error: message
+            }
+          : step.id === FINAL_COMPOSE_STEP_ID
+          ? {
+              ...step,
+              status: "waiting" as GenerationStepStatus,
+              progress: 0
+            }
+          : step
+      );
 
       return {
         ...prev,
@@ -481,7 +481,11 @@ export function ProjectWorkflowModal({
       if (!prev) return prev;
       const steps = prev.steps.map((step) =>
         step.id === FINAL_COMPOSE_STEP_ID
-          ? { ...step, status: "failed" as GenerationStepStatus, error: message }
+          ? {
+              ...step,
+              status: "failed" as GenerationStepStatus,
+              error: message
+            }
           : step
       );
 
@@ -492,64 +496,6 @@ export function ProjectWorkflowModal({
         currentStepIndex: steps.length - 1
       };
     });
-  };
-
-  const startFinalStatusPolling = (projectId: string, jobId: string) => {
-    const pollStatus = async () => {
-      try {
-        const statusResponse = await fetch(
-          `/api/v1/video/status/${jobId}?projectId=${projectId}`
-        );
-
-        if (!statusResponse.ok) {
-          throw new Error("Failed to fetch generation status");
-        }
-
-        const statusData = await statusResponse.json();
-
-        if (statusData.status === "completed") {
-          removeInterval(intervalId);
-          markFinalStepCompleted();
-          toast.success("Generation complete!", {
-            description: "Your property video is ready."
-          });
-        } else if (statusData.status === "failed") {
-          removeInterval(intervalId);
-          const errorMessage =
-            statusData.error?.message || "Final composition failed";
-          markFinalStepFailed(errorMessage);
-          toast.error("Generation failed", {
-            description: errorMessage
-          });
-        } else {
-          setGenerationProgress((prev) => {
-            if (!prev) return prev;
-            const steps = prev.steps.map((step) =>
-              step.id === FINAL_COMPOSE_STEP_ID
-                ? {
-                    ...step,
-                    status: "in-progress" as GenerationStepStatus,
-                    progress: Math.min(95, (step.progress ?? 10) + 5)
-                  }
-                : step
-            );
-            return {
-              ...prev,
-              steps,
-              overallProgress: Math.min(95, prev.overallProgress + 1),
-              currentStep: steps[steps.length - 1]?.label || prev.currentStep,
-              currentStepIndex: steps.length - 1
-            };
-          });
-        }
-      } catch (error) {
-        console.error("Status polling error:", error);
-      }
-    };
-
-    const intervalId = setInterval(pollStatus, 2000);
-    registerInterval(intervalId);
-    pollStatus();
   };
 
   /**
@@ -571,7 +517,10 @@ export function ProjectWorkflowModal({
         const project = await response.json();
 
         // Check if final video is ready
-        if (project.videoGenerationStatus === "completed" && project.finalVideoUrl) {
+        if (
+          project.videoGenerationStatus === "completed" &&
+          project.finalVideoUrl
+        ) {
           removeInterval(intervalId);
           markFinalStepCompleted();
           toast.success("Generation complete!", {
@@ -579,7 +528,8 @@ export function ProjectWorkflowModal({
           });
         } else if (project.videoGenerationStatus === "failed") {
           removeInterval(intervalId);
-          const errorMessage = project.metadata?.error?.message || "Final composition failed";
+          const errorMessage =
+            project.metadata?.error?.message || "Final composition failed";
           markFinalStepFailed(errorMessage);
           toast.error("Generation failed", {
             description: errorMessage
@@ -698,7 +648,6 @@ export function ProjectWorkflowModal({
 
     try {
       clearPollingIntervals();
-      setGenerationJobIds([]);
       initializeGenerationProgress(totalRooms);
       setCurrentStage("generate");
 

@@ -9,7 +9,7 @@ export default async function Home() {
   try {
     projects = await getUserProjects();
   } catch (error) {
-    console.log("No authenticated user or error fetching projects:", error);
+    console.error("No authenticated user or error fetching projects:", error);
   }
   return <HomeClient initialProjects={projects} />;
 }

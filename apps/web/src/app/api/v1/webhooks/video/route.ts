@@ -14,6 +14,7 @@ import {
   createChildLogger,
   logger as baseLogger
 } from "../../../../../lib/logger";
+import { VideoCompletePayload } from "@shared/types/api";
 
 const logger = createChildLogger(baseLogger, {
   module: "video-webhook-route"
@@ -24,32 +25,6 @@ export const runtime = "nodejs";
 
 // Allow reasonable execution time
 export const maxDuration = 60; // 1 minute
-
-// ============================================================================
-// Types
-// ============================================================================
-
-interface VideoCompletePayload {
-  jobId: string;
-  projectId: string;
-  userId: string;
-  status: "completed" | "failed";
-  timestamp: string;
-  result?: {
-    videoUrl: string;
-    thumbnailUrl?: string;
-    duration: number;
-    resolution: {
-      width: number;
-      height: number;
-    };
-  };
-  error?: {
-    message: string;
-    type: string;
-    retryable: boolean;
-  };
-}
 
 // ============================================================================
 // Helper Functions

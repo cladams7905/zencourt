@@ -108,7 +108,6 @@ export function UploadStage({
     try {
       const newProject = await createProject();
       setCurrentProject(newProject);
-      console.log("Project created:", newProject);
       return newProject;
     } catch (error) {
       console.error("Failed to create project:", error);
@@ -244,8 +243,6 @@ export function UploadStage({
           );
         }
       }
-
-      console.log("All uploads completed");
     } catch (error) {
       console.error("Error uploading images:", error);
     } finally {

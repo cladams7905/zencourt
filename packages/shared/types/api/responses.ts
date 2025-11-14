@@ -1,3 +1,5 @@
+import { VideoStatus } from "../models";
+
 export interface ApiResponse {
   success: boolean;
   message?: string;
@@ -55,4 +57,51 @@ export interface RoomGenerationResponse extends ApiResponse {
 export interface RoomStatusResponse extends ApiResponse {
   projectId: string;
   rooms: RoomVideoSummary[];
+}
+
+export interface VideoStatusResponse {
+  success: true;
+  jobId: string;
+  projectId: string;
+  status: VideoStatus;
+  progress?: number; // 0-100
+  estimatedTimeRemaining?: number; // seconds
+  result?: {
+    videoUrl: string;
+    thumbnailUrl?: string;
+    duration: number;
+    resolution?: {
+      width: number;
+      height: number;
+    };
+  };
+  error?: {
+    message: string;
+    type: string;
+    retryable: boolean;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface VideoCompletePayload {
+  jobId: string;
+  projectId: string;
+  userId: string;
+  status: "completed" | "failed";
+  timestamp: string;
+  result?: {
+    videoUrl: string;
+    thumbnailUrl?: string;
+    duration: number;
+    resolution: {
+      width: number;
+      height: number;
+    };
+  };
+  error?: {
+    message: string;
+    type: string;
+    retryable: boolean;
+  };
 }
