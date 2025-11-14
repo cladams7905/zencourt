@@ -21,7 +21,7 @@ import {
   createChildLogger,
   logger as baseLogger
 } from "../../../../../lib/logger";
-import { DBImage, DBVideo } from "@shared/types/models";
+import { DBImage, DBVideo, JobGenerationSettings } from "@shared/types/models";
 
 interface RoomSelection {
   id: string;
@@ -334,7 +334,7 @@ export async function POST(request: NextRequest) {
         prompt: job.prompt,
         category: job.selection.category,
         roomNumber: job.selection.roomNumber
-      },
+      } as JobGenerationSettings,
       falRequestId: null,
       errorMessage: null
     }));

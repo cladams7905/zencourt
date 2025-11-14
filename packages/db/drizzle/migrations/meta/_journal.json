@@ -43,6 +43,13 @@
       "when": 1763095371863,
       "tag": "0005_powerful_boomerang",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1763163723308,
+      "tag": "0006_big_bucky",
+      "breakpoints": true
     }
   ]
 }

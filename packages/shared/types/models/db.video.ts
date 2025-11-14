@@ -18,3 +18,35 @@ export type VideoStatus =
   | "completed"
   | "failed"
   | "canceled";
+
+export type VideoResolution = {
+  width: number;
+  height: number;
+};
+
+export type VideoOrientation = "landscape" | "vertical";
+
+export type VideoMetadata = {
+  duration?: number;
+  resolution?: VideoResolution;
+  orientation?: VideoOrientation;
+  fileSize?: number;
+};
+
+export type GENERATION_MODELS = "kling1.6";
+
+export type JobGenerationSettings = {
+  model: GENERATION_MODELS;
+  orientation: VideoOrientation;
+  aiDirections: string;
+  imageUrls: string[];
+  prompt: string;
+  category: string;
+  sortOrder: number;
+};
+
+export type JobDeliveryStatus =
+  | "pending"
+  | "delivering"
+  | "delivered"
+  | "failed";
