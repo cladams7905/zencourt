@@ -10,7 +10,7 @@ import { s3Service } from "../services/s3Service";
 import {
   buildGenericUploadKey,
   buildUserProjectVideoKey
-} from "../lib/storagePaths";
+} from "@shared/utils/storagePaths";
 
 /**
  * Storage routes for handling S3 uploads/deletes

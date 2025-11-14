@@ -73,9 +73,6 @@ module "secrets" {
   vercel_webhook_signing_key = var.vercel_webhook_signing_key
   vercel_to_aws_api_key      = var.vercel_to_aws_api_key
   vercel_webhook_url         = var.vercel_webhook_url
-  redis_host                 = "localhost" # Placeholder - will be updated when Redis is deployed
-  redis_port                 = 6379
-  redis_password             = var.redis_password
   s3_bucket_name             = module.s3.bucket_id
   max_concurrent_jobs        = 1
   job_timeout_ms             = 600000  # 10 minutes
@@ -124,14 +121,6 @@ module "ecs" {
     {
       name      = "vercel_to_aws_api_key"
       valueFrom = module.secrets.vercel_to_aws_api_key_arn
-    },
-    {
-      name      = "REDIS_HOST"
-      valueFrom = module.secrets.redis_host_parameter
-    },
-    {
-      name      = "REDIS_PORT"
-      valueFrom = module.secrets.redis_port_parameter
     }
   ]
 }

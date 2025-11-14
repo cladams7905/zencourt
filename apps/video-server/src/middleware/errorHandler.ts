@@ -24,11 +24,13 @@ export enum VideoProcessingErrorType {
   FFMPEG_TIMEOUT = 'FFMPEG_TIMEOUT',
   FFMPEG_INVALID_INPUT = 'FFMPEG_INVALID_INPUT',
 
-  // Queue Errors
-  QUEUE_FULL = 'QUEUE_FULL',
+  // fal.ai Errors
+  FAL_SUBMISSION_FAILED = 'FAL_SUBMISSION_FAILED',
+  FAL_GENERATION_FAILED = 'FAL_GENERATION_FAILED',
+
+  // Job Errors
   JOB_TIMEOUT = 'JOB_TIMEOUT',
   JOB_NOT_FOUND = 'JOB_NOT_FOUND',
-  REDIS_CONNECTION_ERROR = 'REDIS_CONNECTION_ERROR',
 
   // Webhook Errors
   WEBHOOK_DELIVERY_FAILED = 'WEBHOOK_DELIVERY_FAILED',
@@ -87,9 +89,9 @@ export class VideoProcessingError extends Error {
     const retryableErrors: VideoProcessingErrorType[] = [
       VideoProcessingErrorType.S3_UPLOAD_FAILED,
       VideoProcessingErrorType.S3_DOWNLOAD_FAILED,
-      VideoProcessingErrorType.REDIS_CONNECTION_ERROR,
       VideoProcessingErrorType.WEBHOOK_DELIVERY_FAILED,
       VideoProcessingErrorType.FFMPEG_TIMEOUT,
+      VideoProcessingErrorType.FAL_SUBMISSION_FAILED,
     ];
 
     return retryableErrors.includes(type);
@@ -107,8 +109,8 @@ export class VideoProcessingError extends Error {
       [VideoProcessingErrorType.INVALID_FILE_FORMAT]: 400,
       [VideoProcessingErrorType.JOB_NOT_FOUND]: 404,
       [VideoProcessingErrorType.S3_NOT_FOUND]: 404,
-      [VideoProcessingErrorType.QUEUE_FULL]: 503,
-      [VideoProcessingErrorType.REDIS_CONNECTION_ERROR]: 503,
+      [VideoProcessingErrorType.FAL_SUBMISSION_FAILED]: 503,
+      [VideoProcessingErrorType.FAL_GENERATION_FAILED]: 500,
     };
 
     return statusMap[type] ?? 500;
@@ -230,26 +232,26 @@ export const ErrorFactory = {
     );
   },
 
-  queueFull(queueLength: number): VideoProcessingError {
+  falSubmissionFailed(message: string, details?: unknown): VideoProcessingError {
     return new VideoProcessingError(
-      'Queue is at capacity, please try again later',
-      VideoProcessingErrorType.QUEUE_FULL,
+      message,
+      VideoProcessingErrorType.FAL_SUBMISSION_FAILED,
       {
         statusCode: 503,
-        details: { queueLength },
+        details,
         retryable: true,
       }
     );
   },
 
-  serviceUnavailable(service: string, details?: unknown): VideoProcessingError {
+  falGenerationFailed(message: string, details?: unknown): VideoProcessingError {
     return new VideoProcessingError(
-      `${service} is unavailable`,
-      VideoProcessingErrorType.REDIS_CONNECTION_ERROR,
+      message,
+      VideoProcessingErrorType.FAL_GENERATION_FAILED,
       {
-        statusCode: 503,
+        statusCode: 500,
         details,
-        retryable: true,
+        retryable: false,
       }
     );
   },

@@ -10,6 +10,14 @@
 import { nanoid } from "nanoid";
 
 /**
+ * Storage-safe segment sanitizer for identifiers (user/project/video IDs, folders, etc.)
+ * Keeps casing intact while removing unsupported characters for S3 keys.
+ */
+function sanitizePathSegment(value: string): string {
+  return value.replace(/[^a-zA-Z0-9._-]/g, "_");
+}
+
+/**
  * Sanitize filename for storage
  * Removes special characters and ensures safe file names
  */
@@ -145,6 +153,36 @@ export function getGenericUploadPath(folder: string, filename: string): string {
   const sanitized = sanitizeFilename(filename);
   const sanitizedFolder = folder.replace(/[^a-zA-Z0-9/_-]/g, "_");
   return `${sanitizedFolder}/${timestamp}-${random}/${sanitized}`;
+}
+
+/**
+ * Build the user/project-scoped S3 key that mirrors the structure shared by
+ * both the Vercel app and the video server so assets stay co-located.
+ */
+export function buildUserProjectVideoKey(
+  userId: string,
+  projectId: string,
+  filename: string,
+  videoId?: string
+): string {
+  const safeUserId = sanitizePathSegment(userId);
+  const safeProjectId = sanitizePathSegment(projectId);
+  const safeFilename = sanitizePathSegment(filename);
+  const videoSegment = videoId ? `/videos/video_${sanitizePathSegment(videoId)}` : "";
+
+  return `user_${safeUserId}/projects/project_${safeProjectId}${videoSegment}/${safeFilename}`;
+}
+
+/**
+ * Generic fallback path used when user/project context is unavailable.
+ */
+export function buildGenericUploadKey(folder: string, filename: string): string {
+  const timestamp = Date.now();
+  const random = Math.random().toString(36).slice(2, 10);
+  const safeFolder = sanitizePathSegment(folder);
+  const safeFilename = sanitizePathSegment(filename);
+
+  return `${safeFolder}/${timestamp}-${random}/${safeFilename}`;
 }
 
 /**

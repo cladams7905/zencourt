@@ -33,10 +33,3 @@ variable "vercel_webhook_url" {
   type        = string
   default     = "https://zencourt.com/api/v1/webhooks/video"
 }
-
-variable "redis_password" {
-  description = "Redis password for production (MUST be set via environment variable or .tfvars)"
-  type        = string
-  sensitive   = true
-  default     = ""
-}

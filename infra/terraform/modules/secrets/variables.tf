@@ -29,25 +29,6 @@ variable "vercel_webhook_url" {
   type        = string
 }
 
-variable "redis_host" {
-  description = "Redis host for video processing queue"
-  type        = string
-  default     = "localhost" # Placeholder - will be updated when Redis is deployed
-}
-
-variable "redis_port" {
-  description = "Redis port"
-  type        = number
-  default     = 6379
-}
-
-variable "redis_password" {
-  description = "Redis password (optional, use for production)"
-  type        = string
-  sensitive   = true
-  default     = ""
-}
-
 variable "s3_bucket_name" {
   description = "S3 bucket name for media storage"
   type        = string

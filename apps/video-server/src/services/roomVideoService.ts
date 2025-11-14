@@ -3,7 +3,7 @@ import { s3Service } from "@/services/s3Service";
 import {
   buildGenericUploadKey,
   buildUserProjectVideoKey
-} from "@/lib/storagePaths";
+} from "@shared/utils/storagePaths";
 import { env } from "@/config/env";
 import { klingService } from "./klingService";
 import { videoRepository } from "./db/videoRepository";

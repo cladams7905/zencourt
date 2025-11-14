@@ -10,7 +10,7 @@ This server handles video generation and composition for the ZenCourt platform. 
 
 - **Runtime**: Node.js 20+
 - **Framework**: Express 4.x with TypeScript
-- **Queue**: Bull (Redis-backed)
+- **Video Generation**: fal.ai API (webhook-based)
 - **Storage**: AWS S3 via AWS SDK v3
 - **Video Processing**: FFmpeg (static binaries)
 - **Logging**: Pino (structured JSON logs)
@@ -25,17 +25,19 @@ video-server/
 │   ├── config/
 │   │   ├── env.ts             # Environment configuration with validation
 │   │   ├── aws.ts             # AWS SDK configuration
-│   │   ├── redis.ts           # Redis configuration
 │   │   └── logger.ts          # Pino logger setup
 │   ├── services/
 │   │   ├── s3Service.ts       # S3 upload/download/delete
 │   │   ├── videoCompositionService.ts  # FFmpeg video composition
-│   │   └── webhookService.ts  # Webhook delivery with retries
-│   ├── queues/
-│   │   └── videoQueue.ts      # Bull queue for job processing
+│   │   ├── webhookService.ts  # Webhook delivery with retries
+│   │   ├── roomVideoService.ts # fal.ai video generation orchestration
+│   │   └── db/                # Database repositories
+│   │       ├── videoRepository.ts
+│   │       └── videoJobRepository.ts
 │   ├── routes/
 │   │   ├── health.ts          # Health check endpoint
-│   │   ├── video.ts           # Video processing endpoints
+│   │   ├── video.ts           # Video generation endpoints
+│   │   ├── webhooks.ts        # fal.ai webhook handler
 │   │   └── storage.ts         # S3 storage proxy endpoints
 │   ├── middleware/
 │   │   ├── auth.ts            # API key authentication
@@ -46,7 +48,6 @@ video-server/
 ├── Dockerfile                 # Multi-stage Docker build
 ├── docker-compose.yml         # Local development environment
 ├── .dockerignore              # Docker build exclusions
-├── .env.example               # Environment variable template
 ├── package.json
 └── tsconfig.json
 ```
@@ -59,10 +60,11 @@ See `.env.example` for all required and optional environment variables.
 
 - `AWS_REGION` - AWS region (e.g., us-east-1)
 - `AWS_S3_BUCKET` - S3 bucket name for media storage
-- `REDIS_HOST` - Redis hostname for Bull queue
-- `REDIS_PORT` - Redis port (default: 6379)
+- `DATABASE_URL` - PostgreSQL database connection string
 - `VERCEL_API_URL` - Vercel API URL for webhook callbacks
 - `VERCEL_TO_AWS_API_KEY` - API key for Vercel <-> video-server authentication
+- `FAL_KEY` - fal.ai API key for video generation
+- `FAL_WEBHOOK_URL` - Public URL for receiving fal.ai webhooks
 
 ### Optional Variables
 
@@ -112,7 +114,7 @@ cp .env.example .env
 # Edit .env with your configuration
 ```
 
-3. Start the local development environment from the repo root (Redis + video-server; S3 traffic goes to your dev bucket):
+3. Start the local development environment from the repo root (S3 traffic goes to your dev bucket):
 
 ```bash
 docker compose -f apps/video-server/docker-compose.yml down
@@ -133,7 +135,7 @@ The server will start on `http://localhost:3001` with hot reload enabled.
 Because the dev Terraform stack no longer provisions ECS/ALB resources, every developer should run the video server locally:
 
 1. Ensure `.env.local` in the repo root sets `AWS_VIDEO_SERVER_URL=http://localhost:3001` and that `VERCEL_TO_AWS_API_KEY` matches the value consumed by the Docker services.
-2. Boot the stack (video server + Redis). The server writes directly to your dev S3 bucket using the credentials from `.env.local`:
+2. Boot the video server. The server writes directly to your dev S3 bucket using the credentials from `.env.local`:
 
    ```bash
    docker compose -f apps/video-server/docker-compose.yml up --build
@@ -204,11 +206,7 @@ npm run test:coverage
 docker compose -f apps/video-server/docker-compose.yml up --build
 ```
 
-This starts:
-
-- video-server (port 3001)
-- Redis (port 6379)
-- LocalStack S3 (port 4566)
+This starts the video-server (port 3001).
 
 ### Using Docker (Production)
 
@@ -226,10 +224,11 @@ docker run --rm -p 3001:3001 \
   -e AWS_S3_BUCKET=your-bucket \
   -e AWS_ACCESS_KEY_ID=your-access-key \
   -e AWS_SECRET_ACCESS_KEY=your-secret \
-  -e REDIS_HOST=your-redis-host \
+  -e DATABASE_URL=postgresql://user:pass@host:5432/db \
   -e VERCEL_TO_AWS_API_KEY=your-secret-key \
-  -e REDIS_PORT=6379 \
   -e VERCEL_API_URL=https://your-app.vercel.app \
+  -e FAL_KEY=your-fal-api-key \
+  -e FAL_WEBHOOK_URL=https://your-domain.com/webhooks/fal \
   zencourt-video-server:latest
 ```
 
@@ -278,14 +277,7 @@ Health check endpoint for container orchestration.
   "timestamp": "2025-01-08T12:00:00.000Z",
   "checks": {
     "ffmpeg": true,
-    "s3": true,
-    "redis": true
-  },
-  "queueStats": {
-    "waiting": 0,
-    "active": 1,
-    "completed": 42,
-    "failed": 0
+    "s3": true
   }
 }
 ```
@@ -493,7 +485,7 @@ The server uses structured error handling with classification:
 
 - **S3 Errors**: S3_UPLOAD_FAILED, S3_DOWNLOAD_FAILED, S3_DELETE_FAILED
 - **FFmpeg Errors**: FFMPEG_NOT_FOUND, FFMPEG_PROCESS_FAILED, FFMPEG_TIMEOUT
-- **Queue Errors**: QUEUE_FULL, JOB_TIMEOUT, REDIS_CONNECTION_ERROR
+- **fal.ai Errors**: FAL_SUBMISSION_FAILED, FAL_GENERATION_FAILED
 - **Webhook Errors**: WEBHOOK_DELIVERY_FAILED
 - **Validation Errors**: INVALID_INPUT, MISSING_REQUIRED_FIELD
 - **Auth Errors**: UNAUTHORIZED, INVALID_API_KEY
@@ -524,16 +516,6 @@ brew install ffmpeg
 
 # Ubuntu/Debian
 apt-get install ffmpeg
-```
-
-### Redis connection failed
-
-Check Redis is running:
-
-```bash
-docker ps | grep redis
-# or
-redis-cli ping
 ```
 
 ### S3 access denied

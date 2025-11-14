@@ -51,7 +51,9 @@ export function GenerateStage({
   } | null>(null);
   const [isLoadingVideo, setIsLoadingVideo] = useState(false);
   const totalRooms = rooms.length;
-  const completedRooms = rooms.filter((room) => room.status === "completed").length;
+  const completedRooms = rooms.filter(
+    (room) => room.status === "completed"
+  ).length;
   const failedRooms = rooms.filter((room) => room.status === "failed");
   const showRoomStatuses = totalRooms > 0;
 
@@ -79,7 +81,7 @@ export function GenerateStage({
 
       setIsLoadingVideo(true);
       try {
-        const res = await fetch(`/api/v1/generation/video/${projectId}`);
+        const res = await fetch(`/api/v1/video/cancel/${projectId}`);
         const data = await res.json();
 
         // Check both data.video.videoUrl (API format) and data.videoUrl (fallback)
@@ -129,7 +131,7 @@ export function GenerateStage({
     // Call cancel API endpoint if we have a projectId
     if (projectId) {
       try {
-        const response = await fetch(`/api/generation/cancel/${projectId}`, {
+        const response = await fetch(`/api/v1/video/cancel/${projectId}`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json"
@@ -141,7 +143,8 @@ export function GenerateStage({
 
         if (!response.ok) {
           const data = await response.json().catch(() => ({}));
-          const message = data?.message || data?.error || "Failed to cancel generation";
+          const message =
+            data?.message || data?.error || "Failed to cancel generation";
           throw new Error(message);
         }
       } catch (error) {
@@ -238,9 +241,12 @@ export function GenerateStage({
             <div className="mt-8 space-y-4">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <h4 className="text-base font-semibold">Room Clip Progress</h4>
+                  <h4 className="text-base font-semibold">
+                    Room Clip Progress
+                  </h4>
                   <p className="text-sm text-muted-foreground">
-                    Track each room&apos;s clip as it makes it through the queue.
+                    Track each room&apos;s clip as it makes it through the
+                    queue.
                   </p>
                 </div>
                 <div className="text-sm text-muted-foreground">
@@ -255,7 +261,9 @@ export function GenerateStage({
 
               <div className="space-y-3">
                 {rooms.map((room, index) => {
-                  const statusMeta = ROOM_STATUS_META[room.status] ?? ROOM_STATUS_META.processing;
+                  const statusMeta =
+                    ROOM_STATUS_META[room.status] ??
+                    ROOM_STATUS_META.processing;
                   const StatusIcon = statusMeta.icon;
                   const displayName = formatRoomDisplayName(room, index);
 
@@ -279,7 +287,9 @@ export function GenerateStage({
                           className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${statusMeta.className}`}
                         >
                           <StatusIcon
-                            className={`h-4 w-4 ${statusMeta.iconClasses || ""}`}
+                            className={`h-4 w-4 ${
+                              statusMeta.iconClasses || ""
+                            }`}
                           />
                           {statusMeta.label}
                         </span>
@@ -467,32 +477,35 @@ interface RoomStatusMeta {
   iconClasses?: string;
 }
 
-const ROOM_STATUS_META: Record<
-  RoomGenerationStatus["status"],
-  RoomStatusMeta
-> = {
-  completed: {
-    label: "Completed",
-    className: "border border-emerald-200 bg-emerald-50 text-emerald-700",
-    icon: CheckCircle2
-  },
-  processing: {
-    label: "Processing",
-    className: "border border-blue-200 bg-blue-50 text-blue-700",
-    icon: Loader2,
-    iconClasses: "animate-spin"
-  },
-  pending: {
-    label: "Queued",
-    className: "border border-slate-200 bg-slate-50 text-slate-600",
-    icon: Clock
-  },
-  failed: {
-    label: "Failed",
-    className: "border border-red-200 bg-red-50 text-red-600",
-    icon: AlertTriangle
-  }
-};
+const ROOM_STATUS_META: Record<RoomGenerationStatus["status"], RoomStatusMeta> =
+  {
+    completed: {
+      label: "Completed",
+      className: "border border-emerald-200 bg-emerald-50 text-emerald-700",
+      icon: CheckCircle2
+    },
+    processing: {
+      label: "Processing",
+      className: "border border-blue-200 bg-blue-50 text-blue-700",
+      icon: Loader2,
+      iconClasses: "animate-spin"
+    },
+    pending: {
+      label: "Queued",
+      className: "border border-slate-200 bg-slate-50 text-slate-600",
+      icon: Clock
+    },
+    failed: {
+      label: "Failed",
+      className: "border border-red-200 bg-red-50 text-red-600",
+      icon: AlertTriangle
+    },
+    canceled: {
+      label: "Canceled",
+      className: "border border-red-200 bg-red-50 text-red-600",
+      icon: AlertTriangle
+    }
+  };
 
 function formatRoomDisplayName(
   room: RoomGenerationStatus,

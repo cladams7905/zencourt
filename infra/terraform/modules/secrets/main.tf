@@ -51,44 +51,6 @@ resource "aws_ssm_parameter" "vercel_webhook_url" {
   })
 }
 
-# Redis Host (for Bull queue)
-resource "aws_ssm_parameter" "redis_host" {
-  name        = "/${var.environment}/zencourt/redis-host"
-  description = "Redis host for video processing queue"
-  type        = "String"
-  value       = var.redis_host
-
-  tags = merge(var.common_tags, {
-    Name = "${var.environment}-redis-host"
-  })
-}
-
-# Redis Port
-resource "aws_ssm_parameter" "redis_port" {
-  name        = "/${var.environment}/zencourt/redis-port"
-  description = "Redis port for video processing queue"
-  type        = "String"
-  value       = tostring(var.redis_port)
-
-  tags = merge(var.common_tags, {
-    Name = "${var.environment}-redis-port"
-  })
-}
-
-# Redis Password (if needed)
-resource "aws_ssm_parameter" "redis_password" {
-  count = var.redis_password != "" ? 1 : 0
-
-  name        = "/${var.environment}/zencourt/redis-password"
-  description = "Redis password for video processing queue"
-  type        = "SecureString"
-  value       = var.redis_password
-
-  tags = merge(var.common_tags, {
-    Name = "${var.environment}-redis-password"
-  })
-}
-
 # AWS Region (for easy reference)
 resource "aws_ssm_parameter" "aws_region" {
   name        = "/${var.environment}/zencourt/aws-region"

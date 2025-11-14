@@ -27,21 +27,6 @@ output "vercel_webhook_url_parameter" {
   value       = aws_ssm_parameter.vercel_webhook_url.name
 }
 
-output "redis_host_parameter" {
-  description = "SSM parameter name for Redis host"
-  value       = aws_ssm_parameter.redis_host.name
-}
-
-output "redis_port_parameter" {
-  description = "SSM parameter name for Redis port"
-  value       = aws_ssm_parameter.redis_port.name
-}
-
-output "redis_password_parameter" {
-  description = "SSM parameter name for Redis password (if set)"
-  value       = var.redis_password != "" ? aws_ssm_parameter.redis_password[0].name : null
-}
-
 output "s3_bucket_name_parameter" {
   description = "SSM parameter name for S3 bucket"
   value       = aws_ssm_parameter.s3_bucket_name.name
@@ -55,18 +40,13 @@ output "aws_region_parameter" {
 # All parameter ARNs for IAM policy attachment
 output "all_parameter_arns" {
   description = "List of all SSM parameter ARNs"
-  value = concat(
-    [
-      aws_ssm_parameter.vercel_webhook_url.arn,
-      aws_ssm_parameter.redis_host.arn,
-      aws_ssm_parameter.redis_port.arn,
-      aws_ssm_parameter.aws_region.arn,
-      aws_ssm_parameter.s3_bucket_name.arn,
-      aws_ssm_parameter.max_concurrent_jobs.arn,
-      aws_ssm_parameter.job_timeout_ms.arn
-    ],
-    var.redis_password != "" ? [aws_ssm_parameter.redis_password[0].arn] : []
-  )
+  value = [
+    aws_ssm_parameter.vercel_webhook_url.arn,
+    aws_ssm_parameter.aws_region.arn,
+    aws_ssm_parameter.s3_bucket_name.arn,
+    aws_ssm_parameter.max_concurrent_jobs.arn,
+    aws_ssm_parameter.job_timeout_ms.arn
+  ]
 }
 
 output "all_secret_arns" {

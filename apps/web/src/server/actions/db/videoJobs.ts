@@ -361,36 +361,6 @@ export async function markVideoJobFailed(
   );
 }
 
-/**
- * Update video job queue position
- */
-export async function updateVideoJobQueuePosition(
-  jobId: string,
-  queuePosition: number
-): Promise<void> {
-  if (!jobId) {
-    throw new Error("Job ID is required");
-  }
-
-  return withDbErrorHandling(
-    async () => {
-      await db
-        .update(videoJobs)
-        .set({
-          queuePosition,
-          updatedAt: new Date()
-        })
-        .where(eq(videoJobs.id, jobId));
-    },
-    {
-      actionName: "updateVideoJobQueuePosition",
-      context: { jobId, queuePosition },
-      errorMessage:
-        "Failed to update video job queue position. Please try again."
-    }
-  );
-}
-
 // ============================================================================
 // Delete Operations
 // ============================================================================
