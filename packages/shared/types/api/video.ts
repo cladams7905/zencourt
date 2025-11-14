@@ -53,13 +53,6 @@ export interface HealthCheckResponse {
   checks: {
     ffmpeg: boolean;
     s3: boolean;
-    redis: boolean;
-  };
-  queueStats: {
-    waiting: number;
-    active: number;
-    completed: number;
-    failed: number;
   };
 }
 

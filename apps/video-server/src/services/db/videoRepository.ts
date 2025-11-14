@@ -1,4 +1,4 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, count, eq, inArray, asc } from "drizzle-orm";
 import { db, projects, videos } from "@db/client";
 import type { VideoStatus } from "@shared/types/models";
 
@@ -175,6 +175,54 @@ class VideoRepository {
       .returning({ id: videos.id });
 
     return canceled.length;
+  }
+
+  /**
+   * Count completed room videos for a project
+   * Used to determine if all room videos are ready for composition
+   */
+  async countCompletedRoomVideos(projectId: string): Promise<number> {
+    const [result] = await db
+      .select({ count: count() })
+      .from(videos)
+      .where(
+        and(
+          eq(videos.projectId, projectId),
+          eq(videos.status, "completed")
+        )
+      );
+
+    return result?.count ?? 0;
+  }
+
+  /**
+   * Count total room videos for a project (excluding canceled/failed)
+   * Used to determine the total number of expected videos for composition
+   */
+  async countTotalRoomVideos(projectId: string): Promise<number> {
+    const [result] = await db
+      .select({ count: count() })
+      .from(videos)
+      .where(eq(videos.projectId, projectId));
+
+    return result?.count ?? 0;
+  }
+
+  /**
+   * Get all completed room videos for a project
+   * Used to retrieve video URLs for composition
+   */
+  async getCompletedRoomVideos(projectId: string): Promise<DbVideo[]> {
+    return db
+      .select()
+      .from(videos)
+      .where(
+        and(
+          eq(videos.projectId, projectId),
+          eq(videos.status, "completed")
+        )
+      )
+      .orderBy(asc(videos.createdAt));
   }
 }
 

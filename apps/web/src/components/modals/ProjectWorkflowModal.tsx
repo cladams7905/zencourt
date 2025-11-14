@@ -552,50 +552,68 @@ export function ProjectWorkflowModal({
     pollStatus();
   };
 
-  const startFinalComposition = async (projectId: string) => {
-    if (!videoSettings) {
-      markFinalStepFailed("Missing video settings");
-      toast.error("Final composition failed", {
-        description: "Video settings were not found."
-      });
-      return;
-    }
+  /**
+   * Start polling for final video completion
+   * Note: Composition happens automatically on the backend when all room videos complete
+   */
+  const startFinalCompositionPolling = async (projectId: string) => {
+    markFinalStepInProgress();
 
-    try {
-      markFinalStepInProgress();
+    const pollProjectStatus = async () => {
+      try {
+        // Poll the project directly to check for final video
+        const response = await fetch(`/api/project/${projectId}`);
 
-      const response = await fetch("/api/v1/video/compose", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          projectId,
-          compositionSettings: {
-            roomOrder: videoSettings.roomOrder.map((room) => room.id),
-            musicUrl: null,
-            musicVolume: 0.5,
-            transitions: null
-          }
-        })
-      });
+        if (!response.ok) {
+          throw new Error("Failed to fetch project status");
+        }
 
-      const data = await response.json();
+        const project = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to start final composition");
+        // Check if final video is ready
+        if (project.videoGenerationStatus === "completed" && project.finalVideoUrl) {
+          removeInterval(intervalId);
+          markFinalStepCompleted();
+          toast.success("Generation complete!", {
+            description: "Your property video is ready."
+          });
+        } else if (project.videoGenerationStatus === "failed") {
+          removeInterval(intervalId);
+          const errorMessage = project.metadata?.error?.message || "Final composition failed";
+          markFinalStepFailed(errorMessage);
+          toast.error("Generation failed", {
+            description: errorMessage
+          });
+        } else {
+          // Still processing - update progress
+          setGenerationProgress((prev) => {
+            if (!prev) return prev;
+            const steps = prev.steps.map((step) =>
+              step.id === FINAL_COMPOSE_STEP_ID
+                ? {
+                    ...step,
+                    status: "in-progress" as GenerationStepStatus,
+                    progress: Math.min(95, (step.progress ?? 10) + 5)
+                  }
+                : step
+            );
+            return {
+              ...prev,
+              steps,
+              overallProgress: Math.min(95, prev.overallProgress + 1),
+              currentStep: steps[steps.length - 1]?.label || prev.currentStep,
+              currentStepIndex: steps.length - 1
+            };
+          });
+        }
+      } catch (error) {
+        console.error("Project status polling error:", error);
       }
+    };
 
-      setGenerationJobIds([data.jobId]);
-      startFinalStatusPolling(projectId, data.jobId);
-    } catch (error) {
-      const description =
-        error instanceof Error ? error.message : "Please try again.";
-      markFinalStepFailed(description);
-      toast.error("Final composition failed", {
-        description
-      });
-    }
+    const intervalId = setInterval(pollProjectStatus, 2000);
+    registerInterval(intervalId);
+    pollProjectStatus();
   };
 
   const startRoomStatusPolling = (
@@ -638,7 +656,9 @@ export function ProjectWorkflowModal({
 
         if (totalRooms > 0 && completed === totalRooms) {
           removeInterval(intervalId);
-          await startFinalComposition(projectId);
+          // Composition now happens automatically on the backend
+          // Just start polling for completion
+          await startFinalCompositionPolling(projectId);
         }
       } catch (error) {
         console.error("Room status polling error:", error);

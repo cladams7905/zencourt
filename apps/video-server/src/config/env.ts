@@ -64,11 +64,6 @@ interface EnvConfig {
   awsRegion: string;
   awsS3Bucket: string;
 
-  // Redis
-  redisHost: string;
-  redisPort: number;
-  redisPassword?: string;
-
   // Vercel Webhook
   vercelApiUrl: string;
   webhookRetryAttempts: number;
@@ -95,13 +90,6 @@ function getEnvVar(name: string, defaultValue?: string): string {
   return value;
 }
 
-function getEnvVarOptional(
-  name: string,
-  defaultValue?: string
-): string | undefined {
-  return process.env[name] || defaultValue;
-}
-
 function getEnvVarNumber(name: string, defaultValue?: number): number {
   const value = process.env[name];
   if (!value && defaultValue === undefined) {
@@ -122,11 +110,6 @@ export const env: EnvConfig = {
   // AWS
   awsRegion: getEnvVar("AWS_REGION", "us-east-1"),
   awsS3Bucket: getEnvVar("AWS_S3_BUCKET"),
-
-  // Redis
-  redisHost: getEnvVar("REDIS_HOST", "localhost"),
-  redisPort: getEnvVarNumber("REDIS_PORT", 6379),
-  redisPassword: getEnvVarOptional("REDIS_PASSWORD"),
 
   // Vercel Webhook
   vercelApiUrl: getEnvVar("VERCEL_API_URL"),
@@ -153,7 +136,6 @@ export function validateEnv(): void {
   const requiredVars = [
     "AWS_REGION",
     "AWS_S3_BUCKET",
-    "REDIS_HOST",
     "VERCEL_API_URL",
     "DATABASE_URL",
     "FAL_KEY",
@@ -191,9 +173,6 @@ export function validateEnv(): void {
     logLevel: env.logLevel,
     awsRegion: env.awsRegion,
     awsS3Bucket: env.awsS3Bucket,
-    redisHost: env.redisHost,
-    redisPort: env.redisPort,
-    redisPassword: env.redisPassword ? "***REDACTED***" : undefined,
     vercelApiUrl: env.vercelApiUrl,
     webhookRetryAttempts: env.webhookRetryAttempts,
     maxConcurrentJobs: env.maxConcurrentJobs,

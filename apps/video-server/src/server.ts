@@ -8,7 +8,6 @@ import healthRoutes from "./routes/health";
 import storageRoutes from "./routes/storage";
 import webhookRoutes from "./routes/webhooks";
 import { errorHandler } from "./middleware/errorHandler";
-import { closeQueue } from "./queues/videoQueue";
 import { Logger } from "pino";
 
 /**
@@ -96,14 +95,14 @@ async function gracefulShutdown(signal: string): Promise<void> {
     "Received shutdown signal - starting graceful shutdown"
   );
 
-  // Force shutdown after 30 seconds (requirement 3.5)
+  // Force shutdown after 30 seconds
   const forceShutdownTimer = setTimeout(() => {
     logger.error("Graceful shutdown timeout - forcing exit");
     process.exit(1);
   }, 30000);
 
   try {
-    // Step 1: Stop accepting new HTTP connections
+    // Stop accepting new HTTP connections
     if (server) {
       logger.info("Stopping HTTP server from accepting new connections...");
       await new Promise<void>((resolve) => {
@@ -114,12 +113,7 @@ async function gracefulShutdown(signal: string): Promise<void> {
       });
     }
 
-    // Step 2: Wait for active jobs to complete and close queue
-    logger.info("Waiting for active jobs to complete and closing queue...");
-    await closeQueue();
-    logger.info("Queue closed successfully");
-
-    // Step 3: Exit successfully
+    // Exit successfully
     clearTimeout(forceShutdownTimer);
     logger.info("Graceful shutdown completed successfully");
     process.exit(0);

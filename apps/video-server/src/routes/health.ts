@@ -8,7 +8,6 @@ import { exec } from "child_process";
 import { promisify } from "util";
 import { logger } from "@/config/logger";
 import { s3Service } from "@/services/s3Service";
-import { checkRedisHealth, getQueueStats } from "@/queues/videoQueue";
 import { HealthCheckResponse } from "@shared/types/api";
 
 const execAsync = promisify(exec);
@@ -49,22 +48,6 @@ async function checkS3(): Promise<boolean> {
   }
 }
 
-/**
- * Check if Redis is accessible
- */
-async function checkRedis(): Promise<boolean> {
-  try {
-    return await checkRedisHealth();
-  } catch (error) {
-    logger.warn(
-      {
-        error: error instanceof Error ? error.message : String(error)
-      },
-      "Redis health check failed"
-    );
-    return false;
-  }
-}
 
 /**
  * GET /health
@@ -73,23 +56,13 @@ async function checkRedis(): Promise<boolean> {
 router.get("/", async (_req: Request, res: Response) => {
   try {
     // Run all health checks in parallel
-    const [ffmpegHealthy, s3Healthy, redisHealthy, queueStats] =
-      await Promise.all([
-        checkFFmpeg(),
-        checkS3(),
-        checkRedis(),
-        getQueueStats().catch(() => ({
-          waiting: 0,
-          active: 0,
-          completed: 0,
-          failed: 0,
-          delayed: 0,
-          paused: 0
-        }))
-      ]);
+    const [ffmpegHealthy, s3Healthy] = await Promise.all([
+      checkFFmpeg(),
+      checkS3()
+    ]);
 
     // Determine overall health status
-    const allHealthy = ffmpegHealthy && s3Healthy && redisHealthy;
+    const allHealthy = ffmpegHealthy && s3Healthy;
     const status = allHealthy ? "healthy" : "unhealthy";
 
     const response: HealthCheckResponse = {
@@ -97,37 +70,20 @@ router.get("/", async (_req: Request, res: Response) => {
       timestamp: new Date().toISOString(),
       checks: {
         ffmpeg: ffmpegHealthy,
-        s3: s3Healthy,
-        redis: redisHealthy
-      },
-      queueStats: {
-        waiting: queueStats.waiting,
-        active: queueStats.active,
-        completed: queueStats.completed,
-        failed: queueStats.failed
+        s3: s3Healthy
       }
     };
 
     if (allHealthy) {
-      logger.info(
-        {
-          checks: response.checks,
-          queueStats: response.queueStats
-        },
-        "Health check passed"
-      );
+      logger.info({ checks: response.checks }, "Health check passed");
     } else {
       logger.warn(
-        {
-          status,
-          checks: response.checks,
-          queueStats: response.queueStats
-        },
+        { status, checks: response.checks },
         "Health check detected issues"
       );
     }
 
-    // Return 503 if any service is unhealthy (requirement 12.3)
+    // Return 503 if any service is unhealthy
     const statusCode = allHealthy ? 200 : 503;
     res.status(statusCode).json(response);
   } catch (error) {
@@ -145,14 +101,7 @@ router.get("/", async (_req: Request, res: Response) => {
       timestamp: new Date().toISOString(),
       checks: {
         ffmpeg: false,
-        s3: false,
-        redis: false
-      },
-      queueStats: {
-        waiting: 0,
-        active: 0,
-        completed: 0,
-        failed: 0
+        s3: false
       }
     };
 

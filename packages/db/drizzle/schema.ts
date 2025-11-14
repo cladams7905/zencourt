@@ -145,6 +145,7 @@ export const videoJobs = pgTable(
       .notNull()
       .references(() => projects.id, { onDelete: "cascade" }),
     userId: text("user_id").notNull(), // From Stack Auth
+    falRequestId: text("fal_request_id"), // fal.ai request ID for webhook matching
     status: varchar("status", { length: 50 })
       .notNull()
       .default("pending")
@@ -161,8 +162,22 @@ export const videoJobs = pgTable(
     errorRetryable: jsonb("error_retryable").$type<boolean>(),
     // Processing metadata
     compositionSettings: jsonb("composition_settings"), // Store composition settings
-    estimatedDuration: integer("estimated_duration"), // Estimated processing time in seconds
-    queuePosition: integer("queue_position"), // Position in processing queue
+    // Fal lifecycle timestamps
+    falSubmittedAt: timestamp("fal_submitted_at"), // When job was submitted to fal.ai
+    falCompletedAt: timestamp("fal_completed_at"), // When fal.ai completed processing
+    webhookReceivedAt: timestamp("webhook_received_at"), // When webhook was received
+    processingStartedAt: timestamp("processing_started_at"), // When server started processing webhook
+    processingCompletedAt: timestamp("processing_completed_at"), // When server completed processing
+    // Fal source asset metadata (for debugging/replay)
+    falVideoUrl: text("fal_video_url"), // Original video URL from fal.ai
+    falFileSize: integer("fal_file_size"), // File size from fal.ai
+    falContentType: text("fal_content_type"), // Content type from fal.ai
+    sourceVideoUrl: text("source_video_url"), // Downloaded source video URL (post-download, pre-FFmpeg)
+    // Downstream webhook tracking
+    webhookStatus: varchar("webhook_status", { length: 50 }), // Status of downstream webhook delivery
+    webhookAttemptCount: integer("webhook_attempt_count").default(0), // Number of webhook delivery attempts
+    webhookLastError: text("webhook_last_error"), // Last webhook delivery error
+    // Legacy timestamps (kept for compatibility)
     startedAt: timestamp("started_at"), // When processing actually started
     completedAt: timestamp("completed_at"), // When processing completed (success or failure)
     createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -173,6 +188,7 @@ export const videoJobs = pgTable(
     index("video_jobs_project_id_idx").on(table.projectId),
     index("video_jobs_user_id_idx").on(table.userId),
     index("video_jobs_status_idx").on(table.status),
+    index("video_jobs_fal_request_id_idx").on(table.falRequestId), // Index for webhook lookup
     // RLS Policy: Users can only access their own video jobs
     crudPolicy({
       role: authenticatedRole,

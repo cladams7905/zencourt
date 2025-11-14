@@ -36,6 +36,13 @@
       "when": 1763007955372,
       "tag": "0004_normal_goblin_queen",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1763095371863,
+      "tag": "0005_powerful_boomerang",
+      "breakpoints": true
     }
   ]
 }

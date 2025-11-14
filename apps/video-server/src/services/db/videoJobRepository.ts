@@ -21,12 +21,36 @@ export interface AttachFalRequestIdOptions {
   falRequestId: string;
 }
 
+export interface RecordFalMetadataOptions {
+  jobId: string;
+  falVideoUrl: string;
+  falFileSize?: number;
+  falContentType?: string;
+}
+
+export interface RecordProcessingCompletionOptions {
+  jobId: string;
+  videoUrl: string;
+  duration?: number;
+  thumbnailUrl?: string;
+}
+
 class VideoJobRepository {
   async findById(jobId: string) {
     const [job] = await db
       .select()
       .from(videoJobs)
       .where(eq(videoJobs.id, jobId))
+      .limit(1);
+
+    return job || null;
+  }
+
+  async findByFalRequestId(falRequestId: string) {
+    const [job] = await db
+      .select()
+      .from(videoJobs)
+      .where(eq(videoJobs.falRequestId, falRequestId))
       .limit(1);
 
     return job || null;
@@ -48,6 +72,8 @@ class VideoJobRepository {
     await db
       .update(videoJobs)
       .set({
+        falRequestId: options.falRequestId,
+        falSubmittedAt: new Date(),
         updatedAt: new Date()
       })
       .where(eq(videoJobs.id, options.jobId));
@@ -62,6 +88,78 @@ class VideoJobRepository {
         updatedAt: new Date()
       })
       .where(eq(videoJobs.id, jobId));
+  }
+
+  /**
+   * Record webhook receipt timestamp
+   */
+  async recordWebhookReceived(jobId: string): Promise<void> {
+    await db
+      .update(videoJobs)
+      .set({
+        webhookReceivedAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(videoJobs.id, jobId));
+  }
+
+  /**
+   * Record fal completion timestamp
+   */
+  async recordFalCompleted(jobId: string): Promise<void> {
+    await db
+      .update(videoJobs)
+      .set({
+        falCompletedAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(videoJobs.id, jobId));
+  }
+
+  /**
+   * Record processing start timestamp
+   */
+  async recordProcessingStarted(jobId: string): Promise<void> {
+    await db
+      .update(videoJobs)
+      .set({
+        processingStartedAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(videoJobs.id, jobId));
+  }
+
+  /**
+   * Record fal metadata (video URL, file size, content type)
+   */
+  async recordFalMetadata(options: RecordFalMetadataOptions): Promise<void> {
+    await db
+      .update(videoJobs)
+      .set({
+        falVideoUrl: options.falVideoUrl,
+        falFileSize: options.falFileSize,
+        falContentType: options.falContentType,
+        updatedAt: new Date()
+      })
+      .where(eq(videoJobs.id, options.jobId));
+  }
+
+  /**
+   * Record processing completion with final video details
+   */
+  async recordProcessingCompleted(options: RecordProcessingCompletionOptions): Promise<void> {
+    await db
+      .update(videoJobs)
+      .set({
+        status: "completed",
+        videoUrl: options.videoUrl,
+        duration: options.duration,
+        thumbnailUrl: options.thumbnailUrl,
+        processingCompletedAt: new Date(),
+        completedAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(videoJobs.id, options.jobId));
   }
 
   async markFailed(jobId: string, errorMessage: string): Promise<void> {
