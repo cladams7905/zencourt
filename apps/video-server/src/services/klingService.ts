@@ -8,6 +8,7 @@ interface SubmitOptions {
   imageUrls: string[];
   duration?: KlingDuration;
   aspectRatio?: KlingAspectRatio;
+  webhookUrl?: string;
 }
 
 const MODEL_ID = "fal-ai/kling-video/v1.6/standard/elements";
@@ -30,6 +31,8 @@ class KlingService {
 
     const selectedImages = options.imageUrls.slice(0, 4);
 
+    const webhookUrl = options.webhookUrl ?? env.falWebhookUrl;
+
     const { request_id } = await fal.queue.submit(MODEL_ID, {
       input: {
         prompt: options.prompt,
@@ -37,7 +40,7 @@ class KlingService {
         duration: options.duration ?? "5",
         aspect_ratio: options.aspectRatio ?? "16:9"
       },
-      webhookUrl: env.falWebhookUrl
+      webhookUrl
     });
 
     logger.info(

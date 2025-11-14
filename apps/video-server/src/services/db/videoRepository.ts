@@ -1,5 +1,6 @@
-import { eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { db, projects, videos } from "@db/client";
+import type { VideoStatus } from "@shared/types/models";
 
 export type DbVideo = typeof videos.$inferSelect;
 export type DbProject = typeof projects.$inferSelect;
@@ -10,6 +11,15 @@ export interface VideoWithProject {
 }
 
 class VideoRepository {
+  private static readonly cancelableStatuses: VideoStatus[] = [
+    "pending",
+    "processing"
+  ];
+
+  private static resolveCancelReason(reason?: string): string {
+    return reason?.trim() || "Canceled by user request";
+  }
+
   async findById(videoId: string): Promise<DbVideo | null> {
     const [record] = await db
       .select()
@@ -41,17 +51,49 @@ class VideoRepository {
     };
   }
 
-  async markProcessing(options: {
+  async findByIdWithProject(videoId: string): Promise<VideoWithProject | null> {
+    const [record] = await db
+      .select({
+        video: videos,
+        project: projects
+      })
+      .from(videos)
+      .leftJoin(projects, eq(projects.id, videos.projectId))
+      .where(eq(videos.id, videoId))
+      .limit(1);
+
+    if (!record) {
+      return null;
+    }
+
+    return {
+      video: record.video,
+      project: record.project ?? null
+    };
+  }
+
+  async markSubmissionPending(options: {
     videoId: string;
-    falRequestId: string;
     generationSettings?: Record<string, unknown>;
   }): Promise<void> {
     await db
       .update(videos)
       .set({
-        falRequestId: options.falRequestId,
-        generationSettings: options.generationSettings,
         status: "processing",
+        generationSettings: options.generationSettings,
+        updatedAt: new Date()
+      })
+      .where(eq(videos.id, options.videoId));
+  }
+
+  async attachFalRequestId(options: {
+    videoId: string;
+    falRequestId: string;
+  }): Promise<void> {
+    await db
+      .update(videos)
+      .set({
+        falRequestId: options.falRequestId,
         updatedAt: new Date()
       })
       .where(eq(videos.id, options.videoId));
@@ -85,6 +127,54 @@ class VideoRepository {
         updatedAt: new Date()
       })
       .where(eq(videos.id, videoId));
+  }
+
+  async cancelVideosByProject(
+    projectId: string,
+    reason?: string
+  ): Promise<number> {
+    const canceled = await db
+      .update(videos)
+      .set({
+        status: "canceled",
+        errorMessage: VideoRepository.resolveCancelReason(reason),
+        updatedAt: new Date()
+      })
+      .where(
+        and(
+          eq(videos.projectId, projectId),
+          inArray(videos.status, VideoRepository.cancelableStatuses)
+        )
+      )
+      .returning({ id: videos.id });
+
+    return canceled.length;
+  }
+
+  async cancelVideosByIds(
+    videoIds: string[],
+    reason?: string
+  ): Promise<number> {
+    if (videoIds.length === 0) {
+      return 0;
+    }
+
+    const canceled = await db
+      .update(videos)
+      .set({
+        status: "canceled",
+        errorMessage: VideoRepository.resolveCancelReason(reason),
+        updatedAt: new Date()
+      })
+      .where(
+        and(
+          inArray(videos.id, videoIds),
+          inArray(videos.status, VideoRepository.cancelableStatuses)
+        )
+      )
+      .returning({ id: videos.id });
+
+    return canceled.length;
   }
 }
 

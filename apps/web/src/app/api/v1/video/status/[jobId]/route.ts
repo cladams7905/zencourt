@@ -6,14 +6,13 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { db, projects } from "@db/client";
-import { eq } from "drizzle-orm";
 import { ApiError, requireAuthenticatedUser } from "../../../_utils";
-import { ProjectMetadata } from "@shared/types/models";
 import {
   createChildLogger,
   logger as baseLogger
 } from "../../../../../../lib/logger";
+import { getVideoJobById } from "../../../../../../server/actions/db/videoJobs";
+import { VideoStatus } from "@shared/types/models";
 
 const logger = createChildLogger(baseLogger, {
   module: "video-status-route"
@@ -33,7 +32,7 @@ interface VideoStatusResponse {
   success: true;
   jobId: string;
   projectId: string;
-  status: "pending" | "processing" | "completed" | "failed";
+  status: VideoStatus;
   progress?: number; // 0-100
   estimatedTimeRemaining?: number; // seconds
   result?: {
@@ -75,93 +74,73 @@ export async function GET(
     // Authenticate user
     const user = await requireAuthenticatedUser();
 
-    // TODO (Task 23): Query video_jobs table instead of projects
-    // For now, we need to find the project by looking at metadata or other fields
-    // Since we don't have a direct job ID mapping yet, we'll need to use the project status
+    // Query video_jobs table directly
+    const job = await getVideoJobById(jobId);
 
-    // Extract project ID from job ID if it's embedded, or query based on status
-    // This is a temporary workaround until video_jobs table is created
-    const projectId = request.nextUrl.searchParams.get("projectId");
-
-    if (!projectId) {
-      throw new ApiError(400, {
-        error: "Missing project ID",
-        message:
-          "Project ID is required as query parameter until video_jobs table is created"
-      });
-    }
-
-    // Get project data
-    const [project] = await db
-      .select()
-      .from(projects)
-      .where(eq(projects.id, projectId))
-      .limit(1);
-
-    if (!project) {
+    if (!job) {
       throw new ApiError(404, {
         error: "Job not found",
         message: `No job found with ID ${jobId}`
       });
     }
 
-    // Verify user owns the project
-    if (project.userId !== user.id) {
+    // Verify user owns the job
+    if (job.userId !== user.id) {
       throw new ApiError(403, {
         error: "Access denied",
         message: "You do not have permission to access this job"
       });
     }
 
-    // Build response based on current project status
-    const status = project.videoGenerationStatus as
-      | "pending"
-      | "processing"
-      | "completed"
-      | "failed"
-      | null;
-    const metadata = project.metadata as ProjectMetadata | null;
+    // Map database status to API status
+    const statusMap: Record<string, VideoStatus> = {
+      pending: "pending",
+      processing: "processing",
+      completed: "completed",
+      failed: "failed",
+      canceled: "failed"
+    };
+
+    const status = statusMap[job.status] || "pending";
 
     const response: VideoStatusResponse = {
       success: true,
       jobId,
-      projectId: project.id,
-      status: status || "pending",
-      createdAt: project.createdAt.toISOString(),
-      updatedAt: project.updatedAt.toISOString()
+      projectId: job.projectId,
+      status,
+      createdAt: job.createdAt.toISOString(),
+      updatedAt: job.updatedAt.toISOString()
     };
 
+    // Add progress
+    response.progress = job.progress ?? 0;
+
     // Add result data if completed
-    if (status === "completed" && project.finalVideoUrl) {
+    if (status === "completed" && job.videoUrl) {
       response.result = {
-        videoUrl: project.finalVideoUrl,
-        thumbnailUrl: metadata?.videoThumbnailUrl,
-        duration: project.finalVideoDuration || 0,
-        resolution: metadata?.videoResolution
+        videoUrl: job.videoUrl,
+        thumbnailUrl: job.thumbnailUrl ?? undefined,
+        duration: job.duration ?? 0,
+        resolution: job.resolution ?? undefined
       };
-      response.progress = 100;
     }
 
     // Add error data if failed
-    if (status === "failed" && metadata?.error) {
+    if (
+      (status === "failed" || job.status === "canceled") &&
+      job.errorMessage
+    ) {
       response.error = {
-        message: metadata.error.message,
-        type: metadata.error.type,
-        retryable: metadata.error.retryable
+        message: job.errorMessage,
+        type: job.errorType ?? "unknown",
+        retryable: job.errorRetryable ?? false
       };
-      response.progress = 0;
     }
 
-    // Add progress estimate if processing
-    if (status === "processing") {
-      // Estimate progress based on time elapsed
-      // This is a rough estimate until we have real progress updates
-      const elapsed = Date.now() - project.updatedAt.getTime();
+    // Add time estimate if processing
+    if (status === "processing" && job.startedAt) {
+      const elapsed = Date.now() - new Date(job.startedAt).getTime();
       const estimatedTotal = 180000; // 3 minutes estimated total
-      response.progress = Math.min(
-        95,
-        Math.floor((elapsed / estimatedTotal) * 100)
-      );
       response.estimatedTimeRemaining = Math.max(
         5,
         Math.floor((estimatedTotal - elapsed) / 1000)
@@ -169,8 +148,8 @@ export async function GET(
     }
 
     logger.info(
-      { jobId, status: status || "pending", projectId: project.id },
-      "Video status check"
+      { jobId, status, projectId: job.projectId },
+      "Video status check from video_jobs table"
     );
 
     return NextResponse.json(response);

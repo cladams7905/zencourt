@@ -19,7 +19,8 @@ import { authenticatedRole, authUid, crudPolicy } from "drizzle-orm/neon";
 import {
   ProjectMetadata,
   ProjectStatus,
-  ImageMetadata
+  ImageMetadata,
+  VideoStatus
 } from "@shared/types/models";
 
 /**
@@ -144,7 +145,10 @@ export const videoJobs = pgTable(
       .notNull()
       .references(() => projects.id, { onDelete: "cascade" }),
     userId: text("user_id").notNull(), // From Stack Auth
-    status: varchar("status", { length: 50 }).notNull().default("pending"), // pending, processing, completed, failed
+    status: varchar("status", { length: 50 })
+      .notNull()
+      .default("pending")
+      .$type<VideoStatus>(), // pending, processing, completed, failed
     progress: integer("progress").default(0), // 0-100
     // Video processing result
     videoUrl: text("video_url"), // Final composed video URL

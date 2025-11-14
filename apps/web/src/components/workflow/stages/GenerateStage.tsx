@@ -129,9 +129,21 @@ export function GenerateStage({
     // Call cancel API endpoint if we have a projectId
     if (projectId) {
       try {
-        await fetch(`/api/generation/cancel/${projectId}`, {
-          method: "POST"
+        const response = await fetch(`/api/generation/cancel/${projectId}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            reason: "User canceled generation from workflow"
+          })
         });
+
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          const message = data?.message || data?.error || "Failed to cancel generation";
+          throw new Error(message);
+        }
       } catch (error) {
         console.error("Failed to cancel generation:", error);
       }

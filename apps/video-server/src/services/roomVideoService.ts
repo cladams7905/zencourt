@@ -4,6 +4,7 @@ import {
   buildGenericUploadKey,
   buildUserProjectVideoKey
 } from "@/lib/storagePaths";
+import { env } from "@/config/env";
 import { klingService } from "./klingService";
 import { videoRepository } from "./db/videoRepository";
 import type {
@@ -12,6 +13,17 @@ import type {
 } from "@/types/requests";
 
 class RoomVideoService {
+  private buildWebhookUrl(videoId: string): string {
+    try {
+      const url = new URL(env.falWebhookUrl);
+      url.searchParams.set("videoId", videoId);
+      return url.toString();
+    } catch {
+      const separator = env.falWebhookUrl.includes("?") ? "&" : "?";
+      return `${env.falWebhookUrl}${separator}videoId=${encodeURIComponent(videoId)}`;
+    }
+  }
+
   async startGeneration(
     request: RoomVideoGenerateRequest
   ): Promise<{ requestId: string }> {
@@ -37,23 +49,42 @@ class RoomVideoService {
       throw new Error(`Video record ${request.videoId} not found`);
     }
 
-    const requestId = await klingService.submitRoomVideo({
+    const generationSettings = {
+      ...request.metadata,
       prompt: request.prompt,
       imageUrls: request.imageUrls,
       duration: request.duration,
       aspectRatio: request.aspectRatio
+    };
+
+    await videoRepository.markSubmissionPending({
+      videoId: request.videoId,
+      generationSettings
     });
 
-    await videoRepository.markProcessing({
-      videoId: request.videoId,
-      falRequestId: requestId,
-      generationSettings: {
-        ...request.metadata,
+    let requestId: string | null = null;
+
+    try {
+      requestId = await klingService.submitRoomVideo({
         prompt: request.prompt,
         imageUrls: request.imageUrls,
         duration: request.duration,
-        aspectRatio: request.aspectRatio
-      }
+        aspectRatio: request.aspectRatio,
+        webhookUrl: this.buildWebhookUrl(request.videoId)
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to submit request to fal.ai";
+
+      await videoRepository.markFailed(request.videoId, message);
+      throw error;
+    }
+
+    await videoRepository.attachFalRequestId({
+      videoId: request.videoId,
+      falRequestId: requestId
     });
 
     logger.info(
@@ -68,14 +99,41 @@ class RoomVideoService {
     return { requestId };
   }
 
-  async handleFalWebhook(payload: FalWebhookPayload): Promise<void> {
+  async handleFalWebhook(
+    payload: FalWebhookPayload,
+    fallbackVideoId?: string
+  ): Promise<void> {
     if (!payload.request_id) {
       throw new Error("Fal webhook missing request_id");
     }
 
-    const record = await videoRepository.findByFalRequestId(
+    let record = await videoRepository.findByFalRequestId(
       payload.request_id
     );
+
+    if (!record && fallbackVideoId) {
+      const fallbackRecord =
+        await videoRepository.findByIdWithProject(fallbackVideoId);
+
+      if (fallbackRecord) {
+        logger.warn(
+          {
+            requestId: payload.request_id,
+            fallbackVideoId
+          },
+          "[RoomVideoService] Webhook fallback lookup by videoId"
+        );
+
+        if (!fallbackRecord.video.falRequestId) {
+          await videoRepository.attachFalRequestId({
+            videoId: fallbackRecord.video.id,
+            falRequestId: payload.request_id
+          });
+        }
+
+        record = fallbackRecord;
+      }
+    }
 
     if (!record) {
       logger.warn(
@@ -86,6 +144,17 @@ class RoomVideoService {
     }
 
     const { video, project } = record;
+
+    if (video.status === "canceled") {
+      logger.info(
+        {
+          videoId: video.id,
+          requestId: payload.request_id
+        },
+        "[RoomVideoService] Ignoring webhook for canceled video"
+      );
+      return;
+    }
 
     if (payload.status === "ERROR" || !payload.payload?.video?.url) {
       const errorMessage =

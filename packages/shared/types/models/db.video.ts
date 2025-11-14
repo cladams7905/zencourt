@@ -12,4 +12,9 @@ export type InsertDBVideo = typeof videos.$inferInsert;
 export type DBVideoJob = typeof videoJobs.$inferSelect;
 export type InsertDBVideoJob = typeof videoJobs.$inferInsert;
 
-export type VideoStatus = "pending" | "processing" | "completed" | "failed";
+export type VideoStatus =
+  | "pending"
+  | "processing"
+  | "completed"
+  | "failed"
+  | "canceled";

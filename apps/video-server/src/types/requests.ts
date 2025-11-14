@@ -101,6 +101,12 @@ export interface FalWebhookPayload {
   error?: string;
 }
 
+export interface CancelVideoRequest {
+  projectId: string;
+  videoIds?: string[];
+  reason?: string;
+}
+
 export interface ErrorResponse {
   success: false;
   error: string;
