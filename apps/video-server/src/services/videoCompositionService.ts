@@ -7,66 +7,41 @@
  * Ported from Vercel to Express with S3 storage
  */
 
-import ffmpeg from 'fluent-ffmpeg';
-import ffmpegStatic from 'ffmpeg-static';
-import ffprobeStatic from 'ffprobe-static';
-import { writeFile, readFile, unlink, rm, mkdir } from 'fs/promises';
-import { existsSync } from 'fs';
-import { join } from 'path';
-import { tmpdir } from 'os';
-import logger from '@/config/logger';
-import { s3Service } from './s3Service';
-import { env } from '@/config/env';
+import ffmpeg from "fluent-ffmpeg";
+import ffmpegStatic from "ffmpeg-static";
+import ffprobeStatic from "ffprobe-static";
+import { writeFile, readFile, unlink, rm, mkdir } from "fs/promises";
+import { existsSync } from "fs";
+import { join } from "path";
+import { tmpdir } from "os";
+import logger from "@/config/logger";
+import { s3Service } from "./s3Service";
+import { env } from "@/config/env";
+import type {
+  ComposedVideoResult,
+  LogoPosition,
+  SubtitleData,
+  VideoCompositionSettings
+} from "@shared/types/video/composition";
 
 // Configure FFmpeg paths
 if (!ffmpegStatic || !ffprobeStatic) {
-  throw new Error('Failed to load ffmpeg/ffprobe binaries');
+  throw new Error("Failed to load ffmpeg/ffprobe binaries");
 }
 
 // ffprobe-static exports path property
-const ffprobeBinaryPath = typeof ffprobeStatic === 'string' ? ffprobeStatic : (ffprobeStatic as { path: string }).path;
+const ffprobeBinaryPath =
+  typeof ffprobeStatic === "string"
+    ? ffprobeStatic
+    : (ffprobeStatic as { path: string }).path;
 
 logger.info(
   { ffmpegPath: ffmpegStatic, ffprobePath: ffprobeBinaryPath },
-  '[VideoComposition] FFmpeg binaries loaded'
+  "[VideoComposition] FFmpeg binaries loaded"
 );
 
 ffmpeg.setFfmpegPath(ffmpegStatic);
 ffmpeg.setFfprobePath(ffprobeBinaryPath);
-
-// ============================================================================
-// Types
-// ============================================================================
-
-export type LogoPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
-
-export interface SubtitleData {
-  startTime: number;
-  endTime: number;
-  text: string;
-}
-
-export interface SubtitleConfig {
-  enabled: boolean;
-  text: string;
-  font?: string;
-}
-
-export interface VideoCompositionSettings {
-  transitions?: boolean;
-  logo?: {
-    s3Url: string;
-    position: LogoPosition;
-  };
-  subtitles?: SubtitleConfig;
-}
-
-export interface ComposedVideoResult {
-  videoUrl: string;
-  thumbnailUrl: string;
-  duration: number;
-  fileSize: number;
-}
 
 // ============================================================================
 // Main Composition Class
@@ -84,7 +59,10 @@ export class VideoCompositionService {
     finalVideoId: string,
     projectName?: string
   ): Promise<ComposedVideoResult> {
-    const tempDir = join(tmpdir(), `video-composition-${projectId}-${Date.now()}`);
+    const tempDir = join(
+      tmpdir(),
+      `video-composition-${projectId}-${Date.now()}`
+    );
     const tempFiles: string[] = [];
 
     try {
@@ -98,17 +76,20 @@ export class VideoCompositionService {
           roomVideosCount: roomVideoUrls.length,
           projectId,
           finalVideoId,
-          tempDir,
+          tempDir
         },
-        '[VideoComposition] Starting composition'
+        "[VideoComposition] Starting composition"
       );
 
       // Step 1: Download all room videos from S3 to temp directory
-      const downloadedVideos = await this.downloadRoomVideosToTemp(roomVideoUrls, tempDir);
+      const downloadedVideos = await this.downloadRoomVideosToTemp(
+        roomVideoUrls,
+        tempDir
+      );
       tempFiles.push(...downloadedVideos);
 
       // Step 2: Concatenate videos with transitions
-      const concatenatedPath = join(tempDir, 'concatenated.mp4');
+      const concatenatedPath = join(tempDir, "concatenated.mp4");
       await this.concatenateVideos(
         downloadedVideos,
         concatenatedPath,
@@ -120,11 +101,11 @@ export class VideoCompositionService {
 
       // Step 3: Apply logo overlay if provided
       if (compositionSettings.logo) {
-        const logoPath = join(tempDir, 'logo.png');
+        const logoPath = join(tempDir, "logo.png");
         await this.downloadLogoToTemp(compositionSettings.logo.s3Url, logoPath);
         tempFiles.push(logoPath);
 
-        const videoWithLogoPath = join(tempDir, 'with_logo.mp4');
+        const videoWithLogoPath = join(tempDir, "with_logo.mp4");
         await this.applyLogoOverlay(
           finalVideoPath,
           logoPath,
@@ -137,7 +118,7 @@ export class VideoCompositionService {
 
       // Step 4: Apply subtitles if enabled
       if (compositionSettings.subtitles?.enabled) {
-        const subtitlesPath = join(tempDir, 'subtitles.srt');
+        const subtitlesPath = join(tempDir, "subtitles.srt");
         await this.generateSubtitleFile(
           compositionSettings.subtitles.text,
           subtitlesPath,
@@ -145,7 +126,7 @@ export class VideoCompositionService {
         );
         tempFiles.push(subtitlesPath);
 
-        const videoWithSubsPath = join(tempDir, 'with_subtitles.mp4');
+        const videoWithSubsPath = join(tempDir, "with_subtitles.mp4");
         await this.applySubtitles(
           finalVideoPath,
           subtitlesPath,
@@ -157,7 +138,7 @@ export class VideoCompositionService {
       }
 
       // Step 5: Generate thumbnail
-      const thumbnailPath = join(tempDir, 'thumbnail.jpg');
+      const thumbnailPath = join(tempDir, "thumbnail.jpg");
       await this.generateThumbnail(finalVideoPath, thumbnailPath);
       tempFiles.push(thumbnailPath);
 
@@ -166,7 +147,10 @@ export class VideoCompositionService {
       const thumbnailBuffer = await readFile(thumbnailPath);
 
       // Step 7: Upload to S3
-      logger.info({ projectId, finalVideoId }, '[VideoComposition] Uploading final video and thumbnail to S3');
+      logger.info(
+        { projectId, finalVideoId },
+        "[VideoComposition] Uploading final video and thumbnail to S3"
+      );
 
       const baseVideoPath = `user_${userId}/projects/project_${projectId}/videos/video_${finalVideoId}`;
       const videoKey = `${baseVideoPath}/final.mp4`;
@@ -176,24 +160,24 @@ export class VideoCompositionService {
         s3Service.uploadFile({
           key: videoKey,
           body: videoBuffer,
-          contentType: 'video/mp4',
+          contentType: "video/mp4",
           metadata: {
             userId,
             projectId,
             videoId: finalVideoId,
-            projectName: projectName || '',
-          },
+            projectName: projectName || ""
+          }
         }),
         s3Service.uploadFile({
           key: thumbnailKey,
           body: thumbnailBuffer,
-          contentType: 'image/jpeg',
+          contentType: "image/jpeg",
           metadata: {
             userId,
             projectId,
-            videoId: finalVideoId,
-          },
-        }),
+            videoId: finalVideoId
+          }
+        })
       ]);
 
       // Get video metadata
@@ -204,21 +188,26 @@ export class VideoCompositionService {
           projectId,
           finalVideoId,
           duration,
-          fileSize: videoBuffer.length,
+          fileSize: videoBuffer.length
         },
-        '[VideoComposition] ✅ Composition complete'
+        "[VideoComposition] ✅ Composition complete"
       );
 
       return {
         videoUrl,
         thumbnailUrl,
         duration,
-        fileSize: videoBuffer.length,
+        fileSize: videoBuffer.length
       };
     } catch (error) {
-      logger.error({ error, projectId, finalVideoId }, '[VideoComposition] ❌ Composition failed');
+      logger.error(
+        { error, projectId, finalVideoId },
+        "[VideoComposition] ❌ Composition failed"
+      );
       throw new Error(
-        `Failed to compose video: ${error instanceof Error ? error.message : 'Unknown error'}`
+        `Failed to compose video: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
       );
     } finally {
       // Cleanup temp files
@@ -227,7 +216,10 @@ export class VideoCompositionService {
       try {
         await rm(tempDir, { recursive: true, force: true });
       } catch (error) {
-        logger.warn({ error, tempDir }, '[VideoComposition] Failed to cleanup temp directory');
+        logger.warn(
+          { error, tempDir },
+          "[VideoComposition] Failed to cleanup temp directory"
+        );
       }
     }
   }
@@ -243,7 +235,10 @@ export class VideoCompositionService {
     videoUrls: string[],
     tempDir: string
   ): Promise<string[]> {
-    logger.info({ count: videoUrls.length }, '[VideoComposition] Downloading room videos from S3');
+    logger.info(
+      { count: videoUrls.length },
+      "[VideoComposition] Downloading room videos from S3"
+    );
 
     const downloadPromises = videoUrls.map(async (url, index) => {
       // Extract S3 key from URL
@@ -253,7 +248,10 @@ export class VideoCompositionService {
       const videoPath = join(tempDir, `room_${index}.mp4`);
       await writeFile(videoPath, videoBuffer);
 
-      logger.info({ index, videoPath, size: videoBuffer.length }, '[VideoComposition] Downloaded room video');
+      logger.info(
+        { index, videoPath, size: videoBuffer.length },
+        "[VideoComposition] Downloaded room video"
+      );
       return videoPath;
     });
 
@@ -263,14 +261,23 @@ export class VideoCompositionService {
   /**
    * Download logo from S3 to temporary directory
    */
-  private async downloadLogoToTemp(s3Url: string, logoPath: string): Promise<void> {
-    logger.info({ s3Url, logoPath }, '[VideoComposition] Downloading logo from S3');
+  private async downloadLogoToTemp(
+    s3Url: string,
+    logoPath: string
+  ): Promise<void> {
+    logger.info(
+      { s3Url, logoPath },
+      "[VideoComposition] Downloading logo from S3"
+    );
 
     const s3Key = this.extractS3KeyFromUrl(s3Url);
     const logoBuffer = await s3Service.downloadFile(env.awsS3Bucket, s3Key);
     await writeFile(logoPath, logoBuffer);
 
-    logger.info({ logoPath, size: logoBuffer.length }, '[VideoComposition] Downloaded logo');
+    logger.info(
+      { logoPath, size: logoBuffer.length },
+      "[VideoComposition] Downloaded logo"
+    );
   }
 
   /**
@@ -283,7 +290,7 @@ export class VideoCompositionService {
     const pathname = urlObj.pathname;
 
     // Remove leading slash
-    return pathname.startsWith('/') ? pathname.substring(1) : pathname;
+    return pathname.startsWith("/") ? pathname.substring(1) : pathname;
   }
 
   // ============================================================================
@@ -298,7 +305,10 @@ export class VideoCompositionService {
     outputPath: string,
     withTransitions: boolean
   ): Promise<void> {
-    logger.info({ count: videoPaths.length, withTransitions }, '[VideoComposition] Concatenating videos');
+    logger.info(
+      { count: videoPaths.length, withTransitions },
+      "[VideoComposition] Concatenating videos"
+    );
 
     // Special case: single video - just re-encode without filters
     if (videoPaths.length === 1) {
@@ -306,22 +316,28 @@ export class VideoCompositionService {
         const command = ffmpeg();
         command
           .input(videoPaths[0])
-          .outputOptions(['-c:v libx264', '-preset medium', '-crf 23', '-y'])
+          .outputOptions(["-c:v libx264", "-preset medium", "-crf 23", "-y"])
           .output(outputPath)
-          .on('start', (cmd) => {
-            logger.debug({ cmd }, '[FFmpeg] Re-encoding single video');
+          .on("start", (cmd) => {
+            logger.debug({ cmd }, "[FFmpeg] Re-encoding single video");
           })
-          .on('progress', (progress) => {
+          .on("progress", (progress) => {
             if (progress.percent) {
-              logger.debug({ percent: Math.round(progress.percent) }, '[FFmpeg] Re-encoding progress');
+              logger.debug(
+                { percent: Math.round(progress.percent) },
+                "[FFmpeg] Re-encoding progress"
+              );
             }
           })
-          .on('end', () => {
-            logger.info('[FFmpeg] ✅ Re-encoding complete');
+          .on("end", () => {
+            logger.info("[FFmpeg] ✅ Re-encoding complete");
             resolve();
           })
-          .on('error', (err, stdout, stderr) => {
-            logger.error({ err, stdout, stderr }, '[FFmpeg] ❌ Re-encoding error');
+          .on("error", (err, stdout, stderr) => {
+            logger.error(
+              { err, stdout, stderr },
+              "[FFmpeg] ❌ Re-encoding error"
+            );
             reject(err);
           })
           .run();
@@ -331,9 +347,13 @@ export class VideoCompositionService {
     // Multiple videos: get durations and metadata first if using transitions
     let videoDurations: number[] = [];
     if (withTransitions) {
-      logger.debug('[VideoComposition] Getting video durations for transition offsets');
-      videoDurations = await Promise.all(videoPaths.map((path) => this.getVideoDuration(path)));
-      logger.debug({ videoDurations }, '[VideoComposition] Video durations');
+      logger.debug(
+        "[VideoComposition] Getting video durations for transition offsets"
+      );
+      videoDurations = await Promise.all(
+        videoPaths.map((path) => this.getVideoDuration(path))
+      );
+      logger.debug({ videoDurations }, "[VideoComposition] Video durations");
     }
 
     return new Promise((resolve, reject) => {
@@ -350,22 +370,34 @@ export class VideoCompositionService {
 
       command
         .complexFilter(filterComplex)
-        .outputOptions(['-map [outv]', '-c:v libx264', '-preset medium', '-crf 23', '-y'])
+        .outputOptions([
+          "-map [outv]",
+          "-c:v libx264",
+          "-preset medium",
+          "-crf 23",
+          "-y"
+        ])
         .output(outputPath)
-        .on('start', (cmd) => {
-          logger.debug({ cmd }, '[FFmpeg] Concatenation started');
+        .on("start", (cmd) => {
+          logger.debug({ cmd }, "[FFmpeg] Concatenation started");
         })
-        .on('progress', (progress) => {
+        .on("progress", (progress) => {
           if (progress.percent) {
-            logger.debug({ percent: Math.round(progress.percent) }, '[FFmpeg] Concatenation progress');
+            logger.debug(
+              { percent: Math.round(progress.percent) },
+              "[FFmpeg] Concatenation progress"
+            );
           }
         })
-        .on('end', () => {
-          logger.info('[FFmpeg] ✅ Concatenation complete');
+        .on("end", () => {
+          logger.info("[FFmpeg] ✅ Concatenation complete");
           resolve();
         })
-        .on('error', (err, stdout, stderr) => {
-          logger.error({ err, stdout, stderr }, '[FFmpeg] ❌ Concatenation error');
+        .on("error", (err, stdout, stderr) => {
+          logger.error(
+            { err, stdout, stderr },
+            "[FFmpeg] ❌ Concatenation error"
+          );
           reject(err);
         })
         .run();
@@ -376,27 +408,39 @@ export class VideoCompositionService {
    * Build simple concatenation filter (no transitions, video only)
    */
   private buildSimpleConcatFilter(videoCount: number): string {
-    const inputs = Array.from({ length: videoCount }, (_, i) => `[${i}:v]`).join('');
+    const inputs = Array.from(
+      { length: videoCount },
+      (_, i) => `[${i}:v]`
+    ).join("");
     return `${inputs}concat=n=${videoCount}:v=1:a=0[outv]`;
   }
 
   /**
    * Build concatenation filter with crossfade transitions (video only)
    */
-  private buildTransitionFilter(videoCount: number, videoDurations: number[]): string {
+  private buildTransitionFilter(
+    videoCount: number,
+    videoDurations: number[]
+  ): string {
     const fadeDuration = 0.5; // 0.5 second crossfade
 
     // Special case for 2 videos
     if (videoCount === 2) {
       const offset = videoDurations[0] - fadeDuration;
-      logger.debug({ offset, fadeDuration }, '[VideoComposition] Building xfade filter for 2 videos');
+      logger.debug(
+        { offset, fadeDuration },
+        "[VideoComposition] Building xfade filter for 2 videos"
+      );
 
       const filter = `[0:v]format=yuv420p,fps=30,scale=720:1280:force_original_aspect_ratio=decrease,pad=720:1280:(ow-iw)/2:(oh-ih)/2,setsar=1[v0];[1:v]format=yuv420p,fps=30,scale=720:1280:force_original_aspect_ratio=decrease,pad=720:1280:(ow-iw)/2:(oh-ih)/2,setsar=1[v1];[v0][v1]xfade=transition=fade:duration=${fadeDuration}:offset=${offset},format=yuv420p[outv]`;
       return filter;
     }
 
     // For 3+ videos: chain xfade filters
-    logger.debug({ videoCount, fadeDuration }, '[VideoComposition] Building xfade filter for multiple videos');
+    logger.debug(
+      { videoCount, fadeDuration },
+      "[VideoComposition] Building xfade filter for multiple videos"
+    );
 
     const filters: string[] = [];
 
@@ -414,7 +458,7 @@ export class VideoCompositionService {
 
       const input1 = isFirst ? `v${i}` : `xf${i - 1}`;
       const input2 = `v${i + 1}`;
-      const output = isLast ? 'outv' : `xf${i}`;
+      const output = isLast ? "outv" : `xf${i}`;
 
       // Offset calculation
       let offset: number;
@@ -422,7 +466,8 @@ export class VideoCompositionService {
         offset = videoDurations[0] - fadeDuration;
       } else {
         const accumulatedDuration =
-          videoDurations.slice(0, i + 1).reduce((a, b) => a + b, 0) - i * fadeDuration;
+          videoDurations.slice(0, i + 1).reduce((a, b) => a + b, 0) -
+          i * fadeDuration;
         offset = accumulatedDuration - fadeDuration;
       }
 
@@ -437,7 +482,7 @@ export class VideoCompositionService {
       }
     }
 
-    return filters.join(';');
+    return filters.join(";");
   }
 
   // ============================================================================
@@ -453,7 +498,7 @@ export class VideoCompositionService {
     outputPath: string,
     position: LogoPosition
   ): Promise<void> {
-    logger.info({ position }, '[VideoComposition] Applying logo overlay');
+    logger.info({ position }, "[VideoComposition] Applying logo overlay");
 
     return new Promise((resolve, reject) => {
       const overlayPosition = this.getLogoOverlayPosition(position);
@@ -462,19 +507,19 @@ export class VideoCompositionService {
         .input(logoPath)
         .complexFilter([
           "[1:v]scale='min(500,iw)':'min(500,ih)':force_original_aspect_ratio=decrease[logo]",
-          `[0:v][logo]overlay=${overlayPosition}[outv]`,
+          `[0:v][logo]overlay=${overlayPosition}[outv]`
         ])
-        .outputOptions(['-c:v libx264', '-preset medium', '-crf 23'])
+        .outputOptions(["-c:v libx264", "-preset medium", "-crf 23"])
         .output(outputPath)
-        .on('start', (cmd) => {
-          logger.debug({ cmd }, '[FFmpeg] Logo overlay started');
+        .on("start", (cmd) => {
+          logger.debug({ cmd }, "[FFmpeg] Logo overlay started");
         })
-        .on('end', () => {
-          logger.info('[FFmpeg] ✅ Logo overlay complete');
+        .on("end", () => {
+          logger.info("[FFmpeg] ✅ Logo overlay complete");
           resolve();
         })
-        .on('error', (err) => {
-          logger.error({ err }, '[FFmpeg] ❌ Logo overlay error');
+        .on("error", (err) => {
+          logger.error({ err }, "[FFmpeg] ❌ Logo overlay error");
           reject(err);
         })
         .run();
@@ -487,10 +532,10 @@ export class VideoCompositionService {
   private getLogoOverlayPosition(position: LogoPosition): string {
     const padding = 20;
     const positions: Record<LogoPosition, string> = {
-      'top-left': `${padding}:${padding}`,
-      'top-right': `W-w-${padding}:${padding}`,
-      'bottom-left': `${padding}:H-h-${padding}`,
-      'bottom-right': `W-w-${padding}:H-h-${padding}`,
+      "top-left": `${padding}:${padding}`,
+      "top-right": `W-w-${padding}:${padding}`,
+      "bottom-left": `${padding}:H-h-${padding}`,
+      "bottom-right": `W-w-${padding}:H-h-${padding}`
     };
     return positions[position];
   }
@@ -507,30 +552,33 @@ export class VideoCompositionService {
     subtitlesPath: string,
     videoDuration: number
   ): Promise<void> {
-    logger.info('[VideoComposition] Generating subtitle file');
+    logger.info("[VideoComposition] Generating subtitle file");
 
     // Split text into chunks if too long (max 40 characters per subtitle)
     const maxCharsPerSubtitle = 40;
-    const words = text.split(' ');
+    const words = text.split(" ");
     const subtitles: SubtitleData[] = [];
 
-    let currentSubtitle = '';
+    let currentSubtitle = "";
     let currentStartTime = 0;
     const secondsPerSubtitle = 3; // Each subtitle displays for 3 seconds
 
     for (const word of words) {
-      if ((currentSubtitle + ' ' + word).length > maxCharsPerSubtitle) {
+      if ((currentSubtitle + " " + word).length > maxCharsPerSubtitle) {
         if (currentSubtitle) {
           subtitles.push({
             startTime: currentStartTime,
-            endTime: Math.min(currentStartTime + secondsPerSubtitle, videoDuration),
-            text: currentSubtitle.trim(),
+            endTime: Math.min(
+              currentStartTime + secondsPerSubtitle,
+              videoDuration
+            ),
+            text: currentSubtitle.trim()
           });
           currentStartTime += secondsPerSubtitle;
           currentSubtitle = word;
         }
       } else {
-        currentSubtitle += (currentSubtitle ? ' ' : '') + word;
+        currentSubtitle += (currentSubtitle ? " " : "") + word;
       }
     }
 
@@ -539,7 +587,7 @@ export class VideoCompositionService {
       subtitles.push({
         startTime: currentStartTime,
         endTime: Math.min(currentStartTime + secondsPerSubtitle, videoDuration),
-        text: currentSubtitle.trim(),
+        text: currentSubtitle.trim()
       });
     }
 
@@ -550,10 +598,13 @@ export class VideoCompositionService {
         const end = this.formatSrtTime(sub.endTime);
         return `${index + 1}\n${start} --> ${end}\n${sub.text}\n`;
       })
-      .join('\n');
+      .join("\n");
 
-    await writeFile(subtitlesPath, srtContent, 'utf-8');
-    logger.info({ subtitleCount: subtitles.length }, '[VideoComposition] ✅ Subtitle file generated');
+    await writeFile(subtitlesPath, srtContent, "utf-8");
+    logger.info(
+      { subtitleCount: subtitles.length },
+      "[VideoComposition] ✅ Subtitle file generated"
+    );
   }
 
   /**
@@ -565,9 +616,11 @@ export class VideoCompositionService {
     const secs = Math.floor(seconds % 60);
     const milliseconds = Math.floor((seconds % 1) * 1000);
 
-    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs
+    return `${hours.toString().padStart(2, "0")}:${minutes
       .toString()
-      .padStart(2, '0')},${milliseconds.toString().padStart(3, '0')}`;
+      .padStart(2, "0")}:${secs.toString().padStart(2, "0")},${milliseconds
+      .toString()
+      .padStart(3, "0")}`;
   }
 
   /**
@@ -577,31 +630,33 @@ export class VideoCompositionService {
     videoPath: string,
     subtitlesPath: string,
     outputPath: string,
-    font: string = 'Arial'
+    font: string = "Arial"
   ): Promise<void> {
-    logger.info('[VideoComposition] Applying subtitles');
+    logger.info("[VideoComposition] Applying subtitles");
 
     return new Promise((resolve, reject) => {
       // Escape the subtitles path for FFmpeg filter
-      const escapedSubPath = subtitlesPath.replace(/\\/g, '/').replace(/:/g, '\\:');
+      const escapedSubPath = subtitlesPath
+        .replace(/\\/g, "/")
+        .replace(/:/g, "\\:");
 
       ffmpeg(videoPath)
         .outputOptions([
-          '-c:v libx264',
-          '-preset medium',
-          '-crf 23',
-          `-vf subtitles=${escapedSubPath}:force_style='FontName=${font},FontSize=24,PrimaryColour=&HFFFFFF,OutlineColour=&H000000,Outline=2'`,
+          "-c:v libx264",
+          "-preset medium",
+          "-crf 23",
+          `-vf subtitles=${escapedSubPath}:force_style='FontName=${font},FontSize=24,PrimaryColour=&HFFFFFF,OutlineColour=&H000000,Outline=2'`
         ])
         .output(outputPath)
-        .on('start', (cmd) => {
-          logger.debug({ cmd }, '[FFmpeg] Subtitle overlay started');
+        .on("start", (cmd) => {
+          logger.debug({ cmd }, "[FFmpeg] Subtitle overlay started");
         })
-        .on('end', () => {
-          logger.info('[FFmpeg] ✅ Subtitle overlay complete');
+        .on("end", () => {
+          logger.info("[FFmpeg] ✅ Subtitle overlay complete");
           resolve();
         })
-        .on('error', (err) => {
-          logger.error({ err }, '[FFmpeg] ❌ Subtitle overlay error');
+        .on("error", (err) => {
+          logger.error({ err }, "[FFmpeg] ❌ Subtitle overlay error");
           reject(err);
         })
         .run();
@@ -615,25 +670,32 @@ export class VideoCompositionService {
   /**
    * Generate thumbnail from first frame of video
    */
-  async generateThumbnail(videoPath: string, outputPath?: string): Promise<string> {
-    const thumbnailPath = outputPath || join(tmpdir(), `thumbnail-${Date.now()}.jpg`);
+  async generateThumbnail(
+    videoPath: string,
+    outputPath?: string
+  ): Promise<string> {
+    const thumbnailPath =
+      outputPath || join(tmpdir(), `thumbnail-${Date.now()}.jpg`);
 
-    logger.info({ thumbnailPath }, '[VideoComposition] Generating thumbnail');
+    logger.info({ thumbnailPath }, "[VideoComposition] Generating thumbnail");
 
     return new Promise((resolve, reject) => {
       ffmpeg(videoPath)
-        .inputOptions(['-ss 00:00:00.000'])
-        .outputOptions(['-frames:v 1', '-q:v 2', '-y'])
+        .inputOptions(["-ss 00:00:00.000"])
+        .outputOptions(["-frames:v 1", "-q:v 2", "-y"])
         .output(thumbnailPath)
-        .on('start', (cmd) => {
-          logger.debug({ cmd }, '[FFmpeg] Thumbnail generation started');
+        .on("start", (cmd) => {
+          logger.debug({ cmd }, "[FFmpeg] Thumbnail generation started");
         })
-        .on('end', () => {
-          logger.info('[FFmpeg] ✅ Thumbnail generated');
+        .on("end", () => {
+          logger.info("[FFmpeg] ✅ Thumbnail generated");
           resolve(thumbnailPath);
         })
-        .on('error', (err, stdout, stderr) => {
-          logger.error({ err, stdout, stderr }, '[FFmpeg] ❌ Thumbnail generation error');
+        .on("error", (err, stdout, stderr) => {
+          logger.error(
+            { err, stdout, stderr },
+            "[FFmpeg] ❌ Thumbnail generation error"
+          );
           reject(err);
         })
         .run();
@@ -665,12 +727,18 @@ export class VideoCompositionService {
   private async cleanupTempFiles(filePaths: string[]): Promise<void> {
     const deletePromises = filePaths.map((path) =>
       unlink(path).catch((err) => {
-        logger.warn({ err, path }, '[VideoComposition] Failed to delete temp file');
+        logger.warn(
+          { err, path },
+          "[VideoComposition] Failed to delete temp file"
+        );
       })
     );
 
     await Promise.all(deletePromises);
-    logger.info({ count: filePaths.length }, '[VideoComposition] ✅ Cleaned up temp files');
+    logger.info(
+      { count: filePaths.length },
+      "[VideoComposition] ✅ Cleaned up temp files"
+    );
   }
 }
 

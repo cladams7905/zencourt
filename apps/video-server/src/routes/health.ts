@@ -9,7 +9,7 @@ import { promisify } from "util";
 import { logger } from "@/config/logger";
 import { s3Service } from "@/services/s3Service";
 import { checkRedisHealth, getQueueStats } from "@/queues/videoQueue";
-import { HealthCheckResponse } from "@/types/requests";
+import { HealthCheckResponse } from "@shared/types/api";
 
 const execAsync = promisify(exec);
 const router = Router();

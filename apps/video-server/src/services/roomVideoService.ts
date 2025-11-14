@@ -7,10 +7,11 @@ import {
 import { env } from "@/config/env";
 import { klingService } from "./klingService";
 import { videoRepository } from "./db/videoRepository";
+import { videoJobRepository } from "./db/videoJobRepository";
 import type {
   FalWebhookPayload,
   RoomVideoGenerateRequest
-} from "@/types/requests";
+} from "@shared/types/api";
 
 class RoomVideoService {
   private buildWebhookUrl(videoId: string): string {
@@ -62,6 +63,17 @@ class RoomVideoService {
       generationSettings
     });
 
+    // Create video_jobs entry if jobId is provided
+    if (request.jobId) {
+      await videoJobRepository.create({
+        id: request.jobId,
+        projectId: request.projectId,
+        userId: request.userId,
+        status: "pending",
+        compositionSettings: generationSettings
+      });
+    }
+
     let requestId: string | null = null;
 
     try {
@@ -79,18 +91,31 @@ class RoomVideoService {
           : "Failed to submit request to fal.ai";
 
       await videoRepository.markFailed(request.videoId, message);
+
+      // Mark video_jobs entry as failed if it exists
+      if (request.jobId) {
+        await videoJobRepository.markFailed(request.jobId, message);
+      }
+
       throw error;
     }
 
+    // Persist fal request_id in videos table
     await videoRepository.attachFalRequestId({
       videoId: request.videoId,
       falRequestId: requestId
     });
 
+    // Mark video_jobs entry as submitted/processing
+    if (request.jobId) {
+      await videoJobRepository.markSubmitted(request.jobId);
+    }
+
     logger.info(
       {
         videoId: request.videoId,
         projectId: request.projectId,
+        jobId: request.jobId,
         requestId
       },
       "[RoomVideoService] Room video generation started"

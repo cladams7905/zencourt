@@ -2,14 +2,15 @@
  * Type definitions for API requests and responses
  */
 
-import type { VideoCompositionSettings } from '@/services/videoCompositionService';
+import type { VideoCompositionSettings } from "../video/composition";
+import type { KlingDuration } from "./requests";
 
 export type { VideoCompositionSettings };
-
-export type KlingDuration = '5' | '10';
-export type KlingAspectRatio = '16:9' | '9:16' | '1:1';
+export type { KlingDuration };
+export type KlingAspectRatio = "16:9" | "9:16" | "1:1";
 
 export interface RoomVideoGenerateRequest {
+  jobId?: string;
   videoId: string;
   projectId: string;
   userId: string;
@@ -47,7 +48,7 @@ export interface VideoProcessResponse {
 }
 
 export interface HealthCheckResponse {
-  status: 'healthy' | 'unhealthy';
+  status: "healthy" | "unhealthy";
   timestamp: string;
   checks: {
     ffmpeg: boolean;
@@ -64,12 +65,12 @@ export interface HealthCheckResponse {
 
 export interface JobStatusResponse {
   jobId: string;
-  status: 'queued' | 'processing' | 'completed' | 'failed';
+  status: "queued" | "processing" | "completed" | "failed";
   progress: number; // 0-100
   error?: string;
   result?: {
     videoUrl: string;
-    thumbnailUrl: string;
+    thumbnailUrl?: string;
     duration: number;
   };
 }
@@ -77,7 +78,7 @@ export interface JobStatusResponse {
 export interface WebhookPayload {
   jobId: string;
   projectId: string;
-  status: 'completed' | 'failed';
+  status: "completed" | "failed";
   videoUrl?: string;
   thumbnailUrl?: string;
   duration?: number;
@@ -87,7 +88,7 @@ export interface WebhookPayload {
 
 export interface FalWebhookPayload {
   request_id: string;
-  status: 'OK' | 'ERROR';
+  status: "OK" | "ERROR";
   payload?: {
     video?: {
       url: string;
@@ -118,5 +119,3 @@ export interface SuccessResponse<T = unknown> {
   success: true;
   data?: T;
 }
-
-export type ApiResponse<T = unknown> = SuccessResponse<T> | ErrorResponse;

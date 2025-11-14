@@ -1,5 +1,8 @@
 import { VideoCompositionService } from '../videoCompositionService';
-import type { VideoCompositionSettings, ComposedVideoResult } from '../videoCompositionService';
+import type {
+  ComposedVideoResult,
+  VideoCompositionSettings,
+} from '@shared/types/video';
 import * as fs from 'fs/promises';
 
 // Mock dependencies

@@ -7,12 +7,12 @@ import { Router, Request, Response } from 'express';
 import { logger } from '@/config/logger';
 import { validateApiKey } from '@/middleware/auth';
 import {
+  CancelVideoRequest,
+  ErrorResponse,
+  JobStatusResponse,
   RoomVideoGenerateRequest,
   RoomVideoGenerateResponse,
-  JobStatusResponse,
-  ErrorResponse,
-  CancelVideoRequest,
-} from '@/types/requests';
+} from '@shared/types/api';
 import { roomVideoService } from '@/services/roomVideoService';
 import { videoRepository } from '@/services/db/videoRepository';
 import { videoJobRepository } from '@/services/db/videoJobRepository';

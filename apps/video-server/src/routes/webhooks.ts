@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
 import logger from "@/config/logger";
 import { roomVideoService } from "@/services/roomVideoService";
-import type { FalWebhookPayload } from "@/types/requests";
+import type { FalWebhookPayload } from "@shared/types/api";
 
 const router = Router();
 

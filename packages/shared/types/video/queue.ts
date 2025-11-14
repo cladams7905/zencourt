@@ -4,7 +4,7 @@
  * Type definitions for Bull queue jobs and webhook delivery
  */
 
-import type { VideoCompositionSettings } from '@/services/videoCompositionService';
+import type { VideoCompositionSettings } from "./composition";
 
 // ============================================================================
 // Video Processing Job Types

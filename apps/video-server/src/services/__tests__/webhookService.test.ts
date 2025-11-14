@@ -4,7 +4,7 @@
 
 import { webhookService } from '../webhookService';
 import axios, { AxiosError } from 'axios';
-import { QueueError } from '@/types/queue';
+import { QueueError } from '@shared/types/video';
 
 jest.mock('axios');
 jest.mock('@/config/logger', () => ({
@@ -203,7 +203,7 @@ describe('WebhookService', () => {
 
   describe('Type definitions', () => {
     it('should have correct WebhookPayload type', () => {
-      const payload: import('@/types/queue').WebhookPayload = {
+      const payload: import('@shared/types/video/queue').WebhookPayload = {
         jobId: 'test',
         status: 'completed',
         timestamp: new Date().toISOString(),
@@ -219,7 +219,7 @@ describe('WebhookService', () => {
     });
 
     it('should have correct WebhookDeliveryOptions type', () => {
-      const options: import('@/types/queue').WebhookDeliveryOptions = {
+      const options: import('@shared/types/video/queue').WebhookDeliveryOptions = {
         url: 'https://example.com/webhook',
         secret: 'test-secret',
         payload: {

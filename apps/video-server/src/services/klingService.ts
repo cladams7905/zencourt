@@ -1,7 +1,7 @@
 import { fal } from "@fal-ai/client";
 import logger from "@/config/logger";
 import { env } from "@/config/env";
-import type { KlingAspectRatio, KlingDuration } from "@/types/requests";
+import type { KlingAspectRatio, KlingDuration } from "@shared/types/api";
 
 interface SubmitOptions {
   prompt: string;

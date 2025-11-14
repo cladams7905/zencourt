@@ -40,6 +40,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { CategorizedGroup, RoomCategory } from "@web/src/types/vision";
+import type { LogoPosition } from "@shared/types/video";
 
 export interface VideoSettings {
   orientation: "landscape" | "vertical";
@@ -60,7 +61,6 @@ interface PlanStageProps {
 }
 
 type VideoOrientation = "landscape" | "vertical";
-type LogoPosition = "top-left" | "top-right" | "bottom-left" | "bottom-right";
 type SubtitleFont =
   | "arial"
   | "helvetica"

@@ -2,7 +2,7 @@
  * Video Queue Tests
  */
 
-import type { VideoJob, QueueStats } from '@/types/queue';
+import type { QueueStats, VideoJob } from '@shared/types/video';
 
 // Mock dependencies before imports
 jest.mock('bull');
@@ -72,7 +72,7 @@ describe('VideoQueue', () => {
     });
 
     it('should have correct VideoJobResult type', () => {
-      const result: import('@/types/queue').VideoJobResult = {
+      const result: import('@shared/types/video/queue').VideoJobResult = {
         videoUrl: 'https://s3.amazonaws.com/final.mp4',
         thumbnailUrl: 'https://s3.amazonaws.com/thumb.jpg',
         duration: 120,
@@ -84,7 +84,7 @@ describe('VideoQueue', () => {
     });
 
     it('should have correct VideoJobStatus type', () => {
-      const statuses: import('@/types/queue').VideoJobStatus[] = [
+      const statuses: import('@shared/types/video/queue').VideoJobStatus[] = [
         'queued',
         'processing',
         'completed',
@@ -95,7 +95,7 @@ describe('VideoQueue', () => {
     });
 
     it('should have correct VideoJobProgress type', () => {
-      const progress: import('@/types/queue').VideoJobProgress = {
+      const progress: import('@shared/types/video/queue').VideoJobProgress = {
         jobId: 'test-job-123',
         status: 'processing',
         progress: 50,
@@ -151,7 +151,7 @@ describe('VideoQueue', () => {
 
   describe('Queue error handling', () => {
     it('should create QueueError with correct properties', () => {
-      const { QueueError } = require('@/types/queue');
+      const { QueueError } = require('@shared/types/video/queue');
       const error = new QueueError(
         'Test error',
         'REDIS_CONNECTION_ERROR',
@@ -165,7 +165,7 @@ describe('VideoQueue', () => {
     });
 
     it('should have all QueueErrorCode types', () => {
-      const errorCodes: import('@/types/queue').QueueErrorCode[] = [
+      const errorCodes: import('@shared/types/video/queue').QueueErrorCode[] = [
         'REDIS_CONNECTION_ERROR',
         'JOB_TIMEOUT',
         'JOB_PROCESSING_ERROR',
@@ -180,7 +180,7 @@ describe('VideoQueue', () => {
 
   describe('Webhook payload types', () => {
     it('should have correct WebhookPayload for completed job', () => {
-      const payload: import('@/types/queue').WebhookPayload = {
+      const payload: import('@shared/types/video/queue').WebhookPayload = {
         jobId: 'test-job-123',
         status: 'completed',
         timestamp: '2025-01-01T00:00:00.000Z',
@@ -197,7 +197,7 @@ describe('VideoQueue', () => {
     });
 
     it('should have correct WebhookPayload for failed job', () => {
-      const payload: import('@/types/queue').WebhookPayload = {
+      const payload: import('@shared/types/video/queue').WebhookPayload = {
         jobId: 'test-job-123',
         status: 'failed',
         timestamp: '2025-01-01T00:00:00.000Z',
@@ -246,7 +246,7 @@ describe('VideoQueue', () => {
     });
 
     it('should support all logo positions', () => {
-      const positions: import('@/services/videoCompositionService').LogoPosition[] = [
+      const positions: import('@shared/types/video').LogoPosition[] = [
         'top-left',
         'top-right',
         'bottom-left',

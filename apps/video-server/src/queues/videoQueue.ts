@@ -8,11 +8,11 @@ import Queue, { Job, JobOptions } from 'bull';
 import { env } from '@/config/env';
 import { logger } from '@/config/logger';
 import {
+  QueueError,
+  QueueStats,
   VideoJob,
   VideoJobResult,
-  QueueStats,
-  QueueError,
-} from '@/types/queue';
+} from '@shared/types/video';
 import { videoCompositionService } from '@/services/videoCompositionService';
 import { webhookService } from '@/services/webhookService';
 import { projectRepository } from '@/services/db/projectRepository';

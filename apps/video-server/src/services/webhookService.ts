@@ -7,7 +7,7 @@
 import axios, { AxiosError } from 'axios';
 import { createHmac } from 'crypto';
 import { logger } from '@/config/logger';
-import { WebhookDeliveryOptions, QueueError } from '@/types/queue';
+import { QueueError, WebhookDeliveryOptions } from '@shared/types/video';
 
 // ============================================================================
 // Webhook Service Class
