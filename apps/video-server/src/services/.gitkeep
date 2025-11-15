@@ -1,5 +1,0 @@
-# Services directory
-# Will contain:
-# - s3Service.ts (Task 6)
-# - videoCompositionService.ts (Task 7)
-# - webhookService.ts (Task 11)
