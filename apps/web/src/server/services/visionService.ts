@@ -11,7 +11,6 @@ import {
   type RoomClassification,
   type SceneDescription
 } from "@web/src/types/vision";
-import { AIVisionError } from "@shared/types/errors";
 import { createChildLogger, logger as baseLogger } from "../../lib/logger";
 
 const visionLogger = createChildLogger(baseLogger, {
@@ -24,6 +23,26 @@ type RetryOptions = {
   timeoutMessage: string;
   failureContext: string;
 };
+
+/**
+ * Error types that can occur during AI vision processing
+ */
+type AIVisionErrorCode =
+  | "API_ERROR"
+  | "TIMEOUT"
+  | "INVALID_RESPONSE"
+  | "RATE_LIMIT";
+
+export class AIVisionError extends Error {
+  constructor(
+    message: string,
+    public code: AIVisionErrorCode,
+    public details?: unknown
+  ) {
+    super(message);
+    this.name = "AIVisionError";
+  }
+}
 
 export class VisionService {
   private client: OpenAI | null = null;

@@ -43,10 +43,7 @@ export type JobGenerationSettings = {
   prompt: string;
   category: string;
   sortOrder: number;
+  roomId?: string;
+  roomName?: string;
+  roomNumber?: number;
 };
-
-export type JobDeliveryStatus =
-  | "pending"
-  | "delivering"
-  | "delivered"
-  | "failed";

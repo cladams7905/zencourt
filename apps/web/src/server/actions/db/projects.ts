@@ -24,7 +24,7 @@ export async function createProject(): Promise<DBProject> {
         .values({
           id: randomUUID(),
           userId: user.id,
-          status: "uploading"
+          status: "draft"
         })
         .returning();
 

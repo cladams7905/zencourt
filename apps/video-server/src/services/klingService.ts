@@ -1,12 +1,12 @@
 import { fal } from "@fal-ai/client";
 import logger from "@/config/logger";
 import { env } from "@/config/env";
-import type { KlingAspectRatio, KlingDuration } from "@shared/types/api";
+import type { KlingAspectRatio } from "@shared/types/api";
 
 interface SubmitOptions {
   prompt: string;
   imageUrls: string[];
-  duration?: KlingDuration;
+  duration?: "5" | "10";
   aspectRatio?: KlingAspectRatio;
   webhookUrl?: string;
 }

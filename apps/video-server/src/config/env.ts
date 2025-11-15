@@ -67,6 +67,7 @@ interface EnvConfig {
 
   // Vercel Webhook
   vercelApiUrl: string;
+  webhookSigningSecret: string;
   webhookRetryAttempts: number;
   webhookRetryBackoffMs: number;
 
@@ -114,6 +115,7 @@ export const env: EnvConfig = {
 
   // Vercel Webhook
   vercelApiUrl: getEnvVar("VERCEL_API_URL"),
+  webhookSigningSecret: getEnvVar("VERCEL_WEBHOOK_SIGNING_KEY"),
   webhookRetryAttempts: getEnvVarNumber("WEBHOOK_RETRY_ATTEMPTS", 5),
   webhookRetryBackoffMs: getEnvVarNumber("WEBHOOK_RETRY_BACKOFF_MS", 1000),
 
@@ -138,6 +140,7 @@ export function validateEnv(): void {
     "AWS_REGION",
     "AWS_S3_BUCKET",
     "VERCEL_API_URL",
+    "VERCEL_WEBHOOK_SIGNING_KEY",
     "DATABASE_URL",
     "FAL_KEY",
     "FAL_WEBHOOK_URL"
@@ -173,6 +176,7 @@ export function validateEnv(): void {
       awsRegion: env.awsRegion,
       awsS3Bucket: env.awsS3Bucket,
       vercelApiUrl: env.vercelApiUrl,
+      webhookSigningSecret: "***REDACTED***",
       webhookRetryAttempts: env.webhookRetryAttempts,
       maxConcurrentJobs: env.maxConcurrentJobs,
       jobTimeoutMs: env.jobTimeoutMs,

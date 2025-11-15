@@ -34,9 +34,9 @@ async function extractReason(request: NextRequest): Promise<string | undefined> 
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { projectId: string } }
+  { params }: { params: Promise<{ projectId: string }> }
 ) {
-  const projectId = params.projectId;
+  const { projectId } = await params;
 
   if (!projectId) {
     return NextResponse.json(

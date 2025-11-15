@@ -1,50 +1,57 @@
-/**
- * Type definitions for API requests and responses
- */
-
 import type { VideoCompositionSettings } from "../video/composition";
-import type { KlingDuration } from "./requests";
 
 export type { VideoCompositionSettings };
-export type { KlingDuration };
 export type KlingAspectRatio = "16:9" | "9:16" | "1:1";
 
-export interface RoomVideoGenerateRequest {
-  jobId?: string;
-  videoId: string;
-  projectId: string;
-  userId: string;
-  roomId: string;
-  roomName?: string;
-  roomType?: string;
-  prompt: string;
-  imageUrls: string[];
-  duration?: KlingDuration;
-  aspectRatio?: KlingAspectRatio;
-  metadata?: Record<string, unknown>;
+export interface VideoJobResult {
+  videoUrl: string;
+  thumbnailUrl?: string;
+  duration: number;
+  fileSize?: number;
+  resolution?: {
+    width: number;
+    height: number;
+  };
 }
 
-export interface RoomVideoGenerateResponse {
-  success: boolean;
-  requestId: string;
-  videoId: string;
+export interface VideoJobError {
+  message: string;
+  type?: string;
+  code?: string;
+  retryable?: boolean;
 }
 
-export interface VideoProcessRequest {
+export type VideoJobWebhookStatus = "completed" | "failed";
+
+export interface VideoJobWebhookPayload {
   jobId: string;
   projectId: string;
-  userId: string;
-  roomVideoUrls: string[];
-  compositionSettings: VideoCompositionSettings;
-  webhookUrl: string;
-  webhookSecret: string;
+  userId?: string;
+  status: VideoJobWebhookStatus;
+  timestamp: string;
+  result?: VideoJobResult;
+  error?: VideoJobError;
 }
 
-export interface VideoProcessResponse {
+/**
+ * Job-based video generation request for video server
+ * Accepts parent videoId and array of jobIds to process
+ */
+export interface VideoServerGenerateRequest {
+  videoId: string; // Parent video ID
+  jobIds: string[]; // Array of video_jobs IDs to process
+  projectId: string;
+  userId: string;
+}
+
+/**
+ * Response from video server generation endpoint
+ */
+export interface VideoServerGenerateResponse {
   success: boolean;
-  jobId: string;
-  estimatedDuration: number; // seconds
-  queuePosition: number;
+  message: string;
+  videoId: string;
+  jobsStarted: number;
 }
 
 export interface HealthCheckResponse {
@@ -60,40 +67,11 @@ export interface JobStatusResponse {
   jobId: string;
   status: "queued" | "processing" | "completed" | "failed";
   progress: number; // 0-100
-  error?: string;
-  result?: {
-    videoUrl: string;
-    thumbnailUrl?: string;
-    duration: number;
-  };
+  error?: VideoJobError | string;
+  result?: VideoJobResult;
 }
 
-export interface WebhookPayload {
-  jobId: string;
-  projectId: string;
-  status: "completed" | "failed";
-  videoUrl?: string;
-  thumbnailUrl?: string;
-  duration?: number;
-  error?: string;
-  timestamp: string;
-}
-
-export interface FalWebhookPayload {
-  request_id: string;
-  status: "OK" | "ERROR";
-  payload?: {
-    video?: {
-      url: string;
-      file_size?: number;
-      content_type?: string;
-      metadata?: {
-        duration?: number;
-      };
-    };
-  };
-  error?: string;
-}
+export type WebhookPayload = VideoJobWebhookPayload;
 
 export interface CancelVideoRequest {
   projectId: string;
@@ -111,4 +89,20 @@ export interface ErrorResponse {
 export interface SuccessResponse<T = unknown> {
   success: true;
   data?: T;
+}
+
+export interface FalWebhookPayload {
+  request_id: string;
+  status: "OK" | "ERROR";
+  payload?: {
+    video?: {
+      url: string;
+      file_size?: number;
+      content_type?: string;
+      metadata?: {
+        duration?: number;
+      };
+    };
+  };
+  error?: string;
 }

@@ -4,10 +4,10 @@
  * Service for delivering webhook notifications with retry logic and HMAC signatures
  */
 
-import axios, { AxiosError } from 'axios';
-import { createHmac } from 'crypto';
-import { logger } from '@/config/logger';
-import { QueueError, WebhookDeliveryOptions } from '@shared/types/video';
+import axios, { AxiosError } from "axios";
+import { createHmac } from "crypto";
+import { logger } from "@/config/logger";
+import { QueueError, WebhookDeliveryOptions } from "@shared/types/video";
 
 // ============================================================================
 // Webhook Service Class
@@ -18,9 +18,7 @@ class WebhookService {
    * Generate HMAC signature for webhook payload
    */
   private generateSignature(payload: string, secret: string): string {
-    return createHmac('sha256', secret)
-      .update(payload)
-      .digest('hex');
+    return createHmac("sha256", secret).update(payload).digest("hex");
   }
 
   /**
@@ -31,11 +29,14 @@ class WebhookService {
     const payloadString = JSON.stringify(payload);
     const signature = this.generateSignature(payloadString, secret);
 
-    logger.info({
-      url,
-      jobId: payload.jobId,
-      status: payload.status,
-    }, 'Sending webhook');
+    logger.info(
+      {
+        url,
+        jobId: payload.jobId,
+        status: payload.status
+      },
+      "Sending webhook"
+    );
 
     let lastError: Error | null = null;
 
@@ -43,23 +44,26 @@ class WebhookService {
       try {
         const response = await axios.post(url, payload, {
           headers: {
-            'Content-Type': 'application/json',
-            'X-Webhook-Signature': signature,
-            'X-Webhook-Delivery-Attempt': attempt.toString(),
-            'X-Webhook-Timestamp': payload.timestamp,
-            'User-Agent': 'ZenCourt-Video-Server/1.0',
+            "Content-Type": "application/json",
+            "X-Webhook-Signature": signature,
+            "X-Webhook-Delivery-Attempt": attempt.toString(),
+            "X-Webhook-Timestamp": payload.timestamp,
+            "User-Agent": "ZenCourt-Video-Server/1.0"
           },
           timeout: 10000, // 10 second timeout
-          validateStatus: (status) => status >= 200 && status < 300,
+          validateStatus: (status) => status >= 200 && status < 300
         });
 
-        logger.info({
-          url,
-          jobId: payload.jobId,
-          status: payload.status,
-          responseStatus: response.status,
-          attempt,
-        }, 'Webhook delivered successfully');
+        logger.info(
+          {
+            url,
+            jobId: payload.jobId,
+            status: payload.status,
+            responseStatus: response.status,
+            attempt
+          },
+          "Webhook delivered successfully"
+        );
 
         return; // Success!
       } catch (error) {
@@ -69,21 +73,24 @@ class WebhookService {
         const statusCode = isAxiosError ? error.response?.status : undefined;
         const isRetryable = this.isRetryableError(statusCode);
 
-        logger.warn({
-          url,
-          jobId: payload.jobId,
-          attempt,
-          maxRetries,
-          statusCode,
-          error: lastError.message,
-          isRetryable,
-        }, 'Webhook delivery failed, will retry if retryable');
+        logger.warn(
+          {
+            url,
+            jobId: payload.jobId,
+            attempt,
+            maxRetries,
+            statusCode,
+            error: lastError.message,
+            isRetryable
+          },
+          "Webhook delivery failed, will retry if retryable"
+        );
 
         // If not retryable, throw immediately
         if (!isRetryable) {
           throw new QueueError(
             `Webhook delivery failed with non-retryable error: ${lastError.message}`,
-            'WEBHOOK_DELIVERY_ERROR',
+            "WEBHOOK_DELIVERY_ERROR",
             { url, statusCode, error: lastError }
           );
         }
@@ -91,26 +98,32 @@ class WebhookService {
         // If we have more attempts, wait before retrying
         if (attempt < maxRetries) {
           const delay = this.calculateBackoff(attempt, backoffMs);
-          logger.debug({
-            attempt,
-            delay,
-          }, 'Waiting before retry');
+          logger.debug(
+            {
+              attempt,
+              delay
+            },
+            "Waiting before retry"
+          );
           await this.sleep(delay);
         }
       }
     }
 
     // All retries exhausted
-    logger.error({
-      url,
-      jobId: payload.jobId,
-      maxRetries,
-      error: lastError?.message,
-    }, 'Webhook delivery failed after all retries');
+    logger.error(
+      {
+        url,
+        jobId: payload.jobId,
+        maxRetries,
+        error: lastError?.message
+      },
+      "Webhook delivery failed after all retries"
+    );
 
     throw new QueueError(
       `Webhook delivery failed after ${maxRetries} attempts: ${lastError?.message}`,
-      'WEBHOOK_DELIVERY_ERROR',
+      "WEBHOOK_DELIVERY_ERROR",
       { url, error: lastError }
     );
   }
@@ -175,11 +188,10 @@ class WebhookService {
 
     // Use timing-safe comparison to prevent timing attacks
     try {
-      return createHmac('sha256', secret)
-        .update(signature)
-        .digest('hex') === createHmac('sha256', secret)
-        .update(expectedSignature)
-        .digest('hex');
+      return (
+        createHmac("sha256", secret).update(signature).digest("hex") ===
+        createHmac("sha256", secret).update(expectedSignature).digest("hex")
+      );
     } catch {
       return false;
     }

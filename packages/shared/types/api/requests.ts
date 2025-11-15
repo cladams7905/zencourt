@@ -2,6 +2,8 @@
 // Kling API
 // ============================================================================
 
+import { VideoOrientation } from "../models";
+
 export interface KlingApiRequest {
   prompt: string;
   input_image_urls: string[]; // Array of image URLs (up to 4 for elements endpoint)
@@ -29,11 +31,9 @@ export interface S3UploadRequest {
 // Video Generation
 // ============================================================================
 
-export type KlingDuration = "5" | "10";
-
 export interface VideoGenerateRequest {
   projectId: string;
-  orientation: 'landscape' | 'vertical';
+  orientation: VideoOrientation;
   rooms: Array<{
     id: string;
     name: string;
@@ -42,45 +42,5 @@ export interface VideoGenerateRequest {
     imageCount?: number;
   }>;
   aiDirections?: string;
-  duration?: KlingDuration;
-  archiveLabel?: string;
-}
-
-export interface VideoComposeRequest {
-  projectId: string;
-  compositionSettings: {
-    roomOrder: string[];
-    musicUrl?: string;
-    musicVolume?: number;
-    transitions?: {
-      type: string;
-      duration: number;
-    };
-  };
-}
-
-export interface VideoProcessPayload {
-  jobId: string;
-  projectId: string;
-  userId: string;
-  roomVideoUrls: Array<{
-    roomId: string;
-    url: string;
-  }>;
-  compositionSettings: {
-    roomOrder: string[];
-    musicUrl?: string | null;
-    musicVolume?: number;
-    transitions?: {
-      type: string;
-      duration: number;
-    } | null;
-  };
-  webhookUrl: string;
-  webhookSecret: string;
-}
-
-export interface VideoArchiveRequest {
-  projectId: string;
-  label?: string;
+  duration?: "5" | "10";
 }

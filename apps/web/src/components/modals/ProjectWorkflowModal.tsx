@@ -144,7 +144,7 @@ export function ProjectWorkflowModal({
             category: img.category,
             confidence: img.confidence,
             features: img.features,
-            order: img.order,
+            sortOrder: img.sortOrder,
             metadata: img.metadata
           };
           return processed;

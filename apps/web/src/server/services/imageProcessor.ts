@@ -114,7 +114,7 @@ export class imageProcessorService {
             : image.features,
           sceneDescription: image.sceneDescription,
           status: image.status,
-          order: image.order,
+          sortOrder: image.sortOrder,
           metadata: image.metadata,
           error: image.error,
           uploadUrl: image.uploadUrl

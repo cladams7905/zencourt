@@ -61,10 +61,7 @@ export function ProjectsView({ initialProjects }: ProjectsViewProps) {
   const uniqueProjects = Array.from(
     new Map(projects.map((p) => [p.id, p])).values()
   );
-  const filteredProjects = uniqueProjects.filter((project) => {
-    if (filter === "all") return true;
-    return project.format === filter;
-  });
+  const filteredProjects = uniqueProjects;
 
   if (projects.length === 0) {
     return (
@@ -177,45 +174,15 @@ export function ProjectsView({ initialProjects }: ProjectsViewProps) {
                 className="bg-white rounded-xl overflow-hidden border border-border hover:shadow-lg transition-shadow group cursor-pointer"
               >
                 <div className="relative aspect-video bg-linear-to-br from-[#d4c4b0] to-[#e8ddd3] overflow-hidden">
-                  {project.format === "vertical" ? (
-                    <>
-                      <Image
-                        src={project.thumbnailUrl || HouseFallback}
-                        alt=""
-                        className="absolute inset-0 w-full h-full object-cover blur-2xl scale-110 opacity-60"
-                      />
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <Image
-                          src={project.thumbnailUrl || HouseFallback}
-                          alt={project.title || "Undefined"}
-                          className="h-full w-auto object-cover"
-                        />
-                      </div>
-                    </>
-                  ) : (
-                    <Image
-                      src={project.thumbnailUrl || HouseFallback}
-                      alt={project.title || "Undefined"}
-                      className="w-full h-full object-cover"
-                    />
-                  )}
+                  <Image
+                    src={project.thumbnailUrl || HouseFallback}
+                    alt={project.title || "Undefined"}
+                    className="w-full h-full object-cover"
+                  />
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
                     <button className="opacity-0 group-hover:opacity-100 transition-opacity bg-white rounded-full p-3">
                       <Play size={24} fill="black" stroke="black" />
                     </button>
-                  </div>
-                  <div className="absolute top-3 right-3 flex gap-2">
-                    {project.subtitles && (
-                      <div className="bg-black/70 text-white px-2 py-1 rounded text-xs">
-                        CC
-                      </div>
-                    )}
-                    <div className="bg-black/70 text-white px-2 py-1 rounded text-xs">
-                      {project.format === "vertical" ? "9:16" : "16:9"}
-                    </div>
-                  </div>
-                  <div className="absolute bottom-3 left-3 bg-black/70 text-white px-2 py-1 rounded text-xs">
-                    {project.duration}
                   </div>
                 </div>
                 <div className="p-4">
@@ -224,9 +191,6 @@ export function ProjectsView({ initialProjects }: ProjectsViewProps) {
                       <h3 className="mb-1 truncate">{project.title}</h3>
                       <p className="text-xs text-muted-foreground mb-1">
                         {project.status}
-                      </p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {project.platform}
                       </p>
                     </div>
                     <button className="text-muted-foreground hover:text-foreground ml-2">

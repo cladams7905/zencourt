@@ -9,10 +9,10 @@ import { validateApiKey } from "@/middleware/auth";
 import {
   CancelVideoRequest,
   ErrorResponse,
-  RoomVideoGenerateRequest,
-  RoomVideoGenerateResponse
+  VideoServerGenerateRequest,
+  VideoServerGenerateResponse
 } from "@shared/types/api";
-import { roomVideoService } from "@/services/roomVideoService";
+import { videoGenerationService } from "@/services/videoGenerationService";
 import { videoRepository } from "@/services/db/videoRepository";
 import { videoJobRepository } from "@/services/db/videoJobRepository";
 
@@ -23,18 +23,19 @@ router.use(validateApiKey);
 
 /**
  * POST /video/generate
- * Submit a room video generation job to fal.ai through the video server
+ * Process video generation jobs using the new job-based workflow
+ * Accepts parent videoId and jobIds, reads video_jobs from DB, dispatches to Fal
  */
 router.post("/generate", async (req: Request, res: Response) => {
   try {
-    const requestData = req.body as RoomVideoGenerateRequest;
+    const requestData = req.body as VideoServerGenerateRequest;
 
-    const requiredFields: (keyof RoomVideoGenerateRequest)[] = [
+    // Validate required fields
+    const requiredFields: (keyof VideoServerGenerateRequest)[] = [
       "videoId",
+      "jobIds",
       "projectId",
-      "userId",
-      "roomId",
-      "prompt"
+      "userId"
     ];
 
     const missingFields = requiredFields.filter((field) => !requestData[field]);
@@ -55,34 +56,43 @@ router.post("/generate", async (req: Request, res: Response) => {
           videoId: requestData.videoId,
           projectId: requestData.projectId
         },
-        "Invalid room video generation request"
+        "[VideoRoute] Invalid video generation request"
       );
 
       res.status(400).json(errorResponse);
       return;
     }
 
-    if (
-      !Array.isArray(requestData.imageUrls) ||
-      requestData.imageUrls.length === 0
-    ) {
+    // Validate jobIds is a non-empty array
+    if (!Array.isArray(requestData.jobIds) || requestData.jobIds.length === 0) {
       const errorResponse: ErrorResponse = {
         success: false,
         error: "Invalid request",
         code: "VALIDATION_ERROR",
-        details: { message: "imageUrls must be a non-empty array" }
+        details: { message: "jobIds must be a non-empty array" }
       };
 
       res.status(400).json(errorResponse);
       return;
     }
 
-    const { requestId } = await roomVideoService.startGeneration(requestData);
+    logger.info(
+      {
+        videoId: requestData.videoId,
+        projectId: requestData.projectId,
+        jobCount: requestData.jobIds.length,
+        jobIds: requestData.jobIds
+      },
+      "[VideoRoute] Starting video generation for jobs"
+    );
 
-    const successResponse: RoomVideoGenerateResponse = {
+    const result = await videoGenerationService.startGeneration(requestData);
+
+    const successResponse: VideoServerGenerateResponse = {
       success: true,
-      requestId,
-      videoId: requestData.videoId
+      message: "Video generation started",
+      videoId: requestData.videoId,
+      jobsStarted: result.jobsStarted
     };
 
     res.status(202).json(successResponse);
@@ -92,7 +102,7 @@ router.post("/generate", async (req: Request, res: Response) => {
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined
       },
-      "Failed to start room video generation request"
+      "[VideoRoute] Failed to start video generation"
     );
 
     const errorResponse: ErrorResponse = {
@@ -132,7 +142,7 @@ router.post("/cancel", async (req: Request, res: Response) => {
         ? await videoRepository.cancelVideosByIds(videoIds, cancelReason)
         : await videoRepository.cancelVideosByProject(projectId, cancelReason);
 
-    const canceledJobs = await videoJobRepository.cancelJobsByProject(
+    const canceledJobs = await videoJobRepository.cancelJobsByProjectId(
       projectId,
       cancelReason
     );

@@ -118,7 +118,7 @@ export function toSerializable(image: ProcessedImage): SerializableImageData {
     features: image.features,
     sceneDescription: image.sceneDescription,
     status: image.status,
-    order: image.order,
+    sortOrder: image.sortOrder,
     metadata: image.metadata,
     error: image.error,
     uploadUrl: image.uploadUrl
@@ -141,7 +141,7 @@ export function toInsertDBImage(
     confidence: image.confidence ?? null,
     features: image.features ?? null,
     sceneDescription: image.sceneDescription ?? null,
-    order: image.order ?? null,
+    sortOrder: image.sortOrder ?? null,
     metadata: image.metadata ?? null
   };
 }

@@ -81,7 +81,7 @@ async function saveImagesToDatabase(
   const imagesToSave = images
     .filter((img) => img.url && img.category)
     .map((img, index) =>
-      toInsertDBImage({ ...img, order: img.order ?? index }, projectId)
+      toInsertDBImage({ ...img, sortOrder: img.sortOrder ?? index }, projectId)
     );
 
   if (imagesToSave.length > 0) {
@@ -229,7 +229,7 @@ export function CategorizeStage({
     setIsCategorizing(true);
 
     try {
-      await updateProject(currentProject.id, { status: "analyzing" });
+      await updateProject(currentProject.id, { status: "draft" });
 
       let finalImages: ProcessedImage[];
 

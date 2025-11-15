@@ -34,7 +34,7 @@ export async function saveImages(
       const imageRecords: InsertDBImage[] = imageData.map((img, index) => ({
         ...img,
         projectId,
-        order: img.order ?? index
+        sortOrder: img.sortOrder ?? index
       }));
 
       const savedImages = await db
@@ -47,7 +47,7 @@ export async function saveImages(
             confidence: sql`excluded.confidence`,
             features: sql`excluded.features`,
             sceneDescription: sql`excluded.scene_description`,
-            order: sql`excluded.order`,
+            sortOrder: sql`excluded.sort_order`,
             metadata: sql`excluded.metadata`
           }
         })

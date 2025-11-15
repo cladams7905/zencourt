@@ -1,26 +1,26 @@
 import { Router, Request, Response } from "express";
 import logger from "@/config/logger";
-import { roomVideoService } from "@/services/roomVideoService";
+import { videoGenerationService } from "@/services/videoGenerationService";
 import type { FalWebhookPayload } from "@shared/types/api";
 
 const router = Router();
 
 /**
  * fal.ai webhook handler
- * Processes video generation completion notifications
+ * Processes video generation completion notifications for job-based workflow
  * Returns 200 OK even on internal failures to prevent fal.ai retries
  */
 router.post("/fal", async (req: Request, res: Response) => {
   const startTime = Date.now();
 
-  // Extract videoId from query params (fallback for legacy webhooks)
-  const rawVideoId = (req.query?.videoId ?? req.query?.video_id) as
+  // Extract requestId from query params (this is the jobId in new workflow)
+  const rawRequestId = (req.query?.requestId ?? req.query?.request_id) as
     | string
     | string[]
     | undefined;
-  const fallbackVideoId = Array.isArray(rawVideoId)
-    ? rawVideoId[0]
-    : rawVideoId;
+  const jobId = Array.isArray(rawRequestId)
+    ? rawRequestId[0]
+    : rawRequestId;
 
   try {
     const payload = req.body as FalWebhookPayload;
@@ -29,7 +29,7 @@ router.post("/fal", async (req: Request, res: Response) => {
       {
         requestId: payload.request_id,
         status: payload.status,
-        fallbackVideoId,
+        jobId,
         webhookDuration: Date.now() - startTime
       },
       "[WebhookRoute] Received fal webhook"
@@ -37,12 +37,13 @@ router.post("/fal", async (req: Request, res: Response) => {
 
     // Process webhook asynchronously (don't wait for completion)
     // This ensures we return 200 OK quickly to fal.ai
-    roomVideoService
-      .handleFalWebhook(payload, fallbackVideoId)
+    videoGenerationService
+      .handleFalWebhook(payload, jobId)
       .catch((error) => {
         logger.error(
           {
             requestId: payload.request_id,
+            jobId,
             error: error instanceof Error ? error.message : String(error),
             stack: error instanceof Error ? error.stack : undefined
           },
@@ -51,14 +52,14 @@ router.post("/fal", async (req: Request, res: Response) => {
       });
 
     // Always return 200 OK to prevent fal.ai retries
-    // Internal failures are logged and handled in roomVideoService
+    // Internal failures are logged and handled in videoGenerationService
     res.status(200).json({ success: true });
   } catch (error) {
     // Log parsing/validation errors but still return 200
     logger.error(
       {
         error: error instanceof Error ? error.message : String(error),
-        fallbackVideoId,
+        jobId,
         body: req.body
       },
       "[WebhookRoute] Failed to parse fal webhook"
