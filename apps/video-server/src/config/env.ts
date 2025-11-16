@@ -1,7 +1,6 @@
 import { config } from "dotenv";
 import * as fs from "fs";
 import * as path from "path";
-import { logger } from "@/config/logger";
 
 function loadLocalEnvFiles(): void {
   const envFiles: string[] = [];
@@ -40,7 +39,7 @@ function loadLocalEnvFiles(): void {
   }
 
   if (loaded.length > 0) {
-    logger.info(`[Config] Loaded env files: ${loaded}`);
+    console.log(`[Config] Loaded env files: ${loaded}`);
     return;
   }
 
@@ -64,6 +63,7 @@ interface EnvConfig {
   // AWS
   awsRegion: string;
   awsS3Bucket: string;
+  awsVideoServerUrl: string;
 
   // Vercel Webhook
   vercelApiUrl: string;
@@ -100,6 +100,14 @@ function getEnvVarNumber(name: string, defaultValue?: number): number {
   return value ? parseInt(value, 10) : defaultValue!;
 }
 
+const awsVideoServerUrl = getEnvVar("AWS_VIDEO_SERVER_URL").replace(
+  /\/+$/,
+  ""
+);
+const falWebhookUrl =
+  process.env.FAL_WEBHOOK_URL?.trim() ||
+  `${awsVideoServerUrl.replace(/\/+$/, "")}/webhooks/fal`;
+
 export const env: EnvConfig = {
   // Server
   nodeEnv: getEnvVar("NODE_ENV", "development"),
@@ -112,6 +120,7 @@ export const env: EnvConfig = {
   // AWS
   awsRegion: getEnvVar("AWS_REGION", "us-east-1"),
   awsS3Bucket: getEnvVar("AWS_S3_BUCKET"),
+  awsVideoServerUrl,
 
   // Vercel Webhook
   vercelApiUrl: getEnvVar("VERCEL_API_URL"),
@@ -129,21 +138,21 @@ export const env: EnvConfig = {
 
   // fal.ai
   falApiKey: getEnvVar("FAL_KEY"),
-  falWebhookUrl: getEnvVar("FAL_WEBHOOK_URL")
+  falWebhookUrl
 };
 
 export function validateEnv(): void {
-  logger.debug("[Config] Validating environment variables...");
+  console.log("[Config] Validating environment variables...");
 
   // List of required variables that must be set
   const requiredVars = [
     "AWS_REGION",
     "AWS_S3_BUCKET",
+    "AWS_VIDEO_SERVER_URL",
     "VERCEL_API_URL",
     "VERCEL_WEBHOOK_SIGNING_KEY",
     "DATABASE_URL",
-    "FAL_KEY",
-    "FAL_WEBHOOK_URL"
+    "FAL_KEY"
   ];
 
   const missing: string[] = [];
@@ -168,8 +177,9 @@ export function validateEnv(): void {
     );
   }
 
-  logger.info(
-    `[Config] ✅ Loaded configuration: ${{
+  console.log(
+    `[Config] ✅ Loaded configuration:`,
+    JSON.stringify({
       nodeEnv: env.nodeEnv,
       port: env.port,
       logLevel: env.logLevel,
@@ -185,6 +195,6 @@ export function validateEnv(): void {
       awsApiKey: "***REDACTED***",
       falApiKey: "***REDACTED***",
       falWebhookUrl: env.falWebhookUrl
-    }}`
+    }, null, 2)
   );
 }

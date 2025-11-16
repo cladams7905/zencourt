@@ -10,7 +10,7 @@ import { klingService } from "./klingService";
 import { ffmpegService } from "./ffmpegService";
 import { s3Service } from "./s3Service";
 import { webhookService } from "./webhookService";
-import { db, videoJobs, videos } from "@db/client";
+import { db, videoJobs, videos, projects } from "@db/client";
 import { eq, inArray } from "drizzle-orm";
 import type {
   VideoServerGenerateRequest,
@@ -25,7 +25,42 @@ interface GenerationResult {
   failedJobs: string[];
 }
 
+interface VideoContext {
+  videoId: string;
+  projectId: string;
+  userId: string;
+}
+
 class VideoGenerationService {
+  private async getVideoContext(videoId: string): Promise<VideoContext> {
+    const [record] = await db
+      .select({
+        videoId: videos.id,
+        projectId: videos.projectId,
+        userId: projects.userId
+      })
+      .from(videos)
+      .leftJoin(projects, eq(videos.projectId, projects.id))
+      .where(eq(videos.id, videoId))
+      .limit(1);
+
+    if (!record?.videoId || !record?.projectId || !record?.userId) {
+      throw new Error(
+        `Video context missing for video ${videoId} (ensure project/user exists)`
+      );
+    }
+
+    return {
+      videoId: record.videoId,
+      projectId: record.projectId,
+      userId: record.userId
+    };
+  }
+
+  private buildStorageBasePath(context: VideoContext): string {
+    return `user_${context.userId}/projects/project_${context.projectId}/videos/video_${context.videoId}`;
+  }
+
   /**
    * Build webhook URL for Fal callback
    * Uses requestId instead of videoId for proper job matching
@@ -333,6 +368,23 @@ class VideoGenerationService {
       return;
     }
 
+    const falCompletionTime = new Date();
+
+    if (!job.processingCompletedAt) {
+      await db
+        .update(videoJobs)
+        .set({
+          processingCompletedAt: falCompletionTime,
+          updatedAt: new Date()
+        })
+        .where(eq(videoJobs.id, job.id));
+
+      job = {
+        ...job,
+        processingCompletedAt: falCompletionTime
+      };
+    }
+
     // Idempotency check: skip if already completed
     if (job.status === "completed") {
       logger.info(
@@ -370,7 +422,7 @@ class VideoGenerationService {
           errorMessage,
           errorType: "FAL_ERROR",
           errorRetryable: false,
-          processingCompletedAt: new Date(),
+          processingCompletedAt: job.processingCompletedAt ?? falCompletionTime,
           updatedAt: new Date()
         })
         .where(eq(videoJobs.id, job.id));
@@ -405,6 +457,8 @@ class VideoGenerationService {
     // Success case: Process video and upload to S3
     try {
       const falVideoUrl = payload.payload.video.url;
+      const videoContext = await this.getVideoContext(job.videoId);
+      const storageBasePath = this.buildStorageBasePath(videoContext);
 
       logger.info(
         {
@@ -427,8 +481,8 @@ class VideoGenerationService {
       });
 
       // Step 2: Upload processed video and thumbnail to S3
-      const videoKey = `videos/${job.videoId}/jobs/${job.id}/video.mp4`;
-      const thumbnailKey = `videos/${job.videoId}/jobs/${job.id}/thumbnail.jpg`;
+      const videoKey = `${storageBasePath}/jobs/job_${job.id}/video.mp4`;
+      const thumbnailKey = `${storageBasePath}/jobs/job_${job.id}/thumbnail.jpg`;
 
       const [videoUrl, thumbnailUrl] = await Promise.all([
         s3Service.uploadFile({
@@ -438,7 +492,8 @@ class VideoGenerationService {
           metadata: {
             jobId: job.id,
             videoId: job.videoId,
-            projectId: job.videoId, // Will be fetched from parent video in Phase 5
+            projectId: videoContext.projectId,
+            userId: videoContext.userId,
             generationModel: job.generationModel || "kling1.6"
           }
         }),
@@ -448,7 +503,9 @@ class VideoGenerationService {
           contentType: "image/jpeg",
           metadata: {
             jobId: job.id,
-            videoId: job.videoId
+            videoId: job.videoId,
+            projectId: videoContext.projectId,
+            userId: videoContext.userId
           }
         })
       ]);
@@ -470,7 +527,7 @@ class VideoGenerationService {
             },
             orientation: job.generationSettings?.orientation || "landscape"
           },
-          processingCompletedAt: new Date(),
+          processingCompletedAt: job.processingCompletedAt ?? falCompletionTime,
           updatedAt: new Date()
         })
         .where(eq(videoJobs.id, job.id));
@@ -501,16 +558,19 @@ class VideoGenerationService {
       });
 
       // Step 5: Check if all jobs for this video are completed
-      const allJobsCompleted = await this.checkAllJobsCompleted(job.videoId);
+      const completionStatus = await this.evaluateJobCompletion(job.videoId);
 
-      if (allJobsCompleted) {
+      if (completionStatus.allCompleted) {
         logger.info(
           { videoId: job.videoId },
           "[VideoGenerationService] All jobs completed, triggering composition"
         );
 
         // Trigger composition asynchronously - don't block webhook response
-        this.composeAndFinalizeVideo(job.videoId).catch((error) => {
+        this.composeAndFinalizeVideo(
+          job.videoId,
+          completionStatus.completedJobs
+        ).catch((error) => {
           logger.error(
             {
               videoId: job.videoId,
@@ -532,6 +592,7 @@ class VideoGenerationService {
           errorMessage,
           errorType: "WEBHOOK_PROCESSING_ERROR",
           errorRetryable: true,
+          processingCompletedAt: job.processingCompletedAt ?? falCompletionTime,
           updatedAt: new Date()
         })
         .where(eq(videoJobs.id, job.id));
@@ -561,15 +622,9 @@ class VideoGenerationService {
     job: DBVideoJob,
     result: VideoJobResult
   ): Promise<void> {
-    // Get parent video to extract projectId and userId
-    const parentVideo = await db
-      .select()
-      .from(videos)
-      .where(eq(videos.id, job.videoId))
-      .limit(1)
-      .then((rows) => rows[0] || null);
+    const videoContext = await this.getVideoContext(job.videoId);
 
-    if (!parentVideo) {
+    if (!videoContext) {
       logger.error(
         { jobId: job.id, videoId: job.videoId },
         "[VideoGenerationService] Cannot send webhook: parent video not found"
@@ -591,7 +646,7 @@ class VideoGenerationService {
 
     const payload: VideoJobWebhookPayload = {
       jobId: job.id,
-      projectId: parentVideo.projectId,
+      projectId: videoContext.projectId,
       status: "completed",
       timestamp: new Date().toISOString(),
       result
@@ -617,7 +672,7 @@ class VideoGenerationService {
       });
 
       logger.info(
-        { jobId: job.id, projectId: parentVideo.projectId },
+        { jobId: job.id, projectId: videoContext.projectId },
         "[VideoGenerationService] ✅ Webhook delivered successfully"
       );
     } catch (error) {
@@ -627,7 +682,7 @@ class VideoGenerationService {
       logger.error(
         {
           jobId: job.id,
-          projectId: parentVideo.projectId,
+          projectId: videoContext.projectId,
           error: errorMessage
         },
         "[VideoGenerationService] ❌ Webhook delivery failed"
@@ -656,18 +711,17 @@ class VideoGenerationService {
     errorType: string,
     errorRetryable: boolean
   ): Promise<void> {
-    // Get parent video to extract projectId
-    const parentVideo = await db
-      .select()
-      .from(videos)
-      .where(eq(videos.id, job.videoId))
-      .limit(1)
-      .then((rows) => rows[0] || null);
-
-    if (!parentVideo) {
+    let videoContext: VideoContext;
+    try {
+      videoContext = await this.getVideoContext(job.videoId);
+    } catch (error) {
       logger.error(
-        { jobId: job.id, videoId: job.videoId },
-        "[VideoGenerationService] Cannot send failure webhook: parent video not found"
+        {
+          jobId: job.id,
+          videoId: job.videoId,
+          error: error instanceof Error ? error.message : String(error)
+        },
+        "[VideoGenerationService] Cannot send failure webhook: missing video context"
       );
       return;
     }
@@ -682,7 +736,7 @@ class VideoGenerationService {
 
     const payload: VideoJobWebhookPayload = {
       jobId: job.id,
-      projectId: parentVideo.projectId,
+      projectId: videoContext.projectId,
       status: "failed",
       timestamp: new Date().toISOString(),
       error: {
@@ -703,7 +757,7 @@ class VideoGenerationService {
       });
 
       logger.info(
-        { jobId: job.id, projectId: parentVideo.projectId },
+        { jobId: job.id, projectId: videoContext.projectId },
         "[VideoGenerationService] ✅ Failure webhook delivered"
       );
     } catch (error) {
@@ -718,38 +772,38 @@ class VideoGenerationService {
     }
   }
 
-  /**
-   * Check if all jobs for a video have completed
-   */
-  private async checkAllJobsCompleted(videoId: string): Promise<boolean> {
+  private async evaluateJobCompletion(videoId: string): Promise<{
+    allCompleted: boolean;
+    completedJobs: (typeof videoJobs.$inferSelect)[];
+  }> {
     const jobs = await db
       .select()
       .from(videoJobs)
       .where(eq(videoJobs.videoId, videoId));
 
     if (jobs.length === 0) {
-      return false;
+      return { allCompleted: false, completedJobs: [] };
     }
 
-    // Check if all jobs are either completed or failed
+    const completedJobs = jobs
+      .filter((job) => job.status === "completed" && job.videoUrl)
+      .sort((a, b) => {
+        const orderA = a.generationSettings?.sortOrder ?? 0;
+        const orderB = b.generationSettings?.sortOrder ?? 0;
+        return orderA - orderB;
+      });
+
     const allDone = jobs.every(
       (job) => job.status === "completed" || job.status === "failed"
     );
+    const allFailed = jobs.every((job) => job.status === "failed");
 
-    if (!allDone) {
-      return false;
-    }
-
-    // Check if at least one job succeeded
-    const hasSuccessfulJob = jobs.some((job) => job.status === "completed");
-
-    if (!hasSuccessfulJob) {
+    if (allFailed) {
       logger.error(
         { videoId, jobCount: jobs.length },
         "[VideoGenerationService] All jobs failed, cannot compose video"
       );
 
-      // Mark parent video as failed
       await db
         .update(videos)
         .set({
@@ -759,18 +813,42 @@ class VideoGenerationService {
         })
         .where(eq(videos.id, videoId));
 
-      return false;
+      try {
+        const videoContext = await this.getVideoContext(videoId);
+        await this.sendFinalVideoWebhook(videoContext, {
+          status: "failed",
+          errorMessage: "All video jobs failed"
+        });
+      } catch (error) {
+        logger.error(
+          {
+            videoId,
+            error: error instanceof Error ? error.message : String(error)
+          },
+          "[VideoGenerationService] Failed to send final failure webhook"
+        );
+      }
+
+      return { allCompleted: false, completedJobs: [] };
     }
 
-    return true;
+    if (!allDone || completedJobs.length === 0) {
+      return { allCompleted: false, completedJobs };
+    }
+
+    return { allCompleted: true, completedJobs };
   }
 
   /**
    * Compose all completed job videos into final video and upload to S3
    * Phase 5: Composition & Finalization
    */
-  private async composeAndFinalizeVideo(videoId: string): Promise<void> {
+  private async composeAndFinalizeVideo(
+    videoId: string,
+    completedJobs: (typeof videoJobs.$inferSelect)[]
+  ): Promise<void> {
     const startTime = Date.now();
+    const videoContext = await this.getVideoContext(videoId);
 
     logger.info(
       { videoId },
@@ -787,31 +865,7 @@ class VideoGenerationService {
         })
         .where(eq(videos.id, videoId));
 
-      // Step 2: Get parent video and all completed jobs
-      const [parentVideo] = await db
-        .select()
-        .from(videos)
-        .where(eq(videos.id, videoId))
-        .limit(1);
-
-      if (!parentVideo) {
-        throw new Error(`Parent video ${videoId} not found`);
-      }
-
-      const jobs = await db
-        .select()
-        .from(videoJobs)
-        .where(eq(videoJobs.videoId, videoId));
-
-      // Filter and sort completed jobs by sortOrder
-      const completedJobs = jobs
-        .filter((job) => job.status === "completed" && job.videoUrl)
-        .sort((a, b) => {
-          const orderA = a.generationSettings?.sortOrder ?? 0;
-          const orderB = b.generationSettings?.sortOrder ?? 0;
-          return orderA - orderB;
-        });
-
+      // Step 2: Get completed jobs (use prefetched list if provided)
       if (completedJobs.length === 0) {
         throw new Error("No completed jobs found for composition");
       }
@@ -843,8 +897,8 @@ class VideoGenerationService {
       const composedResult = await videoCompositionService.combineRoomVideos(
         roomVideoUrls,
         compositionSettings,
-        "", // TODO: Get userId from project
-        parentVideo.projectId,
+        videoContext.userId || "",
+        videoContext.projectId,
         videoId,
         undefined // projectName
       );
@@ -877,7 +931,10 @@ class VideoGenerationService {
       );
 
       // Step 5: Send final webhook to Vercel app
-      await this.sendFinalVideoWebhook(parentVideo, composedResult);
+      await this.sendFinalVideoWebhook(videoContext, {
+        status: "completed",
+        result: composedResult
+      });
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Composition failed";
@@ -902,6 +959,11 @@ class VideoGenerationService {
         })
         .where(eq(videos.id, videoId));
 
+      await this.sendFinalVideoWebhook(videoContext, {
+        status: "failed",
+        errorMessage
+      });
+
       // TODO: Optionally retry based on error type
     }
   }
@@ -910,12 +972,16 @@ class VideoGenerationService {
    * Send final webhook for completed parent video
    */
   private async sendFinalVideoWebhook(
-    parentVideo: typeof videos.$inferSelect,
-    result: {
-      videoUrl: string;
-      thumbnailUrl: string;
-      duration: number;
-      fileSize: number;
+    videoContext: VideoContext,
+    payload: {
+      status: "completed" | "failed";
+      result?: {
+        videoUrl: string;
+        thumbnailUrl: string;
+        duration: number;
+        fileSize: number;
+      };
+      errorMessage?: string;
     }
   ): Promise<void> {
     const webhookUrl = `${env.vercelApiUrl}/api/v1/webhooks/video/final`;
@@ -923,37 +989,47 @@ class VideoGenerationService {
 
     if (!webhookSecret) {
       logger.warn(
-        { videoId: parentVideo.id },
+        { videoId: videoContext.videoId },
         "[VideoGenerationService] VERCEL_WEBHOOK_SIGNING_KEY not configured, skipping final webhook"
       );
       return;
     }
 
-    const payload = {
-      videoId: parentVideo.id,
-      projectId: parentVideo.projectId,
-      status: "completed" as const,
+    if (payload.status === "completed" && !payload.result) {
+      throw new Error("Completed final webhook requires result payload");
+    }
+
+    const body = {
+      videoId: videoContext.videoId,
+      projectId: videoContext.projectId,
+      status: payload.status,
       timestamp: new Date().toISOString(),
-      result
+      result: payload.result,
+      error: payload.errorMessage
+        ? { message: payload.errorMessage }
+        : undefined
     };
 
     try {
       await webhookService.sendWebhook({
         url: webhookUrl,
         secret: webhookSecret,
-        payload: payload as any,
+        payload: body as any,
         maxRetries: 5,
         backoffMs: 1000
       });
 
       logger.info(
-        { videoId: parentVideo.id, projectId: parentVideo.projectId },
+        {
+          videoId: videoContext.videoId,
+          projectId: videoContext.projectId
+        },
         "[VideoGenerationService] ✅ Final video webhook delivered"
       );
     } catch (error) {
       logger.error(
         {
-          videoId: parentVideo.id,
+          videoId: videoContext.videoId,
           error: error instanceof Error ? error.message : String(error)
         },
         "[VideoGenerationService] ❌ Failed to deliver final video webhook"

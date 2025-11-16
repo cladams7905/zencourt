@@ -29,11 +29,7 @@ if (!ffmpegStatic || !ffprobeStatic) {
   throw new Error("Failed to load ffmpeg/ffprobe binaries");
 }
 
-// ffprobe-static exports path property
-const ffprobeBinaryPath =
-  typeof ffprobeStatic === "string"
-    ? ffprobeStatic
-    : (ffprobeStatic as { path: string }).path;
+const ffprobeBinaryPath = "/usr/bin/ffprobe";
 
 logger.info(
   { ffmpegPath: ffmpegStatic, ffprobePath: ffprobeBinaryPath },

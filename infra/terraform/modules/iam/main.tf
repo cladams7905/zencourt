@@ -83,9 +83,13 @@ resource "aws_iam_user_policy" "vercel_api_s3" {
         Action = [
           "s3:GetObject",
           "s3:PutObject",
-          "s3:DeleteObject"
+          "s3:DeleteObject",
+          "s3:PutObjectAcl"
         ]
-        Resource = "${var.s3_bucket_arn}/user_*/*"
+        Resource = [
+          "${var.s3_bucket_arn}/user_*/*",
+          "${var.s3_bucket_arn}/videos/*"
+        ]
       },
       {
         Effect = "Allow"
@@ -103,7 +107,10 @@ resource "aws_iam_user_policy" "vercel_api_s3" {
         Resource = var.s3_bucket_arn
         Condition = {
           StringLike = {
-            "s3:prefix" = ["user_*/*"]
+            "s3:prefix" = [
+              "user_*/*",
+              "videos/*"
+            ]
           }
         }
       }

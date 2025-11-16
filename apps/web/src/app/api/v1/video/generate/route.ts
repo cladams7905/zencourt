@@ -52,13 +52,29 @@ function getCategoryForRoom(room: { id: string; category?: string }): string {
   return trimmed;
 }
 
-function buildPrompt(roomName: string, aiDirections?: string): string {
-  const basePrompt = `Create a cinematic walkthrough video showcasing the ${roomName} inside a property listing. Highlight the key architectural details and ambience.`;
-  if (!aiDirections) {
-    return basePrompt;
-  }
+function buildPrompt(
+  roomName: string,
+  roomDescription?: string | null,
+  aiDirections?: string
+): string {
+  const descriptionPart = roomDescription?.trim()
+    ? ` ${roomDescription.trim()}`
+    : "";
+  const basePrompt = `Smooth camera pan through ${roomName}. Camera should move very slowly through the space.${descriptionPart}`;
 
-  return `${basePrompt} Additional creative direction: ${aiDirections}`;
+  if (!aiDirections?.trim()) {
+    logger.debug({ basePrompt }, `Constructed prompt for ${roomName}`);
+    return basePrompt;
+  } else {
+    const additionalCreativeDirection = !!aiDirections
+      ? `Additional creative direction: ${aiDirections.trim()}`
+      : "";
+    const finalPrompt = basePrompt + additionalCreativeDirection;
+
+    logger.debug({ finalPrompt }, `Constructed prompt for ${roomName}`);
+
+    return finalPrompt;
+  }
 }
 
 function groupImagesByCategory(
@@ -90,10 +106,15 @@ function groupImagesByCategory(
   return grouped;
 }
 
-function selectImageUrlsForRoom(
+interface RoomAssetSelection {
+  imageUrls: string[];
+  roomDescription?: string | null;
+}
+
+function selectRoomAssetsForRoom(
   room: { id: string; name: string; category: string; roomNumber?: number },
   groupedImages: Map<string, DBImage[]>
-): string[] {
+): RoomAssetSelection {
   const availableImages = groupedImages.get(room.category) || [];
   if (availableImages.length === 0) {
     throw new ApiError(400, {
@@ -119,13 +140,25 @@ function selectImageUrlsForRoom(
       });
     }
 
-    return [image.url];
+    return {
+      imageUrls: [image.url],
+      roomDescription: image.sceneDescription
+    };
   }
 
-  return availableImages
+  const imageUrls = availableImages
     .filter((image) => Boolean(image.url))
     .slice(0, maxImages)
     .map((image) => image.url!) as string[];
+
+  const descriptionSource = availableImages.find((image) =>
+    Boolean(image.sceneDescription)
+  );
+
+  return {
+    imageUrls,
+    roomDescription: descriptionSource?.sceneDescription ?? null
+  };
 }
 
 async function enqueueVideoServerJob(
@@ -259,11 +292,15 @@ export async function POST(
       (room, index) => {
         const category = getCategoryForRoom(room);
         const roomWithCategory = { ...room, category };
-        const imageUrls = selectImageUrlsForRoom(
+        const { imageUrls, roomDescription } = selectRoomAssetsForRoom(
           roomWithCategory,
           groupedImages
         );
-        const prompt = buildPrompt(room.name, body.aiDirections);
+        const prompt = buildPrompt(
+          room.name,
+          roomDescription,
+          body.aiDirections
+        );
         const jobId = nanoid();
 
         return {

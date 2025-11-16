@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import {
@@ -29,16 +29,26 @@ import type {
   GenerationStepStatus,
   RoomGenerationStatus
 } from "../../types/workflow";
-import { useRef } from "react";
 import { updateProject } from "../../server/actions/db/projects";
 import { DBProject } from "@shared/types/models";
 import { CategorizedGroup, RoomCategory } from "@web/src/types/vision";
+import type {
+  FinalVideoUpdateEvent,
+  InitialVideoStatusPayload,
+  VideoJobUpdateEvent
+} from "../../types/video-events";
 
 interface ProjectWorkflowModalProps {
   isOpen: boolean;
   onClose: () => void;
   onProjectCreated?: (project: DBProject) => void;
   existingProject?: DBProject | null;
+}
+
+interface FinalVideoData {
+  videoUrl: string;
+  thumbnailUrl?: string | null;
+  duration?: number | null;
 }
 
 export function ProjectWorkflowModal({
@@ -79,31 +89,15 @@ export function ProjectWorkflowModal({
   const [generationProgress, setGenerationProgress] =
     useState<GenerationProgress | null>(null);
   const [roomStatuses, setRoomStatuses] = useState<RoomGenerationStatus[]>([]);
-  const pollingCleanupRef = useRef<(() => void) | null>(null);
-  const activeIntervalsRef = useRef<NodeJS.Timeout[]>([]);
+  const [finalVideo, setFinalVideo] = useState<FinalVideoData | null>(null);
+  const eventSourceRef = useRef<EventSource | null>(null);
   const ROOM_GENERATION_STEP_ID = "room-generation";
   const FINAL_COMPOSE_STEP_ID = "final-compose";
 
-  const clearPollingIntervals = () => {
-    activeIntervalsRef.current.forEach((intervalId) =>
-      clearInterval(intervalId)
-    );
-    activeIntervalsRef.current = [];
-    pollingCleanupRef.current = null;
-  };
-
-  const registerInterval = (intervalId: NodeJS.Timeout) => {
-    activeIntervalsRef.current.push(intervalId);
-    pollingCleanupRef.current = clearPollingIntervals;
-  };
-
-  const removeInterval = (intervalId: NodeJS.Timeout) => {
-    clearInterval(intervalId);
-    activeIntervalsRef.current = activeIntervalsRef.current.filter(
-      (activeId) => activeId !== intervalId
-    );
-    if (activeIntervalsRef.current.length === 0) {
-      pollingCleanupRef.current = null;
+  const stopStatusStream = () => {
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
     }
   };
 
@@ -206,7 +200,7 @@ export function ProjectWorkflowModal({
   // Reset state when modal closes
   useEffect(() => {
     if (!isOpen) {
-      clearPollingIntervals();
+      stopStatusStream();
 
       // Only reset if we're actually closing (not just switching stages)
       const timeout = setTimeout(() => {
@@ -218,6 +212,7 @@ export function ProjectWorkflowModal({
         setCurrentProject(null);
         setGenerationProgress(null);
         setRoomStatuses([]);
+        setFinalVideo(null);
       }, 300); // Wait for modal close animation
       return () => clearTimeout(timeout);
     }
@@ -226,7 +221,7 @@ export function ProjectWorkflowModal({
   // Cleanup polling on unmount
   useEffect(() => {
     return () => {
-      clearPollingIntervals();
+      stopStatusStream();
     };
   }, []);
 
@@ -498,126 +493,164 @@ export function ProjectWorkflowModal({
     });
   };
 
-  /**
-   * Start polling for final video completion
-   * Note: Composition happens automatically on the backend when all room videos complete
-   */
-  const startFinalCompositionPolling = async (projectId: string) => {
-    markFinalStepInProgress();
+  type VideoStatusServerEvent =
+    | { type: "initial"; payload: InitialVideoStatusPayload }
+    | { type: "job-update"; payload: VideoJobUpdateEvent }
+    | { type: "final-update"; payload: FinalVideoUpdateEvent };
 
-    const pollProjectStatus = async () => {
-      try {
-        // Poll the project directly to check for final video
-        const response = await fetch(`/api/project/${projectId}`);
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch project status");
-        }
-
-        const project = await response.json();
-
-        // Check if final video is ready
-        if (
-          project.videoGenerationStatus === "completed" &&
-          project.finalVideoUrl
-        ) {
-          removeInterval(intervalId);
-          markFinalStepCompleted();
-          toast.success("Generation complete!", {
-            description: "Your property video is ready."
-          });
-        } else if (project.videoGenerationStatus === "failed") {
-          removeInterval(intervalId);
-          const errorMessage =
-            project.metadata?.error?.message || "Final composition failed";
-          markFinalStepFailed(errorMessage);
-          toast.error("Generation failed", {
-            description: errorMessage
-          });
-        } else {
-          // Still processing - update progress
-          setGenerationProgress((prev) => {
-            if (!prev) return prev;
-            const steps = prev.steps.map((step) =>
-              step.id === FINAL_COMPOSE_STEP_ID
-                ? {
-                    ...step,
-                    status: "in-progress" as GenerationStepStatus,
-                    progress: Math.min(95, (step.progress ?? 10) + 5)
-                  }
-                : step
-            );
-            return {
-              ...prev,
-              steps,
-              overallProgress: Math.min(95, prev.overallProgress + 1),
-              currentStep: steps[steps.length - 1]?.label || prev.currentStep,
-              currentStepIndex: steps.length - 1
-            };
-          });
-        }
-      } catch (error) {
-        console.error("Project status polling error:", error);
-      }
-    };
-
-    const intervalId = setInterval(pollProjectStatus, 2000);
-    registerInterval(intervalId);
-    pollProjectStatus();
+  const normalizeRoomStatuses = (
+    jobs: VideoJobUpdateEvent[]
+  ): RoomGenerationStatus[] => {
+    return jobs
+      .map((job) => ({
+        id: job.jobId,
+        roomId: job.roomId || null,
+        roomName: job.roomName || null,
+        status: job.status,
+        videoUrl: job.videoUrl ?? null,
+        errorMessage: job.errorMessage ?? null,
+        sortOrder: job.sortOrder ?? undefined
+      }))
+      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
   };
 
-  const startRoomStatusPolling = (
-    projectId: string,
-    totalRooms: number
-  ): void => {
-    const pollRooms = async () => {
+  const syncRoomProgress = (rooms: RoomGenerationStatus[]) => {
+    if (rooms.length === 0) {
+      return;
+    }
+
+    const failedRoom = rooms.find((room) => room.status === "failed");
+    if (failedRoom) {
+      markRoomGenerationFailed(
+        failedRoom.errorMessage || "Room generation failed"
+      );
+      toast.error("Room generation failed", {
+        description:
+          failedRoom.errorMessage || "One or more rooms failed to generate."
+      });
+      return;
+    }
+
+    const completedRooms = rooms.filter(
+      (room) => room.status === "completed"
+    ).length;
+
+    updateRoomGenerationStep(completedRooms, rooms.length);
+
+    if (rooms.length > 0 && completedRooms === rooms.length) {
+      markFinalStepInProgress();
+    }
+  };
+
+  const applyRoomStatusUpdate = (event: VideoJobUpdateEvent) => {
+    setRoomStatuses((prev) => {
+      const updated = [...prev];
+      const nextRoom: RoomGenerationStatus = {
+        id: event.jobId,
+        roomId: event.roomId || null,
+        roomName: event.roomName || null,
+        status: event.status,
+        videoUrl: event.videoUrl ?? null,
+        errorMessage: event.errorMessage ?? null,
+        sortOrder: event.sortOrder ?? undefined
+      };
+
+      const existingIndex = updated.findIndex(
+        (room) => room.id === event.jobId
+      );
+      if (existingIndex >= 0) {
+        updated[existingIndex] = { ...updated[existingIndex], ...nextRoom };
+      } else {
+        updated.push(nextRoom);
+      }
+
+      const ordered = updated.sort(
+        (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)
+      );
+      syncRoomProgress(ordered);
+      return ordered;
+    });
+  };
+
+  const applyInitialStatusPayload = (payload: InitialVideoStatusPayload) => {
+    const normalizedRooms = normalizeRoomStatuses(payload.jobs || []);
+    setRoomStatuses(() => {
+      syncRoomProgress(normalizedRooms);
+      return normalizedRooms;
+    });
+
+    if (
+      payload.finalVideo?.status === "completed" &&
+      payload.finalVideo.finalVideoUrl
+    ) {
+      setFinalVideo({
+        videoUrl: payload.finalVideo.finalVideoUrl,
+        thumbnailUrl: payload.finalVideo.thumbnailUrl ?? null,
+        duration: payload.finalVideo.duration ?? null
+      });
+      markFinalStepCompleted();
+    } else if (payload.finalVideo?.status === "failed") {
+      setFinalVideo(null);
+      markFinalStepFailed("Final composition failed");
+    } else {
+      setFinalVideo(null);
+    }
+  };
+
+  const handleFinalVideoEvent = (event: FinalVideoUpdateEvent) => {
+    if (event.status === "completed") {
+      markFinalStepCompleted();
+      if (event.finalVideoUrl) {
+        setFinalVideo({
+          videoUrl: event.finalVideoUrl,
+          thumbnailUrl: event.thumbnailUrl ?? null,
+          duration: event.duration ?? null
+        });
+      }
+      toast.success("Generation complete!", {
+        description: "Your property video is ready."
+      });
+    } else {
+      setFinalVideo(null);
+      const message = event.errorMessage || "Final composition failed";
+      markFinalStepFailed(message);
+      toast.error("Generation failed", {
+        description: message
+      });
+    }
+  };
+
+  const startStatusStream = (projectId: string | null) => {
+    if (!projectId || typeof window === "undefined") {
+      return;
+    }
+
+    stopStatusStream();
+
+    const source = new EventSource(
+      `/api/v1/video/updates?projectId=${projectId}`
+    );
+
+    source.onmessage = (event) => {
       try {
-        const response = await fetch(
-          `/api/v1/video/rooms?projectId=${projectId}`
-        );
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch room statuses");
-        }
-
-        const data = await response.json();
-        const rooms = (data.rooms || []) as RoomGenerationStatus[];
-
-        setRoomStatuses(rooms);
-
-        const completed = rooms.filter(
-          (room) => room.status === "completed"
-        ).length;
-        const failedRooms = rooms.filter((room) => room.status === "failed");
-
-        if (failedRooms.length > 0) {
-          removeInterval(intervalId);
-          const message =
-            failedRooms[0]?.errorMessage ||
-            "One or more rooms failed to generate.";
-          markRoomGenerationFailed(message);
-          toast.error("Room generation failed", {
-            description: message
-          });
-          return;
-        }
-
-        updateRoomGenerationStep(completed, totalRooms);
-
-        if (totalRooms > 0 && completed === totalRooms) {
-          removeInterval(intervalId);
-          // Composition now happens automatically on the backend
-          // Just start polling for completion
-          await startFinalCompositionPolling(projectId);
+        const data = JSON.parse(event.data) as VideoStatusServerEvent;
+        if (data.type === "initial") {
+          applyInitialStatusPayload(data.payload);
+        } else if (data.type === "job-update") {
+          applyRoomStatusUpdate(data.payload);
+        } else if (data.type === "final-update") {
+          handleFinalVideoEvent(data.payload);
         }
       } catch (error) {
-        console.error("Room status polling error:", error);
+        console.error("Failed to parse video status event:", error);
       }
     };
 
-    const intervalId = setInterval(pollRooms, 5000);
-    registerInterval(intervalId);
-    pollRooms();
+    source.onerror = (error) => {
+      console.error("Video status stream error:", error);
+    };
+
+    eventSourceRef.current = source;
   };
 
   const handleConfirmAndGenerate = async () => {
@@ -645,9 +678,10 @@ export function ProjectWorkflowModal({
 
     setIsConfirming(true);
     setRoomStatuses([]);
+    setFinalVideo(null);
 
     try {
-      clearPollingIntervals();
+      stopStatusStream();
       initializeGenerationProgress(totalRooms);
       setCurrentStage("generate");
 
@@ -670,13 +704,13 @@ export function ProjectWorkflowModal({
         throw new Error(data.message || "Failed to start room generation");
       }
 
-      setRoomStatuses(data.rooms || []);
-      startRoomStatusPolling(currentProject.id, totalRooms);
+      startStatusStream(currentProject.id);
     } catch (error) {
-      clearPollingIntervals();
+      stopStatusStream();
       setGenerationProgress(null);
       setCurrentStage("review");
       setRoomStatuses([]);
+      setFinalVideo(null);
       console.error("Generation failed:", error);
       toast.error("Generation failed", {
         description:
@@ -862,12 +896,14 @@ export function ProjectWorkflowModal({
                 progress={generationProgress}
                 projectId={currentProject?.id}
                 rooms={roomStatuses}
+                finalVideo={finalVideo}
                 onCancel={() => {
-                  clearPollingIntervals();
+                  stopStatusStream();
                   // Reset state
                   setCurrentStage("review");
                   setGenerationProgress(null);
                   setRoomStatuses([]);
+                  setFinalVideo(null);
                 }}
               />
             )}

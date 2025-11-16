@@ -4,7 +4,7 @@
 
 import { webhookService } from "../webhookService";
 import axios, { AxiosError } from "axios";
-import { QueueError } from "@shared/types/video";
+import { WebhookError } from "@shared/types/video";
 
 jest.mock("axios");
 jest.mock("@/config/logger", () => ({
@@ -119,7 +119,7 @@ describe("WebhookService", () => {
       mockAxios.post.mockRejectedValue(createAxiosError(400, "Bad Request"));
 
       await expect(webhookService.sendWebhook(baseOptions)).rejects.toThrow(
-        QueueError
+        WebhookError
       );
       expect(mockAxios.post).toHaveBeenCalledTimes(1);
     });
@@ -128,7 +128,7 @@ describe("WebhookService", () => {
       mockAxios.post.mockRejectedValue(createAxiosError(404, "Not Found"));
 
       await expect(webhookService.sendWebhook(baseOptions)).rejects.toThrow(
-        QueueError
+        WebhookError
       );
       expect(mockAxios.post).toHaveBeenCalledTimes(1);
     });
@@ -139,7 +139,7 @@ describe("WebhookService", () => {
       );
 
       await expect(webhookService.sendWebhook(baseOptions)).rejects.toThrow(
-        QueueError
+        WebhookError
       );
       expect(mockAxios.post).toHaveBeenCalledTimes(3); // maxRetries
     });

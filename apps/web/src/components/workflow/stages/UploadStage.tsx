@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useUser } from "@stackframe/stack";
 import { toast } from "sonner";
+import { nanoid } from "nanoid";
 import { DragDropZone } from "../DragDropZone";
 import { ImageUploadGrid } from "../../shared/ImageUploadGrid";
 import { Button } from "../../ui/button";
@@ -74,7 +75,7 @@ export function UploadStage({
    * Create a single ProcessedImage from a File
    */
   const createImageData = (file: File): ProcessedImage => {
-    const id = crypto.randomUUID();
+    const id = nanoid();
     const previewUrl = generatePreviewUrl(file);
 
     return {

@@ -14,19 +14,19 @@ export interface WebhookDeliveryOptions {
   backoffMs?: number;
 }
 
-export type QueueErrorCode =
+export type WebhookErrorCode =
   | "JOB_TIMEOUT"
   | "JOB_PROCESSING_ERROR"
   | "WEBHOOK_DELIVERY_ERROR"
   | "UNKNOWN_ERROR";
 
-export class QueueError extends Error {
+export class WebhookError extends Error {
   constructor(
     message: string,
-    public code: QueueErrorCode,
+    public code: WebhookErrorCode,
     public details?: unknown
   ) {
     super(message);
-    this.name = "QueueError";
+    this.name = "WebhookError";
   }
 }

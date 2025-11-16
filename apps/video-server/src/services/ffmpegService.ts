@@ -26,16 +26,59 @@ if (!ffmpegStatic || !ffprobeStatic) {
   throw new Error("Failed to load ffmpeg/ffprobe binaries");
 }
 
-const ffprobeBinaryPath =
-  typeof ffprobeStatic === "string"
-    ? ffprobeStatic
-    : (ffprobeStatic as { path: string }).path;
+function resolveBinaryPath({
+  envVar,
+  staticPath,
+  fallbackPaths,
+  binaryName
+}: {
+  envVar?: string;
+  staticPath?: string;
+  fallbackPaths: string[];
+  binaryName: string;
+}): string {
+  const candidates = [
+    envVar?.trim(),
+    staticPath,
+    ...fallbackPaths
+  ].filter(Boolean) as string[];
 
-ffmpeg.setFfmpegPath(ffmpegStatic);
-ffmpeg.setFfprobePath(ffprobeBinaryPath);
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  throw new Error(
+    `Unable to locate ${binaryName} binary. Checked: ${candidates.join(", ")}`
+  );
+}
+
+const resolvedFfmpegPath = resolveBinaryPath({
+  envVar: process.env.FFMPEG_PATH,
+  staticPath:
+    typeof ffmpegStatic === "string"
+      ? ffmpegStatic
+      : (ffmpegStatic as unknown as { path: string }).path,
+  fallbackPaths: ["/usr/bin/ffmpeg", "/usr/local/bin/ffmpeg"],
+  binaryName: "FFmpeg"
+});
+
+const resolvedFfprobePath = resolveBinaryPath({
+  envVar: process.env.FFPROBE_PATH,
+  staticPath:
+    typeof ffprobeStatic === "string"
+      ? ffprobeStatic
+      : (ffprobeStatic as { path: string }).path,
+  fallbackPaths: ["/usr/bin/ffprobe", "/usr/local/bin/ffprobe"],
+  binaryName: "FFprobe"
+});
+
+ffmpeg.setFfmpegPath(resolvedFfmpegPath);
+ffmpeg.setFfprobePath(resolvedFfprobePath);
 
 logger.info(
-  { ffmpegPath: ffmpegStatic, ffprobePath: ffprobeBinaryPath },
+  { ffmpegPath: resolvedFfmpegPath, ffprobePath: resolvedFfprobePath },
   "[FFmpegService] FFmpeg binaries loaded"
 );
 

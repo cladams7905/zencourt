@@ -1,6 +1,6 @@
 "use server";
 
-import { randomUUID } from "crypto";
+import { nanoid } from "nanoid";
 import { eq, and, like, desc } from "drizzle-orm";
 import { getUser } from "./users";
 import { db, projects } from "@db/client";
@@ -22,7 +22,7 @@ export async function createProject(): Promise<DBProject> {
       const [newProject] = await db
         .insert(projects)
         .values({
-          id: randomUUID(),
+          id: nanoid(),
           userId: user.id,
           status: "draft"
         })

@@ -7,7 +7,7 @@
 import axios, { AxiosError } from "axios";
 import { createHmac } from "crypto";
 import { logger } from "@/config/logger";
-import { QueueError, WebhookDeliveryOptions } from "@shared/types/video";
+import { WebhookError, WebhookDeliveryOptions } from "@shared/types/video";
 
 // ============================================================================
 // Webhook Service Class
@@ -88,7 +88,7 @@ class WebhookService {
 
         // If not retryable, throw immediately
         if (!isRetryable) {
-          throw new QueueError(
+          throw new WebhookError(
             `Webhook delivery failed with non-retryable error: ${lastError.message}`,
             "WEBHOOK_DELIVERY_ERROR",
             { url, statusCode, error: lastError }
@@ -121,7 +121,7 @@ class WebhookService {
       "Webhook delivery failed after all retries"
     );
 
-    throw new QueueError(
+    throw new WebhookError(
       `Webhook delivery failed after ${maxRetries} attempts: ${lastError?.message}`,
       "WEBHOOK_DELIVERY_ERROR",
       { url, error: lastError }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "../../ui/button";
 import { ScrollArea } from "../../ui/scroll-area";
 import { VerticalTimeline } from "../VerticalTimeline";
@@ -28,12 +28,19 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
+interface FinalVideoDetails {
+  videoUrl: string;
+  thumbnailUrl?: string | null;
+  duration?: number | null;
+}
+
 interface GenerateStageProps {
   progress: GenerationProgress;
   projectId?: string;
   rooms?: RoomGenerationStatus[];
   onCancel?: () => void;
   onRetry?: () => void;
+  finalVideo?: FinalVideoDetails | null;
 }
 
 export function GenerateStage({
@@ -41,15 +48,10 @@ export function GenerateStage({
   projectId,
   rooms = [],
   onCancel,
-  onRetry
+  onRetry,
+  finalVideo
 }: GenerateStageProps) {
   const [showCancelDialog, setShowCancelDialog] = useState(false);
-  const [videoData, setVideoData] = useState<{
-    videoUrl: string;
-    thumbnailUrl?: string;
-    duration: number;
-  } | null>(null);
-  const [isLoadingVideo, setIsLoadingVideo] = useState(false);
   const totalRooms = rooms.length;
   const completedRooms = rooms.filter(
     (room) => room.status === "completed"
@@ -66,60 +68,6 @@ export function GenerateStage({
     progress.steps?.every((s) => s.status === "completed") || false;
 
   const hasFailed = progress.steps?.some((s) => s.status === "failed") || false;
-
-  // Fetch video data when generation is complete
-  useEffect(() => {
-    if (!isComplete || !projectId || videoData || isLoadingVideo) {
-      return;
-    }
-
-    // Fetch video with polling every 5 seconds until we get the data
-    let pollInterval: NodeJS.Timeout | null = null;
-
-    const fetchVideo = async () => {
-      if (isLoadingVideo) return;
-
-      setIsLoadingVideo(true);
-      try {
-        const res = await fetch(`/api/v1/video/cancel/${projectId}`);
-        const data = await res.json();
-
-        // Check both data.video.videoUrl (API format) and data.videoUrl (fallback)
-        const videoUrl = data.video?.videoUrl || data.videoUrl;
-
-        if (videoUrl) {
-          setVideoData({
-            videoUrl: data.video?.videoUrl || data.videoUrl,
-            thumbnailUrl: data.video?.thumbnailUrl || data.thumbnailUrl,
-            duration: data.video?.duration || data.duration
-          });
-
-          // Stop polling once we have the video
-          if (pollInterval) {
-            clearInterval(pollInterval);
-            pollInterval = null;
-          }
-        }
-      } catch (error) {
-        console.error("Failed to fetch video data:", error);
-      } finally {
-        setIsLoadingVideo(false);
-      }
-    };
-
-    // Initial fetch
-    fetchVideo();
-
-    // Poll every 2 seconds for faster response
-    pollInterval = setInterval(fetchVideo, 2000);
-
-    // Cleanup on unmount
-    return () => {
-      if (pollInterval) {
-        clearInterval(pollInterval);
-      }
-    };
-  }, [isComplete, isLoadingVideo, videoData, projectId]);
 
   const handleCancelClick = () => {
     setShowCancelDialog(true);
@@ -157,31 +105,30 @@ export function GenerateStage({
   };
 
   const handleDownloadVideo = async () => {
-    if (videoData?.videoUrl) {
-      try {
-        // Fetch the video as a blob to handle cross-origin URLs properly
-        const response = await fetch(videoData.videoUrl);
-        if (!response.ok) {
-          throw new Error("Failed to fetch video");
-        }
+    if (!finalVideo?.videoUrl) {
+      return;
+    }
 
-        const blob = await response.blob();
-        const blobUrl = window.URL.createObjectURL(blob);
-
-        const link = document.createElement("a");
-        link.href = blobUrl;
-        link.download = `video-${projectId}.mp4`;
-        document.body.appendChild(link);
-        link.click();
-
-        // Clean up
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(blobUrl);
-      } catch (error) {
-        console.error("Failed to download video:", error);
-        // Fallback to direct link if fetch fails
-        window.open(videoData.videoUrl, "_blank");
+    try {
+      const response = await fetch(finalVideo.videoUrl);
+      if (!response.ok) {
+        throw new Error("Failed to fetch video");
       }
+
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = `video-${projectId}.mp4`;
+      document.body.appendChild(link);
+      link.click();
+
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      console.error("Failed to download video:", error);
+      window.open(finalVideo.videoUrl, "_blank");
     }
   };
 
@@ -230,7 +177,7 @@ export function GenerateStage({
           )}
 
           {/* Generation Steps Timeline - Hide when video preview is shown */}
-          {!videoData && (
+          {!finalVideo && (
             <div className="max-w-2xl mx-auto">
               <VerticalTimeline steps={progress.steps || []} />
             </div>
@@ -322,7 +269,7 @@ export function GenerateStage({
           {/* Video Preview - Show directly without success card */}
           {isComplete && (
             <div className="mt-8 space-y-6">
-              {videoData && (
+              {finalVideo && (
                 <div className="p-6 bg-white border border-gray-200 rounded-lg">
                   <h4 className="text-md font-semibold mb-4 flex items-center gap-2">
                     <Play className="w-5 h-5" />
@@ -332,15 +279,15 @@ export function GenerateStage({
                     <video
                       controls
                       className="w-full h-full"
-                      poster={videoData.thumbnailUrl}
+                      poster={finalVideo.thumbnailUrl ?? undefined}
                     >
-                      <source src={videoData.videoUrl} type="video/mp4" />
+                      <source src={finalVideo.videoUrl} type="video/mp4" />
                       Your browser does not support the video tag.
                     </video>
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="text-sm text-muted-foreground">
-                      Duration: {Math.round(videoData.duration)}s
+                      Duration: {Math.round(finalVideo.duration ?? 0)}s
                     </div>
                     <Button
                       onClick={handleDownloadVideo}
@@ -353,15 +300,6 @@ export function GenerateStage({
                 </div>
               )}
 
-              {/* Loading Video */}
-              {isLoadingVideo && (
-                <div className="p-6 bg-white border border-gray-200 rounded-lg text-center">
-                  <div className="animate-spin w-8 h-8 mx-auto mb-3 border-4 border-primary border-t-transparent rounded-full"></div>
-                  <p className="text-sm text-muted-foreground">
-                    Loading video...
-                  </p>
-                </div>
-              )}
             </div>
           )}
 

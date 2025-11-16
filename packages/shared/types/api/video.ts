@@ -8,6 +8,7 @@ export interface VideoJobResult {
   thumbnailUrl?: string;
   duration: number;
   fileSize?: number;
+  metadata?: Record<string, unknown>;
   resolution?: {
     width: number;
     height: number;

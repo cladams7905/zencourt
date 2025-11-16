@@ -69,6 +69,7 @@ export interface RoomGenerationStatus {
   status: VideoStatus;
   videoUrl?: string | null;
   errorMessage?: string | null;
+  sortOrder?: number | null;
 }
 
 // ============================================================================

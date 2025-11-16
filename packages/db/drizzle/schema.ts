@@ -32,7 +32,7 @@ import {
 export const projects = pgTable(
   "projects",
   {
-    id: text("id").primaryKey(), // UUID
+    id: text("id").primaryKey(),
     userId: text("user_id").notNull(), // From Stack Auth
     title: text("title"),
     status: varchar("status", { length: 50 })
@@ -60,7 +60,7 @@ export const projects = pgTable(
 export const images = pgTable(
   "images",
   {
-    id: text("id").primaryKey(), // UUID
+    id: text("id").primaryKey(),
     projectId: text("project_id")
       .notNull()
       .references(() => projects.id, { onDelete: "cascade" }),
@@ -91,7 +91,7 @@ export const images = pgTable(
 export const videos = pgTable(
   "videos",
   {
-    id: text("id").primaryKey(), // UUID or custom ID
+    id: text("id").primaryKey(),
     projectId: text("project_id")
       .notNull()
       .references(() => projects.id, { onDelete: "cascade" }),
