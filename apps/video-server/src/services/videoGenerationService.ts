@@ -884,7 +884,6 @@ class VideoGenerationService {
 
       // Step 3: Use VideoCompositionService to combine videos
       // TODO: Get actual composition settings from somewhere (project metadata?)
-      // For now, use default settings with no transitions
       const compositionSettings = {
         transitions: true,
         logo: undefined,
