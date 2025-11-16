@@ -886,7 +886,7 @@ class VideoGenerationService {
       // TODO: Get actual composition settings from somewhere (project metadata?)
       // For now, use default settings with no transitions
       const compositionSettings = {
-        transitions: false,
+        transitions: true,
         logo: undefined,
         subtitles: undefined
       };
