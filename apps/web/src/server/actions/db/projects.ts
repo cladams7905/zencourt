@@ -2,7 +2,6 @@
 
 import { nanoid } from "nanoid";
 import { eq, and, like, desc } from "drizzle-orm";
-import { getUser } from "./users";
 import { db, projects } from "@db/client";
 import { DBProject, InsertDBProject } from "@shared/types/models";
 import { withDbErrorHandling } from "../_utils";
@@ -14,16 +13,18 @@ import { withDbErrorHandling } from "../_utils";
  * @returns Promise<DBProject> - The created project
  * @throws Error if user is not authenticated or project creation fails
  */
-export async function createProject(): Promise<DBProject> {
+export async function createProject(userId: string): Promise<DBProject> {
+  if (!userId || userId.trim() === "") {
+    throw new Error("User ID is required to create a project");
+  }
+
   return withDbErrorHandling(
     async () => {
-      const user = await getUser();
-
       const [newProject] = await db
         .insert(projects)
         .values({
           id: nanoid(),
-          userId: user.id,
+          userId,
           status: "draft"
         })
         .returning();
@@ -47,24 +48,26 @@ export async function createProject(): Promise<DBProject> {
  * @throws Error if user is not authenticated or update fails
  */
 export async function updateProject(
+  userId: string,
   projectId: string,
   updates: Partial<Omit<InsertDBProject, "id" | "userId" | "createdAt">>
 ): Promise<DBProject> {
   if (!projectId || projectId.trim() === "") {
     throw new Error("Project ID is required");
   }
+  if (!userId || userId.trim() === "") {
+    throw new Error("User ID is required to update a project");
+  }
 
   return withDbErrorHandling(
     async () => {
-      await getUser();
-
       const [updatedProject] = await db
         .update(projects)
         .set({
           ...updates,
           updatedAt: new Date()
         })
-        .where(eq(projects.id, projectId))
+        .where(and(eq(projects.id, projectId), eq(projects.userId, userId)))
         .returning();
 
       if (!updatedProject) {
@@ -88,15 +91,17 @@ export async function updateProject(
  * @returns Promise<DBProject[]> - Array of user's projects
  * @throws Error if user is not authenticated
  */
-export async function getUserProjects(): Promise<DBProject[]> {
+export async function getUserProjects(userId: string): Promise<DBProject[]> {
+  if (!userId || userId.trim() === "") {
+    throw new Error("User ID is required to fetch projects");
+  }
+
   return withDbErrorHandling(
     async () => {
-      const user = await getUser();
-
       const userProjects = await db
         .select()
         .from(projects)
-        .where(eq(projects.userId, user.id))
+        .where(eq(projects.userId, userId))
         .orderBy(desc(projects.createdAt));
 
       return userProjects;
@@ -115,17 +120,19 @@ export async function getUserProjects(): Promise<DBProject[]> {
  * @returns Promise<number> - The next draft number
  * @throws Error if user is not authenticated
  */
-export async function getNextDraftNumber(): Promise<number> {
+export async function getNextDraftNumber(userId: string): Promise<number> {
+  if (!userId || userId.trim() === "") {
+    throw new Error("User ID is required to fetch draft numbers");
+  }
+
   return withDbErrorHandling(
     async () => {
-      const user = await getUser();
-
       // Get all projects with titles starting with "Draft "
       const draftProjects = await db
         .select()
         .from(projects)
         .where(
-          and(eq(projects.userId, user.id), like(projects.title, "Draft %"))
+          and(eq(projects.userId, userId), like(projects.title, "Draft %"))
         );
 
       // Extract draft numbers and find the highest

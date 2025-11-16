@@ -28,6 +28,7 @@ export interface InitialVideoStatusPayload {
     finalVideoUrl?: string | null;
     thumbnailUrl?: string | null;
     duration?: number | null;
+    errorMessage?: string | null;
   };
 }
 
@@ -36,7 +37,17 @@ type VideoEventMap = {
   "video-final-update": FinalVideoUpdateEvent;
 };
 
-const emitter = new EventEmitter();
+interface VideoEventsGlobal {
+  __videoEventsEmitter?: EventEmitter;
+}
+
+const globalScope = globalThis as typeof globalThis & VideoEventsGlobal;
+
+if (!globalScope.__videoEventsEmitter) {
+  globalScope.__videoEventsEmitter = new EventEmitter();
+}
+
+const emitter = globalScope.__videoEventsEmitter;
 
 type VideoEventName = keyof VideoEventMap;
 

@@ -19,6 +19,7 @@ import type {
   VideoJobWebhookPayload
 } from "@shared/types/api";
 import type { DBVideoJob } from "@shared/types/models";
+import type { ComposedVideoResult } from "@shared/types/video/composition";
 
 interface GenerationResult {
   jobsStarted: number;
@@ -903,20 +904,17 @@ class VideoGenerationService {
         undefined // projectName
       );
 
-      // Step 4: Update parent video with final URLs and metadata
-      await db
-        .update(videos)
-        .set({
-          status: "completed",
-          videoUrl: composedResult.videoUrl,
-          thumbnailUrl: composedResult.thumbnailUrl,
-          metadata: {
-            duration: composedResult.duration,
-            fileSize: composedResult.fileSize
-          },
-          updatedAt: new Date()
-        })
-        .where(eq(videos.id, videoId));
+      const persisted = await this.persistFinalVideoResult(
+        videoId,
+        composedResult
+      );
+
+      if (!persisted) {
+        logger.warn(
+          { videoId },
+          "[VideoGenerationService] Final video persisted via webhook fallback"
+        );
+      }
 
       logger.info(
         {
@@ -965,6 +963,37 @@ class VideoGenerationService {
       });
 
       // TODO: Optionally retry based on error type
+    }
+  }
+
+  private async persistFinalVideoResult(
+    videoId: string,
+    result: ComposedVideoResult
+  ): Promise<boolean> {
+    try {
+      await db
+        .update(videos)
+        .set({
+          status: "completed",
+          videoUrl: result.videoUrl,
+          thumbnailUrl: result.thumbnailUrl,
+          metadata: {
+            duration: result.duration,
+            fileSize: result.fileSize
+          },
+          updatedAt: new Date()
+        })
+        .where(eq(videos.id, videoId));
+      return true;
+    } catch (error) {
+      logger.error(
+        {
+          videoId,
+          err: error instanceof Error ? error.message : String(error)
+        },
+        "[VideoGenerationService] Failed to persist final video result"
+      );
+      return false;
     }
   }
 

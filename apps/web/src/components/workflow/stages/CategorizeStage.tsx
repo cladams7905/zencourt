@@ -76,7 +76,8 @@ function mergeAnalysisResults(
 
 async function saveImagesToDatabase(
   images: ProcessedImage[],
-  projectId: string
+  projectId: string,
+  userId: string
 ): Promise<void> {
   const imagesToSave = images
     .filter((img) => img.url && img.category)
@@ -85,7 +86,7 @@ async function saveImagesToDatabase(
     );
 
   if (imagesToSave.length > 0) {
-    await saveImages(projectId, imagesToSave);
+    await saveImages(userId, projectId, imagesToSave);
   }
 }
 
@@ -229,7 +230,7 @@ export function CategorizeStage({
     setIsCategorizing(true);
 
     try {
-      await updateProject(currentProject.id, { status: "draft" });
+        await updateProject(user.id, currentProject.id, { status: "draft" });
 
       let finalImages: ProcessedImage[];
 
@@ -277,7 +278,7 @@ export function CategorizeStage({
       setCategorizedGroups(organized.groups);
 
       try {
-        await saveImagesToDatabase(finalImages, currentProject.id);
+        await saveImagesToDatabase(finalImages, currentProject.id, user.id);
       } catch (error) {
         console.error("Error saving images to database:", error);
         toast.error("Error saving images to database", {

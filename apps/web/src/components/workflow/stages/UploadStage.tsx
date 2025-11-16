@@ -107,7 +107,7 @@ export function UploadStage({
     }
 
     try {
-      const newProject = await createProject();
+      const newProject = await createProject(user.id);
       setCurrentProject(newProject);
       return newProject;
     } catch (error) {
@@ -121,12 +121,13 @@ export function UploadStage({
   };
 
   const persistImageRecord = async (
+    userId: string,
     projectId: string,
     image: ProcessedImage,
     url: string
   ) => {
     try {
-      await saveImages(projectId, [
+      await saveImages(userId, projectId, [
         {
           id: image.id,
           projectId,
@@ -189,7 +190,12 @@ export function UploadStage({
           const [result] = uploadResult.results;
 
           if (result?.success && result.url) {
-            await persistImageRecord(project.id, imageData, result.url);
+            await persistImageRecord(
+              user.id,
+              project.id,
+              imageData,
+              result.url
+            );
 
             setImages((prev) =>
               prev.map((img) =>
@@ -319,7 +325,12 @@ export function UploadStage({
       const [result] = uploadResult.results;
 
       if (result?.success && result.url) {
-        await persistImageRecord(currentProject.id, imageToRetry, result.url);
+        await persistImageRecord(
+          user.id,
+          currentProject.id,
+          imageToRetry,
+          result.url
+        );
 
         setImages((prev) =>
           prev.map((img) =>
@@ -393,7 +404,7 @@ export function UploadStage({
     }
 
     try {
-      await deleteImageRecord(imageId);
+      await deleteImageRecord(user.id, imageId);
     } catch (error) {
       console.error("Failed to delete image from database:", error);
       toast.error("Failed to delete image record", {

@@ -21,6 +21,7 @@ async function getInitialVideoState(
       status: videos.status,
       videoUrl: videos.videoUrl,
       thumbnailUrl: videos.thumbnailUrl,
+      errorMessage: videos.errorMessage,
       metadata: videos.metadata
     })
     .from(videos)
@@ -62,7 +63,8 @@ async function getInitialVideoState(
         status: latestVideo.status,
         finalVideoUrl: latestVideo.videoUrl,
         thumbnailUrl: latestVideo.thumbnailUrl,
-        duration: latestVideo.metadata?.duration ?? null
+        duration: latestVideo.metadata?.duration ?? null,
+        errorMessage: latestVideo.errorMessage ?? null
       }
     : undefined;
 

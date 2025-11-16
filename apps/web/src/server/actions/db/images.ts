@@ -4,7 +4,6 @@ import { eq, sql } from "drizzle-orm";
 import { db, images } from "@db/client";
 import { DBImage, InsertDBImage } from "@shared/types/models";
 import { withDbErrorHandling } from "../_utils";
-import { getUser } from "./users";
 
 /**
  * Save processed images to database
@@ -16,11 +15,15 @@ import { getUser } from "./users";
  * @throws Error if user is not authenticated or save fails
  */
 export async function saveImages(
+  userId: string,
   projectId: string,
   imageData: InsertDBImage[]
 ): Promise<DBImage[]> {
   if (!projectId || projectId.trim() === "") {
     throw new Error("Project ID is required");
+  }
+  if (!userId || userId.trim() === "") {
+    throw new Error("User ID is required to save images");
   }
 
   if (!imageData || imageData.length === 0) {
@@ -29,8 +32,6 @@ export async function saveImages(
 
   return withDbErrorHandling(
     async () => {
-      await getUser();
-
       const imageRecords: InsertDBImage[] = imageData.map((img, index) => ({
         ...img,
         projectId,
@@ -57,7 +58,7 @@ export async function saveImages(
     },
     {
       actionName: "saveImages",
-      context: { projectId, imageCount: imageData.length },
+      context: { projectId, userId, imageCount: imageData.length },
       errorMessage: "Failed to save images to database. Please try again."
     }
   );
@@ -71,15 +72,19 @@ export async function saveImages(
  * @returns Promise<DBImage[]> - Array of images
  * @throws Error if user is not authenticated
  */
-export async function getProjectImages(projectId: string): Promise<DBImage[]> {
+export async function getProjectImages(
+  userId: string,
+  projectId: string
+): Promise<DBImage[]> {
   if (!projectId || projectId.trim() === "") {
     throw new Error("Project ID is required");
+  }
+  if (!userId || userId.trim() === "") {
+    throw new Error("User ID is required to fetch images");
   }
 
   return withDbErrorHandling(
     async () => {
-      await getUser();
-
       const projectImages = await db
         .select()
         .from(images)
@@ -88,7 +93,7 @@ export async function getProjectImages(projectId: string): Promise<DBImage[]> {
     },
     {
       actionName: "getProjectImages",
-      context: { projectId },
+      context: { projectId, userId },
       errorMessage: "Failed to fetch images from database. Please try again."
     }
   );
@@ -102,19 +107,24 @@ export async function getProjectImages(projectId: string): Promise<DBImage[]> {
  * @returns Promise<void>
  * @throws Error if user is not authenticated or deletion fails
  */
-export async function deleteProjectImages(projectId: string): Promise<void> {
+export async function deleteProjectImages(
+  userId: string,
+  projectId: string
+): Promise<void> {
   if (!projectId || projectId.trim() === "") {
     throw new Error("Project ID is required");
+  }
+  if (!userId || userId.trim() === "") {
+    throw new Error("User ID is required to delete images");
   }
 
   return withDbErrorHandling(
     async () => {
-      await getUser();
       await db.delete(images).where(eq(images.projectId, projectId));
     },
     {
       actionName: "deleteProjectImages",
-      context: { projectId },
+      context: { projectId, userId },
       errorMessage: "Failed to delete images from database. Please try again."
     }
   );
@@ -123,19 +133,24 @@ export async function deleteProjectImages(projectId: string): Promise<void> {
 /**
  * Delete a single image by ID
  */
-export async function deleteImage(imageId: string): Promise<void> {
+export async function deleteImage(
+  userId: string,
+  imageId: string
+): Promise<void> {
   if (!imageId || imageId.trim() === "") {
     throw new Error("Image ID is required");
+  }
+  if (!userId || userId.trim() === "") {
+    throw new Error("User ID is required to delete image");
   }
 
   return withDbErrorHandling(
     async () => {
-      await getUser();
       await db.delete(images).where(eq(images.id, imageId));
     },
     {
       actionName: "deleteImage",
-      context: { imageId },
+      context: { imageId, userId },
       errorMessage: "Failed to delete image. Please try again."
     }
   );

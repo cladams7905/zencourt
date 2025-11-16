@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useUser } from "@stackframe/stack";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import {
@@ -91,6 +92,8 @@ export function ProjectWorkflowModal({
   const [roomStatuses, setRoomStatuses] = useState<RoomGenerationStatus[]>([]);
   const [finalVideo, setFinalVideo] = useState<FinalVideoData | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
+  const finalStatusNotifiedRef = useRef<"success" | "error" | null>(null);
+  const user = useUser({ or: "redirect" });
   const ROOM_GENERATION_STEP_ID = "room-generation";
   const FINAL_COMPOSE_STEP_ID = "final-compose";
 
@@ -113,7 +116,7 @@ export function ProjectWorkflowModal({
   // Load existing project data when modal opens with an existing project
   useEffect(() => {
     async function loadExistingProject() {
-      if (!isOpen || !existingProject) return;
+      if (!isOpen || !existingProject || !user) return;
 
       try {
         // Set project info
@@ -124,7 +127,10 @@ export function ProjectWorkflowModal({
         const { getProjectImages } = await import(
           "../../server/actions/db/images"
         );
-        const projectImages = await getProjectImages(existingProject.id);
+        const projectImages = await getProjectImages(
+          user.id,
+          existingProject.id
+        );
 
         // Convert database images to ProcessedImage format
         const processedImages: ProcessedImage[] = projectImages.map((img) => {
@@ -195,7 +201,7 @@ export function ProjectWorkflowModal({
     }
 
     loadExistingProject();
-  }, [isOpen, existingProject]);
+  }, [isOpen, existingProject, user]);
 
   // Reset state when modal closes
   useEffect(() => {
@@ -261,7 +267,12 @@ export function ProjectWorkflowModal({
     setIsSavingName(true);
     const timeoutId = setTimeout(async () => {
       try {
-        await updateProject(currentProject.id, { title: projectName.trim() });
+        if (!user) {
+          return;
+        }
+        await updateProject(user.id, currentProject.id, {
+          title: projectName.trim()
+        });
       } catch (error) {
         console.error("Failed to save project name:", error);
         toast.error("Failed to save project name", {
@@ -273,7 +284,7 @@ export function ProjectWorkflowModal({
     }, 500); // 500ms debounce delay
 
     return () => clearTimeout(timeoutId);
-  }, [projectName, currentProject]);
+  }, [projectName, currentProject, user]);
 
   // ============================================================================
   // Upload Stage Handlers
@@ -341,6 +352,8 @@ export function ProjectWorkflowModal({
       overallProgress: 5,
       steps
     });
+
+    finalStatusNotifiedRef.current = null;
   };
 
   const updateRoomGenerationStep = (completed: number, total: number) => {
@@ -590,8 +603,16 @@ export function ProjectWorkflowModal({
       });
       markFinalStepCompleted();
     } else if (payload.finalVideo?.status === "failed") {
+      const message =
+        payload.finalVideo.errorMessage || "Final composition failed";
       setFinalVideo(null);
-      markFinalStepFailed("Final composition failed");
+      markFinalStepFailed(message);
+      if (finalStatusNotifiedRef.current !== "error") {
+        toast.error("Generation failed", {
+          description: message
+        });
+        finalStatusNotifiedRef.current = "error";
+      }
     } else {
       setFinalVideo(null);
     }
@@ -607,16 +628,22 @@ export function ProjectWorkflowModal({
           duration: event.duration ?? null
         });
       }
-      toast.success("Generation complete!", {
-        description: "Your property video is ready."
-      });
+      if (finalStatusNotifiedRef.current !== "success") {
+        toast.success("Generation complete!", {
+          description: "Your property video is ready."
+        });
+        finalStatusNotifiedRef.current = "success";
+      }
     } else {
       setFinalVideo(null);
       const message = event.errorMessage || "Final composition failed";
       markFinalStepFailed(message);
-      toast.error("Generation failed", {
-        description: message
-      });
+      if (finalStatusNotifiedRef.current !== "error") {
+        toast.error("Generation failed", {
+          description: message
+        });
+        finalStatusNotifiedRef.current = "error";
+      }
     }
   };
 

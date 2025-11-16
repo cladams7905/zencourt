@@ -9,6 +9,11 @@ import { createHmac } from "crypto";
 import { logger } from "@/config/logger";
 import { WebhookError, WebhookDeliveryOptions } from "@shared/types/video";
 
+const DEFAULT_TIMEOUT_MS = parseInt(
+  process.env.WEBHOOK_TIMEOUT_MS || "",
+  10
+) || 30000;
+
 // ============================================================================
 // Webhook Service Class
 // ============================================================================
@@ -50,7 +55,7 @@ class WebhookService {
             "X-Webhook-Timestamp": payload.timestamp,
             "User-Agent": "ZenCourt-Video-Server/1.0"
           },
-          timeout: 10000, // 10 second timeout
+          timeout: DEFAULT_TIMEOUT_MS,
           validateStatus: (status) => status >= 200 && status < 300
         });
 
