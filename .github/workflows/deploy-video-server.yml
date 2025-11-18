@@ -6,13 +6,6 @@ on:
       - main
   workflow_dispatch:
 
-env:
-  AWS_REGION: ${{ vars.AWS_REGION }}
-  ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
-  ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}
-  ECS_SERVICE: ${{ vars.ECS_SERVICE }}
-  CONTAINER_NAME: ${{ vars.CONTAINER_NAME }}
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -46,7 +39,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
-          aws-region: ${{ env.AWS_REGION }}
+          aws-region: ${{ vars.AWS_REGION }}
 
       - name: Login to Amazon ECR
         id: login-ecr
@@ -55,6 +48,7 @@ jobs:
       - name: Build and push Docker image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
           if [ -z "$ECR_REPOSITORY" ]; then
@@ -67,6 +61,9 @@ jobs:
           docker push "$ECR_REGISTRY/$ECR_REPOSITORY:latest"
 
       - name: Force new ECS deployment
+        env:
+          ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}
+          ECS_SERVICE: ${{ vars.ECS_SERVICE }}
         run: |
           aws ecs update-service \
             --cluster "$ECS_CLUSTER" \
