@@ -30,6 +30,12 @@ export default [
     },
   },
   {
+    files: ['**/__tests__/**/*.ts', '**/*.test.ts', '**/*.spec.ts'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+    },
+  },
+  {
     ignores: ['node_modules/**', 'dist/**', '*.js', '*.mjs'],
   },
 ];
