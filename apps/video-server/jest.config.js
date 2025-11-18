@@ -16,7 +16,10 @@ module.exports = {
   ],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
+    '^@db/(.*)$': '<rootDir>/../../packages/db/$1',
+    '^@shared/(.*)$': '<rootDir>/../../packages/shared/$1',
   },
+  watchman: false,
   coverageThreshold: {
     global: {
       branches: 70,

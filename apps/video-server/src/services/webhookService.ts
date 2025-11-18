@@ -74,8 +74,8 @@ class WebhookService {
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
 
-        const isAxiosError = error instanceof AxiosError;
-        const statusCode = isAxiosError ? error.response?.status : undefined;
+        const axiosError = this.toAxiosError(error);
+        const statusCode = axiosError?.response?.status;
         const isRetryable = this.isRetryableError(statusCode);
 
         logger.warn(
@@ -96,7 +96,7 @@ class WebhookService {
           throw new WebhookError(
             `Webhook delivery failed with non-retryable error: ${lastError.message}`,
             "WEBHOOK_DELIVERY_ERROR",
-            { url, statusCode, error: lastError }
+            { url, statusCode, error: axiosError ?? lastError }
           );
         }
 
@@ -183,6 +183,26 @@ class WebhookService {
    */
   private sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  /**
+   * Normalize unknown errors into AxiosError when possible
+   */
+  private toAxiosError(error: unknown): AxiosError | null {
+    if (error instanceof AxiosError) {
+      return error;
+    }
+
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "isAxiosError" in error &&
+      (error as Partial<AxiosError>).isAxiosError
+    ) {
+      return error as AxiosError;
+    }
+
+    return null;
   }
 
   /**

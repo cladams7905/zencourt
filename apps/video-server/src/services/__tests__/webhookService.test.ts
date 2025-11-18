@@ -3,7 +3,8 @@
  */
 
 import { webhookService } from "../webhookService";
-import axios, { AxiosError } from "axios";
+import axios from "axios";
+import type { AxiosError, AxiosRequestConfig, AxiosResponse } from "axios";
 import { WebhookError } from "@shared/types/video";
 
 jest.mock("axios");
@@ -17,15 +18,29 @@ jest.mock("@/config/logger", () => ({
 }));
 
 const mockAxios = axios as jest.Mocked<typeof axios>;
+const { AxiosError: AxiosErrorCtor } = jest.requireActual(
+  "axios"
+) as typeof import("axios");
+
+type WebhookServiceInternals = {
+  sleep: (ms: number) => Promise<void>;
+  calculateBackoff: (attempt: number, baseMs: number) => number;
+};
 
 // Helper to create AxiosError
 const createAxiosError = (status: number, message: string): AxiosError => {
-  const error = new Error(message) as any;
-  error.isAxiosError = true;
-  error.response = { status };
-  error.constructor = AxiosError;
-  Object.setPrototypeOf(error, AxiosError.prototype);
-  return error;
+  const config: AxiosRequestConfig = {
+    headers: {} as any
+  };
+  const response: AxiosResponse = {
+    data: {},
+    status,
+    statusText: message,
+    headers: {},
+    config: config as any
+  };
+
+  return new AxiosErrorCtor(message, undefined, config as any, undefined, response);
 };
 
 describe("WebhookService", () => {
@@ -34,6 +49,25 @@ describe("WebhookService", () => {
   });
 
   describe("sendWebhook", () => {
+    const serviceInternals =
+      webhookService as unknown as WebhookServiceInternals;
+    let sleepSpy: jest.SpyInstance<Promise<void>, [number]>;
+    let backoffSpy: jest.SpyInstance<number, [number, number]>;
+
+    beforeEach(() => {
+      sleepSpy = jest
+        .spyOn(serviceInternals, "sleep")
+        .mockImplementation(() => Promise.resolve());
+      backoffSpy = jest
+        .spyOn(serviceInternals, "calculateBackoff")
+        .mockReturnValue(1);
+    });
+
+    afterEach(() => {
+      sleepSpy.mockRestore();
+      backoffSpy.mockRestore();
+    });
+
     const baseOptions = {
       url: "https://example.com/webhook",
       secret: "test-secret",
@@ -68,10 +102,13 @@ describe("WebhookService", () => {
         expect.objectContaining({
           headers: expect.objectContaining({
             "Content-Type": "application/json",
+            "User-Agent": "ZenCourt-Video-Server/1.0",
+            "X-Webhook-Delivery-Attempt": "1",
             "X-Webhook-Signature": expect.any(String),
             "X-Webhook-Timestamp": baseOptions.payload.timestamp
           }),
-          timeout: 10000
+          timeout: 30000,
+          validateStatus: expect.any(Function)
         })
       );
     });

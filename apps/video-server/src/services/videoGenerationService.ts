@@ -1027,14 +1027,15 @@ class VideoGenerationService {
       throw new Error("Completed final webhook requires result payload");
     }
 
-    const body = {
-      videoId: videoContext.videoId,
+    // Build webhook payload matching VideoJobWebhookPayload structure
+    const webhookPayload: VideoJobWebhookPayload = {
+      jobId: videoContext.videoId, // Use videoId as jobId for final video webhook
       projectId: videoContext.projectId,
       status: payload.status,
       timestamp: new Date().toISOString(),
       result: payload.result,
       error: payload.errorMessage
-        ? { message: payload.errorMessage }
+        ? { message: payload.errorMessage, code: "COMPOSITION_ERROR" }
         : undefined
     };
 
@@ -1042,7 +1043,7 @@ class VideoGenerationService {
       await webhookService.sendWebhook({
         url: webhookUrl,
         secret: webhookSecret,
-        payload: body as any,
+        payload: webhookPayload,
         maxRetries: 5,
         backoffMs: 1000
       });

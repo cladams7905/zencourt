@@ -397,7 +397,8 @@ export class S3StorageService {
       return error;
     }
 
-    const err = error as any;
+    // Type guard for objects with potential error properties
+    const err = error as { Code?: string; name?: string; message?: string };
     const errorCode = err.Code || err.name || '';
     const errorMessage = err.message || 'Unknown S3 error';
 
