@@ -54,13 +54,22 @@ resource "aws_iam_role" "github" {
 }
 
 data "aws_iam_policy_document" "github" {
+  # ecr:GetAuthorizationToken requires * as resource (account-level permission)
+  statement {
+    effect = "Allow"
+    actions = [
+      "ecr:GetAuthorizationToken"
+    ]
+    resources = ["*"]
+  }
+
+  # Repository-specific ECR permissions
   statement {
     effect = "Allow"
     actions = [
       "ecr:BatchCheckLayerAvailability",
       "ecr:BatchGetImage",
       "ecr:CompleteLayerUpload",
-      "ecr:GetAuthorizationToken",
       "ecr:GetDownloadUrlForLayer",
       "ecr:InitiateLayerUpload",
       "ecr:ListImages",
