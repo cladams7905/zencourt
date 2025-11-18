@@ -2,6 +2,7 @@
 **/*.tfstate
 **/*.tfstate.*
 **/*.tfvars
+**/*.json
 !**/*.tfvars.example
 **/.terraform/
 **/.terraform.lock.hcl

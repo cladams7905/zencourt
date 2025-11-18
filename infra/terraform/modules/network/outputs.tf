@@ -55,8 +55,13 @@ output "alb_target_group_arn" {
 }
 
 output "alb_listener_arn" {
-  description = "ARN of the HTTP ALB listener"
-  value       = aws_lb_listener.http.arn
+  description = "ARN of the listener that forwards traffic to ECS (HTTPS when configured, otherwise HTTP)"
+  value       = var.certificate_arn != "" ? aws_lb_listener.https[0].arn : aws_lb_listener.http.arn
+}
+
+output "alb_https_listener_arn" {
+  description = "ARN of the HTTPS listener if created"
+  value       = var.certificate_arn != "" ? aws_lb_listener.https[0].arn : null
 }
 
 # NAT Gateway Outputs

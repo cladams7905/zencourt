@@ -23,9 +23,31 @@ variable "vercel_to_aws_api_key" {
   sensitive   = true
 }
 
+variable "fal_api_key" {
+  description = "API key for fal.ai video rendering"
+  type        = string
+  sensitive   = true
+}
+
+variable "database_url" {
+  description = "Database connection string used by the video server"
+  type        = string
+  sensitive   = true
+}
+
 # SSM Parameter Store Variables
 variable "vercel_webhook_url" {
   description = "Vercel webhook URL for video completion callbacks"
+  type        = string
+}
+
+variable "vercel_api_url" {
+  description = "Vercel API base URL for authenticated callbacks"
+  type        = string
+}
+
+variable "aws_video_server_url" {
+  description = "Public URL that Vercel should use to reach the ECS video server (typically ALB DNS)"
   type        = string
 }
 

@@ -34,7 +34,7 @@ output "vpc_id" {
 
 output "alb_dns_name" {
   description = "DNS name of the Application Load Balancer (use as AWS_VIDEO_SERVER_URL)"
-  value       = "http://${module.network.alb_dns_name}"
+  value       = format("%s://%s", var.alb_certificate_arn != "" ? "https" : "http", module.network.alb_dns_name)
 }
 
 output "alb_target_group_arn" {
@@ -76,4 +76,14 @@ output "ecs_task_definition_arn" {
 output "ecs_log_group_name" {
   description = "CloudWatch log group name for ECS tasks"
   value       = module.ecs.log_group_name
+}
+
+output "ecr_repository_url" {
+  description = "URL of the ECR repository hosting the video server image"
+  value       = module.ecr.repository_url
+}
+
+output "github_actions_role_arn" {
+  description = "ARN of the IAM role that GitHub Actions assumes for deployments"
+  value       = module.github_actions_deploy_role.role_arn
 }
