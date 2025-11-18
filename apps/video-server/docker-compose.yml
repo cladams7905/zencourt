@@ -30,7 +30,7 @@ services:
       TEMP_DIR: /tmp/video-processing
 
       # fal.ai Configuration
-      FAL_WEBHOOK_URL: http://host.docker.internal:3001/webhooks/fal
+      FAL_WEBHOOK_URL: ${FAL_WEBHOOK_URL:-http://host.docker.internal:3001/webhooks/fal}
     # volumes:
     #   # Mount source code for hot reload in development
     #   - ./src:/app/src:ro

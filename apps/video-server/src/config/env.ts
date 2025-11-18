@@ -104,9 +104,14 @@ const awsVideoServerUrl = getEnvVar("AWS_VIDEO_SERVER_URL").replace(
   /\/+$/,
   ""
 );
-const falWebhookUrl =
-  process.env.FAL_WEBHOOK_URL?.trim() ||
-  `${awsVideoServerUrl.replace(/\/+$/, "")}/webhooks/fal`;
+const defaultFalWebhookUrl = `${awsVideoServerUrl.replace(
+  /\/+$/,
+  ""
+)}/webhooks/fal`;
+const falWebhookUrl = getEnvVar(
+  "FAL_WEBHOOK_URL",
+  defaultFalWebhookUrl
+).trim();
 
 export const env: EnvConfig = {
   // Server

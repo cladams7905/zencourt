@@ -92,6 +92,40 @@ Optional overrides if you ever point the server at a mock such as LocalStack:
 
 Note: The bucket policy enforces AES256 server-side encryption; the video server automatically sets `ServerSideEncryption=AES256` on uploads, so make sure any ad‑hoc scripts do the same.
 
+### fal.ai webhook routing
+
+- **Production** – Point `FAL_WEBHOOK_URL` to the public hostname that fronts this service (typically your ALB DNS name plus `/webhooks/fal`). This is the URL fal.ai calls when a job completes.
+- **Local development** – Keep `AWS_VIDEO_SERVER_URL=http://localhost:3001` for internal requests, but set `FAL_WEBHOOK_URL` to a public tunnel that forwards to `http://localhost:3001/webhooks/fal` (ngrok, Cloudflare Tunnel, etc.). Without that tunnel fal.ai cannot reach your laptop.
+- **Docker Compose** – Export `FAL_WEBHOOK_URL` before running `docker compose` to override the default `http://host.docker.internal:3001/webhooks/fal`.
+
+### Local tunnel helper
+
+The script `apps/video-server/scripts/start-dev-server.sh` automates spinning up an ngrok tunnel and launching Docker Compose with the correct `FAL_WEBHOOK_URL`. Requirements:
+
+- `ngrok` CLI installed and authenticated (`ngrok config add-authtoken ...`)
+- `curl` and `python3` available locally
+
+Quick setup:
+
+1. Install the CLI (`brew install ngrok` or download from https://ngrok.com/download).
+2. Sign in at https://dashboard.ngrok.com/ to copy your authtoken.
+3. Run `ngrok config add-authtoken <token>` once.
+
+Usage:
+
+```bash
+# from the repo root
+apps/video-server/scripts/start-dev-server.sh up --build
+```
+
+The script:
+
+1. Starts `ngrok http 3001` and waits for the HTTPS public URL.
+2. Sets `FAL_WEBHOOK_URL=<public-url>/webhooks/fal`.
+3. Runs `docker compose -f apps/video-server/docker-compose.yml ...` with your supplied arguments.
+
+Stop the compose stack (Ctrl+C) to tear everything down; the script cleans up the ngrok process automatically.
+
 ## Development
 
 ### Prerequisites
