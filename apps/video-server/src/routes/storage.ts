@@ -6,14 +6,14 @@ import {
 } from "../middleware/errorHandler";
 import { validateApiKey } from "../middleware/auth";
 import logger from "../config/logger";
-import { s3Service } from "../services/s3Service";
+import { storageService } from "../services/storageService";
 import {
   buildGenericUploadKey,
   buildUserProjectVideoKey
 } from "@shared/utils/storagePaths";
 
 /**
- * Storage routes for handling S3 uploads/deletes
+ * Storage routes for handling Backblaze uploads/deletes
  * Provides endpoints for Vercel to upload/delete files via proxy
  */
 
@@ -58,7 +58,7 @@ const upload = multer({
 
 /**
  * POST /storage/upload
- * Upload a file to S3
+ * Upload a file to storage
  *
  * Form data:
  * - file: File to upload (required)
@@ -68,9 +68,9 @@ const upload = multer({
  * - videoId: Video ID to nest under /videos/video_{videoId} (optional, requires userId & projectId)
  *
  * Returns:
- * - url: Public S3 URL
+ * - url: Public storage URL
  * - signedUrl: Pre-signed URL with 1-hour expiration
- * - key: S3 object key
+ * - key: Storage object key
  */
 router.post(
   "/upload",
@@ -91,7 +91,7 @@ router.post(
       const projectId = req.body.projectId as string | undefined;
       const videoId = req.body.videoId as string | undefined;
 
-      // Generate S3 key based on provided metadata
+      // Generate storage key based on provided metadata
       let key: string;
       if (userId && projectId) {
         key = buildUserProjectVideoKey(
@@ -112,8 +112,8 @@ router.post(
         );
       }
 
-      // Upload to S3
-      const url = await s3Service.uploadFile({
+      // Upload to Backblaze
+      const url = await storageService.uploadFile({
         key,
         body: file.buffer,
         contentType: file.mimetype,
@@ -126,7 +126,7 @@ router.post(
       });
 
       // Generate signed URL for immediate access
-      const signedUrl = await s3Service.getSignedUrl({
+      const signedUrl = await storageService.getSignedUrl({
         key,
         expiresIn: 3600 // 1 hour
       });
@@ -163,7 +163,7 @@ router.post(
 
       throw new VideoProcessingError(
         "Failed to upload file to storage",
-        VideoProcessingErrorType.S3_UPLOAD_FAILED,
+        VideoProcessingErrorType.STORAGE_UPLOAD_FAILED,
         {
           details: error instanceof Error ? error.message : String(error),
           retryable: true
@@ -175,10 +175,10 @@ router.post(
 
 /**
  * DELETE /storage/delete
- * Delete a file from S3
+ * Delete a file from storage
  *
  * Body:
- * - url: S3 URL to delete (required)
+ * - url: Storage URL to delete (required)
  *
  * Returns:
  * - success: true
@@ -197,13 +197,13 @@ router.delete(
         );
       }
 
-      // Extract S3 key from URL
-      const key = s3Service.extractKeyFromUrl(url);
+      // Extract storage key from URL
+      const key = storageService.extractKeyFromUrl(url);
 
       logger.info({ url, key }, "[Storage] Deleting file");
 
-      // Delete from S3
-      await s3Service.deleteFile("", key);
+      // Delete from storage
+      await storageService.deleteFile("", key);
 
       logger.info({ key }, "[Storage] ✅ File deleted successfully");
 
@@ -225,7 +225,7 @@ router.delete(
 
       throw new VideoProcessingError(
         "Failed to delete file from storage",
-        VideoProcessingErrorType.S3_DELETE_FAILED,
+        VideoProcessingErrorType.STORAGE_DELETE_FAILED,
         {
           details: error instanceof Error ? error.message : String(error),
           retryable: true
@@ -237,10 +237,10 @@ router.delete(
 
 /**
  * POST /storage/signed-url
- * Get a signed URL for an existing S3 object
+ * Get a signed URL for an existing storage object
  *
  * Body:
- * - key: S3 object key (required)
+ * - key: Storage object key (required)
  * - expiresIn: Expiration time in seconds (optional, default: 3600)
  *
  * Returns:
@@ -271,7 +271,7 @@ router.post(
         "[Storage] Generating signed URL"
       );
 
-      const signedUrl = await s3Service.getSignedUrl({
+      const signedUrl = await storageService.getSignedUrl({
         key,
         expiresIn: expiry
       });
@@ -298,7 +298,7 @@ router.post(
 
       throw new VideoProcessingError(
         "Failed to generate signed URL",
-        VideoProcessingErrorType.S3_DOWNLOAD_FAILED,
+        VideoProcessingErrorType.STORAGE_DOWNLOAD_FAILED,
         {
           details: error instanceof Error ? error.message : String(error),
           retryable: true
@@ -310,7 +310,7 @@ router.post(
 
 /**
  * POST /storage/batch
- * Batch upload multiple files to S3
+ * Batch upload multiple files to storage
  *
  * Form data:
  * - files: Array of files to upload (required)
@@ -356,7 +356,7 @@ router.post(
       const uploadResults = await Promise.all(
         files.map(async (file) => {
           try {
-            // Generate S3 key based on provided metadata
+            // Generate storage key based on provided metadata
             let key: string;
             if (userId && projectId) {
               key = buildUserProjectVideoKey(
@@ -368,8 +368,8 @@ router.post(
               key = buildGenericUploadKey(folder, file.originalname);
             }
 
-            // Upload to S3
-            const url = await s3Service.uploadFile({
+            // Upload to storage
+            const url = await storageService.uploadFile({
               key,
               body: file.buffer,
               contentType: file.mimetype,
@@ -450,7 +450,7 @@ router.post(
 
       throw new VideoProcessingError(
         "Failed to batch upload files to storage",
-        VideoProcessingErrorType.S3_UPLOAD_FAILED,
+        VideoProcessingErrorType.STORAGE_UPLOAD_FAILED,
         {
           details: error instanceof Error ? error.message : String(error),
           retryable: true

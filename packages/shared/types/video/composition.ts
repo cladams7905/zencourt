@@ -19,7 +19,7 @@ export interface SubtitleConfig {
 export interface VideoCompositionSettings {
   transitions?: boolean;
   logo?: {
-    s3Url: string;
+    storageUrl: string;
     position: LogoPosition;
   };
   subtitles?: SubtitleConfig;

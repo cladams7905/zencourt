@@ -2,7 +2,7 @@
   "name": "@zencourt/video-server",
   "version": "1.0.0",
   "private": true,
-  "description": "Express server for FFmpeg video processing and S3 storage on AWS ECS",
+  "description": "Express server for FFmpeg video processing and Backblaze B2 storage (Hetzner compatible)",
   "main": "dist/apps/video-server/src/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",

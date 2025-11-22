@@ -10,8 +10,15 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     permissions:
-      id-token: write
       contents: read
+      packages: write
+    env:
+      GHCR_IMAGE: ${{ vars.GHCR_IMAGE || format('ghcr.io/{0}/zencourt-video-server', github.repository_owner) }}
+      IMAGE_TAG: ${{ github.sha }}
+      HETZNER_ENV_FILE: ${{ vars.HETZNER_ENV_FILE || '/home/deploy/.env.video-server' }}
+      HETZNER_DATA_DIR: ${{ vars.HETZNER_DATA_DIR || '/tmp/video-processing' }}
+      HETZNER_CONTAINER_NAME: ${{ vars.HETZNER_CONTAINER_NAME || 'zencourt-video-server' }}
+      VIDEO_SERVER_PORT: ${{ vars.VIDEO_SERVER_PORT || '3001' }}
 
     steps:
       - name: Checkout repository
@@ -35,37 +42,47 @@ jobs:
       - name: Build video server
         run: npm run build --workspace=@zencourt/video-server
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
-          aws-region: ${{ vars.AWS_REGION }}
-
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push Docker image
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
-          IMAGE_TAG: ${{ github.sha }}
         run: |
-          if [ -z "$ECR_REPOSITORY" ]; then
-            echo "ECR_REPOSITORY repo variable is not set" >&2
-            exit 1
-          fi
-          docker build -f apps/video-server/Dockerfile -t "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" .
-          docker tag "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" "$ECR_REGISTRY/$ECR_REPOSITORY:latest"
-          docker push "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
-          docker push "$ECR_REGISTRY/$ECR_REPOSITORY:latest"
+          docker build -f apps/video-server/Dockerfile -t "$GHCR_IMAGE:$IMAGE_TAG" -t "$GHCR_IMAGE:latest" .
+          docker push "$GHCR_IMAGE:$IMAGE_TAG"
+          docker push "$GHCR_IMAGE:latest"
 
-      - name: Force new ECS deployment
-        env:
-          ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}
-          ECS_SERVICE: ${{ vars.ECS_SERVICE }}
-        run: |
-          aws ecs update-service \
-            --cluster "$ECS_CLUSTER" \
-            --service "$ECS_SERVICE" \
-            --force-new-deployment
+      - name: Deploy to Hetzner
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.HETZNER_HOST }}
+          username: ${{ secrets.HETZNER_USER }}
+          key: ${{ secrets.HETZNER_SSH_KEY }}
+          port: ${{ secrets.HETZNER_PORT || 22 }}
+          script: |
+            set -euo pipefail
+            IMAGE="${{ env.GHCR_IMAGE }}"
+            TAG="${{ env.IMAGE_TAG }}"
+            CONTAINER_NAME="${{ env.HETZNER_CONTAINER_NAME }}"
+            ENV_FILE="${{ env.HETZNER_ENV_FILE }}"
+            DATA_DIR="${{ env.HETZNER_DATA_DIR }}"
+            PORT="${{ env.VIDEO_SERVER_PORT }}"
+
+            docker login ghcr.io -u "${{ github.actor }}" -p "${{ secrets.GITHUB_TOKEN }}"
+            docker pull "${IMAGE}:${TAG}"
+
+            docker stop "${CONTAINER_NAME}" >/dev/null 2>&1 || true
+            docker rm "${CONTAINER_NAME}" >/dev/null 2>&1 || true
+
+            mkdir -p "${DATA_DIR}"
+
+            docker run -d \
+              --name "${CONTAINER_NAME}" \
+              --restart unless-stopped \
+              -p "${PORT}:3001" \
+              --env-file "${ENV_FILE}" \
+              -v "${DATA_DIR}":/tmp/video-processing \
+              "${IMAGE}:${TAG}"

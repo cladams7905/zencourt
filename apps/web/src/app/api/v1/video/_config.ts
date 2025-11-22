@@ -21,13 +21,13 @@ export function getVideoServerConfig(
 export function getVideoServerConfig(
   options: ConfigOptions = {}
 ): VideoServerConfig {
-  const baseUrl = process.env.AWS_VIDEO_SERVER_URL?.trim();
-  const apiKey = process.env.VERCEL_TO_AWS_API_KEY?.trim();
+  const baseUrl = process.env.VIDEO_SERVER_URL?.trim();
+  const apiKey = process.env.VIDEO_SERVER_API_KEY?.trim();
   const webhookSecret = process.env.VERCEL_WEBHOOK_SIGNING_KEY?.trim();
 
   if (!baseUrl || !apiKey) {
     throw new Error(
-      "AWS_VIDEO_SERVER_URL and VERCEL_TO_AWS_API_KEY must be configured"
+      "VIDEO_SERVER_URL and VIDEO_SERVER_API_KEY must be configured"
     );
   }
 

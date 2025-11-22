@@ -5,7 +5,7 @@
  * - Download video from URL
  * - Apply basic processing/normalization
  * - Generate thumbnails
- * - Prepare for S3 upload
+ * - Prepare for storage upload
  *
  * This service is used for processing individual video_jobs clips,
  * while videoCompositionService handles combining multiple clips.

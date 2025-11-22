@@ -60,7 +60,7 @@ export interface HealthCheckResponse {
   timestamp: string;
   checks: {
     ffmpeg: boolean;
-    s3: boolean;
+    storage: boolean;
   };
 }
 

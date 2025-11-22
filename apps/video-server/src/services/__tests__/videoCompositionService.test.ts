@@ -30,14 +30,14 @@ jest.mock('fs/promises', () => ({
 
 jest.mock('@/config/env', () => ({
   env: {
-    awsS3Bucket: 'test-bucket',
-    awsRegion: 'us-east-1',
+    storageBucket: 'test-bucket',
+    storageRegion: 'us-west-002',
     tempDir: '/tmp/video-processing',
   },
 }));
 
-jest.mock('../s3Service', () => ({
-  s3Service: {
+jest.mock('../storageService', () => ({
+  storageService: {
     uploadFile: jest.fn(),
     downloadFile: jest.fn(),
   },
@@ -78,11 +78,11 @@ jest.mock('ffprobe-static', () => ({ path: '/usr/bin/ffprobe' }));
 
 describe('VideoCompositionService', () => {
   let service: VideoCompositionService;
-  let mockS3Service: any;
+  let mockStorageService: any;
 
   beforeEach(() => {
     service = new VideoCompositionService();
-    mockS3Service = require('../s3Service').s3Service;
+    mockStorageService = require('../storageService').storageService;
     jest.clearAllMocks();
   });
 
@@ -101,7 +101,7 @@ describe('VideoCompositionService', () => {
       const settings: VideoCompositionSettings = {
         transitions: true,
         logo: {
-          s3Url: 'https://bucket.s3.us-east-1.amazonaws.com/logo.png',
+          storageUrl: 'https://bucket.s3.us-east-1.amazonaws.com/logo.png',
           position: 'top-right',
         },
         subtitles: {
@@ -135,11 +135,15 @@ describe('VideoCompositionService', () => {
     };
 
     beforeEach(() => {
-      // Mock S3 downloads
-      mockS3Service.downloadFile.mockResolvedValue(Buffer.from('mock-video-data'));
+      // Mock storage downloads
+      mockStorageService.downloadFile.mockResolvedValue(
+        Buffer.from('mock-video-data')
+      );
 
-      // Mock S3 uploads
-      mockS3Service.uploadFile.mockResolvedValue('https://s3.amazonaws.com/mock-url.mp4');
+      // Mock storage uploads
+      mockStorageService.uploadFile.mockResolvedValue(
+        'https://s3.amazonaws.com/mock-url.mp4'
+      );
     });
 
     it('should successfully combine room videos without transitions', async () => {
@@ -164,7 +168,7 @@ describe('VideoCompositionService', () => {
       expect(result.fileSize).toBeGreaterThan(0);
     });
 
-    it('should download room videos from S3', async () => {
+    it('should download room videos from storage', async () => {
       const roomVideoUrls = [
         'https://bucket.s3.us-east-1.amazonaws.com/user_user1/projects/project_project456/videos/video_videoRoom1/room.mp4',
       ];
@@ -177,13 +181,13 @@ describe('VideoCompositionService', () => {
         'video789'
       );
 
-      expect(mockS3Service.downloadFile).toHaveBeenCalledWith(
+      expect(mockStorageService.downloadFile).toHaveBeenCalledWith(
         'test-bucket',
         'user_user1/projects/project_project456/videos/video_videoRoom1/room.mp4'
       );
     });
 
-    it('should upload final video and thumbnail to S3', async () => {
+    it('should upload final video and thumbnail to storage', async () => {
       const roomVideoUrls = ['https://bucket.s3.us-east-1.amazonaws.com/video1.mp4'];
 
       await service.combineRoomVideos(
@@ -196,10 +200,10 @@ describe('VideoCompositionService', () => {
       );
 
       // Should upload both video and thumbnail
-      expect(mockS3Service.uploadFile).toHaveBeenCalledTimes(2);
+      expect(mockStorageService.uploadFile).toHaveBeenCalledTimes(2);
 
       // Check video upload
-      const videoCall = mockS3Service.uploadFile.mock.calls.find((call: any) =>
+      const videoCall = mockStorageService.uploadFile.mock.calls.find((call: any) =>
         call[0].key.includes('final.mp4')
       );
       expect(videoCall).toBeDefined();
@@ -213,7 +217,7 @@ describe('VideoCompositionService', () => {
       });
 
       // Check thumbnail upload
-      const thumbnailCall = mockS3Service.uploadFile.mock.calls.find((call: any) =>
+      const thumbnailCall = mockStorageService.uploadFile.mock.calls.find((call: any) =>
         call[0].key.includes('thumbnail.jpg')
       );
       expect(thumbnailCall).toBeDefined();
@@ -247,7 +251,7 @@ describe('VideoCompositionService', () => {
       const settingsWithLogo: VideoCompositionSettings = {
         transitions: false,
         logo: {
-          s3Url: 'https://bucket.s3.us-east-1.amazonaws.com/logo.png',
+          storageUrl: 'https://bucket.s3.us-east-1.amazonaws.com/logo.png',
           position: 'top-right',
         },
       };
@@ -262,8 +266,8 @@ describe('VideoCompositionService', () => {
         'video789'
       );
 
-      // Should download logo from S3
-      expect(mockS3Service.downloadFile).toHaveBeenCalledWith('test-bucket', 'logo.png');
+      // Should download logo from storage
+      expect(mockStorageService.downloadFile).toHaveBeenCalledWith('test-bucket', 'logo.png');
     });
 
     it('should handle subtitles if enabled', async () => {
@@ -313,11 +317,13 @@ describe('VideoCompositionService', () => {
       );
 
       // FFmpeg should be called (mocked, so we just verify the service ran)
-      expect(mockS3Service.downloadFile).toHaveBeenCalledTimes(2);
+      expect(mockStorageService.downloadFile).toHaveBeenCalledTimes(2);
     });
 
     it('should cleanup temp files on error', async () => {
-      mockS3Service.downloadFile.mockRejectedValueOnce(new Error('S3 download failed'));
+      mockStorageService.downloadFile.mockRejectedValueOnce(
+        new Error('Storage download failed')
+      );
 
       const roomVideoUrls = ['https://bucket.s3.us-east-1.amazonaws.com/video1.mp4'];
 
@@ -347,21 +353,21 @@ describe('VideoCompositionService', () => {
         'My Awesome Project'
       );
 
-      const videoCall = mockS3Service.uploadFile.mock.calls.find((call: any) =>
+      const videoCall = mockStorageService.uploadFile.mock.calls.find((call: any) =>
         call[0].key.includes('final.mp4')
       );
       expect(videoCall[0].metadata.projectName).toBe('My Awesome Project');
     });
   });
 
-  describe('S3 URL Parsing', () => {
-    it('should extract S3 key from standard S3 URL', async () => {
+  describe('Storage URL Parsing', () => {
+    it('should extract storage key from standard HTTPS URL', async () => {
       const service = new VideoCompositionService();
       const url = 'https://bucket.s3.us-east-1.amazonaws.com/user_user123/projects/project_proj1/videos/video_video123/source.mp4';
 
       // We'll test this indirectly through the downloadFile calls
-      mockS3Service.downloadFile.mockResolvedValue(Buffer.from('test'));
-      mockS3Service.uploadFile.mockResolvedValue('https://s3.amazonaws.com/video.mp4');
+      mockStorageService.downloadFile.mockResolvedValue(Buffer.from('test'));
+      mockStorageService.uploadFile.mockResolvedValue('https://s3.amazonaws.com/video.mp4');
 
       await service.combineRoomVideos(
         [url],
@@ -372,7 +378,7 @@ describe('VideoCompositionService', () => {
       );
 
       // The key extraction happens internally
-      expect(mockS3Service.downloadFile).toHaveBeenCalled();
+      expect(mockStorageService.downloadFile).toHaveBeenCalled();
     });
   });
 
@@ -397,8 +403,10 @@ describe('VideoCompositionService', () => {
   });
 
   describe('Error Handling', () => {
-    it('should throw error with meaningful message on S3 download failure', async () => {
-      mockS3Service.downloadFile.mockRejectedValue(new Error('S3 Access Denied'));
+    it('should throw error with meaningful message on storage download failure', async () => {
+      mockStorageService.downloadFile.mockRejectedValue(
+        new Error('Storage Access Denied')
+      );
 
       const roomVideoUrls = ['https://bucket.s3.us-east-1.amazonaws.com/video1.mp4'];
 
@@ -413,9 +421,11 @@ describe('VideoCompositionService', () => {
       ).rejects.toThrow('Failed to compose video');
     });
 
-    it('should throw error with meaningful message on S3 upload failure', async () => {
-      mockS3Service.downloadFile.mockResolvedValue(Buffer.from('test'));
-      mockS3Service.uploadFile.mockRejectedValue(new Error('S3 Upload Failed'));
+    it('should throw error with meaningful message on storage upload failure', async () => {
+      mockStorageService.downloadFile.mockResolvedValue(Buffer.from('test'));
+      mockStorageService.uploadFile.mockRejectedValue(
+        new Error('Storage Upload Failed')
+      );
 
       const roomVideoUrls = ['https://bucket.s3.us-east-1.amazonaws.com/video1.mp4'];
 
@@ -443,8 +453,8 @@ describe('VideoCompositionService', () => {
         },
       };
 
-      mockS3Service.downloadFile.mockResolvedValue(Buffer.from('test'));
-      mockS3Service.uploadFile.mockResolvedValue('https://s3.amazonaws.com/video.mp4');
+      mockStorageService.downloadFile.mockResolvedValue(Buffer.from('test'));
+      mockStorageService.uploadFile.mockResolvedValue('https://s3.amazonaws.com/video.mp4');
 
       service.combineRoomVideos(
         ['https://bucket.s3.us-east-1.amazonaws.com/video1.mp4'],
@@ -479,8 +489,8 @@ describe('VideoCompositionService', () => {
         },
       };
 
-      mockS3Service.downloadFile.mockResolvedValue(Buffer.from('test'));
-      mockS3Service.uploadFile.mockResolvedValue('https://s3.amazonaws.com/video.mp4');
+      mockStorageService.downloadFile.mockResolvedValue(Buffer.from('test'));
+      mockStorageService.uploadFile.mockResolvedValue('https://s3.amazonaws.com/video.mp4');
 
       await service.combineRoomVideos(
         ['https://bucket.s3.us-east-1.amazonaws.com/video1.mp4'],
@@ -523,13 +533,13 @@ describe('VideoCompositionService', () => {
         const settingsWithLogo: VideoCompositionSettings = {
           transitions: false,
           logo: {
-            s3Url: 'https://bucket.s3.us-east-1.amazonaws.com/logo.png',
+            storageUrl: 'https://bucket.s3.us-east-1.amazonaws.com/logo.png',
             position,
           },
         };
 
-        mockS3Service.downloadFile.mockResolvedValue(Buffer.from('test'));
-        mockS3Service.uploadFile.mockResolvedValue('https://s3.amazonaws.com/video.mp4');
+        mockStorageService.downloadFile.mockResolvedValue(Buffer.from('test'));
+        mockStorageService.uploadFile.mockResolvedValue('https://s3.amazonaws.com/video.mp4');
 
         await service.combineRoomVideos(
           ['https://bucket.s3.us-east-1.amazonaws.com/video1.mp4'],
@@ -540,7 +550,7 @@ describe('VideoCompositionService', () => {
         );
 
         // Verify logo was downloaded
-        expect(mockS3Service.downloadFile).toHaveBeenCalledWith('test-bucket', 'logo.png');
+        expect(mockStorageService.downloadFile).toHaveBeenCalledWith('test-bucket', 'logo.png');
       });
     });
   });

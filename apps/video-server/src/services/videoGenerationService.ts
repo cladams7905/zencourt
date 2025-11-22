@@ -8,7 +8,7 @@ import logger from "@/config/logger";
 import { env } from "@/config/env";
 import { klingService } from "./klingService";
 import { ffmpegService } from "./ffmpegService";
-import { s3Service } from "./s3Service";
+import { storageService } from "./storageService";
 import { webhookService } from "./webhookService";
 import { db, videoJobs, videos, projects } from "@db/client";
 import { eq, inArray } from "drizzle-orm";
@@ -455,7 +455,7 @@ class VideoGenerationService {
       return;
     }
 
-    // Success case: Process video and upload to S3
+    // Success case: Process video and upload to Backblaze storage
     try {
       const falVideoUrl = payload.payload.video.url;
       const videoContext = await this.getVideoContext(job.videoId);
@@ -481,12 +481,12 @@ class VideoGenerationService {
         targetAspectRatio
       });
 
-      // Step 2: Upload processed video and thumbnail to S3
+      // Step 2: Upload processed video and thumbnail to storage
       const videoKey = `${storageBasePath}/jobs/job_${job.id}/video.mp4`;
       const thumbnailKey = `${storageBasePath}/jobs/job_${job.id}/thumbnail.jpg`;
 
       const [videoUrl, thumbnailUrl] = await Promise.all([
-        s3Service.uploadFile({
+        storageService.uploadFile({
           key: videoKey,
           body: processedVideo.videoBuffer,
           contentType: "video/mp4",
@@ -498,7 +498,7 @@ class VideoGenerationService {
             generationModel: job.generationModel || "kling1.6"
           }
         }),
-        s3Service.uploadFile({
+        storageService.uploadFile({
           key: thumbnailKey,
           body: processedVideo.thumbnailBuffer,
           contentType: "image/jpeg",
@@ -543,7 +543,7 @@ class VideoGenerationService {
           fileSize: processedVideo.metadata.fileSize,
           processingDuration: Date.now() - startTime
         },
-        "[VideoGenerationService] ✅ Video job completed and uploaded to S3"
+        "[VideoGenerationService] ✅ Video job completed and uploaded to storage"
       );
 
       // Step 4: Send webhook to Vercel app for job completion
@@ -841,7 +841,7 @@ class VideoGenerationService {
   }
 
   /**
-   * Compose all completed job videos into final video and upload to S3
+   * Compose all completed job videos into final video and upload to storage
    * Phase 5: Composition & Finalization
    */
   private async composeAndFinalizeVideo(

@@ -4,7 +4,7 @@
  * Handles video composition including combining room videos,
  * applying logo overlays, subtitles, and generating thumbnails using FFmpeg
  *
- * Ported from Vercel to Express with S3 storage
+ * Ported from Vercel to Express with Backblaze B2 storage
  */
 
 import ffmpeg from "fluent-ffmpeg";
@@ -15,7 +15,7 @@ import { existsSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
 import logger from "@/config/logger";
-import { s3Service } from "./s3Service";
+import { storageService } from "./storageService";
 import { env } from "@/config/env";
 import type {
   ComposedVideoResult,
@@ -77,7 +77,7 @@ export class VideoCompositionService {
         "[VideoComposition] Starting composition"
       );
 
-      // Step 1: Download all room videos from S3 to temp directory
+      // Step 1: Download all room videos from B2 to temp directory
       const downloadedVideos = await this.downloadRoomVideosToTemp(
         roomVideoUrls,
         tempDir
@@ -98,7 +98,10 @@ export class VideoCompositionService {
       // Step 3: Apply logo overlay if provided
       if (compositionSettings.logo) {
         const logoPath = join(tempDir, "logo.png");
-        await this.downloadLogoToTemp(compositionSettings.logo.s3Url, logoPath);
+        await this.downloadLogoToTemp(
+          compositionSettings.logo.storageUrl,
+          logoPath
+        );
         tempFiles.push(logoPath);
 
         const videoWithLogoPath = join(tempDir, "with_logo.mp4");
@@ -142,10 +145,10 @@ export class VideoCompositionService {
       const videoBuffer = await readFile(finalVideoPath);
       const thumbnailBuffer = await readFile(thumbnailPath);
 
-      // Step 7: Upload to S3
+      // Step 7: Upload to Backblaze B2
       logger.info(
         { projectId, finalVideoId },
-        "[VideoComposition] Uploading final video and thumbnail to S3"
+        "[VideoComposition] Uploading final video and thumbnail to Backblaze B2"
       );
 
       const baseVideoPath = `user_${userId}/projects/project_${projectId}/videos/video_${finalVideoId}`;
@@ -153,7 +156,7 @@ export class VideoCompositionService {
       const thumbnailKey = `${baseVideoPath}/thumbnail.jpg`;
 
       const [videoUrl, thumbnailUrl] = await Promise.all([
-        s3Service.uploadFile({
+        storageService.uploadFile({
           key: videoKey,
           body: videoBuffer,
           contentType: "video/mp4",
@@ -164,7 +167,7 @@ export class VideoCompositionService {
             projectName: projectName || ""
           }
         }),
-        s3Service.uploadFile({
+        storageService.uploadFile({
           key: thumbnailKey,
           body: thumbnailBuffer,
           contentType: "image/jpeg",
@@ -225,7 +228,7 @@ export class VideoCompositionService {
   // ============================================================================
 
   /**
-   * Download room videos from S3 to temporary directory
+   * Download room videos from Backblaze B2 to temporary directory
    */
   private async downloadRoomVideosToTemp(
     videoUrls: string[],
@@ -233,13 +236,16 @@ export class VideoCompositionService {
   ): Promise<string[]> {
     logger.info(
       { count: videoUrls.length },
-      "[VideoComposition] Downloading room videos from S3"
+      "[VideoComposition] Downloading room videos from Backblaze B2"
     );
 
     const downloadPromises = videoUrls.map(async (url, index) => {
-      // Extract S3 key from URL
-      const s3Key = this.extractS3KeyFromUrl(url);
-      const videoBuffer = await s3Service.downloadFile(env.awsS3Bucket, s3Key);
+      // Extract storage key from URL
+      const storageKey = this.extractStorageKeyFromUrl(url);
+      const videoBuffer = await storageService.downloadFile(
+        env.storageBucket,
+        storageKey
+      );
 
       const videoPath = join(tempDir, `room_${index}.mp4`);
       await writeFile(videoPath, videoBuffer);
@@ -255,19 +261,22 @@ export class VideoCompositionService {
   }
 
   /**
-   * Download logo from S3 to temporary directory
+   * Download logo from Backblaze B2 to temporary directory
    */
   private async downloadLogoToTemp(
-    s3Url: string,
+    storageUrl: string,
     logoPath: string
   ): Promise<void> {
     logger.info(
-      { s3Url, logoPath },
-      "[VideoComposition] Downloading logo from S3"
+      { storageUrl, logoPath },
+      "[VideoComposition] Downloading logo from Backblaze B2"
     );
 
-    const s3Key = this.extractS3KeyFromUrl(s3Url);
-    const logoBuffer = await s3Service.downloadFile(env.awsS3Bucket, s3Key);
+    const storageKey = this.extractStorageKeyFromUrl(storageUrl);
+    const logoBuffer = await storageService.downloadFile(
+      env.storageBucket,
+      storageKey
+    );
     await writeFile(logoPath, logoBuffer);
 
     logger.info(
@@ -277,16 +286,17 @@ export class VideoCompositionService {
   }
 
   /**
-   * Extract S3 key from full S3 URL
+   * Extract storage key from Backblaze-compatible URLs
    */
-  private extractS3KeyFromUrl(url: string): string {
+  private extractStorageKeyFromUrl(url: string): string {
     // Handle format: https://bucket.s3.region.amazonaws.com/key
     // or: https://s3.region.amazonaws.com/bucket/key
     const urlObj = new URL(url);
-    const pathname = urlObj.pathname;
+    let pathname = urlObj.pathname.replace(/^\/+/, "");
 
-    // Remove leading slash
-    return pathname.startsWith("/") ? pathname.substring(1) : pathname;
+    return pathname.startsWith(`${env.storageBucket}/`)
+      ? pathname.substring(env.storageBucket.length + 1)
+      : pathname;
   }
 
   // ============================================================================

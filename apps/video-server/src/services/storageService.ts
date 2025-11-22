@@ -5,46 +5,46 @@ import {
   DeleteObjectCommand,
   HeadBucketCommand,
   ListObjectsV2Command,
-  CopyObjectCommand,
-} from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { Readable } from 'stream';
-import logger from '@/config/logger';
-import { s3Client, AWS_CONFIG } from '@/config/aws';
+  CopyObjectCommand
+} from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { Readable } from "stream";
+import logger from "@/config/logger";
+import { storageClient, STORAGE_CONFIG } from "@/config/storage";
 
 /**
- * S3-specific error types
+ * Storage-specific error types
  */
-export enum S3ErrorType {
-  UPLOAD_FAILED = 'S3_UPLOAD_FAILED',
-  DOWNLOAD_FAILED = 'S3_DOWNLOAD_FAILED',
-  DELETE_FAILED = 'S3_DELETE_FAILED',
-  ACCESS_DENIED = 'S3_ACCESS_DENIED',
-  NOT_FOUND = 'S3_NOT_FOUND',
-  INVALID_BUCKET = 'S3_INVALID_BUCKET',
-  NETWORK_ERROR = 'S3_NETWORK_ERROR',
-  UNKNOWN_ERROR = 'S3_UNKNOWN_ERROR',
+export enum StorageErrorType {
+  UPLOAD_FAILED = "STORAGE_UPLOAD_FAILED",
+  DOWNLOAD_FAILED = "STORAGE_DOWNLOAD_FAILED",
+  DELETE_FAILED = "STORAGE_DELETE_FAILED",
+  ACCESS_DENIED = "STORAGE_ACCESS_DENIED",
+  NOT_FOUND = "STORAGE_NOT_FOUND",
+  INVALID_BUCKET = "STORAGE_INVALID_BUCKET",
+  NETWORK_ERROR = "STORAGE_NETWORK_ERROR",
+  UNKNOWN_ERROR = "STORAGE_UNKNOWN_ERROR"
 }
 
 /**
- * Custom S3 error class
+ * Custom storage error class
  */
-export class S3ServiceError extends Error {
+export class StorageServiceError extends Error {
   constructor(
     message: string,
-    public code: S3ErrorType,
+    public code: StorageErrorType,
     public details?: unknown,
     public retryable: boolean = false
   ) {
     super(message);
-    this.name = 'S3ServiceError';
+    this.name = "StorageServiceError";
   }
 }
 
 /**
- * Options for uploading a file to S3
+ * Options for uploading a file
  */
-export interface S3UploadOptions {
+export interface StorageUploadOptions {
   bucket?: string;
   key: string;
   body: Buffer | Readable | string;
@@ -55,7 +55,7 @@ export interface S3UploadOptions {
 /**
  * Options for getting a signed URL
  */
-export interface S3SignedUrlOptions {
+export interface StorageSignedUrlOptions {
   bucket?: string;
   key: string;
   expiresIn?: number; // seconds (default: 3600 = 1 hour)
@@ -73,14 +73,14 @@ interface RetryConfig {
 const DEFAULT_RETRY_CONFIG: RetryConfig = {
   maxAttempts: 3,
   baseDelayMs: 1000,
-  maxDelayMs: 10000,
+  maxDelayMs: 10000
 };
 
 /**
- * S3 Storage Service
- * Handles all S3 operations with retry logic and error handling
+ * Storage Service
+ * Handles all Backblaze B2 operations with retry logic and error handling
  */
-export class S3StorageService {
+export class StorageService {
   private client: S3Client;
   private defaultBucket: string;
   private retryConfig: RetryConfig;
@@ -90,27 +90,30 @@ export class S3StorageService {
     defaultBucket?: string,
     retryConfig?: Partial<RetryConfig>
   ) {
-    this.client = client || s3Client;
-    this.defaultBucket = defaultBucket || AWS_CONFIG.s3Bucket;
+    this.client = client || storageClient;
+    this.defaultBucket = defaultBucket || STORAGE_CONFIG.bucket;
     this.retryConfig = { ...DEFAULT_RETRY_CONFIG, ...retryConfig };
 
     logger.info(
       {
         bucket: this.defaultBucket,
-        retryConfig: this.retryConfig,
+        retryConfig: this.retryConfig
       },
-      '[S3Service] Initialized'
+      "[StorageService] Initialized"
     );
   }
 
   /**
-   * Upload a file to S3
+   * Upload a file
    */
-  async uploadFile(options: S3UploadOptions): Promise<string> {
+  async uploadFile(options: StorageUploadOptions): Promise<string> {
     const bucket = options.bucket || this.defaultBucket;
     const { key, body, contentType, metadata } = options;
 
-    logger.info({ bucket, key, contentType }, '[S3Service] Uploading file');
+    logger.info(
+      { bucket, key, contentType },
+      "[StorageService] Uploading file"
+    );
 
     return this.executeWithRetry(async () => {
       try {
@@ -119,43 +122,51 @@ export class S3StorageService {
           Key: key,
           Body: body,
           ContentType: contentType,
-          Metadata: metadata,
-          ServerSideEncryption: 'AES256',
+          Metadata: metadata
         });
 
         await this.client.send(command);
 
-        const url = `https://${bucket}.s3.${AWS_CONFIG.region}.amazonaws.com/${key}`;
-        logger.info({ bucket, key, url }, '[S3Service] ✅ File uploaded successfully');
+        const url = this.buildObjectUrl(bucket, key);
+        logger.info(
+          { bucket, key, url },
+          "[StorageService] ✅ File uploaded successfully"
+        );
 
         return url;
       } catch (error) {
-        throw this.handleS3Error(error, S3ErrorType.UPLOAD_FAILED, { bucket, key });
+        throw this.handleStorageError(error, StorageErrorType.UPLOAD_FAILED, {
+          bucket,
+          key
+        });
       }
-    }, 'uploadFile');
+    }, "uploadFile");
   }
 
   /**
-   * Download a file from S3
+   * Download a file
    */
   async downloadFile(bucket: string, key: string): Promise<Buffer> {
     const bucketName = bucket || this.defaultBucket;
 
-    logger.info({ bucket: bucketName, key }, '[S3Service] Downloading file');
+    logger.info(
+      { bucket: bucketName, key },
+      "[StorageService] Downloading file"
+    );
 
     return this.executeWithRetry(async () => {
       try {
         const command = new GetObjectCommand({
           Bucket: bucketName,
-          Key: key,
+          Key: key
         });
 
         const response = await this.client.send(command);
 
         if (!response.Body) {
-          throw new S3ServiceError(
-            'No body in S3 response',
-            S3ErrorType.DOWNLOAD_FAILED,
+          throw new StorageServiceError(
+            "No body in storage response",
+            StorageErrorType.DOWNLOAD_FAILED,
             { bucket: bucketName, key }
           );
         }
@@ -163,71 +174,83 @@ export class S3StorageService {
         const buffer = await this.streamToBuffer(response.Body as Readable);
         logger.info(
           { bucket: bucketName, key, size: buffer.length },
-          '[S3Service] ✅ File downloaded successfully'
+          "[StorageService] ✅ File downloaded successfully"
         );
 
         return buffer;
       } catch (error) {
-        throw this.handleS3Error(error, S3ErrorType.DOWNLOAD_FAILED, {
+        throw this.handleStorageError(error, StorageErrorType.DOWNLOAD_FAILED, {
           bucket: bucketName,
-          key,
+          key
         });
       }
-    }, 'downloadFile');
+    }, "downloadFile");
   }
 
   /**
-   * Delete a file from S3
+   * Delete a file
    */
   async deleteFile(bucket: string, key: string): Promise<void> {
     const bucketName = bucket || this.defaultBucket;
 
-    logger.info({ bucket: bucketName, key }, '[S3Service] Deleting file');
+    logger.info({ bucket: bucketName, key }, "[StorageService] Deleting file");
 
     return this.executeWithRetry(async () => {
       try {
         const command = new DeleteObjectCommand({
           Bucket: bucketName,
-          Key: key,
+          Key: key
         });
 
         await this.client.send(command);
-        logger.info({ bucket: bucketName, key }, '[S3Service] ✅ File deleted successfully');
+        logger.info(
+          { bucket: bucketName, key },
+          "[StorageService] ✅ File deleted successfully"
+        );
       } catch (error) {
-        throw this.handleS3Error(error, S3ErrorType.DELETE_FAILED, {
+        throw this.handleStorageError(error, StorageErrorType.DELETE_FAILED, {
           bucket: bucketName,
-          key,
+          key
         });
       }
-    }, 'deleteFile');
+    }, "deleteFile");
   }
 
   /**
    * Get a pre-signed URL for temporary access to a file
    */
-  async getSignedUrl(options: S3SignedUrlOptions): Promise<string> {
+  async getSignedUrl(options: StorageSignedUrlOptions): Promise<string> {
     const bucket = options.bucket || this.defaultBucket;
     const { key, expiresIn = 3600 } = options;
 
-    logger.info({ bucket, key, expiresIn }, '[S3Service] Generating signed URL');
+    logger.info(
+      { bucket, key, expiresIn },
+      "[StorageService] Generating signed URL"
+    );
 
     try {
       const command = new GetObjectCommand({
         Bucket: bucket,
-        Key: key,
+        Key: key
       });
 
       const url = await getSignedUrl(this.client, command, { expiresIn });
-      logger.info({ bucket, key, expiresIn }, '[S3Service] ✅ Signed URL generated');
+      logger.info(
+        { bucket, key, expiresIn },
+        "[StorageService] ✅ Signed URL generated"
+      );
 
       return url;
     } catch (error) {
-      throw this.handleS3Error(error, S3ErrorType.UNKNOWN_ERROR, { bucket, key });
+      throw this.handleStorageError(error, StorageErrorType.UNKNOWN_ERROR, {
+        bucket,
+        key
+      });
     }
   }
 
   /**
-   * Copy a file within S3 or between buckets
+   * Copy a file within the same bucket or between buckets
    */
   async copyFile(
     sourceBucket: string,
@@ -238,9 +261,9 @@ export class S3StorageService {
     logger.info(
       {
         source: { bucket: sourceBucket, key: sourceKey },
-        destination: { bucket: destBucket, key: destKey },
+        destination: { bucket: destBucket, key: destKey }
       },
-      '[S3Service] Copying file'
+      "[StorageService] Copying file"
     );
 
     return this.executeWithRetry(async () => {
@@ -248,26 +271,26 @@ export class S3StorageService {
         const command = new CopyObjectCommand({
           Bucket: destBucket,
           CopySource: `${sourceBucket}/${sourceKey}`,
-          Key: destKey,
+          Key: destKey
         });
 
         await this.client.send(command);
         logger.info(
           {
             source: { bucket: sourceBucket, key: sourceKey },
-            destination: { bucket: destBucket, key: destKey },
+            destination: { bucket: destBucket, key: destKey }
           },
-          '[S3Service] ✅ File copied successfully'
+          "[StorageService] ✅ File copied successfully"
         );
       } catch (error) {
-        throw this.handleS3Error(error, S3ErrorType.UNKNOWN_ERROR, {
+        throw this.handleStorageError(error, StorageErrorType.UNKNOWN_ERROR, {
           sourceBucket,
           sourceKey,
           destBucket,
-          destKey,
+          destKey
         });
       }
-    }, 'copyFile');
+    }, "copyFile");
   }
 
   /**
@@ -276,25 +299,31 @@ export class S3StorageService {
   async listFiles(bucket: string, prefix: string): Promise<string[]> {
     const bucketName = bucket || this.defaultBucket;
 
-    logger.info({ bucket: bucketName, prefix }, '[S3Service] Listing files');
+    logger.info(
+      { bucket: bucketName, prefix },
+      "[StorageService] Listing files"
+    );
 
     try {
       const command = new ListObjectsV2Command({
         Bucket: bucketName,
-        Prefix: prefix,
+        Prefix: prefix
       });
 
       const response = await this.client.send(command);
-      const keys = response.Contents?.map((obj) => obj.Key || '') || [];
+      const keys = response.Contents?.map((obj) => obj.Key || "") || [];
 
       logger.info(
         { bucket: bucketName, prefix, count: keys.length },
-        '[S3Service] ✅ Files listed successfully'
+        "[StorageService] ✅ Files listed successfully"
       );
 
       return keys;
     } catch (error) {
-      throw this.handleS3Error(error, S3ErrorType.UNKNOWN_ERROR, { bucket: bucketName, prefix });
+      throw this.handleStorageError(error, StorageErrorType.UNKNOWN_ERROR, {
+        bucket: bucketName,
+        prefix
+      });
     }
   }
 
@@ -306,17 +335,37 @@ export class S3StorageService {
 
     try {
       const command = new HeadBucketCommand({
-        Bucket: bucketName,
+        Bucket: bucketName
       });
 
       await this.client.send(command);
-      logger.debug({ bucket: bucketName }, '[S3Service] ✅ Bucket access verified');
+      logger.debug(
+        { bucket: bucketName },
+        "[StorageService] ✅ Bucket access verified"
+      );
 
       return true;
     } catch (error) {
-      logger.error({ bucket: bucketName, error }, '[S3Service] ❌ Bucket access check failed');
+      logger.error(
+        { bucket: bucketName, error },
+        "[StorageService] ❌ Bucket access check failed"
+      );
       return false;
     }
+  }
+
+  /**
+   * Execute an operation with exponential backoff retry
+   */
+  private buildObjectUrl(bucket: string, key: string): string {
+    const endpoint = STORAGE_CONFIG.endpoint.replace(/\/+$/, "");
+    const normalizedKey = key.replace(/^\/+/, "");
+    const encodedKey = normalizedKey
+      .split("/")
+      .map((segment) => encodeURIComponent(segment))
+      .join("/");
+
+    return `${endpoint}/${bucket}/${encodedKey}`;
   }
 
   /**
@@ -335,7 +384,7 @@ export class S3StorageService {
         lastError = error as Error;
 
         // Don't retry if error is not retryable
-        if (error instanceof S3ServiceError && !error.retryable) {
+        if (error instanceof StorageServiceError && !error.retryable) {
           throw error;
         }
 
@@ -346,8 +395,13 @@ export class S3StorageService {
 
         const delay = this.calculateBackoff(attempt);
         logger.warn(
-          { attempt, maxAttempts: this.retryConfig.maxAttempts, delay, operationName },
-          `[S3Service] Retry attempt ${attempt} after ${delay}ms`
+          {
+            attempt,
+            maxAttempts: this.retryConfig.maxAttempts,
+            delay,
+            operationName
+          },
+          `[StorageService] Retry attempt ${attempt} after ${delay}ms`
         );
 
         await this.sleep(delay);
@@ -357,7 +411,7 @@ export class S3StorageService {
     // All retries exhausted
     logger.error(
       { operationName, attempts: this.retryConfig.maxAttempts },
-      '[S3Service] ❌ All retry attempts exhausted'
+      "[StorageService] ❌ All retry attempts exhausted"
     );
     throw lastError;
   }
@@ -383,58 +437,62 @@ export class S3StorageService {
   private async streamToBuffer(stream: Readable): Promise<Buffer> {
     return new Promise((resolve, reject) => {
       const chunks: Buffer[] = [];
-      stream.on('data', (chunk) => chunks.push(chunk));
-      stream.on('error', reject);
-      stream.on('end', () => resolve(Buffer.concat(chunks)));
+      stream.on("data", (chunk) => chunks.push(chunk));
+      stream.on("error", reject);
+      stream.on("end", () => resolve(Buffer.concat(chunks)));
     });
   }
 
   /**
-   * Handle S3 errors and convert to S3ServiceError
+   * Handle storage errors and convert to StorageServiceError
    */
-  private handleS3Error(error: unknown, defaultType: S3ErrorType, context?: unknown): Error {
-    if (error instanceof S3ServiceError) {
+  private handleStorageError(
+    error: unknown,
+    defaultType: StorageErrorType,
+    context?: unknown
+  ): Error {
+    if (error instanceof StorageServiceError) {
       return error;
     }
 
     // Type guard for objects with potential error properties
     const err = error as { Code?: string; name?: string; message?: string };
-    const errorCode = err.Code || err.name || '';
-    const errorMessage = err.message || 'Unknown S3 error';
+    const errorCode = err.Code || err.name || "";
+    const errorMessage = err.message || "Unknown storage error";
 
     // Classify error types
     let type = defaultType;
     let retryable = true;
 
     switch (errorCode) {
-      case 'NoSuchKey':
-      case 'NotFound':
-        type = S3ErrorType.NOT_FOUND;
+      case "NoSuchKey":
+      case "NotFound":
+        type = StorageErrorType.NOT_FOUND;
         retryable = false;
         break;
-      case 'AccessDenied':
-      case 'Forbidden':
-        type = S3ErrorType.ACCESS_DENIED;
+      case "AccessDenied":
+      case "Forbidden":
+        type = StorageErrorType.ACCESS_DENIED;
         retryable = false;
         break;
-      case 'NoSuchBucket':
-      case 'InvalidBucketName':
-        type = S3ErrorType.INVALID_BUCKET;
+      case "NoSuchBucket":
+      case "InvalidBucketName":
+        type = StorageErrorType.INVALID_BUCKET;
         retryable = false;
         break;
-      case 'NetworkingError':
-      case 'TimeoutError':
-        type = S3ErrorType.NETWORK_ERROR;
+      case "NetworkingError":
+      case "TimeoutError":
+        type = StorageErrorType.NETWORK_ERROR;
         retryable = true;
         break;
     }
 
     logger.error(
       { errorCode, errorMessage, type, retryable, context },
-      '[S3Service] S3 operation failed'
+      "[StorageService] Storage operation failed"
     );
 
-    return new S3ServiceError(
+    return new StorageServiceError(
       errorMessage,
       type,
       { errorCode, ...(context as object) },
@@ -443,31 +501,36 @@ export class S3StorageService {
   }
 
   /**
-   * Extract S3 key from URL
+   * Extract object key from a Backblaze-compatible URL
    * Handles both formats:
-   * - https://bucket.s3.region.amazonaws.com/key
+   * - https://bucket.host/key
    * - s3://bucket/key
    *
-   * @param url - S3 URL
-   * @returns S3 object key
+   * @param url - Storage URL
+   * @returns Object key
    */
   extractKeyFromUrl(url: string): string {
     // Handle s3:// URLs
-    if (url.startsWith('s3://')) {
-      const parts = url.replace('s3://', '').split('/');
+    if (url.startsWith("s3://")) {
+      const parts = url.replace("s3://", "").split("/");
       parts.shift(); // Remove bucket name
-      return parts.join('/');
+      return parts.join("/");
     }
 
     // Handle HTTPS URLs
     try {
       const urlObj = new URL(url);
-      // Remove leading slash
-      return urlObj.pathname.substring(1);
+      let pathname = urlObj.pathname.replace(/^\/+/, "");
+
+      if (this.defaultBucket && pathname.startsWith(`${this.defaultBucket}/`)) {
+        pathname = pathname.substring(this.defaultBucket.length + 1);
+      }
+
+      return pathname;
     } catch (error) {
-      throw new S3ServiceError(
-        `Invalid S3 URL format: ${url}`,
-        S3ErrorType.INVALID_BUCKET,
+      throw new StorageServiceError(
+        `Invalid storage URL format: ${url}`,
+        StorageErrorType.INVALID_BUCKET,
         { url, error }
       );
     }
@@ -475,4 +538,4 @@ export class S3StorageService {
 }
 
 // Export singleton instance
-export const s3Service = new S3StorageService();
+export const storageService = new StorageService();

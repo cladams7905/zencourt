@@ -122,7 +122,7 @@ export const videos = pgTable(
 
 /**
  * Video Jobs table
- * Tracks individual video processing jobs sent to AWS Express server
+ * Tracks individual video processing jobs sent to the external video server
  */
 export const videoJobs = pgTable(
   "video_jobs",

@@ -1,7 +1,7 @@
 /**
  * Centralized Storage Path Generation
  *
- * Single source of truth for S3 path/key generation across both
+ * Single source of truth for storage path/key generation across both
  * Vercel and Express server to ensure consistent file organization.
  *
  * Standard format: user_{userId}/projects/project_{projectId}/...
@@ -11,7 +11,7 @@ import { nanoid } from "nanoid";
 
 /**
  * Storage-safe segment sanitizer for identifiers (user/project/video IDs, folders, etc.)
- * Keeps casing intact while removing unsupported characters for S3 keys.
+ * Keeps casing intact while removing unsupported characters for storage keys.
  */
 function sanitizePathSegment(value: string): string {
   return value.replace(/[^a-zA-Z0-9._-]/g, "_");
@@ -47,13 +47,13 @@ export function getProjectFolder(projectId: string, userId: string): string {
 }
 
 /**
- * Get the full S3 key/path for a project image
+ * Get the full storage key/path for a project image
  * Format: user_{userId}/projects/project_{projectId}/images/{filename}
  *
  * @param userId - User ID
  * @param projectId - Project ID
  * @param filename - Original filename
- * @returns Full S3 key
+ * @returns Full storage key
  */
 export function getProjectImagePath(
   userId: string,
@@ -76,7 +76,7 @@ export function getRoomVideoFolder(userId: string, projectId: string, videoId: s
 }
 
 /**
- * Get the full S3 key/path for a room video
+ * Get the full storage key/path for a room video
  * Format: user_{userId}/projects/project_{projectId}/videos/video_{videoId}/room_{roomName}_{timestamp}.mp4
  */
 export function getRoomVideoPath(
@@ -102,7 +102,7 @@ export function getFinalVideoFolder(userId: string, projectId: string, videoId: 
 }
 
 /**
- * Get the full S3 key/path for final video
+ * Get the full storage key/path for final video
  * Format: user_{userId}/projects/project_{projectId}/videos/video_{videoId}/final_{timestamp}.mp4
  */
 export function getFinalVideoPath(
@@ -119,7 +119,7 @@ export function getFinalVideoPath(
 }
 
 /**
- * Get the full S3 key/path for video thumbnail
+ * Get the full storage key/path for video thumbnail
  * Format: user_{userId}/projects/project_{projectId}/videos/video_{videoId}/thumb_{timestamp}.jpg
  */
 export function getThumbnailPath(userId: string, projectId: string, videoId: string): string {
@@ -145,7 +145,7 @@ export function getTempVideoFolder(userId: string, projectId: string, videoId: s
  *
  * @param folder - Base folder (default: "uploads")
  * @param filename - Original filename
- * @returns Full S3 key
+ * @returns Full storage key
  */
 export function getGenericUploadPath(folder: string, filename: string): string {
   const timestamp = Date.now();
@@ -156,7 +156,7 @@ export function getGenericUploadPath(folder: string, filename: string): string {
 }
 
 /**
- * Build the user/project-scoped S3 key that mirrors the structure shared by
+ * Build the user/project-scoped storage key that mirrors the structure shared by
  * both the Vercel app and the video server so assets stay co-located.
  */
 export function buildUserProjectVideoKey(
@@ -186,15 +186,15 @@ export function buildGenericUploadKey(folder: string, filename: string): string 
 }
 
 /**
- * Extract S3 key from URL
+ * Extract storage key from URL
  * Handles both formats:
  * - https://bucket.s3.region.amazonaws.com/key
  * - s3://bucket/key
  *
- * @param url - S3 URL
- * @returns S3 object key
+ * @param url - Storage URL
+ * @returns Object key
  */
-export function extractS3KeyFromUrl(url: string): string {
+export function extractStorageKeyFromUrl(url: string): string {
   // Handle s3:// URLs
   if (url.startsWith("s3://")) {
     const parts = url.replace("s3://", "").split("/");
@@ -205,10 +205,21 @@ export function extractS3KeyFromUrl(url: string): string {
   // Handle HTTPS URLs
   try {
     const urlObj = new URL(url);
-    // Remove leading slash
-    return urlObj.pathname.substring(1);
+    let pathname = urlObj.pathname.replace(/^\/+/, "");
+    const host = urlObj.hostname.toLowerCase();
+
+    // Path-style endpoints (e.g., s3.us-west-002.backblazeb2.com/bucket/key)
+    if (
+      (host.startsWith("s3.") || host.startsWith("s3-")) &&
+      pathname.includes("/")
+    ) {
+      const firstSlash = pathname.indexOf("/");
+      return pathname.substring(firstSlash + 1);
+    }
+
+    return pathname;
   } catch {
-    throw new Error(`Invalid S3 URL format: ${url}`);
+    throw new Error(`Invalid storage URL format: ${url}`);
   }
 }
 

@@ -12,14 +12,14 @@ zencourt/
 ├── packages/
 │   ├── db/               # Drizzle schema, migrations, and Neon client helpers
 │   └── shared/           # Reusable TypeScript utilities (logger, storage paths, etc.)
-├── infra/                # Terraform and deployment configuration
 ├── demo-images/          # Reference assets for marketing/demo flows
+├── scripts/              # Deployment and operational helpers
 └── package.json          # Root workspace configuration and scripts
 ```
 
 - `apps` contains the deployable services.
 - `packages` hosts shared libraries consumed by the apps.
-- `infra` captures infrastructure-as-code kept alongside the app codebase.
+- `scripts` contains operational helpers (e.g., Hetzner deploy script).
 
 ## Getting Started
 

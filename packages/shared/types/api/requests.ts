@@ -13,10 +13,10 @@ export interface KlingApiRequest {
 }
 
 // ============================================================================
-// S3 Storage
+// Storage Uploads
 // ============================================================================
 
-export interface S3UploadRequest {
+export interface StorageUploadRequest {
   fileBuffer: ArrayBuffer;
   fileName: string;
   contentType: string;

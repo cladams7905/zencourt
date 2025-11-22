@@ -5,16 +5,16 @@ export interface ApiResponse {
 }
 
 // ============================================================================
-// S3 Storage
+// Storage Uploads
 // ============================================================================
 
-export interface S3UploadResponse extends ApiResponse {
+export interface StorageUploadResponse extends ApiResponse {
   key: string | null;
   url: string | null;
 }
 
-export interface S3UploadBatchResponse extends ApiResponse {
-  results: (S3UploadResponse & { filename: string })[];
+export interface StorageUploadBatchResponse extends ApiResponse {
+  results: (StorageUploadResponse & { filename: string })[];
 }
 
 // ============================================================================

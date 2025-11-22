@@ -11,12 +11,12 @@ import { env } from '@/config/env';
 // ============================================================================
 
 export enum VideoProcessingErrorType {
-  // S3 Errors
-  S3_UPLOAD_FAILED = 'S3_UPLOAD_FAILED',
-  S3_DOWNLOAD_FAILED = 'S3_DOWNLOAD_FAILED',
-  S3_DELETE_FAILED = 'S3_DELETE_FAILED',
-  S3_ACCESS_DENIED = 'S3_ACCESS_DENIED',
-  S3_NOT_FOUND = 'S3_NOT_FOUND',
+  // Storage Errors
+  STORAGE_UPLOAD_FAILED = 'STORAGE_UPLOAD_FAILED',
+  STORAGE_DOWNLOAD_FAILED = 'STORAGE_DOWNLOAD_FAILED',
+  STORAGE_DELETE_FAILED = 'STORAGE_DELETE_FAILED',
+  STORAGE_ACCESS_DENIED = 'STORAGE_ACCESS_DENIED',
+  STORAGE_NOT_FOUND = 'STORAGE_NOT_FOUND',
 
   // FFmpeg Errors
   FFMPEG_NOT_FOUND = 'FFMPEG_NOT_FOUND',
@@ -87,8 +87,8 @@ export class VideoProcessingError extends Error {
    */
   private isRetryableByDefault(type: VideoProcessingErrorType): boolean {
     const retryableErrors: VideoProcessingErrorType[] = [
-      VideoProcessingErrorType.S3_UPLOAD_FAILED,
-      VideoProcessingErrorType.S3_DOWNLOAD_FAILED,
+      VideoProcessingErrorType.STORAGE_UPLOAD_FAILED,
+      VideoProcessingErrorType.STORAGE_DOWNLOAD_FAILED,
       VideoProcessingErrorType.WEBHOOK_DELIVERY_FAILED,
       VideoProcessingErrorType.FFMPEG_TIMEOUT,
       VideoProcessingErrorType.FAL_SUBMISSION_FAILED,
@@ -108,7 +108,7 @@ export class VideoProcessingError extends Error {
       [VideoProcessingErrorType.MISSING_REQUIRED_FIELD]: 400,
       [VideoProcessingErrorType.INVALID_FILE_FORMAT]: 400,
       [VideoProcessingErrorType.JOB_NOT_FOUND]: 404,
-      [VideoProcessingErrorType.S3_NOT_FOUND]: 404,
+      [VideoProcessingErrorType.STORAGE_NOT_FOUND]: 404,
       [VideoProcessingErrorType.FAL_SUBMISSION_FAILED]: 503,
       [VideoProcessingErrorType.FAL_GENERATION_FAILED]: 500,
     };

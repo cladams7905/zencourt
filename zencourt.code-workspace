@@ -15,10 +15,6 @@
     {
       "name": "packages",
       "path": "packages"
-    },
-    {
-      "name": "infra",
-      "path": "infra"
     }
   ],
   "settings": {}

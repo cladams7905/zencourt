@@ -58,7 +58,7 @@ app.get("/", (_req: Request, res: Response) => {
 // Video processing routes
 app.use("/video", videoRoutes);
 
-// Storage routes (S3 upload/delete)
+// Storage routes (upload/delete)
 app.use("/storage", storageRoutes);
 
 // Webhook routes (fal.ai callbacks)
@@ -140,7 +140,7 @@ server = app.listen(env.port, () => {
     {
       port: env.port,
       nodeEnv: env.nodeEnv,
-      awsRegion: env.awsRegion
+      storageRegion: env.storageRegion
     },
     `🚀 Video processing server started on port ${env.port}`
   );

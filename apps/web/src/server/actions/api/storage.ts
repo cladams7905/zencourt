@@ -1,13 +1,13 @@
 "use server";
 
 /**
- * Client-side wrapper for S3 storage operations via s3StorageService.
+ * Client-side wrapper for Backblaze storage operations via storageService.
  * Includes support for images and videos.
  */
 
-import { S3UploadRequest } from "@shared/types/api/requests";
-import { S3UploadBatchResponse } from "@shared/types/api/responses";
-import s3StorageService from "../../services/s3Service";
+import { StorageUploadRequest } from "@shared/types/api/requests";
+import { StorageUploadBatchResponse } from "@shared/types/api/responses";
+import storageService from "../../services/storageService";
 import { createChildLogger, logger as baseLogger } from "../../../lib/logger";
 
 const logger = createChildLogger(baseLogger, { module: "storage-actions" });
@@ -21,7 +21,7 @@ const logger = createChildLogger(baseLogger, { module: "storage-actions" });
 export async function uploadFile(file: File, folder: string): Promise<string> {
   try {
     const arrayBuffer = await file.arrayBuffer();
-    const result = await s3StorageService.uploadFile({
+    const result = await storageService.uploadFile({
       fileBuffer: arrayBuffer,
       fileName: file.name,
       contentType: file.type,
@@ -45,7 +45,7 @@ export async function uploadFile(file: File, folder: string): Promise<string> {
 }
 
 /**
- * Batch upload multiple files to S3 in a single server action call
+ * Batch upload multiple files to storage in a single server action call
  * More efficient than individual uploads for multiple files
  * @param files - Array of files to upload
  * @param folder - Folder path for organization
@@ -58,9 +58,9 @@ export async function uploadFilesBatch(
   folder: string,
   userId?: string,
   projectId?: string
-): Promise<S3UploadBatchResponse> {
+): Promise<StorageUploadBatchResponse> {
   try {
-    const filesWithBuffers: S3UploadRequest[] = await Promise.all(
+    const filesWithBuffers: StorageUploadRequest[] = await Promise.all(
       files.map(async (file) => ({
         fileBuffer: await file.arrayBuffer(),
         fileName: file.name,
@@ -72,7 +72,7 @@ export async function uploadFilesBatch(
         }
       }))
     );
-    const result = await s3StorageService.uploadFilesBatch(filesWithBuffers);
+    const result = await storageService.uploadFilesBatch(filesWithBuffers);
     if (!result.success) {
       logger.error(`Error in batch upload: ${result.error}`);
       throw new Error(result.error);
@@ -95,7 +95,7 @@ export async function uploadFilesBatch(
  */
 export async function deleteFile(url: string): Promise<void> {
   try {
-    const result = await s3StorageService.deleteFileFromS3(url);
+    const result = await storageService.deleteFile(url);
 
     if (!result.success) {
       logger.error(`Error deleting file: ${result.error}`);

@@ -7,7 +7,7 @@ import { Router, Request, Response } from "express";
 import { exec } from "child_process";
 import { promisify } from "util";
 import { logger } from "@/config/logger";
-import { s3Service } from "@/services/s3Service";
+import { storageService } from "@/services/storageService";
 import { HealthCheckResponse } from "@shared/types/api";
 
 const execAsync = promisify(exec);
@@ -32,22 +32,21 @@ async function checkFFmpeg(): Promise<boolean> {
 }
 
 /**
- * Check if S3 is accessible
+ * Check if storage is accessible
  */
-async function checkS3(): Promise<boolean> {
+async function checkStorage(): Promise<boolean> {
   try {
-    return await s3Service.checkBucketAccess();
+    return await storageService.checkBucketAccess();
   } catch (error) {
     logger.warn(
       {
         error: error instanceof Error ? error.message : String(error)
       },
-      "S3 health check failed"
+      "Storage health check failed"
     );
     return false;
   }
 }
-
 
 /**
  * GET /health
@@ -56,13 +55,13 @@ async function checkS3(): Promise<boolean> {
 router.get("/", async (_req: Request, res: Response) => {
   try {
     // Run all health checks in parallel
-    const [ffmpegHealthy, s3Healthy] = await Promise.all([
+    const [ffmpegHealthy, storageHealthy] = await Promise.all([
       checkFFmpeg(),
-      checkS3()
+      checkStorage()
     ]);
 
     // Determine overall health status
-    const allHealthy = ffmpegHealthy && s3Healthy;
+    const allHealthy = ffmpegHealthy && storageHealthy;
     const status = allHealthy ? "healthy" : "unhealthy";
 
     const response: HealthCheckResponse = {
@@ -70,7 +69,7 @@ router.get("/", async (_req: Request, res: Response) => {
       timestamp: new Date().toISOString(),
       checks: {
         ffmpeg: ffmpegHealthy,
-        s3: s3Healthy
+        storage: storageHealthy
       }
     };
 
@@ -101,7 +100,7 @@ router.get("/", async (_req: Request, res: Response) => {
       timestamp: new Date().toISOString(),
       checks: {
         ffmpeg: false,
-        s3: false
+        storage: false
       }
     };
 

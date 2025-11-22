@@ -9,7 +9,7 @@
  */
 
 import visionService from "./visionService";
-import s3StorageService from "./s3Service";
+import storageService from "./storageService";
 import type {
   ProcessedImage,
   SerializableImageData,
@@ -265,7 +265,7 @@ export class imageProcessorService {
       return null;
     }
 
-    const result = await s3StorageService.getSignedDownloadUrl(
+    const result = await storageService.getSignedDownloadUrl(
       image.url,
       expiresInSeconds
     );

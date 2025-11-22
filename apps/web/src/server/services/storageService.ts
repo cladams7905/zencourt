@@ -1,37 +1,37 @@
 /**
- * S3 Image Upload Service
+ * Storage service for handling Backblaze B2 object uploads.
  *
- * Videos are processed and uploaded by video-server
+ * Videos are processed and uploaded by video-server; this service is for static assets.
  */
 
 import {
   S3Client,
   PutObjectCommand,
   DeleteObjectCommand,
-  GetObjectCommand,
-  ServerSideEncryption
+  GetObjectCommand
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import {
-  S3UploadRequest,
-  S3UploadBatchResponse,
-  S3UploadResponse
+  StorageUploadRequest,
+  StorageUploadBatchResponse,
+  StorageUploadResponse
 } from "@shared/types/api";
 import {
   getProjectImagePath,
   getGenericUploadPath,
-  extractS3KeyFromUrl
+  extractStorageKeyFromUrl
 } from "@shared/utils";
 import { createChildLogger, logger as baseLogger } from "../../lib/logger";
 
-const logger = createChildLogger(baseLogger, { module: "s3-service" });
+const logger = createChildLogger(baseLogger, { module: "storage-service" });
 
 // Validate required environment variables
 const requiredEnvVars = {
-  AWS_REGION: process.env.AWS_REGION,
-  AWS_S3_BUCKET: process.env.AWS_S3_BUCKET,
-  AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID,
-  AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY
+  B2_ENDPOINT: process.env.B2_ENDPOINT,
+  B2_REGION: process.env.B2_REGION || "us-west-002",
+  B2_BUCKET_NAME: process.env.B2_BUCKET_NAME,
+  B2_KEY_ID: process.env.B2_KEY_ID,
+  B2_APPLICATION_KEY: process.env.B2_APPLICATION_KEY
 };
 
 for (const [key, value] of Object.entries(requiredEnvVars)) {
@@ -40,18 +40,20 @@ for (const [key, value] of Object.entries(requiredEnvVars)) {
   }
 }
 
-const s3Client = new S3Client({
-  region: requiredEnvVars.AWS_REGION!,
+const storageClient = new S3Client({
+  region: requiredEnvVars.B2_REGION!,
+  endpoint: requiredEnvVars.B2_ENDPOINT!,
   credentials: {
-    accessKeyId: requiredEnvVars.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: requiredEnvVars.AWS_SECRET_ACCESS_KEY!
-  }
+    accessKeyId: requiredEnvVars.B2_KEY_ID!,
+    secretAccessKey: requiredEnvVars.B2_APPLICATION_KEY!
+  },
+  forcePathStyle: false
 });
 
-const AWS_CONFIG = {
-  region: requiredEnvVars.AWS_REGION!,
-  bucket: requiredEnvVars.AWS_S3_BUCKET!,
-  serverSideEncryption: process.env.AWS_S3_SERVER_SIDE_ENCRYPTION || "AES256"
+const STORAGE_CONFIG = {
+  region: requiredEnvVars.B2_REGION!,
+  bucket: requiredEnvVars.B2_BUCKET_NAME!,
+  endpoint: requiredEnvVars.B2_ENDPOINT!
 } as const;
 
 type UploadContext = {
@@ -63,19 +65,21 @@ type UploadContext = {
 };
 
 /**
- * s3Service encapsulates all S3 interactions for the Next.js app.
+ * StorageService encapsulates all Backblaze-compatible interactions for the Next.js app.
  */
-export class s3Service {
+export class StorageService {
   private readonly client: S3Client;
 
-  constructor(client: S3Client = s3Client) {
+  constructor(client: S3Client = storageClient) {
     this.client = client;
   }
 
   /**
-   * Upload a single file to S3.
+   * Upload a single file to storage.
    */
-  async uploadFile(uploadRequest: S3UploadRequest): Promise<S3UploadResponse> {
+  async uploadFile(
+    uploadRequest: StorageUploadRequest
+  ): Promise<StorageUploadResponse> {
     try {
       const { key, url } = await this.uploadInternal(uploadRequest);
       logger.info({ key, fileName: uploadRequest.fileName }, "File uploaded");
@@ -102,11 +106,11 @@ export class s3Service {
   }
 
   /**
-   * Batch upload multiple files to S3.
+   * Batch upload multiple files.
    */
   async uploadFilesBatch(
-    uploadRequests: S3UploadRequest[]
-  ): Promise<S3UploadBatchResponse> {
+    uploadRequests: StorageUploadRequest[]
+  ): Promise<StorageUploadBatchResponse> {
     if (uploadRequests.length === 0) {
       return { success: true, results: [] };
     }
@@ -166,17 +170,17 @@ export class s3Service {
   }
 
   /**
-   * Delete a file from S3.
+   * Delete a file from storage.
    */
-  async deleteFileFromS3(
+  async deleteFile(
     url: string
   ): Promise<{ success: true } | { success: false; error: string }> {
     try {
-      const key = extractS3KeyFromUrl(url);
+      const key = this.normalizeKeyFromUrl(url);
 
       await this.client.send(
         new DeleteObjectCommand({
-          Bucket: AWS_CONFIG.bucket,
+          Bucket: STORAGE_CONFIG.bucket,
           Key: key
         })
       );
@@ -197,7 +201,7 @@ export class s3Service {
   /**
    * Generate a pre-signed URL for temporary access.
    */
-  async getSignedUrlForS3(
+  async getSignedUploadUrl(
     key: string,
     expiresIn: number = 3600
   ): Promise<
@@ -205,7 +209,7 @@ export class s3Service {
   > {
     try {
       const command = new PutObjectCommand({
-        Bucket: AWS_CONFIG.bucket,
+        Bucket: STORAGE_CONFIG.bucket,
         Key: key
       });
 
@@ -229,19 +233,21 @@ export class s3Service {
 
   /**
    * Generate a signed download URL for an existing object.
-   * Accepts either a full S3 URL or a raw object key.
+   * Accepts either a full storage URL or a raw object key.
    */
   async getSignedDownloadUrl(
     urlOrKey: string,
     expiresIn: number = 900
-  ): Promise<{ success: true; url: string } | { success: false; error: string }> {
+  ): Promise<
+    { success: true; url: string } | { success: false; error: string }
+  > {
     try {
       const key = urlOrKey.startsWith("http")
-        ? extractS3KeyFromUrl(urlOrKey)
-        : urlOrKey;
+        ? this.normalizeKeyFromUrl(urlOrKey)
+        : this.normalizeKey(urlOrKey);
 
       const command = new GetObjectCommand({
-        Bucket: AWS_CONFIG.bucket,
+        Bucket: STORAGE_CONFIG.bucket,
         Key: key
       });
 
@@ -264,19 +270,17 @@ export class s3Service {
   }
 
   private async uploadInternal(
-    uploadRequest: S3UploadRequest
+    uploadRequest: StorageUploadRequest
   ): Promise<{ key: string; url: string }> {
     const context = this.buildUploadContext(uploadRequest);
 
     await this.client.send(
       new PutObjectCommand({
-        Bucket: AWS_CONFIG.bucket,
+        Bucket: STORAGE_CONFIG.bucket,
         Key: context.key,
         Body: context.buffer,
         ContentType: context.contentType,
-        Metadata: context.metadata,
-        ServerSideEncryption:
-          AWS_CONFIG.serverSideEncryption as ServerSideEncryption
+        Metadata: context.metadata
       })
     );
 
@@ -286,7 +290,9 @@ export class s3Service {
     };
   }
 
-  private buildUploadContext(uploadRequest: S3UploadRequest): UploadContext {
+  private buildUploadContext(
+    uploadRequest: StorageUploadRequest
+  ): UploadContext {
     const {
       folder = "uploads",
       userId,
@@ -312,10 +318,27 @@ export class s3Service {
   }
 
   private getPublicUrl(key: string): string {
-    return `https://${AWS_CONFIG.bucket}.s3.${AWS_CONFIG.region}.amazonaws.com/${key}`;
+    const endpoint = STORAGE_CONFIG.endpoint.replace(/\/+$/, "");
+    const normalizedKey = key.replace(/^\/+/, "");
+    const encodedKey = normalizedKey
+      .split("/")
+      .map((segment) => encodeURIComponent(segment))
+      .join("/");
+    return `${endpoint}/${STORAGE_CONFIG.bucket}/${encodedKey}`;
+  }
+
+  private normalizeKeyFromUrl(url: string): string {
+    const extracted = extractStorageKeyFromUrl(url);
+    return this.normalizeKey(extracted);
+  }
+
+  private normalizeKey(key: string): string {
+    return key.startsWith(`${STORAGE_CONFIG.bucket}/`)
+      ? key.substring(STORAGE_CONFIG.bucket.length + 1)
+      : key;
   }
 }
 
-const s3StorageService = new s3Service();
+const storageService = new StorageService();
 
-export default s3StorageService;
+export default storageService;

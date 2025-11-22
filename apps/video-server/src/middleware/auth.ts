@@ -1,6 +1,6 @@
 /**
  * Authentication middleware for API requests
- * Validates X-API-Key header against configured VERCEL_TO_AWS_API_KEY
+ * Validates X-API-Key header against configured VIDEO_SERVER_API_KEY
  */
 
 import { Request, Response, NextFunction } from 'express';
@@ -31,7 +31,7 @@ export function validateApiKey(req: Request, res: Response, next: NextFunction):
     return;
   }
 
-  if (apiKey !== env.awsApiKey) {
+  if (apiKey !== env.apiKey) {
     logger.warn(
       {
         method: req.method,

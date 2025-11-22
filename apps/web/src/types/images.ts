@@ -6,12 +6,12 @@ import { DBImage, InsertDBImage } from "@shared/types/models";
    └→ ProcessedImage created with File object
       { file: File, previewUrl: blob:..., status: "pending" }
 
-2. UPLOAD TO S3
+2. UPLOAD TO STORAGE
    └→ toSerializable() → SerializableImageData
       Removes: file, previewUrl
    └→ Server Action processes upload
    └→ Returns with url populated
-      { url: "https://s3...", status: "uploaded" }
+      { url: "https://storage...", status: "uploaded" }
 
 3. AI ANALYSIS
    └→ toSerializable() → SerializableImageData
@@ -51,7 +51,7 @@ export type ProcessedImage = Partial<Omit<DBImage, "uploadedAt">> & {
   status: ImageProcessingStatus;
   /** Error message if processing failed */
   error?: string;
-  /** Direct S3 URL once uploaded (alias for DB url) */
+  /** Direct storage URL once uploaded (alias for DB url) */
   uploadUrl?: string;
 };
 

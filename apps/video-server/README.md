@@ -1,20 +1,20 @@
 # ZenCourt Video Processing Server
 
-Express server for FFmpeg-based video processing, designed to run on AWS ECS Fargate.
+Express server for FFmpeg-based video processing, designed to run on Hetzner Cloud with Backblaze B2 storage.
 
 ## Overview
 
-This server handles video generation and composition for the ZenCourt platform. It receives video processing requests from the Vercel Next.js frontend, processes them using FFmpeg, stores results in AWS S3, and sends webhook notifications when complete.
+This server handles video generation and composition for the ZenCourt platform. It receives video processing requests from the Vercel Next.js frontend, processes them using FFmpeg, stores results in Backblaze B2 object storage, and sends webhook notifications when complete.
 
 ## Architecture
 
 - **Runtime**: Node.js 20+
 - **Framework**: Express 4.x with TypeScript
 - **Video Generation**: fal.ai API (webhook-based)
-- **Storage**: AWS S3 via AWS SDK v3
+- **Storage**: Backblaze B2 via the object storage SDK v3
 - **Video Processing**: FFmpeg (static binaries)
 - **Logging**: Pino (structured JSON logs)
-- **Deployment**: Docker container on AWS ECS Fargate
+- **Deployment**: Docker container on Hetzner Cloud (or local Docker)
 
 ## Project Structure
 
@@ -24,10 +24,10 @@ video-server/
 │   ├── server.ts              # Express app initialization & graceful shutdown
 │   ├── config/
 │   │   ├── env.ts             # Environment configuration with validation
-│   │   ├── aws.ts             # AWS SDK configuration
+│   │   ├── storage.ts         # Backblaze B2 configuration
 │   │   └── logger.ts          # Pino logger setup
 │   ├── services/
-│   │   ├── s3Service.ts       # S3 upload/download/delete
+│   │   ├── storageService.ts  # Backblaze storage client
 │   │   ├── videoCompositionService.ts  # FFmpeg video composition
 │   │   ├── webhookService.ts  # Webhook delivery with retries
 │   │   ├── roomVideoService.ts # fal.ai video generation orchestration
@@ -38,7 +38,7 @@ video-server/
 │   │   ├── health.ts          # Health check endpoint
 │   │   ├── video.ts           # Video generation endpoints
 │   │   ├── webhooks.ts        # fal.ai webhook handler
-│   │   └── storage.ts         # S3 storage proxy endpoints
+│   │   └── storage.ts         # Storage proxy endpoints
 │   ├── middleware/
 │   │   ├── auth.ts            # API key authentication
 │   │   └── errorHandler.ts    # Global error handler with classification
@@ -58,16 +58,20 @@ See `.env.example` for all required and optional environment variables.
 
 ### Required Variables
 
-- `AWS_REGION` - AWS region (e.g., us-east-1)
-- `AWS_S3_BUCKET` - S3 bucket name for media storage
+- `B2_ENDPOINT` - Backblaze endpoint (e.g., https://s3.us-west-002.backblazeb2.com)
+- `B2_KEY_ID` - Backblaze application key ID
+- `B2_APPLICATION_KEY` - Backblaze application key secret
+- `B2_BUCKET_NAME` - Backblaze bucket for media storage
+- `VIDEO_SERVER_URL` - Public URL for this service (used for redirects + default fal.ai webhook)
 - `DATABASE_URL` - PostgreSQL database connection string
 - `VERCEL_API_URL` - Vercel API URL for webhook callbacks
-- `VERCEL_TO_AWS_API_KEY` - API key for Vercel <-> video-server authentication
+- `VERCEL_WEBHOOK_SIGNING_KEY` - HMAC secret shared with Vercel webhooks
+- `VIDEO_SERVER_API_KEY` - API key for Vercel <-> video-server authentication
 - `FAL_KEY` - fal.ai API key for video generation
-- `FAL_WEBHOOK_URL` - Public URL for receiving fal.ai webhooks
 
 ### Optional Variables
 
+- `B2_REGION` - Backblaze region (default: `us-west-002`)
 - `PORT` - Server port (default: 3001)
 - `NODE_ENV` - Environment (development/production)
 - `LOG_LEVEL` - Logging level (debug/info/warn/error, default: info)
@@ -76,26 +80,25 @@ See `.env.example` for all required and optional environment variables.
 - `TEMP_DIR` - Temporary directory for video processing (default: /tmp/video-processing)
 - `WEBHOOK_RETRY_ATTEMPTS` - Number of webhook retry attempts (default: 5)
 - `WEBHOOK_RETRY_BACKOFF_MS` - Base backoff delay for webhook retries (default: 1000ms)
+- `FAL_WEBHOOK_URL` - Override fal.ai webhook target (defaults to `${VIDEO_SERVER_URL}/webhooks/fal`)
 
-### AWS Configuration
+### Backblaze B2 Configuration
 
-For development against the real S3 bucket (recommended):
+Create an application key with read/write permissions for your media bucket, then add:
 
-- `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` - IAM user or role credentials with access to the dev bucket
-- `AWS_REGION` - Region for the dev bucket
-- `AWS_S3_BUCKET` - Dev bucket name
+- `B2_KEY_ID`
+- `B2_APPLICATION_KEY`
+- `B2_BUCKET_NAME`
+- `B2_ENDPOINT`
+- `B2_REGION` (optional if using `us-west-002`)
 
-Optional overrides if you ever point the server at a mock such as LocalStack:
-
-- `AWS_ENDPOINT`
-- `AWS_FORCE_PATH_STYLE`
-
-Note: The bucket policy enforces AES256 server-side encryption; the video server automatically sets `ServerSideEncryption=AES256` on uploads, so make sure any ad‑hoc scripts do the same.
+All uploads use the object storage SDK v3 pointed at the Backblaze endpoint—no additional cloud services are required.
+Reference `.env.hetzner.example` for a production-ready template that matches the Hetzner deployment.
 
 ### fal.ai webhook routing
 
 - **Production** – Point `FAL_WEBHOOK_URL` to the public hostname that fronts this service (typically your ALB DNS name plus `/webhooks/fal`). This is the URL fal.ai calls when a job completes.
-- **Local development** – Keep `AWS_VIDEO_SERVER_URL=http://localhost:3001` for internal requests, but set `FAL_WEBHOOK_URL` to a public tunnel that forwards to `http://localhost:3001/webhooks/fal` (ngrok, Cloudflare Tunnel, etc.). Without that tunnel fal.ai cannot reach your laptop.
+- **Local development** – Keep `VIDEO_SERVER_URL=http://localhost:3001` for internal requests, but set `FAL_WEBHOOK_URL` to a public tunnel that forwards to `http://localhost:3001/webhooks/fal` (ngrok, Cloudflare Tunnel, etc.). Without that tunnel fal.ai cannot reach your laptop.
 - **Docker Compose** – Export `FAL_WEBHOOK_URL` before running `docker compose` to override the default `http://host.docker.internal:3001/webhooks/fal`.
 
 ### Local tunnel helper
@@ -148,7 +151,7 @@ cp .env.example .env
 # Edit .env with your configuration
 ```
 
-3. Start the local development environment from the repo root (S3 traffic goes to your dev bucket):
+3. Start the local development environment from the repo root (storage traffic goes to your Backblaze bucket):
 
 ```bash
 docker compose -f apps/video-server/docker-compose.yml down
@@ -168,8 +171,8 @@ The server will start on `http://localhost:3001` with hot reload enabled.
 
 Because the dev Terraform stack no longer provisions ECS/ALB resources, every developer should run the video server locally:
 
-1. Ensure `.env.local` in the repo root sets `AWS_VIDEO_SERVER_URL=http://localhost:3001` and that `VERCEL_TO_AWS_API_KEY` matches the value consumed by the Docker services.
-2. Boot the video server. The server writes directly to your dev S3 bucket using the credentials from `.env.local`:
+1. Ensure `.env.local` in the repo root sets `VIDEO_SERVER_URL=http://localhost:3001` and that `VIDEO_SERVER_API_KEY` matches the value consumed by the Docker services.
+2. Boot the video server. The server writes directly to your Backblaze bucket using the credentials from `.env.local`:
 
    ```bash
    docker compose -f apps/video-server/docker-compose.yml up --build
@@ -254,12 +257,15 @@ docker build -f apps/video-server/Dockerfile -t zencourt-video-server:latest .
 
 ```bash
 docker run --rm -p 3001:3001 \
-  -e AWS_REGION=us-east-1 \
-  -e AWS_S3_BUCKET=your-bucket \
-  -e AWS_ACCESS_KEY_ID=your-access-key \
-  -e AWS_SECRET_ACCESS_KEY=your-secret \
+  -e B2_ENDPOINT=https://s3.us-west-002.backblazeb2.com \
+  -e B2_REGION=us-west-002 \
+  -e B2_KEY_ID=your-key-id \
+  -e B2_APPLICATION_KEY=your-application-key \
+  -e B2_BUCKET_NAME=your-bucket \
+  -e VIDEO_SERVER_URL=https://video.example.com \
   -e DATABASE_URL=postgresql://user:pass@host:5432/db \
-  -e VERCEL_TO_AWS_API_KEY=your-secret-key \
+  -e VIDEO_SERVER_API_KEY=your-secret-key \
+  -e VERCEL_WEBHOOK_SIGNING_KEY=your-webhook-secret \
   -e VERCEL_API_URL=https://your-app.vercel.app \
   -e FAL_KEY=your-fal-api-key \
   -e FAL_WEBHOOK_URL=https://your-domain.com/webhooks/fal \
@@ -268,19 +274,13 @@ docker run --rm -p 3001:3001 \
 
 You can also store those values in an env file (e.g. `apps/video-server/.env.docker`) and pass `--env-file apps/video-server/.env.docker` to keep secrets out of the command history.
 
-### AWS ECS Deployment
+### Hetzner Deployment (Manual)
 
-1. Push image to ECR:
+1. Build and push the image to GHCR (or another registry).
+2. SSH into your Hetzner server and pull the latest tag.
+3. Stop the old container and restart with `/home/deploy/.env.video-server` mounted (see plan in root README for details).
 
-```bash
-aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin <account-id>.dkr.ecr.us-east-1.amazonaws.com
-docker tag zencourt-video-server:latest <account-id>.dkr.ecr.us-east-1.amazonaws.com/zencourt-video-server:latest
-docker push <account-id>.dkr.ecr.us-east-1.amazonaws.com/zencourt-video-server:latest
-```
-
-2. Create ECS task definition (see `terraform/` directory for infrastructure as code)
-
-3. Deploy to ECS Fargate
+You can also run `scripts/deploy-hetzner.sh` directly on the server. Provide `GHCR_TOKEN` (a PAT or deploy token) and optionally override `CONTAINER_NAME`, `ENV_FILE`, or `DATA_DIR` to match your setup.
 
 ## API Endpoints
 
@@ -311,7 +311,7 @@ Health check endpoint for container orchestration.
   "timestamp": "2025-01-08T12:00:00.000Z",
   "checks": {
     "ffmpeg": true,
-    "s3": true
+    "storage": true
   }
 }
 ```
@@ -382,7 +382,7 @@ Get status of a video processing job.
 
 ### POST /storage/upload
 
-Upload a file to S3 (proxied from Vercel).
+Upload a file to Backblaze B2 (proxied from Vercel through the video server).
 
 **Headers:**
 
@@ -400,8 +400,8 @@ Upload a file to S3 (proxied from Vercel).
 ```json
 {
   "success": true,
-  "url": "https://bucket.s3.region.amazonaws.com/uploads/file.jpg",
-  "signedUrl": "https://bucket.s3.region.amazonaws.com/uploads/file.jpg?...",
+  "url": "https://s3.us-west-002.backblazeb2.com/zencourt-media/uploads/file.jpg",
+  "signedUrl": "https://s3.us-west-002.backblazeb2.com/zencourt-media/uploads/file.jpg?...",
   "key": "uploads/1234-abc/file.jpg",
   "size": 102400,
   "contentType": "image/jpeg"
@@ -410,7 +410,7 @@ Upload a file to S3 (proxied from Vercel).
 
 ### DELETE /storage/delete
 
-Delete a file from S3.
+Delete a file from Backblaze B2.
 
 **Headers:**
 
@@ -421,7 +421,7 @@ Delete a file from S3.
 
 ```json
 {
-  "url": "https://bucket.s3.region.amazonaws.com/uploads/file.jpg"
+  "url": "https://s3.us-west-002.backblazeb2.com/zencourt-media/uploads/file.jpg"
 }
 ```
 
@@ -435,7 +435,7 @@ Delete a file from S3.
 
 ### POST /storage/signed-url
 
-Generate a pre-signed URL for an S3 object.
+Generate a pre-signed URL for an object in Backblaze B2.
 
 **Headers:**
 
@@ -456,7 +456,7 @@ Generate a pre-signed URL for an S3 object.
 ```json
 {
   "success": true,
-  "signedUrl": "https://bucket.s3.region.amazonaws.com/uploads/file.jpg?...",
+  "signedUrl": "https://s3.us-west-002.backblazeb2.com/zencourt-media/uploads/file.jpg?...",
   "expiresIn": 3600
 }
 ```
@@ -517,7 +517,7 @@ The server uses structured error handling with classification:
 
 ### Error Types
 
-- **S3 Errors**: S3_UPLOAD_FAILED, S3_DOWNLOAD_FAILED, S3_DELETE_FAILED
+- **Storage Errors**: STORAGE_UPLOAD_FAILED, STORAGE_DOWNLOAD_FAILED, STORAGE_DELETE_FAILED (Backblaze B2)
 - **FFmpeg Errors**: FFMPEG_NOT_FOUND, FFMPEG_PROCESS_FAILED, FFMPEG_TIMEOUT
 - **fal.ai Errors**: FAL_SUBMISSION_FAILED, FAL_GENERATION_FAILED
 - **Webhook Errors**: WEBHOOK_DELIVERY_FAILED
@@ -552,13 +552,11 @@ brew install ffmpeg
 apt-get install ffmpeg
 ```
 
-### S3 access denied
+### Backblaze access denied
 
-Verify AWS credentials and S3 bucket permissions. For LocalStack:
-
-```bash
-aws --endpoint-url=http://localhost:4566 s3 mb s3://zencourt-media-dev
-```
+- Verify `B2_KEY_ID`/`B2_APPLICATION_KEY` pair has read/write access to the configured bucket.
+- Confirm the bucket exists inside the account and matches `B2_BUCKET_NAME`.
+- Double-check `B2_ENDPOINT` and `B2_REGION` match the bucket's region.
 
 ### Webhook delivery failures
 

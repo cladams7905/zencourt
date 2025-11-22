@@ -60,10 +60,15 @@ interface EnvConfig {
   // Database
   databaseUrl: string;
 
-  // AWS
-  awsRegion: string;
-  awsS3Bucket: string;
-  awsVideoServerUrl: string;
+  // Storage (Backblaze B2)
+  storageEndpoint: string;
+  storageRegion: string;
+  storageKeyId: string;
+  storageApplicationKey: string;
+  storageBucket: string;
+
+  // Server URLs
+  videoServerUrl: string;
 
   // Vercel Webhook
   vercelApiUrl: string;
@@ -77,7 +82,7 @@ interface EnvConfig {
   tempDir: string;
 
   // API Authentication
-  awsApiKey: string;
+  apiKey: string;
 
   // fal.ai
   falApiKey: string;
@@ -100,11 +105,8 @@ function getEnvVarNumber(name: string, defaultValue?: number): number {
   return value ? parseInt(value, 10) : defaultValue!;
 }
 
-const awsVideoServerUrl = getEnvVar("AWS_VIDEO_SERVER_URL").replace(
-  /\/+$/,
-  ""
-);
-const defaultFalWebhookUrl = `${awsVideoServerUrl.replace(
+const videoServerUrl = getEnvVar("VIDEO_SERVER_URL").replace(/\/+$/, "");
+const defaultFalWebhookUrl = `${videoServerUrl.replace(
   /\/+$/,
   ""
 )}/webhooks/fal`;
@@ -122,10 +124,15 @@ export const env: EnvConfig = {
   // Database
   databaseUrl: getEnvVar("DATABASE_URL"),
 
-  // AWS
-  awsRegion: getEnvVar("AWS_REGION", "us-east-1"),
-  awsS3Bucket: getEnvVar("AWS_S3_BUCKET"),
-  awsVideoServerUrl,
+  // Storage (Backblaze B2)
+  storageEndpoint: getEnvVar("B2_ENDPOINT"),
+  storageRegion: getEnvVar("B2_REGION", "us-west-002"),
+  storageKeyId: getEnvVar("B2_KEY_ID"),
+  storageApplicationKey: getEnvVar("B2_APPLICATION_KEY"),
+  storageBucket: getEnvVar("B2_BUCKET_NAME"),
+
+  // Server URLs
+  videoServerUrl,
 
   // Vercel Webhook
   vercelApiUrl: getEnvVar("VERCEL_API_URL"),
@@ -139,7 +146,7 @@ export const env: EnvConfig = {
   tempDir: getEnvVar("TEMP_DIR", "/tmp/video-processing"),
 
   // API Authentication
-  awsApiKey: getEnvVar("VERCEL_TO_AWS_API_KEY"),
+  apiKey: getEnvVar("VIDEO_SERVER_API_KEY"),
 
   // fal.ai
   falApiKey: getEnvVar("FAL_KEY"),
@@ -151,9 +158,11 @@ export function validateEnv(): void {
 
   // List of required variables that must be set
   const requiredVars = [
-    "AWS_REGION",
-    "AWS_S3_BUCKET",
-    "AWS_VIDEO_SERVER_URL",
+    "B2_ENDPOINT",
+    "B2_KEY_ID",
+    "B2_APPLICATION_KEY",
+    "B2_BUCKET_NAME",
+    "VIDEO_SERVER_URL",
     "VERCEL_API_URL",
     "VERCEL_WEBHOOK_SIGNING_KEY",
     "DATABASE_URL",
@@ -168,8 +177,8 @@ export function validateEnv(): void {
     }
   }
 
-  if (!process.env.VERCEL_TO_AWS_API_KEY) {
-    missing.push("VERCEL_TO_AWS_API_KEY");
+  if (!process.env.VIDEO_SERVER_API_KEY) {
+    missing.push("VIDEO_SERVER_API_KEY");
   }
 
   if (missing.length > 0) {
@@ -188,8 +197,10 @@ export function validateEnv(): void {
       nodeEnv: env.nodeEnv,
       port: env.port,
       logLevel: env.logLevel,
-      awsRegion: env.awsRegion,
-      awsS3Bucket: env.awsS3Bucket,
+      storageRegion: env.storageRegion,
+      storageBucket: env.storageBucket,
+      storageEndpoint: env.storageEndpoint,
+      videoServerUrl: env.videoServerUrl,
       vercelApiUrl: env.vercelApiUrl,
       webhookSigningSecret: "***REDACTED***",
       webhookRetryAttempts: env.webhookRetryAttempts,
@@ -197,7 +208,7 @@ export function validateEnv(): void {
       jobTimeoutMs: env.jobTimeoutMs,
       tempDir: env.tempDir,
       databaseUrl: env.databaseUrl ? "***REDACTED***" : undefined,
-      awsApiKey: "***REDACTED***",
+      apiKey: "***REDACTED***",
       falApiKey: "***REDACTED***",
       falWebhookUrl: env.falWebhookUrl
     }, null, 2)
