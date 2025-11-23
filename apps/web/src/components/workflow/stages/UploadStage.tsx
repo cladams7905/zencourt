@@ -252,6 +252,10 @@ export function UploadStage({
       }
     } catch (error) {
       console.error("Error uploading images:", error);
+      toast.error("Error uploading images:", {
+        description:
+          error instanceof Error ? error.message : "An unknown error occurred"
+      });
     } finally {
       setIsUploading(false);
     }

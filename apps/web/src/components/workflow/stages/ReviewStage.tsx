@@ -23,6 +23,7 @@ import Image from "next/image";
 import type { ProcessedImage } from "../../../types/images";
 import { CategorizedGroup } from "@web/src/types/vision";
 import type { VideoSettings } from "./PlanStage";
+import { getImageDisplayProps } from "@web/src/lib/imageUrls";
 
 interface ReviewStageProps {
   images: ProcessedImage[];
@@ -235,20 +236,25 @@ export function ReviewStage({
 
                       {/* Image Grid */}
                       <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
-                        {group.images.slice(0, 12).map((image) => (
-                          <div
-                            key={image.id}
-                            className="relative aspect-square rounded-md overflow-hidden bg-muted border"
-                          >
-                            <Image
-                              src={image.url || image.uploadUrl || image.previewUrl}
-                              alt={image.file.name}
-                              fill
-                              className="object-cover"
-                              sizes="(max-width: 640px) 25vw, (max-width: 768px) 16vw, 12vw"
-                            />
-                          </div>
-                        ))}
+                        {group.images.slice(0, 12).map((image) => {
+                          const { src, unoptimized } =
+                            getImageDisplayProps(image);
+                          return (
+                            <div
+                              key={image.id}
+                              className="relative aspect-square rounded-md overflow-hidden bg-muted border"
+                            >
+                              <Image
+                                src={src}
+                                unoptimized={unoptimized}
+                                alt={image.file.name}
+                                fill
+                                className="object-cover"
+                                sizes="(max-width: 640px) 25vw, (max-width: 768px) 16vw, 12vw"
+                              />
+                            </div>
+                          );
+                        })}
                         {group.images.length > 12 && (
                           <div className="aspect-square rounded-md border bg-muted flex items-center justify-center">
                             <span className="text-xs text-muted-foreground font-medium">

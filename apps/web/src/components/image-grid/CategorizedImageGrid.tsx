@@ -18,6 +18,7 @@ import { ImagePreviewModal } from "../modals/ImagePreviewModal";
 import { EditableCategoryLabel } from "../shared/EditableCategoryLabel";
 import Image from "next/image";
 import { CategorizedGroup, RoomCategory } from "@web/src/types/vision";
+import { getImageDisplayProps } from "@web/src/lib/imageUrls";
 
 // ============================================================================
 // Types and Interfaces
@@ -555,6 +556,7 @@ function ImageThumbnail({
     image.filename ||
     image.url?.split("/").pop() ||
     "Image";
+  const { src, unoptimized } = getImageDisplayProps(image);
 
   return (
     <div
@@ -588,7 +590,8 @@ function ImageThumbnail({
         } ${isSelected ? "ring-4 ring-blue-500" : ""}`}
       >
         <Image
-          src={image.url || image.previewUrl}
+          src={src}
+          unoptimized={unoptimized}
           alt={category || displayName}
           fill
           sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"

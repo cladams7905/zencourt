@@ -137,7 +137,7 @@ export function ProjectWorkflowModal({
           const processed: ProcessedImage = {
             id: img.id,
             file: new File([], img.filename, { type: "image/*" }), // Mock file for existing images
-            previewUrl: img.url,
+            previewUrl: "", // Empty string to force getImageDisplaySrc to use url field
             status: "uploaded" as const,
             url: img.url,
             filename: img.filename,

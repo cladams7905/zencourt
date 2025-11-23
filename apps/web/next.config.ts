@@ -45,6 +45,11 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "images.unsplash.com",
         pathname: "/**"
+      },
+      {
+        protocol: "https",
+        hostname: "s3.us-east-005.backblazeb2.com",
+        pathname: "/**"
       }
     ]
   }

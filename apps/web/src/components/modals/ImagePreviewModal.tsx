@@ -18,6 +18,10 @@ import {
 } from "lucide-react";
 import type { ProcessedImage } from "../../types/images";
 import Image from "next/image";
+import {
+  buildStorageProxyUrl,
+  getImageDisplayProps
+} from "@web/src/lib/imageUrls";
 
 // ============================================================================
 // Types and Interfaces
@@ -61,6 +65,8 @@ export function ImagePreviewModal({
 }: ImagePreviewModalProps) {
   const [isZoomed, setIsZoomed] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const { src: imageSrc, unoptimized: unoptimizedImage } =
+    getImageDisplayProps(currentImage);
 
   // Navigate to previous image (with looping)
   const handlePrevious = useCallback(() => {
@@ -132,8 +138,14 @@ export function ImagePreviewModal({
 
   // Download image
   const handleDownload = () => {
+    const proxiedUrl =
+      buildStorageProxyUrl(currentImage.url || currentImage.uploadUrl) ||
+      currentImage.previewUrl;
+    if (!proxiedUrl) {
+      return;
+    }
     const link = document.createElement("a");
-    link.href = currentImage.url || currentImage.previewUrl;
+    link.href = proxiedUrl;
     link.download = currentImage.file.name;
     document.body.appendChild(link);
     link.click();
@@ -230,11 +242,11 @@ export function ImagePreviewModal({
 
         {/* Image */}
         <Image
-          src={currentImage.url || currentImage.previewUrl}
+          src={imageSrc}
           alt={currentImage.file.name}
           width={1920}
           height={1080}
-          unoptimized
+          unoptimized={unoptimizedImage}
           className={`max-w-full max-h-full object-contain transition-all duration-300 ${
             isZoomed ? "scale-150 cursor-zoom-out" : "cursor-zoom-in"
           } ${imageLoaded ? "opacity-100" : "opacity-0"}`}
