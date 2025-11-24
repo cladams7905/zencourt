@@ -1029,7 +1029,8 @@ class VideoGenerationService {
 
     // Build webhook payload matching VideoJobWebhookPayload structure
     const webhookPayload: VideoJobWebhookPayload = {
-      jobId: videoContext.videoId, // Use videoId as jobId for final video webhook
+      jobId: videoContext.videoId, // Preserve jobId for schema compatibility
+      videoId: videoContext.videoId,
       projectId: videoContext.projectId,
       status: payload.status,
       timestamp: new Date().toISOString(),

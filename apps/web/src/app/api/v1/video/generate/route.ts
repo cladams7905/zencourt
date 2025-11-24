@@ -28,6 +28,7 @@ import {
 } from "@shared/types/models";
 import { createVideo } from "@web/src/server/actions/db/videos";
 import { createVideoJob } from "@web/src/server/actions/db/videoJobs";
+import { ensurePublicUrls } from "@web/src/server/utils/storageUrls";
 
 const logger = createChildLogger(baseLogger, {
   module: "video-generate-route"
@@ -288,14 +289,31 @@ export async function POST(
     );
 
     // Step 2: Create video_jobs records directly from rooms
-    const videoJobRecords: InsertDBVideoJob[] = body.rooms.map(
-      (room, index) => {
+    const videoJobRecords: InsertDBVideoJob[] = await Promise.all(
+      body.rooms.map(async (room, index) => {
         const category = getCategoryForRoom(room);
         const roomWithCategory = { ...room, category };
         const { imageUrls, roomDescription } = selectRoomAssetsForRoom(
           roomWithCategory,
           groupedImages
         );
+        let publicImageUrls: string[];
+        try {
+          publicImageUrls = await ensurePublicUrls(imageUrls);
+        } catch (error) {
+          logger.error(
+            {
+              projectId: body.projectId,
+              roomId: room.id,
+              err: error instanceof Error ? error.message : String(error)
+            },
+            "Failed to ensure public image URLs"
+          );
+          throw new ApiError(500, {
+            error: "storage_error",
+            message: "Failed to generate signed image URLs for video generation"
+          });
+        }
         const prompt = buildPrompt(
           room.name,
           roomDescription,
@@ -315,7 +333,7 @@ export async function POST(
             model: "kling1.6",
             orientation,
             aiDirections: body.aiDirections || "",
-            imageUrls,
+            imageUrls: publicImageUrls,
             prompt,
             category,
             sortOrder: index,
@@ -336,7 +354,7 @@ export async function POST(
           deliveryLastError: null,
           archivedAt: null
         };
-      }
+      })
     );
 
     // Create all video jobs

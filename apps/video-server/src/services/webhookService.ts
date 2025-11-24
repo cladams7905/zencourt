@@ -10,7 +10,7 @@ import { logger } from "@/config/logger";
 import { WebhookError, WebhookDeliveryOptions } from "@shared/types/video";
 
 const DEFAULT_TIMEOUT_MS =
-  parseInt(process.env.WEBHOOK_TIMEOUT_MS || "", 10) || 30000;
+  parseInt(process.env.WEBHOOK_TIMEOUT_MS || "", 10) || 15 * 60 * 1000;
 
 // ============================================================================
 // Webhook Service Class

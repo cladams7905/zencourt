@@ -26,6 +26,7 @@ export type VideoJobWebhookStatus = "completed" | "failed";
 
 export interface VideoJobWebhookPayload {
   jobId: string;
+  videoId?: string;
   projectId: string;
   userId?: string;
   status: VideoJobWebhookStatus;

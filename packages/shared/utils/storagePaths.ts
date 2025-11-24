@@ -229,3 +229,47 @@ export function extractStorageKeyFromUrl(url: string): string {
 export function generateTempProjectId(): string {
   return `temp-${Date.now()}`;
 }
+
+/**
+ * Extract host from a storage endpoint URL
+ */
+export function getStorageEndpointHost(
+  endpoint?: string | null
+): string | null {
+  if (!endpoint) {
+    return null;
+  }
+
+  try {
+    return new URL(endpoint).host;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Determine whether a URL points to the configured storage endpoint
+ */
+export function isUrlFromStorageEndpoint(
+  url: string,
+  endpoint?: string | null
+): boolean {
+  if (!url) {
+    return false;
+  }
+
+  if (url.startsWith("s3://")) {
+    return true;
+  }
+
+  const endpointHost = getStorageEndpointHost(endpoint);
+  if (!endpointHost) {
+    return false;
+  }
+
+  try {
+    return new URL(url).host === endpointHost;
+  } catch {
+    return false;
+  }
+}

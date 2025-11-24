@@ -13,10 +13,13 @@ import {
   logger as baseLogger
 } from "../../../../../../lib/logger";
 import { emitFinalVideoUpdate } from "@web/src/types/video-events";
+import { ensurePublicUrl } from "@web/src/server/utils/storageUrls";
 
 const logger = createChildLogger(baseLogger, {
   module: "final-video-webhook"
 });
+
+const FINAL_VIDEO_SIGNED_URL_TTL_SECONDS = 6 * 60 * 60; // 6 hours
 
 interface FinalVideoWebhookPayload {
   videoId: string;
@@ -37,20 +40,63 @@ interface FinalVideoWebhookPayload {
 export async function POST(request: NextRequest) {
   try {
     const payload: FinalVideoWebhookPayload = await request.json();
+    const videoId = payload.videoId;
 
     logger.info(
       {
         projectId: payload.projectId,
+        videoId,
         status: payload.status
       },
       "Final video webhook received"
     );
 
+    let signedVideoUrl: string | undefined = undefined;
+    let signedThumbnailUrl: string | undefined = undefined;
+
+    if (payload.result?.videoUrl) {
+      try {
+        signedVideoUrl = await ensurePublicUrl(
+          payload.result.videoUrl,
+          FINAL_VIDEO_SIGNED_URL_TTL_SECONDS
+        );
+      } catch (error) {
+        signedVideoUrl = payload.result.videoUrl;
+        logger.error(
+          {
+            videoId,
+            projectId: payload.projectId,
+            err: error instanceof Error ? error.message : String(error)
+          },
+          "Failed to generate signed URL for final video, using original URL"
+        );
+      }
+    }
+
+    if (payload.result?.thumbnailUrl) {
+      try {
+        signedThumbnailUrl = await ensurePublicUrl(
+          payload.result.thumbnailUrl,
+          FINAL_VIDEO_SIGNED_URL_TTL_SECONDS
+        );
+      } catch (error) {
+        signedThumbnailUrl = payload.result.thumbnailUrl;
+        logger.error(
+          {
+            videoId,
+            projectId: payload.projectId,
+            err: error instanceof Error ? error.message : String(error)
+          },
+          "Failed to generate signed URL for final thumbnail, using original URL"
+        );
+      }
+    }
+
     // Update the video record with final status
-    const updatedVideo = await updateVideo(payload.videoId, {
+    const updatedVideo = await updateVideo(videoId, {
       status: payload.status,
-      videoUrl: payload.result?.videoUrl,
-      thumbnailUrl: payload.result?.thumbnailUrl,
+      videoUrl: signedVideoUrl,
+      thumbnailUrl: signedThumbnailUrl,
       metadata: payload.result
         ? {
             duration: payload.result.duration,
@@ -63,6 +109,7 @@ export async function POST(request: NextRequest) {
     logger.info(
       {
         projectId: payload.projectId,
+        videoId,
         status: payload.status
       },
       "Final video status updated successfully"

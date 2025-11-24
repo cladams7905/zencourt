@@ -16,6 +16,34 @@ This server handles video generation and composition for the Zencourt platform. 
 - **Logging**: Pino (structured JSON logs)
 - **Deployment**: Docker container on Hetzner Cloud (or local Docker)
 
+## Get Started
+
+The script `apps/video-server/scripts/start-dev-server.sh` automates spinning up an ngrok tunnel and launching Docker Compose with the correct `FAL_WEBHOOK_URL`. Requirements:
+
+- `ngrok` CLI installed and authenticated (`ngrok config add-authtoken ...`)
+- `curl` and `python3` available locally
+
+### Quick setup:
+
+1. Install the CLI (`brew install ngrok` or download from https://ngrok.com/download).
+2. Sign in at https://dashboard.ngrok.com/ to copy your authtoken.
+3. Run `ngrok config add-authtoken <token>` once.
+
+Usage:
+
+```bash
+# from the repo root
+apps/video-server/scripts/start-dev-server.sh up --build
+```
+
+The script:
+
+1. Starts `ngrok http 3001` and waits for the HTTPS public URL.
+2. Sets `FAL_WEBHOOK_URL=<public-url>/webhooks/fal`.
+3. Runs `docker compose -f apps/video-server/docker-compose.yml ...` with your supplied arguments.
+
+Stop the compose stack (Ctrl+C) to tear everything down; the script cleans up the ngrok process automatically.
+
 ## Project Structure
 
 ```
@@ -80,6 +108,7 @@ See `.env.example` for all required and optional environment variables.
 - `TEMP_DIR` - Temporary directory for video processing (default: /tmp/video-processing)
 - `WEBHOOK_RETRY_ATTEMPTS` - Number of webhook retry attempts (default: 5)
 - `WEBHOOK_RETRY_BACKOFF_MS` - Base backoff delay for webhook retries (default: 1000ms)
+- `WEBHOOK_TIMEOUT_MS` - Timeout for webhook deliveries (default: 900000 = 15 min)
 - `FAL_WEBHOOK_URL` - Override fal.ai webhook target (defaults to `${VIDEO_SERVER_URL}/webhooks/fal`)
 - `STORAGE_HEALTH_CACHE_MS` - Cache duration for storage health checks (default: 300000 = 5 min). Higher values reduce Backblaze Class C usage during health probes.
 
@@ -101,34 +130,6 @@ Reference `.env.hetzner.example` for a production-ready template that matches th
 - **Production** – Point `FAL_WEBHOOK_URL` to the public hostname that fronts this service (typically your ALB DNS name plus `/webhooks/fal`). This is the URL fal.ai calls when a job completes.
 - **Local development** – Keep `VIDEO_SERVER_URL=http://localhost:3001` for internal requests, but set `FAL_WEBHOOK_URL` to a public tunnel that forwards to `http://localhost:3001/webhooks/fal` (ngrok, Cloudflare Tunnel, etc.). Without that tunnel fal.ai cannot reach your laptop.
 - **Docker Compose** – Export `FAL_WEBHOOK_URL` before running `docker compose` to override the default `http://host.docker.internal:3001/webhooks/fal`.
-
-### Local tunnel helper
-
-The script `apps/video-server/scripts/start-dev-server.sh` automates spinning up an ngrok tunnel and launching Docker Compose with the correct `FAL_WEBHOOK_URL`. Requirements:
-
-- `ngrok` CLI installed and authenticated (`ngrok config add-authtoken ...`)
-- `curl` and `python3` available locally
-
-Quick setup:
-
-1. Install the CLI (`brew install ngrok` or download from https://ngrok.com/download).
-2. Sign in at https://dashboard.ngrok.com/ to copy your authtoken.
-3. Run `ngrok config add-authtoken <token>` once.
-
-Usage:
-
-```bash
-# from the repo root
-apps/video-server/scripts/start-dev-server.sh up --build
-```
-
-The script:
-
-1. Starts `ngrok http 3001` and waits for the HTTPS public URL.
-2. Sets `FAL_WEBHOOK_URL=<public-url>/webhooks/fal`.
-3. Runs `docker compose -f apps/video-server/docker-compose.yml ...` with your supplied arguments.
-
-Stop the compose stack (Ctrl+C) to tear everything down; the script cleans up the ngrok process automatically.
 
 ## Development
 
