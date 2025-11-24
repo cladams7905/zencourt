@@ -113,7 +113,7 @@ describe("WebhookService", () => {
             "X-Webhook-Signature": expect.any(String),
             "X-Webhook-Timestamp": baseOptions.payload.timestamp
           }),
-          timeout: 30000,
+          timeout: 15 * 60 * 1000,
           validateStatus: expect.any(Function)
         })
       );
