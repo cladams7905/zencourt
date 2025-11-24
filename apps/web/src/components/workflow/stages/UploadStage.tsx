@@ -214,16 +214,23 @@ export function UploadStage({
             );
 
             setImages((prev) =>
-              prev.map((img) =>
-                img.id === imageData.id
-                  ? {
-                      ...img,
-                      status: "uploaded" as const,
-                      url: result.url || undefined,
-                      filename: img.filename || imageData.file.name
-                    }
-                  : img
-              )
+              prev.map((img) => {
+                if (img.id !== imageData.id) {
+                  return img;
+                }
+
+                if (img.previewUrl?.startsWith("blob:")) {
+                  URL.revokeObjectURL(img.previewUrl);
+                }
+
+                return {
+                  ...img,
+                  status: "uploaded" as const,
+                  url: result.url || undefined,
+                  previewUrl: result.url || img.previewUrl,
+                  filename: img.filename || imageData.file.name
+                };
+              })
             );
           } else {
             const errorMessage =
