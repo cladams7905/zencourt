@@ -15,6 +15,26 @@ const nextConfig: NextConfig = {
     "pino-pretty",
     "thread-stream"
   ],
+  async headers() {
+    return [
+      {
+        source: "/(.*)",
+        headers: [
+          {
+            key: "Content-Security-Policy",
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com",
+              "connect-src 'self' https://static.cloudflareinsights.com",
+              "img-src 'self' data: https://s3.us-east-005.backblazeb2.com https://images.unsplash.com",
+              "style-src 'self' 'unsafe-inline'",
+              "font-src 'self'"
+            ].join("; ")
+          }
+        ]
+      }
+    ];
+  },
   webpack: (config, { isServer }) => {
     if (isServer) {
       // Exclude ffmpeg/ffprobe binaries from being processed by webpack
