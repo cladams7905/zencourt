@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useUser } from "@stackframe/stack";
 import { toast } from "sonner";
 import { nanoid } from "nanoid";
@@ -51,17 +51,33 @@ export function UploadStage({
         img.status === "error"
     );
 
-  // Cleanup object URLs when component unmounts or images change
+  // Track blob preview URLs so we only revoke them when they're removed/unmounted
+  const blobUrlsRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    const currentBlobUrls = new Set<string>();
+    images.forEach((img) => {
+      if (img.previewUrl?.startsWith("blob:")) {
+        currentBlobUrls.add(img.previewUrl);
+      }
+    });
+
+    const previousBlobUrls = blobUrlsRef.current;
+    previousBlobUrls.forEach((url) => {
+      if (!currentBlobUrls.has(url)) {
+        URL.revokeObjectURL(url);
+      }
+    });
+
+    blobUrlsRef.current = currentBlobUrls;
+  }, [images]);
+
   useEffect(() => {
     return () => {
-      // Cleanup object URLs to prevent memory leaks
-      images.forEach((img) => {
-        if (img.previewUrl.startsWith("blob:")) {
-          URL.revokeObjectURL(img.previewUrl);
-        }
-      });
+      blobUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+      blobUrlsRef.current.clear();
     };
-  }, [images]);
+  }, []);
 
   /**
    * Generate a preview URL using createObjectURL
