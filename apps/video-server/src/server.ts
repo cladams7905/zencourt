@@ -12,7 +12,7 @@ import { Logger } from "pino";
 
 /**
  * Main Express server for video processing
- * Handles FFmpeg operations for ZenCourt video generation
+ * Handles FFmpeg operations for Zencourt video generation
  */
 
 // Validate environment variables before starting
@@ -48,7 +48,7 @@ app.use(pinoHttp(pinoOptions));
 // Routes
 app.get("/", (_req: Request, res: Response) => {
   res.json({
-    service: "ZenCourt Video Processor",
+    service: "Zencourt Video Processor",
     version: "1.0.0",
     status: "running",
     timestamp: new Date().toISOString()

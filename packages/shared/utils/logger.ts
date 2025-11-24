@@ -21,7 +21,7 @@ export interface LoggerOptions {
 }
 
 /**
- * Create a Pino logger instance configured for the ZenCourt monorepo
+ * Create a Pino logger instance configured for the Zencourt monorepo
  *
  * Features:
  * - Structured JSON logging in production
@@ -48,14 +48,15 @@ export function createLogger(options: LoggerOptions): pino.Logger {
   const { service, level, base = {} } = options;
   const nodeEnv = process.env.NODE_ENV || "development";
   const isDevelopment = nodeEnv === "development";
-  const logLevel = level || process.env.LOG_LEVEL || (isDevelopment ? "debug" : "info");
+  const logLevel =
+    level || process.env.LOG_LEVEL || (isDevelopment ? "debug" : "info");
 
   return pino({
     level: logLevel,
 
     // Standard formatters
     formatters: {
-      level: (label) => ({ level: label }),
+      level: (label) => ({ level: label })
     },
 
     // ISO timestamps for consistency
@@ -65,7 +66,7 @@ export function createLogger(options: LoggerOptions): pino.Logger {
     base: {
       service,
       env: nodeEnv,
-      ...base,
+      ...base
     },
 
     // Pretty printing in development for readability
@@ -75,10 +76,10 @@ export function createLogger(options: LoggerOptions): pino.Logger {
           options: {
             colorize: true,
             translateTime: "HH:MM:ss Z",
-            ignore: "pid,hostname",
-          },
+            ignore: "pid,hostname"
+          }
         }
-      : undefined,
+      : undefined
   });
 }
 

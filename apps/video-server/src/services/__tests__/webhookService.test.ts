@@ -40,7 +40,13 @@ const createAxiosError = (status: number, message: string): AxiosError => {
     config: config as any
   };
 
-  return new AxiosErrorCtor(message, undefined, config as any, undefined, response);
+  return new AxiosErrorCtor(
+    message,
+    undefined,
+    config as any,
+    undefined,
+    response
+  );
 };
 
 describe("WebhookService", () => {
@@ -102,7 +108,7 @@ describe("WebhookService", () => {
         expect.objectContaining({
           headers: expect.objectContaining({
             "Content-Type": "application/json",
-            "User-Agent": "ZenCourt-Video-Server/1.0",
+            "User-Agent": "Zencourt-Video-Server/1.0",
             "X-Webhook-Delivery-Attempt": "1",
             "X-Webhook-Signature": expect.any(String),
             "X-Webhook-Timestamp": baseOptions.payload.timestamp

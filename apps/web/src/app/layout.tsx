@@ -5,7 +5,7 @@ import { Toaster } from "../components/ui/sonner";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "ZenCourt - Home",
+  title: "Zencourt - Home",
   description: "AI Marketing Studio for Real Estate Professionals"
 };
 

@@ -12,6 +12,20 @@ import { HealthCheckResponse } from "@shared/types/api";
 
 const execAsync = promisify(exec);
 const router = Router();
+const DEFAULT_STORAGE_HEALTH_CACHE_MS = 5 * 60 * 1000; // 5 minutes
+const storageHealthCacheDuration = Number(
+  process.env.STORAGE_HEALTH_CACHE_MS ?? DEFAULT_STORAGE_HEALTH_CACHE_MS
+);
+const STORAGE_HEALTH_CACHE_MS = Number.isFinite(storageHealthCacheDuration)
+  ? Math.max(storageHealthCacheDuration, 0)
+  : DEFAULT_STORAGE_HEALTH_CACHE_MS;
+
+type StorageHealthCache = {
+  healthy: boolean;
+  timestamp: number;
+};
+
+let storageHealthCache: StorageHealthCache | null = null;
 
 /**
  * Check if FFmpeg is available and working
@@ -35,8 +49,27 @@ async function checkFFmpeg(): Promise<boolean> {
  * Check if storage is accessible
  */
 async function checkStorage(): Promise<boolean> {
+  if (
+    storageHealthCache &&
+    Date.now() - storageHealthCache.timestamp < STORAGE_HEALTH_CACHE_MS
+  ) {
+    logger.debug(
+      {
+        healthy: storageHealthCache.healthy,
+        ageMs: Date.now() - storageHealthCache.timestamp
+      },
+      "Using cached storage health result"
+    );
+    return storageHealthCache.healthy;
+  }
+
   try {
-    return await storageService.checkBucketAccess();
+    const healthy = await storageService.checkBucketAccess();
+    storageHealthCache = {
+      healthy,
+      timestamp: Date.now()
+    };
+    return healthy;
   } catch (error) {
     logger.warn(
       {
@@ -44,6 +77,10 @@ async function checkStorage(): Promise<boolean> {
       },
       "Storage health check failed"
     );
+    storageHealthCache = {
+      healthy: false,
+      timestamp: Date.now()
+    };
     return false;
   }
 }

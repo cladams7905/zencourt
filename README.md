@@ -1,6 +1,6 @@
-# ZenCourt Monorepo
+# Zencourt Monorepo
 
-This is a monorepo containing the ZenCourt application suite.
+This is a monorepo containing the Zencourt application suite.
 
 ## Structure
 

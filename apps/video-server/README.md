@@ -1,10 +1,10 @@
-# ZenCourt Video Processing Server
+# Zencourt Video Processing Server
 
 Express server for FFmpeg-based video processing, designed to run on Hetzner Cloud with Backblaze B2 storage.
 
 ## Overview
 
-This server handles video generation and composition for the ZenCourt platform. It receives video processing requests from the Vercel Next.js frontend, processes them using FFmpeg, stores results in Backblaze B2 object storage, and sends webhook notifications when complete.
+This server handles video generation and composition for the Zencourt platform. It receives video processing requests from the Vercel Next.js frontend, processes them using FFmpeg, stores results in Backblaze B2 object storage, and sends webhook notifications when complete.
 
 ## Architecture
 
@@ -81,6 +81,7 @@ See `.env.example` for all required and optional environment variables.
 - `WEBHOOK_RETRY_ATTEMPTS` - Number of webhook retry attempts (default: 5)
 - `WEBHOOK_RETRY_BACKOFF_MS` - Base backoff delay for webhook retries (default: 1000ms)
 - `FAL_WEBHOOK_URL` - Override fal.ai webhook target (defaults to `${VIDEO_SERVER_URL}/webhooks/fal`)
+- `STORAGE_HEALTH_CACHE_MS` - Cache duration for storage health checks (default: 300000 = 5 min). Higher values reduce Backblaze Class C usage during health probes.
 
 ### Backblaze B2 Configuration
 
@@ -292,7 +293,7 @@ Returns server information and status.
 
 ```json
 {
-  "service": "ZenCourt Video Processor",
+  "service": "Zencourt Video Processor",
   "version": "1.0.0",
   "status": "running",
   "timestamp": "2025-01-08T12:00:00.000Z"
@@ -471,7 +472,7 @@ When video processing completes, the server sends a webhook to the configured `w
 - `X-Webhook-Signature`: HMAC-SHA256 signature of payload
 - `X-Webhook-Delivery-Attempt`: Delivery attempt number (1-5)
 - `X-Webhook-Timestamp`: ISO 8601 timestamp
-- `User-Agent`: ZenCourt-Video-Server/1.0
+- `User-Agent`: Zencourt-Video-Server/1.0
 
 **Payload (Success):**
 

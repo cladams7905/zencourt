@@ -4,9 +4,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-ZenCourt is an npm workspaces monorepo for a video generation platform serving real estate marketing. The architecture separates frontend (Vercel-deployed Next.js) from backend video processing (Hetzner-deployed Express + FFmpeg).
+Zencourt is an npm workspaces monorepo for a video generation platform serving real estate marketing. The architecture separates frontend (Vercel-deployed Next.js) from backend video processing (Hetzner-deployed Express + FFmpeg).
 
 **Structure:**
+
 ```
 apps/web/              # Next.js 15 frontend with Stack Auth
 apps/video-server/     # Express backend with FFmpeg video processing
@@ -15,6 +16,7 @@ packages/shared/       # Shared types and utilities
 ```
 
 **Tech Stack:**
+
 - Frontend: Next.js 15, React 19, Tailwind CSS 4, Radix UI, TanStack Query, fal.ai
 - Backend: Express, FFmpeg (fluent-ffmpeg), Pino logging, AWS SDK (S3-compatible)
 - Database: Drizzle ORM, Neon PostgreSQL with Row-Level Security
@@ -63,6 +65,7 @@ npm run type-check --workspace=@zencourt/video-server
 ### Web App (apps/web)
 
 **Structure:**
+
 - `app/` - Next.js App Router with API routes at `api/v1/`
 - `app/api/v1/video/` - Video generation endpoints
 - `app/api/v1/webhooks/` - Webhook handlers from video-server
@@ -70,6 +73,7 @@ npm run type-check --workspace=@zencourt/video-server
 - `middleware.ts` - Stack Auth session validation
 
 **Authentication Flow:**
+
 - Middleware checks `stack-access` and `stack-refresh` cookies
 - Bypasses: `/handler/*` (auth pages), `/api/v1/webhooks/*`, Next.js internals
 - Redirects unauthenticated users to `/handler/sign-in`
@@ -77,6 +81,7 @@ npm run type-check --workspace=@zencourt/video-server
 ### Video Server (apps/video-server)
 
 **Structure:**
+
 - `routes/` - Express routes (video, webhooks, health, storage)
 - `services/` - Business logic layer
   - `db/` - Repository pattern (`videoRepository`, `videoJobRepository`)
@@ -90,6 +95,7 @@ npm run type-check --workspace=@zencourt/video-server
 - `config/` - Environment, logging, storage configuration
 
 **Video Processing Pipeline:**
+
 1. User uploads images via web app
 2. Web app calls video-server `/video/generate`
 3. Video-server creates `videoJobs`, calls fal.ai (Kling AI)
@@ -100,6 +106,7 @@ npm run type-check --workspace=@zencourt/video-server
 ### Database (packages/db)
 
 **Schema (`drizzle/schema.ts`):**
+
 - `projects` - User projects with RLS policies
 - `images` - Uploaded images with AI classification
 - `videos` - Final composed videos
@@ -111,11 +118,13 @@ All tables enforce user isolation via RLS policies. Stack Auth provides authenti
 ### Shared Package (packages/shared)
 
 **Critical Utilities:**
+
 - `utils/storagePaths.ts` - **Centralized storage key generation**. Both web and video-server MUST use these functions to maintain consistent file organization.
 - `utils/logger.ts` - Pino logger configuration
 - `types/` - Shared TypeScript types for API contracts
 
 **Storage Path Pattern:**
+
 ```
 user_{userId}/projects/project_{projectId}/videos/video_{videoId}/...
 ```
@@ -125,6 +134,7 @@ user_{userId}/projects/project_{projectId}/videos/video_{videoId}/...
 ### 1. TypeScript Path Mappings
 
 Centralized in `tsconfig.base.json` with workspace aliases:
+
 - `@db/*` → `packages/db/src/*`
 - `@shared/*` → `packages/shared/src/*`
 - `@web/*` → `apps/web/src/*`
@@ -139,6 +149,7 @@ Centralized in `tsconfig.base.json` with workspace aliases:
 ### 3. Video Job Architecture
 
 Each video generation is split into multiple `videoJobs` (one per room). This enables:
+
 - Parallel processing of individual videos
 - Individual retry logic per job
 - Granular error tracking
@@ -150,6 +161,7 @@ Fields include: `errorType`, `errorRetryable`, `errorMessage` for debugging.
 **fal.ai → video-server → web app**
 
 Video-server acts as middleware to add:
+
 - Retry logic for failed requests
 - Error categorization and handling
 - Webhook delivery to web app
@@ -157,6 +169,7 @@ Video-server acts as middleware to add:
 ### 5. Docker Build Context
 
 Video-server Dockerfile builds from **monorepo root** (`context: ../..`) to access all packages. The build:
+
 - Copies entire monorepo structure
 - Installs dependencies for all workspaces
 - Compiles TypeScript in container
@@ -165,6 +178,7 @@ Video-server Dockerfile builds from **monorepo root** (`context: ../..`) to acce
 ### 6. Next.js Monorepo Configuration
 
 Non-standard config in `next.config.ts`:
+
 - Transpiles workspace packages (`@zencourt/db`, `@zencourt/shared`)
 - Externalizes FFmpeg and Pino to prevent bundling issues
 - Custom webpack config for FFmpeg binaries
@@ -198,6 +212,7 @@ Non-standard config in `next.config.ts`:
 ## Testing
 
 Video-server has Jest configuration with:
+
 - **Coverage threshold:** 70% (branches, functions, lines, statements)
 - **Test patterns:** `**/__tests__/**/*.ts`, `**/*.{spec,test}.ts`
 - **Module mapping:** Supports workspace aliases
