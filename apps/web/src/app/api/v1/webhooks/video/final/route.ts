@@ -12,7 +12,6 @@ import {
   createChildLogger,
   logger as baseLogger
 } from "../../../../../../lib/logger";
-import { emitFinalVideoUpdate } from "@web/src/types/video-events";
 import { ensurePublicUrl } from "@web/src/server/utils/storageUrls";
 
 const logger = createChildLogger(baseLogger, {
@@ -93,7 +92,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Update the video record with final status
-    const updatedVideo = await updateVideo(videoId, {
+    await updateVideo(videoId, {
       status: payload.status,
       videoUrl: signedVideoUrl,
       thumbnailUrl: signedThumbnailUrl,
@@ -114,15 +113,6 @@ export async function POST(request: NextRequest) {
       },
       "Final video status updated successfully"
     );
-
-    emitFinalVideoUpdate({
-      projectId: payload.projectId,
-      status: payload.status,
-      finalVideoUrl: updatedVideo.videoUrl,
-      thumbnailUrl: updatedVideo.thumbnailUrl,
-      duration: updatedVideo.metadata?.duration ?? null,
-      errorMessage: payload.error?.message
-    });
 
     // Revalidate the project page to reflect the final video
     revalidatePath(`/project/${payload.projectId}`);

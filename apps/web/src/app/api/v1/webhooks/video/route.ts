@@ -15,7 +15,6 @@ import {
   createChildLogger,
   logger as baseLogger
 } from "../../../../../lib/logger";
-import { emitVideoJobUpdate } from "@web/src/types/video-events";
 import type { VideoJobWebhookPayload } from "@shared/types/api";
 import type { DBVideoJob } from "@shared/types/models";
 
@@ -100,25 +99,6 @@ export async function POST(request: NextRequest) {
       },
       "Video job status updated successfully"
     );
-
-    emitVideoJobUpdate({
-      projectId: payload.projectId,
-      jobId: updatedJob?.id ?? payload.jobId,
-      status: updatedJob?.status ?? payload.status,
-      videoUrl: updatedJob?.videoUrl ?? videoUrl,
-      errorMessage:
-        updatedJob?.errorMessage ?? payload.error?.message ?? null,
-      roomId:
-        generationInfo?.roomId ?? updatedJob?.generationSettings?.roomId ?? null,
-      roomName:
-        generationInfo?.roomName ??
-        updatedJob?.generationSettings?.roomName ??
-        null,
-      sortOrder:
-        generationInfo?.sortOrder ??
-        updatedJob?.generationSettings?.sortOrder ??
-        null
-    });
 
     // Kick off route revalidation without blocking the webhook response
     scheduleProjectRevalidation(payload.projectId);
