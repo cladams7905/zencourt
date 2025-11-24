@@ -52,8 +52,6 @@ export async function POST(request: NextRequest) {
     const duration = payload.result?.duration ?? null;
     const fileSize = payload.result?.fileSize ?? null;
     const metadata = payload.result?.metadata;
-    const generationInfo = payload.generation;
-
     logger.info(
       {
         projectId: payload.projectId,
