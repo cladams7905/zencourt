@@ -6,6 +6,7 @@ import type { ProcessedImage } from "@web/src/types/images";
 import type { CategorizedGroup } from "@web/src/types/vision";
 import type { DBProject, ProjectStage } from "@shared/types/models";
 import type {
+  FinalVideoData,
   GenerationProgress,
   RoomGenerationStatus
 } from "@web/src/types/workflow";
@@ -14,16 +15,11 @@ import { CategorizeStage } from "../../workflow/stages/CategorizeStage";
 import { PlanStage, VideoSettings } from "../../workflow/stages/PlanStage";
 import { ReviewStage } from "../../workflow/stages/ReviewStage";
 import { GenerateStage } from "../../workflow/stages/GenerateStage";
+import { CompleteStage } from "../../workflow/stages/CompleteStage";
 import {
   UploadPreviewModal,
   CategorizedPreviewModal
 } from "./ImagePreviewModals";
-
-export interface FinalVideoData {
-  videoUrl: string;
-  thumbnailUrl?: string | null;
-  duration?: number | null;
-}
 
 interface StageContentProps {
   stage: ProjectStage;
@@ -94,16 +90,15 @@ export function StageContent({
   };
 
   const handleContinueUpload = () => setWorkflowStage("categorize");
-  const handleBackToUpload = () => setWorkflowStage("upload");
+  const handleBackToUpload = () => setWorkflowStage("upload", false);
   const handleContinueCategorize = () => setWorkflowStage("plan");
-  const handleBackToCategorize = () => setWorkflowStage("categorize");
+  const handleBackToCategorize = () => setWorkflowStage("categorize", false);
 
   const handleContinuePlan = (settings: VideoSettings) => {
     setVideoSettings(settings);
     setWorkflowStage("review");
   };
-
-  const handleBackToPlan = () => setWorkflowStage("plan");
+  const handleBackToPlan = () => setWorkflowStage("plan", false);
 
   const handleReviewConfirm = async () => {
     setIsConfirming(true);
@@ -135,8 +130,8 @@ export function StageContent({
           categorizedGroups={categorizedGroups}
           setCategorizedGroups={setCategorizedGroups}
           onImageClick={handleCategorizedImageClick}
-          onContinue={handleContinueCategorize}
           onBack={handleBackToUpload}
+          onContinue={handleContinueCategorize}
         />
       )}
 
@@ -144,8 +139,8 @@ export function StageContent({
         <PlanStage
           categorizedGroups={categorizedGroups}
           availableCategories={availableCategories}
-          onContinue={handleContinuePlan}
           onBack={handleBackToCategorize}
+          onContinue={handleContinuePlan}
         />
       )}
 
@@ -154,8 +149,8 @@ export function StageContent({
           images={images}
           categorizedGroups={categorizedGroups}
           videoSettings={videoSettings || undefined}
-          onConfirm={handleReviewConfirm}
           onBack={handleBackToPlan}
+          onConfirm={handleReviewConfirm}
           isConfirming={isConfirming}
         />
       )}
@@ -165,9 +160,12 @@ export function StageContent({
           progress={generationProgress}
           projectId={currentProject?.id}
           rooms={roomStatuses}
-          finalVideo={finalVideo}
           onCancel={onCancelGenerate}
         />
+      )}
+
+      {stage === "complete" && (
+        <CompleteStage finalVideo={finalVideo} projectId={currentProject?.id} />
       )}
 
       <UploadPreviewModal

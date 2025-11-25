@@ -12,4 +12,5 @@ export type ProjectStage =
   | "categorize"
   | "plan"
   | "review"
-  | "generate";
+  | "generate"
+  | "complete";

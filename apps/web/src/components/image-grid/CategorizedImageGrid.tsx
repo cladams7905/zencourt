@@ -102,6 +102,12 @@ export function CategorizedImageGrid({
     new Set(groups.map((g, i) => `${g.category}-${i}`))
   );
 
+  useEffect(() => {
+    setExpandedCategories(
+      new Set(groups.map((group, index) => `${group.category}-${index}`))
+    );
+  }, [groups]);
+
   const [dragState, setDragState] = useState<DragState>({
     isDragging: false,
     draggedImage: null,

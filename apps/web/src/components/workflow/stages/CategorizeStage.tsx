@@ -103,8 +103,8 @@ interface CategorizeStageProps {
     categoryIndex: number,
     imageIndex: number
   ) => void;
-  onContinue: () => void;
   onBack: () => void;
+  onContinue: () => void;
 }
 
 export function CategorizeStage({
@@ -114,8 +114,8 @@ export function CategorizeStage({
   categorizedGroups,
   setCategorizedGroups,
   onImageClick,
-  onContinue,
-  onBack
+  onBack,
+  onContinue
 }: CategorizeStageProps) {
   const user = useUser({ or: "redirect" });
   const [isCategorizing, setIsCategorizing] = useState(false);
@@ -230,7 +230,7 @@ export function CategorizeStage({
     setIsCategorizing(true);
 
     try {
-        await updateProject(user.id, currentProject.id, { status: "draft" });
+      await updateProject(user.id, currentProject.id, { stage: "categorize" });
 
       let finalImages: ProcessedImage[];
 
@@ -463,12 +463,7 @@ export function CategorizeStage({
       {/* Fade overlay and sticky footer */}
       <>
         <div className="sticky bottom-0 left-0 right-0 z-20 pt-4 pb-4 px-6 bg-white border-t flex gap-3">
-          <Button
-            onClick={onBack}
-            variant="outline"
-            size="lg"
-            className="flex-1"
-          >
+          <Button onClick={onBack} variant="outline" size="lg" className="flex-1">
             Back to Upload
           </Button>
           <Button onClick={onContinue} className="flex-1" size="lg">

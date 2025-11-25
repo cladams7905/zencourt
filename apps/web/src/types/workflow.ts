@@ -82,6 +82,15 @@ export interface WorkflowState {
   generationProgress: GenerationProgress | null;
 }
 
+/**
+ * Final composed video details shown in the workflow
+ */
+export interface FinalVideoData {
+  videoUrl: string;
+  thumbnailUrl?: string | null;
+  duration?: number | null;
+}
+
 // ============================================================================
 // Extended Project Type
 // ============================================================================
@@ -126,7 +135,8 @@ export function isStageBefore(
     "categorize",
     "plan",
     "review",
-    "generate"
+    "generate",
+    "complete"
   ];
   return stages.indexOf(stage) < stages.indexOf(compareStage);
 }
@@ -143,7 +153,8 @@ export function isStageAfter(
     "categorize",
     "plan",
     "review",
-    "generate"
+    "generate",
+    "complete"
   ];
   return stages.indexOf(stage) > stages.indexOf(compareStage);
 }
@@ -157,7 +168,8 @@ export function getCompletedStages(currentStage: ProjectStage): ProjectStage[] {
     "categorize",
     "plan",
     "review",
-    "generate"
+    "generate",
+    "complete"
   ];
   const currentIndex = stages.indexOf(currentStage);
   return stages.slice(0, currentIndex);
@@ -172,7 +184,8 @@ export function getNextStage(currentStage: ProjectStage): ProjectStage | null {
     "categorize",
     "plan",
     "review",
-    "generate"
+    "generate",
+    "complete"
   ];
   const currentIndex = stages.indexOf(currentStage);
   return currentIndex < stages.length - 1 ? stages[currentIndex + 1] : null;
@@ -189,7 +202,8 @@ export function getPreviousStage(
     "categorize",
     "plan",
     "review",
-    "generate"
+    "generate",
+    "complete"
   ];
   const currentIndex = stages.indexOf(currentStage);
   return currentIndex > 0 ? stages[currentIndex - 1] : null;

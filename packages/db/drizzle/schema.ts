@@ -1,9 +1,3 @@
-/**
- * Database Schema
- *
- * Defines the structure for projects and images in the database with RLS policies.
- */
-
 import {
   pgTable,
   text,
@@ -17,12 +11,12 @@ import {
 import { sql } from "drizzle-orm";
 import { authenticatedRole, authUid, crudPolicy } from "drizzle-orm/neon";
 import {
-  ProjectStatus,
   ImageMetadata,
   VideoStatus,
   VideoMetadata,
   JobGenerationSettings,
-  GENERATION_MODELS
+  GENERATION_MODELS,
+  ProjectStage
 } from "@shared/types/models";
 
 /**
@@ -35,10 +29,10 @@ export const projects = pgTable(
     id: text("id").primaryKey(),
     userId: text("user_id").notNull(), // From Stack Auth
     title: text("title"),
-    status: varchar("status", { length: 50 })
-      .$type<ProjectStatus>()
+    stage: varchar("stage", { length: 50 })
       .notNull()
-      .default("draft"), // draft, published
+      .$type<ProjectStage>()
+      .default("upload"),
     thumbnailUrl: text("thumbnail_url"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull()

@@ -54,8 +54,7 @@ export function ProjectsView({ initialProjects }: ProjectsViewProps) {
     } else {
       setProjects([...projects, project]);
     }
-    setIsWorkflowModalOpen(false);
-    setSelectedProject(null);
+    setSelectedProject(project);
   };
 
   const uniqueProjects = Array.from(
@@ -177,6 +176,8 @@ export function ProjectsView({ initialProjects }: ProjectsViewProps) {
                   <Image
                     src={project.thumbnailUrl || HouseFallback}
                     alt={project.title || "Undefined"}
+                    width={1280}
+                    height={720}
                     className="w-full h-full object-cover"
                   />
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
@@ -190,7 +191,7 @@ export function ProjectsView({ initialProjects }: ProjectsViewProps) {
                     <div className="flex-1 min-w-0">
                       <h3 className="mb-1 truncate">{project.title}</h3>
                       <p className="text-xs text-muted-foreground mb-1">
-                        {project.status}
+                        {project.stage === "complete" ? "published" : "draft"}
                       </p>
                     </div>
                     <button className="text-muted-foreground hover:text-foreground ml-2">

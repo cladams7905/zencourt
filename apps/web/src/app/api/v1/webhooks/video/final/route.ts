@@ -7,12 +7,15 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import { db, projects } from "@db/client";
+import { eq } from "drizzle-orm";
 import { updateVideo } from "@web/src/server/actions/db/videos";
 import {
   createChildLogger,
   logger as baseLogger
 } from "../../../../../../lib/logger";
 import { ensurePublicUrl } from "@web/src/server/utils/storageUrls";
+import type { InsertDBProject } from "@shared/types/models";
 
 const logger = createChildLogger(baseLogger, {
   module: "final-video-webhook"
@@ -91,8 +94,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Update the video record with final status
-    await updateVideo(videoId, {
+    const updatedVideo = await updateVideo(videoId, {
       status: payload.status,
       videoUrl: signedVideoUrl,
       thumbnailUrl: signedThumbnailUrl,
@@ -113,6 +115,35 @@ export async function POST(request: NextRequest) {
       },
       "Final video status updated successfully"
     );
+
+    if (payload.status === "completed") {
+      const projectUpdates: Partial<
+        Omit<InsertDBProject, "id" | "userId" | "createdAt">
+      > = {
+        stage: "complete",
+        updatedAt: new Date()
+      };
+
+      if (signedThumbnailUrl) {
+        projectUpdates.thumbnailUrl = signedThumbnailUrl;
+      } else if (updatedVideo.thumbnailUrl) {
+        projectUpdates.thumbnailUrl = updatedVideo.thumbnailUrl;
+      }
+
+      await db
+        .update(projects)
+        .set(projectUpdates)
+        .where(eq(projects.id, payload.projectId));
+
+      logger.info(
+        {
+          projectId: payload.projectId,
+          videoId,
+          stage: "complete"
+        },
+        "Project metadata updated after final video completion"
+      );
+    }
 
     // Revalidate the project page to reflect the final video
     revalidatePath(`/project/${payload.projectId}`);

@@ -50,6 +50,20 @@
       "when": 1763163723308,
       "tag": "0006_big_bucky",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1764045754276,
+      "tag": "0007_abandoned_sheva_callister",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1764046166978,
+      "tag": "0008_careless_tempest",
+      "breakpoints": true
     }
   ]
 }

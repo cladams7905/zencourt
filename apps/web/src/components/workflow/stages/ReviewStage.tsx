@@ -38,11 +38,11 @@ export function ReviewStage({
   images,
   categorizedGroups,
   videoSettings,
-  onConfirm,
   onBack,
+  onConfirm,
   isConfirming = false
 }: ReviewStageProps) {
-  const [isImagesOpen, setIsImagesOpen] = useState(false);
+  const [isImagesOpen, setIsImagesOpen] = useState(true);
 
   const totalImages = images.filter(
     (img) => img.status === "uploaded" || img.status === "analyzed"

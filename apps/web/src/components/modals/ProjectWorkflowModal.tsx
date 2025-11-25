@@ -1,42 +1,36 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useUser } from "@stackframe/stack";
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle
-} from "../ui/alert-dialog";
+import { Dialog, DialogContent } from "../ui/dialog";
 import { cn } from "../ui/utils";
-import { ProjectNameInput } from "../workflow/ProjectNameInput";
-import { UploadStage } from "../workflow/stages/UploadStage";
-import { CategorizeStage } from "../workflow/stages/CategorizeStage";
-import { PlanStage, VideoSettings } from "../workflow/stages/PlanStage";
-import { ReviewStage } from "../workflow/stages/ReviewStage";
-import { GenerateStage } from "../workflow/stages/GenerateStage";
-import { ImagePreviewModal } from "./ImagePreviewModal";
-import type { ProcessedImage } from "../../types/images";
 import type {
-  WorkflowStage,
+  FinalVideoData,
   GenerationProgress,
   GenerationStep,
   GenerationStepStatus,
   RoomGenerationStatus
 } from "../../types/workflow";
+import type { VideoSettings } from "../workflow/stages/PlanStage";
 import { updateProject } from "../../server/actions/db/projects";
-import { DBProject } from "@shared/types/models";
+import { DBProject, ProjectStage } from "@shared/types/models";
 import { CategorizedGroup, RoomCategory } from "@web/src/types/vision";
 import type {
   InitialVideoStatusPayload,
   VideoJobUpdateEvent
 } from "../../types/video-status";
+import { WorkflowHeader } from "./project-workflow/WorkflowHeader";
+import { StageContent } from "./project-workflow/StageContent";
+import { CloseWorkflowDialog } from "./project-workflow/CloseWorkflowDialog";
+import { ProcessedImage } from "@web/src/types/images";
+
+const ROOM_GENERATION_STEP_ID = "room-generation";
+const FINAL_COMPOSE_STEP_ID = "final-compose";
+const COMPLETED_STEP_LABEL = "Compose Final Video";
+const ROOM_STEP_LABEL = "Generate Room Videos";
+const POLLING_DELAY_MS = 120_000;
+const POLLING_INTERVAL_MS = 5_000;
 
 interface ProjectWorkflowModalProps {
   isOpen: boolean;
@@ -45,63 +39,148 @@ interface ProjectWorkflowModalProps {
   existingProject?: DBProject | null;
 }
 
-interface FinalVideoData {
-  videoUrl: string;
-  thumbnailUrl?: string | null;
-  duration?: number | null;
-}
-
 export function ProjectWorkflowModal({
   isOpen,
   onClose,
   onProjectCreated,
   existingProject
 }: ProjectWorkflowModalProps) {
-  // Workflow state
-  const [currentStage, setCurrentStage] = useState<WorkflowStage>("upload");
-  const [projectName, setProjectName] = useState("");
+  const [currentStage, setCurrentStage] = useState<ProjectStage>(
+    existingProject?.stage ?? "upload"
+  );
+  const [projectName, setProjectName] = useState(existingProject?.title || "");
   const [isSavingName, setIsSavingName] = useState(false);
-
-  // Project and image state
-  const [currentProject, setCurrentProject] = useState<DBProject | null>(null);
+  const [currentProject, setCurrentProject] = useState<DBProject | null>(
+    existingProject ?? null
+  );
   const [images, setImages] = useState<ProcessedImage[]>([]);
   const [categorizedGroups, setCategorizedGroups] = useState<
     CategorizedGroup[]
   >([]);
-
-  // Video settings state
   const [videoSettings, setVideoSettings] = useState<VideoSettings | null>(
     null
   );
-
-  // Upload stage state
-  const [previewImage, setPreviewImage] = useState<ProcessedImage | null>(null);
-
-  // Categorize stage state
-  const [previewImageFromGrid, setPreviewImageFromGrid] =
-    useState<ProcessedImage | null>(null);
-  const [previewIndexFromGrid, setPreviewIndexFromGrid] = useState<number>(0);
-
-  // Review stage state
-  const [isConfirming, setIsConfirming] = useState(false);
-
-  // Generate stage state
   const [generationProgress, setGenerationProgress] =
     useState<GenerationProgress | null>(null);
   const [roomStatuses, setRoomStatuses] = useState<RoomGenerationStatus[]>([]);
   const [finalVideo, setFinalVideo] = useState<FinalVideoData | null>(null);
-const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [projectStatus, setProjectStatus] =
+    useState<InitialVideoStatusPayload | null>(null);
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const pollDelayTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const pollingActiveRef = useRef(false);
+  const generationStartRef = useRef<number | null>(null);
+  const [statusCache, setStatusCache] = useState<
+    Record<string, InitialVideoStatusPayload>
+  >({});
+  const [loadedProjectKey, setLoadedProjectKey] = useState<string | null>(null);
+  const cachedStatus = existingProject
+    ? statusCache[existingProject.id] ?? null
+    : null;
+  const currentProjectKey = existingProject
+    ? `${existingProject.id}:${existingProject.stage}:${
+        existingProject.updatedAt ?? ""
+      }`
+    : null;
   const finalStatusNotifiedRef = useRef<"success" | "error" | null>(null);
+  const pendingStageRef = useRef<ProjectStage | null>(null);
   const user = useUser({ or: "redirect" });
-  const ROOM_GENERATION_STEP_ID = "room-generation";
-  const FINAL_COMPOSE_STEP_ID = "final-compose";
 
-  const stopStatusPolling = () => {
+  const stopStatusPolling = useCallback(() => {
+    pollingActiveRef.current = false;
+    if (pollDelayTimeoutRef.current) {
+      clearTimeout(pollDelayTimeoutRef.current);
+      pollDelayTimeoutRef.current = null;
+    }
     if (pollIntervalRef.current) {
       clearInterval(pollIntervalRef.current);
       pollIntervalRef.current = null;
     }
-  };
+  }, []);
+
+  const persistProjectStage = useCallback(
+    async (stage: ProjectStage) => {
+      if (!currentProject || !user) {
+        return;
+      }
+      if (currentProject.stage === stage) {
+        return;
+      }
+      try {
+        const updatedProject = await updateProject(user.id, currentProject.id, {
+          stage
+        });
+        setCurrentProject(updatedProject);
+        onProjectCreated?.(updatedProject);
+      } catch (error) {
+        console.error("Failed to update project stage:", error);
+        toast.error("Failed to update project stage", {
+          description:
+            error instanceof Error ? error.message : "Please try again."
+        });
+      }
+    },
+    [currentProject, onProjectCreated, user]
+  );
+
+  const setWorkflowStage = useCallback(
+    (stage: ProjectStage, persist: boolean = true) => {
+      const stageToPersist: ProjectStage =
+        stage === "generate" ? "review" : stage;
+      const isEnteringGenerate =
+        stage === "generate" && currentStage !== "generate";
+      const isLeavingGenerate =
+        stage !== "generate" && currentStage === "generate";
+
+      if (isEnteringGenerate) {
+        generationStartRef.current = Date.now();
+      } else if (isLeavingGenerate) {
+        generationStartRef.current = null;
+      }
+
+      setCurrentStage(stage);
+      setCurrentProject((prev) => {
+        if (!prev) {
+          return prev;
+        }
+        return {
+          ...prev,
+          stage: stageToPersist
+        };
+      });
+
+      if (!persist) {
+        pendingStageRef.current = null;
+        return;
+      }
+
+      if (!currentProject || !user) {
+        pendingStageRef.current = stageToPersist;
+        return;
+      }
+
+      pendingStageRef.current = null;
+      void persistProjectStage(stageToPersist);
+    },
+    [currentProject, currentStage, persistProjectStage, user]
+  );
+
+  function normalizeRoomStatuses(
+    jobs: VideoJobUpdateEvent[]
+  ): RoomGenerationStatus[] {
+    return jobs
+      .map((job) => ({
+        id: job.jobId,
+        roomId: job.roomId || null,
+        roomName: job.roomName || null,
+        status: job.status,
+        videoUrl: job.videoUrl ?? null,
+        errorMessage: job.errorMessage ?? null,
+        sortOrder: job.sortOrder ?? undefined
+      }))
+      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+  }
+
 
   // Internal modal state
   const [internalIsOpen, setInternalIsOpen] = useState(isOpen);
@@ -112,14 +191,511 @@ const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
     setInternalIsOpen(isOpen);
   }, [isOpen]);
 
+
+  useEffect(() => {
+    if (!isOpen || !currentProject || !user) {
+      return;
+    }
+    if (!pendingStageRef.current) {
+      return;
+    }
+    const stageToPersist = pendingStageRef.current;
+    pendingStageRef.current = null;
+    void persistProjectStage(stageToPersist);
+  }, [currentProject, isOpen, persistProjectStage, user]);
+
+  // Reset state when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      stopStatusPolling();
+
+      // Only reset if we're actually closing (not just switching stages)
+      const timeout = setTimeout(() => {
+        setWorkflowStage("upload", false);
+        setProjectName("");
+        setImages([]);
+        setCategorizedGroups([]);
+        setVideoSettings(null);
+        setCurrentProject(null);
+        setGenerationProgress(null);
+        setRoomStatuses([]);
+        setFinalVideo(null);
+        setProjectStatus(null);
+        setLoadedProjectKey(null);
+      }, 300); // Wait for modal close animation
+      return () => clearTimeout(timeout);
+    }
+  }, [isOpen, setWorkflowStage, stopStatusPolling]);
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      stopStatusPolling();
+    };
+  }, [stopStatusPolling]);
+
+  // Check if there's work in progress
+  const hasWorkInProgress = images.length > 0 || currentStage !== "upload";
+
+  // Handle modal close with confirmation
+  const handleClose = () => {
+    if (
+      hasWorkInProgress &&
+      currentStage !== "generate" &&
+      currentStage !== "complete"
+    ) {
+      setShowCloseConfirm(true);
+    } else {
+      // Call onProjectCreated callback if project exists before closing
+      if (currentProject && onProjectCreated) {
+        onProjectCreated(currentProject);
+      }
+      onClose();
+    }
+  };
+
+  const handleConfirmClose = () => {
+    setShowCloseConfirm(false);
+    // Call onProjectCreated callback if project exists before closing
+    if (currentProject && onProjectCreated) {
+      onProjectCreated(currentProject);
+    }
+    onClose();
+  };
+
+  // Debounced project name save
+  useEffect(() => {
+    if (!currentProject || !projectName.trim()) return;
+
+    setIsSavingName(true);
+    const timeoutId = setTimeout(async () => {
+      try {
+        if (!user) {
+          return;
+        }
+        await updateProject(user.id, currentProject.id, {
+          title: projectName.trim()
+        });
+      } catch (error) {
+        console.error("Failed to save project name:", error);
+        toast.error("Failed to save project name", {
+          description: "Your changes may not be saved. Please try again."
+        });
+      } finally {
+        setIsSavingName(false);
+      }
+    }, 500); // 500ms debounce delay
+
+    return () => clearTimeout(timeoutId);
+  }, [projectName, currentProject, user]);
+
+  const initializeGenerationProgress = (roomCount: number) => {
+    const steps: GenerationStep[] = [
+      {
+        id: ROOM_GENERATION_STEP_ID,
+        label: "Generate Room Videos",
+        status: "in-progress" as GenerationStepStatus,
+        progress: roomCount > 0 ? 5 : 0
+      },
+      {
+        id: FINAL_COMPOSE_STEP_ID,
+        label: "Compose Final Video",
+        status: "waiting" as GenerationStepStatus,
+        progress: 0
+      }
+    ];
+
+    setGenerationProgress({
+      currentStep: steps[0].label,
+      totalSteps: steps.length,
+      currentStepIndex: 0,
+      estimatedTimeRemaining: Math.max(roomCount * 45, 60),
+      overallProgress: 5,
+      steps
+    });
+
+    finalStatusNotifiedRef.current = null;
+  };
+
+  const updateRoomGenerationStep = useCallback(
+    (completed: number, total: number) => {
+      setGenerationProgress((prev) => {
+        if (!prev) return prev;
+        const progressPercent =
+          total === 0
+            ? 100
+            : Math.min(100, Math.round((completed / total) * 100));
+
+        const steps = prev.steps.map((step) => {
+          if (step.id === ROOM_GENERATION_STEP_ID) {
+            return {
+              ...step,
+              status: (progressPercent >= 100
+                ? "completed"
+                : "in-progress") as GenerationStepStatus,
+              progress: progressPercent
+            };
+          }
+
+          if (
+            step.id === FINAL_COMPOSE_STEP_ID &&
+            progressPercent >= 100 &&
+            step.status === "waiting"
+          ) {
+            return {
+              ...step,
+              status: "in-progress" as GenerationStepStatus,
+              progress: step.progress ?? 5
+            };
+          }
+
+          return step;
+        });
+
+        const currentStepIndex =
+          progressPercent >= 100
+            ? steps.findIndex((step) => step.id === FINAL_COMPOSE_STEP_ID) || 0
+            : steps.findIndex((step) => step.id === ROOM_GENERATION_STEP_ID) ||
+              0;
+
+        const currentStep = steps[currentStepIndex]?.label || prev.currentStep;
+
+        return {
+          ...prev,
+          steps,
+          currentStep,
+          currentStepIndex,
+          overallProgress:
+            progressPercent >= 100
+              ? Math.max(prev.overallProgress, 85)
+              : Math.max(
+                  prev.overallProgress,
+                  Math.round(progressPercent * 0.6)
+                )
+        };
+      });
+    },
+    []
+  );
+
+  const markRoomGenerationFailed = useCallback((message: string) => {
+    setGenerationProgress((prev) => {
+      if (!prev) return prev;
+      const steps = prev.steps.map((step) =>
+        step.id === ROOM_GENERATION_STEP_ID
+          ? {
+              ...step,
+              status: "failed" as GenerationStepStatus,
+              error: message
+            }
+          : step.id === FINAL_COMPOSE_STEP_ID
+          ? {
+              ...step,
+              status: "waiting" as GenerationStepStatus,
+              progress: 0
+            }
+          : step
+      );
+
+      return {
+        ...prev,
+        steps,
+        currentStep: steps[0]?.label || prev.currentStep,
+        currentStepIndex: 0
+      };
+    });
+  }, []);
+
+  const markFinalStepInProgress = useCallback(() => {
+    setGenerationProgress((prev) => {
+      if (!prev) return prev;
+      const steps = prev.steps.map((step) =>
+        step.id === FINAL_COMPOSE_STEP_ID
+          ? {
+              ...step,
+              status: "in-progress" as GenerationStepStatus,
+              progress: step.progress ?? 10
+            }
+          : step
+      );
+
+      return {
+        ...prev,
+        steps,
+        currentStep: steps[steps.length - 1]?.label || prev.currentStep,
+        currentStepIndex: steps.length - 1,
+        overallProgress: Math.max(prev.overallProgress, 90)
+      };
+    });
+  }, []);
+
+  const createCompletedProgress = useCallback((): GenerationProgress => {
+    return {
+      currentStep: COMPLETED_STEP_LABEL,
+      totalSteps: 2,
+      currentStepIndex: 1,
+      estimatedTimeRemaining: 0,
+      overallProgress: 100,
+      steps: [
+        {
+          id: ROOM_GENERATION_STEP_ID,
+          label: ROOM_STEP_LABEL,
+          status: "completed",
+          progress: 100
+        },
+        {
+          id: FINAL_COMPOSE_STEP_ID,
+          label: COMPLETED_STEP_LABEL,
+          status: "completed",
+          progress: 100
+        }
+      ]
+    };
+  }, []);
+
+  const markFinalStepCompleted = useCallback(() => {
+    setGenerationProgress((prev) => {
+      if (!prev) {
+        return createCompletedProgress();
+      }
+
+      const steps = prev.steps.map((step) =>
+        step.id === FINAL_COMPOSE_STEP_ID
+          ? {
+              ...step,
+              status: "completed" as GenerationStepStatus,
+              progress: 100
+            }
+          : step.id === ROOM_GENERATION_STEP_ID
+          ? {
+              ...step,
+              status: "completed" as GenerationStepStatus,
+              progress: 100
+            }
+          : step
+      );
+
+      return {
+        ...prev,
+        steps,
+        currentStep: steps[steps.length - 1]?.label || COMPLETED_STEP_LABEL,
+        currentStepIndex: steps.length - 1,
+        overallProgress: 100
+      };
+    });
+  }, [createCompletedProgress]);
+
+  const markFinalStepFailed = useCallback(
+    (message: string) => {
+      setGenerationProgress((prev) => {
+        if (!prev) {
+          return {
+            ...createCompletedProgress(),
+            steps: [
+              {
+                id: ROOM_GENERATION_STEP_ID,
+                label: ROOM_STEP_LABEL,
+                status: "completed",
+                progress: 100
+              },
+              {
+                id: FINAL_COMPOSE_STEP_ID,
+                label: COMPLETED_STEP_LABEL,
+                status: "failed",
+                error: message
+              }
+            ]
+          };
+        }
+        const steps = prev.steps.map((step) =>
+          step.id === FINAL_COMPOSE_STEP_ID
+            ? {
+                ...step,
+                status: "failed" as GenerationStepStatus,
+                error: message
+              }
+            : step
+        );
+
+        return {
+          ...prev,
+          steps,
+          currentStep: steps[steps.length - 1]?.label || prev.currentStep,
+          currentStepIndex: steps.length - 1
+        };
+      });
+    },
+    [createCompletedProgress]
+  );
+
+  const syncRoomProgress = useCallback(
+    (rooms: RoomGenerationStatus[]) => {
+      if (rooms.length === 0) {
+        return;
+      }
+
+      const failedRoom = rooms.find((room) => room.status === "failed");
+      if (failedRoom) {
+        markRoomGenerationFailed(
+          failedRoom.errorMessage || "Room generation failed"
+        );
+        toast.error("Room generation failed", {
+          description:
+            failedRoom.errorMessage || "One or more rooms failed to generate."
+        });
+        return;
+      }
+
+      const completedRooms = rooms.filter(
+        (room) => room.status === "completed"
+      ).length;
+
+      updateRoomGenerationStep(completedRooms, rooms.length);
+
+      if (rooms.length > 0 && completedRooms === rooms.length) {
+        markFinalStepInProgress();
+      }
+    },
+    [
+      markFinalStepInProgress,
+      markRoomGenerationFailed,
+      updateRoomGenerationStep
+    ]
+  );
+
+  const applyInitialStatusPayload = useCallback(
+    (
+      projectId: string,
+      payload: InitialVideoStatusPayload,
+      suppressNotifications = false
+    ) => {
+      const normalizedRooms = normalizeRoomStatuses(payload.jobs || []);
+      setRoomStatuses(() => {
+        syncRoomProgress(normalizedRooms);
+        return normalizedRooms;
+      });
+
+      setStatusCache((prev) => {
+        if (prev[projectId] === payload) {
+          return prev;
+        }
+        return {
+          ...prev,
+          [projectId]: payload
+        };
+      });
+
+      const hasIncompleteRooms = normalizedRooms.some(
+        (room) => room.status !== "completed"
+      );
+      const hasJobsWithoutFinalVideo =
+        normalizedRooms.length > 0 && !payload.finalVideo;
+      const finalStatus = payload.finalVideo?.status ?? null;
+      const finalVideoReady =
+        finalStatus === "completed" && Boolean(payload.finalVideo?.finalVideoUrl);
+
+      if (finalVideoReady) {
+        setFinalVideo({
+          videoUrl: payload.finalVideo.finalVideoUrl,
+          thumbnailUrl: payload.finalVideo.thumbnailUrl ?? null,
+          duration: payload.finalVideo.duration ?? null
+        });
+        setCurrentProject((prev) => {
+          if (!prev || prev.id !== payload.finalVideo?.projectId) {
+            return prev;
+          }
+
+          return {
+            ...prev,
+            thumbnailUrl:
+              payload.finalVideo?.thumbnailUrl ?? prev.thumbnailUrl ?? null
+          };
+        });
+        markFinalStepCompleted();
+        setWorkflowStage("complete");
+        stopStatusPolling();
+        if (
+          !suppressNotifications &&
+          finalStatusNotifiedRef.current !== "success"
+        ) {
+          toast.success("Generation complete!", {
+            description: "Your property video is ready."
+          });
+          finalStatusNotifiedRef.current = "success";
+        }
+        return;
+      }
+
+      if (finalStatus === "failed") {
+        const message =
+          payload.finalVideo.errorMessage || "Final composition failed";
+        setFinalVideo(null);
+        markFinalStepFailed(message);
+        stopStatusPolling();
+        setWorkflowStage("generate", false);
+        if (
+          !suppressNotifications &&
+          finalStatusNotifiedRef.current !== "error"
+        ) {
+          toast.error("Generation failed", {
+            description: message
+          });
+          finalStatusNotifiedRef.current = "error";
+        }
+        return;
+      }
+
+      if (hasIncompleteRooms || hasJobsWithoutFinalVideo) {
+        setWorkflowStage("generate", false);
+      }
+      setFinalVideo(null);
+    },
+    [
+      markFinalStepCompleted,
+      markFinalStepFailed,
+      setWorkflowStage,
+      stopStatusPolling,
+      syncRoomProgress
+    ]
+  );
+
+  const fetchStatus = useCallback(
+    async (projectId: string, suppressNotifications = false) => {
+      try {
+        const response = await fetch(`/api/v1/video/status/${projectId}`, {
+          cache: "no-store"
+        });
+        if (!response.ok) {
+          throw new Error("Failed to fetch status");
+        }
+        const data = (await response.json()) as {
+          success: boolean;
+          data: InitialVideoStatusPayload | undefined;
+        };
+        if (!data.success || !data.data) {
+          return;
+        }
+        setProjectStatus(data.data);
+        applyInitialStatusPayload(projectId, data.data, suppressNotifications);
+        return data.data;
+      } catch (error) {
+        console.error("Failed to fetch video status:", error);
+      }
+    },
+    [applyInitialStatusPayload]
+  );
+
   // Load existing project data when modal opens with an existing project
   useEffect(() => {
     async function loadExistingProject() {
       if (!isOpen || !existingProject || !user) return;
+      if (loadedProjectKey === currentProjectKey) return;
 
       try {
         // Set project info
         setCurrentProject(existingProject);
+        setCurrentStage(existingProject.stage ?? "upload");
+        pendingStageRef.current = null;
         setProjectName(existingProject.title || "");
 
         // Fetch project images
@@ -191,8 +767,25 @@ const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
           });
 
           setCategorizedGroups(categorizedGroups);
-          setCurrentStage("categorize");
         }
+
+        if (cachedStatus) {
+          applyInitialStatusPayload(existingProject.id, cachedStatus, true);
+        }
+
+        const hasCachedFinalVideo =
+          cachedStatus?.finalVideo?.status === "completed" &&
+          Boolean(cachedStatus.finalVideo.finalVideoUrl);
+
+        const shouldFetchStatus =
+          !cachedStatus ||
+          (existingProject.stage === "complete" && !hasCachedFinalVideo);
+
+        if (shouldFetchStatus) {
+          await fetchStatus(existingProject.id, true);
+        }
+
+        setLoadedProjectKey(currentProjectKey);
       } catch (error) {
         console.error("Failed to load existing project:", error);
         toast.error("Failed to load project data");
@@ -200,432 +793,72 @@ const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
     }
 
     loadExistingProject();
-  }, [isOpen, existingProject, user]);
+  }, [
+    applyInitialStatusPayload,
+    cachedStatus,
+    currentProjectKey,
+    existingProject,
+    fetchStatus,
+    isOpen,
+    loadedProjectKey,
+    user
+  ]);
 
-  // Reset state when modal closes
-  useEffect(() => {
-    if (!isOpen) {
-      stopStatusPolling();
-
-      // Only reset if we're actually closing (not just switching stages)
-      const timeout = setTimeout(() => {
-        setCurrentStage("upload");
-        setProjectName("");
-        setImages([]);
-        setCategorizedGroups([]);
-        setVideoSettings(null);
-        setCurrentProject(null);
-        setGenerationProgress(null);
-        setRoomStatuses([]);
-        setFinalVideo(null);
-      }, 300); // Wait for modal close animation
-      return () => clearTimeout(timeout);
-    }
-  }, [isOpen]);
-
-  // Cleanup polling on unmount
-  useEffect(() => {
-    return () => {
-      stopStatusPolling();
-    };
-  }, []);
-
-  // Check if there's work in progress
-  const hasWorkInProgress = images.length > 0 || currentStage !== "upload";
-
-  // Handle modal close with confirmation
-  const handleClose = () => {
-    if (hasWorkInProgress && currentStage !== "generate") {
-      setShowCloseConfirm(true);
-    } else {
-      // Call onProjectCreated callback if project exists before closing
-      if (currentProject && onProjectCreated) {
-        onProjectCreated(currentProject);
-      }
-      onClose();
-    }
-  };
-
-  const handleConfirmClose = () => {
-    setShowCloseConfirm(false);
-    // Call onProjectCreated callback if project exists before closing
-    if (currentProject && onProjectCreated) {
-      onProjectCreated(currentProject);
-    }
-    onClose();
-  };
-
-  // ============================================================================
-  // Project Name Auto-Save
-  // ============================================================================
-
-  // Debounced project name save
-  useEffect(() => {
-    if (!currentProject || !projectName.trim()) return;
-
-    setIsSavingName(true);
-    const timeoutId = setTimeout(async () => {
-      try {
-        if (!user) {
-          return;
-        }
-        await updateProject(user.id, currentProject.id, {
-          title: projectName.trim()
-        });
-      } catch (error) {
-        console.error("Failed to save project name:", error);
-        toast.error("Failed to save project name", {
-          description: "Your changes may not be saved. Please try again."
-        });
-      } finally {
-        setIsSavingName(false);
-      }
-    }, 500); // 500ms debounce delay
-
-    return () => clearTimeout(timeoutId);
-  }, [projectName, currentProject, user]);
-
-  // ============================================================================
-  // Upload Stage Handlers
-  // ============================================================================
-
-  const handleImageClick = (imageId: string) => {
-    const image = images.find((img) => img.id === imageId);
-    if (image) {
-      setPreviewImage(image);
-      setInternalIsOpen(false);
-    }
-  };
-
-  const handlePreviewClose = () => {
-    setPreviewImage(null);
-    setInternalIsOpen(true);
-  };
-
-  // ============================================================================
-  // Stage Navigation Handlers
-  // ============================================================================
-
-  const handleContinueFromUpload = () => {
-    setCurrentStage("categorize");
-  };
-
-  const handleContinueFromCategorize = () => {
-    setCurrentStage("plan");
-  };
-
-  const handleBackToCategorize = () => {
-    setCurrentStage("categorize");
-  };
-
-  // ============================================================================
-  // Plan Stage Handlers
-  // ============================================================================
-
-  const handleContinueFromPlan = (settings: VideoSettings) => {
-    setVideoSettings(settings);
-    setCurrentStage("review");
-  };
-
-  const initializeGenerationProgress = (roomCount: number) => {
-    const steps: GenerationStep[] = [
-      {
-        id: ROOM_GENERATION_STEP_ID,
-        label: "Generate Room Videos",
-        status: "in-progress" as GenerationStepStatus,
-        progress: roomCount > 0 ? 5 : 0
-      },
-      {
-        id: FINAL_COMPOSE_STEP_ID,
-        label: "Compose Final Video",
-        status: "waiting" as GenerationStepStatus,
-        progress: 0
-      }
-    ];
-
-    setGenerationProgress({
-      currentStep: steps[0].label,
-      totalSteps: steps.length,
-      currentStepIndex: 0,
-      estimatedTimeRemaining: Math.max(roomCount * 45, 60),
-      overallProgress: 5,
-      steps
-    });
-
-    finalStatusNotifiedRef.current = null;
-  };
-
-  const updateRoomGenerationStep = (completed: number, total: number) => {
-    setGenerationProgress((prev) => {
-      if (!prev) return prev;
-      const progressPercent =
-        total === 0
-          ? 100
-          : Math.min(100, Math.round((completed / total) * 100));
-
-      const steps = prev.steps.map((step) => {
-        if (step.id === ROOM_GENERATION_STEP_ID) {
-          return {
-            ...step,
-            status: (progressPercent >= 100
-              ? "completed"
-              : "in-progress") as GenerationStepStatus,
-            progress: progressPercent
-          };
-        }
-
-        if (
-          step.id === FINAL_COMPOSE_STEP_ID &&
-          progressPercent >= 100 &&
-          step.status === "waiting"
-        ) {
-          return {
-            ...step,
-            status: "in-progress" as GenerationStepStatus,
-            progress: step.progress ?? 5
-          };
-        }
-
-        return step;
-      });
-
-      const currentStepIndex =
-        progressPercent >= 100
-          ? steps.findIndex((step) => step.id === FINAL_COMPOSE_STEP_ID) || 0
-          : steps.findIndex((step) => step.id === ROOM_GENERATION_STEP_ID) || 0;
-
-      const currentStep = steps[currentStepIndex]?.label || prev.currentStep;
-
-      return {
-        ...prev,
-        steps,
-        currentStep,
-        currentStepIndex,
-        overallProgress:
-          progressPercent >= 100
-            ? Math.max(prev.overallProgress, 85)
-            : Math.max(prev.overallProgress, Math.round(progressPercent * 0.6))
-      };
-    });
-  };
-
-  const markRoomGenerationFailed = (message: string) => {
-    setGenerationProgress((prev) => {
-      if (!prev) return prev;
-      const steps = prev.steps.map((step) =>
-        step.id === ROOM_GENERATION_STEP_ID
-          ? {
-              ...step,
-              status: "failed" as GenerationStepStatus,
-              error: message
-            }
-          : step.id === FINAL_COMPOSE_STEP_ID
-          ? {
-              ...step,
-              status: "waiting" as GenerationStepStatus,
-              progress: 0
-            }
-          : step
-      );
-
-      return {
-        ...prev,
-        steps,
-        currentStep: steps[0]?.label || prev.currentStep,
-        currentStepIndex: 0
-      };
-    });
-  };
-
-  const markFinalStepInProgress = () => {
-    setGenerationProgress((prev) => {
-      if (!prev) return prev;
-      const steps = prev.steps.map((step) =>
-        step.id === FINAL_COMPOSE_STEP_ID
-          ? {
-              ...step,
-              status: "in-progress" as GenerationStepStatus,
-              progress: step.progress ?? 10
-            }
-          : step
-      );
-
-      return {
-        ...prev,
-        steps,
-        currentStep: steps[steps.length - 1]?.label || prev.currentStep,
-        currentStepIndex: steps.length - 1,
-        overallProgress: Math.max(prev.overallProgress, 90)
-      };
-    });
-  };
-
-  const markFinalStepCompleted = () => {
-    setGenerationProgress((prev) => {
-      if (!prev) return prev;
-      const steps = prev.steps.map((step) =>
-        step.id === FINAL_COMPOSE_STEP_ID
-          ? {
-              ...step,
-              status: "completed" as GenerationStepStatus,
-              progress: 100
-            }
-          : step
-      );
-
-      return {
-        ...prev,
-        steps,
-        currentStep: steps[steps.length - 1]?.label || prev.currentStep,
-        currentStepIndex: steps.length - 1,
-        overallProgress: 100
-      };
-    });
-  };
-
-  const markFinalStepFailed = (message: string) => {
-    setGenerationProgress((prev) => {
-      if (!prev) return prev;
-      const steps = prev.steps.map((step) =>
-        step.id === FINAL_COMPOSE_STEP_ID
-          ? {
-              ...step,
-              status: "failed" as GenerationStepStatus,
-              error: message
-            }
-          : step
-      );
-
-      return {
-        ...prev,
-        steps,
-        currentStep: steps[steps.length - 1]?.label || prev.currentStep,
-        currentStepIndex: steps.length - 1
-      };
-    });
-  };
-
-  const normalizeRoomStatuses = (
-    jobs: VideoJobUpdateEvent[]
-  ): RoomGenerationStatus[] => {
-    return jobs
-      .map((job) => ({
-        id: job.jobId,
-        roomId: job.roomId || null,
-        roomName: job.roomName || null,
-        status: job.status,
-        videoUrl: job.videoUrl ?? null,
-        errorMessage: job.errorMessage ?? null,
-        sortOrder: job.sortOrder ?? undefined
-      }))
-      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
-  };
-
-  const syncRoomProgress = (rooms: RoomGenerationStatus[]) => {
-    if (rooms.length === 0) {
-      return;
-    }
-
-    const failedRoom = rooms.find((room) => room.status === "failed");
-    if (failedRoom) {
-      markRoomGenerationFailed(
-        failedRoom.errorMessage || "Room generation failed"
-      );
-      toast.error("Room generation failed", {
-        description:
-          failedRoom.errorMessage || "One or more rooms failed to generate."
-      });
-      return;
-    }
-
-    const completedRooms = rooms.filter(
-      (room) => room.status === "completed"
-    ).length;
-
-    updateRoomGenerationStep(completedRooms, rooms.length);
-
-    if (rooms.length > 0 && completedRooms === rooms.length) {
-      markFinalStepInProgress();
-    }
-  };
-
-  const applyInitialStatusPayload = (payload: InitialVideoStatusPayload) => {
-    const normalizedRooms = normalizeRoomStatuses(payload.jobs || []);
-    setRoomStatuses(() => {
-      syncRoomProgress(normalizedRooms);
-      return normalizedRooms;
-    });
-
-    if (
-      payload.finalVideo?.status === "completed" &&
-      payload.finalVideo.finalVideoUrl
-    ) {
-      setFinalVideo({
-        videoUrl: payload.finalVideo.finalVideoUrl,
-        thumbnailUrl: payload.finalVideo.thumbnailUrl ?? null,
-        duration: payload.finalVideo.duration ?? null
-      });
-      markFinalStepCompleted();
-      stopStatusPolling();
-      if (finalStatusNotifiedRef.current !== "success") {
-        toast.success("Generation complete!", {
-          description: "Your property video is ready."
-        });
-        finalStatusNotifiedRef.current = "success";
-      }
-    } else if (payload.finalVideo?.status === "failed") {
-      const message =
-        payload.finalVideo.errorMessage || "Final composition failed";
-      setFinalVideo(null);
-      markFinalStepFailed(message);
-      stopStatusPolling();
-      if (finalStatusNotifiedRef.current !== "error") {
-        toast.error("Generation failed", {
-          description: message
-        });
-        finalStatusNotifiedRef.current = "error";
-      }
-    } else {
-      setFinalVideo(null);
-    }
-  };
-
-  const fetchStatus = async (projectId: string) => {
-    try {
-      const response = await fetch(
-        `/api/v1/video/status/${projectId}`,
-        {
-          cache: "no-store"
-        }
-      );
-      if (!response.ok) {
-        throw new Error("Failed to fetch status");
-      }
-      const data = (await response.json()) as {
-        success: boolean;
-        data: InitialVideoStatusPayload | undefined;
-      };
-      if (!data.success || !data.data) {
+  const startStatusPolling = useCallback(
+    (projectId: string | null) => {
+      if (!projectId || typeof window === "undefined") {
         return;
       }
-      applyInitialStatusPayload(data.data);
-    } catch (error) {
-      console.error("Failed to fetch video status:", error);
-    }
-  };
 
-  const startStatusPolling = (projectId: string | null) => {
-    if (!projectId || typeof window === "undefined") {
+      if (pollingActiveRef.current) {
+        return;
+      }
+
+      pollingActiveRef.current = true;
+      finalStatusNotifiedRef.current = null;
+
+      const now = Date.now();
+      if (generationStartRef.current === null) {
+        generationStartRef.current = now;
+      }
+      const elapsed = now - generationStartRef.current;
+      const delay = Math.max(POLLING_DELAY_MS - elapsed, 0);
+
+      pollDelayTimeoutRef.current = setTimeout(() => {
+        pollDelayTimeoutRef.current = null;
+        void fetchStatus(projectId);
+        pollIntervalRef.current = setInterval(() => {
+          void fetchStatus(projectId);
+        }, POLLING_INTERVAL_MS);
+      }, delay);
+    },
+    [fetchStatus]
+  );
+
+  useEffect(() => {
+    if (!isOpen || currentStage !== "generate" || !currentProject) {
+      stopStatusPolling();
       return;
     }
 
-    stopStatusPolling();
-    finalStatusNotifiedRef.current = null;
-    fetchStatus(projectId);
-    pollIntervalRef.current = setInterval(() => {
-      fetchStatus(projectId);
-    }, 5000);
-  };
+    const finalStatus = projectStatus?.finalVideo?.status;
+    const isFinalized = finalStatus === "completed" || finalStatus === "failed";
+
+    if (isFinalized) {
+      stopStatusPolling();
+      return;
+    }
+
+    startStatusPolling(currentProject.id);
+  }, [
+    currentProject,
+    currentProject?.id,
+    currentStage,
+    isOpen,
+    projectStatus?.finalVideo?.status,
+    startStatusPolling,
+    stopStatusPolling
+  ]);
 
   const handleConfirmAndGenerate = async () => {
     if (!currentProject) {
@@ -650,14 +883,14 @@ const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
       return;
     }
 
-    setIsConfirming(true);
     setRoomStatuses([]);
     setFinalVideo(null);
+    setProjectStatus(null);
 
     try {
       stopStatusPolling();
       initializeGenerationProgress(totalRooms);
-      setCurrentStage("generate");
+      setWorkflowStage("generate");
 
       const response = await fetch("/api/v1/video/generate", {
         method: "POST",
@@ -677,12 +910,10 @@ const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
       if (!response.ok) {
         throw new Error(data.message || "Failed to start room generation");
       }
-
-      startStatusPolling(currentProject.id);
     } catch (error) {
       stopStatusPolling();
       setGenerationProgress(null);
-      setCurrentStage("review");
+      setWorkflowStage("review");
       setRoomStatuses([]);
       setFinalVideo(null);
       console.error("Generation failed:", error);
@@ -690,14 +921,12 @@ const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
         description:
           error instanceof Error ? error.message : "Please try again."
       });
-    } finally {
-      setIsConfirming(false);
     }
   };
 
   // Determine modal size based on current stage
   const getModalClassName = () => {
-    if (currentStage === "generate") {
+    if (currentStage === "generate" || currentStage === "complete") {
       return "max-w-5xl h-[92vh]";
     }
     return cn(
@@ -722,250 +951,49 @@ const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
             "flex flex-col p-0 gap-0 overflow-hidden"
           )}
         >
-          {/* Modal Header - Fixed */}
-          <DialogHeader className="border-b">
-            <ProjectNameInput
-              value={projectName}
-              onChange={setProjectName}
-              placeholder="Untitled Project"
-              isSaving={isSavingName}
-            />
-            {/* Header */}
-            <div className="sticky top-0 bg-white z-30 px-6 py-4 border-t">
-              {currentStage === "upload" && (
-                <>
-                  <h2 className="text-xl font-semibold">
-                    Choose Images to Upload
-                  </h2>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Click to upload or drag and drop images of your property
-                    listing to generate content from.
-                  </p>
-                </>
-              )}
-              {currentStage === "categorize" &&
-                categorizedGroups.length > 0 && (
-                  <>
-                    <h2 className="text-xl font-semibold">
-                      Review Categorized Images
-                    </h2>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {categorizedGroups.length} categories found with{" "}
-                      {images.filter((img) => img.category).length} images
-                    </p>
-                  </>
-                )}
-              {currentStage === "plan" && (
-                <>
-                  <h2 className="text-xl font-semibold">
-                    Configure Your Video
-                  </h2>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Customize your property walkthrough video settings
-                  </p>
-                </>
-              )}
-              {currentStage === "review" && (
-                <>
-                  <h2 className="text-xl font-semibold">Review Your Project</h2>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Confirm your images and selected media before generating
-                  </p>
-                </>
-              )}
-              {currentStage === "generate" && (
-                <>
-                  <h2 className="text-xl font-semibold">
-                    {generationProgress?.steps?.every(
-                      (s) => s.status === "completed"
-                    )
-                      ? "Generation Complete!"
-                      : generationProgress?.steps?.some(
-                          (s) => s.status === "failed"
-                        )
-                      ? "Generation Failed"
-                      : "Generating Your Content"}
-                  </h2>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {generationProgress?.steps?.every(
-                      (s) => s.status === "completed"
-                    )
-                      ? "Your content has been successfully generated"
-                      : generationProgress?.steps?.some(
-                          (s) => s.status === "failed"
-                        )
-                      ? "Some steps encountered errors"
-                      : "Creating video from your images"}
-                  </p>
-                </>
-              )}
-            </div>
-            <DialogTitle className="hidden">Project Workflow</DialogTitle>
-          </DialogHeader>
+          <WorkflowHeader
+            currentStage={currentStage}
+            categorizedGroupCount={categorizedGroups.length}
+            categorizedImageCount={images.filter((img) => img.category).length}
+            generationProgress={generationProgress}
+            projectName={projectName}
+            onProjectNameChange={setProjectName}
+            isSavingName={isSavingName}
+          />
 
-          {/* Stage Content - Scrollable */}
-          <div className="relative flex-1 overflow-auto">
-            {/* Upload Stage */}
-            {currentStage === "upload" && (
-              <UploadStage
-                images={images}
-                setImages={setImages}
-                currentProject={currentProject}
-                setCurrentProject={setCurrentProject}
-                onImageClick={handleImageClick}
-                onContinue={handleContinueFromUpload}
-              />
-            )}
-
-            {/* Categorize Stage */}
-            {currentStage === "categorize" && (
-              <CategorizeStage
-                images={images}
-                setImages={setImages}
-                currentProject={currentProject}
-                categorizedGroups={categorizedGroups}
-                setCategorizedGroups={setCategorizedGroups}
-                onImageClick={(image, categoryIndex, imageIndex) => {
-                  // Find the global index of the image in all images
-                  let globalIndex = 0;
-                  for (let i = 0; i < categoryIndex; i++) {
-                    globalIndex += categorizedGroups[i].images.length;
-                  }
-                  globalIndex += imageIndex;
-
-                  setPreviewImageFromGrid(image);
-                  setPreviewIndexFromGrid(globalIndex);
-                  setInternalIsOpen(false);
-                }}
-                onContinue={handleContinueFromCategorize}
-                onBack={() => setCurrentStage("upload")}
-              />
-            )}
-
-            {/* Plan Stage */}
-            {currentStage === "plan" && (
-              <PlanStage
-                categorizedGroups={categorizedGroups}
-                availableCategories={availableCategories}
-                onContinue={handleContinueFromPlan}
-                onBack={handleBackToCategorize}
-              />
-            )}
-
-            {/* Review Stage */}
-            {currentStage === "review" && (
-              <ReviewStage
-                images={images}
-                categorizedGroups={categorizedGroups}
-                videoSettings={videoSettings || undefined}
-                onConfirm={handleConfirmAndGenerate}
-                onBack={() => setCurrentStage("plan")}
-                isConfirming={isConfirming}
-              />
-            )}
-
-            {/* Generate Stage */}
-            {currentStage === "generate" && generationProgress && (
-              <GenerateStage
-                progress={generationProgress}
-                projectId={currentProject?.id}
-                rooms={roomStatuses}
-                finalVideo={finalVideo}
-                onCancel={() => {
-                  stopStatusPolling();
-                  // Reset state
-                  setCurrentStage("review");
-                  setGenerationProgress(null);
-                  setRoomStatuses([]);
-                  setFinalVideo(null);
-                }}
-              />
-            )}
-          </div>
+          <StageContent
+            stage={currentStage}
+            images={images}
+            setImages={setImages}
+            currentProject={currentProject}
+            setCurrentProject={setCurrentProject}
+            categorizedGroups={categorizedGroups}
+            setCategorizedGroups={setCategorizedGroups}
+            availableCategories={availableCategories}
+            videoSettings={videoSettings}
+            setVideoSettings={setVideoSettings}
+            setWorkflowStage={setWorkflowStage}
+            setInternalIsOpen={setInternalIsOpen}
+            onConfirmReview={handleConfirmAndGenerate}
+            generationProgress={generationProgress}
+            roomStatuses={roomStatuses}
+            finalVideo={finalVideo}
+            onCancelGenerate={() => {
+              stopStatusPolling();
+              setWorkflowStage("review");
+              setGenerationProgress(null);
+              setRoomStatuses([]);
+              setFinalVideo(null);
+            }}
+          />
         </DialogContent>
-
-        {/* Image Preview Modal - Upload Step */}
-        {previewImage && (
-          <ImagePreviewModal
-            isOpen={!!previewImage}
-            onClose={handlePreviewClose}
-            currentImage={previewImage}
-            allImages={images}
-            currentIndex={images.findIndex((img) => img.id === previewImage.id)}
-            onNavigate={(index) => {
-              const newImage = images[index];
-              if (newImage) {
-                setPreviewImage(newImage);
-              }
-            }}
-            categoryInfo={{
-              displayLabel: "Upload",
-              color: "#6b7280"
-            }}
-            showMetadata={false}
-          />
-        )}
-
-        {/* Image Preview Modal - Categorized Grid */}
-        {previewImageFromGrid && (
-          <ImagePreviewModal
-            isOpen={!!previewImageFromGrid}
-            onClose={() => {
-              setPreviewImageFromGrid(null);
-              setInternalIsOpen(true);
-            }}
-            currentImage={previewImageFromGrid}
-            allImages={images}
-            currentIndex={previewIndexFromGrid}
-            onNavigate={(index) => {
-              const newImage = images[index];
-              if (newImage) {
-                setPreviewImageFromGrid(newImage);
-                setPreviewIndexFromGrid(index);
-              }
-            }}
-            categoryInfo={
-              previewImageFromGrid.category
-                ? {
-                    displayLabel:
-                      categorizedGroups.find((g) =>
-                        g.images.some(
-                          (img) => img.id === previewImageFromGrid.id
-                        )
-                      )?.displayLabel || "Unknown",
-                    color:
-                      categorizedGroups.find((g) =>
-                        g.images.some(
-                          (img) => img.id === previewImageFromGrid.id
-                        )
-                      )?.metadata.color || "#6b7280"
-                  }
-                : undefined
-            }
-            showMetadata={true}
-          />
-        )}
       </Dialog>
 
-      {/* Close Confirmation Dialog */}
-      <AlertDialog open={showCloseConfirm} onOpenChange={setShowCloseConfirm}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Close Project Workflow?</AlertDialogTitle>
-            <AlertDialogDescription>
-              You have unsaved work in progress. Are you sure you want to close?
-              Your progress will be saved, but you&apos;ll need to start the
-              workflow again.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Continue Working</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmClose}>
-              Yes, Close
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <CloseWorkflowDialog
+        open={showCloseConfirm}
+        onOpenChange={setShowCloseConfirm}
+        onConfirm={handleConfirmClose}
+      />
     </>
   );
 }

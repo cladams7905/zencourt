@@ -196,8 +196,8 @@ function PreviewContent({
 
 export function PlanStage({
   categorizedGroups = [],
-  onContinue,
-  onBack
+  onBack,
+  onContinue
 }: PlanStageProps) {
   // Video configuration state
   const [orientation, setOrientation] = useState<VideoOrientation>("vertical");

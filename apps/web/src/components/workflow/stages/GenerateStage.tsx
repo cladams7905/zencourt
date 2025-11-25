@@ -22,17 +22,10 @@ import {
   AlertTriangle,
   CheckCircle2,
   Clock,
-  Download,
   Loader2,
   Play
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-
-interface FinalVideoDetails {
-  videoUrl: string;
-  thumbnailUrl?: string | null;
-  duration?: number | null;
-}
 
 interface GenerateStageProps {
   progress: GenerationProgress;
@@ -40,7 +33,6 @@ interface GenerateStageProps {
   rooms?: RoomGenerationStatus[];
   onCancel?: () => void;
   onRetry?: () => void;
-  finalVideo?: FinalVideoDetails | null;
 }
 
 export function GenerateStage({
@@ -48,8 +40,7 @@ export function GenerateStage({
   projectId,
   rooms = [],
   onCancel,
-  onRetry,
-  finalVideo
+  onRetry
 }: GenerateStageProps) {
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const totalRooms = rooms.length;
@@ -63,9 +54,6 @@ export function GenerateStage({
     progress.steps?.some((s) => s.status === "in-progress") ||
     progress.steps?.some((s) => s.status === "waiting") ||
     false;
-
-  const isComplete =
-    progress.steps?.every((s) => s.status === "completed") || false;
 
   const hasFailed = progress.steps?.some((s) => s.status === "failed") || false;
 
@@ -102,34 +90,6 @@ export function GenerateStage({
 
     // Call the onCancel callback to stop polling and reset UI
     onCancel?.();
-  };
-
-  const handleDownloadVideo = async () => {
-    if (!finalVideo?.videoUrl) {
-      return;
-    }
-
-    try {
-      const response = await fetch(finalVideo.videoUrl);
-      if (!response.ok) {
-        throw new Error("Failed to fetch video");
-      }
-
-      const blob = await response.blob();
-      const blobUrl = window.URL.createObjectURL(blob);
-
-      const link = document.createElement("a");
-      link.href = blobUrl;
-      link.download = `video-${projectId}.mp4`;
-      document.body.appendChild(link);
-      link.click();
-
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(blobUrl);
-    } catch (error) {
-      console.error("Failed to download video:", error);
-      window.open(finalVideo.videoUrl, "_blank");
-    }
   };
 
   const handleOpenRoomVideo = (videoUrl: string) => {
@@ -176,12 +136,10 @@ export function GenerateStage({
             </div>
           )}
 
-          {/* Generation Steps Timeline - Hide when video preview is shown */}
-          {!finalVideo && (
-            <div className="max-w-2xl mx-auto">
-              <VerticalTimeline steps={progress.steps || []} />
-            </div>
-          )}
+          {/* Generation Steps Timeline */}
+          <div className="max-w-2xl mx-auto">
+            <VerticalTimeline steps={progress.steps || []} />
+          </div>
 
           {/* Room-Level Progress */}
           {showRoomStatuses && (
@@ -263,43 +221,6 @@ export function GenerateStage({
                   );
                 })}
               </div>
-            </div>
-          )}
-
-          {/* Video Preview - Show directly without success card */}
-          {isComplete && (
-            <div className="mt-8 space-y-6">
-              {finalVideo && (
-                <div className="p-6 bg-white border border-gray-200 rounded-lg">
-                  <h4 className="text-md font-semibold mb-4 flex items-center gap-2">
-                    <Play className="w-5 h-5" />
-                    Video Preview
-                  </h4>
-                  <div className="aspect-video bg-black rounded-lg overflow-hidden mb-4">
-                    <video
-                      controls
-                      className="w-full h-full"
-                      poster={finalVideo.thumbnailUrl ?? undefined}
-                    >
-                      <source src={finalVideo.videoUrl} type="video/mp4" />
-                      Your browser does not support the video tag.
-                    </video>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm text-muted-foreground">
-                      Duration: {Math.round(finalVideo.duration ?? 0)}s
-                    </div>
-                    <Button
-                      onClick={handleDownloadVideo}
-                      className="flex items-center gap-2"
-                    >
-                      <Download className="w-4 h-4" />
-                      Download Video
-                    </Button>
-                  </div>
-                </div>
-              )}
-
             </div>
           )}
 
