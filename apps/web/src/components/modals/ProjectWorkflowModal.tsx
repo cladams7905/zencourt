@@ -594,7 +594,7 @@ export function ProjectWorkflowModal({
       const finalVideoReady =
         finalStatus === "completed" && Boolean(payload.finalVideo?.finalVideoUrl);
 
-      if (finalVideoReady) {
+      if (finalVideoReady && payload.finalVideo?.finalVideoUrl) {
         setFinalVideo({
           videoUrl: payload.finalVideo.finalVideoUrl,
           thumbnailUrl: payload.finalVideo.thumbnailUrl ?? null,
@@ -626,7 +626,7 @@ export function ProjectWorkflowModal({
         return;
       }
 
-      if (finalStatus === "failed") {
+      if (finalStatus === "failed" && payload.finalVideo) {
         const message =
           payload.finalVideo.errorMessage || "Final composition failed";
         setFinalVideo(null);
