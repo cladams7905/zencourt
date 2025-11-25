@@ -4,23 +4,9 @@
  * Type definitions for the multi-stage project creation workflow
  */
 
-import { DBProject, VideoStatus } from "@shared/types/models";
+import { DBProject, VideoStatus, ProjectStage } from "@shared/types/models";
 import type { ProcessedImage } from "./images";
 import { CategorizedGroup } from "./vision";
-
-// ============================================================================
-// Workflow Stage Types
-// ============================================================================
-
-/**
- * The five stages of the project creation workflow
- */
-export type WorkflowStage =
-  | "upload"
-  | "categorize"
-  | "plan"
-  | "review"
-  | "generate";
 
 // ============================================================================
 // Generation Progress Types
@@ -81,7 +67,7 @@ export interface RoomGenerationStatus {
  */
 export interface WorkflowState {
   // Current stage
-  currentStage: WorkflowStage;
+  currentStage: ProjectStage;
 
   // Project information
   projectName: string;
@@ -104,7 +90,7 @@ export interface WorkflowState {
  * Project with workflow-specific fields
  */
 export interface ProjectWithWorkflow extends DBProject {
-  workflowStage?: WorkflowStage;
+  workflowStage?: ProjectStage;
 }
 
 // ============================================================================
@@ -132,10 +118,10 @@ export type StageValidator = (state: WorkflowState) => ValidationResult;
  * Check if a workflow stage is before another stage
  */
 export function isStageBefore(
-  stage: WorkflowStage,
-  compareStage: WorkflowStage
+  stage: ProjectStage,
+  compareStage: ProjectStage
 ): boolean {
-  const stages: WorkflowStage[] = [
+  const stages: ProjectStage[] = [
     "upload",
     "categorize",
     "plan",
@@ -149,10 +135,10 @@ export function isStageBefore(
  * Check if a workflow stage is after another stage
  */
 export function isStageAfter(
-  stage: WorkflowStage,
-  compareStage: WorkflowStage
+  stage: ProjectStage,
+  compareStage: ProjectStage
 ): boolean {
-  const stages: WorkflowStage[] = [
+  const stages: ProjectStage[] = [
     "upload",
     "categorize",
     "plan",
@@ -165,10 +151,8 @@ export function isStageAfter(
 /**
  * Get all stages up to and including the specified stage
  */
-export function getCompletedStages(
-  currentStage: WorkflowStage
-): WorkflowStage[] {
-  const stages: WorkflowStage[] = [
+export function getCompletedStages(currentStage: ProjectStage): ProjectStage[] {
+  const stages: ProjectStage[] = [
     "upload",
     "categorize",
     "plan",
@@ -182,10 +166,8 @@ export function getCompletedStages(
 /**
  * Get the next stage in the workflow
  */
-export function getNextStage(
-  currentStage: WorkflowStage
-): WorkflowStage | null {
-  const stages: WorkflowStage[] = [
+export function getNextStage(currentStage: ProjectStage): ProjectStage | null {
+  const stages: ProjectStage[] = [
     "upload",
     "categorize",
     "plan",
@@ -200,9 +182,9 @@ export function getNextStage(
  * Get the previous stage in the workflow
  */
 export function getPreviousStage(
-  currentStage: WorkflowStage
-): WorkflowStage | null {
-  const stages: WorkflowStage[] = [
+  currentStage: ProjectStage
+): ProjectStage | null {
+  const stages: ProjectStage[] = [
     "upload",
     "categorize",
     "plan",
