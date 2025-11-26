@@ -24,8 +24,7 @@ export async function createProject(userId: string): Promise<DBProject> {
         .insert(projects)
         .values({
           id: nanoid(),
-          userId,
-          stage: "upload"
+          userId
         })
         .returning();
 

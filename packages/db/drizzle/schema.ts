@@ -1,4 +1,5 @@
 import {
+  pgEnum,
   pgTable,
   text,
   timestamp,
@@ -16,10 +17,27 @@ import {
   VideoStatus,
   VideoMetadata,
   JobGenerationSettings,
-  GENERATION_MODELS,
-  AssetGenerationStage,
-  AssetGenerationType
+  GENERATION_MODELS
 } from "@shared/types/models";
+
+export const assetGenerationTypeEnum = pgEnum("asset_generation_type", [
+  "video"
+]);
+export const assetGenerationStageEnum = pgEnum("asset_generation_stage", [
+  "upload",
+  "categorize",
+  "plan",
+  "review",
+  "generate",
+  "complete"
+]);
+export const videoStatusEnum = pgEnum("video_status", [
+  "pending",
+  "processing",
+  "completed",
+  "failed",
+  "canceled"
+]);
 
 /**
  * Projects table
@@ -82,12 +100,9 @@ export const assets = pgTable(
       .notNull()
       .references(() => projects.id, { onDelete: "cascade" }),
     title: text("title"),
-    type: varchar("generation_type", { length: 50 })
+    type: assetGenerationTypeEnum("generation_type").notNull(),
+    stage: assetGenerationStageEnum("generation_stage")
       .notNull()
-      .$type<AssetGenerationType>(),
-    stage: varchar("generation_stage", { length: 50 })
-      .notNull()
-      .$type<AssetGenerationStage>()
       .default("upload"),
     thumbnailUrl: text("thumbnail_url"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -154,10 +169,7 @@ export const videoAssets = pgTable(
       .references(() => assets.id, { onDelete: "cascade" }),
     videoUrl: text("video_url"),
     thumbnailUrl: text("thumbnail_url"),
-    status: varchar("status", { length: 50 })
-      .notNull()
-      .default("pending")
-      .$type<VideoStatus>(),
+    status: videoStatusEnum("status").notNull().default("pending"),
     metadata: jsonb("metadata").$type<VideoMetadata>(),
     errorMessage: text("error_message"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -187,7 +199,7 @@ export const videoAssetJobs = pgTable(
       .notNull()
       .references(() => videoAssets.id, { onDelete: "cascade" }),
     requestId: text("request_id"),
-    status: varchar("status", { length: 50 })
+    status: videoStatusEnum("status")
       .notNull()
       .default("pending")
       .$type<VideoStatus>(),

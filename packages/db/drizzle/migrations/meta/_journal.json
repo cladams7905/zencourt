@@ -78,6 +78,13 @@
       "when": 1764168774524,
       "tag": "0010_absent_mephistopheles",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1764173805234,
+      "tag": "0011_far_legion",
+      "breakpoints": true
     }
   ]
 }

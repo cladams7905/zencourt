@@ -1,6 +1,6 @@
 "use server";
 
-import { db, videoJobs } from "@db/client";
+import { db, videoAssetJobs as videoJobs } from "@db/client";
 import type { DBVideoJob, InsertDBVideoJob } from "@shared/types/models";
 import { eq } from "drizzle-orm";
 
@@ -17,7 +17,7 @@ export async function createVideoJob(job: InsertDBVideoJob): Promise<void> {
 export async function updateVideoJob(
   jobId: string,
   updates: Partial<
-    Omit<InsertDBVideoJob, "id" | "videoId" | "createdAt" | "updatedAt">
+    Omit<InsertDBVideoJob, "id" | "videoAssetId" | "createdAt" | "updatedAt">
   >
 ): Promise<DBVideoJob> {
   const [updated] = await db

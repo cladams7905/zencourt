@@ -1,6 +1,6 @@
 "use server";
 
-import { db, videos } from "@db/client";
+import { db, videoAssets as videos } from "@db/client";
 import type { DBVideo, InsertDBVideo } from "@shared/types/models";
 import { eq } from "drizzle-orm";
 
@@ -16,7 +16,7 @@ export async function createVideo(video: InsertDBVideo): Promise<void> {
  */
 export async function updateVideo(
   videoId: string,
-  updates: Partial<Omit<InsertDBVideo, "id" | "projectId" | "createdAt">>
+  updates: Partial<Omit<InsertDBVideo, "id" | "assetId" | "createdAt">>
 ): Promise<DBVideo> {
   if (!videoId) {
     throw new Error("videoId is required");
