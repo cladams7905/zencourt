@@ -64,6 +64,20 @@
       "when": 1764046166978,
       "tag": "0008_careless_tempest",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1764125864447,
+      "tag": "0009_messy_hannibal_king",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1764168774524,
+      "tag": "0010_absent_mephistopheles",
+      "breakpoints": true
     }
   ]
 }

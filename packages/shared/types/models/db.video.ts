@@ -4,13 +4,13 @@
  * Type definitions for video-related database operations
  */
 
-import { videos, videoJobs } from "@db/client";
+import { videoAssets, videoAssetJobs } from "@db/client";
 
-export type DBVideo = typeof videos.$inferSelect;
-export type InsertDBVideo = typeof videos.$inferInsert;
+export type DBVideo = typeof videoAssets.$inferSelect;
+export type InsertDBVideo = typeof videoAssets.$inferInsert;
 
-export type DBVideoJob = typeof videoJobs.$inferSelect;
-export type InsertDBVideoJob = typeof videoJobs.$inferInsert;
+export type DBVideoJob = typeof videoAssetJobs.$inferSelect;
+export type InsertDBVideoJob = typeof videoAssetJobs.$inferInsert;
 
 export type VideoStatus =
   | "pending"
