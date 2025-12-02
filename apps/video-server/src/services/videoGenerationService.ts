@@ -5,7 +5,6 @@
  */
 
 import logger from "@/config/logger";
-import { env } from "@/config/env";
 import { klingService } from "./klingService";
 import { ffmpegService } from "./ffmpegService";
 import { storageService } from "./storageService";
@@ -68,12 +67,12 @@ class VideoGenerationService {
    */
   private buildWebhookUrl(requestId: string): string {
     try {
-      const url = new URL(env.falWebhookUrl);
+      const url = new URL(process.env.FAL_WEBHOOK_URL);
       url.searchParams.set("requestId", requestId);
       return url.toString();
     } catch {
-      const separator = env.falWebhookUrl.includes("?") ? "&" : "?";
-      return `${env.falWebhookUrl}${separator}requestId=${encodeURIComponent(
+      const separator = process.env.FAL_WEBHOOK_URL.includes("?") ? "&" : "?";
+      return `${process.env.FAL_WEBHOOK_URL}${separator}requestId=${encodeURIComponent(
         requestId
       )}`;
     }
@@ -634,8 +633,8 @@ class VideoGenerationService {
     }
 
     // Build webhook URL from Vercel API URL
-    const webhookUrl = `${env.vercelApiUrl}/api/v1/webhooks/video`;
-    const webhookSecret = env.webhookSigningSecret;
+    const webhookUrl = `${process.env.VERCEL_API_URL}/api/v1/webhooks/video`;
+    const webhookSecret = process.env.VERCEL_WEBHOOK_SIGNING_SECRET;
 
     if (!webhookSecret) {
       logger.warn(
@@ -728,8 +727,8 @@ class VideoGenerationService {
     }
 
     // Build webhook URL from Vercel API URL
-    const webhookUrl = `${env.vercelApiUrl}/api/v1/webhooks/video`;
-    const webhookSecret = env.webhookSigningSecret;
+    const webhookUrl = `${process.env.VERCEL_API_URL}/api/v1/webhooks/video`;
+    const webhookSecret = process.env.VERCEL_WEBHOOK_SIGNING_SECRET;
 
     if (!webhookUrl || !webhookSecret) {
       return;
@@ -1012,8 +1011,8 @@ class VideoGenerationService {
       errorMessage?: string;
     }
   ): Promise<void> {
-    const webhookUrl = `${env.vercelApiUrl}/api/v1/webhooks/video/final`;
-    const webhookSecret = env.webhookSigningSecret;
+    const webhookUrl = `${process.env.VERCEL_API_URL}/api/v1/webhooks/video/final`;
+    const webhookSecret = process.env.VERCEL_WEBHOOK_SIGNING_SECRET;
 
     if (!webhookSecret) {
       logger.warn(

@@ -6,7 +6,7 @@
 
 import axios, { AxiosError } from "axios";
 import { createHmac } from "crypto";
-import { logger } from "@/config/logger";
+import logger from "@/config/logger";
 import { WebhookError, WebhookDeliveryOptions } from "@shared/types/video";
 
 const DEFAULT_TIMEOUT_MS =

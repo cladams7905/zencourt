@@ -1,13 +1,11 @@
 import { createLogger } from "@shared/utils/logger";
-import { env } from "./env";
+import { Logger } from "pino";
 
 /**
  * Shared logger instance for the video processing server
  * Uses the shared logger configuration from @shared/utils/logger
  */
-export const logger = createLogger({
+export default createLogger({
   service: "zencourt-video-server",
-  level: env.logLevel
-});
-
-export default logger;
+  level: process.env.LOG_LEVEL
+}) as Logger;

@@ -4,7 +4,7 @@
  */
 
 import { Router, Request, Response } from "express";
-import { logger } from "@/config/logger";
+import logger from "@/config/logger";
 import { validateApiKey } from "@/middleware/auth";
 import {
   CancelVideoRequest,

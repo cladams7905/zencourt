@@ -4,13 +4,14 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
-import { env } from '@/config/env';
-import { logger } from '@/config/logger';
+import logger from '@/config/logger';
 
 /**
  * Middleware to validate API key from X-API-Key header
  */
 export function validateApiKey(req: Request, res: Response, next: NextFunction): void {
+  //C: We should not be handing have one single api key for the entire server what
+  //C: This is inherently insecure
   const apiKey = req.headers['x-api-key'] as string | undefined;
 
   if (!apiKey) {
@@ -31,7 +32,7 @@ export function validateApiKey(req: Request, res: Response, next: NextFunction):
     return;
   }
 
-  if (apiKey !== env.apiKey) {
+  if (apiKey !== process.env.VIDEO_SERVER_API_KEY) {
     logger.warn(
       {
         method: req.method,

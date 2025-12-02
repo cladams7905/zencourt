@@ -1,23 +1,19 @@
 import "tsconfig-paths/register";
 import express, { Express, Request, Response } from "express";
 import pinoHttp, { Options as PinoHttpOptions } from "pino-http";
-import { validateEnv, env } from "./config/env";
+import InitializeEnv from "./config/env";
 import logger from "./config/logger";
 import videoRoutes from "./routes/video";
 import healthRoutes from "./routes/health";
 import storageRoutes from "./routes/storage";
 import webhookRoutes from "./routes/webhooks";
 import { errorHandler } from "./middleware/errorHandler";
-import { Logger } from "pino";
 
 /**
  * Main Express server for video processing
  * Handles FFmpeg operations for Zencourt video generation
  */
-
-// Validate environment variables before starting
-validateEnv();
-
+InitializeEnv();
 const app: Express = express();
 
 // Middleware
@@ -26,7 +22,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Request logging with Pino
 const pinoOptions: PinoHttpOptions = {
-  logger: logger as Logger,
+  logger: logger,
   autoLogging: {
     ignore(req) {
       return req.url === "/health";
@@ -135,14 +131,14 @@ process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
 process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 
 // Start server
-server = app.listen(env.port, () => {
+server = app.listen(process.env.PORT, () => {
   logger.info(
     {
-      port: env.port,
-      nodeEnv: env.nodeEnv,
-      storageRegion: env.storageRegion
+      port: process.env.PORT,
+      nodeEnv: process.env.NODE_ENV,
+      storageRegion: process.env.B2_REGION
     },
-    `🚀 Video processing server started on port ${env.port}`
+    `Video processing server started on port ${process.env.PORT}`
   );
 });
 

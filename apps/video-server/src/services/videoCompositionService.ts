@@ -16,7 +16,6 @@ import { join } from "path";
 import { tmpdir } from "os";
 import logger from "@/config/logger";
 import { storageService } from "./storageService";
-import { env } from "@/config/env";
 import type {
   ComposedVideoResult,
   LogoPosition,
@@ -243,7 +242,7 @@ export class VideoCompositionService {
       // Extract storage key from URL
       const storageKey = this.extractStorageKeyFromUrl(url);
       const videoBuffer = await storageService.downloadFile(
-        env.storageBucket,
+        process.env.B2_BUCKET_NAME,
         storageKey
       );
 
@@ -274,7 +273,7 @@ export class VideoCompositionService {
 
     const storageKey = this.extractStorageKeyFromUrl(storageUrl);
     const logoBuffer = await storageService.downloadFile(
-      env.storageBucket,
+      process.env.B2_BUCKET_NAME,
       storageKey
     );
     await writeFile(logoPath, logoBuffer);
@@ -294,8 +293,8 @@ export class VideoCompositionService {
     const urlObj = new URL(url);
     let pathname = urlObj.pathname.replace(/^\/+/, "");
 
-    return pathname.startsWith(`${env.storageBucket}/`)
-      ? pathname.substring(env.storageBucket.length + 1)
+    return pathname.startsWith(`${process.env.B2_BUCKET_NAME}/`)
+      ? pathname.substring(process.env.B2_BUCKET_NAME.length + 1)
       : pathname;
   }
 

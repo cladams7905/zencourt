@@ -1,6 +1,5 @@
 import { S3Client } from "@aws-sdk/client-s3";
-import { env } from "./env";
-import { logger } from "@/config/logger";
+import logger from "@/config/logger";
 
 /**
  * Create and configure Backblaze B2 client using the object storage SDK
@@ -11,24 +10,24 @@ import { logger } from "@/config/logger";
  * - Virtual-hosted-style URLs (not path-style)
  */
 export const storageClient = new S3Client({
-  region: env.storageRegion,
-  endpoint: env.storageEndpoint,
+  region: process.env.B2_REGION,
+  endpoint: process.env.B2_ENDPOINT,
   credentials: {
-    accessKeyId: env.storageKeyId,
-    secretAccessKey: env.storageApplicationKey
+    accessKeyId: process.env.B2_KEY_ID,
+    secretAccessKey: process.env.B2_APPLICATION_KEY
   },
   // Backblaze B2 supports virtual-hosted-style URLs
   forcePathStyle: false
 });
 
 export const STORAGE_CONFIG = {
-  region: env.storageRegion,
-  bucket: env.storageBucket,
-  endpoint: env.storageEndpoint
+  region: process.env.B2_REGION,
+  bucket: process.env.B2_BUCKET_NAME,
+  endpoint: process.env.B2_ENDPOINT
 } as const;
 
 logger.info(
-  `[Storage] Backblaze client initialized for region: ${env.storageRegion}`
+  `[Storage] Backblaze client initialized for region: ${process.env.B2_REGION}
+  On endpoint: ${process.env.B2_ENDPOINT}
+  For the default bucket: ${process.env.B2_BUCKET_NAME}`
 );
-logger.info(`[Storage] Endpoint: ${env.storageEndpoint}`);
-logger.info(`[Storage] Default bucket: ${env.storageBucket}`);

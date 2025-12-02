@@ -3,8 +3,7 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
-import { logger } from '@/config/logger';
-import { env } from '@/config/env';
+import logger from '@/config/logger';
 
 // ============================================================================
 // Error Types and Classification
@@ -50,6 +49,26 @@ export enum VideoProcessingErrorType {
   INTERNAL_ERROR = 'INTERNAL_ERROR',
 }
 
+const retryableErrors: VideoProcessingErrorType[] = [
+  VideoProcessingErrorType.STORAGE_UPLOAD_FAILED,
+  VideoProcessingErrorType.STORAGE_DOWNLOAD_FAILED,
+  VideoProcessingErrorType.WEBHOOK_DELIVERY_FAILED,
+  VideoProcessingErrorType.FFMPEG_TIMEOUT,
+  VideoProcessingErrorType.FAL_SUBMISSION_FAILED,
+];
+
+const statusMap: Partial<Record<VideoProcessingErrorType, number>> = {
+  [VideoProcessingErrorType.UNAUTHORIZED]: 401,
+  [VideoProcessingErrorType.INVALID_API_KEY]: 401,
+  [VideoProcessingErrorType.INVALID_INPUT]: 400,
+  [VideoProcessingErrorType.MISSING_REQUIRED_FIELD]: 400,
+  [VideoProcessingErrorType.INVALID_FILE_FORMAT]: 400,
+  [VideoProcessingErrorType.JOB_NOT_FOUND]: 404,
+  [VideoProcessingErrorType.STORAGE_NOT_FOUND]: 404,
+  [VideoProcessingErrorType.FAL_SUBMISSION_FAILED]: 503,
+  [VideoProcessingErrorType.FAL_GENERATION_FAILED]: 500,
+};
+
 /**
  * Custom error class for video processing operations
  */
@@ -73,47 +92,13 @@ export class VideoProcessingError extends Error {
     super(message);
     this.name = 'VideoProcessingError';
     this.type = type;
-    this.retryable = options?.retryable ?? this.isRetryableByDefault(type);
-    this.statusCode = options?.statusCode ?? this.getDefaultStatusCode(type);
+    this.retryable = options?.retryable ?? retryableErrors.includes(type);
+    this.statusCode = options?.statusCode ?? statusMap[type] ?? 500;
     this.details = options?.details;
     this.context = options?.context;
 
     // Maintain proper stack trace
     Error.captureStackTrace(this, this.constructor);
-  }
-
-  /**
-   * Determine if an error type is retryable by default
-   */
-  private isRetryableByDefault(type: VideoProcessingErrorType): boolean {
-    const retryableErrors: VideoProcessingErrorType[] = [
-      VideoProcessingErrorType.STORAGE_UPLOAD_FAILED,
-      VideoProcessingErrorType.STORAGE_DOWNLOAD_FAILED,
-      VideoProcessingErrorType.WEBHOOK_DELIVERY_FAILED,
-      VideoProcessingErrorType.FFMPEG_TIMEOUT,
-      VideoProcessingErrorType.FAL_SUBMISSION_FAILED,
-    ];
-
-    return retryableErrors.includes(type);
-  }
-
-  /**
-   * Get default HTTP status code for error type
-   */
-  private getDefaultStatusCode(type: VideoProcessingErrorType): number {
-    const statusMap: Partial<Record<VideoProcessingErrorType, number>> = {
-      [VideoProcessingErrorType.UNAUTHORIZED]: 401,
-      [VideoProcessingErrorType.INVALID_API_KEY]: 401,
-      [VideoProcessingErrorType.INVALID_INPUT]: 400,
-      [VideoProcessingErrorType.MISSING_REQUIRED_FIELD]: 400,
-      [VideoProcessingErrorType.INVALID_FILE_FORMAT]: 400,
-      [VideoProcessingErrorType.JOB_NOT_FOUND]: 404,
-      [VideoProcessingErrorType.STORAGE_NOT_FOUND]: 404,
-      [VideoProcessingErrorType.FAL_SUBMISSION_FAILED]: 503,
-      [VideoProcessingErrorType.FAL_GENERATION_FAILED]: 500,
-    };
-
-    return statusMap[type] ?? 500;
   }
 
   /**
@@ -126,7 +111,7 @@ export class VideoProcessingError extends Error {
       code: this.type,
       retryable: this.retryable,
       details: this.details,
-      ...(env.nodeEnv === 'development' && { stack: this.stack }),
+      ...(process.env.NODE_ENV === 'development' && { stack: this.stack }),
     };
   }
 }
@@ -185,10 +170,10 @@ export function errorHandler(
   } else {
     res.status(statusCode).json({
       success: false,
-      error: env.nodeEnv === 'development' ? err.message : 'An unexpected error occurred',
+      error: process.env.NODE_ENV === 'development' ? err.message : 'An unexpected error occurred',
       code: VideoProcessingErrorType.INTERNAL_ERROR,
       retryable: false,
-      ...(env.nodeEnv === 'development' && { stack: err.stack }),
+      ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
     });
   }
 }
