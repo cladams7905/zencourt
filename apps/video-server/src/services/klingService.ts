@@ -1,6 +1,5 @@
 import { fal } from "@fal-ai/client";
 import logger from "@/config/logger";
-import { env } from "@/config/env";
 import type { KlingAspectRatio } from "@shared/types/api";
 
 interface SubmitOptions {
@@ -16,7 +15,7 @@ const MODEL_ID = "fal-ai/kling-video/v1.6/standard/elements";
 class KlingService {
   constructor() {
     fal.config({
-      credentials: () => env.falApiKey
+      credentials: () => process.env.FAL_KEY
     });
   }
 
@@ -31,7 +30,7 @@ class KlingService {
 
     const selectedImages = options.imageUrls.slice(0, 4);
 
-    const webhookUrl = options.webhookUrl ?? env.falWebhookUrl;
+    const webhookUrl = options.webhookUrl ?? process.env.FAL_WEBHOOK_URL;
 
     try {
       const { request_id } = await fal.queue.submit(MODEL_ID, {
