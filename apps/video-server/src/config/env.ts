@@ -10,7 +10,7 @@ declare global {
       LOG_LEVEL: string;
 
       // Database
-      DATBASE_URL: string;
+      DATABASE_URL: string;
 
       // Storage (Backblaze B2)
       B2_ENDPOINT: string;
@@ -24,7 +24,7 @@ declare global {
 
       // Vercel Webhook
       VERCEL_API_URL: string;
-      VERCEL_WEBHOOK_SIGNING_SECRET: string;
+      VERCEL_WEBHOOK_SECRET: string;
       WEBHOOK_RETRY_ATTEMPTS: number;
       WEBHOOK_RETRY_BACKOFF_MS: number;
 
@@ -46,7 +46,7 @@ declare global {
 
 //C: This is all that is needed
 export default function Initialize() {
-  config()
+  config();
   const requiredVars = [
     "B2_ENDPOINT",
     "B2_KEY_ID",
@@ -54,16 +54,32 @@ export default function Initialize() {
     "B2_BUCKET_NAME",
     "VIDEO_SERVER_URL",
     "VERCEL_API_URL",
-    "VERCEL_WEBHOOK_SIGNING_KEY",
+    "VERCEL_WEBHOOK_SECRET",
     "DATABASE_URL",
     "FAL_KEY"
   ];
 
-  for (var reqVar in requiredVars) {
-    if (!process.env[reqVar]) {
-      console.error(`Missing environment variable value for ${reqVar}`)
+  for (const varName of requiredVars) {
+    if (!process.env[varName] || process.env[varName]?.length === 0) {
+      console.error(`Missing environment variable value for ${varName}`);
     }
-  } 
-  process.env.VIDEO_SERVER_URL = process.env.VIDEO_SERVER_URL.replace(/\/+$/, "");
-  process.env.FAL_WEBHOOK_URL = (process.env.VIDEO_SERVER_URL ?? `${process.env.VIDEO_SERVER_URL}/webhooks/fal`).trim();
+  }
+
+  if (process.env.VIDEO_SERVER_URL) {
+    process.env.VIDEO_SERVER_URL = process.env.VIDEO_SERVER_URL.replace(
+      /\/+$/,
+      ""
+    );
+  }
+
+  if (!process.env.FAL_WEBHOOK_URL && process.env.VIDEO_SERVER_URL) {
+    process.env.FAL_WEBHOOK_URL = `${process.env.VIDEO_SERVER_URL}/webhooks/fal`;
+  }
+
+  if (process.env.FAL_WEBHOOK_URL) {
+    process.env.FAL_WEBHOOK_URL = process.env.FAL_WEBHOOK_URL.replace(
+      /\/+$/,
+      ""
+    );
+  }
 }

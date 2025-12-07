@@ -93,7 +93,7 @@ See `.env.example` for all required and optional environment variables.
 - `VIDEO_SERVER_URL` - Public URL for this service (used for redirects + default fal.ai webhook)
 - `DATABASE_URL` - PostgreSQL database connection string
 - `VERCEL_API_URL` - Vercel API URL for webhook callbacks
-- `VERCEL_WEBHOOK_SIGNING_KEY` - HMAC secret shared with Vercel webhooks
+- `VERCEL_WEBHOOK_SECRET` - HMAC secret shared with Vercel webhooks
 - `VIDEO_SERVER_API_KEY` - API key for Vercel <-> video-server authentication
 - `FAL_KEY` - fal.ai API key for video generation
 
@@ -267,7 +267,7 @@ docker run --rm -p 3001:3001 \
   -e VIDEO_SERVER_URL=https://video.example.com \
   -e DATABASE_URL=postgresql://user:pass@host:5432/db \
   -e VIDEO_SERVER_API_KEY=your-secret-key \
-  -e VERCEL_WEBHOOK_SIGNING_KEY=your-webhook-secret \
+  -e VERCEL_WEBHOOK_SECRET=your-webhook-secret \
   -e VERCEL_API_URL=https://your-app.vercel.app \
   -e FAL_KEY=your-fal-api-key \
   -e FAL_WEBHOOK_URL=https://your-domain.com/webhooks/fal \

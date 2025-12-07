@@ -11,8 +11,7 @@
     "db:studio": "dotenv -e ../../.env.local -- drizzle-kit studio --config=drizzle/drizzle.config.ts"
   },
   "dependencies": {
-    "@neondatabase/serverless": "^1.0.2",
-    "@stackframe/stack": "2.4.8"
+    "@neondatabase/serverless": "^1.0.2"
   },
   "devDependencies": {
     "drizzle-kit": "^0.31.8",

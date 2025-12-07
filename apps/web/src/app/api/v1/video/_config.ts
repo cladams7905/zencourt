@@ -23,7 +23,7 @@ export function getVideoServerConfig(
 ): VideoServerConfig {
   const baseUrl = process.env.VIDEO_SERVER_URL?.trim();
   const apiKey = process.env.VIDEO_SERVER_API_KEY?.trim();
-  const webhookSecret = process.env.VERCEL_WEBHOOK_SIGNING_KEY?.trim();
+  const webhookSecret = process.env.VERCEL_WEBHOOK_SECRET?.trim();
 
   if (!baseUrl || !apiKey) {
     throw new Error(
@@ -32,7 +32,7 @@ export function getVideoServerConfig(
   }
 
   if (options.requireWebhookSecret && !webhookSecret) {
-    throw new Error("VERCEL_WEBHOOK_SIGNING_KEY must be configured");
+    throw new Error("VERCEL_WEBHOOK_SECRET must be configured");
   }
 
   return {

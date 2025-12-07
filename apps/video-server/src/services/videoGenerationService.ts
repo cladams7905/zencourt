@@ -98,9 +98,9 @@ class VideoGenerationService {
       return url.toString();
     } catch {
       const separator = process.env.FAL_WEBHOOK_URL.includes("?") ? "&" : "?";
-      return `${process.env.FAL_WEBHOOK_URL}${separator}requestId=${encodeURIComponent(
-        requestId
-      )}`;
+      return `${
+        process.env.FAL_WEBHOOK_URL
+      }${separator}requestId=${encodeURIComponent(requestId)}`;
     }
   }
 
@@ -662,12 +662,12 @@ class VideoGenerationService {
 
     // Build webhook URL from Vercel API URL
     const webhookUrl = `${process.env.VERCEL_API_URL}/api/v1/webhooks/video`;
-    const webhookSecret = process.env.VERCEL_WEBHOOK_SIGNING_SECRET;
+    const webhookSecret = process.env.VERCEL_WEBHOOK_SECRET;
 
     if (!webhookSecret) {
       logger.warn(
         { jobId: job.id },
-        "[VideoGenerationService] VERCEL_WEBHOOK_SIGNING_KEY not configured, skipping webhook delivery"
+        "[VideoGenerationService] VERCEL_WEBHOOK_SECRET not configured, skipping webhook delivery"
       );
       return;
     }
@@ -756,7 +756,7 @@ class VideoGenerationService {
 
     // Build webhook URL from Vercel API URL
     const webhookUrl = `${process.env.VERCEL_API_URL}/api/v1/webhooks/video`;
-    const webhookSecret = process.env.VERCEL_WEBHOOK_SIGNING_SECRET;
+    const webhookSecret = process.env.VERCEL_WEBHOOK_SECRET;
 
     if (!webhookUrl || !webhookSecret) {
       return;
@@ -1040,12 +1040,12 @@ class VideoGenerationService {
     }
   ): Promise<void> {
     const webhookUrl = `${process.env.VERCEL_API_URL}/api/v1/webhooks/video/final`;
-    const webhookSecret = process.env.VERCEL_WEBHOOK_SIGNING_SECRET;
+    const webhookSecret = process.env.VERCEL_WEBHOOK_SECRET;
 
     if (!webhookSecret) {
       logger.warn(
         { videoId: videoContext.videoId },
-        "[VideoGenerationService] VERCEL_WEBHOOK_SIGNING_KEY not configured, skipping final webhook"
+        "[VideoGenerationService] VERCEL_WEBHOOK_SECRET not configured, skipping final webhook"
       );
       return;
     }
