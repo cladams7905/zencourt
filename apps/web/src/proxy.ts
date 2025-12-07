@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const isHandlerPage = pathname.startsWith("/handler");
   const isWebhook = pathname.startsWith("/api/v1/webhooks");
