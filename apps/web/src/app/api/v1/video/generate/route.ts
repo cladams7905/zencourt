@@ -6,8 +6,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { nanoid } from "nanoid";
-import { eq, asc, DrizzleQueryError } from "drizzle-orm";
-import { db, images } from "@db/client";
+import { eq, asc, desc, and, DrizzleQueryError } from "drizzle-orm";
+import { db, assets, collectionImages, collections } from "@db/client";
 import {
   ApiError,
   requireAuthenticatedUser,
@@ -248,11 +248,46 @@ export async function POST(
     const orientation = body.orientation || "landscape";
     const duration = body.duration || DEFAULT_DURATION;
 
-    const projectImages = await db
+    const [collection] = await db
       .select()
-      .from(images)
-      .where(eq(images.projectId, body.projectId))
-      .orderBy(asc(images.sortOrder));
+      .from(collections)
+      .where(eq(collections.projectId, project.id))
+      .limit(1);
+
+    if (!collection) {
+      logger.error(
+        { projectId: project.id },
+        "Video generation request missing collection"
+      );
+      throw new ApiError(400, {
+        error: "Missing collection",
+        message: "Project is missing its collection of property images"
+      });
+    }
+
+    const [projectAsset] = await db
+      .select()
+      .from(assets)
+      .where(and(eq(assets.projectId, project.id), eq(assets.type, "video")))
+      .orderBy(desc(assets.createdAt))
+      .limit(1);
+
+    if (!projectAsset) {
+      logger.error(
+        { projectId: project.id },
+        "Video generation request missing asset"
+      );
+      throw new ApiError(400, {
+        error: "Missing asset",
+        message: "Project is missing its video asset configuration"
+      });
+    }
+
+    const projectImages: DBImage[] = (await db
+      .select()
+      .from(collectionImages)
+      .where(eq(collectionImages.collectionId, collection.id))
+      .orderBy(asc(collectionImages.sortOrder))) as DBImage[];
 
     const groupedImages = groupImagesByCategory(projectImages);
 
@@ -270,7 +305,7 @@ export async function POST(
     const parentVideoId = nanoid();
     const parentVideo: InsertDBVideo = {
       id: parentVideoId,
-      projectId: body.projectId,
+      assetId: projectAsset.id,
       status: "pending",
       videoUrl: null,
       thumbnailUrl: null,
@@ -323,7 +358,7 @@ export async function POST(
 
         return {
           id: jobId,
-          videoId: parentVideoId,
+          videoAssetId: parentVideoId,
           requestId: null,
           status: "pending",
           videoUrl: null,

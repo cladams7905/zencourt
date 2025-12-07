@@ -1,4 +1,4 @@
-import { db, videos, videoJobs } from "@db/client";
+import { db, assets, videoAssetJobs, videoAssets } from "@db/client";
 import { asc, desc, eq } from "drizzle-orm";
 import type {
   FinalVideoUpdateEvent,
@@ -11,16 +11,17 @@ export async function getProjectVideoStatus(
 ): Promise<InitialVideoStatusPayload> {
   const latestVideoResult = await db
     .select({
-      id: videos.id,
-      status: videos.status,
-      videoUrl: videos.videoUrl,
-      thumbnailUrl: videos.thumbnailUrl,
-      errorMessage: videos.errorMessage,
-      metadata: videos.metadata
+      id: videoAssets.id,
+      status: videoAssets.status,
+      videoUrl: videoAssets.videoUrl,
+      thumbnailUrl: videoAssets.thumbnailUrl,
+      errorMessage: videoAssets.errorMessage,
+      metadata: videoAssets.metadata
     })
-    .from(videos)
-    .where(eq(videos.projectId, projectId))
-    .orderBy(desc(videos.createdAt))
+    .from(videoAssets)
+    .innerJoin(assets, eq(videoAssets.assetId, assets.id))
+    .where(eq(assets.projectId, projectId))
+    .orderBy(desc(videoAssets.createdAt))
     .limit(1);
 
   const latestVideo = latestVideoResult[0];
@@ -30,15 +31,15 @@ export async function getProjectVideoStatus(
   if (latestVideo) {
     const jobRows = await db
       .select({
-        id: videoJobs.id,
-        status: videoJobs.status,
-        videoUrl: videoJobs.videoUrl,
-        errorMessage: videoJobs.errorMessage,
-        generationSettings: videoJobs.generationSettings
+        id: videoAssetJobs.id,
+        status: videoAssetJobs.status,
+        videoUrl: videoAssetJobs.videoUrl,
+        errorMessage: videoAssetJobs.errorMessage,
+        generationSettings: videoAssetJobs.generationSettings
       })
-      .from(videoJobs)
-      .where(eq(videoJobs.videoId, latestVideo.id))
-      .orderBy(asc(videoJobs.createdAt));
+      .from(videoAssetJobs)
+      .where(eq(videoAssetJobs.videoAssetId, latestVideo.id))
+      .orderBy(asc(videoAssetJobs.createdAt));
 
     jobs = jobRows.map((job) => ({
       projectId,

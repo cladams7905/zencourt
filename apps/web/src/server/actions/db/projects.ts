@@ -2,7 +2,7 @@
 
 import { nanoid } from "nanoid";
 import { eq, and, like, desc } from "drizzle-orm";
-import { db, projects } from "@db/client";
+import { db, projects, collections, assets } from "@db/client";
 import { DBProject, InsertDBProject } from "@shared/types/models";
 import { withDbErrorHandling } from "../_utils";
 
@@ -20,15 +20,42 @@ export async function createProject(userId: string): Promise<DBProject> {
 
   return withDbErrorHandling(
     async () => {
-      const [newProject] = await db
-        .insert(projects)
-        .values({
-          id: nanoid(),
-          userId
-        })
-        .returning();
+      return db.transaction(async (tx) => {
+        const projectId = nanoid();
+        const [newProject] = await tx
+          .insert(projects)
+          .values({
+            id: projectId,
+            userId
+          })
+          .returning();
 
-      return newProject;
+        const [collection] = await tx
+          .insert(collections)
+          .values({
+            id: nanoid(),
+            projectId
+          })
+          .returning();
+
+        const [asset] = await tx
+          .insert(assets)
+          .values({
+            id: nanoid(),
+            projectId,
+            type: "video",
+            stage: "upload"
+          })
+          .returning();
+
+        return {
+          ...newProject,
+          stage: asset.stage,
+          thumbnailUrl: asset.thumbnailUrl ?? newProject.thumbnailUrl,
+          collectionId: collection.id,
+          assetId: asset.id
+        };
+      });
     },
     {
       actionName: "createProject",
@@ -98,12 +125,24 @@ export async function getUserProjects(userId: string): Promise<DBProject[]> {
   return withDbErrorHandling(
     async () => {
       const userProjects = await db
-        .select()
+        .select({
+          project: projects,
+          collection: collections.id,
+          asset: assets
+        })
         .from(projects)
+        .leftJoin(collections, eq(collections.projectId, projects.id))
+        .leftJoin(assets, eq(assets.projectId, projects.id))
         .where(eq(projects.userId, userId))
         .orderBy(desc(projects.createdAt));
 
-      return userProjects;
+      return userProjects.map(({ project, collection, asset }) => ({
+        ...project,
+        collectionId: collection ?? null,
+        assetId: asset?.id ?? null,
+        stage: asset?.stage ?? "upload",
+        thumbnailUrl: asset?.thumbnailUrl ?? project.thumbnailUrl
+      }));
     },
     {
       actionName: "getUserProjects",

@@ -12,7 +12,8 @@ export type InsertDBVideo = typeof videoAssets.$inferInsert;
 export type DBVideoJob = typeof videoAssetJobs.$inferSelect;
 export type InsertDBVideoJob = typeof videoAssetJobs.$inferInsert;
 
-export type VideoStatus = typeof videoStatusEnum;
+export type VideoStatus =
+  (typeof videoStatusEnum.enumValues)[number];
 
 export type VideoResolution = {
   width: number;

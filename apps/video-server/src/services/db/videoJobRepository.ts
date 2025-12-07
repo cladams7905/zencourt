@@ -1,5 +1,10 @@
 import { and, eq, inArray } from "drizzle-orm";
-import { db, videoJobs, videos } from "@db/client";
+import {
+  db,
+  videoAssetJobs as videoJobs,
+  videoAssets,
+  assets
+} from "@db/client";
 import type { VideoStatus } from "@shared/types/models";
 
 const CANCELABLE_STATUSES: VideoStatus[] = ["pending", "processing"];
@@ -16,11 +21,12 @@ class VideoJobRepository {
     projectId: string,
     reason?: string
   ): Promise<number> {
-    // First, find all videos for this project
+    // First, find all video assets belonging to this project
     const projectVideos = await db
-      .select({ id: videos.id })
-      .from(videos)
-      .where(eq(videos.projectId, projectId));
+      .select({ id: videoAssets.id })
+      .from(videoAssets)
+      .innerJoin(assets, eq(videoAssets.assetId, assets.id))
+      .where(eq(assets.projectId, projectId));
 
     if (projectVideos.length === 0) {
       return 0;
@@ -38,7 +44,7 @@ class VideoJobRepository {
       })
       .where(
         and(
-          inArray(videoJobs.videoId, videoIds),
+          inArray(videoJobs.videoAssetId, videoIds),
           inArray(videoJobs.status, CANCELABLE_STATUSES)
         )
       )

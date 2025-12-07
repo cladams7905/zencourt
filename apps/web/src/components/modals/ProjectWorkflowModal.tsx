@@ -14,7 +14,12 @@ import type {
 } from "../../types/workflow";
 import type { VideoSettings } from "../workflow/stages/PlanStage";
 import { updateProject } from "../../server/actions/db/projects";
-import { DBProject, ProjectStage } from "@shared/types/models";
+import {
+  DBAsset,
+  DBCollection,
+  DBProject,
+  ProjectStage
+} from "@shared/types/models";
 import { CategorizedGroup, RoomCategory } from "@web/src/types/vision";
 import type {
   InitialVideoStatusPayload,
@@ -24,6 +29,16 @@ import { WorkflowHeader } from "./project-workflow/WorkflowHeader";
 import { StageContent } from "./project-workflow/StageContent";
 import { CloseWorkflowDialog } from "./project-workflow/CloseWorkflowDialog";
 import { ProcessedImage } from "@web/src/types/images";
+import {
+  createCollection,
+  getCollectionByProjectId,
+  getProjectImages
+} from "../../server/actions/db/collections";
+import {
+  createAsset,
+  getAssetsByProjectId,
+  updateAsset
+} from "../../server/actions/db/assets";
 
 const ROOM_GENERATION_STEP_ID = "room-generation";
 const FINAL_COMPOSE_STEP_ID = "final-compose";
@@ -45,14 +60,15 @@ export function ProjectWorkflowModal({
   onProjectCreated,
   existingProject
 }: ProjectWorkflowModalProps) {
-  const [currentStage, setCurrentStage] = useState<ProjectStage>(
-    existingProject?.stage ?? "upload"
-  );
+  const [currentStage, setCurrentStage] = useState<ProjectStage>("upload");
   const [projectName, setProjectName] = useState(existingProject?.title || "");
   const [isSavingName, setIsSavingName] = useState(false);
   const [currentProject, setCurrentProject] = useState<DBProject | null>(
     existingProject ?? null
   );
+  const [currentCollection, setCurrentCollection] =
+    useState<DBCollection | null>(null);
+  const [currentAsset, setCurrentAsset] = useState<DBAsset | null>(null);
   const [images, setImages] = useState<ProcessedImage[]>([]);
   const [categorizedGroups, setCategorizedGroups] = useState<
     CategorizedGroup[]
@@ -78,9 +94,7 @@ export function ProjectWorkflowModal({
     ? statusCache[existingProject.id] ?? null
     : null;
   const currentProjectKey = existingProject
-    ? `${existingProject.id}:${existingProject.stage}:${
-        existingProject.updatedAt ?? ""
-      }`
+    ? `${existingProject.id}:${existingProject.updatedAt ?? ""}`
     : null;
   const finalStatusNotifiedRef = useRef<"success" | "error" | null>(null);
   const pendingStageRef = useRef<ProjectStage | null>(null);
@@ -98,20 +112,37 @@ export function ProjectWorkflowModal({
     }
   }, []);
 
-  const persistProjectStage = useCallback(
+  useEffect(() => {
+    if (currentAsset?.stage) {
+      setCurrentStage(currentAsset.stage);
+    }
+  }, [currentAsset?.stage]);
+
+  useEffect(() => {
+    if (existingProject?.stage) {
+      setCurrentStage(existingProject.stage);
+    }
+  }, [existingProject?.stage]);
+
+  const persistAssetStage = useCallback(
     async (stage: ProjectStage) => {
-      if (!currentProject || !user) {
+      if (!currentProject || !currentAsset || !user) {
         return;
       }
-      if (currentProject.stage === stage) {
+      if (currentAsset.stage === stage) {
         return;
       }
       try {
-        const updatedProject = await updateProject(user.id, currentProject.id, {
+        const updatedAsset = await updateAsset(user.id, currentAsset.id, {
           stage
         });
-        setCurrentProject(updatedProject);
-        onProjectCreated?.(updatedProject);
+        setCurrentAsset(updatedAsset);
+        setCurrentProject((prev) =>
+          prev ? { ...prev, stage } : prev
+        );
+        if (currentProject) {
+          onProjectCreated?.({ ...currentProject, stage });
+        }
       } catch (error) {
         console.error("Failed to update project stage:", error);
         toast.error("Failed to update project stage", {
@@ -120,7 +151,7 @@ export function ProjectWorkflowModal({
         });
       }
     },
-    [currentProject, onProjectCreated, user]
+    [currentAsset, currentProject, onProjectCreated, user]
   );
 
   const setWorkflowStage = useCallback(
@@ -139,30 +170,29 @@ export function ProjectWorkflowModal({
       }
 
       setCurrentStage(stage);
-      setCurrentProject((prev) => {
-        if (!prev) {
-          return prev;
-        }
-        return {
-          ...prev,
-          stage: stageToPersist
-        };
-      });
+      setCurrentAsset((prev) =>
+        prev
+          ? {
+              ...prev,
+              stage: stageToPersist
+            }
+          : prev
+      );
 
       if (!persist) {
         pendingStageRef.current = null;
         return;
       }
 
-      if (!currentProject || !user) {
+      if (!currentProject || !currentAsset || !user) {
         pendingStageRef.current = stageToPersist;
         return;
       }
 
       pendingStageRef.current = null;
-      void persistProjectStage(stageToPersist);
+      void persistAssetStage(stageToPersist);
     },
-    [currentProject, currentStage, persistProjectStage, user]
+    [currentAsset, currentProject, currentStage, persistAssetStage, user]
   );
 
   function normalizeRoomStatuses(
@@ -193,7 +223,7 @@ export function ProjectWorkflowModal({
 
 
   useEffect(() => {
-    if (!isOpen || !currentProject || !user) {
+    if (!isOpen || !currentProject || !currentAsset || !user) {
       return;
     }
     if (!pendingStageRef.current) {
@@ -201,8 +231,8 @@ export function ProjectWorkflowModal({
     }
     const stageToPersist = pendingStageRef.current;
     pendingStageRef.current = null;
-    void persistProjectStage(stageToPersist);
-  }, [currentProject, isOpen, persistProjectStage, user]);
+    void persistAssetStage(stageToPersist);
+  }, [currentAsset, currentProject, isOpen, persistAssetStage, user]);
 
   // Reset state when modal closes
   useEffect(() => {
@@ -692,20 +722,49 @@ export function ProjectWorkflowModal({
       if (loadedProjectKey === currentProjectKey) return;
 
       try {
-        // Set project info
-        setCurrentProject(existingProject);
-        setCurrentStage(existingProject.stage ?? "upload");
         pendingStageRef.current = null;
         setProjectName(existingProject.title || "");
 
-        // Fetch project images
-        const { getProjectImages } = await import(
-          "../../server/actions/db/images"
-        );
-        const projectImages = await getProjectImages(
-          user.id,
-          existingProject.id
-        );
+        let collection = currentCollection;
+        if (!collection || collection.projectId !== existingProject.id) {
+          collection =
+            (await getCollectionByProjectId(user.id, existingProject.id)) ??
+            (await createCollection(user.id, existingProject.id));
+          setCurrentCollection(collection);
+        }
+
+        let asset = currentAsset;
+        if (!asset || asset.projectId !== existingProject.id) {
+          const assets = await getAssetsByProjectId(user.id, existingProject.id);
+          asset =
+            assets[0] ??
+            (await createAsset(user.id, {
+              projectId: existingProject.id,
+              type: "video",
+              title: existingProject.title ?? undefined
+            }));
+          setCurrentAsset(asset);
+          if (asset) {
+            setCurrentStage(asset.stage);
+          }
+        }
+
+        if (collection) {
+          setCurrentProject({
+            ...existingProject,
+            stage: asset?.stage ?? existingProject.stage,
+            collectionId: collection.id,
+            assetId: asset?.id,
+            thumbnailUrl: asset?.thumbnailUrl ?? existingProject.thumbnailUrl
+          });
+        } else {
+          setCurrentProject(existingProject);
+        }
+
+        const projectImages =
+          collection != null
+            ? await getProjectImages(user.id, collection.id)
+            : [];
 
         // Convert database images to ProcessedImage format
         const processedImages: ProcessedImage[] = projectImages.map((img) => {
@@ -716,6 +775,7 @@ export function ProjectWorkflowModal({
             status: "uploaded" as const,
             url: img.url,
             filename: img.filename,
+            collectionId: img.collectionId,
             category: img.category,
             confidence: img.confidence,
             features: img.features,
@@ -779,7 +839,7 @@ export function ProjectWorkflowModal({
 
         const shouldFetchStatus =
           !cachedStatus ||
-          (existingProject.stage === "complete" && !hasCachedFinalVideo);
+          (currentAsset?.stage === "complete" && !hasCachedFinalVideo);
 
         if (shouldFetchStatus) {
           await fetchStatus(existingProject.id, true);
@@ -797,6 +857,8 @@ export function ProjectWorkflowModal({
     applyInitialStatusPayload,
     cachedStatus,
     currentProjectKey,
+    currentAsset,
+    currentCollection,
     existingProject,
     fetchStatus,
     isOpen,
@@ -967,6 +1029,10 @@ export function ProjectWorkflowModal({
             setImages={setImages}
             currentProject={currentProject}
             setCurrentProject={setCurrentProject}
+            currentCollection={currentCollection}
+            setCurrentCollection={setCurrentCollection}
+            currentAsset={currentAsset}
+            setCurrentAsset={setCurrentAsset}
             categorizedGroups={categorizedGroups}
             setCategorizedGroups={setCategorizedGroups}
             availableCategories={availableCategories}

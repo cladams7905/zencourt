@@ -7,15 +7,14 @@ import { Button } from "../../ui/button";
 import { Progress } from "../../ui/progress";
 import { CategorizedImageGrid } from "../../image-grid/CategorizedImageGrid";
 import { analyzeImagesWorkflow } from "../../../server/actions/api/vision";
-import { updateProject } from "../../../server/actions/db/projects";
-import { saveImages } from "../../../server/actions/db/images";
+import { saveImages } from "../../../server/actions/db/collections";
 import type {
   ProcessedImage,
   ProcessingProgress,
   SerializableImageData
 } from "../../../types/images";
 import { toSerializable, toInsertDBImage } from "../../../types/images";
-import type { DBProject } from "@shared/types/models";
+import type { DBCollection, DBProject } from "@shared/types/models";
 import {
   CategorizedGroup,
   ROOM_CATEGORIES,
@@ -76,17 +75,20 @@ function mergeAnalysisResults(
 
 async function saveImagesToDatabase(
   images: ProcessedImage[],
-  projectId: string,
+  collectionId: string,
   userId: string
 ): Promise<void> {
   const imagesToSave = images
     .filter((img) => img.url && img.category)
     .map((img, index) =>
-      toInsertDBImage({ ...img, sortOrder: img.sortOrder ?? index }, projectId)
+      toInsertDBImage(
+        { ...img, sortOrder: img.sortOrder ?? index },
+        collectionId
+      )
     );
 
   if (imagesToSave.length > 0) {
-    await saveImages(userId, projectId, imagesToSave);
+    await saveImages(userId, collectionId, imagesToSave);
   }
 }
 
@@ -94,6 +96,7 @@ interface CategorizeStageProps {
   images: ProcessedImage[];
   setImages: React.Dispatch<React.SetStateAction<ProcessedImage[]>>;
   currentProject: DBProject | null;
+  currentCollection: DBCollection | null;
   categorizedGroups: CategorizedGroup[];
   setCategorizedGroups: React.Dispatch<
     React.SetStateAction<CategorizedGroup[]>
@@ -111,6 +114,7 @@ export function CategorizeStage({
   images,
   setImages,
   currentProject,
+  currentCollection,
   categorizedGroups,
   setCategorizedGroups,
   onImageClick,
@@ -219,7 +223,7 @@ export function CategorizeStage({
     totalImagesThatShouldBeAnalyzed === alreadyAnalyzed.length;
 
   const handleProcessImages = useCallback(async () => {
-    if (!user || !currentProject) {
+    if (!user || !currentProject || !currentCollection) {
       toast.error("No project found", {
         description: "Please try uploading images again."
       });
@@ -230,8 +234,6 @@ export function CategorizeStage({
     setIsCategorizing(true);
 
     try {
-      await updateProject(user.id, currentProject.id, { stage: "categorize" });
-
       let finalImages: ProcessedImage[];
 
       if (needsAnalysis.length > 0) {
@@ -278,7 +280,11 @@ export function CategorizeStage({
       setCategorizedGroups(organized.groups);
 
       try {
-        await saveImagesToDatabase(finalImages, currentProject.id, user.id);
+        await saveImagesToDatabase(
+          finalImages,
+          currentCollection.id,
+          user.id
+        );
       } catch (error) {
         console.error("Error saving images to database:", error);
         toast.error("Error saving images to database", {
@@ -309,6 +315,7 @@ export function CategorizeStage({
     }
   }, [
     alreadyAnalyzed,
+    currentCollection,
     currentProject,
     needsAnalysis,
     setCategorizedGroups,

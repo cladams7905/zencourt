@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
-import { db, images, projects } from "@db/client";
+import { db, collectionImages, collections, projects } from "@db/client";
 import storageService from "@web/src/server/services/storageService";
 import { createChildLogger, logger as baseLogger } from "@web/src/lib/logger";
 import {
@@ -48,13 +48,17 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   const imageRecord = await db
     .select({
-      id: images.id,
-      projectId: images.projectId,
+      id: collectionImages.id,
+      projectId: collections.projectId,
       ownerId: projects.userId
     })
-    .from(images)
-    .innerJoin(projects, eq(images.projectId, projects.id))
-    .where(eq(images.url, decodedUrl))
+    .from(collectionImages)
+    .innerJoin(
+      collections,
+      eq(collectionImages.collectionId, collections.id)
+    )
+    .innerJoin(projects, eq(collections.projectId, projects.id))
+    .where(eq(collectionImages.url, decodedUrl))
     .limit(1);
 
   const image = imageRecord[0];

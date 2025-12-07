@@ -8,8 +8,16 @@ import { DragDropZone } from "../DragDropZone";
 import { ImageUploadGrid } from "../../shared/ImageUploadGrid";
 import { Button } from "../../ui/button";
 import { createProject } from "../../../server/actions/db/projects";
+import {
+  createCollection,
+  getCollectionByProjectId
+} from "../../../server/actions/db/collections";
+import {
+  createAsset,
+  getAssetsByProjectId
+} from "../../../server/actions/db/assets";
 import type { ProcessedImage } from "../../../types/images";
-import { DBProject } from "@shared/types/models";
+import type { DBAsset, DBCollection, DBProject } from "@shared/types/models";
 import {
   uploadFilesBatch,
   deleteFile
@@ -17,13 +25,19 @@ import {
 import {
   saveImages,
   deleteImage as deleteImageRecord
-} from "@web/src/server/actions/db/images";
+} from "@web/src/server/actions/db/collections";
 
 interface UploadStageProps {
   images: ProcessedImage[];
   setImages: React.Dispatch<React.SetStateAction<ProcessedImage[]>>;
   currentProject: DBProject | null;
   setCurrentProject: React.Dispatch<React.SetStateAction<DBProject | null>>;
+  currentCollection: DBCollection | null;
+  setCurrentCollection: React.Dispatch<
+    React.SetStateAction<DBCollection | null>
+  >;
+  currentAsset: DBAsset | null;
+  setCurrentAsset: React.Dispatch<React.SetStateAction<DBAsset | null>>;
   onImageClick: (imageId: string) => void;
   onContinue: () => void;
 }
@@ -33,6 +47,10 @@ export function UploadStage({
   setImages,
   currentProject,
   setCurrentProject,
+  currentCollection,
+  setCurrentCollection,
+  currentAsset,
+  setCurrentAsset,
   onImageClick,
   onContinue
 }: UploadStageProps) {
@@ -125,6 +143,36 @@ export function UploadStage({
     try {
       const newProject = await createProject(user.id);
       setCurrentProject(newProject);
+
+      const collection =
+        (await getCollectionByProjectId(user.id, newProject.id)) ??
+        (await createCollection(user.id, newProject.id));
+      setCurrentCollection(collection);
+
+      const assetsForProject = await getAssetsByProjectId(
+        user.id,
+        newProject.id
+      );
+      let newAsset =
+        assetsForProject.find((asset) => asset.id === newProject.assetId) ??
+        assetsForProject[0];
+      if (!newAsset) {
+        newAsset = await createAsset(user.id, {
+          projectId: newProject.id,
+          type: "video",
+          title: newProject.title ?? undefined
+        });
+      }
+      setCurrentAsset(newAsset);
+
+      setCurrentProject({
+        ...newProject,
+        stage: newAsset.stage,
+        collectionId: collection.id,
+        assetId: newAsset.id,
+        thumbnailUrl: newAsset.thumbnailUrl ?? newProject.thumbnailUrl
+      });
+
       return newProject;
     } catch (error) {
       console.error("Failed to create project:", error);
@@ -138,15 +186,15 @@ export function UploadStage({
 
   const persistImageRecord = async (
     userId: string,
-    projectId: string,
+    collectionId: string,
     image: ProcessedImage,
     url: string
   ) => {
     try {
-      await saveImages(userId, projectId, [
+      await saveImages(userId, collectionId, [
         {
           id: image.id,
-          projectId,
+          collectionId,
           filename: image.filename || image.file.name,
           url
         }
@@ -158,6 +206,46 @@ export function UploadStage({
           error instanceof Error ? error.message : "Unknown error occurred"
       });
     }
+  };
+
+  const ensureProjectResources = async (
+    project: DBProject,
+    userId: string
+  ): Promise<{ collection: DBCollection; asset: DBAsset }> => {
+    let collection = currentCollection;
+    if (!collection || collection.projectId !== project.id) {
+      collection =
+        (await getCollectionByProjectId(userId, project.id)) ??
+        (await createCollection(userId, project.id));
+      setCurrentCollection(collection);
+    }
+
+    let asset = currentAsset;
+    if (!asset || asset.projectId !== project.id) {
+      const existingAssets = await getAssetsByProjectId(userId, project.id);
+      asset =
+        existingAssets[0] ??
+        (await createAsset(userId, {
+          projectId: project.id,
+          type: "video",
+          title: project.title ?? undefined
+        }));
+      setCurrentAsset(asset);
+    }
+
+    setCurrentProject((prev) =>
+      prev && prev.id === project.id
+        ? {
+            ...prev,
+            collectionId: collection.id,
+            assetId: asset.id,
+            stage: asset.stage,
+            thumbnailUrl: asset.thumbnailUrl ?? prev.thumbnailUrl
+          }
+        : prev
+    );
+
+    return { collection, asset };
   };
 
   const handleUploadImages = async (imageDataArray: ProcessedImage[]) => {
@@ -182,6 +270,7 @@ export function UploadStage({
       return;
     }
 
+    const { collection } = await ensureProjectResources(project, user.id);
     setIsUploading(true);
 
     try {
@@ -208,7 +297,7 @@ export function UploadStage({
           if (result?.success && result.url) {
             await persistImageRecord(
               user.id,
-              project.id,
+              collection.id,
               imageData,
               result.url
             );
@@ -226,6 +315,7 @@ export function UploadStage({
                 return {
                   ...img,
                   status: "uploaded" as const,
+                  collectionId: collection.id,
                   url: result.url || undefined,
                   previewUrl: result.url || img.previewUrl,
                   filename: img.filename || imageData.file.name
@@ -333,6 +423,10 @@ export function UploadStage({
   const handleRetryUpload = async (imageId: string) => {
     const imageToRetry = images.find((img) => img.id === imageId);
     if (!imageToRetry || !currentProject || !user) return;
+    const { collection } = await ensureProjectResources(
+      currentProject,
+      user.id
+    );
 
     setImages((prev) =>
       prev.map((img) =>
@@ -354,7 +448,7 @@ export function UploadStage({
       if (result?.success && result.url) {
         await persistImageRecord(
           user.id,
-          currentProject.id,
+          collection.id,
           imageToRetry,
           result.url
         );

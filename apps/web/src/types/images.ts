@@ -21,7 +21,7 @@ import { DBImage, InsertDBImage } from "@shared/types/models";
 
 4. SAVE TO DATABASE
    └→ toInsertDBImage() → InsertDBImage
-      { id, projectId, filename, url, category, confidence, features, ... }
+      { id, collectionId, filename, url, category, confidence, features, ... }
    └→ Database insert
    └→ Returns DBImage with uploadedAt
 
@@ -110,7 +110,7 @@ export type ProcessingPhase =
 export function toSerializable(image: ProcessedImage): SerializableImageData {
   return {
     id: image.id,
-    projectId: image.projectId,
+    collectionId: image.collectionId,
     url: image.url,
     filename: image.filename,
     category: image.category,
@@ -130,11 +130,11 @@ export function toSerializable(image: ProcessedImage): SerializableImageData {
  */
 export function toInsertDBImage(
   image: ProcessedImage,
-  projectId: string
+  collectionId: string
 ): InsertDBImage {
   return {
     id: image.id,
-    projectId,
+    collectionId,
     filename: image.filename || image.file?.name || "image",
     url: image.url!,
     category: image.category ?? null,

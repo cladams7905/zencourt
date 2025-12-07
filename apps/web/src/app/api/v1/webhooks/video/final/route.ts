@@ -7,7 +7,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { db, projects } from "@db/client";
+import { db, assets } from "@db/client";
 import { eq } from "drizzle-orm";
 import { updateVideo } from "@web/src/server/actions/db/videos";
 import {
@@ -15,7 +15,6 @@ import {
   logger as baseLogger
 } from "../../../../../../lib/logger";
 import { ensurePublicUrl } from "@web/src/server/utils/storageUrls";
-import type { InsertDBProject } from "@shared/types/models";
 
 const logger = createChildLogger(baseLogger, {
   module: "final-video-webhook"
@@ -116,32 +115,35 @@ export async function POST(request: NextRequest) {
       "Final video status updated successfully"
     );
 
-    if (payload.status === "completed") {
-      const projectUpdates: Partial<
-        Omit<InsertDBProject, "id" | "userId" | "createdAt">
-      > = {
-        stage: "complete",
+    if (updatedVideo.assetId) {
+      const assetUpdates: Partial<typeof assets.$inferInsert> = {
         updatedAt: new Date()
       };
 
-      if (signedThumbnailUrl) {
-        projectUpdates.thumbnailUrl = signedThumbnailUrl;
-      } else if (updatedVideo.thumbnailUrl) {
-        projectUpdates.thumbnailUrl = updatedVideo.thumbnailUrl;
+      const resolvedThumbnail =
+        signedThumbnailUrl ?? updatedVideo.thumbnailUrl ?? undefined;
+
+      if (resolvedThumbnail) {
+        assetUpdates.thumbnailUrl = resolvedThumbnail;
+      }
+
+      if (payload.status === "completed") {
+        assetUpdates.stage = "complete";
       }
 
       await db
-        .update(projects)
-        .set(projectUpdates)
-        .where(eq(projects.id, payload.projectId));
+        .update(assets)
+        .set(assetUpdates)
+        .where(eq(assets.id, updatedVideo.assetId));
 
       logger.info(
         {
           projectId: payload.projectId,
           videoId,
-          stage: "complete"
+          assetId: updatedVideo.assetId,
+          assetStage: assetUpdates.stage ?? "unchanged"
         },
-        "Project metadata updated after final video completion"
+        "Asset metadata updated after final video webhook"
       );
     }
 

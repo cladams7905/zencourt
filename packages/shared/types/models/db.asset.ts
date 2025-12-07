@@ -8,6 +8,8 @@ export type DBAsset = typeof assets.$inferSelect;
 
 export type InsertDBAsset = typeof assets.$inferInsert;
 
-export type AssetGenerationStage = typeof assetGenerationStageEnum;
+export type AssetGenerationStage =
+  (typeof assetGenerationStageEnum.enumValues)[number];
 
-export type AssetGenerationType = typeof assetGenerationTypeEnum;
+export type AssetGenerationType =
+  (typeof assetGenerationTypeEnum.enumValues)[number];

@@ -9,7 +9,13 @@ import { klingService } from "./klingService";
 import { ffmpegService } from "./ffmpegService";
 import { storageService } from "./storageService";
 import { webhookService } from "./webhookService";
-import { db, videoJobs, videos, projects } from "@db/client";
+import {
+  db,
+  videoAssetJobs as videoJobs,
+  videoAssets as videos,
+  assets,
+  projects
+} from "@db/client";
 import { eq, inArray } from "drizzle-orm";
 import type {
   VideoServerGenerateRequest,
@@ -27,6 +33,7 @@ interface GenerationResult {
 
 interface VideoContext {
   videoId: string;
+  assetId: string;
   projectId: string;
   userId: string;
 }
@@ -36,15 +43,22 @@ class VideoGenerationService {
     const [record] = await db
       .select({
         videoId: videos.id,
-        projectId: videos.projectId,
+        assetId: videos.assetId,
+        projectId: assets.projectId,
         userId: projects.userId
       })
       .from(videos)
-      .leftJoin(projects, eq(videos.projectId, projects.id))
+      .innerJoin(assets, eq(videos.assetId, assets.id))
+      .innerJoin(projects, eq(assets.projectId, projects.id))
       .where(eq(videos.id, videoId))
       .limit(1);
 
-    if (!record?.videoId || !record?.projectId || !record?.userId) {
+    if (
+      !record?.videoId ||
+      !record?.assetId ||
+      !record?.projectId ||
+      !record?.userId
+    ) {
       throw new Error(
         `Video context missing for video ${videoId} (ensure project/user exists)`
       );
@@ -52,6 +66,7 @@ class VideoGenerationService {
 
     return {
       videoId: record.videoId,
+      assetId: record.assetId,
       projectId: record.projectId,
       userId: record.userId
     };
@@ -124,7 +139,7 @@ class VideoGenerationService {
     }
 
     // Validate all jobs belong to the same video
-    const invalidJobs = jobs.filter((job) => job.videoId !== videoId);
+    const invalidJobs = jobs.filter((job) => job.videoAssetId !== videoId);
     if (invalidJobs.length > 0) {
       throw new Error(
         `Jobs do not belong to video ${videoId}: ${invalidJobs
@@ -243,7 +258,7 @@ class VideoGenerationService {
     logger.info(
       {
         jobId: job.id,
-        videoId: job.videoId,
+        videoId: job.videoAssetId,
         imageCount: imageUrls.length,
         aspectRatio
       },
@@ -281,7 +296,7 @@ class VideoGenerationService {
     logger.info(
       {
         jobId: job.id,
-        videoId: job.videoId,
+        videoId: job.videoAssetId,
         requestId
       },
       "[VideoGenerationService] Job marked as processing"
@@ -435,12 +450,12 @@ class VideoGenerationService {
           errorMessage: `Job ${job.id} failed: ${errorMessage}`,
           updatedAt: new Date()
         })
-        .where(eq(videos.id, job.videoId));
+        .where(eq(videos.id, job.videoAssetId));
 
       logger.error(
         {
           jobId: job.id,
-          videoId: job.videoId,
+          videoId: job.videoAssetId,
           requestId: payload.request_id,
           error: errorMessage,
           duration: Date.now() - startTime
@@ -457,13 +472,13 @@ class VideoGenerationService {
     // Success case: Process video and upload to Backblaze storage
     try {
       const falVideoUrl = payload.payload.video.url;
-      const videoContext = await this.getVideoContext(job.videoId);
+      const videoContext = await this.getVideoContext(job.videoAssetId);
       const storageBasePath = this.buildStorageBasePath(videoContext);
 
       logger.info(
         {
           jobId: job.id,
-          videoId: job.videoId,
+          videoId: job.videoAssetId,
           falVideoUrl
         },
         "[VideoGenerationService] Processing video from Fal"
@@ -491,7 +506,7 @@ class VideoGenerationService {
           contentType: "video/mp4",
           metadata: {
             jobId: job.id,
-            videoId: job.videoId,
+            videoId: job.videoAssetId,
             projectId: videoContext.projectId,
             userId: videoContext.userId,
             generationModel: job.generationModel || "kling1.6"
@@ -503,7 +518,7 @@ class VideoGenerationService {
           contentType: "image/jpeg",
           metadata: {
             jobId: job.id,
-            videoId: job.videoId,
+            videoId: job.videoAssetId,
             projectId: videoContext.projectId,
             userId: videoContext.userId
           }
@@ -535,7 +550,7 @@ class VideoGenerationService {
       logger.info(
         {
           jobId: job.id,
-          videoId: job.videoId,
+          videoId: job.videoAssetId,
           videoUrl,
           thumbnailUrl,
           duration: processedVideo.metadata.duration,
@@ -558,22 +573,24 @@ class VideoGenerationService {
       });
 
       // Step 5: Check if all jobs for this video are completed
-      const completionStatus = await this.evaluateJobCompletion(job.videoId);
+      const completionStatus = await this.evaluateJobCompletion(
+        job.videoAssetId
+      );
 
       if (completionStatus.allCompleted) {
         logger.info(
-          { videoId: job.videoId },
+          { videoId: job.videoAssetId },
           "[VideoGenerationService] All jobs completed, triggering composition"
         );
 
         // Trigger composition asynchronously - don't block webhook response
         this.composeAndFinalizeVideo(
-          job.videoId,
+          job.videoAssetId,
           completionStatus.completedJobs
         ).catch((error) => {
           logger.error(
             {
-              videoId: job.videoId,
+              videoId: job.videoAssetId,
               error: error instanceof Error ? error.message : String(error)
             },
             "[VideoGenerationService] Composition failed"
@@ -600,7 +617,7 @@ class VideoGenerationService {
       logger.error(
         {
           jobId: job.id,
-          videoId: job.videoId,
+          videoId: job.videoAssetId,
           requestId: payload.request_id,
           error: errorMessage,
           stack: error instanceof Error ? error.stack : undefined,
@@ -622,11 +639,11 @@ class VideoGenerationService {
     job: DBVideoJob,
     result: VideoJobResult
   ): Promise<void> {
-    const videoContext = await this.getVideoContext(job.videoId);
+    const videoContext = await this.getVideoContext(job.videoAssetId);
 
     if (!videoContext) {
       logger.error(
-        { jobId: job.id, videoId: job.videoId },
+        { jobId: job.id, videoId: job.videoAssetId },
         "[VideoGenerationService] Cannot send webhook: parent video not found"
       );
       return;
@@ -713,12 +730,12 @@ class VideoGenerationService {
   ): Promise<void> {
     let videoContext: VideoContext;
     try {
-      videoContext = await this.getVideoContext(job.videoId);
+      videoContext = await this.getVideoContext(job.videoAssetId);
     } catch (error) {
       logger.error(
         {
           jobId: job.id,
-          videoId: job.videoId,
+          videoId: job.videoAssetId,
           error: error instanceof Error ? error.message : String(error)
         },
         "[VideoGenerationService] Cannot send failure webhook: missing video context"
@@ -779,7 +796,7 @@ class VideoGenerationService {
     const jobs = await db
       .select()
       .from(videoJobs)
-      .where(eq(videoJobs.videoId, videoId));
+      .where(eq(videoJobs.videoAssetId, videoId));
 
     if (jobs.length === 0) {
       return { allCompleted: false, completedJobs: [] };

@@ -40,8 +40,8 @@ export interface VideoJobWebhookPayload {
  * Accepts parent videoId and array of jobIds to process
  */
 export interface VideoServerGenerateRequest {
-  videoId: string; // Parent video ID
-  jobIds: string[]; // Array of video_jobs IDs to process
+  videoId: string; // Parent video_assets ID
+  jobIds: string[]; // Array of video_asset_jobs IDs to process
   projectId: string;
   userId: string;
 }

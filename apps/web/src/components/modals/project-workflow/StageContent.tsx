@@ -4,7 +4,12 @@ import { useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import type { ProcessedImage } from "@web/src/types/images";
 import type { CategorizedGroup } from "@web/src/types/vision";
-import type { DBProject, ProjectStage } from "@shared/types/models";
+import type {
+  DBAsset,
+  DBCollection,
+  DBProject,
+  ProjectStage
+} from "@shared/types/models";
 import type {
   FinalVideoData,
   GenerationProgress,
@@ -27,6 +32,10 @@ interface StageContentProps {
   setImages: Dispatch<SetStateAction<ProcessedImage[]>>;
   currentProject: DBProject | null;
   setCurrentProject: Dispatch<SetStateAction<DBProject | null>>;
+  currentCollection: DBCollection | null;
+  setCurrentCollection: Dispatch<SetStateAction<DBCollection | null>>;
+  currentAsset: DBAsset | null;
+  setCurrentAsset: Dispatch<SetStateAction<DBAsset | null>>;
   categorizedGroups: CategorizedGroup[];
   setCategorizedGroups: Dispatch<SetStateAction<CategorizedGroup[]>>;
   availableCategories: string[];
@@ -47,6 +56,10 @@ export function StageContent({
   setImages,
   currentProject,
   setCurrentProject,
+  currentCollection,
+  setCurrentCollection,
+  currentAsset,
+  setCurrentAsset,
   categorizedGroups,
   setCategorizedGroups,
   availableCategories,
@@ -117,6 +130,10 @@ export function StageContent({
           setImages={setImages}
           currentProject={currentProject}
           setCurrentProject={setCurrentProject}
+          currentCollection={currentCollection}
+          setCurrentCollection={setCurrentCollection}
+          currentAsset={currentAsset}
+          setCurrentAsset={setCurrentAsset}
           onImageClick={handleUploadImageClick}
           onContinue={handleContinueUpload}
         />
@@ -127,6 +144,7 @@ export function StageContent({
           images={images}
           setImages={setImages}
           currentProject={currentProject}
+          currentCollection={currentCollection}
           categorizedGroups={categorizedGroups}
           setCategorizedGroups={setCategorizedGroups}
           onImageClick={handleCategorizedImageClick}
