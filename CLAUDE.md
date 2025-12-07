@@ -9,10 +9,10 @@ Zencourt is an npm workspaces monorepo for a video generation platform serving r
 **Structure:**
 
 ```
-apps/web/              # Next.js 15 frontend with Stack Auth
+apps/web/              # Next.js 15 frontend with Stack Auth + server actions
 apps/video-server/     # Express backend with FFmpeg video processing
-packages/db/           # Drizzle ORM + Neon PostgreSQL
-packages/shared/       # Shared types and utilities
+packages/db/           # Drizzle ORM + Neon PostgreSQL schema + client
+packages/shared/       # Shared types, enums, utilities
 ```
 
 **Tech Stack:**
@@ -96,21 +96,26 @@ npm run type-check --workspace=@zencourt/video-server
 
 **Video Processing Pipeline:**
 
-1. User uploads images via web app
-2. Web app calls video-server `/video/generate`
-3. Video-server creates `videoJobs`, calls fal.ai (Kling AI)
-4. fal.ai webhooks to video-server on completion
-5. Video-server processes results, webhooks to web app
-6. Web app updates UI
+1. User uploads property images → stored as `collection_images` tied to a project collection.
+2. Web workflow creates/updates a video `asset` record (stage, type, thumbnail) for the project.
+3. Web app requests generation via `/video/generate`, creating a parent `video_assets` row plus `video_asset_jobs` (one per room).
+4. Video-server dispatches each job to fal.ai (Kling) and tracks progress via `video_asset_jobs`.
+5. fal.ai webhooks -> video-server: job assets downloaded, normalized, uploaded, job rows updated.
+6. Once all jobs complete, video-server composes the final asset video, writes back to `video_assets`, and notifies the web app.
+7. Web app updates UI/project workflow stage via `assets` table.
 
 ### Database (packages/db)
 
-**Schema (`drizzle/schema.ts`):**
+**Schema Highlights (`drizzle/schema.ts` via `@db/client`):**
 
-- `projects` - User projects with RLS policies
-- `images` - Uploaded images with AI classification
-- `videos` - Final composed videos
-- `videoJobs` - Individual video generation jobs (tracks fal.ai requests)
+- `projects` – Owns collections/assets; RLS scoped to owner.
+- `collections` – 1:1 with project; keeps metadata for uploaded media.
+- `collection_images` – Uploaded property imagery + AI classifications.
+- `assets` – Generated deliverables per project (currently `type = "video"` with generation stage + thumbnail).
+- `video_assets` – Finalized video output for a specific asset (one row per generation run).
+- `video_asset_jobs` – Individual Kling job entries tied to `video_assets`.
+
+> **Important:** Always import Drizzle helpers (`eq`, `and`, `inArray`, etc.) from `@db/client` rather than `drizzle-orm` directly so every workspace shares the same Drizzle instance/schema.
 
 **Row-Level Security:**
 All tables enforce user isolation via RLS policies. Stack Auth provides authentication, RLS provides defense-in-depth at the database level.
@@ -126,7 +131,7 @@ All tables enforce user isolation via RLS policies. Stack Auth provides authenti
 **Storage Path Pattern:**
 
 ```
-user_{userId}/projects/project_{projectId}/videos/video_{videoId}/...
+user_{userId}/projects/project_{projectId}/videos/video_{videoAssetId}/...
 ```
 
 ## Critical Architectural Patterns
@@ -148,7 +153,7 @@ Centralized in `tsconfig.base.json` with workspace aliases:
 
 ### 3. Video Job Architecture
 
-Each video generation is split into multiple `videoJobs` (one per room). This enables:
+Each video generation is split into multiple `video_asset_jobs` (one per room). This enables:
 
 - Parallel processing of individual videos
 - Individual retry logic per job
@@ -166,16 +171,22 @@ Video-server acts as middleware to add:
 - Error categorization and handling
 - Webhook delivery to web app
 
-### 5. Docker Build Context
+### 5. Database Access Consistency
 
-Video-server Dockerfile builds from **monorepo root** (`context: ../..`) to access all packages. The build:
+- Use `@db/client` for **all** DB access (web + video-server) to guarantee a single source of schema and Drizzle helpers.
+- Refrain from importing `drizzle-orm` helpers directly from node_modules—schema types will mismatch across packages.
+- Server actions (web) and services (video-server) must respect project ownership checks already encoded in RLS/policies.
+
+### 6. Docker Build Context
+
+Video-server Dockerfile builds from **monorepo root** (`context: ../..`) to access shared packages. The build:
 
 - Copies entire monorepo structure
 - Installs dependencies for all workspaces
 - Compiles TypeScript in container
 - Includes FFmpeg binaries in Alpine image
 
-### 6. Next.js Monorepo Configuration
+### 7. Next.js Monorepo Configuration
 
 Non-standard config in `next.config.ts`:
 
@@ -184,7 +195,7 @@ Non-standard config in `next.config.ts`:
 - Custom webpack config for FFmpeg binaries
 - Output file tracing includes monorepo root
 
-### 7. FFmpeg Handling
+### 8. FFmpeg Handling
 
 - **Docker:** Alpine image includes system FFmpeg binaries
 - **Local dev:** Uses `ffmpeg-static` npm package
@@ -194,10 +205,12 @@ Non-standard config in `next.config.ts`:
 
 1. `packages/db/drizzle/schema.ts` - Complete data model with RLS policies
 2. `packages/shared/utils/storagePaths.ts` - Storage architecture (critical!)
-3. `packages/shared/types/models/db.video.ts` - Video and job type definitions
-4. `apps/video-server/src/services/videoGenerationService.ts` - Core orchestration logic
-5. `apps/video-server/src/server.ts` - Express app with graceful shutdown
-6. `apps/web/src/middleware.ts` - Stack Auth validation logic
+3. `packages/shared/types/models/db.asset.ts` - Asset + stage enums shared with frontend.
+4. `packages/shared/types/models/db.video.ts` - Video + job type definitions.
+5. `apps/video-server/src/services/videoGenerationService.ts` - Core orchestration logic.
+6. `apps/video-server/src/services/db/*.ts` - Repositories that mutate DB state.
+7. `apps/web/src/server/actions/db/*.ts` - Server actions wrapping DB access.
+8. `apps/web/src/middleware.ts` - Stack Auth validation logic.
 7. `tsconfig.base.json` - Monorepo path mappings
 8. `.github/workflows/deploy-video-server.yml` - Hetzner deployment pipeline
 
