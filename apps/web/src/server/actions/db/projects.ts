@@ -6,6 +6,8 @@ import { db, projects, collections, assets } from "@db/client";
 import { DBProject, InsertDBProject } from "@shared/types/models";
 import { withDbErrorHandling } from "../_utils";
 
+type AssetRecord = typeof assets.$inferSelect;
+
 /**
  * Create a new project
  * Server action that creates a project in the database
@@ -124,7 +126,7 @@ export async function getUserProjects(userId: string): Promise<DBProject[]> {
 
   return withDbErrorHandling(
     async () => {
-      const userProjects = await db
+      const rows = await db
         .select({
           project: projects,
           collection: collections.id,
@@ -136,13 +138,64 @@ export async function getUserProjects(userId: string): Promise<DBProject[]> {
         .where(eq(projects.userId, userId))
         .orderBy(desc(projects.createdAt));
 
-      return userProjects.map(({ project, collection, asset }) => ({
-        ...project,
-        collectionId: collection ?? null,
-        assetId: asset?.id ?? null,
-        stage: asset?.stage ?? "upload",
-        thumbnailUrl: asset?.thumbnailUrl
-      }));
+      const projectMap = new Map<
+        string,
+        {
+          project: (typeof projects.$inferSelect);
+          collectionId: string | null;
+          assets: AssetRecord[];
+        }
+      >();
+
+      for (const { project, collection, asset } of rows) {
+        let entry = projectMap.get(project.id);
+        if (!entry) {
+          entry = {
+            project,
+            collectionId: collection ?? null,
+            assets: []
+          };
+          projectMap.set(project.id, entry);
+        } else if (entry.collectionId == null && collection) {
+          entry.collectionId = collection;
+        }
+
+        if (asset) {
+          const alreadyExists = entry.assets.some(
+            (existing) => existing.id === asset.id
+          );
+          if (!alreadyExists) {
+            entry.assets.push(asset);
+          }
+        }
+      }
+
+      return Array.from(projectMap.values()).map(
+        ({ project, collectionId, assets }) => {
+          const primaryAsset = assets.reduce<AssetRecord | null>(
+            (latest, current) => {
+              if (!latest) return current;
+              const latestTime = latest.updatedAt
+                ? new Date(latest.updatedAt).getTime()
+                : 0;
+              const currentTime = current.updatedAt
+                ? new Date(current.updatedAt).getTime()
+                : 0;
+              return currentTime > latestTime ? current : latest;
+            },
+            null
+          );
+
+          return {
+            ...project,
+            collectionId,
+            assetId: primaryAsset?.id ?? null,
+            stage: primaryAsset?.stage ?? "upload",
+            thumbnailUrl: primaryAsset?.thumbnailUrl ?? null,
+            assets
+          };
+        }
+      );
     },
     {
       actionName: "getUserProjects",

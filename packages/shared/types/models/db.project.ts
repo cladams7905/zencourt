@@ -1,4 +1,5 @@
 import { projects, assetGenerationStageEnum } from "@db/client";
+import type { DBAsset } from "./db.asset";
 
 export type ProjectStage =
   (typeof assetGenerationStageEnum.enumValues)[number];
@@ -8,6 +9,7 @@ export type DBProject = typeof projects.$inferSelect & {
   thumbnailUrl?: string | null;
   assetId?: string | null;
   collectionId?: string | null;
+  assets?: DBAsset[];
 };
 
 export type InsertDBProject = typeof projects.$inferInsert;

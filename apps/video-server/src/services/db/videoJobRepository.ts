@@ -1,9 +1,11 @@
-import { and, eq, inArray } from "drizzle-orm";
 import {
   db,
   videoAssetJobs as videoJobs,
   videoAssets,
-  assets
+  assets,
+  and,
+  eq,
+  inArray
 } from "@db/client";
 import type { VideoStatus } from "@shared/types/models";
 

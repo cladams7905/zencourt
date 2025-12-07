@@ -14,9 +14,10 @@ import {
   videoAssetJobs as videoJobs,
   videoAssets as videos,
   assets,
-  projects
+  projects,
+  eq,
+  inArray
 } from "@db/client";
-import { eq, inArray } from "drizzle-orm";
 import type {
   VideoServerGenerateRequest,
   FalWebhookPayload,
@@ -39,7 +40,14 @@ interface VideoContext {
 }
 
 class VideoGenerationService {
+  private videoContextCache = new Map<string, VideoContext>();
+
   private async getVideoContext(videoId: string): Promise<VideoContext> {
+    const cached = this.videoContextCache.get(videoId);
+    if (cached) {
+      return cached;
+    }
+
     const [record] = await db
       .select({
         videoId: videos.id,
@@ -64,12 +72,15 @@ class VideoGenerationService {
       );
     }
 
-    return {
+    const context: VideoContext = {
       videoId: record.videoId,
       assetId: record.assetId,
       projectId: record.projectId,
       userId: record.userId
     };
+
+    this.videoContextCache.set(videoId, context);
+    return context;
   }
 
   private buildStorageBasePath(context: VideoContext): string {
@@ -1081,6 +1092,8 @@ class VideoGenerationService {
         "[VideoGenerationService] ❌ Failed to deliver final video webhook"
       );
       // Don't fail the composition if webhook fails
+    } finally {
+      this.videoContextCache.delete(videoContext.videoId);
     }
   }
 }
