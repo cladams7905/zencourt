@@ -12,11 +12,11 @@
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",
-    "@stackframe/stack": "2.4.8",
-    "drizzle-orm": "^0.44.6"
+    "@stackframe/stack": "2.4.8"
   },
   "devDependencies": {
-    "drizzle-kit": "^0.18.1",
+    "drizzle-kit": "^0.31.8",
+    "drizzle-orm": "^0.45.0",
     "typescript": "^5"
   }
 }

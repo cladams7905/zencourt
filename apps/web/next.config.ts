@@ -15,6 +15,8 @@ const nextConfig: NextConfig = {
     "pino-pretty",
     "thread-stream"
   ],
+  // Silence Next.js 16 warning when using custom webpack config under Turbopack defaults
+  turbopack: {},
   webpack: (config, { isServer }) => {
     if (isServer) {
       // Exclude ffmpeg/ffprobe binaries from being processed by webpack

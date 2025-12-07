@@ -25,7 +25,9 @@
       "@db/*": ["packages/db/*"],
       "@shared/*": ["packages/shared/*"],
       "@web/*": ["apps/web/*"],
-      "@video-server/*": ["apps/video-server/*"]
+      "@video-server/*": ["apps/video-server/*"],
+      "drizzle-orm": ["./node_modules/drizzle-orm"],
+      "drizzle-orm/*": ["./node_modules/drizzle-orm/*"]
     }
   },
   "exclude": ["node_modules", "dist"]

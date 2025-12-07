@@ -51,7 +51,7 @@ export async function createProject(userId: string): Promise<DBProject> {
         return {
           ...newProject,
           stage: asset.stage,
-          thumbnailUrl: asset.thumbnailUrl ?? newProject.thumbnailUrl,
+          thumbnailUrl: asset.thumbnailUrl,
           collectionId: collection.id,
           assetId: asset.id
         };
@@ -141,7 +141,7 @@ export async function getUserProjects(userId: string): Promise<DBProject[]> {
         collectionId: collection ?? null,
         assetId: asset?.id ?? null,
         stage: asset?.stage ?? "upload",
-        thumbnailUrl: asset?.thumbnailUrl ?? project.thumbnailUrl
+        thumbnailUrl: asset?.thumbnailUrl
       }));
     },
     {
