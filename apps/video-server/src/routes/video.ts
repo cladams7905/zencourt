@@ -13,8 +13,8 @@ import {
   VideoServerGenerateResponse
 } from "@shared/types/api";
 import { videoGenerationService } from "@/services/videoGenerationService";
-import { videoRepository } from "@/services/db/videoRepository";
-import { videoJobRepository } from "@/services/db/videoJobRepository";
+import { videoAssetRepository } from "@/services/db/videoAssetRepository";
+import { videoAssetJobRepository } from "@/services/db/videoAssetJobRepository";
 
 const router = Router();
 
@@ -139,10 +139,10 @@ router.post("/cancel", async (req: Request, res: Response) => {
 
     const canceledVideos =
       Array.isArray(videoIds) && videoIds.length > 0
-        ? await videoRepository.cancelVideosByIds(videoIds, cancelReason)
-        : await videoRepository.cancelVideosByProject(projectId, cancelReason);
+        ? await videoAssetRepository.cancelByIds(videoIds, cancelReason)
+        : await videoAssetRepository.cancelByProject(projectId, cancelReason);
 
-    const canceledJobs = await videoJobRepository.cancelJobsByProjectId(
+    const canceledJobs = await videoAssetJobRepository.cancelJobsByProjectId(
       projectId,
       cancelReason
     );

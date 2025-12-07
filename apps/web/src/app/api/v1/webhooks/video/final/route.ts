@@ -9,7 +9,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { db, assets } from "@db/client";
 import { eq } from "drizzle-orm";
-import { updateVideo } from "@web/src/server/actions/db/videos";
+import { updateVideoAsset } from "@web/src/server/actions/db/videoAssets";
 import {
   createChildLogger,
   logger as baseLogger
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const updatedVideo = await updateVideo(videoId, {
+    const updatedVideo = await updateVideoAsset(videoId, {
       status: payload.status,
       videoUrl: signedVideoUrl,
       thumbnailUrl: signedThumbnailUrl,

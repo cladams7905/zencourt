@@ -1,20 +1,22 @@
 "use server";
 
-import { db, videoAssets as videos } from "@db/client";
+import { db, videoAssets } from "@db/client";
 import type { DBVideo, InsertDBVideo } from "@shared/types/models";
 import { eq } from "drizzle-orm";
 
 /**
- * Create a new video record
+ * Create a new video asset record
  */
-export async function createVideo(video: InsertDBVideo): Promise<void> {
-  await db.insert(videos).values(video);
+export async function createVideoAsset(
+  video: InsertDBVideo
+): Promise<void> {
+  await db.insert(videoAssets).values(video);
 }
 
 /**
- * Update an existing video record
+ * Update an existing video asset record
  */
-export async function updateVideo(
+export async function updateVideoAsset(
   videoId: string,
   updates: Partial<Omit<InsertDBVideo, "id" | "assetId" | "createdAt">>
 ): Promise<DBVideo> {
@@ -23,16 +25,16 @@ export async function updateVideo(
   }
 
   const [updated] = await db
-    .update(videos)
+    .update(videoAssets)
     .set({
       ...updates,
       updatedAt: new Date()
     })
-    .where(eq(videos.id, videoId))
+    .where(eq(videoAssets.id, videoId))
     .returning();
 
   if (!updated) {
-    throw new Error(`Video ${videoId} not found`);
+    throw new Error(`Video asset ${videoId} not found`);
   }
 
   return updated;

@@ -26,8 +26,8 @@ import {
   InsertDBVideo,
   InsertDBVideoJob
 } from "@shared/types/models";
-import { createVideo } from "@web/src/server/actions/db/videos";
-import { createVideoJob } from "@web/src/server/actions/db/videoJobs";
+import { createVideoAsset } from "@web/src/server/actions/db/videoAssets";
+import { createVideoAssetJob } from "@web/src/server/actions/db/videoAssetJobs";
 import { ensurePublicUrls } from "@web/src/server/utils/storageUrls";
 
 const logger = createChildLogger(baseLogger, {
@@ -313,7 +313,7 @@ export async function POST(
       errorMessage: null
     };
 
-    await createVideo(parentVideo);
+    await createVideoAsset(parentVideo);
 
     logger.info(
       {
@@ -394,7 +394,7 @@ export async function POST(
 
     // Create all video jobs
     for (const jobRecord of videoJobRecords) {
-      await createVideoJob(jobRecord);
+      await createVideoAssetJob(jobRecord);
     }
 
     const jobIds = videoJobRecords.map((r) => r.id);

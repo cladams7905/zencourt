@@ -8,9 +8,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import {
-  updateVideoJob,
-  getVideoJobById
-} from "@web/src/server/actions/db/videoJobs";
+  updateVideoAssetJob,
+  getVideoAssetJobById
+} from "@web/src/server/actions/db/videoAssetJobs";
 import {
   createChildLogger,
   logger as baseLogger
@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
     let updatedJob: DBVideoJob | null = null;
 
     try {
-      updatedJob = await updateVideoJob(payload.jobId, {
+      updatedJob = await updateVideoAssetJob(payload.jobId, {
         status: payload.status,
         videoUrl,
         thumbnailUrl,
@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
         },
         "Failed to persist video job update, using fallback data"
       );
-      updatedJob = await getVideoJobById(payload.jobId);
+      updatedJob = await getVideoAssetJobById(payload.jobId);
     }
 
     logger.info(

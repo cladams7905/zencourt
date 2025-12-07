@@ -210,9 +210,9 @@ Non-standard config in `next.config.ts`:
 5. `apps/video-server/src/services/videoGenerationService.ts` - Core orchestration logic.
 6. `apps/video-server/src/services/db/*.ts` - Repositories that mutate DB state.
 7. `apps/web/src/server/actions/db/*.ts` - Server actions wrapping DB access.
-8. `apps/web/src/middleware.ts` - Stack Auth validation logic.
-7. `tsconfig.base.json` - Monorepo path mappings
-8. `.github/workflows/deploy-video-server.yml` - Hetzner deployment pipeline
+8. `apps/web/src/proxy.ts` - Stack Auth validation logic.
+9. `tsconfig.base.json` - Monorepo path mappings
+10. `.github/workflows/deploy-video-server.yml` - Hetzner deployment pipeline
 
 ## Deployment
 

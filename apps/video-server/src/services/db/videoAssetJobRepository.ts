@@ -1,11 +1,9 @@
+import { and, eq, inArray } from "@db/client";
 import {
   db,
   videoAssetJobs as videoJobs,
   videoAssets,
-  assets,
-  and,
-  eq,
-  inArray
+  assets
 } from "@db/client";
 import type { VideoStatus } from "@shared/types/models";
 
@@ -15,9 +13,9 @@ function cancelReason(reason?: string): string {
   return reason?.trim() || "Canceled by user request";
 }
 
-class VideoJobRepository {
+class VideoAssetJobRepository {
   /**
-   * Cancel all jobs for videos belonging to a project
+   * Cancel all jobs for video assets belonging to a project
    */
   async cancelJobsByProjectId(
     projectId: string,
@@ -56,4 +54,4 @@ class VideoJobRepository {
   }
 }
 
-export const videoJobRepository = new VideoJobRepository();
+export const videoAssetJobRepository = new VideoAssetJobRepository();

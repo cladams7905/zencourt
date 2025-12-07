@@ -1,17 +1,10 @@
-import {
-  db,
-  videoAssets as videos,
-  assets,
-  and,
-  eq,
-  exists,
-  inArray
-} from "@db/client";
+import { and, eq, exists, inArray } from "@db/client";
+import { db, videoAssets as videos, assets } from "@db/client";
 import type { VideoStatus } from "@shared/types/models";
 
-export type DbVideo = typeof videos.$inferSelect;
+export type DbVideoAsset = typeof videos.$inferSelect;
 
-class VideoRepository {
+class VideoAssetRepository {
   private static readonly cancelableStatuses: VideoStatus[] = [
     "pending",
     "processing"
@@ -21,7 +14,7 @@ class VideoRepository {
     return reason?.trim() || "Canceled by user request";
   }
 
-  async cancelVideosByProject(
+  async cancelByProject(
     projectId: string,
     reason?: string
   ): Promise<number> {
@@ -29,7 +22,7 @@ class VideoRepository {
       .update(videos)
       .set({
         status: "canceled",
-        errorMessage: VideoRepository.resolveCancelReason(reason),
+        errorMessage: VideoAssetRepository.resolveCancelReason(reason),
         updatedAt: new Date()
       })
       .where(
@@ -45,7 +38,7 @@ class VideoRepository {
                 )
               )
           ),
-          inArray(videos.status, VideoRepository.cancelableStatuses)
+          inArray(videos.status, VideoAssetRepository.cancelableStatuses)
         )
       )
       .returning({ id: videos.id });
@@ -53,7 +46,7 @@ class VideoRepository {
     return canceled.length;
   }
 
-  async cancelVideosByIds(
+  async cancelByIds(
     videoIds: string[],
     reason?: string
   ): Promise<number> {
@@ -65,20 +58,19 @@ class VideoRepository {
       .update(videos)
       .set({
         status: "canceled",
-        errorMessage: VideoRepository.resolveCancelReason(reason),
+        errorMessage: VideoAssetRepository.resolveCancelReason(reason),
         updatedAt: new Date()
       })
       .where(
         and(
           inArray(videos.id, videoIds),
-          inArray(videos.status, VideoRepository.cancelableStatuses)
+          inArray(videos.status, VideoAssetRepository.cancelableStatuses)
         )
       )
       .returning({ id: videos.id });
 
     return canceled.length;
   }
-
 }
 
-export const videoRepository = new VideoRepository();
+export const videoAssetRepository = new VideoAssetRepository();
