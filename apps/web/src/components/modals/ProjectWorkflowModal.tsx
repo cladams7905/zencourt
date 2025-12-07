@@ -46,6 +46,31 @@ const COMPLETED_STEP_LABEL = "Compose Final Video";
 const ROOM_STEP_LABEL = "Generate Room Videos";
 const POLLING_DELAY_MS = 120_000;
 const POLLING_INTERVAL_MS = 5_000;
+const STAGE_SEQUENCE: ProjectStage[] = [
+  "upload",
+  "categorize",
+  "plan",
+  "review",
+  "generate",
+  "complete"
+];
+const STAGE_ORDER = STAGE_SEQUENCE.reduce<Record<ProjectStage, number>>(
+  (acc, stage, index) => {
+    acc[stage] = index;
+    return acc;
+  },
+  {} as Record<ProjectStage, number>
+);
+
+const isStageAdvancing = (
+  nextStage: ProjectStage,
+  currentStage?: ProjectStage | null
+) => {
+  if (!currentStage) {
+    return true;
+  }
+  return STAGE_ORDER[nextStage] > STAGE_ORDER[currentStage];
+};
 
 interface ProjectWorkflowModalProps {
   isOpen: boolean;
@@ -98,6 +123,7 @@ export function ProjectWorkflowModal({
     : null;
   const finalStatusNotifiedRef = useRef<"success" | "error" | null>(null);
   const pendingStageRef = useRef<ProjectStage | null>(null);
+  const isLoadingProjectRef = useRef(false);
   const user = useUser({ or: "redirect" });
 
   const stopStatusPolling = useCallback(() => {
@@ -170,21 +196,22 @@ export function ProjectWorkflowModal({
       }
 
       setCurrentStage(stage);
-      setCurrentAsset((prev) =>
-        prev
-          ? {
-              ...prev,
-              stage: stageToPersist
-            }
-          : prev
-      );
 
       if (!persist) {
         pendingStageRef.current = null;
         return;
       }
 
-      if (!currentProject || !currentAsset || !user) {
+      const hasAsset = Boolean(currentProject && currentAsset && user);
+      const latestPersistedStage = currentAsset?.stage ?? null;
+      const advancing = isStageAdvancing(stageToPersist, latestPersistedStage);
+
+      if (!advancing) {
+        pendingStageRef.current = null;
+        return;
+      }
+
+      if (!hasAsset) {
         pendingStageRef.current = stageToPersist;
         return;
       }
@@ -230,6 +257,10 @@ export function ProjectWorkflowModal({
       return;
     }
     const stageToPersist = pendingStageRef.current;
+    if (!isStageAdvancing(stageToPersist, currentAsset.stage)) {
+      pendingStageRef.current = null;
+      return;
+    }
     pendingStageRef.current = null;
     void persistAssetStage(stageToPersist);
   }, [currentAsset, currentProject, isOpen, persistAssetStage, user]);
@@ -720,8 +751,10 @@ export function ProjectWorkflowModal({
     async function loadExistingProject() {
       if (!isOpen || !existingProject || !user) return;
       if (loadedProjectKey === currentProjectKey) return;
+      if (isLoadingProjectRef.current) return;
 
       try {
+        isLoadingProjectRef.current = true;
         pendingStageRef.current = null;
         setProjectName(existingProject.title || "");
 
@@ -837,9 +870,10 @@ export function ProjectWorkflowModal({
           cachedStatus?.finalVideo?.status === "completed" &&
           Boolean(cachedStatus.finalVideo.finalVideoUrl);
 
+        const stageForStatus = currentAsset?.stage ?? existingProject.stage;
         const shouldFetchStatus =
-          !cachedStatus ||
-          (currentAsset?.stage === "complete" && !hasCachedFinalVideo);
+          stageForStatus === "generate" ||
+          (stageForStatus === "complete" && !hasCachedFinalVideo);
 
         if (shouldFetchStatus) {
           await fetchStatus(existingProject.id, true);
@@ -849,6 +883,8 @@ export function ProjectWorkflowModal({
       } catch (error) {
         console.error("Failed to load existing project:", error);
         toast.error("Failed to load project data");
+      } finally {
+        isLoadingProjectRef.current = false;
       }
     }
 
@@ -1039,7 +1075,6 @@ export function ProjectWorkflowModal({
             videoSettings={videoSettings}
             setVideoSettings={setVideoSettings}
             setWorkflowStage={setWorkflowStage}
-            setInternalIsOpen={setInternalIsOpen}
             onConfirmReview={handleConfirmAndGenerate}
             generationProgress={generationProgress}
             roomStatuses={roomStatuses}

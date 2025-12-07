@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { useUser } from "@stackframe/stack";
 import { toast } from "sonner";
 import { Button } from "../../ui/button";
@@ -204,24 +204,27 @@ export function CategorizeStage({
   }, []);
 
   // Check if we need to process images on mount
-  const alreadyAnalyzed = images.filter(
-    (img) =>
-      img.category && (img.status === "uploaded" || img.status === "analyzed")
+  const alreadyAnalyzed = useMemo(
+    () =>
+      images.filter(
+        (img) =>
+          img.category && (img.status === "uploaded" || img.status === "analyzed")
+      ),
+    [images]
   );
-  const needsAnalysis = images.filter(
-    (img) =>
-      !img.category &&
-      (img.status === "uploaded" || img.status === "analyzed") &&
-      !img.error
+  const needsAnalysis = useMemo(
+    () =>
+      images.filter(
+        (img) =>
+          !img.category &&
+          (img.status === "uploaded" || img.status === "analyzed") &&
+          !img.error
+      ),
+    [images]
   );
 
   // If images need analysis and we haven't started processing, start automatically
   // Check if the number of analyzed images doesn't match total images needing it
-  const totalImagesThatShouldBeAnalyzed =
-    alreadyAnalyzed.length + needsAnalysis.length;
-  const allImagesAnalyzed =
-    totalImagesThatShouldBeAnalyzed === alreadyAnalyzed.length;
-
   const handleProcessImages = useCallback(async () => {
     if (!user || !currentProject || !currentCollection) {
       toast.error("No project found", {
@@ -325,20 +328,37 @@ export function CategorizeStage({
     user
   ]);
 
-  // Auto-start processing when component mounts if needed
-  // Only run once using state to prevent multiple calls across remounts
+  // Auto-start processing or organize already analyzed images
   React.useEffect(() => {
-    // Skip if already processing or if state indicates we've already started
+    if (needsAnalysis.length === 0) {
+      if (
+        !isCategorizing &&
+        !hasInitiatedProcessing &&
+        categorizedGroups.length === 0 &&
+        alreadyAnalyzed.length > 0
+      ) {
+        const organized = categorizeImages(alreadyAnalyzed);
+        setCategorizedGroups(organized.groups);
+      }
+      return;
+    }
+
     if (isCategorizing || hasInitiatedProcessing) {
       return;
     }
 
-    // Check if we need to process
-    if (needsAnalysis.length > 0 && !allImagesAnalyzed) {
-      handleProcessImages();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Empty deps - only run on mount
+    setHasInitiatedProcessing(true);
+    void handleProcessImages();
+  }, [
+    alreadyAnalyzed,
+    categorizeImages,
+    categorizedGroups.length,
+    handleProcessImages,
+    hasInitiatedProcessing,
+    isCategorizing,
+    needsAnalysis.length,
+    setCategorizedGroups
+  ]);
 
   const handleRecategorize = (
     imageId: string,

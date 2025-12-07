@@ -1,9 +1,22 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
+import { createPortal } from "react-dom";
 import { ImagePreviewModal } from "../ImagePreviewModal";
 import type { ProcessedImage } from "@web/src/types/images";
 import type { CategorizedGroup } from "@web/src/types/vision";
+
+function usePortalReady() {
+  const [isReady, setIsReady] = useState(false);
+
+  useEffect(() => {
+    setIsReady(true);
+    return () => setIsReady(false);
+  }, []);
+
+  return isReady;
+}
 
 interface UploadPreviewModalProps {
   previewImage: ProcessedImage | null;
@@ -18,11 +31,13 @@ export function UploadPreviewModal({
   onClose,
   setPreviewImage
 }: UploadPreviewModalProps) {
-  if (!previewImage) {
+  const isReady = usePortalReady();
+
+  if (!previewImage || !isReady || typeof document === "undefined") {
     return null;
   }
 
-  return (
+  return createPortal(
     <ImagePreviewModal
       isOpen
       onClose={onClose}
@@ -40,7 +55,8 @@ export function UploadPreviewModal({
         color: "#6b7280"
       }}
       showMetadata={false}
-    />
+    />,
+    document.body
   );
 }
 
@@ -63,7 +79,9 @@ export function CategorizedPreviewModal({
   setPreviewImage,
   setPreviewIndex
 }: CategorizedPreviewModalProps) {
-  if (!previewImage) {
+  const isReady = usePortalReady();
+
+  if (!previewImage || !isReady || typeof document === "undefined") {
     return null;
   }
 
@@ -73,7 +91,7 @@ export function CategorizedPreviewModal({
       )
     : null;
 
-  return (
+  return createPortal(
     <ImagePreviewModal
       isOpen
       onClose={onClose}
@@ -96,6 +114,7 @@ export function CategorizedPreviewModal({
           : undefined
       }
       showMetadata
-    />
+    />,
+    document.body
   );
 }

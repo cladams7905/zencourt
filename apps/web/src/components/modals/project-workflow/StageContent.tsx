@@ -42,7 +42,6 @@ interface StageContentProps {
   videoSettings: VideoSettings | null;
   setVideoSettings: Dispatch<SetStateAction<VideoSettings | null>>;
   setWorkflowStage: (stage: ProjectStage, persist?: boolean) => void;
-  setInternalIsOpen: Dispatch<SetStateAction<boolean>>;
   onConfirmReview: () => Promise<void>;
   generationProgress: GenerationProgress | null;
   roomStatuses: RoomGenerationStatus[];
@@ -66,7 +65,6 @@ export function StageContent({
   videoSettings,
   setVideoSettings,
   setWorkflowStage,
-  setInternalIsOpen,
   onConfirmReview,
   generationProgress,
   roomStatuses,
@@ -83,7 +81,6 @@ export function StageContent({
     const image = images.find((img) => img.id === imageId);
     if (!image) return;
     setPreviewImage(image);
-    setInternalIsOpen(false);
   };
 
   const handleCategorizedImageClick = (
@@ -99,7 +96,6 @@ export function StageContent({
 
     setPreviewImageFromGrid(image);
     setPreviewIndexFromGrid(globalIndex);
-    setInternalIsOpen(false);
   };
 
   const handleContinueUpload = () => setWorkflowStage("categorize");
@@ -191,7 +187,6 @@ export function StageContent({
         images={images}
         onClose={() => {
           setPreviewImage(null);
-          setInternalIsOpen(true);
         }}
         setPreviewImage={setPreviewImage}
       />
@@ -203,7 +198,6 @@ export function StageContent({
         previewIndex={previewIndexFromGrid}
         onClose={() => {
           setPreviewImageFromGrid(null);
-          setInternalIsOpen(true);
         }}
         setPreviewImage={setPreviewImageFromGrid}
         setPreviewIndex={setPreviewIndexFromGrid}
