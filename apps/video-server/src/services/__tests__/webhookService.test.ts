@@ -9,7 +9,8 @@ import { WebhookError } from "@shared/types/video";
 
 jest.mock("axios");
 jest.mock("@/config/logger", () => ({
-  logger: {
+  __esModule: true,
+  default: {
     info: jest.fn(),
     warn: jest.fn(),
     error: jest.fn(),
