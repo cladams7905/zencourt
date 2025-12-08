@@ -127,8 +127,9 @@ export function CategorizeStage({
     useState<ProcessingProgress | null>(null);
   const processingSignatureRef = useRef<string | null>(null);
   const lastProcessedSignatureRef = useRef<string | null>(null);
-  const analyzedImageIdsRef = useRef<Set<string>>(new Set());
-  const [analyzedVersion, setAnalyzedVersion] = useState(0);
+  const [analyzedImageIds, setAnalyzedImageIds] = useState<Set<string>>(
+    () => new Set()
+  );
 
   const categorizeImages = useCallback((images: ProcessedImage[]) => {
     const groupedByCategory = images.reduce<Record<string, ProcessedImage[]>>(
@@ -228,8 +229,8 @@ export function CategorizeStage({
   );
   const pendingImages = useMemo(
     () =>
-      needsAnalysis.filter((img) => !analyzedImageIdsRef.current.has(img.id)),
-    [needsAnalysis, analyzedVersion]
+      needsAnalysis.filter((img) => !analyzedImageIds.has(img.id)),
+    [needsAnalysis, analyzedImageIds]
   );
   const pendingAnalysisIds = useMemo(
     () => pendingImages.map((img) => img.id).sort(),
@@ -243,27 +244,27 @@ export function CategorizeStage({
 
   // Keep analyzed ID set in sync with current images
   React.useEffect(() => {
-    const existingIds = new Set<string>();
-    let changed = false;
+    setAnalyzedImageIds((prev) => {
+      const next = new Set(prev);
+      let changed = false;
+      const currentIds = new Set(images.map((img) => img.id));
 
-    images.forEach((img) => {
-      existingIds.add(img.id);
-      if (img.category && !analyzedImageIdsRef.current.has(img.id)) {
-        analyzedImageIdsRef.current.add(img.id);
-        changed = true;
+      images.forEach((img) => {
+        if (img.category && !next.has(img.id)) {
+          next.add(img.id);
+          changed = true;
+        }
+      });
+
+      for (const id of Array.from(next)) {
+        if (!currentIds.has(id)) {
+          next.delete(id);
+          changed = true;
+        }
       }
+
+      return changed ? next : prev;
     });
-
-    for (const id of Array.from(analyzedImageIdsRef.current)) {
-      if (!existingIds.has(id)) {
-        analyzedImageIdsRef.current.delete(id);
-        changed = true;
-      }
-    }
-
-    if (changed) {
-      setAnalyzedVersion((v) => v + 1);
-    }
   }, [images]);
 
   // If images need analysis and we haven't started processing, start automatically
@@ -346,12 +347,11 @@ export function CategorizeStage({
       });
 
       // Mark these images as analyzed
-      pendingImages.forEach((img) => {
-        if (!analyzedImageIdsRef.current.has(img.id)) {
-          analyzedImageIdsRef.current.add(img.id);
-        }
+      setAnalyzedImageIds((prev) => {
+        const next = new Set(prev);
+        pendingImages.forEach((img) => next.add(img.id));
+        return next;
       });
-      setAnalyzedVersion((v) => v + 1);
 
       // Small delay to show 100% completion before transitioning
       await new Promise((resolve) => setTimeout(resolve, 300));
@@ -380,7 +380,7 @@ export function CategorizeStage({
     setCategorizedGroups,
     setImages,
     categorizeImages,
-    setAnalyzedVersion,
+    setAnalyzedImageIds,
     user
   ]);
 

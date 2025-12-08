@@ -7,7 +7,7 @@
  * - Generate thumbnails
  * - Prepare for storage upload
  *
- * This service is used for processing individual video_jobs clips,
+ * This service is used for processing individual video_asset_jobs clips,
  * while videoCompositionService handles combining multiple clips.
  */
 
@@ -37,11 +37,9 @@ function resolveBinaryPath({
   fallbackPaths: string[];
   binaryName: string;
 }): string {
-  const candidates = [
-    envVar?.trim(),
-    staticPath,
-    ...fallbackPaths
-  ].filter(Boolean) as string[];
+  const candidates = [envVar?.trim(), staticPath, ...fallbackPaths].filter(
+    Boolean
+  ) as string[];
 
   for (const candidate of candidates) {
     if (existsSync(candidate)) {
