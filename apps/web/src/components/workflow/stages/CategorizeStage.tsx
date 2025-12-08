@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import { useUser } from "@stackframe/stack";
 import { toast } from "sonner";
 import { Button } from "../../ui/button";
@@ -125,7 +125,10 @@ export function CategorizeStage({
   const [isCategorizing, setIsCategorizing] = useState(false);
   const [processingProgress, setProcessingProgress] =
     useState<ProcessingProgress | null>(null);
-  const [hasInitiatedProcessing, setHasInitiatedProcessing] = useState(false);
+  const processingSignatureRef = useRef<string | null>(null);
+  const lastProcessedSignatureRef = useRef<string | null>(null);
+  const analyzedImageIdsRef = useRef<Set<string>>(new Set());
+  const [analyzedVersion, setAnalyzedVersion] = useState(0);
 
   const categorizeImages = useCallback((images: ProcessedImage[]) => {
     const groupedByCategory = images.reduce<Record<string, ProcessedImage[]>>(
@@ -208,7 +211,8 @@ export function CategorizeStage({
     () =>
       images.filter(
         (img) =>
-          img.category && (img.status === "uploaded" || img.status === "analyzed")
+          img.category &&
+          (img.status === "uploaded" || img.status === "analyzed")
       ),
     [images]
   );
@@ -222,33 +226,76 @@ export function CategorizeStage({
       ),
     [images]
   );
+  const pendingImages = useMemo(
+    () =>
+      needsAnalysis.filter((img) => !analyzedImageIdsRef.current.has(img.id)),
+    [needsAnalysis, analyzedVersion]
+  );
+  const pendingAnalysisIds = useMemo(
+    () => pendingImages.map((img) => img.id).sort(),
+    [pendingImages]
+  );
+  const pendingSignature =
+    pendingAnalysisIds.length > 0 ? pendingAnalysisIds.join("|") : null;
+  const shouldShowProcessingState =
+    isCategorizing ||
+    (pendingSignature !== null && categorizedGroups.length === 0);
+
+  // Keep analyzed ID set in sync with current images
+  React.useEffect(() => {
+    const existingIds = new Set<string>();
+    let changed = false;
+
+    images.forEach((img) => {
+      existingIds.add(img.id);
+      if (img.category && !analyzedImageIdsRef.current.has(img.id)) {
+        analyzedImageIdsRef.current.add(img.id);
+        changed = true;
+      }
+    });
+
+    for (const id of Array.from(analyzedImageIdsRef.current)) {
+      if (!existingIds.has(id)) {
+        analyzedImageIdsRef.current.delete(id);
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      setAnalyzedVersion((v) => v + 1);
+    }
+  }, [images]);
 
   // If images need analysis and we haven't started processing, start automatically
   // Check if the number of analyzed images doesn't match total images needing it
   const handleProcessImages = useCallback(async () => {
+    if (pendingImages.length === 0) {
+      return true;
+    }
+
     if (!user || !currentProject || !currentCollection) {
       toast.error("No project found", {
         description: "Please try uploading images again."
       });
-      return;
+      return false;
     }
 
-    setHasInitiatedProcessing(true);
     setIsCategorizing(true);
+    let encounteredError = false;
 
     try {
       let finalImages: ProcessedImage[];
 
-      if (needsAnalysis.length > 0) {
+      if (pendingImages.length > 0) {
         setProcessingProgress({
           phase: "analyzing",
           completed: 0,
-          total: needsAnalysis.length,
+          total: pendingImages.length,
           overallProgress: 0
         });
 
         const result = await analyzeImagesWorkflow(
-          needsAnalysis.map(toSerializable),
+          pendingImages.map(toSerializable),
           { aiConcurrency: 10 }
         );
 
@@ -260,7 +307,7 @@ export function CategorizeStage({
         });
 
         const analyzedImages = mergeAnalysisResults(
-          needsAnalysis,
+          pendingImages,
           result.images
         );
 
@@ -283,11 +330,7 @@ export function CategorizeStage({
       setCategorizedGroups(organized.groups);
 
       try {
-        await saveImagesToDatabase(
-          finalImages,
-          currentCollection.id,
-          user.id
-        );
+        await saveImagesToDatabase(finalImages, currentCollection.id, user.id);
       } catch (error) {
         console.error("Error saving images to database:", error);
         toast.error("Error saving images to database", {
@@ -302,9 +345,18 @@ export function CategorizeStage({
         overallProgress: 100
       });
 
+      // Mark these images as analyzed
+      pendingImages.forEach((img) => {
+        if (!analyzedImageIdsRef.current.has(img.id)) {
+          analyzedImageIdsRef.current.add(img.id);
+        }
+      });
+      setAnalyzedVersion((v) => v + 1);
+
       // Small delay to show 100% completion before transitioning
       await new Promise((resolve) => setTimeout(resolve, 300));
     } catch (error) {
+      encounteredError = true;
       console.error("Error processing images:", error);
       toast.error("Failed to process images", {
         description:
@@ -315,25 +367,53 @@ export function CategorizeStage({
     } finally {
       setIsCategorizing(false);
       setProcessingProgress(null);
+      if (encounteredError) {
+        processingSignatureRef.current = null;
+      }
     }
+    return !encounteredError;
   }, [
     alreadyAnalyzed,
     currentCollection,
     currentProject,
-    needsAnalysis,
+    pendingImages,
     setCategorizedGroups,
     setImages,
-    setHasInitiatedProcessing,
     categorizeImages,
+    setAnalyzedVersion,
     user
   ]);
 
+  const runProcessing = useCallback(
+    async (signature: string) => {
+      processingSignatureRef.current = signature;
+      try {
+        const success = await handleProcessImages();
+        if (success) {
+          lastProcessedSignatureRef.current = signature;
+        }
+      } finally {
+        processingSignatureRef.current = null;
+      }
+    },
+    [handleProcessImages]
+  );
+
+  React.useEffect(() => {
+    if (!pendingSignature && !isCategorizing) {
+      lastProcessedSignatureRef.current = null;
+    }
+  }, [pendingSignature, isCategorizing]);
+
   // Auto-start processing or organize already analyzed images
   React.useEffect(() => {
-    if (needsAnalysis.length === 0) {
+    if (!user || !currentProject || !currentCollection) {
+      return;
+    }
+
+    if (!pendingSignature) {
       if (
         !isCategorizing &&
-        !hasInitiatedProcessing &&
         categorizedGroups.length === 0 &&
         alreadyAnalyzed.length > 0
       ) {
@@ -343,21 +423,35 @@ export function CategorizeStage({
       return;
     }
 
-    if (isCategorizing || hasInitiatedProcessing) {
+    if (isCategorizing) {
       return;
     }
 
-    setHasInitiatedProcessing(true);
-    void handleProcessImages();
+    if (processingSignatureRef.current === pendingSignature) {
+      return;
+    }
+
+    if (processingSignatureRef.current !== null) {
+      return;
+    }
+
+    if (lastProcessedSignatureRef.current === pendingSignature) {
+      return;
+    }
+
+    void runProcessing(pendingSignature);
   }, [
     alreadyAnalyzed,
-    categorizeImages,
     categorizedGroups.length,
+    categorizeImages,
+    currentCollection,
+    currentProject,
     handleProcessImages,
-    hasInitiatedProcessing,
     isCategorizing,
-    needsAnalysis.length,
-    setCategorizedGroups
+    pendingSignature,
+    runProcessing,
+    setCategorizedGroups,
+    user
   ]);
 
   const handleRecategorize = (
@@ -420,7 +514,7 @@ export function CategorizeStage({
   };
 
   // Show processing UI
-  if (isCategorizing) {
+  if (shouldShowProcessingState) {
     return (
       <div className="h-full flex flex-col items-center justify-center p-6">
         <div className="w-full max-w-md space-y-4">
@@ -490,7 +584,12 @@ export function CategorizeStage({
       {/* Fade overlay and sticky footer */}
       <>
         <div className="sticky bottom-0 left-0 right-0 z-20 pt-4 pb-4 px-6 bg-white border-t flex gap-3">
-          <Button onClick={onBack} variant="outline" size="lg" className="flex-1">
+          <Button
+            onClick={onBack}
+            variant="outline"
+            size="lg"
+            className="flex-1"
+          >
             Back to Upload
           </Button>
           <Button onClick={onContinue} className="flex-1" size="lg">
