@@ -24,7 +24,7 @@ router.use(validateApiKey);
 /**
  * POST /video/generate
  * Process video generation jobs using the new job-based workflow
- * Accepts parent videoId and jobIds, reads video_jobs from DB, dispatches to Fal
+ * Accepts parent videoId and jobIds, reads video_asset_jobs from DB, dispatches to Fal
  */
 router.post("/generate", async (req: Request, res: Response) => {
   try {
