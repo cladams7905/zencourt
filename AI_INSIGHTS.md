@@ -1,25 +1,21 @@
 # AI-Focused Project Notes
 
+This document details my three major focuses of my CS470 semester project.
+
 ## Applied Research: AI Video Models
 
-- Surveyed leading models (Kling, Pika, Runway, Luma) with a focus on photorealism, frame consistency, and API ergonomics for automated pipelines.
-- Selected Kling for its balance of quality, predictable latency, and rich webhook support, while keeping abstraction layers flexible enough to swap in future providers.
-- Documented evaluation criteria—prompt controllability, asset licensing guarantees, and throttling behavior—to guide future experiments when new models emerge.
+- I researched Kling, Pika, Runway, and Luma to weigh their pros and cons for generating real estate videos.
+- I landed on Kling because it hits the sweet spot for quality plus predictable latency, and it gives me the fast generation I need. I still kept my abstraction thin so I can swap models later if the landscape shifts.
+- I also investigated the possiblity of hosting + training my own simple video generation model with a rented GPU, but decided against it for cost reasons.
 
 ## Core AI Responsibilities
 
-- Designed the **video generation pipeline** that generates video using Kling AI model, manages webhook callbacks, and normalizes generated clips for FFmpeg composition.
-- Built **job orchestration** around `video_asset_jobs`, giving every room its own retryable AI task so failures in one generation run never block the rest of the asset.
-- Developed **storage and metadata synchronization** between Kling outputs, Backblaze buckets, and Drizzle-managed Neon Postgres tables to keep AI artifacts auditable.
+- I designed the **video generation pipeline**: feed property prompts to Kling AI, normalize the clips, and hand them off to FFmpeg for composition.
+- I built the **job orchestration** around `video_asset_jobs`, which basically means every room gets its own retryable AI task so one failure doesn’t take out the entire project.
+- I also wired up the **storage and metadata sync** between Kling outputs, Backblaze, and Drizzle/Neon Postgres so every asset is auditable from prompt to final video.
 
 ## Architecture for AI Compute Costs
 
-- Split the system into a Vercel-hosted Next.js web app and a Hetzner/Coolify-managed video server so high-compute workloads can scale independently.
-- Containerized the video server with FFmpeg, fluent-ffmpeg bindings, and worker scripts that can horizontally scale when model usage spikes.
-- Implemented **cost-aware scheduling**, batching, and caching strategies (signed image URLs, reusable prompt templates) to minimize redundant calls to expensive AI endpoints.
-- Provisioned observability hooks (metrics around job duration, queue depth, webhook retries) to track GPU spend and trigger alerts before costs spike.
-
-## Additional AI Tooling Notes
-
-- Used Claude Code and Codex as pair-programming partners to iterate on FFmpeg filters, webhook handlers, and Drizzle queries more rapidly.
-- Maintained tight human review loops on AI-assisted code to prevent regression bugs and ensure consistency across shared packages.
+- To keep costs down, I split the stack between a Vercel Next.js front end and a Hetzner/Coolify video server. All the heavy FFmpeg + AI work stays on the box where I control scaling.
+- I containerized the video server with FFmpeg, fluent-ffmpeg bindings, and worker scripts so I can spin up more workers when the queue grows.
+- I set up observability—job durations, queue depth, webhook retry counts—so I can see GPU spend patterns and react before it gets ugly.
