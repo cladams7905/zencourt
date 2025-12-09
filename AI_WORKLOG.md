@@ -10,4 +10,4 @@
 | Nov 25–29    | Observability & Controls    | Metrics, alerts, and throttling for AI usage      | Added job duration tracking, queue depth checks, and cache strategies    | 4          |
 | Nov 30–Dec 4 | AI Pair Programming         | Claude Code + Codex assisted refactors            | Prompting, review loops, and consolidation of AI-generated patches       | 3          |
 
-**Total AI-focused hours (estimate): 39**
+**Total time spent (estimate): 39**

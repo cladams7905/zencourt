@@ -1,21 +1,30 @@
-# AI-Focused Project Notes
+# CS470 Final Project Report
 
-This document details my three major focuses of my CS470 semester project.
+This document details my three major focuses of my semester project for creating an AI photo-to-video generation platform for real estate agents.
 
-## Applied Research: AI Video Models
+## Project Overview
 
-- I researched Kling, Pika, Runway, and Luma to weigh their pros and cons for generating real estate videos.
-- I landed on Kling because it hits the sweet spot for quality plus predictable latency, and it gives me the fast generation I need. I still kept my abstraction thin so I can swap models later if the landscape shifts.
-- I also investigated the possiblity of hosting + training my own simple video generation model with a rented GPU, but decided against it for cost reasons.
+- I evaluated Kling, Pika, Runway, and Luma video generation models for their overall efficacy, cost, and stability. I even toyed with self-hosting a lightweight model on rented GPUs, but the ops lift plus compute costs pushed me toward fal.ai’s managed Kling service.
+- I designed the video pipeline end to end: property prompts flow to Kling, webhooks return clip metadata, and I normalize everything before FFmpeg composes the final video. Job orchestration via `video_asset_jobs` keeps each room in its own retryable bubble, and storage sync between Kling, Backblaze, and Drizzle/Neon Postgres keeps artifacts traceable.
+- To manage compute costs, I split hosting between Vercel (Next.js UI) and a Hetzner/Coolify video server. The server is containerized with FFmpeg + worker scripts for horizontal scaling, and I rely on cost-aware scheduling (batched jobs, reusable prompts, signed image URLs) plus observability hooks (job duration, queue depth, webhook retries) to monitor GPU usage in real time.
 
-## Core AI Responsibilities
+## Did It Work?
 
-- I designed the **video generation pipeline**: feed property prompts to Kling AI, normalize the clips, and hand them off to FFmpeg for composition.
-- I built the **job orchestration** around `video_asset_jobs`, which basically means every room gets its own retryable AI task so one failure doesn’t take out the entire project.
-- I also wired up the **storage and metadata sync** between Kling outputs, Backblaze, and Drizzle/Neon Postgres so every asset is auditable from prompt to final video.
+- The end-to-end video generation does work, but there are still some occasional hiccups. One of the biggest issues is that the AI output varies greatly between generation attemps and does not feel totally stable yet. However, with further optimizations, I am confident this would be stable enough for realtors to actually use!
+- Demo video: https://youtu.be/wJld00uWvGg.
 
-## Architecture for AI Compute Costs
+## Lessons Learned
 
-- To keep costs down, I split the stack between a Vercel Next.js front end and a Hetzner/Coolify video server. All the heavy FFmpeg + AI work stays on the box where I control scaling.
-- I containerized the video server with FFmpeg, fluent-ffmpeg bindings, and worker scripts so I can spin up more workers when the queue grows.
-- I set up observability—job durations, queue depth, webhook retry counts—so I can see GPU spend patterns and react before it gets ugly.
+- Don’t “accept all” from AI pair programmers—double-checking Claude/Codex suggestions saved me from duplicate logic and regressions.
+- Early optimization pays off: designing storage keys, batching strategies, and cost controls upfront made the later scaling work far easier.
+- Great design docs make prompting easier; the time I spent writing them unlocked faster iterations with AI copilots.
+
+## What I’d Do Differently
+
+- Decide on the GPU hosting approach earlier. The detour into self-hosting was educational but slowed down my ability to polish observability and UI work.
+- Add automated tests for the webhook chain from day one so I’m not relying on manual verification during crunch time.
+
+## AI Tooling Notes
+
+- Claude Code and Codex acted as pair-programming buddies for FFmpeg filters, webhook handlers, and Drizzle queries.
+- I still review every AI-generated patch to keep the shared packages clean and avoid regressions.
