@@ -15,6 +15,10 @@ import {
   logger as baseLogger
 } from "../../../../../../lib/logger";
 import { ensurePublicUrl } from "@web/src/server/utils/storageUrls";
+import {
+  parseVerifiedWebhook,
+  WebhookVerificationError
+} from "@web/src/server/utils/webhookVerification";
 
 const logger = createChildLogger(baseLogger, {
   module: "final-video-webhook"
@@ -40,7 +44,9 @@ interface FinalVideoWebhookPayload {
 
 export async function POST(request: NextRequest) {
   try {
-    const payload: FinalVideoWebhookPayload = await request.json();
+    const payload = await parseVerifiedWebhook<FinalVideoWebhookPayload>(
+      request
+    );
     const videoId = payload.videoId;
 
     logger.info(
@@ -155,6 +161,22 @@ export async function POST(request: NextRequest) {
       message: "Final video status updated"
     });
   } catch (error) {
+    if (error instanceof WebhookVerificationError) {
+      logger.warn(
+        {
+          err: error.message
+        },
+        "Final video webhook failed verification"
+      );
+      return NextResponse.json(
+        {
+          success: false,
+          error: error.message
+        },
+        { status: error.status }
+      );
+    }
+
     logger.error(
       {
         err: error instanceof Error ? error.message : String(error)

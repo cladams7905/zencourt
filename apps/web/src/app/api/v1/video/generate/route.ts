@@ -323,7 +323,7 @@ export async function POST(
       "Created parent video record"
     );
 
-    // Step 2: Create video_jobs records directly from rooms
+    // Step 2: Create video_asset_jobs records directly from rooms
     const videoJobRecords: InsertDBVideoJob[] = await Promise.all(
       body.rooms.map(async (room, index) => {
         const category = getCategoryForRoom(room);

@@ -17,6 +17,10 @@ import {
 } from "../../../../../lib/logger";
 import type { VideoJobWebhookPayload } from "@shared/types/api";
 import type { DBVideoJob } from "@shared/types/models";
+import {
+  parseVerifiedWebhook,
+  WebhookVerificationError
+} from "@web/src/server/utils/webhookVerification";
 
 const logger = createChildLogger(baseLogger, {
   module: "video-job-webhook"
@@ -40,13 +44,15 @@ function scheduleProjectRevalidation(projectId: string): void {
 
 export async function POST(request: NextRequest) {
   try {
-    const payload = (await request.json()) as VideoJobWebhookPayload & {
-      generation?: {
-        roomId?: string;
-        roomName?: string;
-        sortOrder?: number;
-      };
-    };
+    const payload = await parseVerifiedWebhook<
+      VideoJobWebhookPayload & {
+        generation?: {
+          roomId?: string;
+          roomName?: string;
+          sortOrder?: number;
+        };
+      }
+    >(request);
     const videoUrl = payload.result?.videoUrl ?? null;
     const thumbnailUrl = payload.result?.thumbnailUrl ?? null;
     const duration = payload.result?.duration ?? null;
@@ -108,6 +114,22 @@ export async function POST(request: NextRequest) {
         : "Video job webhook processed without DB update"
     });
   } catch (error) {
+    if (error instanceof WebhookVerificationError) {
+      logger.warn(
+        {
+          err: error.message
+        },
+        "Video job webhook failed verification"
+      );
+      return NextResponse.json(
+        {
+          success: false,
+          error: error.message
+        },
+        { status: error.status }
+      );
+    }
+
     logger.error(
       {
         err: error instanceof Error ? error.message : String(error)
