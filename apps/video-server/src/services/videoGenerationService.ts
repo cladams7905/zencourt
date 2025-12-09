@@ -1,7 +1,7 @@
 /**
  * Video Generation Service
  * Handles the new job-based video generation workflow
- * Reads video_jobs from DB, dispatches to Fal, manages state transitions
+ * Reads video_asset_jobs from DB, dispatches to Fal, manages state transitions
  */
 
 import logger from "@/config/logger";
