@@ -57,3 +57,13 @@ jobs:
           docker build -f apps/video-server/Dockerfile -t "$GHCR_IMAGE:$IMAGE_TAG" -t "$GHCR_IMAGE:latest" .
           docker push "$GHCR_IMAGE:$IMAGE_TAG"
           docker push "$GHCR_IMAGE:latest"
+
+      - name: Trigger Coolify redeploy
+        env:
+          COOLIFY_WEBHOOK_URL: ${{ secrets.COOLIFY_WEBHOOK_URL }}
+        run: |
+          if [ -z "$COOLIFY_WEBHOOK_URL" ]; then
+            echo "COOLIFY_WEBHOOK_URL secret not set, skipping redeploy trigger."
+            exit 0
+          fi
+          curl --fail --show-error --silent -X POST "$COOLIFY_WEBHOOK_URL"
