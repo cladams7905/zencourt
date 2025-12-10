@@ -2,7 +2,7 @@
 
 import { Button } from "../../ui/button";
 import { ScrollArea } from "../../ui/scroll-area";
-import { CheckCircle2, Download, Play } from "lucide-react";
+import { CheckCircle2, Download, Play, Loader2 } from "lucide-react";
 import type { FinalVideoData } from "@web/src/types/workflow";
 
 interface CompleteStageProps {
@@ -44,8 +44,14 @@ export function CompleteStage({
 
   if (!finalVideo) {
     return (
-      <div className="flex h-full items-center justify-center text-muted-foreground">
-        Final video is not available yet. Please check back shortly.
+      <div className="flex h-full flex-col items-center justify-center gap-4 text-muted-foreground">
+        <Loader2 className="h-8 w-8 animate-spin text-foreground" />
+        <div className="text-center space-y-1">
+          <p className="font-medium text-foreground">Preparing final video…</p>
+          <p className="text-sm">
+            Hang tight while we fetch the composed video.
+          </p>
+        </div>
       </div>
     );
   }

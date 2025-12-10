@@ -28,7 +28,6 @@ type WebhookServiceInternals = {
   calculateBackoff: (attempt: number, baseMs: number) => number;
 };
 
-// Helper to create AxiosError
 const createAxiosError = (status: number, message: string): AxiosError => {
   const config: AxiosRequestConfig = {
     headers: {} as any
