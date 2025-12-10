@@ -268,7 +268,12 @@ export function isUrlFromStorageEndpoint(
   }
 
   try {
-    return new URL(url).host === endpointHost;
+    const urlHost = new URL(url).host;
+    if (urlHost === endpointHost) {
+      return true;
+    }
+    // Handle bucket-style subdomains (e.g., bucket.s3.us-east-005.backblazeb2.com)
+    return urlHost.endsWith(`.${endpointHost}`);
   } catch {
     return false;
   }

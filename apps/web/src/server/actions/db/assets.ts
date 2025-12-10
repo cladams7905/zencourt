@@ -5,11 +5,24 @@ import { eq } from "drizzle-orm";
 import { db, assets } from "@db/client";
 import type { DBAsset, InsertDBAsset } from "@shared/types/models";
 import { withDbErrorHandling } from "../_utils";
+import { ensurePublicUrlSafe } from "../../utils/storageUrls";
 
 type CreateAssetInput = Omit<
   InsertDBAsset,
   "id" | "createdAt" | "updatedAt"
 > & { id?: string };
+
+const ASSET_THUMBNAIL_TTL_SECONDS = 6 * 60 * 60; // 6 hours
+
+async function resolveThumbnailUrl(
+  url?: string | null
+): Promise<string | null> {
+  if (!url) {
+    return url ?? null;
+  }
+  const signed = await ensurePublicUrlSafe(url, ASSET_THUMBNAIL_TTL_SECONDS);
+  return signed ?? url ?? null;
+}
 
 /**
  * Create a new asset for a project
@@ -35,7 +48,10 @@ export async function createAsset(
         })
         .returning();
 
-      return newAsset;
+      return {
+        ...newAsset,
+        thumbnailUrl: await resolveThumbnailUrl(newAsset.thumbnailUrl)
+      };
     },
     {
       actionName: "createAsset",
@@ -75,7 +91,10 @@ export async function updateAsset(
         throw new Error("Asset not found");
       }
 
-      return updatedAsset;
+      return {
+        ...updatedAsset,
+        thumbnailUrl: await resolveThumbnailUrl(updatedAsset.thumbnailUrl)
+      };
     },
     {
       actionName: "updateAsset",
@@ -101,7 +120,16 @@ export async function getAssetsByProjectId(
 
   return withDbErrorHandling(
     async () => {
-      return db.select().from(assets).where(eq(assets.projectId, projectId));
+      const assetRows = await db
+        .select()
+        .from(assets)
+        .where(eq(assets.projectId, projectId));
+      return Promise.all(
+        assetRows.map(async (asset) => ({
+          ...asset,
+          thumbnailUrl: await resolveThumbnailUrl(asset.thumbnailUrl)
+        }))
+      );
     },
     {
       actionName: "getAssetsByProjectId",
@@ -132,7 +160,13 @@ export async function getAssetById(
         .from(assets)
         .where(eq(assets.id, assetId))
         .limit(1);
-      return assetRecord ?? null;
+      if (!assetRecord) {
+        return null;
+      }
+      return {
+        ...assetRecord,
+        thumbnailUrl: await resolveThumbnailUrl(assetRecord.thumbnailUrl)
+      };
     },
     {
       actionName: "getAssetById",

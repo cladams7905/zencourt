@@ -5,8 +5,38 @@ import { eq, and, like, desc } from "drizzle-orm";
 import { db, projects, collections, assets } from "@db/client";
 import { DBProject, InsertDBProject } from "@shared/types/models";
 import { withDbErrorHandling } from "../_utils";
+import { ensurePublicUrlSafe } from "../../utils/storageUrls";
 
 type AssetRecord = typeof assets.$inferSelect;
+
+const PROJECT_THUMBNAIL_TTL_SECONDS = 6 * 60 * 60; // 6 hours
+
+async function resolveThumbnailUrl(
+  url?: string | null
+): Promise<string | null> {
+  if (!url) {
+    return url ?? null;
+  }
+  const signed = await ensurePublicUrlSafe(
+    url,
+    PROJECT_THUMBNAIL_TTL_SECONDS
+  );
+  return signed ?? url ?? null;
+}
+
+async function withSignedAssetThumbnails(
+  assetList: AssetRecord[]
+): Promise<AssetRecord[]> {
+  if (!assetList || assetList.length === 0) {
+    return assetList;
+  }
+  return Promise.all(
+    assetList.map(async (asset) => ({
+      ...asset,
+      thumbnailUrl: await resolveThumbnailUrl(asset.thumbnailUrl)
+    }))
+  );
+}
 
 /**
  * Create a new project
@@ -170,7 +200,7 @@ export async function getUserProjects(userId: string): Promise<DBProject[]> {
         }
       }
 
-      return Array.from(projectMap.values()).map(
+      const aggregatedProjects = Array.from(projectMap.values()).map(
         ({ project, collectionId, assets }) => {
           const primaryAsset = assets.reduce<AssetRecord | null>(
             (latest, current) => {
@@ -195,6 +225,19 @@ export async function getUserProjects(userId: string): Promise<DBProject[]> {
             assets
           };
         }
+      );
+
+      return Promise.all(
+        aggregatedProjects.map(async (project) => {
+          const signedAssets = await withSignedAssetThumbnails(
+            project.assets ?? []
+          );
+          return {
+            ...project,
+            assets: signedAssets,
+            thumbnailUrl: await resolveThumbnailUrl(project.thumbnailUrl)
+          };
+        })
       );
     },
     {

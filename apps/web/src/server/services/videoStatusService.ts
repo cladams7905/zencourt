@@ -5,6 +5,9 @@ import type {
   InitialVideoStatusPayload,
   VideoJobUpdateEvent
 } from "@web/src/types/video-status";
+import { ensurePublicUrlSafe } from "../utils/storageUrls";
+
+const VIDEO_STATUS_URL_TTL_SECONDS = 6 * 60 * 60; // 6 hours
 
 export async function getProjectVideoStatus(
   projectId: string
@@ -41,35 +44,63 @@ export async function getProjectVideoStatus(
       .where(eq(videoAssetJobs.videoAssetId, latestVideo.id))
       .orderBy(asc(videoAssetJobs.createdAt));
 
-    jobs = jobRows.map((job) => ({
-      projectId,
-      jobId: job.id,
-      status: job.status,
-      videoUrl: job.videoUrl,
-      errorMessage: job.errorMessage,
-      roomId: job.generationSettings?.roomId,
-      roomName: job.generationSettings?.roomName,
-      sortOrder: job.generationSettings?.sortOrder ?? null
-    }));
+    jobs = await Promise.all(
+      jobRows.map(async (job) => {
+        const signedVideoUrl = await ensurePublicUrlSafe(
+          job.videoUrl,
+          VIDEO_STATUS_URL_TTL_SECONDS
+        );
+        return {
+          projectId,
+          jobId: job.id,
+          status: job.status,
+          videoUrl: signedVideoUrl ?? job.videoUrl,
+          errorMessage: job.errorMessage,
+          roomId: job.generationSettings?.roomId,
+          roomName: job.generationSettings?.roomName,
+          sortOrder: job.generationSettings?.sortOrder ?? null
+        };
+      })
+    );
   }
 
   let finalVideo: FinalVideoUpdateEvent | undefined;
 
   if (latestVideo?.status === "completed" && latestVideo.videoUrl) {
+    const [signedVideoUrl, signedThumbnailUrl] = await Promise.all([
+      ensurePublicUrlSafe(
+        latestVideo.videoUrl,
+        VIDEO_STATUS_URL_TTL_SECONDS
+      ),
+      ensurePublicUrlSafe(
+        latestVideo.thumbnailUrl,
+        VIDEO_STATUS_URL_TTL_SECONDS
+      )
+    ]);
     finalVideo = {
       projectId,
       status: "completed",
-      finalVideoUrl: latestVideo.videoUrl,
-      thumbnailUrl: latestVideo.thumbnailUrl ?? undefined,
+      finalVideoUrl: signedVideoUrl ?? latestVideo.videoUrl,
+      thumbnailUrl: signedThumbnailUrl ?? latestVideo.thumbnailUrl ?? undefined,
       duration: latestVideo.metadata?.duration ?? null,
       errorMessage: latestVideo.errorMessage ?? null
     };
   } else if (latestVideo?.status === "failed") {
+    const [signedVideoUrl, signedThumbnailUrl] = await Promise.all([
+      ensurePublicUrlSafe(
+        latestVideo.videoUrl,
+        VIDEO_STATUS_URL_TTL_SECONDS
+      ),
+      ensurePublicUrlSafe(
+        latestVideo.thumbnailUrl,
+        VIDEO_STATUS_URL_TTL_SECONDS
+      )
+    ]);
     finalVideo = {
       projectId,
       status: "failed",
-      finalVideoUrl: latestVideo.videoUrl ?? undefined,
-      thumbnailUrl: latestVideo.thumbnailUrl ?? undefined,
+      finalVideoUrl: signedVideoUrl ?? latestVideo.videoUrl ?? undefined,
+      thumbnailUrl: signedThumbnailUrl ?? latestVideo.thumbnailUrl ?? undefined,
       duration: latestVideo.metadata?.duration ?? null,
       errorMessage: latestVideo.errorMessage ?? null
     };
