@@ -2,16 +2,43 @@ import { getUserProjects } from "../server/actions/db/projects";
 import { HomeClient } from "../components/HomeClient";
 import { DBProject } from "@shared/types/models";
 import { getUser } from "../server/actions/db/users";
+import { LandingPage } from "../components/landing/LandingPage";
+import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
 
+export const metadata: Metadata = {
+  title: "Zencourt - Effortless Social Media Marketing for Real Estate",
+  description:
+    "Turn every listing into a powerful social media campaign in minutes. Generate videos, reels, and posts automatically from your property photos with AI-powered content creation.",
+  keywords: [
+    "real estate marketing",
+    "social media automation",
+    "property videos",
+    "real estate AI",
+    "listing marketing",
+    "Instagram reels",
+    "TikTok videos",
+  ],
+};
+
 export default async function Home() {
+  let user = null;
   let projects: DBProject[] = [];
+
   try {
-    const user = await getUser();
+    user = await getUser();
     projects = await getUserProjects(user.id);
   } catch (error) {
-    console.error("No authenticated user or error fetching projects:", error);
+    // No authenticated user - show landing page
+    console.log("No authenticated user, showing landing page");
   }
-  return <HomeClient initialProjects={projects} />;
+
+  // If user is authenticated, show dashboard
+  if (user) {
+    return <HomeClient initialProjects={projects} />;
+  }
+
+  // Otherwise show landing page
+  return <LandingPage />;
 }

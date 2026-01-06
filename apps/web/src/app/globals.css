@@ -1,4 +1,3 @@
-@import url("https://fonts.googleapis.com/css2?family=League+Spartan:wght@400;500;600;700&family=Quicksand:wght@400;500;600&display=swap");
 @import "tailwindcss";
 
 @custom-variant dark (&:is(.dark *));
@@ -129,7 +128,7 @@
 
   body {
     @apply bg-background text-foreground;
-    font-family: "Quicksand", sans-serif;
+    font-family: var(--font-quicksand), sans-serif;
   }
 
   h1,
@@ -138,7 +137,7 @@
   h4,
   h5,
   h6 {
-    font-family: "League Spartan", sans-serif;
+    font-family: var(--font-playfair), serif;
   }
 }
 
@@ -209,5 +208,99 @@ html {
 }
 
 .font-spartan {
-  font-family: "League Spartan", sans-serif;
+  font-family: var(--font-playfair), serif;
+}
+
+.font-playfair {
+  font-family: var(--font-playfair), serif;
+}
+
+/* Landing page animations */
+@keyframes scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-scroll {
+  animation: scroll 40s linear infinite;
+}
+
+.animate-scroll:hover {
+  animation-play-state: paused;
+}
+
+/* Hide scrollbars */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Grain texture effect */
+@keyframes grain {
+  0%, 100% { transform: translate(0, 0); }
+  10% { transform: translate(-5%, -10%); }
+  20% { transform: translate(-15%, 5%); }
+  30% { transform: translate(7%, -25%); }
+  40% { transform: translate(-5%, 25%); }
+  50% { transform: translate(-15%, 10%); }
+  60% { transform: translate(15%, 0%); }
+  70% { transform: translate(0%, 15%); }
+  80% { transform: translate(3%, 35%); }
+  90% { transform: translate(-10%, 10%); }
+}
+
+.grain-overlay::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.5' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.35'/%3E%3C/svg%3E");
+  opacity: 0.4;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+  animation: grain 8s steps(10) infinite;
+}
+
+.grain-light::before {
+  opacity: 0.2;
+}
+
+/* Enhanced typographic scale */
+.text-display-lg {
+  font-size: clamp(3rem, 7vw, 5rem);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.text-display-md {
+  font-size: clamp(2.5rem, 5vw, 3.5rem);
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+
+.text-heading-lg {
+  font-size: clamp(1.75rem, 3vw, 2.25rem);
+  line-height: 1.2;
+}
+
+.text-heading-md {
+  font-size: clamp(1.25rem, 2.5vw, 1.5rem);
+  line-height: 1.3;
+}
+
+.text-body-lg {
+  font-size: clamp(1.125rem, 1.5vw, 1.25rem);
+  line-height: 1.6;
+}
+
+.text-body-md {
+  font-size: 1rem;
+  line-height: 1.65;
 }

@@ -6,13 +6,14 @@ export async function proxy(request: NextRequest) {
   const isWebhook = pathname.startsWith("/api/v1/webhooks");
   const isNextInternal =
     pathname.startsWith("/_next") || pathname === "/_not-found";
+  const isRootPage = pathname === "/";
 
   const hasStackSession =
     Boolean(request.cookies.get("stack-access")?.value) ||
     Boolean(request.cookies.get("stack-refresh")?.value);
 
-  // Allow requests that should bypass auth entirely
-  if (isHandlerPage || isWebhook || isNextInternal) {
+  // Allow requests that should bypass auth entirely (including root page for landing)
+  if (isHandlerPage || isWebhook || isNextInternal || isRootPage) {
     return NextResponse.next();
   }
 

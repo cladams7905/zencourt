@@ -34,7 +34,7 @@ export function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
 
   const handleLogout = async () => {
     await user?.signOut();
-    window.location.href = "/auth";
+    window.location.href = "/handler/sign-in";
   };
 
   return (
