@@ -17,18 +17,17 @@ import type {
   VideoStatus
 } from "@shared/types/models";
 
-import { assets } from "./assets";
-import { projects } from "./projects";
-import { videoAssets } from "./videoAssets";
+import { content } from "./content";
+import { videoContent } from "./videoContent";
 import { videoStatusEnum } from "./enums";
 
-export const videoAssetJobs = pgTable(
-  "video_asset_jobs",
+export const videoContentJobs = pgTable(
+  "video_content_jobs",
   {
     id: text("id").primaryKey(),
-    videoAssetId: text("video_asset_id")
+    videoContentId: text("video_content_id")
       .notNull()
-      .references(() => videoAssets.id, { onDelete: "cascade" }),
+      .references(() => videoContent.id, { onDelete: "cascade" }),
     requestId: text("request_id"),
     status: videoStatusEnum("status")
       .notNull()
@@ -57,27 +56,27 @@ export const videoAssetJobs = pgTable(
     deliveryLastError: text("delivery_last_error")
   },
   (table) => [
-    index("video_asset_jobs_video_asset_id_idx").on(table.videoAssetId),
-    index("video_asset_jobs_status_idx").on(table.status),
-    index("video_asset_jobs_video_asset_status_idx").on(
-      table.videoAssetId,
+    index("video_content_jobs_video_content_id_idx").on(
+      table.videoContentId
+    ),
+    index("video_content_jobs_status_idx").on(table.status),
+    index("video_content_jobs_video_content_status_idx").on(
+      table.videoContentId,
       table.status
     ),
-    index("video_asset_jobs_status_created_idx").on(
+    index("video_content_jobs_status_created_idx").on(
       table.status,
       table.createdAt
     ),
-    index("video_asset_jobs_request_id_idx").on(table.requestId),
+    index("video_content_jobs_request_id_idx").on(table.requestId),
     crudPolicy({
       role: authenticatedRole,
-      read: sql`(select ${projects.userId} = auth.user_id() from ${projects}
-        join ${assets} on ${assets.projectId} = ${projects.id}
-        join ${videoAssets} on ${videoAssets.assetId} = ${assets.id}
-        where ${videoAssets.id} = ${table.videoAssetId})`,
-      modify: sql`(select ${projects.userId} = auth.user_id() from ${projects}
-        join ${assets} on ${assets.projectId} = ${projects.id}
-        join ${videoAssets} on ${videoAssets.assetId} = ${assets.id}
-        where ${videoAssets.id} = ${table.videoAssetId})`
+      read: sql`(select ${content.userId} = auth.user_id() from ${content}
+        join ${videoContent} on ${videoContent.contentId} = ${content.id}
+        where ${videoContent.id} = ${table.videoContentId})`,
+      modify: sql`(select ${content.userId} = auth.user_id() from ${content}
+        join ${videoContent} on ${videoContent.contentId} = ${content.id}
+        where ${videoContent.id} = ${table.videoContentId})`
     })
   ]
 );

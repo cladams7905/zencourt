@@ -10,17 +10,16 @@ import { authenticatedRole, crudPolicy } from "drizzle-orm/neon";
 
 import type { VideoMetadata } from "@shared/types/models";
 
-import { assets } from "./assets";
-import { projects } from "./projects";
+import { content } from "./content";
 import { videoStatusEnum } from "./enums";
 
-export const videoAssets = pgTable(
-  "video_assets",
+export const videoContent = pgTable(
+  "video_content",
   {
     id: text("id").primaryKey(),
-    assetId: text("asset_id")
+    contentId: text("content_id")
       .notNull()
-      .references(() => assets.id, { onDelete: "cascade" }),
+      .references(() => content.id, { onDelete: "cascade" }),
     videoUrl: text("video_url"),
     thumbnailUrl: text("thumbnail_url"),
     status: videoStatusEnum("status").notNull().default("pending"),
@@ -30,13 +29,20 @@ export const videoAssets = pgTable(
     updatedAt: timestamp("updated_at").defaultNow().notNull()
   },
   (table) => [
-    index("video_assets_asset_id_idx").on(table.assetId),
-    index("video_assets_status_idx").on(table.status),
-    index("video_assets_asset_status_idx").on(table.assetId, table.status),
+    index("video_content_content_id_idx").on(table.contentId),
+    index("video_content_status_idx").on(table.status),
+    index("video_content_content_status_idx").on(
+      table.contentId,
+      table.status
+    ),
     crudPolicy({
       role: authenticatedRole,
-      read: sql`(select ${projects.userId} = auth.user_id() from ${projects} join ${assets} on ${assets.projectId} = ${projects.id} where ${assets.id} = ${table.assetId})`,
-      modify: sql`(select ${projects.userId} = auth.user_id() from ${projects} join ${assets} on ${assets.projectId} = ${projects.id} where ${assets.id} = ${table.assetId})`
+      read: sql`(select ${content.userId} = auth.user_id()
+        from ${content}
+        where ${content.id} = ${table.contentId})`,
+      modify: sql`(select ${content.userId} = auth.user_id()
+        from ${content}
+        where ${content.id} = ${table.contentId})`
     })
   ]
 );

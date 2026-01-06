@@ -1,9 +1,9 @@
-import { db, projects } from "@db/client";
+import { db, campaigns } from "@db/client";
 import { stackServerApp } from "@web/src/lib/stack/server";
 import type { CurrentServerUser } from "@stackframe/stack";
 import { eq } from "drizzle-orm";
 
-type Project = typeof projects.$inferSelect;
+type Campaign = typeof campaigns.$inferSelect;
 
 export class ApiError extends Error {
   constructor(
@@ -28,38 +28,38 @@ export async function requireAuthenticatedUser(): Promise<CurrentServerUser> {
   return user;
 }
 
-export async function requireProjectAccess(
-  projectId: string | null | undefined,
+export async function requireCampaignAccess(
+  campaignId: string | null | undefined,
   userId: string
-): Promise<Project> {
-  if (!projectId) {
+): Promise<Campaign> {
+  if (!campaignId) {
     throw new ApiError(400, {
       error: "Invalid request",
-      message: "Project ID is required"
+      message: "Campaign ID is required"
     });
   }
 
-  const projectResult = await db
+  const campaignResult = await db
     .select()
-    .from(projects)
-    .where(eq(projects.id, projectId))
+    .from(campaigns)
+    .where(eq(campaigns.id, campaignId))
     .limit(1);
 
-  const project = projectResult[0];
+  const campaign = campaignResult[0];
 
-  if (!project) {
+  if (!campaign) {
     throw new ApiError(404, {
       error: "Not found",
-      message: "Project not found"
+      message: "Campaign not found"
     });
   }
 
-  if (project.userId !== userId) {
+  if (campaign.userId !== userId) {
     throw new ApiError(403, {
       error: "Forbidden",
-      message: "You don't have access to this project"
+      message: "You don't have access to this campaign"
     });
   }
 
-  return project;
+  return campaign;
 }

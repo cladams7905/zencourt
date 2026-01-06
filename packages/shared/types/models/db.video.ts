@@ -1,19 +1,18 @@
 /**
- * Video Database Model Types
+ * Video Content Database Model Types
  *
  * Type definitions for video-related database operations
  */
 
-import { videoAssets, videoAssetJobs, videoStatusEnum } from "@db/client";
+import { videoContent, videoContentJobs, videoStatusEnum } from "@db/client";
 
-export type DBVideo = typeof videoAssets.$inferSelect;
-export type InsertDBVideo = typeof videoAssets.$inferInsert;
+export type DBVideoContent = typeof videoContent.$inferSelect;
+export type InsertDBVideoContent = typeof videoContent.$inferInsert;
 
-export type DBVideoJob = typeof videoAssetJobs.$inferSelect;
-export type InsertDBVideoJob = typeof videoAssetJobs.$inferInsert;
+export type DBVideoContentJob = typeof videoContentJobs.$inferSelect;
+export type InsertDBVideoContentJob = typeof videoContentJobs.$inferInsert;
 
-export type VideoStatus =
-  (typeof videoStatusEnum.enumValues)[number];
+export type VideoStatus = (typeof videoStatusEnum.enumValues)[number];
 
 export type VideoResolution = {
   width: number;

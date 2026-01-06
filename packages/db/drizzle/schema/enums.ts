@@ -1,10 +1,12 @@
 import { pgEnum } from "drizzle-orm/pg-core";
 
-export const assetGenerationTypeEnum = pgEnum("asset_generation_type", [
-  "video"
+export const contentTypeEnum = pgEnum("content_type", [
+  "video",
+  "post",
+  "story"
 ]);
 
-export const assetGenerationStageEnum = pgEnum("asset_generation_stage", [
+export const campaignStageEnum = pgEnum("campaign_stage", [
   "upload",
   "categorize",
   "plan",
@@ -12,6 +14,32 @@ export const assetGenerationStageEnum = pgEnum("asset_generation_stage", [
   "generate",
   "complete"
 ]);
+
+export const contentStatusEnum = pgEnum("content_status", [
+  "draft",
+  "scheduled",
+  "archived"
+]);
+
+export const accountTypeEnum = pgEnum("account_type", ["basic", "admin"]);
+
+export const paymentPlanEnum = pgEnum("payment_plan", [
+  "free",
+  "starter",
+  "growth",
+  "enterprise"
+]);
+
+export const socialPlatformEnum = pgEnum("social_platform", [
+  "instagram",
+  "facebook",
+  "tiktok",
+  "youtube",
+  "linkedin",
+  "twitter"
+]);
+
+export const mediaTypeEnum = pgEnum("media_type", ["video", "image"]);
 
 export const videoStatusEnum = pgEnum("video_status", [
   "pending",
