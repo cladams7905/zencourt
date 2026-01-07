@@ -1,10 +1,5 @@
 import { and, eq, inArray } from "@db/client";
-import {
-  db,
-  videoAssetJobs as videoJobs,
-  videoAssets,
-  assets
-} from "@db/client";
+import { db, videoContentJobs as videoJobs, videoContent, content } from "@db/client";
 import type { VideoStatus } from "@shared/types/models";
 
 const CANCELABLE_STATUSES: VideoStatus[] = ["pending", "processing"];
@@ -13,26 +8,26 @@ function cancelReason(reason?: string): string {
   return reason?.trim() || "Canceled by user request";
 }
 
-class VideoAssetJobRepository {
+class VideoContentJobRepository {
   /**
-   * Cancel all jobs for video assets belonging to a project
+   * Cancel all jobs for video content belonging to a campaign
    */
-  async cancelJobsByProjectId(
-    projectId: string,
+  async cancelJobsByCampaignId(
+    campaignId: string,
     reason?: string
   ): Promise<number> {
-    // First, find all video assets belonging to this project
-    const projectVideos = await db
-      .select({ id: videoAssets.id })
-      .from(videoAssets)
-      .innerJoin(assets, eq(videoAssets.assetId, assets.id))
-      .where(eq(assets.projectId, projectId));
+    // First, find all video content belonging to this campaign
+    const campaignVideos = await db
+      .select({ id: videoContent.id })
+      .from(videoContent)
+      .innerJoin(content, eq(videoContent.contentId, content.id))
+      .where(eq(content.campaignId, campaignId));
 
-    if (projectVideos.length === 0) {
+    if (campaignVideos.length === 0) {
       return 0;
     }
 
-    const videoIds = projectVideos.map((v) => v.id);
+    const videoIds = campaignVideos.map((v) => v.id);
 
     // Cancel all jobs for those videos
     const canceled = await db
@@ -44,7 +39,7 @@ class VideoAssetJobRepository {
       })
       .where(
         and(
-          inArray(videoJobs.videoAssetId, videoIds),
+          inArray(videoJobs.videoContentId, videoIds),
           inArray(videoJobs.status, CANCELABLE_STATUSES)
         )
       )
@@ -54,4 +49,4 @@ class VideoAssetJobRepository {
   }
 }
 
-export const videoAssetJobRepository = new VideoAssetJobRepository();
+export const videoContentJobRepository = new VideoContentJobRepository();

@@ -1,34 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   requireAuthenticatedUser,
-  requireProjectAccess
+  requireCampaignAccess
 } from "../../../_utils";
-import { getProjectVideoStatus } from "@web/src/server/services/videoStatusService";
+import { getCampaignVideoStatus } from "@web/src/server/services/videoStatusService";
 
 export const runtime = "nodejs";
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: Promise<{ projectId: string }> }
+  { params }: { params: Promise<{ campaignId: string }> }
 ) {
-  const { projectId } = await params;
+  const { campaignId } = await params;
 
-  if (!projectId) {
+  if (!campaignId) {
     return NextResponse.json(
       {
         success: false,
-        error: "ProjectIdMissing",
-        message: "projectId path parameter is required"
+        error: "CampaignIdMissing",
+        message: "campaignId path parameter is required"
       },
       { status: 400 }
     );
   }
 
   const user = await requireAuthenticatedUser();
-  await requireProjectAccess(projectId, user.id);
+  await requireCampaignAccess(campaignId, user.id);
 
   try {
-    const payload = await getProjectVideoStatus(projectId);
+    const payload = await getCampaignVideoStatus(campaignId);
     return NextResponse.json({
       success: true,
       data: payload

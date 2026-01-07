@@ -1,21 +1,21 @@
 import type { ReactNode } from "react";
 import Image from "next/image";
 
-interface AuthSurfaceProps {
+interface AuthViewProps {
   title?: string;
   subtitle?: string;
   children: ReactNode;
 }
 
-export function AuthSurface({
+export function AuthView({
   title = "Welcome to Zencourt",
   subtitle = "Effortless social media marketing for real estate professionals",
   children
-}: AuthSurfaceProps) {
+}: AuthViewProps) {
   return (
     <div className="min-h-screen flex">
       {/* Left Panel - Visual Brand Side */}
-      <div className="hidden lg:flex lg:w-1/2 relative bg-gradient-to-br from-accent/20 via-background to-accent/10 overflow-hidden">
+      <div className="hidden lg:flex lg:w-1/2 relative bg-linear-to-br from-accent/20 via-background to-accent/10 overflow-hidden">
         {/* Decorative Background Elements */}
         <div className="absolute top-1/4 -left-24 w-96 h-96 bg-accent/30 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 -right-24 w-96 h-96 bg-secondary/40 rounded-full blur-3xl" />
@@ -46,23 +46,34 @@ export function AuthSurface({
               </span>
             </h2>
             <p className="text-lg text-muted-foreground leading-relaxed">
-              Join thousands of realtors creating stunning social media content in seconds, not hours.
+              Join thousands of realtors creating stunning social media content
+              in seconds, not hours.
             </p>
           </div>
 
           {/* Bottom Stats */}
           <div className="flex gap-12">
             <div>
-              <div className="text-3xl font-playfair font-bold text-foreground mb-1">15h+</div>
+              <div className="text-3xl font-playfair font-bold text-foreground mb-1">
+                15h+
+              </div>
               <div className="text-sm text-muted-foreground">Saved weekly</div>
             </div>
             <div>
-              <div className="text-3xl font-playfair font-bold text-foreground mb-1">300%</div>
-              <div className="text-sm text-muted-foreground">Engagement boost</div>
+              <div className="text-3xl font-playfair font-bold text-foreground mb-1">
+                300%
+              </div>
+              <div className="text-sm text-muted-foreground">
+                Engagement boost
+              </div>
             </div>
             <div>
-              <div className="text-3xl font-playfair font-bold text-foreground mb-1">50k+</div>
-              <div className="text-sm text-muted-foreground">Assets created</div>
+              <div className="text-3xl font-playfair font-bold text-foreground mb-1">
+                50k+
+              </div>
+              <div className="text-sm text-muted-foreground">
+                Assets created
+              </div>
             </div>
           </div>
         </div>
@@ -98,18 +109,22 @@ export function AuthSurface({
           </div>
 
           {/* Auth Form Container */}
-          <div className="space-y-6">
-            {children}
-          </div>
+          <div className="space-y-6">{children}</div>
 
           {/* Footer Note */}
           <p className="mt-8 text-center text-sm text-muted-foreground">
             By continuing, you agree to our{" "}
-            <a href="#" className="text-foreground hover:text-accent transition-colors underline">
+            <a
+              href="#"
+              className="text-foreground hover:text-accent transition-colors underline"
+            >
               Terms of Service
             </a>{" "}
             and{" "}
-            <a href="#" className="text-foreground hover:text-accent transition-colors underline">
+            <a
+              href="#"
+              className="text-foreground hover:text-accent transition-colors underline"
+            >
               Privacy Policy
             </a>
           </p>

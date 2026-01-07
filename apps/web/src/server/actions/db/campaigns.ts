@@ -235,7 +235,7 @@ export async function getUserCampaigns(
 
 /**
  * Get the next draft number for the user
- * Counts existing draft projects and returns the next sequential number
+ * Counts existing draft campaigns and returns the next sequential number
  *
  * @returns Promise<number> - The next draft number
  * @throws Error if user is not authenticated

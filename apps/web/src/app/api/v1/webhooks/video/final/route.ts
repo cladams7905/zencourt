@@ -7,9 +7,9 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { db, assets } from "@db/client";
+import { db, content } from "@db/client";
 import { eq } from "drizzle-orm";
-import { updateVideoAsset } from "@web/src/server/actions/db/videoAssets";
+import { updateVideoContent } from "@web/src/server/actions/db/videoContent";
 import {
   createChildLogger,
   logger as baseLogger
@@ -28,7 +28,7 @@ const FINAL_VIDEO_SIGNED_URL_TTL_SECONDS = 6 * 60 * 60; // 6 hours
 
 interface FinalVideoWebhookPayload {
   videoId: string;
-  projectId: string;
+  campaignId: string;
   status: "completed" | "failed";
   timestamp: string;
   result?: {
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
 
     logger.info(
       {
-        projectId: payload.projectId,
+        campaignId: payload.campaignId,
         videoId,
         status: payload.status
       },
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
         logger.error(
           {
             videoId,
-            projectId: payload.projectId,
+            campaignId: payload.campaignId,
             err: error instanceof Error ? error.message : String(error)
           },
           "Failed to generate signed URL for final video, using original URL"
@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
         logger.error(
           {
             videoId,
-            projectId: payload.projectId,
+            campaignId: payload.campaignId,
             err: error instanceof Error ? error.message : String(error)
           },
           "Failed to generate signed URL for final thumbnail, using original URL"
@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const updatedVideo = await updateVideoAsset(videoId, {
+    const updatedVideo = await updateVideoContent(videoId, {
       status: payload.status,
       videoUrl: signedVideoUrl,
       thumbnailUrl: signedThumbnailUrl,
@@ -114,15 +114,15 @@ export async function POST(request: NextRequest) {
 
     logger.info(
       {
-        projectId: payload.projectId,
+        campaignId: payload.campaignId,
         videoId,
         status: payload.status
       },
       "Final video status updated successfully"
     );
 
-    if (updatedVideo.assetId) {
-      const assetUpdates: Partial<typeof assets.$inferInsert> = {
+    if (updatedVideo.contentId) {
+      const contentUpdates: Partial<typeof content.$inferInsert> = {
         updatedAt: new Date()
       };
 
@@ -130,31 +130,26 @@ export async function POST(request: NextRequest) {
         signedThumbnailUrl ?? updatedVideo.thumbnailUrl ?? undefined;
 
       if (resolvedThumbnail) {
-        assetUpdates.thumbnailUrl = resolvedThumbnail;
-      }
-
-      if (payload.status === "completed") {
-        assetUpdates.stage = "complete";
+        contentUpdates.thumbnailUrl = resolvedThumbnail;
       }
 
       await db
-        .update(assets)
-        .set(assetUpdates)
-        .where(eq(assets.id, updatedVideo.assetId));
+        .update(content)
+        .set(contentUpdates)
+        .where(eq(content.id, updatedVideo.contentId));
 
       logger.info(
         {
-          projectId: payload.projectId,
+          campaignId: payload.campaignId,
           videoId,
-          assetId: updatedVideo.assetId,
-          assetStage: assetUpdates.stage ?? "unchanged"
+          contentId: updatedVideo.contentId
         },
-        "Asset metadata updated after final video webhook"
+        "Content metadata updated after final video webhook"
       );
     }
 
-    // Revalidate the project page to reflect the final video
-    revalidatePath(`/project/${payload.projectId}`);
+    // Revalidate the campaign page to reflect the final video
+    revalidatePath(`/campaign/${payload.campaignId}`);
 
     return NextResponse.json({
       success: true,

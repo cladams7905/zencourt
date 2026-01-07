@@ -5,20 +5,20 @@ const testimonials = [
     quote:
       "Zencourt has completely transformed my workflow. I used to spend hours on Canva; now my social media runs itself while I'm at showings.",
     author: "Elena Rodriguez",
-    role: "Luxury Agent, Miami",
+    role: "Luxury Agent, Miami"
   },
   {
     quote:
       "The AI actually sounds like me. That was my biggest worry, but the voice calibration is spot on. My engagement has doubled in just three months.",
     author: "James Thorne",
-    role: "Broker, New York",
+    role: "Broker, New York"
   },
   {
     quote:
       "The video reels it generates from static listing photos are incredible. I got three qualified leads from my first automated post. Highly recommended.",
     author: "Sarah Jenkins",
-    role: "Realtor, Austin",
-  },
+    role: "Realtor, Austin"
+  }
 ];
 
 export function Testimonials() {
@@ -51,7 +51,7 @@ export function Testimonials() {
                   ))}
                 </div>
                 <p className="text-lg text-foreground font-spartan italic mb-8">
-                  "{testimonial.quote}"
+                  &quot;{testimonial.quote}&quot;
                 </p>
               </div>
               <div className="flex items-center gap-4 border-t border-border/50 pt-6">

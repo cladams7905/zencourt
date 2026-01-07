@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   ApiError,
   requireAuthenticatedUser,
-  requireProjectAccess
+  requireCampaignAccess
 } from "@web/src/app/api/v1/_utils";
 import { getVideoServerConfig } from "@web/src/app/api/v1/video/_config";
 import {
@@ -34,15 +34,15 @@ async function extractReason(request: NextRequest): Promise<string | undefined> 
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ projectId: string }> }
+  { params }: { params: Promise<{ campaignId: string }> }
 ) {
-  const { projectId } = await params;
+  const { campaignId } = await params;
 
-  if (!projectId) {
+  if (!campaignId) {
     return NextResponse.json(
       {
         error: "Invalid request",
-        message: "projectId is required"
+        message: "campaignId is required"
       },
       { status: 400 }
     );
@@ -50,7 +50,7 @@ export async function POST(
 
   try {
     const user = await requireAuthenticatedUser();
-    await requireProjectAccess(projectId, user.id);
+    await requireCampaignAccess(campaignId, user.id);
 
     const reason = await extractReason(request);
     const { baseUrl, apiKey } = getVideoServerConfig();
@@ -62,7 +62,7 @@ export async function POST(
         "X-API-Key": apiKey
       },
       body: JSON.stringify({
-        projectId,
+        campaignId,
         reason: reason || "Canceled via workflow"
       })
     });
@@ -81,7 +81,7 @@ export async function POST(
 
     logger.info(
       {
-        projectId,
+        campaignId,
         canceledVideos: payload?.canceledVideos,
         canceledJobs: payload?.canceledJobs
       },
@@ -90,14 +90,14 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
-      projectId,
+      campaignId,
       canceledVideos: payload?.canceledVideos ?? 0,
       canceledJobs: payload?.canceledJobs ?? 0
     });
   } catch (error) {
     logger.error(
       {
-        projectId,
+        campaignId,
         error: error instanceof Error ? error.message : String(error)
       },
       "Failed to cancel generation"

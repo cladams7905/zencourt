@@ -1,4 +1,12 @@
-import { Brain, Palette, MapPin, Play, Heart, MessageCircle, Send, Music } from "lucide-react";
+import {
+  Brain,
+  Palette,
+  MapPin,
+  Heart,
+  MessageCircle,
+  Send,
+  Music
+} from "lucide-react";
 
 export function FeatureSpotlight1() {
   return (
@@ -11,13 +19,13 @@ export function FeatureSpotlight1() {
               Beyond Templates: Content that Speaks Your Brand
             </h2>
             <p className="text-body-lg text-muted-foreground mb-10">
-              Generic posts don't sell homes. Our content generation engine
+              Generic posts don&apos;t sell homes. Our content generation engine
               dynamically matches your unique writing style, visual branding,
               and market niche to create posts that feel authentically yours.
             </p>
             <div className="space-y-8">
               <div className="flex gap-5 group">
-                <div className="flex-shrink-0 w-12 h-12 bg-background rounded-xl border border-border flex items-center justify-center shadow-sm group-hover:border-accent transition-colors">
+                <div className="shrink-0 w-12 h-12 bg-background rounded-xl border border-border flex items-center justify-center shadow-sm group-hover:border-accent transition-colors">
                   <Brain className="h-6 w-6 text-foreground" />
                 </div>
                 <div>
@@ -31,7 +39,7 @@ export function FeatureSpotlight1() {
                 </div>
               </div>
               <div className="flex gap-5 group">
-                <div className="flex-shrink-0 w-12 h-12 bg-background rounded-xl border border-border flex items-center justify-center shadow-sm group-hover:border-accent transition-colors">
+                <div className="shrink-0 w-12 h-12 bg-background rounded-xl border border-border flex items-center justify-center shadow-sm group-hover:border-accent transition-colors">
                   <Palette className="h-6 w-6 text-foreground" />
                 </div>
                 <div>
@@ -45,7 +53,7 @@ export function FeatureSpotlight1() {
                 </div>
               </div>
               <div className="flex gap-5 group">
-                <div className="flex-shrink-0 w-12 h-12 bg-background rounded-xl border border-border flex items-center justify-center shadow-sm group-hover:border-accent transition-colors">
+                <div className="shrink-0 w-12 h-12 bg-background rounded-xl border border-border flex items-center justify-center shadow-sm group-hover:border-accent transition-colors">
                   <MapPin className="h-6 w-6 text-foreground" />
                 </div>
                 <div>
@@ -64,7 +72,7 @@ export function FeatureSpotlight1() {
           {/* Right: Phone Mockup */}
           <div className="w-full lg:w-1/2 relative">
             <div className="relative mx-auto w-[300px] h-[600px] bg-primary rounded-[2.5rem] p-3 shadow-2xl ring-1 ring-primary/5">
-              <div className="h-full w-full bg-gradient-to-br from-secondary to-accent/20 rounded-[2rem] overflow-hidden relative">
+              <div className="h-full w-full bg-linear-to-br from-secondary to-accent/20 rounded-4xl overflow-hidden relative">
                 {/* AI Generated Badge */}
                 <div className="absolute top-6 left-1/2 -translate-x-1/2 px-4 py-1.5 bg-black/40 backdrop-blur-md rounded-full border border-white/10 z-20 flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
@@ -93,7 +101,7 @@ export function FeatureSpotlight1() {
                 </div>
 
                 {/* Bottom Caption */}
-                <div className="absolute bottom-0 w-full p-4 bg-gradient-to-t from-black/80 to-transparent pt-12 z-10">
+                <div className="absolute bottom-0 w-full p-4 bg-linear-to-t from-black/80 to-transparent pt-12 z-10">
                   <div className="flex items-center gap-2 mb-2">
                     <div className="w-8 h-8 rounded-full border border-white/30 bg-white/10 backdrop-blur-sm" />
                     <span className="text-white font-semibold text-sm drop-shadow-sm">

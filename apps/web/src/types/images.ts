@@ -1,4 +1,4 @@
-import { DBImage, InsertDBImage } from "@shared/types/models";
+import { DBCampaignImage, InsertDBCampaignImage } from "@shared/types/models";
 
 /**
  * Data Flow Through Image Types
@@ -21,7 +21,7 @@ import { DBImage, InsertDBImage } from "@shared/types/models";
 
 4. SAVE TO DATABASE
    └→ toInsertDBImage() → InsertDBImage
-      { id, collectionId, filename, url, category, confidence, features, ... }
+      { id, campaignId, filename, url, category, confidence, features, ... }
    └→ Database insert
    └→ Returns DBImage with uploadedAt
 
@@ -40,9 +40,10 @@ import { DBImage, InsertDBImage } from "@shared/types/models";
  * - status: Current processing state
  * - error: Runtime error message if processing failed
  */
-export type ProcessedImage = Partial<Omit<DBImage, "uploadedAt">> & {
+export type ProcessedImage = Partial<Omit<DBCampaignImage, "uploadedAt">> & {
   /** Unique identifier - required */
   id: string;
+  campaignId?: string | null;
   /** Original file object - needed for upload and processing */
   file: File;
   /** Preview URL (data URL or object URL) - for immediate display */
@@ -110,7 +111,7 @@ export type ProcessingPhase =
 export function toSerializable(image: ProcessedImage): SerializableImageData {
   return {
     id: image.id,
-    collectionId: image.collectionId,
+    campaignId: image.campaignId,
     url: image.url,
     filename: image.filename,
     category: image.category,
@@ -130,11 +131,11 @@ export function toSerializable(image: ProcessedImage): SerializableImageData {
  */
 export function toInsertDBImage(
   image: ProcessedImage,
-  collectionId: string
-): InsertDBImage {
+  campaignId: string
+): InsertDBCampaignImage {
   return {
     id: image.id,
-    collectionId,
+    campaignId,
     filename: image.filename || image.file?.name || "image",
     url: image.url!,
     category: image.category ?? null,
@@ -150,9 +151,10 @@ export function toInsertDBImage(
  * Convert DBImage to ProcessedImage for client workflow
  * Used when loading existing images from database
  */
-export function fromDBImage(db: DBImage, file?: File): ProcessedImage {
+export function fromDBImage(db: DBCampaignImage, file?: File): ProcessedImage {
   return {
     ...db,
+    campaignId: db.campaignId,
     file: file ?? new File([], db.filename, { type: "image/jpeg" }),
     previewUrl: db.url,
     status: "analyzed" as const

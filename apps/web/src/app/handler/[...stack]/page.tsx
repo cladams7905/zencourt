@@ -1,10 +1,10 @@
 import { StackHandler } from "@stackframe/stack";
-import { AuthSurface } from "@web/src/components/AuthSurface";
+import { AuthView } from "@web/src/components/AuthView";
 
 export default function Handler() {
   return (
-    <AuthSurface>
+    <AuthView>
       <StackHandler fullPage={false} />
-    </AuthSurface>
+    </AuthView>
   );
 }

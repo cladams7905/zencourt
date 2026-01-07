@@ -1,6 +1,6 @@
-import { getUserProjects } from "../server/actions/db/projects";
-import { HomeClient } from "../components/HomeClient";
-import { DBProject } from "@shared/types/models";
+import { getUserCampaigns } from "../server/actions/db/campaigns";
+import { DashboardView } from "../components/DashboardView";
+import { DBCampaign } from "@shared/types/models";
 import { getUser } from "../server/actions/db/users";
 import { LandingPage } from "../components/landing/LandingPage";
 import type { Metadata } from "next";
@@ -18,17 +18,17 @@ export const metadata: Metadata = {
     "real estate AI",
     "listing marketing",
     "Instagram reels",
-    "TikTok videos",
-  ],
+    "TikTok videos"
+  ]
 };
 
 export default async function Home() {
   let user = null;
-  let projects: DBProject[] = [];
+  let campaigns: DBCampaign[] = [];
 
   try {
     user = await getUser();
-    projects = await getUserProjects(user.id);
+    campaigns = await getUserCampaigns(user.id);
   } catch (error) {
     // No authenticated user - show landing page
     console.log("No authenticated user, showing landing page");
@@ -36,7 +36,7 @@ export default async function Home() {
 
   // If user is authenticated, show dashboard
   if (user) {
-    return <HomeClient initialProjects={projects} />;
+    return <DashboardView initialCampaigns={campaigns} />;
   }
 
   // Otherwise show landing page

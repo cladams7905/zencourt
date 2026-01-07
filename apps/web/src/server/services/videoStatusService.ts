@@ -1,4 +1,4 @@
-import { db, assets, videoAssetJobs, videoAssets } from "@db/client";
+import { db, content, videoContentJobs, videoContent } from "@db/client";
 import { asc, desc, eq } from "drizzle-orm";
 import type {
   FinalVideoUpdateEvent,
@@ -9,22 +9,22 @@ import { ensurePublicUrlSafe } from "../utils/storageUrls";
 
 const VIDEO_STATUS_URL_TTL_SECONDS = 6 * 60 * 60; // 6 hours
 
-export async function getProjectVideoStatus(
-  projectId: string
+export async function getCampaignVideoStatus(
+  campaignId: string
 ): Promise<InitialVideoStatusPayload> {
   const latestVideoResult = await db
     .select({
-      id: videoAssets.id,
-      status: videoAssets.status,
-      videoUrl: videoAssets.videoUrl,
-      thumbnailUrl: videoAssets.thumbnailUrl,
-      errorMessage: videoAssets.errorMessage,
-      metadata: videoAssets.metadata
+      id: videoContent.id,
+      status: videoContent.status,
+      videoUrl: videoContent.videoUrl,
+      thumbnailUrl: videoContent.thumbnailUrl,
+      errorMessage: videoContent.errorMessage,
+      metadata: videoContent.metadata
     })
-    .from(videoAssets)
-    .innerJoin(assets, eq(videoAssets.assetId, assets.id))
-    .where(eq(assets.projectId, projectId))
-    .orderBy(desc(videoAssets.createdAt))
+    .from(videoContent)
+    .innerJoin(content, eq(videoContent.contentId, content.id))
+    .where(eq(content.campaignId, campaignId))
+    .orderBy(desc(videoContent.createdAt))
     .limit(1);
 
   const latestVideo = latestVideoResult[0];
@@ -34,15 +34,15 @@ export async function getProjectVideoStatus(
   if (latestVideo) {
     const jobRows = await db
       .select({
-        id: videoAssetJobs.id,
-        status: videoAssetJobs.status,
-        videoUrl: videoAssetJobs.videoUrl,
-        errorMessage: videoAssetJobs.errorMessage,
-        generationSettings: videoAssetJobs.generationSettings
+        id: videoContentJobs.id,
+        status: videoContentJobs.status,
+        videoUrl: videoContentJobs.videoUrl,
+        errorMessage: videoContentJobs.errorMessage,
+        generationSettings: videoContentJobs.generationSettings
       })
-      .from(videoAssetJobs)
-      .where(eq(videoAssetJobs.videoAssetId, latestVideo.id))
-      .orderBy(asc(videoAssetJobs.createdAt));
+      .from(videoContentJobs)
+      .where(eq(videoContentJobs.videoContentId, latestVideo.id))
+      .orderBy(asc(videoContentJobs.createdAt));
 
     jobs = await Promise.all(
       jobRows.map(async (job) => {
@@ -51,7 +51,7 @@ export async function getProjectVideoStatus(
           VIDEO_STATUS_URL_TTL_SECONDS
         );
         return {
-          projectId,
+          campaignId,
           jobId: job.id,
           status: job.status,
           videoUrl: signedVideoUrl ?? job.videoUrl,
@@ -78,7 +78,7 @@ export async function getProjectVideoStatus(
       )
     ]);
     finalVideo = {
-      projectId,
+      campaignId,
       status: "completed",
       finalVideoUrl: signedVideoUrl ?? latestVideo.videoUrl,
       thumbnailUrl: signedThumbnailUrl ?? latestVideo.thumbnailUrl ?? undefined,
@@ -97,7 +97,7 @@ export async function getProjectVideoStatus(
       )
     ]);
     finalVideo = {
-      projectId,
+      campaignId,
       status: "failed",
       finalVideoUrl: signedVideoUrl ?? latestVideo.videoUrl ?? undefined,
       thumbnailUrl: signedThumbnailUrl ?? latestVideo.thumbnailUrl ?? undefined,

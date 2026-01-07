@@ -13,8 +13,8 @@ import {
   VideoServerGenerateResponse
 } from "@shared/types/api";
 import { videoGenerationService } from "@/services/videoGenerationService";
-import { videoAssetRepository } from "@/services/db/videoAssetRepository";
-import { videoAssetJobRepository } from "@/services/db/videoAssetJobRepository";
+import { videoContentRepository } from "@/services/db/videoContentRepository";
+import { videoContentJobRepository } from "@/services/db/videoContentJobRepository";
 
 const router = Router();
 
@@ -34,7 +34,7 @@ router.post("/generate", async (req: Request, res: Response) => {
     const requiredFields: (keyof VideoServerGenerateRequest)[] = [
       "videoId",
       "jobIds",
-      "projectId",
+      "campaignId",
       "userId"
     ];
 
@@ -54,7 +54,7 @@ router.post("/generate", async (req: Request, res: Response) => {
         {
           missingFields,
           videoId: requestData.videoId,
-          projectId: requestData.projectId
+          campaignId: requestData.campaignId
         },
         "[VideoRoute] Invalid video generation request"
       );
@@ -79,7 +79,7 @@ router.post("/generate", async (req: Request, res: Response) => {
     logger.info(
       {
         videoId: requestData.videoId,
-        projectId: requestData.projectId,
+        campaignId: requestData.campaignId,
         jobCount: requestData.jobIds.length,
         jobIds: requestData.jobIds
       },
@@ -123,14 +123,14 @@ router.post("/generate", async (req: Request, res: Response) => {
  */
 router.post("/cancel", async (req: Request, res: Response) => {
   try {
-    const { projectId, videoIds, reason } = req.body as CancelVideoRequest;
+    const { campaignId, videoIds, reason } = req.body as CancelVideoRequest;
 
-    if (!projectId) {
+    if (!campaignId) {
       res.status(400).json({
         success: false,
         error: "Invalid request",
         code: "VALIDATION_ERROR",
-        details: { message: "projectId is required" }
+        details: { message: "campaignId is required" }
       });
       return;
     }
@@ -139,17 +139,21 @@ router.post("/cancel", async (req: Request, res: Response) => {
 
     const canceledVideos =
       Array.isArray(videoIds) && videoIds.length > 0
-        ? await videoAssetRepository.cancelByIds(videoIds, cancelReason)
-        : await videoAssetRepository.cancelByProject(projectId, cancelReason);
+        ? await videoContentRepository.cancelByIds(videoIds, cancelReason)
+        : await videoContentRepository.cancelByCampaign(
+            campaignId,
+            cancelReason
+          );
 
-    const canceledJobs = await videoAssetJobRepository.cancelJobsByProjectId(
-      projectId,
-      cancelReason
-    );
+    const canceledJobs =
+      await videoContentJobRepository.cancelJobsByCampaignId(
+        campaignId,
+        cancelReason
+      );
 
     logger.info(
-      { projectId, canceledVideos, canceledJobs },
-      "Canceled video generation for project"
+      { campaignId, canceledVideos, canceledJobs },
+      "Canceled video generation for campaign"
     );
 
     res.status(200).json({

@@ -8,15 +8,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import {
-  updateVideoAssetJob,
-  getVideoAssetJobById
-} from "@web/src/server/actions/db/videoAssetJobs";
+  updateVideoContentJob,
+  getVideoContentJobById
+} from "@web/src/server/actions/db/videoContentJobs";
 import {
   createChildLogger,
   logger as baseLogger
 } from "../../../../../lib/logger";
 import type { VideoJobWebhookPayload } from "@shared/types/api";
-import type { DBVideoJob } from "@shared/types/models";
+import type { DBVideoContentJob } from "@shared/types/models";
 import {
   parseVerifiedWebhook,
   WebhookVerificationError
@@ -26,17 +26,17 @@ const logger = createChildLogger(baseLogger, {
   module: "video-job-webhook"
 });
 
-function scheduleProjectRevalidation(projectId: string): void {
+function scheduleCampaignRevalidation(campaignId: string): void {
   setImmediate(() => {
     try {
-      revalidatePath(`/project/${projectId}`);
+      revalidatePath(`/campaign/${campaignId}`);
     } catch (error) {
       logger.error(
         {
-          projectId,
+          campaignId,
           err: error instanceof Error ? error.message : String(error)
         },
-        "Failed to revalidate project path"
+        "Failed to revalidate campaign path"
       );
     }
   });
@@ -60,17 +60,17 @@ export async function POST(request: NextRequest) {
     const metadata = payload.result?.metadata;
     logger.info(
       {
-        projectId: payload.projectId,
+        campaignId: payload.campaignId,
         jobId: payload.jobId,
         status: payload.status
       },
       "Video job webhook received"
     );
 
-    let updatedJob: DBVideoJob | null = null;
+    let updatedJob: DBVideoContentJob | null = null;
 
     try {
-      updatedJob = await updateVideoAssetJob(payload.jobId, {
+      updatedJob = await updateVideoContentJob(payload.jobId, {
         status: payload.status,
         videoUrl,
         thumbnailUrl,
@@ -86,18 +86,18 @@ export async function POST(request: NextRequest) {
     } catch (error) {
       logger.error(
         {
-          projectId: payload.projectId,
+          campaignId: payload.campaignId,
           jobId: payload.jobId,
           err: error instanceof Error ? error.message : String(error)
         },
         "Failed to persist video job update, using fallback data"
       );
-      updatedJob = await getVideoAssetJobById(payload.jobId);
+      updatedJob = await getVideoContentJobById(payload.jobId);
     }
 
     logger.info(
       {
-        projectId: payload.projectId,
+        campaignId: payload.campaignId,
         jobId: payload.jobId,
         status: payload.status
       },
@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
     );
 
     // Kick off route revalidation without blocking the webhook response
-    scheduleProjectRevalidation(payload.projectId);
+    scheduleCampaignRevalidation(payload.campaignId);
 
     return NextResponse.json({
       success: Boolean(updatedJob),

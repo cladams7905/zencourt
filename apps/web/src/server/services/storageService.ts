@@ -17,7 +17,7 @@ import {
   StorageUploadResponse
 } from "@shared/types/api";
 import {
-  getProjectImagePath,
+  getCampaignImagePath,
   getGenericUploadPath,
   extractStorageKeyFromUrl
 } from "@shared/utils";
@@ -296,11 +296,11 @@ export class StorageService {
     const {
       folder = "uploads",
       userId,
-      projectId
+      campaignId
     } = uploadRequest.options || {};
     const key =
-      userId && projectId
-        ? getProjectImagePath(userId, projectId, uploadRequest.fileName)
+      userId && campaignId
+        ? getCampaignImagePath(userId, campaignId, uploadRequest.fileName)
         : getGenericUploadPath(folder, uploadRequest.fileName);
 
     return {
@@ -312,7 +312,7 @@ export class StorageService {
         originalName: uploadRequest.fileName,
         uploadedAt: new Date().toISOString(),
         ...(userId && { userId }),
-        ...(projectId && { projectId })
+        ...(campaignId && { campaignId })
       }
     };
   }

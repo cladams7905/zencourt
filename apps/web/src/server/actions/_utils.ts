@@ -13,7 +13,7 @@ export interface DbActionOptions {
   actionName: string;
 
   /**
-   * Context to include in logs (e.g., { projectId, userId })
+   * Context to include in logs (e.g., { campaignId, userId })
    */
   context?: Record<string, unknown>;
 
@@ -40,9 +40,9 @@ export interface DbActionOptions {
  *
  * @example
  * ```typescript
- * export async function saveImages(projectId: string, imageData: InsertDBImage[]) {
+ * export async function saveImages(campaignId: string, imageData: InsertDBImage[]) {
  *   // Validate inputs first
- *   if (!projectId) throw new Error("Project ID is required");
+ *   if (!campaignId) throw new Error("Campaign ID is required");
  *
  *   return withDbErrorHandling(
  *     async () => {
@@ -54,7 +54,7 @@ export interface DbActionOptions {
  *     },
  *     {
  *       actionName: "saveImages",
- *       context: { projectId, imageCount: imageData.length },
+ *       context: { campaignId, imageCount: imageData.length },
  *       errorMessage: "Failed to save images to database"
  *     }
  *   );

@@ -15,7 +15,7 @@ const logger = createChildLogger(baseLogger, { module: "storage-actions" });
 /**
  * Upload a single file to storage via server action
  * @param file - File to upload
- * @param folder - Folder path for organization (e.g., "projects/abc123")
+ * @param folder - Folder path for organization (e.g., "campaigns/abc123")
  * @returns Public URL of the uploaded file
  */
 export async function uploadFile(file: File, folder: string): Promise<string> {
@@ -50,14 +50,14 @@ export async function uploadFile(file: File, folder: string): Promise<string> {
  * @param files - Array of files to upload
  * @param folder - Folder path for organization
  * @param userId - User ID for organized storage (optional)
- * @param projectId - Project ID for organized storage (optional)
+ * @param campaignId - Campaign ID for organized storage (optional)
  * @returns Array of upload results with status for each file
  */
 export async function uploadFilesBatch(
   files: File[],
   folder: string,
   userId?: string,
-  projectId?: string
+  campaignId?: string
 ): Promise<StorageUploadBatchResponse> {
   try {
     const filesWithBuffers: StorageUploadRequest[] = await Promise.all(
@@ -68,7 +68,7 @@ export async function uploadFilesBatch(
         options: {
           folder,
           userId,
-          projectId
+          campaignId
         }
       }))
     );

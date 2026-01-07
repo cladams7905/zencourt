@@ -1,10 +1,10 @@
 import { and, eq, exists, inArray } from "@db/client";
-import { db, videoAssets as videos, assets } from "@db/client";
+import { db, videoContent as videos, content } from "@db/client";
 import type { VideoStatus } from "@shared/types/models";
 
-export type DbVideoAsset = typeof videos.$inferSelect;
+export type DbVideoContent = typeof videos.$inferSelect;
 
-class VideoAssetRepository {
+class VideoContentRepository {
   private static readonly cancelableStatuses: VideoStatus[] = [
     "pending",
     "processing"
@@ -14,31 +14,31 @@ class VideoAssetRepository {
     return reason?.trim() || "Canceled by user request";
   }
 
-  async cancelByProject(
-    projectId: string,
+  async cancelByCampaign(
+    campaignId: string,
     reason?: string
   ): Promise<number> {
     const canceled = await db
       .update(videos)
       .set({
         status: "canceled",
-        errorMessage: VideoAssetRepository.resolveCancelReason(reason),
+        errorMessage: VideoContentRepository.resolveCancelReason(reason),
         updatedAt: new Date()
       })
       .where(
         and(
           exists(
             db
-              .select({ id: assets.id })
-              .from(assets)
+              .select({ id: content.id })
+              .from(content)
               .where(
                 and(
-                  eq(assets.id, videos.assetId),
-                  eq(assets.projectId, projectId)
+                  eq(content.id, videos.contentId),
+                  eq(content.campaignId, campaignId)
                 )
               )
           ),
-          inArray(videos.status, VideoAssetRepository.cancelableStatuses)
+          inArray(videos.status, VideoContentRepository.cancelableStatuses)
         )
       )
       .returning({ id: videos.id });
@@ -58,13 +58,13 @@ class VideoAssetRepository {
       .update(videos)
       .set({
         status: "canceled",
-        errorMessage: VideoAssetRepository.resolveCancelReason(reason),
+        errorMessage: VideoContentRepository.resolveCancelReason(reason),
         updatedAt: new Date()
       })
       .where(
         and(
           inArray(videos.id, videoIds),
-          inArray(videos.status, VideoAssetRepository.cancelableStatuses)
+          inArray(videos.status, VideoContentRepository.cancelableStatuses)
         )
       )
       .returning({ id: videos.id });
@@ -73,4 +73,4 @@ class VideoAssetRepository {
   }
 }
 
-export const videoAssetRepository = new VideoAssetRepository();
+export const videoContentRepository = new VideoContentRepository();

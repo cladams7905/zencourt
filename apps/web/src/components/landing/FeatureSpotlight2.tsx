@@ -20,9 +20,9 @@ export function FeatureSpotlight2() {
               Effortlessly Generated
             </h2>
             <p className="text-body-lg text-muted-foreground">
-              Don't let static images sit idle. Zencourt's advanced AI weaves
-              your property photos into dynamic, high-engagement video clips
-              perfect for Instagram Reels and TikTok. Capture attention
+              Don&apos;t let static images sit idle. Zencourt&apos;s advanced AI
+              weaves your property photos into dynamic, high-engagement video
+              clips perfect for Instagram Reels and TikTok. Capture attention
               instantly with smooth transitions and synchronized audio.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 pt-4">
@@ -86,11 +86,11 @@ export function FeatureSpotlight2() {
                   {[1, 2, 3].map((num) => (
                     <div
                       key={num}
-                      className={`aspect-[4/3] rounded-lg overflow-hidden shadow-sm border border-border relative ${
+                      className={`aspect-4/3 rounded-lg overflow-hidden shadow-sm border border-border relative ${
                         num > 1 ? "grayscale opacity-70" : ""
                       }`}
                     >
-                      <div className="w-full h-full bg-gradient-to-br from-accent/30 to-secondary" />
+                      <div className="w-full h-full bg-linear-to-br from-accent/30 to-secondary" />
                       <div className="absolute top-1 left-1 bg-background/90 px-1.5 py-0.5 rounded text-[8px] font-bold">
                         0{num}
                       </div>
@@ -104,9 +104,9 @@ export function FeatureSpotlight2() {
                 </div>
 
                 {/* Output Video */}
-                <div className="flex-1 aspect-[9/16] bg-primary rounded-xl overflow-hidden relative shadow-lg group">
-                  <div className="w-full h-full bg-gradient-to-br from-accent/20 to-secondary opacity-90 group-hover:scale-105 transition-transform duration-700" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                <div className="flex-1 aspect-9/16 bg-primary rounded-xl overflow-hidden relative shadow-lg group">
+                  <div className="w-full h-full bg-linear-to-br from-accent/20 to-secondary opacity-90 group-hover:scale-105 transition-transform duration-700" />
+                  <div className="absolute inset-0 bg-linear-to-t from-black/60 to-transparent" />
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="w-12 h-12 bg-white/20 backdrop-blur rounded-full flex items-center justify-center border border-white/40 cursor-pointer hover:bg-white/30 transition-colors">
                       <Play className="h-6 w-6 text-white" fill="white" />
