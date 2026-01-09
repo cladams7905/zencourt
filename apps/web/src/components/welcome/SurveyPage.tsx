@@ -22,15 +22,11 @@ import {
 import {
   ArrowRight,
   ArrowLeft,
-  SkipForward,
-  Sparkles,
-  MapPin,
   TrendingUp,
   DollarSign,
   Lightbulb,
   Calendar,
   Home,
-  Camera,
   Wrench,
   Shield,
   Globe,
@@ -160,24 +156,6 @@ const contentCategories: {
     label: "Luxury Properties",
     description: "High-end listings & luxury market insights",
     icon: Crown
-  },
-  {
-    value: "commercial",
-    label: "Commercial Real Estate",
-    description: "Office, retail & investment properties",
-    icon: Building
-  },
-  {
-    value: "military_relocation",
-    label: "Military Relocation",
-    description: "VA loans & military-friendly areas",
-    icon: Shield
-  },
-  {
-    value: "international",
-    label: "International Real Estate",
-    description: "Global markets & expat housing",
-    icon: Globe
   }
 ];
 

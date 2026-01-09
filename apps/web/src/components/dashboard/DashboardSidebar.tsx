@@ -1,6 +1,8 @@
 "use client";
 
 import * as React from "react";
+import { useUser } from "@stackframe/stack";
+import { useRouter } from "next/navigation";
 import { cn } from "../ui/utils";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
@@ -12,10 +14,20 @@ import {
   Clock,
   Archive,
   Plus,
-  ChevronDown
+  ChevronDown,
+  Settings,
+  CreditCard,
+  LogOut
 } from "lucide-react";
 import Image from "next/image";
 import Logo from "../../../public/zencourt-logo.svg";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
+} from "../ui/dropdown-menu";
 
 interface DashboardSidebarProps {
   className?: string;
@@ -30,8 +42,15 @@ const DashboardSidebar = ({
   userRole = "Pro Agent",
   userAvatar
 }: DashboardSidebarProps) => {
+  const user = useUser();
+  const router = useRouter();
   const [contentExpanded, setContentExpanded] = React.useState(true);
   const [campaignsExpanded, setCampaignsExpanded] = React.useState(true);
+
+  const handleLogout = async () => {
+    await user?.signOut();
+    router.push("/");
+  };
 
   return (
     <aside
@@ -76,7 +95,7 @@ const DashboardSidebar = ({
 
         {/* Content Section */}
         <div className="space-y-1">
-          <button
+          <div
             onClick={() => setContentExpanded(!contentExpanded)}
             className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
           >
@@ -99,7 +118,7 @@ const DashboardSidebar = ({
                 )}
               />
             </div>
-          </button>
+          </div>
 
           {contentExpanded && (
             <div className="space-y-0.5 pl-2">
@@ -165,7 +184,7 @@ const DashboardSidebar = ({
 
         {/* Campaigns Section */}
         <div className="space-y-1">
-          <button
+          <div
             onClick={() => setCampaignsExpanded(!campaignsExpanded)}
             className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
           >
@@ -188,7 +207,7 @@ const DashboardSidebar = ({
                 )}
               />
             </div>
-          </button>
+          </div>
 
           {campaignsExpanded && (
             <div className="space-y-0.5 pl-2">
@@ -222,32 +241,66 @@ const DashboardSidebar = ({
 
       {/* User Profile */}
       <div className="p-6 border-t border-border/50">
-        <div className="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-accent/10 cursor-pointer transition-colors">
-          {userAvatar ? (
-            <img
-              src={userAvatar}
-              alt={userName}
-              className="h-10 w-10 rounded-full object-cover border border-border"
-            />
-          ) : (
-            <div className="h-10 w-10 rounded-full bg-accent flex items-center justify-center border border-border">
-              <span className="text-sm font-semibold text-accent-foreground">
-                {userName
-                  .split(" ")
-                  .map((n) => n[0])
-                  .join("")}
-              </span>
-            </div>
-          )}
-          <div className="flex flex-col min-w-0">
-            <span className="text-sm font-semibold text-foreground truncate">
-              {userName}
-            </span>
-            <span className="text-xs text-muted-foreground truncate">
-              {userRole}
-            </span>
-          </div>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="w-full flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-accent/10 cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+              {userAvatar ? (
+                <Image
+                  src={userAvatar}
+                  alt={userName}
+                  className="h-10 w-10 rounded-full object-cover border border-border group-hover:border-foreground/20 transition-colors"
+                />
+              ) : (
+                <div className="h-10 w-10 rounded-full bg-accent flex items-center justify-center border border-border group-hover:border-foreground/20 transition-colors">
+                  <span className="text-sm font-semibold text-accent-foreground">
+                    {userName
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")}
+                  </span>
+                </div>
+              )}
+              <div className="flex flex-col min-w-0 flex-1 text-left">
+                <span className="text-sm font-semibold text-foreground truncate">
+                  {userName}
+                </span>
+                <span className="text-xs text-muted-foreground truncate">
+                  {userRole}
+                </span>
+              </div>
+              <ChevronDown className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-all group-data-[state=open]:rotate-180 duration-200" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="end"
+            side="top"
+            sideOffset={8}
+            className="w-56 bg-popover/95 backdrop-blur-xl border-border/50 shadow-2xl rounded-xl p-1.5"
+          >
+            <DropdownMenuItem
+              className="rounded-lg px-3 py-2.5 cursor-pointer focus:bg-secondary/80 transition-all duration-150 group"
+              onClick={() => console.log("Account settings clicked")}
+            >
+              <Settings className="mr-3 h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+              <span className="text-sm font-medium">Account Settings</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="rounded-lg px-3 py-2.5 cursor-pointer focus:bg-secondary/80 transition-all duration-150 group"
+              onClick={() => console.log("Manage subscription clicked")}
+            >
+              <CreditCard className="mr-3 h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+              <span className="text-sm font-medium">Manage Subscription</span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator className="my-1.5 bg-border/50" />
+            <DropdownMenuItem
+              className="rounded-lg px-3 py-2.5 cursor-pointer focus:bg-secondary/80 transition-all duration-150 group"
+              onClick={handleLogout}
+            >
+              <LogOut className="mr-3 h-4 w-4" />
+              <span className="text-sm font-medium">Logout</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </aside>
   );
