@@ -14,7 +14,7 @@ export function FeatureSpotlight2() {
                 New Feature
               </span>
             </div>
-            <h2 className="text-display-md font-playfair font-semibold text-foreground">
+            <h2 className="text-display-md font-header font-semibold text-foreground">
               Stunning Video Clips,
               <br />
               Effortlessly Generated

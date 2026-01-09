@@ -8,20 +8,20 @@ export function Footer() {
       { label: "Features", href: "#features" },
       { label: "Pricing", href: "#pricing" },
       { label: "Enterprise", href: "#" },
-      { label: "Case Studies", href: "#" },
+      { label: "Case Studies", href: "#" }
     ],
     resources: [
       { label: "Blog", href: "#" },
       { label: "Community", href: "#" },
       { label: "Help Center", href: "#" },
-      { label: "Webinars", href: "#" },
+      { label: "Webinars", href: "#" }
     ],
     company: [
       { label: "About", href: "#" },
       { label: "Careers", href: "#" },
       { label: "Legal", href: "#" },
-      { label: "Contact", href: "#" },
-    ],
+      { label: "Contact", href: "#" }
+    ]
   };
 
   return (
@@ -32,7 +32,7 @@ export function Footer() {
           <div className="col-span-2 md:col-span-1">
             <div className="flex items-center gap-2 mb-6">
               <Image
-                src="/android-chrome-512x512.png"
+                src="/zencourt-logo.svg"
                 alt="Zencourt Logo"
                 width={24}
                 height={24}

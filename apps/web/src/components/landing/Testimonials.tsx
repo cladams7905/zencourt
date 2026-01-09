@@ -26,7 +26,7 @@ export function Testimonials() {
     <section className="py-24 bg-background overflow-hidden" id="testimonials">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
-          <h2 className="text-display-md font-playfair font-semibold text-foreground mb-4">
+          <h2 className="text-display-md font-header font-semibold text-foreground mb-4">
             Loved by Top Agents
           </h2>
           <p className="text-body-md text-muted-foreground">
@@ -38,7 +38,7 @@ export function Testimonials() {
           {testimonials.map((testimonial, index) => (
             <div
               key={index}
-              className="min-w-[300px] md:min-w-[400px] bg-secondary p-8 rounded-2xl snap-center border border-border flex flex-col justify-between"
+              className="min-w-[300px] md:min-w-[400px] bg-accent/20 p-8 rounded-2xl snap-center border border-border flex flex-col justify-between"
             >
               <div>
                 <div className="flex items-center gap-1 mb-6 text-foreground">

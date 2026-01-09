@@ -15,7 +15,7 @@ export function FeatureSpotlight1() {
         <div className="flex flex-col lg:flex-row items-center gap-16 lg:gap-24">
           {/* Left: Text Content */}
           <div className="w-full lg:w-1/2">
-            <h2 className="text-display-md font-playfair font-semibold text-foreground mb-6">
+            <h2 className="text-display-md font-header font-semibold text-foreground mb-6">
               Beyond Templates: Content that Speaks Your Brand
             </h2>
             <p className="text-body-lg text-muted-foreground mb-10">

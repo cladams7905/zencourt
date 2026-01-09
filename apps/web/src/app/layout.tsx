@@ -2,20 +2,20 @@ import type { Metadata } from "next";
 import { StackProvider, StackTheme } from "@stackframe/stack";
 import { stackClientApp } from "../lib/stack/client";
 import { Toaster } from "../components/ui/sonner";
-import { Quicksand, Playfair_Display } from "next/font/google";
+import { Playfair_Display, Mulish } from "next/font/google";
 import "./globals.css";
 
-const quicksand = Quicksand({
+const body = Mulish({
   subsets: ["latin"],
   weight: ["300", "400", "500", "600"],
-  variable: "--font-quicksand",
+  variable: "--font-body",
   display: "swap"
 });
 
-const playfair = Playfair_Display({
+const header = Playfair_Display({
   subsets: ["latin"],
   weight: ["400", "600", "700"],
-  variable: "--font-playfair",
+  variable: "--font-header",
   display: "swap"
 });
 
@@ -30,7 +30,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${quicksand.variable} ${playfair.variable}`}>
+    <html lang="en" className={`${body.variable} ${header.variable}`}>
       <body className="antialiased">
         <StackProvider app={stackClientApp}>
           <StackTheme>{children}</StackTheme>

@@ -12,7 +12,7 @@ export function Navigation() {
           {/* Logo */}
           <div className="flex items-center gap-3">
             <Image
-              src="/android-chrome-512x512.png"
+              src="/zencourt-logo.svg"
               alt="Zencourt Logo"
               width={24}
               height={24}

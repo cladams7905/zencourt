@@ -25,20 +25,20 @@ export function AuthView({
           {/* Logo */}
           <div className="flex items-center gap-3">
             <Image
-              src="/android-chrome-512x512.png"
+              src="/zencourt-logo.svg"
               alt="Zencourt"
               width={32}
               height={32}
               className="object-contain"
             />
-            <span className="text-foreground font-playfair text-3xl font-semibold tracking-tight">
+            <span className="text-foreground font-header text-3xl font-semibold tracking-tight">
               zencourt
             </span>
           </div>
 
           {/* Center Message */}
           <div className="max-w-md">
-            <h2 className="text-4xl lg:text-5xl font-playfair font-semibold text-foreground leading-[1.1] mb-6">
+            <h2 className="text-4xl lg:text-5xl font-header font-semibold text-foreground leading-[1.1] mb-6">
               Turn listings into{" "}
               <span className="relative inline-block">
                 <span className="absolute inset-x-0 bottom-2 h-3 bg-accent/40 -z-10 transform -rotate-1 rounded-sm" />
@@ -54,13 +54,13 @@ export function AuthView({
           {/* Bottom Stats */}
           <div className="flex gap-12">
             <div>
-              <div className="text-3xl font-playfair font-bold text-foreground mb-1">
+              <div className="text-3xl font-header font-bold text-foreground mb-1">
                 15h+
               </div>
               <div className="text-sm text-muted-foreground">Saved weekly</div>
             </div>
             <div>
-              <div className="text-3xl font-playfair font-bold text-foreground mb-1">
+              <div className="text-3xl font-header font-bold text-foreground mb-1">
                 300%
               </div>
               <div className="text-sm text-muted-foreground">
@@ -68,7 +68,7 @@ export function AuthView({
               </div>
             </div>
             <div>
-              <div className="text-3xl font-playfair font-bold text-foreground mb-1">
+              <div className="text-3xl font-header font-bold text-foreground mb-1">
                 50k+
               </div>
               <div className="text-sm text-muted-foreground">
@@ -85,20 +85,20 @@ export function AuthView({
           {/* Mobile Logo */}
           <div className="lg:hidden flex items-center gap-3 mb-12">
             <Image
-              src="/android-chrome-512x512.png"
+              src="/zencourt-logo.svg"
               alt="Zencourt"
               width={28}
               height={28}
               className="object-contain"
             />
-            <span className="text-foreground font-playfair text-2xl font-semibold tracking-tight">
+            <span className="text-foreground font-header text-2xl font-semibold tracking-tight">
               zencourt
             </span>
           </div>
 
           {/* Header */}
           <div className="mb-10">
-            <h1 className="text-3xl lg:text-4xl font-playfair font-semibold text-foreground mb-3 leading-tight">
+            <h1 className="text-3xl lg:text-4xl font-header font-semibold text-foreground mb-3 leading-tight">
               {title}
             </h1>
             {subtitle && (

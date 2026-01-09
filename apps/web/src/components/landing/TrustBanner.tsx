@@ -6,12 +6,12 @@ const companies = [
   { name: "SKYLINE REALTY", icon: MapPin },
   { name: "URBAN LIVING", icon: Home },
   { name: "COASTAL GROUP", icon: Hotel },
-  { name: "MODERN NEST", icon: Castle },
+  { name: "MODERN NEST", icon: Castle }
 ];
 
 export function TrustBanner() {
   return (
-    <section className="border-y border-border bg-secondary/50 py-10 overflow-hidden">
+    <section className="border-y border-border bg-accent/20 py-10 overflow-hidden">
       <div className="text-center mb-8">
         <p className="text-sm font-semibold text-muted-foreground uppercase tracking-widest">
           Trusted by realtors at

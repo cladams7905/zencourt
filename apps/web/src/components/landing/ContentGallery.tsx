@@ -15,7 +15,7 @@ export function ContentGallery() {
     <section className="py-20 lg:py-32 bg-background" id="features">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
-          <h2 className="text-display-md font-playfair font-semibold text-foreground mb-4">
+          <h2 className="text-display-md font-header font-semibold text-foreground mb-4">
             Stunning Content, Instantly
           </h2>
           <p className="text-body-md text-muted-foreground max-w-xl mx-auto">

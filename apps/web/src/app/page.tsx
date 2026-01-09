@@ -1,9 +1,11 @@
 import { getUserCampaigns } from "../server/actions/db/campaigns";
-import { DashboardView } from "../components/DashboardView";
+import { DashboardView } from "../components/dashboard/DashboardView";
 import { DBCampaign } from "@shared/types/models";
 import { getUser } from "../server/actions/db/users";
+import { getOrCreateUserAdditional } from "../server/actions/db/userAdditional";
 import { LandingPage } from "../components/landing/LandingPage";
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -24,18 +26,22 @@ export const metadata: Metadata = {
 
 export default async function Home() {
   let user = null;
-  let campaigns: DBCampaign[] = [];
 
   try {
     user = await getUser();
-    campaigns = await getUserCampaigns(user.id);
   } catch (error) {
     // No authenticated user - show landing page
     console.log("No authenticated user, showing landing page");
   }
 
-  // If user is authenticated, show dashboard
+  // If user is authenticated and has completed welcome survey, show dashboard
   if (user) {
+    const userAdditional = await getOrCreateUserAdditional(user.id);
+    if (!userAdditional.surveyCompletedAt) {
+      redirect("/welcome");
+    }
+
+    const campaigns: DBCampaign[] = await getUserCampaigns(user.id);
     return <DashboardView initialCampaigns={campaigns} />;
   }
 

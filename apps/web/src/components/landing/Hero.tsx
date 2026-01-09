@@ -6,7 +6,7 @@ export function Hero() {
   return (
     <section className="relative pt-20 pb-16 lg:pt-32 lg:pb-24 overflow-hidden">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
-        <h1 className="text-display-lg font-playfair font-semibold text-foreground mb-8">
+        <h1 className="text-display-lg font-header font-semibold text-foreground mb-8">
           Effortless Social Media Marketing for{" "}
           <span className="relative inline-block px-2">
             <span className="absolute inset-x-0 bottom-2 h-4 bg-accent/40 -z-10 transform -rotate-1 rounded-sm grain-overlay" />

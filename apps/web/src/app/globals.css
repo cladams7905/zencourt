@@ -5,6 +5,7 @@
 :root {
   --font-size: 16px;
   --background: #ffffff;
+  --background-light: #fdfdfd;
   --foreground: #000000;
   --card: #ffffff;
   --card-foreground: #000000;
@@ -37,7 +38,7 @@
   --sidebar-foreground: #000000;
   --sidebar-primary: #000000;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f5f5f5;
+  --sidebar-accent: #e8ddd3;
   --sidebar-accent-foreground: #000000;
   --sidebar-border: rgba(0, 0, 0, 0.08);
   --sidebar-ring: rgba(0, 0, 0, 0.2);
@@ -82,6 +83,7 @@
 
 @theme inline {
   --color-background: var(--background);
+  --color-background-light: var(--background-light);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
@@ -128,7 +130,7 @@
 
   body {
     @apply bg-background text-foreground;
-    font-family: var(--font-quicksand), sans-serif;
+    font-family: var(--font-body), sans-serif;
   }
 
   h1,
@@ -137,7 +139,7 @@
   h4,
   h5,
   h6 {
-    font-family: var(--font-playfair), serif;
+    font-family: var(--font-header), serif;
   }
 }
 
@@ -205,14 +207,14 @@ html {
   .safe-area-inset-bottom {
     padding-bottom: env(safe-area-inset-bottom);
   }
-}
 
-.font-spartan {
-  font-family: var(--font-playfair), serif;
-}
+  .font-header {
+    font-family: var(--font-header), serif;
+  }
 
-.font-playfair {
-  font-family: var(--font-playfair), serif;
+  .font-body {
+    font-family: var(--font-body), sans-serif;
+  }
 }
 
 /* Landing page animations */
@@ -245,20 +247,41 @@ html {
 
 /* Grain texture effect */
 @keyframes grain {
-  0%, 100% { transform: translate(0, 0); }
-  10% { transform: translate(-5%, -10%); }
-  20% { transform: translate(-15%, 5%); }
-  30% { transform: translate(7%, -25%); }
-  40% { transform: translate(-5%, 25%); }
-  50% { transform: translate(-15%, 10%); }
-  60% { transform: translate(15%, 0%); }
-  70% { transform: translate(0%, 15%); }
-  80% { transform: translate(3%, 35%); }
-  90% { transform: translate(-10%, 10%); }
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  10% {
+    transform: translate(-5%, -10%);
+  }
+  20% {
+    transform: translate(-15%, 5%);
+  }
+  30% {
+    transform: translate(7%, -25%);
+  }
+  40% {
+    transform: translate(-5%, 25%);
+  }
+  50% {
+    transform: translate(-15%, 10%);
+  }
+  60% {
+    transform: translate(15%, 0%);
+  }
+  70% {
+    transform: translate(0%, 15%);
+  }
+  80% {
+    transform: translate(3%, 35%);
+  }
+  90% {
+    transform: translate(-10%, 10%);
+  }
 }
 
 .grain-overlay::before {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.5' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.35'/%3E%3C/svg%3E");
