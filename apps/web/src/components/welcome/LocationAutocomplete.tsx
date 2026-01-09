@@ -10,6 +10,7 @@ export interface LocationData {
   city: string;
   state: string;
   country: string;
+  postalCode?: string;
   placeId: string;
   formattedAddress: string;
 }
@@ -76,10 +77,11 @@ export const LocationAutocomplete = ({
   const parseAddressComponents = React.useCallback(
     (
       components: google.maps.GeocoderAddressComponent[]
-    ): Pick<LocationData, "city" | "state" | "country"> => {
+    ): Pick<LocationData, "city" | "state" | "country" | "postalCode"> => {
       let city = "";
       let state = "";
       let country = "";
+      let postalCode = "";
 
       for (const component of components) {
         if (component.types.includes("locality")) {
@@ -88,10 +90,12 @@ export const LocationAutocomplete = ({
           state = component.long_name;
         } else if (component.types.includes("country")) {
           country = component.long_name;
+        } else if (component.types.includes("postal_code")) {
+          postalCode = component.long_name;
         }
       }
 
-      return { city, state, country };
+      return { city, state, country, postalCode };
     },
     []
   );
@@ -145,7 +149,7 @@ export const LocationAutocomplete = ({
             results[0]
           ) {
             const result = results[0];
-            const { city, state, country } = parseAddressComponents(
+            const { city, state, country, postalCode } = parseAddressComponents(
               result.address_components || []
             );
 
@@ -153,6 +157,7 @@ export const LocationAutocomplete = ({
               city,
               state,
               country,
+              postalCode,
               placeId: result.place_id || "",
               formattedAddress: result.formatted_address || ""
             };
@@ -238,7 +243,7 @@ export const LocationAutocomplete = ({
           status === window.google.maps.places.PlacesServiceStatus.OK &&
           place
         ) {
-          const { city, state, country } = parseAddressComponents(
+          const { city, state, country, postalCode } = parseAddressComponents(
             place.address_components || []
           );
 
@@ -246,6 +251,7 @@ export const LocationAutocomplete = ({
             city,
             state,
             country,
+            postalCode,
             placeId: place.place_id || "",
             formattedAddress: place.formatted_address || ""
           };

@@ -50,6 +50,11 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
+        hostname: "lh3.googleusercontent.com",
+        pathname: "/**"
+      },
+      {
+        protocol: "https",
         hostname: "zencourt-media-dev.s3.us-east-005.backblazeb2.com",
         pathname: "/**"
       },

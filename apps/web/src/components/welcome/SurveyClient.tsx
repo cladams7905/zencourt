@@ -13,13 +13,14 @@ interface SurveyClientProps {
 }
 
 const formatLocation = (location: SurveyFormData["location"]): string => {
-  if (location.formattedAddress) {
-    return location.formattedAddress;
+  if (location.country === "United States") {
+    const stateAndZip = [location.state, location.postalCode]
+      .filter(Boolean)
+      .join(" ");
+    return [location.city, stateAndZip].filter(Boolean).join(", ");
   }
 
-  return [location.city, location.state, location.country]
-    .filter(Boolean)
-    .join(", ");
+  return [location.city, location.country].filter(Boolean).join(", ");
 };
 
 export const SurveyClient = ({

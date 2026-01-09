@@ -12,6 +12,11 @@ import { DBCampaign } from "@shared/types/models";
 
 interface DashboardViewProps {
   initialCampaigns?: DBCampaign[];
+  headerName?: string;
+  location?: string;
+  sidebarName?: string;
+  sidebarPlan?: string;
+  userAvatar?: string;
   className?: string;
 }
 
@@ -82,7 +87,14 @@ const mockContentItems: ContentItem[] = [
   { id: "8", aspectRatio: "square", isFavorite: false }
 ];
 
-const DashboardView = ({ className }: DashboardViewProps) => {
+const DashboardView = ({
+  className,
+  headerName,
+  location,
+  sidebarName,
+  sidebarPlan,
+  userAvatar
+}: DashboardViewProps) => {
   const [contentType, setContentType] = React.useState<ContentType>("videos");
   const [activeFilters, setActiveFilters] = React.useState<string[]>([
     "Market Trends"
@@ -109,12 +121,16 @@ const DashboardView = ({ className }: DashboardViewProps) => {
   return (
     <div className={cn("flex h-screen overflow-hidden", className)}>
       {/* Sidebar */}
-      <DashboardSidebar />
+      <DashboardSidebar
+        userName={sidebarName}
+        paymentPlan={sidebarPlan}
+        userAvatar={userAvatar}
+      />
 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto relative bg-background">
         {/* Header */}
-        <DashboardHeader />
+        <DashboardHeader userName={headerName} location={location} />
 
         {/* Content */}
         <div className="px-8 py-8 max-w-[1600px] mx-auto space-y-10">

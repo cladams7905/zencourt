@@ -72,7 +72,7 @@ const ContentFilterBar = ({
             className={cn(
               "rounded-lg px-4 py-2 transition-all",
               activeType === "videos"
-                ? "bg-background text-foreground shadow-sm"
+                ? "bg-background text-foreground shadow-sm hover:bg-background"
                 : "text-muted-foreground hover:text-foreground"
             )}
             onClick={() => onTypeChange?.("videos")}
@@ -85,7 +85,7 @@ const ContentFilterBar = ({
             className={cn(
               "rounded-lg px-4 py-2 transition-all",
               activeType === "posts"
-                ? "bg-background text-foreground shadow-sm"
+                ? "bg-background text-foreground shadow-sm hover:bg-background"
                 : "text-muted-foreground hover:text-foreground"
             )}
             onClick={() => onTypeChange?.("posts")}
@@ -98,7 +98,7 @@ const ContentFilterBar = ({
             className={cn(
               "rounded-lg px-4 py-2 transition-all",
               activeType === "stories"
-                ? "bg-background text-foreground shadow-sm"
+                ? "bg-background text-foreground shadow-sm hover:bg-background"
                 : "text-muted-foreground hover:text-foreground"
             )}
             onClick={() => onTypeChange?.("stories")}

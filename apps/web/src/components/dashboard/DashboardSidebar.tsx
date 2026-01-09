@@ -32,14 +32,14 @@ import {
 interface DashboardSidebarProps {
   className?: string;
   userName?: string;
-  userRole?: string;
+  paymentPlan?: string;
   userAvatar?: string;
 }
 
 const DashboardSidebar = ({
   className,
-  userName = "Carter Adams",
-  userRole = "Pro Agent",
+  userName = "User",
+  paymentPlan = "Free",
   userAvatar
 }: DashboardSidebarProps) => {
   const user = useUser();
@@ -227,6 +227,8 @@ const DashboardSidebar = ({
                 <Image
                   src={userAvatar}
                   alt={userName}
+                  width={40}
+                  height={40}
                   className="h-10 w-10 rounded-full object-cover border border-border group-hover:border-foreground/20 transition-colors"
                 />
               ) : (
@@ -244,7 +246,7 @@ const DashboardSidebar = ({
                   {userName}
                 </span>
                 <span className="text-xs text-muted-foreground truncate">
-                  {userRole}
+                  {paymentPlan} Plan
                 </span>
               </div>
               <ChevronDown className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-all group-data-[state=open]:rotate-180 duration-200" />
