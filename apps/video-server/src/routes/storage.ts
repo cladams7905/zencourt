@@ -9,7 +9,7 @@ import logger from "../config/logger";
 import { storageService } from "../services/storageService";
 import {
   buildGenericUploadKey,
-  buildUserProjectVideoKey
+  buildUserListingVideoKey
 } from "@shared/utils/storagePaths";
 
 /**
@@ -94,7 +94,7 @@ router.post(
       // Generate storage key based on provided metadata
       let key: string;
       if (userId && projectId) {
-        key = buildUserProjectVideoKey(
+        key = buildUserListingVideoKey(
           userId,
           projectId,
           file.originalname,
@@ -359,7 +359,7 @@ router.post(
             // Generate storage key based on provided metadata
             let key: string;
             if (userId && projectId) {
-              key = buildUserProjectVideoKey(
+              key = buildUserListingVideoKey(
                 userId,
                 projectId,
                 file.originalname

@@ -1,5 +1,5 @@
-export * from "./db.campaign";
-export * from "./db.campaignImage";
+export * from "./db.listing";
+export * from "./db.listingImage";
 export * from "./db.content";
 export * from "./db.video";
 export * from "./db.imageContent";

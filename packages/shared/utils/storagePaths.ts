@@ -4,7 +4,7 @@
  * Single source of truth for storage path/key generation across both
  * Vercel and Express server to ensure consistent file organization.
  *
- * Standard format: user_{userId}/campaigns/campaign_{campaignId}/...
+ * Standard format: user_{userId}/listings/listing_{listingId}/...
  */
 
 import { nanoid } from "nanoid";
@@ -30,137 +30,137 @@ export function sanitizeFilename(filename: string): string {
 }
 
 /**
- * Get the folder path for a campaign's images
- * Format: user_{userId}/campaigns/campaign_{campaignId}
+ * Get the folder path for a listing's images
+ * Format: user_{userId}/listings/listing_{listingId}
  *
- * @param campaignId - Campaign ID
+ * @param listingId - Listing ID
  * @param userId - User ID (required for user-scoped folders)
  * @throws Error if userId is not provided
  */
-export function getCampaignFolder(
-  campaignId: string,
+export function getListingFolder(
+  listingId: string,
   userId: string
 ): string {
   if (!userId) {
     throw new Error(
-      "User ID is required for campaign folder. Cannot upload without authentication."
+      "User ID is required for listing folder. Cannot upload without authentication."
     );
   }
-  return `user_${userId}/campaigns/campaign_${campaignId}`;
+  return `user_${userId}/listings/listing_${listingId}`;
 }
 
 /**
- * Get the full storage key/path for a campaign image
- * Format: user_{userId}/campaigns/campaign_{campaignId}/images/{filename}
+ * Get the full storage key/path for a listing image
+ * Format: user_{userId}/listings/listing_{listingId}/images/{filename}
  *
  * @param userId - User ID
- * @param campaignId - Campaign ID
+ * @param listingId - Listing ID
  * @param filename - Original filename
  * @returns Full storage key
  */
-export function getCampaignImagePath(
+export function getListingImagePath(
   userId: string,
-  campaignId: string,
+  listingId: string,
   filename: string
 ): string {
   const sanitized = sanitizeFilename(filename);
-  return `${getCampaignFolder(campaignId, userId)}/images/${sanitized}`;
+  return `${getListingFolder(listingId, userId)}/images/${sanitized}`;
 }
 
 /**
  * Get the folder path for room videos
- * Format: user_{userId}/campaigns/campaign_{campaignId}/videos/video_{videoId}
+ * Format: user_{userId}/listings/listing_{listingId}/videos/video_{videoId}
  */
 export function getRoomVideoFolder(
   userId: string,
-  campaignId: string,
+  listingId: string,
   videoId: string
 ): string {
-  if (!userId || !campaignId || !videoId) {
+  if (!userId || !listingId || !videoId) {
     throw new Error(
-      "User ID, Campaign ID, and Video ID are required for video storage"
+      "User ID, Listing ID, and Video ID are required for video storage"
     );
   }
-  return `user_${userId}/campaigns/campaign_${campaignId}/videos/video_${videoId}`;
+  return `user_${userId}/listings/listing_${listingId}/videos/video_${videoId}`;
 }
 
 /**
  * Get the full storage key/path for a room video
- * Format: user_{userId}/campaigns/campaign_{campaignId}/videos/video_{videoId}/room_{roomName}_{timestamp}.mp4
+ * Format: user_{userId}/listings/listing_{listingId}/videos/video_{videoId}/room_{roomName}_{timestamp}.mp4
  */
 export function getRoomVideoPath(
   userId: string,
-  campaignId: string,
+  listingId: string,
   videoId: string,
   roomName: string
 ): string {
   const timestamp = Date.now();
   const sanitized = sanitizeFilename(roomName);
-  return `${getRoomVideoFolder(userId, campaignId, videoId)}/room_${sanitized}_${timestamp}.mp4`;
+  return `${getRoomVideoFolder(userId, listingId, videoId)}/room_${sanitized}_${timestamp}.mp4`;
 }
 
 /**
  * Get the folder path for final composed video
- * Format: user_{userId}/campaigns/campaign_{campaignId}/videos/video_{videoId}
+ * Format: user_{userId}/listings/listing_{listingId}/videos/video_{videoId}
  */
 export function getFinalVideoFolder(
   userId: string,
-  campaignId: string,
+  listingId: string,
   videoId: string
 ): string {
-  if (!userId || !campaignId || !videoId) {
+  if (!userId || !listingId || !videoId) {
     throw new Error(
-      "User ID, Campaign ID, and Video ID are required for video storage"
+      "User ID, Listing ID, and Video ID are required for video storage"
     );
   }
-  return `user_${userId}/campaigns/campaign_${campaignId}/videos/video_${videoId}`;
+  return `user_${userId}/listings/listing_${listingId}/videos/video_${videoId}`;
 }
 
 /**
  * Get the full storage key/path for final video
- * Format: user_{userId}/campaigns/campaign_{campaignId}/videos/video_{videoId}/final_{timestamp}.mp4
+ * Format: user_{userId}/listings/listing_{listingId}/videos/video_{videoId}/final_{timestamp}.mp4
  */
 export function getFinalVideoPath(
   userId: string,
-  campaignId: string,
+  listingId: string,
   videoId: string,
-  campaignName?: string
+  listingName?: string
 ): string {
   const timestamp = Date.now();
-  const filename = campaignName
-    ? `final_${sanitizeFilename(campaignName)}_${timestamp}.mp4`
+  const filename = listingName
+    ? `final_${sanitizeFilename(listingName)}_${timestamp}.mp4`
     : `final_${timestamp}.mp4`;
-  return `${getFinalVideoFolder(userId, campaignId, videoId)}/${filename}`;
+  return `${getFinalVideoFolder(userId, listingId, videoId)}/${filename}`;
 }
 
 /**
  * Get the full storage key/path for video thumbnail
- * Format: user_{userId}/campaigns/campaign_{campaignId}/videos/video_{videoId}/thumb_{timestamp}.jpg
+ * Format: user_{userId}/listings/listing_{listingId}/videos/video_{videoId}/thumb_{timestamp}.jpg
  */
 export function getThumbnailPath(
   userId: string,
-  campaignId: string,
+  listingId: string,
   videoId: string
 ): string {
   const timestamp = Date.now();
-  return `${getFinalVideoFolder(userId, campaignId, videoId)}/thumb_${timestamp}.jpg`;
+  return `${getFinalVideoFolder(userId, listingId, videoId)}/thumb_${timestamp}.jpg`;
 }
 
 /**
  * Get the folder path for temporary video files during composition
- * Format: user_{userId}/campaigns/campaign_{campaignId}/videos/video_{videoId}/temp
+ * Format: user_{userId}/listings/listing_{listingId}/videos/video_{videoId}/temp
  */
 export function getTempVideoFolder(
   userId: string,
-  campaignId: string,
+  listingId: string,
   videoId: string
 ): string {
-  if (!userId || !campaignId || !videoId) {
+  if (!userId || !listingId || !videoId) {
     throw new Error(
-      "User ID, Campaign ID, and Video ID are required for temp storage"
+      "User ID, Listing ID, and Video ID are required for temp storage"
     );
   }
-  return `user_${userId}/campaigns/campaign_${campaignId}/videos/video_${videoId}/temp`;
+  return `user_${userId}/listings/listing_${listingId}/videos/video_${videoId}/temp`;
 }
 
 /**
@@ -181,23 +181,23 @@ export function getGenericUploadPath(folder: string, filename: string): string {
 }
 
 /**
- * Build the user/campaign-scoped storage key that mirrors the structure shared by
+ * Build the user/listing-scoped storage key that mirrors the structure shared by
  * both the Vercel app and the video server so assets stay co-located.
  */
-export function buildUserCampaignVideoKey(
+export function buildUserListingVideoKey(
   userId: string,
-  campaignId: string,
+  listingId: string,
   filename: string,
   videoId?: string
 ): string {
   const safeUserId = sanitizePathSegment(userId);
-  const safeCampaignId = sanitizePathSegment(campaignId);
+  const safeListingId = sanitizePathSegment(listingId);
   const safeFilename = sanitizePathSegment(filename);
   const videoSegment = videoId
     ? `/videos/video_${sanitizePathSegment(videoId)}`
     : "";
 
-  return `user_${safeUserId}/campaigns/campaign_${safeCampaignId}${videoSegment}/${safeFilename}`;
+  return `user_${safeUserId}/listings/listing_${safeListingId}${videoSegment}/${safeFilename}`;
 }
 
 /**
@@ -251,16 +251,16 @@ export function extractStorageKeyFromUrl(url: string): string {
 }
 
 /**
- * Generate a temporary campaign ID
+ * Generate a temporary listing ID
  */
-export function generateTempCampaignId(): string {
+export function generateTempListingId(): string {
   return `temp-${Date.now()}`;
 }
 
 // Backwards-compatible exports to reduce breakage while code is migrated.
-export const getProjectFolder = getCampaignFolder;
-export const getProjectImagePath = getCampaignImagePath;
-export const buildUserProjectVideoKey = buildUserCampaignVideoKey;
+export const getProjectFolder = getListingFolder;
+export const getProjectImagePath = getListingImagePath;
+export const buildUserProjectVideoKey = buildUserListingVideoKey;
 
 /**
  * Extract host from a storage endpoint URL

@@ -1,7 +1,7 @@
 import type { VideoStatus } from "@shared/types/models";
 
 export interface VideoJobUpdateEvent {
-  campaignId: string;
+  listingId: string;
   jobId: string;
   status: VideoStatus;
   videoUrl?: string | null;
@@ -12,7 +12,7 @@ export interface VideoJobUpdateEvent {
 }
 
 export interface FinalVideoUpdateEvent {
-  campaignId: string;
+  listingId: string;
   status: "completed" | "failed";
   finalVideoUrl?: string | null;
   thumbnailUrl?: string | null;

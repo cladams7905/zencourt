@@ -14,8 +14,8 @@ class VideoContentRepository {
     return reason?.trim() || "Canceled by user request";
   }
 
-  async cancelByCampaign(
-    campaignId: string,
+  async cancelByListing(
+    listingId: string,
     reason?: string
   ): Promise<number> {
     const canceled = await db
@@ -34,7 +34,7 @@ class VideoContentRepository {
               .where(
                 and(
                   eq(content.id, videos.contentId),
-                  eq(content.campaignId, campaignId)
+                  eq(content.listingId, listingId)
                 )
               )
           ),

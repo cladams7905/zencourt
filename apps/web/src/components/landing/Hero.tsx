@@ -14,7 +14,7 @@ export function Hero() {
           </span>
         </h1>
         <p className="text-body-lg text-muted-foreground mb-12 max-w-3xl mx-auto">
-          Turn every listing into a powerful social media campaign in minutes.
+          Turn every listing into a powerful social media listing in minutes.
           Generate videos, reels, and posts automatically from your property
           photos.
         </p>

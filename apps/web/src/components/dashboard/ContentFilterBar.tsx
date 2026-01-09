@@ -27,7 +27,7 @@ const ContentFilterBar = ({
   className
 }: ContentFilterBarProps) => {
   const filters = [
-    { id: "campaigns", label: "Campaigns" },
+    { id: "listings", label: "Listings" },
     { id: "market-trends", label: "Market Trends" },
     { id: "seasonal", label: "Seasonal" },
     { id: "tips", label: "Tips" },
@@ -111,7 +111,7 @@ const ContentFilterBar = ({
         <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide max-w-full justify-end w-full sm:w-auto">
           {filters.map((filter) => {
             const isActive = activeFilters.includes(filter.label);
-            const isCampaigns = filter.id === "campaigns";
+            const isListings = filter.id === "listings";
 
             return (
               <Button
@@ -123,12 +123,12 @@ const ContentFilterBar = ({
                   isActive
                     ? "bg-primary text-primary-foreground border-primary"
                     : "bg-background border-border hover:border-foreground/20",
-                  isCampaigns && "gap-1.5"
+                  isListings && "gap-1.5"
                 )}
                 onClick={() => onFilterToggle?.(filter.label)}
               >
                 {filter.label}
-                {isCampaigns && <ChevronDown className="h-3 w-3" />}
+                {isListings && <ChevronDown className="h-3 w-3" />}
               </Button>
             );
           })}

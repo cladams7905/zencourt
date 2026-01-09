@@ -9,8 +9,8 @@ import { ensurePublicUrlSafe } from "../utils/storageUrls";
 
 const VIDEO_STATUS_URL_TTL_SECONDS = 6 * 60 * 60; // 6 hours
 
-export async function getCampaignVideoStatus(
-  campaignId: string
+export async function getListingVideoStatus(
+  listingId: string
 ): Promise<InitialVideoStatusPayload> {
   const latestVideoResult = await db
     .select({
@@ -23,7 +23,7 @@ export async function getCampaignVideoStatus(
     })
     .from(videoContent)
     .innerJoin(content, eq(videoContent.contentId, content.id))
-    .where(eq(content.campaignId, campaignId))
+    .where(eq(content.listingId, listingId))
     .orderBy(desc(videoContent.createdAt))
     .limit(1);
 
@@ -51,7 +51,7 @@ export async function getCampaignVideoStatus(
           VIDEO_STATUS_URL_TTL_SECONDS
         );
         return {
-          campaignId,
+          listingId,
           jobId: job.id,
           status: job.status,
           videoUrl: signedVideoUrl ?? job.videoUrl,
@@ -78,7 +78,7 @@ export async function getCampaignVideoStatus(
       )
     ]);
     finalVideo = {
-      campaignId,
+      listingId,
       status: "completed",
       finalVideoUrl: signedVideoUrl ?? latestVideo.videoUrl,
       thumbnailUrl: signedThumbnailUrl ?? latestVideo.thumbnailUrl ?? undefined,
@@ -97,7 +97,7 @@ export async function getCampaignVideoStatus(
       )
     ]);
     finalVideo = {
-      campaignId,
+      listingId,
       status: "failed",
       finalVideoUrl: signedVideoUrl ?? latestVideo.videoUrl ?? undefined,
       thumbnailUrl: signedThumbnailUrl ?? latestVideo.thumbnailUrl ?? undefined,

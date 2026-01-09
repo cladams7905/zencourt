@@ -45,7 +45,7 @@ const DashboardSidebar = ({
   const user = useUser();
   const router = useRouter();
   const [contentExpanded, setContentExpanded] = React.useState(true);
-  const [campaignsExpanded, setCampaignsExpanded] = React.useState(true);
+  const [listingsExpanded, setListingsExpanded] = React.useState(true);
 
   const handleLogout = async () => {
     await user?.signOut();
@@ -170,13 +170,13 @@ const DashboardSidebar = ({
           <div className="h-px bg-border w-full" />
         </div>
 
-        {/* Campaigns Section */}
+        {/* Listings Section */}
         <div className="space-y-1">
           <div
-            onClick={() => setCampaignsExpanded(!campaignsExpanded)}
+            onClick={() => setListingsExpanded(!listingsExpanded)}
             className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
           >
-            <span>Campaigns</span>
+            <span>Listings</span>
             <div className="flex items-center gap-2">
               <Button
                 size="icon"
@@ -191,13 +191,13 @@ const DashboardSidebar = ({
               <ChevronDown
                 className={cn(
                   "h-4 w-4 transition-transform",
-                  campaignsExpanded && "rotate-180"
+                  listingsExpanded && "rotate-180"
                 )}
               />
             </div>
           </div>
 
-          {campaignsExpanded && (
+          {listingsExpanded && (
             <div className="space-y-0.5 pl-2">
               <Button variant="ghost" className="w-full justify-start gap-3">
                 <div className="w-1.5 h-1.5 rotate-45 bg-foreground shrink-0" />

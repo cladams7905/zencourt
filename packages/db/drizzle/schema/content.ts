@@ -14,14 +14,14 @@ import {
   contentTypeEnum,
   socialPlatformEnum
 } from "./enums";
-import { campaigns } from "./campaigns";
+import { listings } from "./listings";
 
 export const content = pgTable(
   "content",
   {
     id: text("id").primaryKey(),
-    campaignId: text("campaign_id")
-      .references(() => campaigns.id, { onDelete: "set null" }),
+    listingId: text("listing_id")
+      .references(() => listings.id, { onDelete: "set null" }),
     userId: text("user_id").notNull(),
     contentType: contentTypeEnum("content_type").notNull(),
     status: contentStatusEnum("status").notNull().default("draft"),
@@ -37,7 +37,7 @@ export const content = pgTable(
   },
   (table) => [
     index("content_user_id_idx").on(table.userId),
-    index("content_campaign_id_idx").on(table.campaignId),
+    index("content_listing_id_idx").on(table.listingId),
     index("content_type_idx").on(table.contentType),
     index("content_status_idx").on(table.status),
     crudPolicy({

@@ -8,10 +8,10 @@ import { ScheduleCard, type ScheduledPost } from "./ScheduleCard";
 import { ContentFilterBar, type ContentType } from "./ContentFilterBar";
 import { ContentGrid, type ContentItem } from "./ContentGrid";
 import { ArrowRight } from "lucide-react";
-import { DBCampaign } from "@shared/types/models";
+import { DBListing } from "@shared/types/models";
 
 interface DashboardViewProps {
-  initialCampaigns?: DBCampaign[];
+  initialListings?: DBListing[];
   headerName?: string;
   location?: string;
   sidebarName?: string;

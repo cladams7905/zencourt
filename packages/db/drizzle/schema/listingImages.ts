@@ -13,15 +13,15 @@ import { authenticatedRole, crudPolicy } from "drizzle-orm/neon";
 
 import type { ImageMetadata } from "@shared/types/models";
 
-import { campaigns } from "./campaigns";
+import { listings } from "./listings";
 
-export const campaignImages = pgTable(
-  "campaign_images",
+export const listingImages = pgTable(
+  "listing_images",
   {
     id: text("id").primaryKey(),
-    campaignId: text("campaign_id")
+    listingId: text("listing_id")
       .notNull()
-      .references(() => campaigns.id, { onDelete: "cascade" }),
+      .references(() => listings.id, { onDelete: "cascade" }),
     filename: text("filename").notNull(),
     url: text("url").notNull(),
     category: varchar("category", { length: 50 }),
@@ -33,15 +33,15 @@ export const campaignImages = pgTable(
     uploadedAt: timestamp("uploaded_at").defaultNow().notNull()
   },
   (table) => [
-    index("campaign_images_campaign_id_idx").on(table.campaignId),
+    index("listing_images_listing_id_idx").on(table.listingId),
     crudPolicy({
       role: authenticatedRole,
-      read: sql`(select ${campaigns.userId} = auth.user_id()
-        from ${campaigns}
-        where ${campaigns.id} = ${table.campaignId})`,
-      modify: sql`(select ${campaigns.userId} = auth.user_id()
-        from ${campaigns}
-        where ${campaigns.id} = ${table.campaignId})`
+      read: sql`(select ${listings.userId} = auth.user_id()
+        from ${listings}
+        where ${listings.id} = ${table.listingId})`,
+      modify: sql`(select ${listings.userId} = auth.user_id()
+        from ${listings}
+        where ${listings.id} = ${table.listingId})`
     })
   ]
 );

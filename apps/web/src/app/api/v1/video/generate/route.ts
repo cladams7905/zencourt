@@ -7,11 +7,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { nanoid } from "nanoid";
 import { eq, asc, desc, and, DrizzleQueryError } from "drizzle-orm";
-import { db, campaigns, campaignImages, content } from "@db/client";
+import { db, listings, listingImages, content } from "@db/client";
 import {
   ApiError,
   requireAuthenticatedUser,
-  requireCampaignAccess
+  requireListingAccess
 } from "../../_utils";
 import { VideoGenerateRequest, VideoGenerateResponse } from "@shared/types/api";
 import { getVideoServerConfig } from "../_config";
@@ -21,7 +21,7 @@ import {
   logger as baseLogger
 } from "../../../../../lib/logger";
 import {
-  DBCampaignImage,
+  DBListingImage,
   JobGenerationSettings,
   InsertDBVideoContent,
   InsertDBVideoContentJob
@@ -79,11 +79,11 @@ function buildPrompt(
 }
 
 function groupImagesByCategory(
-  campaignImagesByCategory: DBCampaignImage[]
-): Map<string, DBCampaignImage[]> {
-  const grouped = new Map<string, DBCampaignImage[]>();
+  listingImagesByCategory: DBListingImage[]
+): Map<string, DBListingImage[]> {
+  const grouped = new Map<string, DBListingImage[]>();
 
-  campaignImagesByCategory.forEach((image) => {
+  listingImagesByCategory.forEach((image) => {
     if (!image.category || !image.url) {
       return;
     }
@@ -114,7 +114,7 @@ interface RoomAssetSelection {
 
 function selectRoomAssetsForRoom(
   room: { id: string; name: string; category: string; roomNumber?: number },
-  groupedImages: Map<string, DBCampaignImage[]>
+  groupedImages: Map<string, DBListingImage[]>
 ): RoomAssetSelection {
   const availableImages = groupedImages.get(room.category) || [];
   if (availableImages.length === 0) {
@@ -165,7 +165,7 @@ function selectRoomAssetsForRoom(
 async function enqueueVideoServerJob(
   parentVideoId: string,
   jobIds: string[],
-  campaignId: string,
+  listingId: string,
   userId: string
 ) {
   const { baseUrl, apiKey } = getVideoServerConfig();
@@ -173,7 +173,7 @@ async function enqueueVideoServerJob(
   logger.info(
     {
       parentVideoId,
-      campaignId,
+      listingId,
       userId,
       jobCount: jobIds.length,
       jobIds
@@ -190,7 +190,7 @@ async function enqueueVideoServerJob(
     body: JSON.stringify({
       videoId: parentVideoId,
       jobIds,
-      campaignId,
+      listingId,
       userId
     })
   });
@@ -203,7 +203,7 @@ async function enqueueVideoServerJob(
     logger.error(
       {
         parentVideoId,
-        campaignId,
+        listingId,
         responseStatus: response.status,
         message
       },
@@ -223,12 +223,12 @@ export async function POST(
   try {
     const body: VideoGenerateRequest = await request.json();
     const user = await requireAuthenticatedUser();
-    const campaign = await requireCampaignAccess(body.campaignId, user.id);
+    const listing = await requireListingAccess(body.listingId, user.id);
 
     logger.info(
       {
         userId: user.id,
-        campaignId: campaign.id
+        listingId: listing.id
       },
       "Video generation request authorized"
     );
@@ -236,7 +236,7 @@ export async function POST(
     // Validate rooms
     if (!body.rooms || body.rooms.length === 0) {
       logger.warn(
-        { campaignId: body.campaignId },
+        { listingId: body.listingId },
         "Video generation request missing rooms"
       );
       throw new ApiError(400, {
@@ -248,28 +248,28 @@ export async function POST(
     const orientation = body.orientation || "landscape";
     const duration = body.duration || DEFAULT_DURATION;
 
-    const campaignImageRows: DBCampaignImage[] = (await db
+    const listingImageRows: DBListingImage[] = (await db
       .select()
-      .from(campaignImages)
-      .where(eq(campaignImages.campaignId, campaign.id))
-      .orderBy(asc(campaignImages.sortOrder), asc(campaignImages.uploadedAt))) as DBCampaignImage[];
+      .from(listingImages)
+      .where(eq(listingImages.listingId, listing.id))
+      .orderBy(asc(listingImages.sortOrder), asc(listingImages.uploadedAt))) as DBListingImage[];
 
-    if (campaignImageRows.length === 0) {
+    if (listingImageRows.length === 0) {
       logger.error(
-        { campaignId: campaign.id },
+        { listingId: listing.id },
         "Video generation request missing images"
       );
       throw new ApiError(400, {
         error: "Missing images",
-        message: "Campaign is missing property images"
+        message: "Listing is missing property images"
       });
     }
 
-    const groupedImages = groupImagesByCategory(campaignImageRows);
+    const groupedImages = groupImagesByCategory(listingImageRows);
 
     logger.info(
       {
-        campaignId: body.campaignId,
+        listingId: body.listingId,
         roomCount: body.rooms.length,
         orientation,
         duration
@@ -277,13 +277,13 @@ export async function POST(
       "Preparing new video generation"
     );
 
-    // Ensure a parent content record exists for this campaign
+    // Ensure a parent content record exists for this listing
     const existingContent = await db
       .select()
       .from(content)
       .where(
         and(
-          eq(content.campaignId, campaign.id),
+          eq(content.listingId, listing.id),
           eq(content.contentType, "video")
         )
       )
@@ -296,7 +296,7 @@ export async function POST(
           .insert(content)
           .values({
             id: nanoid(),
-            campaignId: campaign.id,
+            listingId: listing.id,
             userId: user.id,
             contentType: "video",
             status: "draft"
@@ -320,7 +320,7 @@ export async function POST(
     logger.info(
       {
         parentVideoId,
-        campaignId: body.campaignId
+        listingId: body.listingId
       },
       "Created parent video record"
     );
@@ -340,7 +340,7 @@ export async function POST(
         } catch (error) {
           logger.error(
             {
-              campaignId: body.campaignId,
+              listingId: body.listingId,
               roomId: room.id,
               err: error instanceof Error ? error.message : String(error)
             },
@@ -404,7 +404,7 @@ export async function POST(
     logger.info(
       {
         parentVideoId,
-        campaignId: body.campaignId,
+        listingId: body.listingId,
         jobCount: videoJobRecords.length,
         jobIds
       },
@@ -412,12 +412,12 @@ export async function POST(
     );
 
     // Step 3: Enqueue jobs to video server
-    await enqueueVideoServerJob(parentVideoId, jobIds, campaign.id, user.id);
+    await enqueueVideoServerJob(parentVideoId, jobIds, listing.id, user.id);
 
     logger.info(
       {
         parentVideoId,
-        campaignId: campaign.id,
+        listingId: listing.id,
         userId: user.id,
         jobCount: videoJobRecords.length
       },
@@ -429,7 +429,7 @@ export async function POST(
       {
         success: true,
         message: "Video generation started",
-        campaignId: body.campaignId,
+        listingId: body.listingId,
         videoId: parentVideoId,
         jobIds: jobIds,
         jobCount: videoJobRecords.length
@@ -449,7 +449,7 @@ export async function POST(
         {
           error: error.body.message,
           success: false,
-          campaignId: "",
+          listingId: "",
           videoId: "",
           jobIds: [],
           jobCount: 0
@@ -465,7 +465,7 @@ export async function POST(
         {
           error: error.message,
           success: false,
-          campaignId: "",
+          listingId: "",
           videoId: "",
           jobIds: [],
           jobCount: 0
@@ -480,7 +480,7 @@ export async function POST(
         message:
           error instanceof Error ? error.message : "Unable to start generation",
         success: false,
-        campaignId: "",
+        listingId: "",
         videoId: "",
         jobIds: [],
         jobCount: 0

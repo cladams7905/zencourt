@@ -1,6 +1,6 @@
-import { getUserCampaigns } from "../server/actions/db/campaigns";
+import { getUserListings } from "../server/actions/db/listings";
 import { DashboardView } from "../components/dashboard/DashboardView";
-import { DBCampaign } from "@shared/types/models";
+import { DBListing } from "@shared/types/models";
 import { getUser } from "../server/actions/db/users";
 import { getOrCreateUserAdditional } from "../server/actions/db/userAdditional";
 import { LandingPage } from "../components/landing/LandingPage";
@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Zencourt - Effortless Social Media Marketing for Real Estate",
   description:
-    "Turn every listing into a powerful social media campaign in minutes. Generate videos, reels, and posts automatically from your property photos with AI-powered content creation.",
+    "Turn every listing into a powerful social media listing in minutes. Generate videos, reels, and posts automatically from your property photos with AI-powered content creation.",
   keywords: [
     "real estate marketing",
     "social media automation",
@@ -82,10 +82,10 @@ export default async function Home() {
     const paymentPlanLabel =
       paymentPlanLabels[userAdditional.paymentPlan] ?? "Free";
 
-    const campaigns: DBCampaign[] = await getUserCampaigns(user.id);
+    const listings: DBListing[] = await getUserListings(user.id);
     return (
       <DashboardView
-        initialCampaigns={campaigns}
+        initialListings={listings}
         headerName={headerName}
         location={locationLabel}
         sidebarName={sidebarName}

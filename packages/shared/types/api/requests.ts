@@ -23,7 +23,7 @@ export interface StorageUploadRequest {
   options?: {
     folder?: string;
     userId?: string;
-    campaignId?: string;
+    listingId?: string;
   };
 }
 
@@ -32,7 +32,7 @@ export interface StorageUploadRequest {
 // ============================================================================
 
 export interface VideoGenerateRequest {
-  campaignId: string;
+  listingId: string;
   orientation: VideoOrientation;
   rooms: Array<{
     id: string;

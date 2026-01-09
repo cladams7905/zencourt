@@ -22,7 +22,7 @@ export interface StorageUploadBatchResponse extends ApiResponse {
 // ============================================================================
 
 export interface VideoGenerateResponse extends ApiResponse {
-  campaignId: string;
+  listingId: string;
   videoId: string;
   jobIds: string[];
   jobCount: number;

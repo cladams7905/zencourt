@@ -2,21 +2,21 @@
 
 import { nanoid } from "nanoid";
 import { eq, sql } from "drizzle-orm";
-import { db, campaignImages as images } from "@db/client";
+import { db, listingImages as images } from "@db/client";
 import {
-  DBCampaignImage,
-  InsertDBCampaignImage
+  DBListingImage,
+  InsertDBListingImage
 } from "@shared/types/models";
 import { withDbErrorHandling } from "../_utils";
 
 /**
- * Save processed images to database for a campaign
+ * Save processed images to database for a listing
  */
 export async function saveImages(
   userId: string,
-  campaignId: string,
-  imageData: InsertDBCampaignImage[]
-): Promise<DBCampaignImage[]> {
+  listingId: string,
+  imageData: InsertDBListingImage[]
+): Promise<DBListingImage[]> {
   if (!userId || userId.trim() === "") {
     throw new Error("User ID is required to save images");
   }
@@ -27,11 +27,11 @@ export async function saveImages(
 
   return withDbErrorHandling(
     async () => {
-      const imageRecords: InsertDBCampaignImage[] = imageData.map(
+      const imageRecords: InsertDBListingImage[] = imageData.map(
         (img, index) => ({
           ...img,
           id: img.id ?? nanoid(),
-          campaignId,
+          listingId,
           sortOrder: img.sortOrder ?? index
         })
       );
@@ -56,21 +56,21 @@ export async function saveImages(
     },
     {
       actionName: "saveImages",
-      context: { campaignId, userId, imageCount: imageData.length },
+      context: { listingId, userId, imageCount: imageData.length },
       errorMessage: "Failed to save images to database. Please try again."
     }
   );
 }
 
 /**
- * Get all images for a campaign
+ * Get all images for a listing
  */
-export async function getCampaignImages(
+export async function getListingImages(
   userId: string,
-  campaignId: string
-): Promise<DBCampaignImage[]> {
-  if (!campaignId || campaignId.trim() === "") {
-    throw new Error("Campaign ID is required");
+  listingId: string
+): Promise<DBListingImage[]> {
+  if (!listingId || listingId.trim() === "") {
+    throw new Error("Listing ID is required");
   }
   if (!userId || userId.trim() === "") {
     throw new Error("User ID is required to fetch images");
@@ -78,29 +78,29 @@ export async function getCampaignImages(
 
   return withDbErrorHandling(
     async () => {
-      const campaignImages = await db
+      const listingImages = await db
         .select()
         .from(images)
-        .where(eq(images.campaignId, campaignId));
-      return campaignImages as DBCampaignImage[];
+        .where(eq(images.listingId, listingId));
+      return listingImages as DBListingImage[];
     },
     {
-      actionName: "getCampaignImages",
-      context: { campaignId, userId },
+      actionName: "getListingImages",
+      context: { listingId, userId },
       errorMessage: "Failed to fetch images from database. Please try again."
     }
   );
 }
 
 /**
- * Delete all images for a campaign
+ * Delete all images for a listing
  */
-export async function deleteCampaignImages(
+export async function deleteListingImages(
   userId: string,
-  campaignId: string
+  listingId: string
 ): Promise<void> {
-  if (!campaignId || campaignId.trim() === "") {
-    throw new Error("Campaign ID is required");
+  if (!listingId || listingId.trim() === "") {
+    throw new Error("Listing ID is required");
   }
   if (!userId || userId.trim() === "") {
     throw new Error("User ID is required to delete images");
@@ -108,11 +108,11 @@ export async function deleteCampaignImages(
 
   return withDbErrorHandling(
     async () => {
-      await db.delete(images).where(eq(images.campaignId, campaignId));
+      await db.delete(images).where(eq(images.listingId, listingId));
     },
     {
-      actionName: "deleteCampaignImages",
-      context: { campaignId, userId },
+      actionName: "deleteListingImages",
+      context: { listingId, userId },
       errorMessage: "Failed to delete images from database. Please try again."
     }
   );

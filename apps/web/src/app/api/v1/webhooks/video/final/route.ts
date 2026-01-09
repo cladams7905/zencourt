@@ -28,7 +28,7 @@ const FINAL_VIDEO_SIGNED_URL_TTL_SECONDS = 6 * 60 * 60; // 6 hours
 
 interface FinalVideoWebhookPayload {
   videoId: string;
-  campaignId: string;
+  listingId: string;
   status: "completed" | "failed";
   timestamp: string;
   result?: {
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
 
     logger.info(
       {
-        campaignId: payload.campaignId,
+        listingId: payload.listingId,
         videoId,
         status: payload.status
       },
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
         logger.error(
           {
             videoId,
-            campaignId: payload.campaignId,
+            listingId: payload.listingId,
             err: error instanceof Error ? error.message : String(error)
           },
           "Failed to generate signed URL for final video, using original URL"
@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
         logger.error(
           {
             videoId,
-            campaignId: payload.campaignId,
+            listingId: payload.listingId,
             err: error instanceof Error ? error.message : String(error)
           },
           "Failed to generate signed URL for final thumbnail, using original URL"
@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
 
     logger.info(
       {
-        campaignId: payload.campaignId,
+        listingId: payload.listingId,
         videoId,
         status: payload.status
       },
@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
 
       logger.info(
         {
-          campaignId: payload.campaignId,
+          listingId: payload.listingId,
           videoId,
           contentId: updatedVideo.contentId
         },
@@ -148,8 +148,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Revalidate the campaign page to reflect the final video
-    revalidatePath(`/campaign/${payload.campaignId}`);
+    // Revalidate the listing page to reflect the final video
+    revalidatePath(`/listing/${payload.listingId}`);
 
     return NextResponse.json({
       success: true,

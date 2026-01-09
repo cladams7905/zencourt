@@ -2,14 +2,14 @@
 
 import { nanoid } from "nanoid";
 import { eq, and, like, desc } from "drizzle-orm";
-import { db, campaigns, content } from "@db/client";
-import { DBCampaign, InsertDBCampaign } from "@shared/types/models";
+import { db, listings, content } from "@db/client";
+import { DBListing, InsertDBListing } from "@shared/types/models";
 import { withDbErrorHandling } from "../_utils";
 import { ensurePublicUrlSafe } from "../../utils/storageUrls";
 
 type ContentRecord = typeof content.$inferSelect;
 
-const CAMPAIGN_THUMBNAIL_TTL_SECONDS = 6 * 60 * 60; // 6 hours
+const LISTING_THUMBNAIL_TTL_SECONDS = 6 * 60 * 60; // 6 hours
 
 async function resolveThumbnailUrl(
   url?: string | null
@@ -19,7 +19,7 @@ async function resolveThumbnailUrl(
   }
   const signed = await ensurePublicUrlSafe(
     url,
-    CAMPAIGN_THUMBNAIL_TTL_SECONDS
+    LISTING_THUMBNAIL_TTL_SECONDS
   );
   return signed ?? url ?? null;
 }
@@ -39,25 +39,25 @@ async function withSignedContentThumbnails(
 }
 
 /**
- * Create a new campaign
- * Server action that creates a campaign in the database
+ * Create a new listing
+ * Server action that creates a listing in the database
  *
- * @returns Promise<DBCampaign> - The created campaign
- * @throws Error if user is not authenticated or campaign creation fails
+ * @returns Promise<DBListing> - The created listing
+ * @throws Error if user is not authenticated or listing creation fails
  */
-export async function createCampaign(userId: string): Promise<DBCampaign> {
+export async function createListing(userId: string): Promise<DBListing> {
   if (!userId || userId.trim() === "") {
-    throw new Error("User ID is required to create a campaign");
+    throw new Error("User ID is required to create a listing");
   }
 
   return withDbErrorHandling(
     async () => {
       return db.transaction(async (tx) => {
-        const campaignId = nanoid();
-        const [newCampaign] = await tx
-          .insert(campaigns)
+        const listingId = nanoid();
+        const [newListing] = await tx
+          .insert(listings)
           .values({
-            id: campaignId,
+            id: listingId,
             userId
           })
           .returning();
@@ -66,7 +66,7 @@ export async function createCampaign(userId: string): Promise<DBCampaign> {
           .insert(content)
           .values({
             id: nanoid(),
-            campaignId,
+            listingId,
             userId,
             contentType: "video",
             status: "draft"
@@ -74,7 +74,7 @@ export async function createCampaign(userId: string): Promise<DBCampaign> {
           .returning();
 
         return {
-          ...newCampaign,
+          ...newListing,
           primaryContentId: primaryContent.id,
           thumbnailUrl: primaryContent.thumbnailUrl,
           contents: [primaryContent]
@@ -82,100 +82,100 @@ export async function createCampaign(userId: string): Promise<DBCampaign> {
       });
     },
     {
-      actionName: "createCampaign",
-      errorMessage: "Failed to create campaign. Please try again."
+      actionName: "createListing",
+      errorMessage: "Failed to create listing. Please try again."
     }
   );
 }
 
 /**
- * Update campaign
- * Server action that updates one or more fields of a campaign
+ * Update listing
+ * Server action that updates one or more fields of a listing
  *
- * @param campaignId - The ID of the campaign to update
- * @param updates - Partial campaign object with fields to update
- * @returns Promise<DBCampaign> - The updated campaign
+ * @param listingId - The ID of the listing to update
+ * @param updates - Partial listing object with fields to update
+ * @returns Promise<DBListing> - The updated listing
  * @throws Error if user is not authenticated or update fails
  */
-export async function updateCampaign(
+export async function updateListing(
   userId: string,
-  campaignId: string,
-  updates: Partial<Omit<InsertDBCampaign, "id" | "userId" | "createdAt">>
-): Promise<DBCampaign> {
-  if (!campaignId || campaignId.trim() === "") {
-    throw new Error("Campaign ID is required");
+  listingId: string,
+  updates: Partial<Omit<InsertDBListing, "id" | "userId" | "createdAt">>
+): Promise<DBListing> {
+  if (!listingId || listingId.trim() === "") {
+    throw new Error("Listing ID is required");
   }
   if (!userId || userId.trim() === "") {
-    throw new Error("User ID is required to update a campaign");
+    throw new Error("User ID is required to update a listing");
   }
 
   return withDbErrorHandling(
     async () => {
-      const [updatedCampaign] = await db
-        .update(campaigns)
+      const [updatedListing] = await db
+        .update(listings)
         .set({
           ...updates,
           updatedAt: new Date()
         })
-        .where(and(eq(campaigns.id, campaignId), eq(campaigns.userId, userId)))
+        .where(and(eq(listings.id, listingId), eq(listings.userId, userId)))
         .returning();
 
-      if (!updatedCampaign) {
-        throw new Error("Campaign not found");
+      if (!updatedListing) {
+        throw new Error("Listing not found");
       }
 
-      return updatedCampaign;
+      return updatedListing;
     },
     {
-      actionName: "updateCampaign",
-      context: { campaignId },
-      errorMessage: "Failed to update campaign. Please try again."
+      actionName: "updateListing",
+      context: { listingId },
+      errorMessage: "Failed to update listing. Please try again."
     }
   );
 }
 
 /**
- * Get all campaigns for the current user
- * Server action that retrieves all campaigns belonging to the authenticated user
+ * Get all listings for the current user
+ * Server action that retrieves all listings belonging to the authenticated user
  *
- * @returns Promise<DBCampaign[]> - Array of user's campaigns
+ * @returns Promise<DBListing[]> - Array of user's listings
  * @throws Error if user is not authenticated
  */
-export async function getUserCampaigns(
+export async function getUserListings(
   userId: string
-): Promise<DBCampaign[]> {
+): Promise<DBListing[]> {
   if (!userId || userId.trim() === "") {
-    throw new Error("User ID is required to fetch campaigns");
+    throw new Error("User ID is required to fetch listings");
   }
 
   return withDbErrorHandling(
     async () => {
       const rows = await db
         .select({
-          campaign: campaigns,
+          listing: listings,
           content: content
         })
-        .from(campaigns)
-        .leftJoin(content, eq(content.campaignId, campaigns.id))
-        .where(eq(campaigns.userId, userId))
-        .orderBy(desc(campaigns.createdAt));
+        .from(listings)
+        .leftJoin(content, eq(content.listingId, listings.id))
+        .where(eq(listings.userId, userId))
+        .orderBy(desc(listings.createdAt));
 
-      const campaignMap = new Map<
+      const listingMap = new Map<
         string,
         {
-          campaign: (typeof campaigns.$inferSelect);
+          listing: (typeof listings.$inferSelect);
           contents: ContentRecord[];
         }
       >();
 
-      for (const { campaign, content: contentRow } of rows) {
-        let entry = campaignMap.get(campaign.id);
+      for (const { listing, content: contentRow } of rows) {
+        let entry = listingMap.get(listing.id);
         if (!entry) {
           entry = {
-            campaign,
+            listing,
             contents: []
           };
-          campaignMap.set(campaign.id, entry);
+          listingMap.set(listing.id, entry);
         }
 
         if (contentRow) {
@@ -188,8 +188,8 @@ export async function getUserCampaigns(
         }
       }
 
-      const aggregatedCampaigns = Array.from(campaignMap.values()).map(
-        ({ campaign, contents }) => {
+      const aggregatedListings = Array.from(listingMap.values()).map(
+        ({ listing, contents }) => {
           const primaryContent = contents.reduce<ContentRecord | null>(
             (latest, current) => {
               if (!latest) return current;
@@ -205,7 +205,7 @@ export async function getUserCampaigns(
           );
 
           return {
-            ...campaign,
+            ...listing,
             primaryContentId: primaryContent?.id ?? null,
             thumbnailUrl: primaryContent?.thumbnailUrl ?? null,
             contents
@@ -214,28 +214,28 @@ export async function getUserCampaigns(
       );
 
       return Promise.all(
-        aggregatedCampaigns.map(async (campaign) => {
+        aggregatedListings.map(async (listing) => {
           const signedContent = await withSignedContentThumbnails(
-            campaign.contents ?? []
+            listing.contents ?? []
           );
           return {
-            ...campaign,
+            ...listing,
             contents: signedContent,
-            thumbnailUrl: await resolveThumbnailUrl(campaign.thumbnailUrl)
+            thumbnailUrl: await resolveThumbnailUrl(listing.thumbnailUrl)
           };
         })
       );
     },
     {
-      actionName: "getUserCampaigns",
-      errorMessage: "Failed to fetch campaigns. Please try again."
+      actionName: "getUserListings",
+      errorMessage: "Failed to fetch listings. Please try again."
     }
   );
 }
 
 /**
  * Get the next draft number for the user
- * Counts existing draft campaigns and returns the next sequential number
+ * Counts existing draft listings and returns the next sequential number
  *
  * @returns Promise<number> - The next draft number
  * @throws Error if user is not authenticated
@@ -247,14 +247,14 @@ export async function getNextDraftNumber(userId: string): Promise<number> {
 
   return withDbErrorHandling(
     async () => {
-      // Get all campaigns with titles starting with "Draft "
-      const draftCampaigns = await db
+      // Get all listings with titles starting with "Draft "
+      const draftListings = await db
         .select()
-        .from(campaigns)
-        .where(and(eq(campaigns.userId, userId), like(campaigns.title, "Draft %")));
+        .from(listings)
+        .where(and(eq(listings.userId, userId), like(listings.title, "Draft %")));
 
       // Extract draft numbers and find the highest
-      const draftNumbers = draftCampaigns
+      const draftNumbers = draftListings
         .map((p) => {
           const match = p.title?.match(/^Draft (\d+)$/);
           return match ? parseInt(match[1], 10) : 0;

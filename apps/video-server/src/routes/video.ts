@@ -34,7 +34,7 @@ router.post("/generate", async (req: Request, res: Response) => {
     const requiredFields: (keyof VideoServerGenerateRequest)[] = [
       "videoId",
       "jobIds",
-      "campaignId",
+      "listingId",
       "userId"
     ];
 
@@ -54,7 +54,7 @@ router.post("/generate", async (req: Request, res: Response) => {
         {
           missingFields,
           videoId: requestData.videoId,
-          campaignId: requestData.campaignId
+          listingId: requestData.listingId
         },
         "[VideoRoute] Invalid video generation request"
       );
@@ -79,7 +79,7 @@ router.post("/generate", async (req: Request, res: Response) => {
     logger.info(
       {
         videoId: requestData.videoId,
-        campaignId: requestData.campaignId,
+        listingId: requestData.listingId,
         jobCount: requestData.jobIds.length,
         jobIds: requestData.jobIds
       },
@@ -123,14 +123,14 @@ router.post("/generate", async (req: Request, res: Response) => {
  */
 router.post("/cancel", async (req: Request, res: Response) => {
   try {
-    const { campaignId, videoIds, reason } = req.body as CancelVideoRequest;
+    const { listingId, videoIds, reason } = req.body as CancelVideoRequest;
 
-    if (!campaignId) {
+    if (!listingId) {
       res.status(400).json({
         success: false,
         error: "Invalid request",
         code: "VALIDATION_ERROR",
-        details: { message: "campaignId is required" }
+        details: { message: "listingId is required" }
       });
       return;
     }
@@ -140,20 +140,20 @@ router.post("/cancel", async (req: Request, res: Response) => {
     const canceledVideos =
       Array.isArray(videoIds) && videoIds.length > 0
         ? await videoContentRepository.cancelByIds(videoIds, cancelReason)
-        : await videoContentRepository.cancelByCampaign(
-            campaignId,
+        : await videoContentRepository.cancelByListing(
+            listingId,
             cancelReason
           );
 
     const canceledJobs =
-      await videoContentJobRepository.cancelJobsByCampaignId(
-        campaignId,
+      await videoContentJobRepository.cancelJobsByListingId(
+        listingId,
         cancelReason
       );
 
     logger.info(
-      { campaignId, canceledVideos, canceledJobs },
-      "Canceled video generation for campaign"
+      { listingId, canceledVideos, canceledJobs },
+      "Canceled video generation for listing"
     );
 
     res.status(200).json({

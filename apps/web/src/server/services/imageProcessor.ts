@@ -104,7 +104,7 @@ export class imageProcessorService {
       const normalizedImages: SerializableImageData[] = analyzedImages.map(
         (image) => ({
           id: image.id,
-          campaignId: image.campaignId,
+          listingId: image.listingId,
           url: image.url,
           filename: image.filename,
           category: image.category,

@@ -6,7 +6,7 @@ export const contentTypeEnum = pgEnum("content_type", [
   "story"
 ]);
 
-export const campaignStageEnum = pgEnum("campaign_stage", [
+export const listingStageEnum = pgEnum("listing_stage", [
   "upload",
   "categorize",
   "plan",

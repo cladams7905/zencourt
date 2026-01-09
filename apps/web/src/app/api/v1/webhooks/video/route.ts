@@ -26,17 +26,17 @@ const logger = createChildLogger(baseLogger, {
   module: "video-job-webhook"
 });
 
-function scheduleCampaignRevalidation(campaignId: string): void {
+function scheduleListingRevalidation(listingId: string): void {
   setImmediate(() => {
     try {
-      revalidatePath(`/campaign/${campaignId}`);
+      revalidatePath(`/listing/${listingId}`);
     } catch (error) {
       logger.error(
         {
-          campaignId,
+          listingId,
           err: error instanceof Error ? error.message : String(error)
         },
-        "Failed to revalidate campaign path"
+        "Failed to revalidate listing path"
       );
     }
   });
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
     const metadata = payload.result?.metadata;
     logger.info(
       {
-        campaignId: payload.campaignId,
+        listingId: payload.listingId,
         jobId: payload.jobId,
         status: payload.status
       },
@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
     } catch (error) {
       logger.error(
         {
-          campaignId: payload.campaignId,
+          listingId: payload.listingId,
           jobId: payload.jobId,
           err: error instanceof Error ? error.message : String(error)
         },
@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
 
     logger.info(
       {
-        campaignId: payload.campaignId,
+        listingId: payload.listingId,
         jobId: payload.jobId,
         status: payload.status
       },
@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
     );
 
     // Kick off route revalidation without blocking the webhook response
-    scheduleCampaignRevalidation(payload.campaignId);
+    scheduleListingRevalidation(payload.listingId);
 
     return NextResponse.json({
       success: Boolean(updatedJob),

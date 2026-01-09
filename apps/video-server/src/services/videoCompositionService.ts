@@ -50,13 +50,13 @@ export class VideoCompositionService {
     roomVideoUrls: string[],
     compositionSettings: VideoCompositionSettings,
     userId: string,
-    campaignId: string,
+    listingId: string,
     finalVideoId: string,
-    campaignName?: string
+    listingName?: string
   ): Promise<ComposedVideoResult> {
     const tempDir = join(
       tmpdir(),
-      `video-composition-${campaignId}-${Date.now()}`
+      `video-composition-${listingId}-${Date.now()}`
     );
     const tempFiles: string[] = [];
 
@@ -69,7 +69,7 @@ export class VideoCompositionService {
       logger.info(
         {
           roomVideosCount: roomVideoUrls.length,
-          campaignId,
+          listingId,
           finalVideoId,
           tempDir
         },
@@ -150,7 +150,7 @@ export class VideoCompositionService {
         "[VideoComposition] Uploading final video and thumbnail to Backblaze B2"
       );
 
-      const baseVideoPath = `user_${userId}/campaigns/campaign_${campaignId}/videos/video_${finalVideoId}`;
+      const baseVideoPath = `user_${userId}/listings/listing_${listingId}/videos/video_${finalVideoId}`;
       const videoKey = `${baseVideoPath}/final.mp4`;
       const thumbnailKey = `${baseVideoPath}/thumbnail.jpg`;
 
@@ -161,9 +161,9 @@ export class VideoCompositionService {
           contentType: "video/mp4",
           metadata: {
             userId,
-            campaignId,
+            listingId,
             videoId: finalVideoId,
-            campaignName: campaignName || ""
+            listingName: listingName || ""
           }
         }),
         storageService.uploadFile({
@@ -172,7 +172,7 @@ export class VideoCompositionService {
           contentType: "image/jpeg",
           metadata: {
             userId,
-            campaignId,
+            listingId,
             videoId: finalVideoId
           }
         })
@@ -183,7 +183,7 @@ export class VideoCompositionService {
 
       logger.info(
         {
-          campaignId,
+          listingId,
           finalVideoId,
           duration,
           fileSize: videoBuffer.length
@@ -199,7 +199,7 @@ export class VideoCompositionService {
       };
     } catch (error) {
       logger.error(
-        { error, campaignId, finalVideoId },
+        { error, listingId, finalVideoId },
         "[VideoComposition] ❌ Composition failed"
       );
       throw new Error(

@@ -27,7 +27,7 @@ export type VideoJobWebhookStatus = "completed" | "failed";
 export interface VideoJobWebhookPayload {
   jobId: string;
   videoId?: string;
-  campaignId: string;
+  listingId: string;
   userId?: string;
   status: VideoJobWebhookStatus;
   timestamp: string;
@@ -42,7 +42,7 @@ export interface VideoJobWebhookPayload {
 export interface VideoServerGenerateRequest {
   videoId: string; // Parent video_assets ID
   jobIds: string[]; // Array of video_asset_jobs IDs to process
-  campaignId: string;
+  listingId: string;
   userId: string;
 }
 
@@ -76,7 +76,7 @@ export interface JobStatusResponse {
 export type WebhookPayload = VideoJobWebhookPayload;
 
 export interface CancelVideoRequest {
-  campaignId: string;
+  listingId: string;
   videoIds?: string[];
   reason?: string;
 }

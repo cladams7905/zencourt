@@ -1,10 +1,10 @@
 /**
- * Campaign Workflow Types
+ * Listing Workflow Types
  *
- * Type definitions for the multi-stage campaign creation workflow
+ * Type definitions for the multi-stage listing creation workflow
  */
 
-import { DBCampaign, VideoStatus, CampaignStage } from "@shared/types/models";
+import { DBListing, VideoStatus, ListingStage } from "@shared/types/models";
 import type { ProcessedImage } from "./images";
 import { CategorizedGroup } from "./vision";
 
@@ -63,15 +63,15 @@ export interface RoomGenerationStatus {
 // ============================================================================
 
 /**
- * Complete state for the campaign workflow modal
+ * Complete state for the listing workflow modal
  */
 export interface WorkflowState {
   // Current stage
-  currentStage: CampaignStage;
+  currentStage: ListingStage;
 
-  // Campaign information
-  campaignName: string;
-  currentCampaign: DBCampaign | null;
+  // Listing information
+  listingName: string;
+  currentListing: DBListing | null;
 
   // Image data
   images: ProcessedImage[];
@@ -96,10 +96,10 @@ export interface FinalVideoData {
 // ============================================================================
 
 /**
- * Campaign with workflow-specific fields
+ * Listing with workflow-specific fields
  */
-export interface CampaignWithWorkflow extends DBCampaign {
-  workflowStage?: CampaignStage;
+export interface ListingWithWorkflow extends DBListing {
+  workflowStage?: ListingStage;
 }
 
 // ============================================================================
@@ -127,10 +127,10 @@ export type StageValidator = (state: WorkflowState) => ValidationResult;
  * Check if a workflow stage is before another stage
  */
 export function isStageBefore(
-  stage: CampaignStage,
-  compareStage: CampaignStage
+  stage: ListingStage,
+  compareStage: ListingStage
 ): boolean {
-  const stages: CampaignStage[] = [
+  const stages: ListingStage[] = [
     "upload",
     "categorize",
     "plan",
@@ -145,10 +145,10 @@ export function isStageBefore(
  * Check if a workflow stage is after another stage
  */
 export function isStageAfter(
-  stage: CampaignStage,
-  compareStage: CampaignStage
+  stage: ListingStage,
+  compareStage: ListingStage
 ): boolean {
-  const stages: CampaignStage[] = [
+  const stages: ListingStage[] = [
     "upload",
     "categorize",
     "plan",
@@ -163,9 +163,9 @@ export function isStageAfter(
  * Get all stages up to and including the specified stage
  */
 export function getCompletedStages(
-  currentStage: CampaignStage
-): CampaignStage[] {
-  const stages: CampaignStage[] = [
+  currentStage: ListingStage
+): ListingStage[] {
+  const stages: ListingStage[] = [
     "upload",
     "categorize",
     "plan",
@@ -181,9 +181,9 @@ export function getCompletedStages(
  * Get the next stage in the workflow
  */
 export function getNextStage(
-  currentStage: CampaignStage
-): CampaignStage | null {
-  const stages: CampaignStage[] = [
+  currentStage: ListingStage
+): ListingStage | null {
+  const stages: ListingStage[] = [
     "upload",
     "categorize",
     "plan",
@@ -199,9 +199,9 @@ export function getNextStage(
  * Get the previous stage in the workflow
  */
 export function getPreviousStage(
-  currentStage: CampaignStage
-): CampaignStage | null {
-  const stages: CampaignStage[] = [
+  currentStage: ListingStage
+): ListingStage | null {
+  const stages: ListingStage[] = [
     "upload",
     "categorize",
     "plan",

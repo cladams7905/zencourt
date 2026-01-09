@@ -14,7 +14,7 @@ import {
   videoContentJobs as videoJobs,
   videoContent as videos,
   content,
-  campaigns,
+  listings,
   eq,
   inArray
 } from "@db/client";
@@ -35,7 +35,7 @@ interface GenerationResult {
 interface VideoContext {
   videoId: string;
   contentId: string;
-  campaignId: string;
+  listingId: string;
   userId: string;
   projectId: string; // backward-compat logging alias
 }
@@ -53,32 +53,32 @@ class VideoGenerationService {
       .select({
         videoId: videos.id,
         contentId: videos.contentId,
-        campaignId: content.campaignId,
-        userId: campaigns.userId
+        listingId: content.listingId,
+        userId: listings.userId
       })
       .from(videos)
       .innerJoin(content, eq(videos.contentId, content.id))
-      .innerJoin(campaigns, eq(content.campaignId, campaigns.id))
+      .innerJoin(listings, eq(content.listingId, listings.id))
       .where(eq(videos.id, videoId))
       .limit(1);
 
     if (
       !record?.videoId ||
       !record?.contentId ||
-      !record?.campaignId ||
+      !record?.listingId ||
       !record?.userId
     ) {
       throw new Error(
-        `Video context missing for video ${videoId} (ensure campaign/user exists)`
+        `Video context missing for video ${videoId} (ensure listing/user exists)`
       );
     }
 
     const context: VideoContext = {
       videoId: record.videoId,
       contentId: record.contentId,
-      campaignId: record.campaignId,
+      listingId: record.listingId,
       userId: record.userId,
-      projectId: record.campaignId
+      projectId: record.listingId
     };
 
     this.videoContextCache.set(videoId, context);
@@ -86,7 +86,7 @@ class VideoGenerationService {
   }
 
   private buildStorageBasePath(context: VideoContext): string {
-    return `user_${context.userId}/campaigns/campaign_${context.campaignId}/videos/video_${context.videoId}`;
+    return `user_${context.userId}/listings/listing_${context.listingId}/videos/video_${context.videoId}`;
   }
 
   /**
@@ -117,12 +117,12 @@ class VideoGenerationService {
   async startGeneration(
     request: VideoServerGenerateRequest
   ): Promise<GenerationResult> {
-    const { videoId, jobIds, campaignId, userId } = request;
+    const { videoId, jobIds, listingId, userId } = request;
 
     logger.info(
       {
         videoId,
-        campaignId,
+        listingId,
         userId,
         jobCount: jobIds.length,
         jobIds
@@ -678,7 +678,7 @@ class VideoGenerationService {
 
     const payload: VideoJobWebhookPayload = {
       jobId: job.id,
-      campaignId: videoContext.campaignId,
+      listingId: videoContext.listingId,
       status: "completed",
       timestamp: new Date().toISOString(),
       result
@@ -704,7 +704,7 @@ class VideoGenerationService {
       });
 
       logger.info(
-        { jobId: job.id, campaignId: videoContext.campaignId },
+        { jobId: job.id, listingId: videoContext.listingId },
         "[VideoGenerationService] ✅ Webhook delivered successfully"
       );
     } catch (error) {
@@ -714,7 +714,7 @@ class VideoGenerationService {
       logger.error(
         {
           jobId: job.id,
-          campaignId: videoContext.campaignId,
+          listingId: videoContext.listingId,
           error: errorMessage
         },
         "[VideoGenerationService] ❌ Webhook delivery failed"
@@ -768,7 +768,7 @@ class VideoGenerationService {
 
     const payload: VideoJobWebhookPayload = {
       jobId: job.id,
-      campaignId: videoContext.campaignId,
+      listingId: videoContext.listingId,
       status: "failed",
       timestamp: new Date().toISOString(),
       error: {
@@ -789,7 +789,7 @@ class VideoGenerationService {
       });
 
       logger.info(
-        { jobId: job.id, campaignId: videoContext.campaignId },
+        { jobId: job.id, listingId: videoContext.listingId },
         "[VideoGenerationService] ✅ Failure webhook delivered"
       );
     } catch (error) {
@@ -929,9 +929,9 @@ class VideoGenerationService {
         roomVideoUrls,
         compositionSettings,
         videoContext.userId || "",
-        videoContext.campaignId,
+        videoContext.listingId,
         videoId,
-        undefined // campaignName
+        undefined // listingName
       );
 
       const persisted = await this.persistFinalVideoResult(
@@ -1062,7 +1062,7 @@ class VideoGenerationService {
     const webhookPayload: VideoJobWebhookPayload = {
       jobId: videoContext.videoId, // Preserve jobId for schema compatibility
       videoId: videoContext.videoId,
-      campaignId: videoContext.campaignId,
+      listingId: videoContext.listingId,
       status: payload.status,
       timestamp: new Date().toISOString(),
       result: payload.result,
@@ -1083,7 +1083,7 @@ class VideoGenerationService {
       logger.info(
         {
           videoId: videoContext.videoId,
-          campaignId: videoContext.campaignId
+          listingId: videoContext.listingId
         },
         "[VideoGenerationService] ✅ Final video webhook delivered"
       );

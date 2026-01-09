@@ -25,7 +25,7 @@ async function resolveThumbnailUrl(
 }
 
 /**
- * Create new content for a campaign
+ * Create new content for a listing
  */
 export async function createContent(
   userId: string,
@@ -34,9 +34,9 @@ export async function createContent(
   if (!userId || userId.trim() === "") {
     throw new Error("User ID is required to create content");
   }
-  const campaignId = payload.campaignId;
-  if (!campaignId || campaignId.trim() === "") {
-    throw new Error("Campaign ID is required to create content");
+  const listingId = payload.listingId;
+  if (!listingId || listingId.trim() === "") {
+    throw new Error("Listing ID is required to create content");
   }
 
   return withDbErrorHandling(
@@ -57,7 +57,7 @@ export async function createContent(
     },
     {
       actionName: "createContent",
-      context: { userId, campaignId },
+      context: { userId, listingId },
       errorMessage: "Failed to create content. Please try again."
     }
   );
@@ -69,7 +69,7 @@ export async function createContent(
 export async function updateContent(
   userId: string,
   contentId: string,
-  updates: Partial<Omit<InsertDBContent, "id" | "campaignId" | "createdAt">>
+  updates: Partial<Omit<InsertDBContent, "id" | "listingId" | "createdAt">>
 ): Promise<DBContent> {
   if (!userId || userId.trim() === "") {
     throw new Error("User ID is required to update content");
@@ -107,17 +107,17 @@ export async function updateContent(
 }
 
 /**
- * Fetch content for a campaign
+ * Fetch content for a listing
  */
-export async function getContentByCampaignId(
+export async function getContentByListingId(
   userId: string,
-  campaignId: string
+  listingId: string
 ): Promise<DBContent[]> {
   if (!userId || userId.trim() === "") {
     throw new Error("User ID is required to fetch content");
   }
-  if (!campaignId || campaignId.trim() === "") {
-    throw new Error("Campaign ID is required to fetch content");
+  if (!listingId || listingId.trim() === "") {
+    throw new Error("Listing ID is required to fetch content");
   }
 
   return withDbErrorHandling(
@@ -125,7 +125,7 @@ export async function getContentByCampaignId(
       const contentRows = await db
         .select()
         .from(content)
-        .where(eq(content.campaignId, campaignId));
+        .where(eq(content.listingId, listingId));
       return Promise.all(
         contentRows.map(async (item) => ({
           ...item,
@@ -134,8 +134,8 @@ export async function getContentByCampaignId(
       );
     },
     {
-      actionName: "getContentByCampaignId",
-      context: { userId, campaignId },
+      actionName: "getContentByListingId",
+      context: { userId, listingId },
       errorMessage: "Failed to load content. Please try again."
     }
   );

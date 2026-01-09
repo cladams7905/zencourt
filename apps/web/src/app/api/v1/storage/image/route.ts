@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
-import { db, campaignImages, campaigns } from "@db/client";
+import { db, listingImages, listings } from "@db/client";
 import storageService from "@web/src/server/services/storageService";
 import { createChildLogger, logger as baseLogger } from "@web/src/lib/logger";
 import {
@@ -48,13 +48,13 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   const imageRecord = await db
     .select({
-      id: campaignImages.id,
-      campaignId: campaignImages.campaignId,
-      ownerId: campaigns.userId
+      id: listingImages.id,
+      listingId: listingImages.listingId,
+      ownerId: listings.userId
     })
-    .from(campaignImages)
-    .innerJoin(campaigns, eq(campaignImages.campaignId, campaigns.id))
-    .where(eq(campaignImages.url, decodedUrl))
+    .from(listingImages)
+    .innerJoin(listings, eq(listingImages.listingId, listings.id))
+    .where(eq(listingImages.url, decodedUrl))
     .limit(1);
 
   const image = imageRecord[0];
@@ -69,7 +69,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   if (image.ownerId !== userId) {
     logger.warn(
-      { decodedUrl, userId, campaignOwner: image.ownerId },
+      { decodedUrl, userId, listingOwner: image.ownerId },
       "User attempted to access unauthorized image"
     );
     return fail(403, "You do not have access to this image");

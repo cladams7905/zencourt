@@ -1,9 +1,9 @@
-import { db, campaigns } from "@db/client";
+import { db, listings } from "@db/client";
 import { stackServerApp } from "@web/src/lib/stack/server";
 import type { CurrentServerUser } from "@stackframe/stack";
 import { eq } from "drizzle-orm";
 
-type Campaign = typeof campaigns.$inferSelect;
+type Listing = typeof listings.$inferSelect;
 
 export class ApiError extends Error {
   constructor(
@@ -28,38 +28,38 @@ export async function requireAuthenticatedUser(): Promise<CurrentServerUser> {
   return user;
 }
 
-export async function requireCampaignAccess(
-  campaignId: string | null | undefined,
+export async function requireListingAccess(
+  listingId: string | null | undefined,
   userId: string
-): Promise<Campaign> {
-  if (!campaignId) {
+): Promise<Listing> {
+  if (!listingId) {
     throw new ApiError(400, {
       error: "Invalid request",
-      message: "Campaign ID is required"
+      message: "Listing ID is required"
     });
   }
 
-  const campaignResult = await db
+  const listingResult = await db
     .select()
-    .from(campaigns)
-    .where(eq(campaigns.id, campaignId))
+    .from(listings)
+    .where(eq(listings.id, listingId))
     .limit(1);
 
-  const campaign = campaignResult[0];
+  const listing = listingResult[0];
 
-  if (!campaign) {
+  if (!listing) {
     throw new ApiError(404, {
       error: "Not found",
-      message: "Campaign not found"
+      message: "Listing not found"
     });
   }
 
-  if (campaign.userId !== userId) {
+  if (listing.userId !== userId) {
     throw new ApiError(403, {
       error: "Forbidden",
-      message: "You don't have access to this campaign"
+      message: "You don't have access to this listing"
     });
   }
 
-  return campaign;
+  return listing;
 }
