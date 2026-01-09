@@ -17,7 +17,7 @@ export const userAdditional = pgTable(
     location: text("location"),
     referralSource: text("referral_source"),
     referralSourceOther: text("referral_source_other"),
-    contentInterests: text("content_interests"),
+    targetAudiences: text("target_audiences"),
     weeklyPostingFrequency: integer("weekly_posting_frequency"),
     paymentPlan: paymentPlanEnum("payment_plan").notNull().default("free"),
     weeklyGenerationLimit: integer("weekly_generation_limit"),

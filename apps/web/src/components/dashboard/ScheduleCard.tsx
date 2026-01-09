@@ -36,20 +36,25 @@ const ScheduleCard = ({
   dayLabel,
   posts,
   className,
-  onAddClick,
+  onAddClick
 }: ScheduleCardProps) => {
   const visiblePosts = posts.slice(0, 3);
   const remainingCount = posts.length - visiblePosts.length;
   const contentSummary = React.useMemo(() => {
     if (posts.length === 0) return "No content scheduled";
 
-    const videos = posts.filter((p) => p.title.toLowerCase().includes("video")).length;
-    const stories = posts.filter((p) => p.title.toLowerCase().includes("story")).length;
+    const videos = posts.filter((p) =>
+      p.title.toLowerCase().includes("video")
+    ).length;
+    const stories = posts.filter((p) =>
+      p.title.toLowerCase().includes("story")
+    ).length;
     const regular = posts.length - videos - stories;
 
     const parts = [];
     if (videos > 0) parts.push(`${videos} video${videos > 1 ? "s" : ""}`);
-    if (stories > 0) parts.push(`${stories} ${stories > 1 ? "stories" : "story"}`);
+    if (stories > 0)
+      parts.push(`${stories} ${stories > 1 ? "stories" : "story"}`);
     if (regular > 0) parts.push(`${regular} post${regular > 1 ? "s" : ""}`);
 
     return parts.join(", ");
@@ -89,11 +94,11 @@ const ScheduleCard = ({
           {/* Add Button */}
           <Button
             size="icon"
-            variant="ghost"
+            variant="default"
             onClick={onAddClick}
-            className="absolute -top-1 -right-1 h-7 w-7 rounded-full bg-secondary hover:bg-secondary/80 border border-border"
+            className="absolute -top-1 -right-1 h-7 w-7 rounded-full"
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="h-4 w-4 text-primary-foreground" />
           </Button>
         </div>
 
@@ -104,7 +109,7 @@ const ScheduleCard = ({
               <a
                 key={post.id}
                 href="#"
-                className="flex items-center gap-3 p-2 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors group"
+                className="flex items-center gap-3 p-2 rounded-lg hover:bg-secondary/50 transition-colors group"
               >
                 {/* Thumbnail */}
                 {post.thumbnail ? (

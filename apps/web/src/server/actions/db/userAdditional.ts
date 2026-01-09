@@ -44,7 +44,7 @@ export async function completeWelcomeSurvey(
     | "referralSource"
     | "referralSourceOther"
     | "location"
-    | "contentInterests"
+    | "targetAudiences"
     | "weeklyPostingFrequency"
   >
 ): Promise<DBUserAdditional> {

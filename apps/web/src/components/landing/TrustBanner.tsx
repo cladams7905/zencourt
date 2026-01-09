@@ -25,7 +25,7 @@ export function TrustBanner() {
             return (
               <div
                 key={`${company.name}-${index}`}
-                className="flex items-center gap-3 font-spartan text-2xl font-bold text-foreground whitespace-nowrap"
+                className="flex items-center gap-3 font-header text-2xl font-bold text-foreground whitespace-nowrap"
               >
                 <Icon className="h-8 w-8" />
                 {company.name}

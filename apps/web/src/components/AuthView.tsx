@@ -7,15 +7,11 @@ interface AuthViewProps {
   children: ReactNode;
 }
 
-export function AuthView({
-  title = "Welcome to Zencourt",
-  subtitle = "Effortless social media marketing for real estate professionals",
-  children
-}: AuthViewProps) {
+export function AuthView({ children }: AuthViewProps) {
   return (
     <div className="min-h-screen flex">
       {/* Left Panel - Visual Brand Side */}
-      <div className="hidden lg:flex lg:w-1/2 relative bg-linear-to-br from-accent/20 via-background to-accent/10 overflow-hidden">
+      <div className="hidden lg:flex lg:w-1/2 relative bg-linear-to-br from-accent via-white to-accent/20 overflow-hidden">
         {/* Decorative Background Elements */}
         <div className="absolute top-1/4 -left-24 w-96 h-96 bg-accent/30 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 -right-24 w-96 h-96 bg-secondary/40 rounded-full blur-3xl" />
@@ -25,7 +21,7 @@ export function AuthView({
           {/* Logo */}
           <div className="flex items-center gap-3">
             <Image
-              src="/zencourt-logo.svg"
+              src="/zencourt-logo.png"
               alt="Zencourt"
               width={32}
               height={32}
@@ -85,7 +81,7 @@ export function AuthView({
           {/* Mobile Logo */}
           <div className="lg:hidden flex items-center gap-3 mb-12">
             <Image
-              src="/zencourt-logo.svg"
+              src="/zencourt-logo.png"
               alt="Zencourt"
               width={28}
               height={28}
@@ -96,20 +92,10 @@ export function AuthView({
             </span>
           </div>
 
-          {/* Header */}
-          <div className="mb-10">
-            <h1 className="text-3xl lg:text-4xl font-header font-semibold text-foreground mb-3 leading-tight">
-              {title}
-            </h1>
-            {subtitle && (
-              <p className="text-muted-foreground text-base leading-relaxed">
-                {subtitle}
-              </p>
-            )}
-          </div>
-
           {/* Auth Form Container */}
-          <div className="space-y-6">{children}</div>
+          <div className="space-y-6 flex align-center justify-center">
+            {children}
+          </div>
 
           {/* Footer Note */}
           <p className="mt-8 text-center text-sm text-muted-foreground">

@@ -29,7 +29,7 @@ export function FeatureSpotlight1() {
                   <Brain className="h-6 w-6 text-foreground" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-foreground font-spartan mb-1">
+                  <h3 className="text-lg font-semibold text-foreground font-header mb-1">
                     Adaptive Voice AI
                   </h3>
                   <p className="text-sm text-muted-foreground leading-relaxed">
@@ -43,7 +43,7 @@ export function FeatureSpotlight1() {
                   <Palette className="h-6 w-6 text-foreground" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-foreground font-spartan mb-1">
+                  <h3 className="text-lg font-semibold text-foreground font-header mb-1">
                     Visual Brand Consistency
                   </h3>
                   <p className="text-sm text-muted-foreground leading-relaxed">
@@ -57,7 +57,7 @@ export function FeatureSpotlight1() {
                   <MapPin className="h-6 w-6 text-foreground" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-foreground font-spartan mb-1">
+                  <h3 className="text-lg font-semibold text-foreground font-header mb-1">
                     Hyper-Local Context
                   </h3>
                   <p className="text-sm text-muted-foreground leading-relaxed">

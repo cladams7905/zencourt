@@ -24,7 +24,7 @@ const ContentFilterBar = ({
   onFilterToggle,
   generationCount = 5,
   generationLimit = 50,
-  className,
+  className
 }: ContentFilterBarProps) => {
   const filters = [
     { id: "campaigns", label: "Campaigns" },
@@ -32,7 +32,7 @@ const ContentFilterBar = ({
     { id: "seasonal", label: "Seasonal" },
     { id: "tips", label: "Tips" },
     { id: "local-events", label: "Local Events" },
-    { id: "lifestyle", label: "Lifestyle" },
+    { id: "lifestyle", label: "Lifestyle" }
   ];
 
   const generationPercentage = (generationCount / generationLimit) * 100;
@@ -42,7 +42,7 @@ const ContentFilterBar = ({
       {/* Header with generation count */}
       <div className="flex items-end justify-between">
         <div>
-          <h2 className="text-2xl font-serif font-medium text-foreground">
+          <h2 className="text-2xl font-header font-medium text-foreground">
             Your Recommended Content
           </h2>
           <p className="text-muted-foreground text-sm mt-1">

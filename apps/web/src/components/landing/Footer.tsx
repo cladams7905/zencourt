@@ -32,13 +32,13 @@ export function Footer() {
           <div className="col-span-2 md:col-span-1">
             <div className="flex items-center gap-2 mb-6">
               <Image
-                src="/zencourt-logo.svg"
+                src="/zencourt-logo.png"
                 alt="Zencourt Logo"
                 width={24}
                 height={24}
                 className="object-contain opacity-80"
               />
-              <span className="text-foreground font-spartan text-xl font-semibold tracking-tight">
+              <span className="text-foreground font-header text-xl font-semibold tracking-tight">
                 zencourt
               </span>
             </div>

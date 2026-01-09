@@ -5,7 +5,7 @@
 :root {
   --font-size: 16px;
   --background: #ffffff;
-  --background-light: #fdfdfd;
+  --background-light: #f8f6f3;
   --foreground: #000000;
   --card: #ffffff;
   --card-foreground: #000000;
@@ -13,9 +13,9 @@
   --popover-foreground: #000000;
   --primary: #000000;
   --primary-foreground: #ffffff;
-  --secondary: #f5f5f5;
+  --secondary: #f8f6f3;
   --secondary-foreground: #000000;
-  --muted: #f5f5f5;
+  --muted: #f8f6f3;
   --muted-foreground: #666666;
   --accent: #e8ddd3;
   --accent-foreground: #000000;
@@ -23,11 +23,11 @@
   --destructive-foreground: #ffffff;
   --border: rgba(0, 0, 0, 0.08);
   --input: rgba(0, 0, 0, 0.08);
-  --input-background: #fafafa;
-  --switch-background: #cbced4;
+  --input-background: #f8f6f3;
+  --switch-background: #f8f6f3;
   --font-weight-medium: 500;
   --font-weight-normal: 400;
-  --ring: rgba(0, 0, 0, 0.2);
+  --ring: rgba(0, 0, 0, 0.08);
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);

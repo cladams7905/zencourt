@@ -23,18 +23,14 @@ import {
   ArrowRight,
   ArrowLeft,
   TrendingUp,
-  DollarSign,
-  Lightbulb,
-  Calendar,
   Home,
-  Wrench,
   Shield,
   Globe,
   Crown,
   KeyRound,
   Building,
   Palmtree,
-  Hammer
+  Users
 } from "lucide-react";
 
 export type ReferralSource =
@@ -48,34 +44,28 @@ export type ReferralSource =
   | "online_ad"
   | "other";
 
-export type ContentInterestCategory =
-  | "market_trends"
-  | "investing"
-  | "buyer_seller_tips"
-  | "local_events"
-  | "lifestyle"
-  | "listing_promotion"
-  | "repairs_maintenance"
-  | "military_relocation"
-  | "international"
-  | "luxury_properties"
-  | "first_time_buyers"
-  | "commercial"
-  | "vacation_rentals"
-  | "property_flipping";
+export type TargetAudience =
+  | "luxury_homebuyers"
+  | "first_time_homebuyers"
+  | "military_veterans"
+  | "real_estate_investors"
+  | "downsizers_retirees"
+  | "growing_families"
+  | "commercial_clients"
+  | "vacation_property_buyers"
+  | "international_buyers";
 
 export interface SurveyFormData {
   referralSource: ReferralSource;
   referralSourceOther?: string;
   location: LocationData;
-  contentInterests: ContentInterestCategory[];
+  targetAudiences: TargetAudience[];
   weeklyPostingFrequency: number;
 }
 
 interface SurveyPageProps {
   googleMapsApiKey: string;
   onSubmit: (data: SurveyFormData) => Promise<void>;
-  onSkip?: () => void;
   className?: string;
 }
 
@@ -91,82 +81,75 @@ const referralOptions: { value: ReferralSource; label: string }[] = [
   { value: "other", label: "Other" }
 ];
 
-const contentCategories: {
-  value: ContentInterestCategory;
+const audienceCategories: {
+  value: TargetAudience;
   label: string;
   description: string;
-  icon: typeof TrendingUp;
+  icon: typeof Crown;
 }[] = [
   {
-    value: "market_trends",
-    label: "Market Trends",
-    description: "Local market updates & forecasts",
-    icon: TrendingUp
-  },
-  {
-    value: "investing",
-    label: "Investing",
-    description: "Investment strategies & ROI tips",
-    icon: DollarSign
-  },
-  {
-    value: "buyer_seller_tips",
-    label: "Buyer/Seller Tips",
-    description: "How-to guides & expert advice",
-    icon: Lightbulb
-  },
-  {
-    value: "local_events",
-    label: "Local Events",
-    description: "Community happenings & neighborhood spotlights",
-    icon: Calendar
-  },
-  {
-    value: "lifestyle",
-    label: "Lifestyle",
-    description: "Home decor, design & living inspiration",
-    icon: Home
-  },
-  {
-    value: "repairs_maintenance",
-    label: "Repairs & Maintenance",
-    description: "Home improvement & DIY tips",
-    icon: Wrench
-  },
-  {
-    value: "property_flipping",
-    label: "Property Flipping",
-    description: "Renovation tips & flipping strategies",
-    icon: Hammer
-  },
-  {
-    value: "first_time_buyers",
+    value: "first_time_homebuyers",
     label: "First-Time Homebuyers",
-    description: "Mortgage basics & buyer programs",
+    description: "Mortgage basics, buyer programs, starter homes",
     icon: KeyRound
   },
   {
-    value: "vacation_rentals",
-    label: "Vacation Rentals",
-    description: "Short-term rental & Airbnb strategies",
+    value: "growing_families",
+    label: "Growing Families",
+    description: "School districts, family-friendly neighborhoods, space needs",
+    icon: Users
+  },
+  {
+    value: "real_estate_investors",
+    label: "Real Estate Investors",
+    description: "ROI analysis, rental properties, cash flow strategies",
+    icon: TrendingUp
+  },
+  {
+    value: "downsizers_retirees",
+    label: "Downsizers & Retirees",
+    description: "55+ communities, simplified living, retirement planning",
+    icon: Home
+  },
+  {
+    value: "luxury_homebuyers",
+    label: "Luxury Homebuyers",
+    description: "High-end properties, premium amenities, exclusive markets",
+    icon: Crown
+  },
+  {
+    value: "vacation_property_buyers",
+    label: "Vacation Property Buyers",
+    description: "Second homes, rental income, resort markets",
     icon: Palmtree
   },
   {
-    value: "luxury_properties",
-    label: "Luxury Properties",
-    description: "High-end listings & luxury market insights",
-    icon: Crown
+    value: "military_veterans",
+    label: "Military & Veterans",
+    description: "VA loans, relocation services, military benefits",
+    icon: Shield
+  },
+  {
+    value: "commercial_clients",
+    label: "Commercial Clients",
+    description: "Office space, retail properties, industrial real estate",
+    icon: Building
+  },
+  {
+    value: "international_buyers",
+    label: "International Buyers",
+    description: "Visa programs, global markets, cross-border transactions",
+    icon: Globe
   }
 ];
 
 export const SurveyPage = ({
   googleMapsApiKey,
   onSubmit,
-  onSkip,
   className
 }: SurveyPageProps) => {
-  const [contentInterests, setContentInterests] = React.useState<
-    ContentInterestCategory[]
+  const [targetAudiences, setTargetAudiences] = React.useState<
+    TargetAudience[]
   >([]);
   const [weeklyPostingFrequency, setWeeklyPostingFrequency] = React.useState(3);
   const [referralSource, setReferralSource] = React.useState<
@@ -190,15 +173,16 @@ export const SurveyPage = ({
   // Step validation
   const stepValidation = React.useMemo(
     () => ({
-      0: contentInterests.length >= 1 && contentInterests.length <= 5,
-      1: weeklyPostingFrequency >= 0 && weeklyPostingFrequency <= 7,
-      2: !!location,
-      3:
+      0: true, // Welcome screen - always valid
+      1: targetAudiences.length >= 1 && targetAudiences.length <= 3,
+      2: weeklyPostingFrequency >= 0 && weeklyPostingFrequency <= 7,
+      3: !!location,
+      4:
         !!referralSource &&
         (referralSource !== "other" || referralSourceOther.trim().length > 0)
     }),
     [
-      contentInterests,
+      targetAudiences,
       weeklyPostingFrequency,
       location,
       referralSource,
@@ -211,16 +195,16 @@ export const SurveyPage = ({
     return Object.values(stepValidation).every((valid) => valid);
   }, [stepValidation]);
 
-  // Handle content interest toggle
-  const toggleContentInterest = (category: ContentInterestCategory) => {
-    setContentInterests((prev) => {
-      if (prev.includes(category)) {
-        return prev.filter((c) => c !== category);
+  // Handle target audience toggle
+  const toggleTargetAudience = (audience: TargetAudience) => {
+    setTargetAudiences((prev) => {
+      if (prev.includes(audience)) {
+        return prev.filter((a) => a !== audience);
       }
-      if (prev.length >= 5) {
-        return prev; // Max 5 selections
+      if (prev.length >= 3) {
+        return prev; // Max 3 selections
       }
-      return [...prev, category];
+      return [...prev, audience];
     });
   };
 
@@ -249,7 +233,7 @@ export const SurveyPage = ({
         referralSourceOther:
           referralSource === "other" ? referralSourceOther : undefined,
         location,
-        contentInterests,
+        targetAudiences,
         weeklyPostingFrequency
       });
     } catch (error) {
@@ -262,29 +246,6 @@ export const SurveyPage = ({
 
   return (
     <div className={cn("h-screen flex overflow-hidden", className)}>
-      {/* Left Panel - Minimal Aesthetic Column */}
-      <div className="hidden lg:flex lg:w-1/4 relative bg-linear-to-br from-accent via-white to-accent/20 overflow-hidden">
-        {/* Decorative Background Elements */}
-        <div className="absolute top-1/3 -left-32 w-80 h-80 bg-accent/30 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/3 -right-32 w-80 h-80 bg-secondary/40 rounded-full blur-3xl" />
-
-        {/* Logo Only */}
-        <div className="relative z-10 p-8 pl-10">
-          <div className="flex items-center gap-3">
-            <Image
-              src="/zencourt-logo.svg"
-              alt="Zencourt"
-              width={32}
-              height={32}
-              className="object-contain"
-            />
-            <span className="text-foreground font-header text-3xl font-semibold tracking-tight">
-              zencourt
-            </span>
-          </div>
-        </div>
-      </div>
-
       {/* Right Panel - Survey Form */}
       <div className="flex-1 flex flex-col bg-background overflow-hidden relative">
         {/* Header Section - Full Width */}
@@ -292,7 +253,7 @@ export const SurveyPage = ({
           {/* Mobile Logo */}
           <div className="lg:hidden flex items-center gap-3 mb-8">
             <Image
-              src="/zencourt-logo.svg"
+              src="/zencourt-logo.png"
               alt="Zencourt"
               width={28}
               height={28}
@@ -306,64 +267,93 @@ export const SurveyPage = ({
           {/* Progress Bar - Centered */}
           <div className="flex items-center justify-center">
             <div className="w-full max-w-md">
-              <Progress value={((currentStep + 1) / 4) * 100} className="h-2" />
+              <Progress value={((currentStep + 1) / 5) * 100} className="h-2" />
               <p className="text-sm text-muted-foreground mt-2 text-center">
-                Step {currentStep + 1} of 4
+                Step {currentStep + 1} of 5
               </p>
             </div>
           </div>
         </div>
 
         {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 flex overflow-y-auto items-center">
           <div className="w-full max-w-2xl mx-auto px-8 lg:px-12 py-8">
             {/* Survey Carousel */}
             <form onSubmit={handleSubmit}>
               <Carousel setApi={setApi} className="w-full">
                 <CarouselContent>
-                  {/* Step 1: Content Interests */}
+                  {/* Step 0: Welcome Screen */}
+                  <CarouselItem>
+                    <div className="flex flex-col items-center justify-center min-h-[500px] space-y-8 py-12">
+                      {/* Animated decorative element */}
+                      <div className="relative">
+                        <Image
+                          src="/zencourt-logo.png"
+                          alt="Zencourt Logo"
+                          width={48}
+                          height={48}
+                          className="object-contain"
+                        />
+                      </div>
+
+                      {/* Welcome text */}
+                      <div className="space-y-4 text-center max-w-xl">
+                        <h1 className="font-header text-5xl md:text-6xl font-bold text-foreground tracking-tight">
+                          Welcome to Zencourt
+                        </h1>
+                        <p className="text-md md:text-lg text-muted-foreground leading-relaxed px-4">
+                          Let&apos;s personalize your experience. We&apos;ll ask
+                          you a few quick questions to tailor your dashboard and
+                          content recommendations to your unique real estate
+                          marketing needs.
+                        </p>
+                      </div>
+                    </div>
+                  </CarouselItem>
+
+                  {/* Step 1: Target Audiences */}
                   <CarouselItem>
                     <div className="space-y-6">
                       <Label className="flex items-center gap-2 text-xl font-header text-foreground">
-                        What types of content would you like to create?
+                        Who is your primary target audience?
                       </Label>
                       <p className="text-sm text-muted-foreground">
-                        Select up to 5 categories to receive content
-                        recommendations for
+                        Select 1-3 audience demographics to personalize your
+                        content strategy
                       </p>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        {contentCategories.map((category) => {
-                          const Icon = category.icon;
-                          const isSelected = contentInterests.includes(
-                            category.value
+                        {audienceCategories.map((audience) => {
+                          const Icon = audience.icon;
+                          const isSelected = targetAudiences.includes(
+                            audience.value
                           );
                           const isDisabled =
-                            !isSelected && contentInterests.length >= 5;
+                            !isSelected && targetAudiences.length >= 3;
 
                           return (
                             <button
-                              key={category.value}
+                              key={audience.value}
                               type="button"
                               onClick={() =>
-                                toggleContentInterest(category.value)
+                                toggleTargetAudience(audience.value)
                               }
                               disabled={isDisabled}
                               className={cn(
                                 "flex items-start gap-2.5 p-3 rounded-lg border transition-all duration-200 text-left",
                                 isSelected
-                                  ? "border-accent bg-accent/40 shadow-sm"
-                                  : "border-border hover:bg-accent/20 hover:border-accent/10",
+                                  ? "border-border bg-secondary shadow-sm"
+                                  : "border-border hover:bg-secondary/50",
                                 isDisabled && "opacity-50 cursor-not-allowed"
                               )}
                             >
                               <Icon className="h-5 w-5 shrink-0 text-accent-foreground mt-0.5" />
                               <div className="flex-1 min-w-0">
                                 <div className="text-sm font-bold text-foreground mb-0.5">
-                                  {category.label}
+                                  {audience.label}
                                 </div>
                                 <div className="text-xs text-muted-foreground leading-tight">
-                                  {category.description}
+                                  {audience.description}
                                 </div>
                               </div>
                             </button>
@@ -375,17 +365,17 @@ export const SurveyPage = ({
                         <span
                           className={cn(
                             "text-muted-foreground",
-                            contentInterests.length === 0 && "text-destructive"
+                            targetAudiences.length === 0 && "text-destructive"
                           )}
                         >
-                          {contentInterests.length === 0
-                            ? "Please select at least 1 category"
-                            : `${contentInterests.length} of 5 selected`}
+                          {targetAudiences.length === 0
+                            ? "Please select at least 1 audience"
+                            : `${targetAudiences.length} of 3 selected`}
                         </span>
-                        {contentInterests.length > 0 && (
+                        {targetAudiences.length > 0 && (
                           <button
                             type="button"
-                            onClick={() => setContentInterests([])}
+                            onClick={() => setTargetAudiences([])}
                             className="text-muted-foreground hover:text-foreground underline"
                           >
                             Clear all
@@ -483,7 +473,7 @@ export const SurveyPage = ({
                         {referralOptions.map((option) => (
                           <div
                             key={option.value}
-                            className="flex items-center space-x-3 px-4 py-3 rounded-lg border border-border hover:bg-accent/5 hover:border-accent/30 transition-all duration-200"
+                            className="flex items-center space-x-3 px-4 py-3 rounded-lg border border-border hover:bg-secondary/50 transition-all duration-200"
                           >
                             <RadioGroupItem
                               value={option.value}
@@ -509,7 +499,7 @@ export const SurveyPage = ({
                               setReferralSourceOther(e.target.value)
                             }
                             placeholder="Please specify..."
-                            className="w-full bg-input-background"
+                            className="w-full bg-input-background/50"
                           />
                         </div>
                       )}
@@ -522,11 +512,12 @@ export const SurveyPage = ({
         </div>
 
         {/* Navigation Controls - Sticky Footer */}
-        <div className="sticky bottom-0 left-0 right-0 bg-background border-t border-border shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
+        <div className="sticky bottom-0 left-0 right-0 bg-background border-t border-border ">
           <div className="w-full max-w-2xl mx-auto px-8 lg:px-12 py-6">
             <div className="flex items-center justify-between gap-4">
               <Button
                 type="button"
+                size="lg"
                 variant="outline"
                 onClick={handlePrevious}
                 disabled={currentStep === 0}
@@ -536,9 +527,10 @@ export const SurveyPage = ({
                 Previous
               </Button>
 
-              {currentStep < 3 ? (
+              {currentStep < 4 ? (
                 <Button
                   type="button"
+                  size="lg"
                   onClick={handleNext}
                   disabled={
                     !stepValidation[currentStep as keyof typeof stepValidation]

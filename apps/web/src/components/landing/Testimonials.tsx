@@ -50,7 +50,7 @@ export function Testimonials() {
                     />
                   ))}
                 </div>
-                <p className="text-lg text-foreground font-spartan italic mb-8">
+                <p className="text-lg text-foreground font-header italic mb-8">
                   &quot;{testimonial.quote}&quot;
                 </p>
               </div>

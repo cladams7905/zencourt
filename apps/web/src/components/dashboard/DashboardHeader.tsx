@@ -26,7 +26,7 @@ const DashboardHeader = ({
         className
       )}
     >
-      <h1 className="text-2xl font-serif font-medium text-foreground">
+      <h1 className="text-2xl font-header font-medium text-foreground">
         Welcome back, {userName}
       </h1>
 

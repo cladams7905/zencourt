@@ -306,7 +306,7 @@ export const LocationAutocomplete = ({
             size="icon"
             variant="ghost"
             onClick={handleClear}
-            className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 hover:bg-accent/20"
+            className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 hover:bg-secondary/20"
           >
             <X className="h-3 w-3" />
           </Button>
@@ -319,7 +319,7 @@ export const LocationAutocomplete = ({
               <button
                 key={suggestion.place_id}
                 onClick={() => handleSelectPlace(suggestion)}
-                className="w-full text-left px-4 py-3 hover:bg-accent/10 transition-colors flex items-start gap-3 border-b border-border last:border-0"
+                className="w-full text-left px-4 py-3 hover:bg-secondary/50 transition-colors flex items-start gap-3 border-b border-border last:border-0"
               >
                 <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
                 <div className="flex-1 min-w-0">

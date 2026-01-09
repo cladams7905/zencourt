@@ -20,7 +20,7 @@ import {
   LogOut
 } from "lucide-react";
 import Image from "next/image";
-import Logo from "../../../public/zencourt-logo.svg";
+import Logo from "../../../public/zencourt-logo.png";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -55,7 +55,7 @@ const DashboardSidebar = ({
   return (
     <aside
       className={cn(
-        "w-[260px] shrink-0 bg-accent/40 text-foreground flex flex-col border-r border-border",
+        "w-[260px] shrink-0 flex flex-col border-r border-border",
         className
       )}
     >
@@ -68,7 +68,7 @@ const DashboardSidebar = ({
           height={24}
           className="object-contain"
         />
-        <span className="text-foreground font-spartan text-2xl font-semibold tracking-tight">
+        <span className="text-foreground font-header text-2xl font-semibold tracking-tight">
           zencourt
         </span>
       </div>
@@ -104,7 +104,7 @@ const DashboardSidebar = ({
               <Button
                 size="icon"
                 variant="ghost"
-                className="h-5 w-5 hover:bg-accent/20"
+                className="h-5 w-5"
                 onClick={(e) => {
                   e.stopPropagation();
                 }}
@@ -122,10 +122,7 @@ const DashboardSidebar = ({
 
           {contentExpanded && (
             <div className="space-y-0.5 pl-2">
-              <Button
-                variant="ghost"
-                className="w-full justify-between text-muted-foreground hover:text-foreground hover:bg-accent/10"
-              >
+              <Button variant="ghost" className="w-full justify-between">
                 <div className="flex items-center gap-3">
                   <FileEdit className="h-4 w-4" />
                   <span className="text-sm">Drafts</span>
@@ -135,10 +132,7 @@ const DashboardSidebar = ({
                 </Badge>
               </Button>
 
-              <Button
-                variant="ghost"
-                className="w-full justify-between text-muted-foreground hover:text-foreground hover:bg-accent/10"
-              >
+              <Button variant="ghost" className="w-full justify-between">
                 <div className="flex items-center gap-3">
                   <Heart className="h-4 w-4" />
                   <span className="text-sm">Favorites</span>
@@ -148,10 +142,7 @@ const DashboardSidebar = ({
                 </Badge>
               </Button>
 
-              <Button
-                variant="ghost"
-                className="w-full justify-between text-muted-foreground hover:text-foreground hover:bg-accent/10"
-              >
+              <Button variant="ghost" className="w-full justify-between">
                 <div className="flex items-center gap-3">
                   <Clock className="h-4 w-4" />
                   <span className="text-sm">Scheduled</span>
@@ -161,10 +152,7 @@ const DashboardSidebar = ({
                 </Badge>
               </Button>
 
-              <Button
-                variant="ghost"
-                className="w-full justify-between text-muted-foreground hover:text-foreground hover:bg-accent/10"
-              >
+              <Button variant="ghost" className="w-full justify-between">
                 <div className="flex items-center gap-3">
                   <Archive className="h-4 w-4" />
                   <span className="text-sm">Archive</span>
@@ -193,7 +181,7 @@ const DashboardSidebar = ({
               <Button
                 size="icon"
                 variant="ghost"
-                className="h-5 w-5 hover:bg-accent/20"
+                className="h-5 w-5"
                 onClick={(e) => {
                   e.stopPropagation();
                 }}
@@ -211,26 +199,17 @@ const DashboardSidebar = ({
 
           {campaignsExpanded && (
             <div className="space-y-0.5 pl-2">
-              <Button
-                variant="ghost"
-                className="w-full justify-start gap-3 text-muted-foreground hover:text-foreground hover:bg-accent/10"
-              >
+              <Button variant="ghost" className="w-full justify-start gap-3">
                 <div className="w-1.5 h-1.5 rotate-45 bg-foreground shrink-0" />
                 <span className="text-sm truncate">1240 Serenity Lane</span>
               </Button>
 
-              <Button
-                variant="ghost"
-                className="w-full justify-start gap-3 text-muted-foreground hover:text-foreground hover:bg-accent/10"
-              >
+              <Button variant="ghost" className="w-full justify-start gap-3">
                 <div className="w-1.5 h-1.5 rotate-45 bg-foreground shrink-0" />
                 <span className="text-sm truncate">880 Fairview Blvd</span>
               </Button>
 
-              <Button
-                variant="ghost"
-                className="w-full justify-start gap-3 text-muted-foreground hover:text-foreground hover:bg-accent/10"
-              >
+              <Button variant="ghost" className="w-full justify-start gap-3">
                 <div className="w-1.5 h-1.5 rotate-45 bg-foreground shrink-0" />
                 <span className="text-sm truncate">Woodland Estate</span>
               </Button>
@@ -243,7 +222,7 @@ const DashboardSidebar = ({
       <div className="p-6 border-t border-border/50">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="w-full flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-accent/10 cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+            <button className="w-full flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-secondary cursor-pointer transition-all duration-200 group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
               {userAvatar ? (
                 <Image
                   src={userAvatar}
@@ -251,8 +230,8 @@ const DashboardSidebar = ({
                   className="h-10 w-10 rounded-full object-cover border border-border group-hover:border-foreground/20 transition-colors"
                 />
               ) : (
-                <div className="h-10 w-10 rounded-full bg-accent flex items-center justify-center border border-border group-hover:border-foreground/20 transition-colors">
-                  <span className="text-sm font-semibold text-accent-foreground">
+                <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center border border-border group-hover:border-foreground/20 transition-colors">
+                  <span className="text-sm font-semibold text-primary-foreground">
                     {userName
                       .split(" ")
                       .map((n) => n[0])

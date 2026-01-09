@@ -89,7 +89,7 @@ export function ContentGallery() {
                 Viral Reach
               </span>
             </div>
-            <div className="text-4xl font-spartan font-bold mb-2 relative z-10">
+            <div className="text-4xl font-header font-bold mb-2 relative z-10">
               24.5k
             </div>
             <div className="text-xs opacity-70 relative z-10">
@@ -115,7 +115,7 @@ export function ContentGallery() {
                 <p className="text-xs font-bold text-foreground uppercase tracking-wide mb-1">
                   Open House
                 </p>
-                <p className="text-sm text-muted-foreground font-spartan">
+                <p className="text-sm text-muted-foreground font-header">
                   Sunday, 2pm - 4pm
                 </p>
                 <button className="mt-3 w-full py-1.5 bg-primary text-primary-foreground text-xs rounded-lg">
@@ -136,7 +136,7 @@ export function ContentGallery() {
             <div className="p-4 bg-secondary/50 border-t border-border">
               <div className="flex justify-between items-start">
                 <div>
-                  <h4 className="font-spartan font-semibold text-foreground">
+                  <h4 className="font-header font-semibold text-foreground">
                     Modern Loft
                   </h4>
                   <p className="text-xs text-muted-foreground">
@@ -151,7 +151,7 @@ export function ContentGallery() {
           {/* Testimonial Quote Card */}
           <div className="break-inside-avoid bg-accent/20 p-8 rounded-2xl border border-accent/20 flex flex-col items-center justify-center text-center aspect-square md:aspect-auto">
             <Sparkles className="h-8 w-8 text-foreground mb-3" />
-            <p className="font-spartan text-foreground font-medium text-lg italic leading-relaxed">
+            <p className="font-header text-foreground font-medium text-lg italic leading-relaxed">
               &quot;Sold in record time thanks to these automated reels!&quot;
             </p>
             <p className="text-xs font-bold text-muted-foreground mt-4 uppercase tracking-widest">
@@ -188,7 +188,7 @@ export function ContentGallery() {
               <span className="inline-block px-3 py-1 bg-white/20 backdrop-blur rounded-full text-[10px] font-bold uppercase mb-3">
                 Scheduled
               </span>
-              <h3 className="font-spartan text-2xl font-bold mb-1">
+              <h3 className="font-header text-2xl font-bold mb-1">
                 New Listing
               </h3>
               <p className="text-primary-foreground/70 text-sm">

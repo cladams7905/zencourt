@@ -33,7 +33,7 @@ export const SurveyClient = ({
       referralSource: data.referralSource,
       referralSourceOther: data.referralSourceOther ?? null,
       location: formatLocation(data.location),
-      contentInterests: JSON.stringify(data.contentInterests),
+      targetAudiences: JSON.stringify(data.targetAudiences),
       weeklyPostingFrequency: data.weeklyPostingFrequency
     });
 

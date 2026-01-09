@@ -1,0 +1,1 @@
+ALTER TABLE "user_additional" RENAME COLUMN "content_interests" TO "target_audiences";
