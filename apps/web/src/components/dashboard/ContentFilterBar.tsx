@@ -29,10 +29,11 @@ const ContentFilterBar = ({
   const filters = [
     { id: "listings", label: "Listings" },
     { id: "market-trends", label: "Market Trends" },
-    { id: "seasonal", label: "Seasonal" },
+    { id: "finance", label: "Finance" },
     { id: "tips", label: "Tips" },
-    { id: "local-events", label: "Local Events" },
-    { id: "lifestyle", label: "Lifestyle" }
+    { id: "community", label: "Community" },
+    { id: "lifestyle", label: "Lifestyle" },
+    { id: "seasonal", label: "Seasonal" }
   ];
 
   const generationPercentage = (generationCount / generationLimit) * 100;
