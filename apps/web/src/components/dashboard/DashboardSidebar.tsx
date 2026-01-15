@@ -78,12 +78,18 @@ const DashboardSidebar = ({
         {/* Divider */}
         <div className="pt-4"></div>
         {/* Main Navigation */}
-        <Button variant="ghost" className="w-full justify-start gap-3">
+        <Button
+          variant="ghost"
+          className="w-full justify-start gap-3 hover:bg-foreground/5"
+        >
           <LayoutDashboard className="h-5 w-5" />
           <span className="text-sm font-medium">Dashboard</span>
         </Button>
 
-        <Button variant="ghost" className="w-full justify-start gap-3">
+        <Button
+          variant="ghost"
+          className="w-full justify-start gap-3 hover:bg-foreground/5"
+        >
           <Calendar className="h-5 w-5" />
           <span className="text-sm font-medium">Calendar</span>
         </Button>
@@ -104,7 +110,7 @@ const DashboardSidebar = ({
               <Button
                 size="icon"
                 variant="ghost"
-                className="h-5 w-5"
+                className="h-5 w-5 hover:bg-foreground/5"
                 onClick={(e) => {
                   e.stopPropagation();
                 }}
@@ -122,42 +128,54 @@ const DashboardSidebar = ({
 
           {contentExpanded && (
             <div className="space-y-0.5 pl-2">
-              <Button variant="ghost" className="w-full justify-between">
+              <Button
+                variant="ghost"
+                className="w-full justify-between hover:bg-foreground/5"
+              >
                 <div className="flex items-center gap-3">
                   <FileEdit className="h-4 w-4" />
                   <span className="text-sm">Drafts</span>
                 </div>
-                <Badge variant="white" className="text-xs px-1.5 py-0 h-5">
+                <Badge variant="muted" className="text-xs px-1.5 py-0 h-5">
                   3
                 </Badge>
               </Button>
 
-              <Button variant="ghost" className="w-full justify-between">
+              <Button
+                variant="ghost"
+                className="w-full justify-between hover:bg-foreground/5"
+              >
                 <div className="flex items-center gap-3">
                   <Heart className="h-4 w-4" />
                   <span className="text-sm">Favorites</span>
                 </div>
-                <Badge variant="white" className="text-xs px-1.5 py-0 h-5">
+                <Badge variant="muted" className="text-xs px-1.5 py-0 h-5">
                   12
                 </Badge>
               </Button>
 
-              <Button variant="ghost" className="w-full justify-between">
+              <Button
+                variant="ghost"
+                className="w-full justify-between hover:bg-foreground/5"
+              >
                 <div className="flex items-center gap-3">
                   <Clock className="h-4 w-4" />
                   <span className="text-sm">Scheduled</span>
                 </div>
-                <Badge variant="white" className="text-xs px-1.5 py-0 h-5">
+                <Badge variant="muted" className="text-xs px-1.5 py-0 h-5">
                   5
                 </Badge>
               </Button>
 
-              <Button variant="ghost" className="w-full justify-between">
+              <Button
+                variant="ghost"
+                className="w-full justify-between hover:bg-foreground/5"
+              >
                 <div className="flex items-center gap-3">
                   <Archive className="h-4 w-4" />
                   <span className="text-sm">Archive</span>
                 </div>
-                <Badge variant="white" className="text-xs px-1.5 py-0 h-5">
+                <Badge variant="muted" className="text-xs px-1.5 py-0 h-5">
                   48
                 </Badge>
               </Button>
@@ -181,7 +199,7 @@ const DashboardSidebar = ({
               <Button
                 size="icon"
                 variant="ghost"
-                className="h-5 w-5"
+                className="h-5 w-5 hover:bg-foreground/5"
                 onClick={(e) => {
                   e.stopPropagation();
                 }}
@@ -199,17 +217,26 @@ const DashboardSidebar = ({
 
           {listingsExpanded && (
             <div className="space-y-0.5 pl-2">
-              <Button variant="ghost" className="w-full justify-start gap-3">
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-3 hover:bg-foreground/5"
+              >
                 <div className="w-1.5 h-1.5 rotate-45 bg-foreground shrink-0" />
                 <span className="text-sm truncate">1240 Serenity Lane</span>
               </Button>
 
-              <Button variant="ghost" className="w-full justify-start gap-3">
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-3 hover:bg-foreground/5"
+              >
                 <div className="w-1.5 h-1.5 rotate-45 bg-foreground shrink-0" />
                 <span className="text-sm truncate">880 Fairview Blvd</span>
               </Button>
 
-              <Button variant="ghost" className="w-full justify-start gap-3">
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-3 hover:bg-foreground/5"
+              >
                 <div className="w-1.5 h-1.5 rotate-45 bg-foreground shrink-0" />
                 <span className="text-sm truncate">Woodland Estate</span>
               </Button>
@@ -222,7 +249,7 @@ const DashboardSidebar = ({
       <div className="p-6 border-t border-border/50">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="w-full flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-secondary cursor-pointer transition-all duration-200 group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+            <button className="w-full flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-foreground/5 cursor-pointer transition-all duration-200 group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
               {userAvatar ? (
                 <Image
                   src={userAvatar}
@@ -259,14 +286,14 @@ const DashboardSidebar = ({
             className="w-56 bg-popover/95 backdrop-blur-xl border-border/50 shadow-2xl rounded-xl p-1.5"
           >
             <DropdownMenuItem
-              className="rounded-lg px-3 py-2.5 cursor-pointer focus:bg-secondary/80 transition-all duration-150 group"
+              className="rounded-lg px-3 py-2.5 cursor-pointer focus:bg-secondary transition-all duration-150 group"
               onClick={() => console.log("Account settings clicked")}
             >
               <Settings className="mr-3 h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
               <span className="text-sm font-medium">Account Settings</span>
             </DropdownMenuItem>
             <DropdownMenuItem
-              className="rounded-lg px-3 py-2.5 cursor-pointer focus:bg-secondary/80 transition-all duration-150 group"
+              className="rounded-lg px-3 py-2.5 cursor-pointer focus:bg-secondary transition-all duration-150 group"
               onClick={() => console.log("Manage subscription clicked")}
             >
               <CreditCard className="mr-3 h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
@@ -274,7 +301,7 @@ const DashboardSidebar = ({
             </DropdownMenuItem>
             <DropdownMenuSeparator className="my-1.5 bg-border/50" />
             <DropdownMenuItem
-              className="rounded-lg px-3 py-2.5 cursor-pointer focus:bg-secondary/80 transition-all duration-150 group"
+              className="rounded-lg px-3 py-2.5 cursor-pointer focus:bg-secondary transition-all duration-150 group"
               onClick={handleLogout}
             >
               <LogOut className="mr-3 h-4 w-4" />

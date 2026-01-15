@@ -25,12 +25,11 @@ import {
   TrendingUp,
   Home,
   Shield,
-  Globe,
   Crown,
   KeyRound,
-  Building,
   Palmtree,
-  Users
+  Users,
+  Briefcase
 } from "lucide-react";
 
 export type ReferralSource =
@@ -51,9 +50,8 @@ export type TargetAudience =
   | "real_estate_investors"
   | "downsizers_retirees"
   | "growing_families"
-  | "commercial_clients"
-  | "vacation_property_buyers"
-  | "international_buyers";
+  | "job_transferees"
+  | "vacation_property_buyers";
 
 export interface SurveyFormData {
   referralSource: ReferralSource;
@@ -130,16 +128,10 @@ const audienceCategories: {
     icon: Shield
   },
   {
-    value: "commercial_clients",
-    label: "Commercial Clients",
-    description: "Office space, retail properties, industrial real estate",
-    icon: Building
-  },
-  {
-    value: "international_buyers",
-    label: "International Buyers",
-    description: "Visa programs, global markets, cross-border transactions",
-    icon: Globe
+    value: "job_transferees",
+    label: "Relocators & Job Transferees",
+    description: "Corporate relocations, remote moves, new-to-area buyers",
+    icon: Briefcase
   }
 ];
 

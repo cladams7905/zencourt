@@ -20,7 +20,7 @@ interface ContentFilterBarProps {
 const ContentFilterBar = ({
   activeType = "videos",
   onTypeChange,
-  activeFilters = ["Market Trends"],
+  activeFilters = ["Market Insights"],
   onFilterToggle,
   generationCount = 5,
   generationLimit = 50,
@@ -28,9 +28,8 @@ const ContentFilterBar = ({
 }: ContentFilterBarProps) => {
   const filters = [
     { id: "listings", label: "Listings" },
-    { id: "market-trends", label: "Market Trends" },
-    { id: "finance", label: "Finance" },
-    { id: "tips", label: "Tips" },
+    { id: "market-insights", label: "Market Insights" },
+    { id: "educational", label: "Educational" },
     { id: "community", label: "Community" },
     { id: "lifestyle", label: "Lifestyle" },
     { id: "seasonal", label: "Seasonal" }

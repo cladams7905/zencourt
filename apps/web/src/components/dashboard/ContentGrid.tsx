@@ -7,12 +7,22 @@ import { Heart, Edit, Download, Share2 } from "lucide-react";
 
 type AspectRatio = "square" | "vertical" | "horizontal";
 
+type CarouselSlide = {
+  header: string;
+  content: string;
+};
+
 interface ContentItem {
   id: string;
   thumbnail?: string;
   aspectRatio?: AspectRatio;
   isFavorite?: boolean;
   alt?: string;
+  hook?: string;
+  hookSubheader?: string | null;
+  caption?: string | null;
+  body?: CarouselSlide[] | null;
+  isLoading?: boolean;
 }
 
 interface ContentGridProps {
@@ -29,7 +39,7 @@ const ContentGridItem = ({
   onFavoriteToggle,
   onEdit,
   onDownload,
-  onShare,
+  onShare
 }: {
   item: ContentItem;
   onFavoriteToggle?: (id: string) => void;
@@ -40,19 +50,42 @@ const ContentGridItem = ({
   const aspectClasses = {
     square: "",
     vertical: "aspect-[9/16]",
-    horizontal: "",
+    horizontal: ""
   };
+
+  const hasTextContent = Boolean(
+    item.hook || item.hookSubheader || item.caption || item.body?.length
+  );
+
+  if (item.isLoading) {
+    return (
+      <div className="break-inside-avoid relative rounded-2xl mb-6 animate-pulse">
+        <div className="rounded-xl border border-border bg-secondary p-4">
+          <div className="h-5 w-4/5 rounded bg-muted-foreground/20" />
+          <div className="mt-3 h-4 w-2/3 rounded bg-muted-foreground/20" />
+          <div className="mt-5 h-4 w-full rounded bg-muted-foreground/20" />
+          <div className="mt-3 h-4 w-5/6 rounded bg-muted-foreground/20" />
+          <div className="mt-3 h-4 w-3/4 rounded bg-muted-foreground/20" />
+          <div className="mt-3 h-4 w-2/3 rounded bg-muted-foreground/20" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!item.thumbnail && !hasTextContent) {
+    return null;
+  }
 
   return (
     <div className="break-inside-avoid relative rounded-2xl mb-6">
-      <div
-        className={cn(
-          "relative group rounded-xl overflow-hidden cursor-pointer",
-          item.aspectRatio === "vertical" && "aspect-[9/16]"
-        )}
-      >
-        {/* Content Image/Placeholder */}
-        {item.thumbnail ? (
+      {item.thumbnail && (
+        <div
+          className={cn(
+            "relative group rounded-xl overflow-hidden cursor-pointer",
+            item.aspectRatio === "vertical" && "aspect-[9/16]"
+          )}
+        >
+          {/* Content Image */}
           <img
             src={item.thumbnail}
             alt={item.alt || "Content item"}
@@ -61,79 +94,104 @@ const ContentGridItem = ({
               item.aspectRatio === "vertical" ? "h-full" : "h-auto"
             )}
           />
-        ) : (
-          <div
-            className={cn(
-              "w-full bg-gradient-to-br from-accent/30 via-accent/10 to-secondary transition-transform duration-700 group-hover:scale-105",
-              item.aspectRatio === "vertical" ? "h-full" : "aspect-[4/3]"
-            )}
-          />
-        )}
 
-        {/* Hover Overlay */}
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300" />
+          {/* Hover Overlay */}
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300" />
 
-        {/* Favorite Button */}
-        <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={(e) => {
-              e.preventDefault();
-              onFavoriteToggle?.(item.id);
-            }}
-            className={cn(
-              "h-6 w-6 rounded-full backdrop-blur-md border transition-all",
-              item.isFavorite
-                ? "bg-primary/90 border-primary text-primary-foreground hover:bg-primary"
-                : "bg-background/20 border-background/30 text-background hover:bg-background/30 hover:border-background/70"
-            )}
-          >
-            <Heart
-              className={cn("h-3.5 w-3.5", item.isFavorite && "fill-current")}
-            />
-          </Button>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="absolute bottom-4 left-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-          <div className="flex gap-2 p-1.5 rounded-md bg-black/20 backdrop-blur-sm">
+          {/* Favorite Button */}
+          <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
             <Button
               size="icon"
               variant="ghost"
               onClick={(e) => {
                 e.preventDefault();
-                onEdit?.(item.id);
+                onFavoriteToggle?.(item.id);
               }}
-              className="h-7 w-7 text-background hover:text-background/80 hover:bg-background/10"
+              className={cn(
+                "h-6 w-6 rounded-full backdrop-blur-md border transition-all",
+                item.isFavorite
+                  ? "bg-primary/90 border-primary text-primary-foreground hover:bg-primary"
+                  : "bg-background/20 border-background/30 text-background hover:bg-background/30 hover:border-background/70"
+              )}
             >
-              <Edit className="h-4 w-4" />
-            </Button>
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={(e) => {
-                e.preventDefault();
-                onDownload?.(item.id);
-              }}
-              className="h-7 w-7 text-background hover:text-background/80 hover:bg-background/10"
-            >
-              <Download className="h-4 w-4" />
-            </Button>
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={(e) => {
-                e.preventDefault();
-                onShare?.(item.id);
-              }}
-              className="h-7 w-7 text-background hover:text-background/80 hover:bg-background/10"
-            >
-              <Share2 className="h-4 w-4" />
+              <Heart
+                className={cn("h-3.5 w-3.5", item.isFavorite && "fill-current")}
+              />
             </Button>
           </div>
+
+          {/* Action Buttons */}
+          <div className="absolute bottom-4 left-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            <div className="flex gap-2 p-1.5 rounded-md bg-black/20 backdrop-blur-sm">
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={(e) => {
+                  e.preventDefault();
+                  onEdit?.(item.id);
+                }}
+                className="h-7 w-7 text-background hover:text-background/80 hover:bg-background/10"
+              >
+                <Edit className="h-4 w-4" />
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={(e) => {
+                  e.preventDefault();
+                  onDownload?.(item.id);
+                }}
+                className="h-7 w-7 text-background hover:text-background/80 hover:bg-background/10"
+              >
+                <Download className="h-4 w-4" />
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={(e) => {
+                  e.preventDefault();
+                  onShare?.(item.id);
+                }}
+                className="h-7 w-7 text-background hover:text-background/80 hover:bg-background/10"
+              >
+                <Share2 className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
+
+      {hasTextContent && (
+        <div className="rounded-xl border border-border bg-background/80 p-4 shadow-sm">
+          {item.hook && (
+            <p className="text-sm font-semibold text-foreground">{item.hook}</p>
+          )}
+          {item.hookSubheader && (
+            <p className="mt-1 text-xs text-muted-foreground">
+              {item.hookSubheader}
+            </p>
+          )}
+          {item.caption && (
+            <p className="text-xs text-muted-foreground whitespace-pre-line">
+              {item.caption}
+            </p>
+          )}
+          {item.body?.length ? (
+            <div className="mt-4 space-y-3">
+              {item.body.map((slide, index) => (
+                <div key={`${item.id}-slide-${index}`}>
+                  <p className="text-xs font-semibold text-foreground">
+                    {index + 1}. {slide.header}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {slide.content}
+                  </p>
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      )}
     </div>
   );
 };
@@ -144,15 +202,10 @@ const ContentGrid = ({
   onFavoriteToggle,
   onEdit,
   onDownload,
-  onShare,
+  onShare
 }: ContentGridProps) => {
   return (
-    <div
-      className={cn(
-        "columns-2 md:columns-3 lg:columns-4 gap-6",
-        className
-      )}
-    >
+    <div className={cn("columns-2 md:columns-3 xl:columns-4 gap-6", className)}>
       {items.map((item) => (
         <ContentGridItem
           key={item.id}
