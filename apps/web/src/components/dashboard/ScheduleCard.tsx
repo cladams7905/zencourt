@@ -63,7 +63,7 @@ const ScheduleCard = ({
   return (
     <Card
       className={cn(
-        "flex-shrink-0 w-[280px] hover:shadow-lg transition-all duration-300",
+        "shrink-0 w-[280px] hover:shadow-lg transition-all duration-300",
         className
       )}
     >
@@ -113,11 +113,11 @@ const ScheduleCard = ({
               >
                 {/* Thumbnail */}
                 {post.thumbnail ? (
-                  <div className="relative h-14 w-14 rounded-md bg-muted-foreground/5 overflow-hidden flex-shrink-0">
-                    <div className="h-full w-full bg-gradient-to-br from-accent/20 to-accent/5" />
+                  <div className="relative h-14 w-14 rounded-md bg-muted-foreground/5 overflow-hidden shrink-0">
+                    <div className="h-full w-full bg-linear-to-br from-accent/20 to-accent/5" />
                   </div>
                 ) : (
-                  <div className="relative h-14 w-14 rounded-md bg-muted overflow-hidden flex items-center justify-center flex-shrink-0">
+                  <div className="relative h-14 w-14 rounded-md bg-muted overflow-hidden flex items-center justify-center shrink-0">
                     <FileEdit className="h-5 w-5 text-muted-foreground" />
                   </div>
                 )}

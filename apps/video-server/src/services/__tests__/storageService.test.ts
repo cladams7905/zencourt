@@ -147,7 +147,7 @@ describe("StorageService", () => {
       expect(typeof storage.uploadFile).toBe("function");
       expect(typeof storage.downloadFile).toBe("function");
       expect(typeof storage.deleteFile).toBe("function");
-      expect(typeof storage.getSignedUrl).toBe("function");
+      expect(typeof storage.getSignedDownloadUrl).toBe("function");
       expect(typeof storage.copyFile).toBe("function");
       expect(typeof storage.listFiles).toBe("function");
       expect(typeof storage.checkBucketAccess).toBe("function");

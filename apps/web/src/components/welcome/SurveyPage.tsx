@@ -168,7 +168,10 @@ export const SurveyPage = ({
       0: true, // Welcome screen - always valid
       1: targetAudiences.length >= 1 && targetAudiences.length <= 3,
       2: weeklyPostingFrequency >= 0 && weeklyPostingFrequency <= 7,
-      3: !!location,
+      3:
+        !!location &&
+        (location.country !== "United States" ||
+          (Boolean(location.state) && Boolean(location.postalCode))),
       4:
         !!referralSource &&
         (referralSource !== "other" || referralSourceOther.trim().length > 0)

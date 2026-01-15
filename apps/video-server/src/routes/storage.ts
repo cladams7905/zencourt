@@ -126,7 +126,7 @@ router.post(
       });
 
       // Generate signed URL for immediate access
-      const signedUrl = await storageService.getSignedUrl({
+      const signedUrl = await storageService.getSignedDownloadUrl({
         key,
         expiresIn: 3600 // 1 hour
       });
@@ -268,15 +268,15 @@ router.post(
 
       logger.info(
         { key, expiresIn: expiry },
-        "[Storage] Generating signed URL"
+        "[Storage] Generating signed download URL"
       );
 
-      const signedUrl = await storageService.getSignedUrl({
+      const signedUrl = await storageService.getSignedDownloadUrl({
         key,
         expiresIn: expiry
       });
 
-      logger.info({ key }, "[Storage] ✅ Signed URL generated");
+      logger.info({ key }, "[Storage] ✅ Signed download URL generated");
 
       res.status(200).json({
         success: true,

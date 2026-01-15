@@ -15,8 +15,8 @@ interface DashboardHeaderProps {
 
 const DashboardHeader = ({
   className,
-  userName = "Carter",
-  location = "Lynchburg, VA",
+  userName = "User",
+  location = "United States",
   hasNotifications = true
 }: DashboardHeaderProps) => {
   return (

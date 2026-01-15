@@ -28,7 +28,7 @@ import {
 } from "@shared/types/models";
 import { createVideoContent } from "@web/src/server/actions/db/videoContent";
 import { createVideoContentJob } from "@web/src/server/actions/db/videoContentJobs";
-import { ensurePublicUrls } from "@web/src/server/utils/storageUrls";
+import { getSignedDownloadUrls } from "@web/src/server/utils/storageUrls";
 
 const logger = createChildLogger(baseLogger, {
   module: "video-generate-route"
@@ -336,7 +336,7 @@ export async function POST(
         );
         let publicImageUrls: string[];
         try {
-          publicImageUrls = await ensurePublicUrls(imageUrls);
+          publicImageUrls = await getSignedDownloadUrls(imageUrls);
         } catch (error) {
           logger.error(
             {

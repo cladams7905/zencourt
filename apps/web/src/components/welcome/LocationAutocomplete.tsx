@@ -87,7 +87,7 @@ export const LocationAutocomplete = ({
         if (component.types.includes("locality")) {
           city = component.long_name;
         } else if (component.types.includes("administrative_area_level_1")) {
-          state = component.long_name;
+          state = component.short_name;
         } else if (component.types.includes("country")) {
           country = component.long_name;
         } else if (component.types.includes("postal_code")) {

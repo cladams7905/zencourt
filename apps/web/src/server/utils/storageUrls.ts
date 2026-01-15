@@ -78,7 +78,7 @@ function setCachedSignedUrl(
   });
 }
 
-export async function ensurePublicUrl(
+export async function getSignedDownloadUrl(
   url: string,
   expiresIn: number = DEFAULT_SIGNED_URL_TTL_SECONDS
 ): Promise<string> {
@@ -118,7 +118,7 @@ export async function ensurePublicUrl(
   return signedResult.url;
 }
 
-export async function ensurePublicUrlSafe(
+export async function getSignedDownloadUrlSafe(
   url?: string | null,
   expiresIn: number = DEFAULT_SIGNED_URL_TTL_SECONDS
 ): Promise<string | undefined> {
@@ -126,15 +126,15 @@ export async function ensurePublicUrlSafe(
     return undefined;
   }
   try {
-    return await ensurePublicUrl(url, expiresIn);
+    return await getSignedDownloadUrl(url, expiresIn);
   } catch {
     return url ?? undefined;
   }
 }
 
-export async function ensurePublicUrls(
+export async function getSignedDownloadUrls(
   urls: string[],
   expiresIn: number = DEFAULT_SIGNED_URL_TTL_SECONDS
 ): Promise<string[]> {
-  return Promise.all(urls.map((url) => ensurePublicUrl(url, expiresIn)));
+  return Promise.all(urls.map((url) => getSignedDownloadUrl(url, expiresIn)));
 }

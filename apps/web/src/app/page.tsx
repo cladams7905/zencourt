@@ -2,7 +2,7 @@ import { getUserListings } from "../server/actions/db/listings";
 import { DashboardView } from "../components/dashboard/DashboardView";
 import { DBListing } from "@shared/types/models";
 import { getUser } from "../server/actions/db/users";
-import { getOrCreateUserAdditional } from "../server/actions/db/userAdditional";
+import { getOrCreateUserAdditional, getUserProfileCompletion } from "../server/actions/db/userAdditional";
 import { LandingPage } from "../components/landing/LandingPage";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
@@ -83,6 +83,8 @@ export default async function Home() {
       paymentPlanLabels[userAdditional.paymentPlan] ?? "Free";
 
     const listings: DBListing[] = await getUserListings(user.id);
+    const profileCompletion = await getUserProfileCompletion(user.id);
+
     return (
       <DashboardView
         initialListings={listings}
@@ -91,6 +93,9 @@ export default async function Home() {
         sidebarName={sidebarName}
         sidebarPlan={paymentPlanLabel}
         userAvatar={user.profileImageUrl ?? undefined}
+        profileCompleted={profileCompletion.profileCompleted}
+        writingStyleCompleted={profileCompletion.writingStyleCompleted}
+        mediaUploaded={profileCompletion.mediaUploaded}
       />
     );
   }

@@ -11,6 +11,7 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { Readable } from "stream";
 import logger from "@/config/logger";
 import { storageClient, STORAGE_CONFIG } from "@/config/storage";
+import { buildStoragePublicUrl, extractStorageKeyFromUrl } from "@shared/utils";
 
 /**
  * Storage-specific error types
@@ -53,7 +54,7 @@ export interface StorageUploadOptions {
 }
 
 /**
- * Options for getting a signed URL
+ * Options for getting a signed download URL
  */
 export interface StorageSignedUrlOptions {
   bucket?: string;
@@ -217,15 +218,15 @@ export class StorageService {
   }
 
   /**
-   * Get a pre-signed URL for temporary access to a file
+   * Get a pre-signed download URL for temporary access to a file
    */
-  async getSignedUrl(options: StorageSignedUrlOptions): Promise<string> {
+  async getSignedDownloadUrl(options: StorageSignedUrlOptions): Promise<string> {
     const bucket = options.bucket || this.defaultBucket;
     const { key, expiresIn = 3600 } = options;
 
     logger.info(
       { bucket, key, expiresIn },
-      "[StorageService] Generating signed URL"
+      "[StorageService] Generating signed download URL"
     );
 
     try {
@@ -237,7 +238,7 @@ export class StorageService {
       const url = await getSignedUrl(this.client, command, { expiresIn });
       logger.info(
         { bucket, key, expiresIn },
-        "[StorageService] ✅ Signed URL generated"
+        "[StorageService] ✅ Signed download URL generated"
       );
 
       return url;
@@ -358,14 +359,7 @@ export class StorageService {
    * Execute an operation with exponential backoff retry
    */
   private buildObjectUrl(bucket: string, key: string): string {
-    const endpoint = STORAGE_CONFIG.endpoint.replace(/\/+$/, "");
-    const normalizedKey = key.replace(/^\/+/, "");
-    const encodedKey = normalizedKey
-      .split("/")
-      .map((segment) => encodeURIComponent(segment))
-      .join("/");
-
-    return `${endpoint}/${bucket}/${encodedKey}`;
+    return buildStoragePublicUrl(STORAGE_CONFIG.endpoint, bucket, key);
   }
 
   /**
@@ -510,23 +504,12 @@ export class StorageService {
    * @returns Object key
    */
   extractKeyFromUrl(url: string): string {
-    // Handle s3:// URLs
-    if (url.startsWith("s3://")) {
-      const parts = url.replace("s3://", "").split("/");
-      parts.shift(); // Remove bucket name
-      return parts.join("/");
-    }
-
-    // Handle HTTPS URLs
     try {
-      const urlObj = new URL(url);
-      let pathname = urlObj.pathname.replace(/^\/+/, "");
-
-      if (this.defaultBucket && pathname.startsWith(`${this.defaultBucket}/`)) {
-        pathname = pathname.substring(this.defaultBucket.length + 1);
+      const key = extractStorageKeyFromUrl(url);
+      if (this.defaultBucket && key.startsWith(`${this.defaultBucket}/`)) {
+        return key.substring(this.defaultBucket.length + 1);
       }
-
-      return pathname;
+      return key;
     } catch (error) {
       throw new StorageServiceError(
         `Invalid storage URL format: ${url}`,

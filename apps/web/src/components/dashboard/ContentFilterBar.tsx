@@ -65,7 +65,7 @@ const ContentFilterBar = ({
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
         {/* Type Tabs */}
-        <div className="bg-secondary p-1 rounded-xl flex items-center flex-shrink-0">
+        <div className="bg-secondary p-1 rounded-xl flex items-center shrink-0">
           <Button
             size="sm"
             variant={activeType === "videos" ? "default" : "ghost"}

@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 import { db, content } from "@db/client";
 import type { DBContent, InsertDBContent } from "@shared/types/models";
 import { withDbErrorHandling } from "../_utils";
-import { ensurePublicUrlSafe } from "../../utils/storageUrls";
+import { getSignedDownloadUrlSafe } from "../../utils/storageUrls";
 
 type CreateContentInput = Omit<
   InsertDBContent,
@@ -20,7 +20,10 @@ async function resolveThumbnailUrl(
   if (!url) {
     return url ?? null;
   }
-  const signed = await ensurePublicUrlSafe(url, CONTENT_THUMBNAIL_TTL_SECONDS);
+  const signed = await getSignedDownloadUrlSafe(
+    url,
+    CONTENT_THUMBNAIL_TTL_SECONDS
+  );
   return signed ?? url ?? null;
 }
 

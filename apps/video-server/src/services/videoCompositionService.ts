@@ -15,7 +15,9 @@ import { existsSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
 import logger from "@/config/logger";
+import { STORAGE_CONFIG } from "@/config/storage";
 import { storageService } from "./storageService";
+import { extractStorageKeyFromUrl } from "@shared/utils";
 import type {
   ComposedVideoResult,
   LogoPosition,
@@ -240,9 +242,9 @@ export class VideoCompositionService {
 
     const downloadPromises = videoUrls.map(async (url, index) => {
       // Extract storage key from URL
-      const storageKey = this.extractStorageKeyFromUrl(url);
+      const storageKey = extractStorageKeyFromUrl(url);
       const videoBuffer = await storageService.downloadFile(
-        process.env.B2_BUCKET_NAME,
+        STORAGE_CONFIG.bucket,
         storageKey
       );
 
@@ -271,9 +273,9 @@ export class VideoCompositionService {
       "[VideoComposition] Downloading logo from Backblaze B2"
     );
 
-    const storageKey = this.extractStorageKeyFromUrl(storageUrl);
+    const storageKey = extractStorageKeyFromUrl(storageUrl);
     const logoBuffer = await storageService.downloadFile(
-      process.env.B2_BUCKET_NAME,
+      STORAGE_CONFIG.bucket,
       storageKey
     );
     await writeFile(logoPath, logoBuffer);
@@ -282,20 +284,6 @@ export class VideoCompositionService {
       { logoPath, size: logoBuffer.length },
       "[VideoComposition] Downloaded logo"
     );
-  }
-
-  /**
-   * Extract storage key from Backblaze-compatible URLs
-   */
-  private extractStorageKeyFromUrl(url: string): string {
-    // Handle format: https://bucket.s3.region.amazonaws.com/key
-    // or: https://s3.region.amazonaws.com/bucket/key
-    const urlObj = new URL(url);
-    let pathname = urlObj.pathname.replace(/^\/+/, "");
-
-    return pathname.startsWith(`${process.env.B2_BUCKET_NAME}/`)
-      ? pathname.substring(process.env.B2_BUCKET_NAME.length + 1)
-      : pathname;
   }
 
   // ============================================================================

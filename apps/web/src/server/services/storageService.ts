@@ -19,41 +19,41 @@ import {
 import {
   getListingImagePath,
   getGenericUploadPath,
-  extractStorageKeyFromUrl
+  extractStorageKeyFromUrl,
+  buildStorageConfigFromEnv,
+  buildStoragePublicUrl
 } from "@shared/utils";
 import { createChildLogger, logger as baseLogger } from "../../lib/logger";
 
 const logger = createChildLogger(baseLogger, { module: "storage-service" });
 
-// Validate required environment variables
-const requiredEnvVars = {
-  B2_ENDPOINT: process.env.B2_ENDPOINT,
-  B2_REGION: process.env.B2_REGION || "us-west-002",
-  B2_BUCKET_NAME: process.env.B2_BUCKET_NAME,
-  B2_KEY_ID: process.env.B2_KEY_ID,
-  B2_APPLICATION_KEY: process.env.B2_APPLICATION_KEY
-};
-
-for (const [key, value] of Object.entries(requiredEnvVars)) {
-  if (!value) {
-    throw new Error(`${key} environment variable is required`);
+const storageConfig = buildStorageConfigFromEnv(
+  {
+    B2_ENDPOINT: process.env.B2_ENDPOINT,
+    B2_REGION: process.env.B2_REGION,
+    B2_BUCKET_NAME: process.env.B2_BUCKET_NAME,
+    B2_KEY_ID: process.env.B2_KEY_ID,
+    B2_APPLICATION_KEY: process.env.B2_APPLICATION_KEY
+  },
+  {
+    defaultRegion: "us-west-002"
   }
-}
+);
 
 const storageClient = new S3Client({
-  region: requiredEnvVars.B2_REGION!,
-  endpoint: requiredEnvVars.B2_ENDPOINT!,
+  region: storageConfig.region,
+  endpoint: storageConfig.endpoint,
   credentials: {
-    accessKeyId: requiredEnvVars.B2_KEY_ID!,
-    secretAccessKey: requiredEnvVars.B2_APPLICATION_KEY!
+    accessKeyId: storageConfig.keyId,
+    secretAccessKey: storageConfig.applicationKey
   },
   forcePathStyle: false
 });
 
 const STORAGE_CONFIG = {
-  region: requiredEnvVars.B2_REGION!,
-  bucket: requiredEnvVars.B2_BUCKET_NAME!,
-  endpoint: requiredEnvVars.B2_ENDPOINT!
+  region: storageConfig.region,
+  bucket: storageConfig.bucket,
+  endpoint: storageConfig.endpoint
 } as const;
 
 type UploadContext = {
@@ -286,7 +286,11 @@ export class StorageService {
 
     return {
       key: context.key,
-      url: this.getPublicUrl(context.key)
+      url: buildStoragePublicUrl(
+        STORAGE_CONFIG.endpoint,
+        STORAGE_CONFIG.bucket,
+        context.key
+      )
     };
   }
 
@@ -315,16 +319,6 @@ export class StorageService {
         ...(listingId && { listingId })
       }
     };
-  }
-
-  private getPublicUrl(key: string): string {
-    const endpoint = STORAGE_CONFIG.endpoint.replace(/\/+$/, "");
-    const normalizedKey = key.replace(/^\/+/, "");
-    const encodedKey = normalizedKey
-      .split("/")
-      .map((segment) => encodeURIComponent(segment))
-      .join("/");
-    return `${endpoint}/${STORAGE_CONFIG.bucket}/${encodedKey}`;
   }
 
   private normalizeKeyFromUrl(url: string): string {

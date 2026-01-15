@@ -251,6 +251,24 @@ export function extractStorageKeyFromUrl(url: string): string {
 }
 
 /**
+ * Build a public object URL for a storage key.
+ */
+export function buildStoragePublicUrl(
+  endpoint: string,
+  bucket: string,
+  key: string
+): string {
+  const normalizedEndpoint = endpoint.replace(/\/+$/, "");
+  const normalizedKey = key.replace(/^\/+/, "");
+  const encodedKey = normalizedKey
+    .split("/")
+    .map((segment) => encodeURIComponent(segment))
+    .join("/");
+
+  return `${normalizedEndpoint}/${bucket}/${encodedKey}`;
+}
+
+/**
  * Generate a temporary listing ID
  */
 export function generateTempListingId(): string {

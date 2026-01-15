@@ -4,6 +4,7 @@ import * as React from "react";
 import { cn } from "../ui/utils";
 import { Button } from "../ui/button";
 import { Heart, Edit, Download, Share2 } from "lucide-react";
+import Image from "next/image";
 
 type AspectRatio = "square" | "vertical" | "horizontal";
 
@@ -47,12 +48,6 @@ const ContentGridItem = ({
   onDownload?: (id: string) => void;
   onShare?: (id: string) => void;
 }) => {
-  const aspectClasses = {
-    square: "",
-    vertical: "aspect-[9/16]",
-    horizontal: ""
-  };
-
   const hasTextContent = Boolean(
     item.hook || item.hookSubheader || item.caption || item.body?.length
   );
@@ -82,11 +77,11 @@ const ContentGridItem = ({
         <div
           className={cn(
             "relative group rounded-xl overflow-hidden cursor-pointer",
-            item.aspectRatio === "vertical" && "aspect-[9/16]"
+            item.aspectRatio === "vertical" && "aspect-9/16"
           )}
         >
           {/* Content Image */}
-          <img
+          <Image
             src={item.thumbnail}
             alt={item.alt || "Content item"}
             className={cn(

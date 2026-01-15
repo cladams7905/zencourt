@@ -125,6 +125,8 @@ All tables enforce user isolation via RLS policies. Stack Auth provides authenti
 **Critical Utilities:**
 
 - `utils/storagePaths.ts` - **Centralized storage key generation**. Both web and video-server MUST use these functions to maintain consistent file organization.
+- `utils/storageConfig.ts` - Shared Backblaze env parsing/validation for web + video-server.
+- `utils/storagePaths.ts` also exports `buildStoragePublicUrl` and `extractStorageKeyFromUrl` for consistent URL building/parsing.
 - `utils/logger.ts` - Pino logger configuration
 - `types/` - Shared TypeScript types for API contracts
 
@@ -150,6 +152,9 @@ Centralized in `tsconfig.base.json` with workspace aliases:
 ### 2. Storage Consistency
 
 **Always use `@shared/utils/storagePaths.ts` functions** for generating storage keys. This ensures both web and video-server maintain identical file organization. Never construct storage paths manually.
+Also use shared helpers for storage URL parsing/building (`extractStorageKeyFromUrl`, `buildStoragePublicUrl`) and env config normalization (`buildStorageConfigFromEnv`) to avoid drift across runtimes.
+
+**Signed URL naming:** server-side helpers use `getSignedDownloadUrl*` (see `apps/web/src/server/utils/storageUrls.ts` and `apps/video-server/src/services/storageService.ts`).
 
 ### 3. Video Job Architecture
 

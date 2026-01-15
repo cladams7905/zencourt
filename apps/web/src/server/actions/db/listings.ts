@@ -5,7 +5,7 @@ import { eq, and, like, desc } from "drizzle-orm";
 import { db, listings, content } from "@db/client";
 import { DBListing, InsertDBListing } from "@shared/types/models";
 import { withDbErrorHandling } from "../_utils";
-import { ensurePublicUrlSafe } from "../../utils/storageUrls";
+import { getSignedDownloadUrlSafe } from "../../utils/storageUrls";
 
 type ContentRecord = typeof content.$inferSelect;
 
@@ -17,7 +17,7 @@ async function resolveThumbnailUrl(
   if (!url) {
     return url ?? null;
   }
-  const signed = await ensurePublicUrlSafe(
+  const signed = await getSignedDownloadUrlSafe(
     url,
     LISTING_THUMBNAIL_TTL_SECONDS
   );

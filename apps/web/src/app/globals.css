@@ -23,8 +23,8 @@
   --destructive-foreground: #ffffff;
   --border: rgba(0, 0, 0, 0.08);
   --input: rgba(0, 0, 0, 0.08);
-  --input-background: #f8f6f3;
-  --switch-background: #f8f6f3;
+  --input-background: #ffffff;
+  --switch-background: #ffffff;
   --font-weight-medium: 500;
   --font-weight-normal: 400;
   --ring: rgba(0, 0, 0, 0.08);

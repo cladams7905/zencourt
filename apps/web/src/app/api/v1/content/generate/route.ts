@@ -14,6 +14,10 @@ import {
 import { createChildLogger, logger as baseLogger } from "@web/src/lib/logger";
 import { db, eq, userAdditional } from "@db/client";
 import { Redis } from "@upstash/redis";
+import {
+  getRentCastMarketData,
+  parseMarketLocation
+} from "@web/src/server/services/marketDataService";
 
 const logger = createChildLogger(baseLogger, {
   module: "content-generate-route"
@@ -67,28 +71,54 @@ function getRecentHooksKey(userId: string, category: string): string {
   return `recent_hooks:${userId}:${category}`;
 }
 
-async function getPrimaryAudienceSegment(userId: string): Promise<string[]> {
+type UserAdditionalSnapshot = {
+  targetAudiences: string | null;
+  location: string | null;
+  writingStylePreset: string | null;
+  writingStyleCustom: string | null;
+  agentName: string;
+  brokerageName: string;
+};
+
+async function getUserAdditionalSnapshot(
+  userId: string
+): Promise<UserAdditionalSnapshot> {
   const [record] = await db
     .select({
-      targetAudiences: userAdditional.targetAudiences
+      targetAudiences: userAdditional.targetAudiences,
+      location: userAdditional.location,
+      writingStylePreset: userAdditional.writingStylePreset,
+      writingStyleCustom: userAdditional.writingStyleCustom,
+      agentName: userAdditional.agentName,
+      brokerageName: userAdditional.brokerageName
     })
     .from(userAdditional)
     .where(eq(userAdditional.userId, userId));
 
-  if (!record?.targetAudiences) {
+  return {
+    targetAudiences: record?.targetAudiences ?? null,
+    location: record?.location ?? null,
+    writingStylePreset: record?.writingStylePreset ?? null,
+    writingStyleCustom: record?.writingStyleCustom ?? null,
+    agentName: record?.agentName ?? "",
+    brokerageName: record?.brokerageName ?? ""
+  };
+}
+
+function parsePrimaryAudienceSegments(
+  targetAudiences: string | null
+): string[] {
+  if (!targetAudiences) {
     return [];
   }
 
   try {
-    const parsed = JSON.parse(record.targetAudiences);
+    const parsed = JSON.parse(targetAudiences);
     if (Array.isArray(parsed) && parsed.length > 0) {
       return [String(parsed[0])];
     }
   } catch (error) {
-    logger.warn(
-      { error, targetAudiences: record.targetAudiences },
-      "Failed to parse target audiences"
-    );
+    logger.warn({ error, targetAudiences }, "Failed to parse target audiences");
   }
 
   return [];
@@ -160,6 +190,37 @@ function validateGeneratedItems(
   }
 }
 
+function buildWritingStyleDescription(
+  preset: string | null,
+  custom: string | null
+): string {
+  const DEFAULT_STYLE =
+    "Friendly, conversational, use occasional exclamation points and texting lingo (lol, tbh, idk, haha, soooo, wayyy)";
+
+  if (!preset && !custom) {
+    return DEFAULT_STYLE;
+  }
+
+  const parts: string[] = [];
+
+  if (preset) {
+    const presetDescriptions: Record<string, string> = {
+      professional: "Professional, polished tone with industry terminology",
+      casual: "Casual, friendly style with relaxed language",
+      friendly: "Warm, approachable tone that builds rapport",
+      enthusiastic: "Energetic, upbeat style with exclamation points",
+      educational: "Informative, teaching-focused with clear explanations"
+    };
+    parts.push(presetDescriptions[preset] || preset);
+  }
+
+  if (custom) {
+    parts.push(custom);
+  }
+
+  return parts.join(". ");
+}
+
 export async function POST(request: NextRequest) {
   try {
     logger.info("Received content generation request");
@@ -180,17 +241,54 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const audienceSegments = await getPrimaryAudienceSegment(user.id);
+    const userAdditionalSnapshot = await getUserAdditionalSnapshot(user.id);
+    const audienceSegments = parsePrimaryAudienceSegments(
+      userAdditionalSnapshot.targetAudiences
+    );
     const redis = getRedisClient();
     const recentHooksKey = getRecentHooksKey(user.id, body.category);
     const recentHooks = redis
       ? await redis.lrange<string>(recentHooksKey, 0, RECENT_HOOKS_MAX - 1)
       : [];
 
+    const marketLocation = parseMarketLocation(userAdditionalSnapshot.location);
+    let marketData = null;
+
+    if (body.category === "market_insights") {
+      if (!marketLocation) {
+        throw new ApiError(400, {
+          error: "Missing market location",
+          message:
+            "Please add a valid US location and zip code to your profile."
+        });
+      }
+
+      marketData = await getRentCastMarketData(marketLocation);
+      if (!marketData) {
+        throw new ApiError(500, {
+          error: "Market data unavailable",
+          message: "RentCast is not configured. Please try again later."
+        });
+      }
+    }
+
+    // Enhance agent profile with user's data from database
+    const enhancedAgentProfile = {
+      ...body.agent_profile,
+      agent_name: userAdditionalSnapshot.agentName || body.agent_profile.agent_name,
+      brokerage_name: userAdditionalSnapshot.brokerageName || body.agent_profile.brokerage_name,
+      writing_style_description: buildWritingStyleDescription(
+        userAdditionalSnapshot.writingStylePreset,
+        userAdditionalSnapshot.writingStyleCustom
+      )
+    };
+
     const promptInput: PromptAssemblyInput = {
       ...body,
+      agent_profile: enhancedAgentProfile,
       audience_segments: audienceSegments,
-      recent_hooks: recentHooks
+      recent_hooks: recentHooks,
+      market_data: marketData
     };
 
     const systemPrompt = await buildSystemPrompt(promptInput);

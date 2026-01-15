@@ -4,6 +4,7 @@ import * as React from "react";
 import { cn } from "./../ui/utils";
 import { DashboardSidebar } from "./DashboardSidebar";
 import { DashboardHeader } from "./DashboardHeader";
+import { ProfileCompletionChecklist } from "./ProfileCompletionChecklist";
 import { ScheduleCard, type ScheduledPost } from "./ScheduleCard";
 import { ContentFilterBar, type ContentType } from "./ContentFilterBar";
 import { ContentGrid, type ContentItem } from "./ContentGrid";
@@ -18,6 +19,9 @@ interface DashboardViewProps {
   sidebarName?: string;
   sidebarPlan?: string;
   userAvatar?: string;
+  profileCompleted?: boolean;
+  writingStyleCompleted?: boolean;
+  mediaUploaded?: boolean;
   className?: string;
 }
 
@@ -107,52 +111,6 @@ const DEFAULT_GENERATED_STATE: Record<ContentType, Record<string, ContentItem[]>
     stories: {}
   };
 
-const mockMarketData = {
-  city: "Austin",
-  state: "TX",
-  zip_code: "78701",
-  data_timestamp: "2025-01-15T00:00:00Z",
-  housing_market_summary:
-    "Austin is moderately competitive with steady demand and balanced supply.",
-  median_home_price: "$485,000",
-  price_change_yoy: "+4.2%",
-  active_listings: "1,247",
-  months_of_supply: "2.3 months",
-  avg_dom: "28 days",
-  sale_to_list_ratio: "98.5%",
-  median_rent: "$1,850/month",
-  rent_change_yoy: "+5.2%",
-  rate_30yr: "6.875%",
-  estimated_monthly_payment: "$3,050",
-  median_household_income: "$92,000",
-  affordability_index: "102",
-  entry_level_price: "$365,000",
-  entry_level_payment: "$2,450",
-  market_conditions_narrative:
-    "Well-priced homes move quickly, with modest year-over-year gains and stable inventory."
-};
-
-const mockCommunityData = {
-  city: "Austin",
-  state: "TX",
-  zip_code: "78701",
-  data_timestamp: "2025-01-15T00:00:00Z",
-  neighborhoods_list: "Downtown, East Austin, Zilker, Mueller",
-  local_nickname: "Live Music Capital",
-  restaurants_list: "Loro (Asian smokehouse), Odd Duck (farm-to-table)",
-  coffee_shops_list: "Houndstooth Coffee, Merit Coffee",
-  brunch_spots_list: "Paperboy, Sawyer & Co.",
-  parks_list: "Zilker Park, Lady Bird Lake Trail",
-  trails_list: "Barton Creek Greenbelt",
-  public_schools_list: "Casis Elementary, Austin High",
-  family_activities_list: "Thinkery, Barton Springs Pool",
-  shopping_list: "South Congress, The Domain",
-  farmers_markets_list: "Texas Farmers' Market at Mueller",
-  annual_events_list: "SXSW, Austin City Limits",
-  local_favorites_narrative:
-    "A city known for live music, outdoor lifestyle, and a standout food scene."
-};
-
 const GENERATED_BATCH_SIZE = 4;
 
 const DashboardView = ({
@@ -161,7 +119,10 @@ const DashboardView = ({
   location,
   sidebarName,
   sidebarPlan,
-  userAvatar
+  userAvatar,
+  profileCompleted = false,
+  writingStyleCompleted = false,
+  mediaUploaded = false
 }: DashboardViewProps) => {
   const [contentType, setContentType] = React.useState<ContentType>("videos");
   const [activeFilters, setActiveFilters] = React.useState<string[]>([
@@ -387,6 +348,7 @@ const DashboardView = ({
         city: city || defaultAgentProfile.city,
         state: state || defaultAgentProfile.state
       };
+      const filterFocus = activeFilters[0] ?? "";
 
       const body = {
         category,
@@ -395,10 +357,8 @@ const DashboardView = ({
         content_request: {
           platform: "instagram",
           content_type: "social_post",
-          focus: activeFilter
-        },
-        market_data: category === "market_insights" ? mockMarketData : null,
-        community_data: category === "community" ? mockCommunityData : null
+          focus: filterFocus
+        }
       };
 
       try {
@@ -571,6 +531,7 @@ const DashboardView = ({
     }
     },
     [
+      activeFilters,
       buildLoadingItems,
       contentType,
       extractJsonItemsFromStream,
@@ -637,6 +598,13 @@ const DashboardView = ({
 
         {/* Content */}
         <div className="px-8 py-8 max-w-[1600px] mx-auto space-y-10">
+          {/* Profile Completion Checklist */}
+          <ProfileCompletionChecklist
+            profileCompleted={profileCompleted}
+            writingStyleCompleted={writingStyleCompleted}
+            mediaUploaded={mediaUploaded}
+          />
+
           {/* Upcoming Schedule Section */}
           <section>
             <div className="flex items-center justify-between mb-4">

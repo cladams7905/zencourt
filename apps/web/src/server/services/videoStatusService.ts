@@ -5,7 +5,7 @@ import type {
   InitialVideoStatusPayload,
   VideoJobUpdateEvent
 } from "@web/src/types/video-status";
-import { ensurePublicUrlSafe } from "../utils/storageUrls";
+import { getSignedDownloadUrlSafe } from "../utils/storageUrls";
 
 const VIDEO_STATUS_URL_TTL_SECONDS = 6 * 60 * 60; // 6 hours
 
@@ -46,7 +46,7 @@ export async function getListingVideoStatus(
 
     jobs = await Promise.all(
       jobRows.map(async (job) => {
-        const signedVideoUrl = await ensurePublicUrlSafe(
+        const signedVideoUrl = await getSignedDownloadUrlSafe(
           job.videoUrl,
           VIDEO_STATUS_URL_TTL_SECONDS
         );
@@ -68,11 +68,11 @@ export async function getListingVideoStatus(
 
   if (latestVideo?.status === "completed" && latestVideo.videoUrl) {
     const [signedVideoUrl, signedThumbnailUrl] = await Promise.all([
-      ensurePublicUrlSafe(
+      getSignedDownloadUrlSafe(
         latestVideo.videoUrl,
         VIDEO_STATUS_URL_TTL_SECONDS
       ),
-      ensurePublicUrlSafe(
+      getSignedDownloadUrlSafe(
         latestVideo.thumbnailUrl,
         VIDEO_STATUS_URL_TTL_SECONDS
       )
@@ -87,11 +87,11 @@ export async function getListingVideoStatus(
     };
   } else if (latestVideo?.status === "failed") {
     const [signedVideoUrl, signedThumbnailUrl] = await Promise.all([
-      ensurePublicUrlSafe(
+      getSignedDownloadUrlSafe(
         latestVideo.videoUrl,
         VIDEO_STATUS_URL_TTL_SECONDS
       ),
-      ensurePublicUrlSafe(
+      getSignedDownloadUrlSafe(
         latestVideo.thumbnailUrl,
         VIDEO_STATUS_URL_TTL_SECONDS
       )

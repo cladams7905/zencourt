@@ -14,7 +14,7 @@ import {
   createChildLogger,
   logger as baseLogger
 } from "../../../../../../lib/logger";
-import { ensurePublicUrl } from "@web/src/server/utils/storageUrls";
+import { getSignedDownloadUrl } from "@web/src/server/utils/storageUrls";
 import {
   parseVerifiedWebhook,
   WebhookVerificationError
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
 
     if (payload.result?.videoUrl) {
       try {
-        signedVideoUrl = await ensurePublicUrl(
+        signedVideoUrl = await getSignedDownloadUrl(
           payload.result.videoUrl,
           FINAL_VIDEO_SIGNED_URL_TTL_SECONDS
         );
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
 
     if (payload.result?.thumbnailUrl) {
       try {
-        signedThumbnailUrl = await ensurePublicUrl(
+        signedThumbnailUrl = await getSignedDownloadUrl(
           payload.result.thumbnailUrl,
           FINAL_VIDEO_SIGNED_URL_TTL_SECONDS
         );
