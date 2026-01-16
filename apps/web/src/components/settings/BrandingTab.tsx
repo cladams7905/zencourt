@@ -392,6 +392,15 @@ export function BrandingTab({ userId, userAdditional }: BrandingTabProps) {
     fieldKey: keyof BrandingProfileState,
     fieldName: string
   ) => {
+    if (file.size > 1024 * 1024) {
+      toast.error(
+        fieldKey === "avatarImageUrl"
+          ? "Headshot must be smaller than 1 MB."
+          : "Logo must be smaller than 1 MB."
+      );
+      return;
+    }
+
     const previewUrl = URL.createObjectURL(file);
 
     if (fieldKey === "avatarImageUrl") {
@@ -426,6 +435,23 @@ export function BrandingTab({ userId, userAdditional }: BrandingTabProps) {
         setIsUploadingBrokerLogo(false);
       }
     }
+  };
+
+  const handleImageRemove = async (
+    fieldKey: keyof BrandingProfileState,
+    fieldName: string
+  ) => {
+    if (fieldKey === "avatarImageUrl") {
+      setAvatarImageUrl("");
+      setAvatarPreviewUrl("");
+    } else {
+      setBrokerLogoUrl("");
+      setBrokerLogoPreviewUrl("");
+    }
+
+    await persistProfileUpdate(fieldName, "removed", {
+      [fieldKey]: ""
+    });
   };
 
   const handleSaveWritingStyle = async () => {
@@ -527,7 +553,7 @@ export function BrandingTab({ userId, userAdditional }: BrandingTabProps) {
                 <label
                   htmlFor="avatarUpload"
                   className={cn(
-                    "block rounded-xl border border-dashed border-border p-4 transition-colors",
+                    "flex items-center justify-center rounded-xl border border-dashed border-border p-4 transition-colors h-50",
                     !isUploadingAvatar &&
                       !isSavingProfile &&
                       "cursor-pointer hover:bg-secondary",
@@ -537,13 +563,31 @@ export function BrandingTab({ userId, userAdditional }: BrandingTabProps) {
                 >
                   {avatarPreviewUrl ? (
                     <div className="rounded-lg overflow-hidden border border-border bg-background">
-                      <div className="relative h-40 w-full">
+                      <div className="relative mx-auto h-40 w-40">
                         <Image
                           {...getPreviewImageProps(avatarPreviewUrl)}
                           alt="Profile preview"
                           fill
                           className="object-cover"
                         />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="absolute right-2 top-2 h-7 w-7 bg-background/70 backdrop-blur-sm hover:bg-background rounded-full cursor-pointer"
+                          disabled={isUploadingAvatar || isSavingProfile}
+                          aria-label="Remove headshot"
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            void handleImageRemove(
+                              "avatarImageUrl",
+                              "Headshot"
+                            );
+                          }}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
                   ) : (
@@ -553,6 +597,9 @@ export function BrandingTab({ userId, userAdditional }: BrandingTabProps) {
                     </div>
                   )}
                 </label>
+                <p className="text-xs text-muted-foreground">
+                  Max 1 MB. Recommended 320x320.
+                </p>
                 <Input
                   id="avatarUpload"
                   type="file"
@@ -577,7 +624,7 @@ export function BrandingTab({ userId, userAdditional }: BrandingTabProps) {
                 <label
                   htmlFor="brokerLogoUpload"
                   className={cn(
-                    "block rounded-xl border border-dashed border-border p-4 transition-colors",
+                    "flex items-center justify-center rounded-xl border border-dashed border-border p-4 transition-colors h-50",
                     !isUploadingBrokerLogo &&
                       !isSavingProfile &&
                       "cursor-pointer hover:bg-secondary",
@@ -586,15 +633,32 @@ export function BrandingTab({ userId, userAdditional }: BrandingTabProps) {
                   )}
                 >
                   {brokerLogoPreviewUrl ? (
-                    <div className="rounded-lg overflow-hidden border border-border bg-white p-4">
-                      <div className="relative h-24 w-full">
-                        <Image
-                          {...getPreviewImageProps(brokerLogoPreviewUrl)}
-                          alt="Logo preview"
-                          fill
-                          className="object-contain"
-                        />
-                      </div>
+                    <div className="relative inline-flex rounded-lg overflow-hidden border border-border bg-white">
+                      <Image
+                        {...getPreviewImageProps(brokerLogoPreviewUrl)}
+                        alt="Logo preview"
+                        width={320}
+                        height={120}
+                        className="h-auto w-auto max-h-24 max-w-full object-contain"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-2 top-2 h-7 w-7 bg-background/70 backdrop-blur-sm hover:bg-background rounded-full cursor-pointer"
+                        disabled={isUploadingBrokerLogo || isSavingProfile}
+                        aria-label="Remove logo"
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          void handleImageRemove(
+                            "brokerLogoUrl",
+                            "Brokerage Logo"
+                          );
+                        }}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
                     </div>
                   ) : (
                     <div className="flex flex-col items-center gap-2 text-muted-foreground">
@@ -603,6 +667,9 @@ export function BrandingTab({ userId, userAdditional }: BrandingTabProps) {
                     </div>
                   )}
                 </label>
+                <p className="text-xs text-muted-foreground">
+                  Max 1 MB. Recommended 800x300 (or 600x225).
+                </p>
                 <Input
                   id="brokerLogoUpload"
                   type="file"
