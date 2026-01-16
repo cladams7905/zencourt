@@ -13,22 +13,19 @@ import {
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from "../ui/alert-dialog";
 import { Textarea } from "../ui/textarea";
-import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
+import { Slider } from "../ui/slider";
+import { Upload, X } from "lucide-react";
 import {
-  PenTool,
-  Users,
-  Upload,
-  X,
-  TrendingUp,
-  Home,
-  Shield,
-  Crown,
-  KeyRound,
-  Palmtree,
-  Briefcase
-} from "lucide-react";
-import {
+  ensureGoogleHeadshot,
   updateUserProfile,
   updateWritingStyle,
   updateTargetAudiences
@@ -40,105 +37,78 @@ import {
 } from "@web/src/server/actions/api/storage";
 import { toast } from "sonner";
 import { cn } from "../ui/utils";
-import type { TargetAudience } from "../welcome/SurveyPage";
+import type { TargetAudience } from "@db/client";
+import { audienceCategories } from "./audienceCategories";
 
 interface BrandingTabProps {
   userId: string;
   userAdditional: DBUserAdditional;
+  defaultAgentName?: string;
+  defaultHeadshotUrl?: string;
 }
 
 type BrandingProfileState = {
   agentName: string;
   brokerageName: string;
-  avatarImageUrl: string;
-  brokerLogoUrl: string;
+  headshotUrl: string;
+  personalLogoUrl: string;
 };
 
-const PRESET_STYLES = [
+const TONE_SCALE = [
   {
-    value: "professional",
-    label: "Professional",
-    description: "Polished, formal tone with industry terminology"
+    value: 1,
+    label: "Very informal",
+    description: "Texting lingo, playful, highly conversational",
+    example:
+      "ngl this kitchen is literally chef's kiss 👨‍🍳✨ the light hits just right and the vibes are immaculate. hmu if you wanna check it out"
   },
   {
-    value: "casual",
-    label: "Casual",
-    description: "Friendly, conversational style with relaxed language"
+    value: 2,
+    label: "Informal",
+    description: "Warm, casual, approachable voice",
+    example:
+      "This home has THAT energy—gorgeous natural light, a kitchen you'll want to spend all day in, and a backyard perfect for weekend hangouts. Come check it out!"
   },
   {
-    value: "friendly",
-    label: "Friendly",
-    description: "Warm, approachable tone that builds rapport"
+    value: 3,
+    label: "Conversational",
+    description: "Casual-professional, friendly, clear and concise",
+    example:
+      "Beautiful home with updated finishes, excellent natural lighting, and a functional floor plan that just works. I'd love to walk you through it, let's set up a time!"
   },
   {
-    value: "enthusiastic",
-    label: "Enthusiastic",
-    description: "Energetic, upbeat style with exclamation points"
+    value: 4,
+    label: "Formal",
+    description: "Polished, authoritative, minimal slang",
+    example:
+      "This residence showcases quality construction and thoughtful design, featuring updated systems and an open floor plan. Contact us to arrange a private showing."
   },
   {
-    value: "educational",
-    label: "Educational",
-    description: "Informative, teaching-focused with clear explanations"
+    value: 5,
+    label: "Very formal",
+    description: "Professional, structured, elevated tone",
+    example:
+      "This property presents superior craftsmanship, contemporary renovations, and harmonious spatial planning. We invite qualified inquiries."
   }
 ];
 
-const audienceCategories: {
-  value: TargetAudience;
-  label: string;
-  description: string;
-  icon: typeof Crown;
-}[] = [
-  {
-    value: "first_time_homebuyers",
-    label: "First-Time Homebuyers",
-    description: "Mortgage basics, buyer programs, starter homes",
-    icon: KeyRound
-  },
-  {
-    value: "growing_families",
-    label: "Growing Families",
-    description: "School districts, family-friendly neighborhoods",
-    icon: Users
-  },
-  {
-    value: "real_estate_investors",
-    label: "Real Estate Investors",
-    description: "ROI analysis, rental properties, cash flow",
-    icon: TrendingUp
-  },
-  {
-    value: "downsizers_retirees",
-    label: "Downsizers & Retirees",
-    description: "55+ communities, simplified living",
-    icon: Home
-  },
-  {
-    value: "luxury_homebuyers",
-    label: "Luxury Homebuyers",
-    description: "High-end properties, premium amenities",
-    icon: Crown
-  },
-  {
-    value: "vacation_property_buyers",
-    label: "Vacation Property Buyers",
-    description: "Second homes, rental income, resort markets",
-    icon: Palmtree
-  },
-  {
-    value: "military_veterans",
-    label: "Military & Veterans",
-    description: "VA loans, relocation services",
-    icon: Shield
-  },
-  {
-    value: "job_transferees",
-    label: "Relocators & Job Transferees",
-    description: "Corporate relocations, remote moves",
-    icon: Briefcase
+const coerceToneValue = (preset: number | string | null): number => {
+  if (preset === null || preset === undefined || preset === "") {
+    return 3;
   }
-];
+  const numeric = Number(preset);
+  if (!Number.isNaN(numeric) && numeric >= 1 && numeric <= 5) {
+    return numeric;
+  }
+  return 3;
+};
 
-export function BrandingTab({ userId, userAdditional }: BrandingTabProps) {
+export function BrandingTab({
+  userId,
+  userAdditional,
+  defaultAgentName,
+  defaultHeadshotUrl
+}: BrandingTabProps) {
   const router = useRouter();
   const [isSavingProfile, setIsSavingProfile] = React.useState(false);
   const [isLoadingStyle, setIsLoadingStyle] = React.useState(false);
@@ -148,29 +118,29 @@ export function BrandingTab({ userId, userAdditional }: BrandingTabProps) {
     React.useState(false);
 
   // Profile form state
-  const [agentName, setAgentName] = React.useState(
-    userAdditional.agentName || ""
-  );
+  const initialAgentName = userAdditional.agentName || defaultAgentName || "";
+  const initialHeadshotUrl = userAdditional.headshotUrl || "";
+  const [agentName, setAgentName] = React.useState(initialAgentName);
   const [brokerageName, setBrokerageName] = React.useState(
     userAdditional.brokerageName || ""
   );
-  const [avatarImageUrl, setAvatarImageUrl] = React.useState(
-    userAdditional.avatarImageUrl || ""
+  const [agentTitle, setAgentTitle] = React.useState(
+    userAdditional.agentTitle || ""
   );
-  const [brokerLogoUrl, setBrokerLogoUrl] = React.useState(
-    userAdditional.brokerLogoUrl || ""
+  const [headshotUrl, setheadshotUrl] = React.useState(initialHeadshotUrl);
+  const [personalLogoUrl, setpersonalLogoUrl] = React.useState(
+    userAdditional.personalLogoUrl || ""
   );
-  const [avatarPreviewUrl, setAvatarPreviewUrl] = React.useState(
-    userAdditional.avatarImageUrl || ""
-  );
+  const [avatarPreviewUrl, setAvatarPreviewUrl] =
+    React.useState(initialHeadshotUrl);
   const [brokerLogoPreviewUrl, setBrokerLogoPreviewUrl] = React.useState(
-    userAdditional.brokerLogoUrl || ""
+    userAdditional.personalLogoUrl || ""
   );
   const savedProfileRef = React.useRef<BrandingProfileState>({
-    agentName: userAdditional.agentName || "",
+    agentName: initialAgentName,
     brokerageName: userAdditional.brokerageName || "",
-    avatarImageUrl: userAdditional.avatarImageUrl || "",
-    brokerLogoUrl: userAdditional.brokerLogoUrl || ""
+    headshotUrl: initialHeadshotUrl,
+    personalLogoUrl: userAdditional.personalLogoUrl || ""
   });
   const avatarPreviewRef = React.useRef<string | null>(null);
   const brokerLogoPreviewRef = React.useRef<string | null>(null);
@@ -179,36 +149,30 @@ export function BrandingTab({ userId, userAdditional }: BrandingTabProps) {
   const [targetAudiences, setTargetAudiences] = React.useState<
     TargetAudience[]
   >(() => {
-    if (userAdditional.targetAudiences) {
-      try {
-        return JSON.parse(userAdditional.targetAudiences);
-      } catch {
-        return [];
-      }
-    }
-    return [];
+    return userAdditional.targetAudiences ?? [];
+  });
+  const [initialTargetAudiences, setInitialTargetAudiences] = React.useState<
+    TargetAudience[]
+  >(() => {
+    return userAdditional.targetAudiences ?? [];
   });
 
   // Writing style state
-  const [writingStylePreset, setWritingStylePreset] = React.useState(
-    userAdditional.writingStylePreset || ""
+  const [writingToneLevel, setwritingToneLevel] = React.useState<number>(
+    coerceToneValue(userAdditional.writingToneLevel)
   );
   const [writingStyleCustom, setWritingStyleCustom] = React.useState(
     userAdditional.writingStyleCustom || ""
   );
-  const [writingStyleExamples, setWritingStyleExamples] = React.useState<
-    string[]
-  >(() => {
-    if (userAdditional.writingStyleExamples) {
-      try {
-        return JSON.parse(userAdditional.writingStyleExamples);
-      } catch {
-        return [];
-      }
-    }
-    return [];
-  });
-  const [newExampleUrl, setNewExampleUrl] = React.useState("");
+  const [initialWritingStyle, setInitialWritingStyle] = React.useState(() => ({
+    preset: coerceToneValue(userAdditional.writingToneLevel),
+    custom: userAdditional.writingStyleCustom || ""
+  }));
+  const [initialAgentInfo, setInitialAgentInfo] = React.useState(() => ({
+    agentName: initialAgentName,
+    brokerageName: userAdditional.brokerageName || "",
+    agentTitle: userAdditional.agentTitle || ""
+  }));
   const getPreviewImageProps = React.useCallback((url: string) => {
     if (!url) {
       return { src: "", unoptimized: false };
@@ -225,29 +189,26 @@ export function BrandingTab({ userId, userAdditional }: BrandingTabProps) {
   React.useEffect(() => {
     let isActive = true;
     const resolveSignedUrl = async () => {
-      if (!avatarImageUrl) {
+      if (!headshotUrl) {
         if (isActive) {
           setAvatarPreviewUrl("");
         }
         return;
       }
-      if (
-        avatarImageUrl.startsWith("blob:") ||
-        avatarImageUrl.startsWith("data:")
-      ) {
+      if (headshotUrl.startsWith("blob:") || headshotUrl.startsWith("data:")) {
         if (isActive) {
-          setAvatarPreviewUrl(avatarImageUrl);
+          setAvatarPreviewUrl(headshotUrl);
         }
         return;
       }
       try {
-        const signed = await getSignedDownloadUrl(avatarImageUrl);
+        const signed = await getSignedDownloadUrl(headshotUrl);
         if (isActive) {
           setAvatarPreviewUrl(signed);
         }
       } catch (error) {
         if (isActive) {
-          setAvatarPreviewUrl(avatarImageUrl);
+          setAvatarPreviewUrl(headshotUrl);
         }
         toast.error(
           (error as Error).message || "Failed to load headshot preview"
@@ -258,34 +219,34 @@ export function BrandingTab({ userId, userAdditional }: BrandingTabProps) {
     return () => {
       isActive = false;
     };
-  }, [avatarImageUrl]);
+  }, [headshotUrl]);
 
   React.useEffect(() => {
     let isActive = true;
     const resolveSignedUrl = async () => {
-      if (!brokerLogoUrl) {
+      if (!personalLogoUrl) {
         if (isActive) {
           setBrokerLogoPreviewUrl("");
         }
         return;
       }
       if (
-        brokerLogoUrl.startsWith("blob:") ||
-        brokerLogoUrl.startsWith("data:")
+        personalLogoUrl.startsWith("blob:") ||
+        personalLogoUrl.startsWith("data:")
       ) {
         if (isActive) {
-          setBrokerLogoPreviewUrl(brokerLogoUrl);
+          setBrokerLogoPreviewUrl(personalLogoUrl);
         }
         return;
       }
       try {
-        const signed = await getSignedDownloadUrl(brokerLogoUrl);
+        const signed = await getSignedDownloadUrl(personalLogoUrl);
         if (isActive) {
           setBrokerLogoPreviewUrl(signed);
         }
       } catch (error) {
         if (isActive) {
-          setBrokerLogoPreviewUrl(brokerLogoUrl);
+          setBrokerLogoPreviewUrl(personalLogoUrl);
         }
         toast.error((error as Error).message || "Failed to load logo preview");
       }
@@ -294,7 +255,40 @@ export function BrandingTab({ userId, userAdditional }: BrandingTabProps) {
     return () => {
       isActive = false;
     };
-  }, [brokerLogoUrl]);
+  }, [personalLogoUrl]);
+
+  const hasSeededHeadshotRef = React.useRef(false);
+  React.useEffect(() => {
+    if (hasSeededHeadshotRef.current) {
+      return;
+    }
+    if (headshotUrl || !defaultHeadshotUrl) {
+      return;
+    }
+
+    hasSeededHeadshotRef.current = true;
+    setIsUploadingAvatar(true);
+    ensureGoogleHeadshot(userId, defaultHeadshotUrl)
+      .then((url) => {
+        if (!url) {
+          return;
+        }
+        setheadshotUrl(url);
+        setAvatarPreviewUrl(url);
+        savedProfileRef.current = {
+          ...savedProfileRef.current,
+          headshotUrl: url
+        };
+      })
+      .catch((error) => {
+        toast.error(
+          (error as Error).message || "Failed to save Google headshot"
+        );
+      })
+      .finally(() => {
+        setIsUploadingAvatar(false);
+      });
+  }, [defaultHeadshotUrl, headshotUrl, userId]);
 
   const toggleTargetAudience = (audience: TargetAudience) => {
     setTargetAudiences((prev) => {
@@ -307,6 +301,144 @@ export function BrandingTab({ userId, userAdditional }: BrandingTabProps) {
       return [...prev, audience];
     });
   };
+
+  const isAgentInfoDirty = React.useMemo(() => {
+    return (
+      (agentName || "") !== (initialAgentInfo.agentName || "") ||
+      (brokerageName || "") !== (initialAgentInfo.brokerageName || "") ||
+      (agentTitle || "") !== (initialAgentInfo.agentTitle || "")
+    );
+  }, [agentName, brokerageName, agentTitle, initialAgentInfo]);
+
+  const isTargetAudiencesDirty = React.useMemo(() => {
+    const initial = [...initialTargetAudiences].sort();
+    const current = [...targetAudiences].sort();
+    if (initial.length !== current.length) {
+      return true;
+    }
+    return initial.some((value, index) => value !== current[index]);
+  }, [initialTargetAudiences, targetAudiences]);
+
+  const isWritingStyleDirty = React.useMemo(() => {
+    const initial = initialWritingStyle;
+    if (initial.preset !== writingToneLevel) {
+      return true;
+    }
+    if ((initial.custom || "") !== (writingStyleCustom || "")) {
+      return true;
+    }
+    return false;
+  }, [writingToneLevel, writingStyleCustom, initialWritingStyle]);
+
+  const toneValue = React.useMemo(
+    () => coerceToneValue(writingToneLevel),
+    [writingToneLevel]
+  );
+  const toneMeta =
+    TONE_SCALE.find((tone) => tone.value === toneValue) ?? TONE_SCALE[2];
+
+  const hasUnsavedChanges = React.useMemo(() => {
+    return isAgentInfoDirty || isTargetAudiencesDirty || isWritingStyleDirty;
+  }, [isAgentInfoDirty, isTargetAudiencesDirty, isWritingStyleDirty]);
+
+  const [isUnsavedDialogOpen, setIsUnsavedDialogOpen] = React.useState(false);
+  const [pendingNavigation, setPendingNavigation] = React.useState<
+    string | null
+  >(null);
+  const [isSavingAll, setIsSavingAll] = React.useState(false);
+
+  const handleSaveAllChanges = async () => {
+    setIsSavingAll(true);
+    if (isAgentInfoDirty) {
+      await handleSaveAgentInfo();
+    }
+    if (isTargetAudiencesDirty) {
+      await handleSaveTargetAudiences();
+    }
+    if (isWritingStyleDirty) {
+      await handleSaveWritingStyle();
+    }
+    setIsSavingAll(false);
+  };
+
+  const handleCancelNavigation = () => {
+    setIsUnsavedDialogOpen(false);
+    setPendingNavigation(null);
+  };
+
+  const handleDiscardNavigation = () => {
+    const nextUrl = pendingNavigation;
+    setIsUnsavedDialogOpen(false);
+    setPendingNavigation(null);
+    if (nextUrl) {
+      router.push(nextUrl);
+    }
+  };
+
+  const handleConfirmSaveNavigation = async () => {
+    await handleSaveAllChanges();
+    const nextUrl = pendingNavigation;
+    setIsUnsavedDialogOpen(false);
+    setPendingNavigation(null);
+    if (nextUrl) {
+      router.push(nextUrl);
+    }
+  };
+
+  React.useEffect(() => {
+    if (!hasUnsavedChanges) {
+      return;
+    }
+
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
+  React.useEffect(() => {
+    const handleClick = (event: MouseEvent) => {
+      if (!hasUnsavedChanges) {
+        return;
+      }
+      if (event.defaultPrevented) {
+        return;
+      }
+      if (event.button !== 0 || event.metaKey || event.ctrlKey) {
+        return;
+      }
+      const target = event.target as HTMLElement | null;
+      const anchor = target?.closest("a");
+      if (!anchor) {
+        return;
+      }
+      if (
+        anchor.target === "_blank" ||
+        anchor.hasAttribute("download") ||
+        anchor.getAttribute("data-ignore-unsaved") === "true"
+      ) {
+        return;
+      }
+      const href = anchor.getAttribute("href");
+      if (!href || href.startsWith("#")) {
+        return;
+      }
+      const nextUrl = new URL(href, window.location.href);
+      const currentUrl = new URL(window.location.href);
+      if (nextUrl.href === currentUrl.href) {
+        return;
+      }
+      event.preventDefault();
+      setPendingNavigation(nextUrl.toString());
+      setIsUnsavedDialogOpen(true);
+    };
+
+    document.addEventListener("click", handleClick, true);
+    return () => document.removeEventListener("click", handleClick, true);
+  }, [hasUnsavedChanges]);
 
   React.useEffect(() => {
     if (
@@ -342,10 +474,11 @@ export function BrandingTab({ userId, userAdditional }: BrandingTabProps) {
   const getProfileSnapshot = (
     overrides: Partial<BrandingProfileState> = {}
   ): BrandingProfileState => ({
-    agentName: overrides.agentName ?? agentName,
-    brokerageName: overrides.brokerageName ?? brokerageName,
-    avatarImageUrl: overrides.avatarImageUrl ?? avatarImageUrl,
-    brokerLogoUrl: overrides.brokerLogoUrl ?? brokerLogoUrl
+    agentName: overrides.agentName ?? savedProfileRef.current.agentName,
+    brokerageName:
+      overrides.brokerageName ?? savedProfileRef.current.brokerageName,
+    headshotUrl: overrides.headshotUrl ?? headshotUrl,
+    personalLogoUrl: overrides.personalLogoUrl ?? personalLogoUrl
   });
 
   const persistProfileUpdate = async (
@@ -360,9 +493,9 @@ export function BrandingTab({ userId, userAdditional }: BrandingTabProps) {
       await updateUserProfile(userId, {
         agentName: nextProfile.agentName,
         brokerageName: nextProfile.brokerageName,
-        agentTitle: null,
-        avatarImageUrl: nextProfile.avatarImageUrl || null,
-        brokerLogoUrl: nextProfile.brokerLogoUrl || null
+        agentTitle: agentTitle || null,
+        headshotUrl: nextProfile.headshotUrl || null,
+        personalLogoUrl: nextProfile.personalLogoUrl || null
       });
       savedProfileRef.current = nextProfile;
       toast.success(`successfuly updated ${fieldName} to ${displayValue}.`);
@@ -374,17 +507,29 @@ export function BrandingTab({ userId, userAdditional }: BrandingTabProps) {
     }
   };
 
-  const handleProfileBlur = async (
-    fieldKey: keyof BrandingProfileState,
-    fieldName: string,
-    fieldValue: string
-  ) => {
-    if (savedProfileRef.current[fieldKey] === fieldValue) {
-      return;
+  const handleSaveAgentInfo = async () => {
+    setIsSavingProfile(true);
+    try {
+      await updateUserProfile(userId, {
+        agentName,
+        brokerageName,
+        agentTitle: agentTitle || null,
+        headshotUrl: savedProfileRef.current.headshotUrl || null,
+        personalLogoUrl: savedProfileRef.current.personalLogoUrl || null
+      });
+      savedProfileRef.current = {
+        ...savedProfileRef.current,
+        agentName,
+        brokerageName
+      };
+      setInitialAgentInfo({ agentName, brokerageName, agentTitle });
+      toast.success("Agent information updated successfully!");
+      router.refresh();
+    } catch (error) {
+      toast.error((error as Error).message || "Failed to update agent profile");
+    } finally {
+      setIsSavingProfile(false);
     }
-    await persistProfileUpdate(fieldName, fieldValue, {
-      [fieldKey]: fieldValue
-    });
   };
 
   const handleImageUpload = async (
@@ -394,7 +539,7 @@ export function BrandingTab({ userId, userAdditional }: BrandingTabProps) {
   ) => {
     if (file.size > 1024 * 1024) {
       toast.error(
-        fieldKey === "avatarImageUrl"
+        fieldKey === "headshotUrl"
           ? "Headshot must be smaller than 1 MB."
           : "Logo must be smaller than 1 MB."
       );
@@ -403,7 +548,7 @@ export function BrandingTab({ userId, userAdditional }: BrandingTabProps) {
 
     const previewUrl = URL.createObjectURL(file);
 
-    if (fieldKey === "avatarImageUrl") {
+    if (fieldKey === "headshotUrl") {
       setAvatarPreviewUrl(previewUrl);
       setIsUploadingAvatar(true);
     } else {
@@ -413,11 +558,11 @@ export function BrandingTab({ userId, userAdditional }: BrandingTabProps) {
 
     try {
       const uploadedUrl = await uploadFile(file, `user_${userId}/branding`);
-      if (fieldKey === "avatarImageUrl") {
-        setAvatarImageUrl(uploadedUrl);
+      if (fieldKey === "headshotUrl") {
+        setheadshotUrl(uploadedUrl);
         setAvatarPreviewUrl(uploadedUrl);
       } else {
-        setBrokerLogoUrl(uploadedUrl);
+        setpersonalLogoUrl(uploadedUrl);
         setBrokerLogoPreviewUrl(uploadedUrl);
       }
       await persistProfileUpdate(fieldName, file.name, {
@@ -429,7 +574,7 @@ export function BrandingTab({ userId, userAdditional }: BrandingTabProps) {
           `Failed to upload ${fieldName.toLowerCase()}`
       );
     } finally {
-      if (fieldKey === "avatarImageUrl") {
+      if (fieldKey === "headshotUrl") {
         setIsUploadingAvatar(false);
       } else {
         setIsUploadingBrokerLogo(false);
@@ -441,11 +586,11 @@ export function BrandingTab({ userId, userAdditional }: BrandingTabProps) {
     fieldKey: keyof BrandingProfileState,
     fieldName: string
   ) => {
-    if (fieldKey === "avatarImageUrl") {
-      setAvatarImageUrl("");
+    if (fieldKey === "headshotUrl") {
+      setheadshotUrl("");
       setAvatarPreviewUrl("");
     } else {
-      setBrokerLogoUrl("");
+      setpersonalLogoUrl("");
       setBrokerLogoPreviewUrl("");
     }
 
@@ -458,12 +603,12 @@ export function BrandingTab({ userId, userAdditional }: BrandingTabProps) {
     setIsLoadingStyle(true);
     try {
       await updateWritingStyle(userId, {
-        writingStylePreset: writingStylePreset || null,
-        writingStyleCustom: writingStyleCustom || null,
-        writingStyleExamples:
-          writingStyleExamples.length > 0
-            ? JSON.stringify(writingStyleExamples)
-            : null
+        writingToneLevel: writingToneLevel ?? null,
+        writingStyleCustom: writingStyleCustom || null
+      });
+      setInitialWritingStyle({
+        preset: writingToneLevel,
+        custom: writingStyleCustom || ""
       });
       toast.success("Writing style updated successfully!");
       router.refresh();
@@ -474,21 +619,11 @@ export function BrandingTab({ userId, userAdditional }: BrandingTabProps) {
     }
   };
 
-  const handleAddExample = () => {
-    if (newExampleUrl.trim() !== "") {
-      setWritingStyleExamples([...writingStyleExamples, newExampleUrl.trim()]);
-      setNewExampleUrl("");
-    }
-  };
-
-  const handleRemoveExample = (index: number) => {
-    setWritingStyleExamples(writingStyleExamples.filter((_, i) => i !== index));
-  };
-
   const handleSaveTargetAudiences = async () => {
     setIsLoadingAudiences(true);
     try {
-      await updateTargetAudiences(userId, JSON.stringify(targetAudiences));
+      await updateTargetAudiences(userId, targetAudiences);
+      setInitialTargetAudiences([...targetAudiences]);
       toast.success("Target audiences updated successfully!");
       router.refresh();
     } catch (error) {
@@ -510,9 +645,9 @@ export function BrandingTab({ userId, userAdditional }: BrandingTabProps) {
           </div>
           <CardDescription>Manage your visual branding assets</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
+        <CardContent className="space-y-6 min-w-0 overflow-hidden">
+          <div className="grid gap-4 md:grid-cols-2 min-w-0">
+            <div className="space-y-2 min-w-0">
               <Label htmlFor="agentName">
                 <div className="flex items-center gap-2">Display Name</div>
               </Label>
@@ -520,14 +655,11 @@ export function BrandingTab({ userId, userAdditional }: BrandingTabProps) {
                 id="agentName"
                 value={agentName}
                 onChange={(e) => setAgentName(e.target.value)}
-                onBlur={() =>
-                  handleProfileBlur("agentName", "Agent Name", agentName)
-                }
                 placeholder="Alex Rivera"
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 min-w-0">
               <Label htmlFor="brokerageName">
                 <div className="flex items-center gap-2">Brokerage Name</div>
               </Label>
@@ -535,25 +667,30 @@ export function BrandingTab({ userId, userAdditional }: BrandingTabProps) {
                 id="brokerageName"
                 value={brokerageName}
                 onChange={(e) => setBrokerageName(e.target.value)}
-                onBlur={() =>
-                  handleProfileBlur(
-                    "brokerageName",
-                    "Brokerage Name",
-                    brokerageName
-                  )
-                }
                 placeholder="Zencourt Realty"
+              />
+            </div>
+
+            <div className="space-y-2 min-w-0">
+              <Label htmlFor="agentTitle">
+                <div className="flex items-center gap-2">Title (Optional)</div>
+              </Label>
+              <Input
+                id="agentTitle"
+                value={agentTitle}
+                onChange={(e) => setAgentTitle(e.target.value)}
+                placeholder="Realtor, Broker, etc."
               />
             </div>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
+            <div className="space-y-2 min-w-0">
               <Label htmlFor="avatarUpload">Professional Headshot</Label>
               <div className="space-y-3">
                 <label
                   htmlFor="avatarUpload"
                   className={cn(
-                    "flex items-center justify-center rounded-xl border border-dashed border-border p-4 transition-colors h-50",
+                    "flex w-full min-w-0 items-center justify-center rounded-xl border border-dashed border-border p-4 transition-colors h-50",
                     !isUploadingAvatar &&
                       !isSavingProfile &&
                       "cursor-pointer hover:bg-secondary",
@@ -562,8 +699,15 @@ export function BrandingTab({ userId, userAdditional }: BrandingTabProps) {
                   )}
                 >
                   {avatarPreviewUrl ? (
-                    <div className="rounded-lg overflow-hidden border border-border bg-background">
-                      <div className="relative mx-auto h-40 w-40">
+                    <div className="max-w-full rounded-lg overflow-hidden border border-border bg-background">
+                      <div
+                        className={cn(
+                          "relative mx-auto",
+                          avatarPreviewUrl.includes("google-headshot")
+                            ? "h-24 w-24"
+                            : "h-40 w-40"
+                        )}
+                      >
                         <Image
                           {...getPreviewImageProps(avatarPreviewUrl)}
                           alt="Profile preview"
@@ -580,10 +724,7 @@ export function BrandingTab({ userId, userAdditional }: BrandingTabProps) {
                           onClick={(event) => {
                             event.preventDefault();
                             event.stopPropagation();
-                            void handleImageRemove(
-                              "avatarImageUrl",
-                              "Headshot"
-                            );
+                            void handleImageRemove("headshotUrl", "Headshot");
                           }}
                         >
                           <X className="h-4 w-4" />
@@ -605,26 +746,26 @@ export function BrandingTab({ userId, userAdditional }: BrandingTabProps) {
                   type="file"
                   accept="image/*"
                   disabled={isUploadingAvatar || isSavingProfile}
-                  className="sr-only"
+                  className="sr-only w-0"
                   onChange={(event) => {
                     const file = event.target.files?.[0];
                     if (!file) {
                       return;
                     }
-                    void handleImageUpload(file, "avatarImageUrl", "Headshot");
+                    void handleImageUpload(file, "headshotUrl", "Headshot");
                     event.target.value = "";
                   }}
                 />
               </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 min-w-0">
               <Label htmlFor="brokerLogoUpload">Personal Logo</Label>
               <div className="space-y-3">
                 <label
                   htmlFor="brokerLogoUpload"
                   className={cn(
-                    "flex items-center justify-center rounded-xl border border-dashed border-border p-4 transition-colors h-50",
+                    "inline-flex w-full min-w-0 items-center justify-center rounded-xl border border-dashed border-border p-4 transition-colors h-50",
                     !isUploadingBrokerLogo &&
                       !isSavingProfile &&
                       "cursor-pointer hover:bg-secondary",
@@ -633,7 +774,7 @@ export function BrandingTab({ userId, userAdditional }: BrandingTabProps) {
                   )}
                 >
                   {brokerLogoPreviewUrl ? (
-                    <div className="relative inline-flex rounded-lg overflow-hidden border border-border bg-white">
+                    <div className="relative inline-flex max-w-full rounded-lg overflow-hidden border border-border bg-white">
                       <Image
                         {...getPreviewImageProps(brokerLogoPreviewUrl)}
                         alt="Logo preview"
@@ -652,7 +793,7 @@ export function BrandingTab({ userId, userAdditional }: BrandingTabProps) {
                           event.preventDefault();
                           event.stopPropagation();
                           void handleImageRemove(
-                            "brokerLogoUrl",
+                            "personalLogoUrl",
                             "Brokerage Logo"
                           );
                         }}
@@ -675,7 +816,7 @@ export function BrandingTab({ userId, userAdditional }: BrandingTabProps) {
                   type="file"
                   accept="image/*"
                   disabled={isUploadingBrokerLogo || isSavingProfile}
-                  className="sr-only"
+                  className="sr-only w-0"
                   onChange={(event) => {
                     const file = event.target.files?.[0];
                     if (!file) {
@@ -683,7 +824,7 @@ export function BrandingTab({ userId, userAdditional }: BrandingTabProps) {
                     }
                     void handleImageUpload(
                       file,
-                      "brokerLogoUrl",
+                      "personalLogoUrl",
                       "Brokerage Logo"
                     );
                     event.target.value = "";
@@ -692,6 +833,13 @@ export function BrandingTab({ userId, userAdditional }: BrandingTabProps) {
               </div>
             </div>
           </div>
+          {isAgentInfoDirty && (
+            <div className="flex justify-end pt-2">
+              <Button onClick={handleSaveAgentInfo} disabled={isSavingProfile}>
+                {isSavingProfile ? "Saving..." : "Save Agent Information"}
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -699,12 +847,10 @@ export function BrandingTab({ userId, userAdditional }: BrandingTabProps) {
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
-            <Users className="h-5 w-5 text-muted-foreground" />
             <CardTitle>Target Audiences</CardTitle>
           </div>
           <CardDescription>
-            Select 1-3 primary audiences for content personalization (from your
-            welcome survey)
+            Select 1-2 primary audiences for content personalization
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -712,7 +858,7 @@ export function BrandingTab({ userId, userAdditional }: BrandingTabProps) {
             {audienceCategories.map((category) => {
               const Icon = category.icon;
               const isSelected = targetAudiences.includes(category.value);
-              const isDisabled = !isSelected && targetAudiences.length >= 3;
+              const isDisabled = !isSelected && targetAudiences.length >= 2;
 
               return (
                 <button
@@ -725,7 +871,7 @@ export function BrandingTab({ userId, userAdditional }: BrandingTabProps) {
                     "flex items-start gap-2.5 p-3 rounded-lg border transition-all duration-200 text-left",
                     isSelected
                       ? "border-border bg-secondary shadow-sm"
-                      : "border-border hover:bg-secondary/50",
+                      : "hover:bg-secondary",
                     isDisabled && "opacity-50 cursor-not-allowed"
                   )}
                 >
@@ -748,17 +894,19 @@ export function BrandingTab({ userId, userAdditional }: BrandingTabProps) {
           </div>
 
           <p className="text-sm text-muted-foreground">
-            Selected {targetAudiences.length} of 3 maximum
+            Selected {targetAudiences.length} of 2 maximum
           </p>
 
-          <div className="flex justify-end pt-2">
-            <Button
-              onClick={handleSaveTargetAudiences}
-              disabled={isLoadingAudiences}
-            >
-              {isLoadingAudiences ? "Saving..." : "Save Target Audiences"}
-            </Button>
-          </div>
+          {isTargetAudiencesDirty && (
+            <div className="flex justify-end pt-2">
+              <Button
+                onClick={handleSaveTargetAudiences}
+                disabled={isLoadingAudiences}
+              >
+                {isLoadingAudiences ? "Saving..." : "Save Target Audiences"}
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -766,7 +914,6 @@ export function BrandingTab({ userId, userAdditional }: BrandingTabProps) {
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
-            <PenTool className="h-5 w-5 text-muted-foreground" />
             <CardTitle>Writing Style</CardTitle>
           </div>
           <CardDescription>
@@ -774,37 +921,37 @@ export function BrandingTab({ userId, userAdditional }: BrandingTabProps) {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Preset Styles */}
+          {/* Tone Scale */}
           <div className="space-y-3">
-            <Label>Choose a Style Preset</Label>
-            <RadioGroup
-              value={writingStylePreset}
-              onValueChange={setWritingStylePreset}
-            >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {PRESET_STYLES.map((style) => (
-                  <label
-                    key={style.value}
-                    className={cn(
-                      "relative flex items-start gap-2.5 p-3 rounded-lg border cursor-pointer transition-all duration-200",
-                      writingStylePreset === style.value
-                        ? "border-border bg-secondary shadow-sm"
-                        : "border-border hover:bg-secondary/50"
-                    )}
-                  >
-                    <RadioGroupItem value={style.value} className="mt-0.5" />
-                    <div className="flex-1">
-                      <div className="text-sm font-bold text-foreground mb-0.5">
-                        {style.label}
-                      </div>
-                      <div className="text-xs text-muted-foreground leading-tight">
-                        {style.description}
-                      </div>
-                    </div>
-                  </label>
-                ))}
+            <Label>Writing Tone</Label>
+            <div className="rounded-lg border border-border p-4">
+              <div className="flex items-center justify-between text-sm">
+                <span className="font-semibold text-foreground">
+                  {toneMeta.label}
+                </span>
+                <span className="text-muted-foreground">{toneValue}/5</span>
               </div>
-            </RadioGroup>
+              <div className="mt-3">
+                <Slider
+                  value={[toneValue]}
+                  min={1}
+                  max={5}
+                  step={1}
+                  onValueChange={([value]) => setwritingToneLevel(value)}
+                  className="w-full"
+                />
+              </div>
+              <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
+                <span>Informal</span>
+                <span>Formal</span>
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                {toneMeta.description}
+              </p>
+              <div className="mt-3 rounded-md border border-dashed border-border bg-muted px-3 py-2 text-xs text-muted-foreground italic">
+                &quot;{toneMeta.example}&quot;
+              </div>
+            </div>
           </div>
 
           {/* Custom Description */}
@@ -816,75 +963,58 @@ export function BrandingTab({ userId, userAdditional }: BrandingTabProps) {
               id="customDescription"
               value={writingStyleCustom}
               onChange={(e) => setWritingStyleCustom(e.target.value)}
-              placeholder="e.g., I love using emojis and keeping things light. I often use phrases like 'y'all' and 'let's dive in!'"
+              placeholder="e.g., I often use phrases like 'y'all' and 'howdy'."
               rows={3}
               className="resize-none"
             />
           </div>
 
-          {/* Writing Examples */}
-          <div className="space-y-3">
-            <Label>Writing Examples (Optional)</Label>
-            <p className="text-sm text-muted-foreground">
-              Add URLs to screenshots of your social media posts
-            </p>
-
-            <div className="flex gap-2">
-              <Input
-                value={newExampleUrl}
-                onChange={(e) => setNewExampleUrl(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    handleAddExample();
-                  }
-                }}
-                placeholder="https://example.com/screenshot.png"
-              />
+          {isWritingStyleDirty && (
+            <div className="flex justify-end pt-2">
               <Button
-                type="button"
-                onClick={handleAddExample}
-                disabled={!newExampleUrl.trim()}
-                variant="outline"
-                className="gap-2 shrink-0"
+                onClick={handleSaveWritingStyle}
+                disabled={isLoadingStyle}
               >
-                <Upload className="h-4 w-4" />
-                Add
+                {isLoadingStyle ? "Saving..." : "Save Writing Style"}
               </Button>
             </div>
-
-            {writingStyleExamples.length > 0 && (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {writingStyleExamples.map((url, index) => (
-                  <div
-                    key={index}
-                    className="relative group rounded-lg overflow-hidden border border-border"
-                  >
-                    <img
-                      src={url}
-                      alt={`Writing example ${index + 1}`}
-                      className="w-full h-24 object-cover"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveExample(index)}
-                      className="absolute top-1 right-1 p-1 rounded-full bg-destructive text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="flex justify-end pt-2">
-            <Button onClick={handleSaveWritingStyle} disabled={isLoadingStyle}>
-              {isLoadingStyle ? "Saving..." : "Save Writing Style"}
-            </Button>
-          </div>
+          )}
         </CardContent>
       </Card>
+
+      <AlertDialog
+        open={isUnsavedDialogOpen}
+        onOpenChange={(open) => {
+          setIsUnsavedDialogOpen(open);
+          if (!open) {
+            setPendingNavigation(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Save changes before leaving?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You have unsaved changes in your branding settings. Save them
+              before navigating away.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button variant="outline" onClick={handleCancelNavigation}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDiscardNavigation}>
+              Discard
+            </Button>
+            <Button
+              onClick={handleConfirmSaveNavigation}
+              disabled={isSavingAll}
+            >
+              {isSavingAll ? "Saving..." : "Save Changes"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -19,39 +19,9 @@ import {
   LocationAutocomplete,
   type LocationData
 } from "./LocationAutocomplete";
-import {
-  ArrowRight,
-  ArrowLeft,
-  TrendingUp,
-  Home,
-  Shield,
-  Crown,
-  KeyRound,
-  Palmtree,
-  Users,
-  Briefcase
-} from "lucide-react";
-
-export type ReferralSource =
-  | "facebook"
-  | "google_search"
-  | "instagram"
-  | "linkedin"
-  | "word_of_mouth"
-  | "conference"
-  | "referral"
-  | "online_ad"
-  | "other";
-
-export type TargetAudience =
-  | "luxury_homebuyers"
-  | "first_time_homebuyers"
-  | "military_veterans"
-  | "real_estate_investors"
-  | "downsizers_retirees"
-  | "growing_families"
-  | "job_transferees"
-  | "vacation_property_buyers";
+import { ArrowRight, ArrowLeft } from "lucide-react";
+import type { ReferralSource, TargetAudience } from "@db/client";
+import { audienceCategories } from "../settings/audienceCategories";
 
 export interface SurveyFormData {
   referralSource: ReferralSource;
@@ -77,62 +47,6 @@ const referralOptions: { value: ReferralSource; label: string }[] = [
   { value: "referral", label: "Referral from a colleague" },
   { value: "online_ad", label: "Online Ad" },
   { value: "other", label: "Other" }
-];
-
-const audienceCategories: {
-  value: TargetAudience;
-  label: string;
-  description: string;
-  icon: typeof Crown;
-}[] = [
-  {
-    value: "first_time_homebuyers",
-    label: "First-Time Homebuyers",
-    description: "Mortgage basics, buyer programs, starter homes",
-    icon: KeyRound
-  },
-  {
-    value: "growing_families",
-    label: "Growing Families",
-    description: "School districts, family-friendly neighborhoods, space needs",
-    icon: Users
-  },
-  {
-    value: "real_estate_investors",
-    label: "Real Estate Investors",
-    description: "ROI analysis, rental properties, cash flow strategies",
-    icon: TrendingUp
-  },
-  {
-    value: "downsizers_retirees",
-    label: "Downsizers & Retirees",
-    description: "55+ communities, simplified living, retirement planning",
-    icon: Home
-  },
-  {
-    value: "luxury_homebuyers",
-    label: "Luxury Homebuyers",
-    description: "High-end properties, premium amenities, exclusive markets",
-    icon: Crown
-  },
-  {
-    value: "vacation_property_buyers",
-    label: "Vacation Property Buyers",
-    description: "Second homes, rental income, resort markets",
-    icon: Palmtree
-  },
-  {
-    value: "military_veterans",
-    label: "Military & Veterans",
-    description: "VA loans, relocation services, military benefits",
-    icon: Shield
-  },
-  {
-    value: "job_transferees",
-    label: "Relocators & Job Transferees",
-    description: "Corporate relocations, remote moves, new-to-area buyers",
-    icon: Briefcase
-  }
 ];
 
 export const SurveyPage = ({
@@ -168,10 +82,7 @@ export const SurveyPage = ({
       0: true, // Welcome screen - always valid
       1: targetAudiences.length >= 1 && targetAudiences.length <= 3,
       2: weeklyPostingFrequency >= 0 && weeklyPostingFrequency <= 7,
-      3:
-        !!location &&
-        (location.country !== "United States" ||
-          (Boolean(location.state) && Boolean(location.postalCode))),
+      3: !!location && Boolean(location.postalCode),
       4:
         !!referralSource &&
         (referralSource !== "other" || referralSourceOther.trim().length > 0)
@@ -276,7 +187,7 @@ export const SurveyPage = ({
             {/* Survey Carousel */}
             <form onSubmit={handleSubmit}>
               <Carousel setApi={setApi} className="w-full">
-                <CarouselContent>
+                <CarouselContent className="px-2">
                   {/* Step 0: Welcome Screen */}
                   <CarouselItem>
                     <div className="flex flex-col items-center justify-center min-h-[500px] space-y-8 py-12">
@@ -313,7 +224,7 @@ export const SurveyPage = ({
                         Who is your primary target audience?
                       </Label>
                       <p className="text-sm text-muted-foreground">
-                        Select 1-3 audience demographics to personalize your
+                        Select 1-2 audience demographics to personalize your
                         content strategy
                       </p>
 
@@ -324,7 +235,7 @@ export const SurveyPage = ({
                             audience.value
                           );
                           const isDisabled =
-                            !isSelected && targetAudiences.length >= 3;
+                            !isSelected && targetAudiences.length >= 2;
 
                           return (
                             <button
@@ -338,7 +249,7 @@ export const SurveyPage = ({
                                 "flex items-start gap-2.5 p-3 rounded-lg border transition-all duration-200 text-left",
                                 isSelected
                                   ? "border-border bg-secondary shadow-sm"
-                                  : "border-border hover:bg-secondary/50",
+                                  : "hover:bg-secondary",
                                 isDisabled && "opacity-50 cursor-not-allowed"
                               )}
                             >
@@ -365,7 +276,7 @@ export const SurveyPage = ({
                         >
                           {targetAudiences.length === 0
                             ? "Please select at least 1 audience"
-                            : `${targetAudiences.length} of 3 selected`}
+                            : `${targetAudiences.length} of 2 selected`}
                         </span>
                         {targetAudiences.length > 0 && (
                           <button
@@ -415,19 +326,11 @@ export const SurveyPage = ({
                           </div>
                         </div>
 
-                        <div
-                          className={cn(
-                            "p-4 rounded-lg border transition-colors",
-                            weeklyPostingFrequency >= 2 &&
-                              weeklyPostingFrequency <= 3
-                              ? "border-accent/50 bg-accent/5"
-                              : "border-border bg-muted/30"
-                          )}
-                        >
+                        <div className="p-4 rounded-lg border bg-secondary border-border">
                           <p className="text-sm text-foreground flex items-start gap-2">
                             <span>
                               <strong>Recommendation:</strong> We recommend
-                              posting at least 2-3 times per week to increase
+                              posting at least 3-5 times per week to increase
                               your online brand presence and engagement.
                             </span>
                           </p>
@@ -440,14 +343,14 @@ export const SurveyPage = ({
                   <CarouselItem>
                     <div className="space-y-6">
                       <Label className="flex items-center gap-2 text-xl font-header font-medium text-foreground">
-                        Where are you located?
+                        What is your ZIP code?
                       </Label>
 
                       <LocationAutocomplete
                         value={location}
                         onChange={setLocation}
                         apiKey={googleMapsApiKey}
-                        placeholder="Start typing your city..."
+                        placeholder="Enter your ZIP code"
                       />
                     </div>
                   </CarouselItem>

@@ -21,16 +21,14 @@ interface LocationAutocompleteProps {
   apiKey: string;
   placeholder?: string;
   className?: string;
-  autoLocate?: boolean;
 }
 
 export const LocationAutocomplete = ({
   value,
   onChange,
   apiKey,
-  placeholder = "Start typing your city...",
-  className,
-  autoLocate = true
+  placeholder = "Enter your ZIP code",
+  className
 }: LocationAutocompleteProps) => {
   const [inputValue, setInputValue] = React.useState("");
   const [suggestions, setSuggestions] = React.useState<
@@ -39,14 +37,13 @@ export const LocationAutocomplete = ({
   const [isLoading, setIsLoading] = React.useState(false);
   const [isScriptLoaded, setIsScriptLoaded] = React.useState(false);
   const [showSuggestions, setShowSuggestions] = React.useState(false);
-  const [hasAttemptedAutoLocate, setHasAttemptedAutoLocate] =
-    React.useState(false);
   const inputRef = React.useRef<HTMLInputElement>(null);
   const autocompleteService =
     React.useRef<google.maps.places.AutocompleteService | null>(null);
   const placesService = React.useRef<google.maps.places.PlacesService | null>(
     null
   );
+  const blurTimeoutRef = React.useRef<number | null>(null);
 
   // Load Google Maps script
   React.useEffect(() => {
@@ -74,6 +71,14 @@ export const LocationAutocomplete = ({
     }
   }, [isScriptLoaded]);
 
+  React.useEffect(() => {
+    return () => {
+      if (blurTimeoutRef.current) {
+        window.clearTimeout(blurTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const parseAddressComponents = React.useCallback(
     (
       components: google.maps.GeocoderAddressComponent[]
@@ -82,7 +87,6 @@ export const LocationAutocomplete = ({
       let state = "";
       let country = "";
       let postalCode = "";
-
       for (const component of components) {
         if (component.types.includes("locality")) {
           city = component.long_name;
@@ -105,89 +109,15 @@ export const LocationAutocomplete = ({
       // For US locations: "City, State"
       // For international: "City, Country"
       if (location.country === "United States") {
-        return location.state
-          ? `${location.city}, ${location.state}`
-          : location.city;
+        const cityState = [location.city, location.state]
+          .filter(Boolean)
+          .join(", ");
+        return [cityState, location.postalCode].filter(Boolean).join(" ");
       }
       return `${location.city}, ${location.country}`;
     },
     []
   );
-
-  // Auto-locate the user once when possible
-  React.useEffect(() => {
-    if (
-      !autoLocate ||
-      hasAttemptedAutoLocate ||
-      value ||
-      !isScriptLoaded ||
-      !window.google
-    ) {
-      return;
-    }
-
-    if (!navigator.geolocation) {
-      setHasAttemptedAutoLocate(true);
-      return;
-    }
-
-    setHasAttemptedAutoLocate(true);
-    setIsLoading(true);
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const geocoder = new window.google.maps.Geocoder();
-        const locationLatLng = {
-          lat: position.coords.latitude,
-          lng: position.coords.longitude
-        };
-
-        geocoder.geocode({ location: locationLatLng }, (results, status) => {
-          setIsLoading(false);
-          if (
-            status === window.google.maps.GeocoderStatus.OK &&
-            results &&
-            results[0]
-          ) {
-            const result = results[0];
-            const { city, state, country, postalCode } = parseAddressComponents(
-              result.address_components || []
-            );
-
-            const locationData = {
-              city,
-              state,
-              country,
-              postalCode,
-              placeId: result.place_id || "",
-              formattedAddress: result.formatted_address || ""
-            };
-
-            onChange(locationData);
-
-            const displayText = formatLocationDisplay(locationData);
-            setInputValue(displayText);
-            setSuggestions([]);
-            setShowSuggestions(false);
-          }
-        });
-      },
-      () => {
-        setIsLoading(false);
-      },
-      {
-        maximumAge: 300000,
-        timeout: 10000
-      }
-    );
-  }, [
-    autoLocate,
-    hasAttemptedAutoLocate,
-    isScriptLoaded,
-    onChange,
-    parseAddressComponents,
-    formatLocationDisplay,
-    value
-  ]);
 
   // Fetch suggestions
   const fetchSuggestions = React.useCallback(async (query: string) => {
@@ -200,7 +130,8 @@ export const LocationAutocomplete = ({
     try {
       const result = await autocompleteService.current.getPlacePredictions({
         input: query,
-        types: ["(cities)"]
+        types: ["postal_code"],
+        componentRestrictions: { country: "us" }
       });
 
       setSuggestions(result?.predictions || []);
@@ -238,7 +169,6 @@ export const LocationAutocomplete = ({
         fields: ["address_components", "formatted_address", "place_id"]
       },
       (place, status) => {
-        setIsLoading(false);
         if (
           status === window.google.maps.places.PlacesServiceStatus.OK &&
           place
@@ -247,7 +177,7 @@ export const LocationAutocomplete = ({
             place.address_components || []
           );
 
-          const locationData = {
+          const locationData: LocationData = {
             city,
             state,
             country,
@@ -256,13 +186,21 @@ export const LocationAutocomplete = ({
             formattedAddress: place.formatted_address || ""
           };
 
-          onChange(locationData);
+          const finalize = (nextPostal: string) => {
+            const nextLocation = {
+              ...locationData,
+              postalCode: locationData.postalCode || nextPostal
+            };
+            onChange(nextLocation);
+            const displayText = formatLocationDisplay(nextLocation);
+            setInputValue(displayText);
+            setSuggestions([]);
+            setShowSuggestions(false);
+          };
 
-          const displayText = formatLocationDisplay(locationData);
-          setInputValue(displayText);
-          setSuggestions([]);
-          setShowSuggestions(false);
+          finalize("");
         }
+        setIsLoading(false);
       }
     );
   };
@@ -275,6 +213,46 @@ export const LocationAutocomplete = ({
     setShowSuggestions(false);
     inputRef.current?.focus();
   };
+
+  const resolvePostalEntry = React.useCallback(
+    (postalInput: string) => {
+      if (!window.google) {
+        return;
+      }
+      const geocoder = new window.google.maps.Geocoder();
+      geocoder.geocode(
+        {
+          address: postalInput,
+          componentRestrictions: { country: "us" }
+        },
+        (results, status) => {
+          if (
+            status !== window.google.maps.GeocoderStatus.OK ||
+            !results?.length
+          ) {
+            return;
+          }
+          const result = results[0];
+          const { city, state, country, postalCode } = parseAddressComponents(
+            result.address_components || []
+          );
+          const locationData: LocationData = {
+            city,
+            state,
+            country,
+            postalCode,
+            placeId: result.place_id || "",
+            formattedAddress: result.formatted_address || ""
+          };
+          onChange(locationData);
+          setInputValue(formatLocationDisplay(locationData));
+          setSuggestions([]);
+          setShowSuggestions(false);
+        }
+      );
+    },
+    [formatLocationDisplay, onChange, parseAddressComponents]
+  );
 
   return (
     <div className={cn("relative", className)}>
@@ -295,6 +273,24 @@ export const LocationAutocomplete = ({
             if (!value) {
               setShowSuggestions(true);
             }
+          }}
+          onBlur={() => {
+            if (blurTimeoutRef.current) {
+              window.clearTimeout(blurTimeoutRef.current);
+            }
+            if (value) {
+              return;
+            }
+            blurTimeoutRef.current = window.setTimeout(() => {
+              const trimmed = inputValue.trim();
+              if (!trimmed) {
+                return;
+              }
+              const normalized = trimmed.replace(/\s+/g, "");
+              if (/^\d{5}(-\d{4})?$/.test(normalized)) {
+                resolvePostalEntry(normalized);
+              }
+            }, 150);
           }}
           placeholder={placeholder}
           className="pr-8"

@@ -133,7 +133,7 @@ export function AccountTab({
             <div className="space-y-1">
               <Label>Current Plan</Label>
               <div>
-                <Badge variant={plan.color as string}>{plan.label}</Badge>
+                <Badge variant="secondary">{plan.label}</Badge>
               </div>
             </div>
             <Button variant="outline">Manage Subscription</Button>

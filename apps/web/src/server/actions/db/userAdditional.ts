@@ -6,6 +6,7 @@ import type {
   InsertDBUserAdditional
 } from "@shared/types/models";
 import { withDbErrorHandling } from "../_utils";
+import storageService from "@web/src/server/services/storageService";
 
 export async function getOrCreateUserAdditional(
   userId: string
@@ -86,48 +87,9 @@ export async function completeWelcomeSurvey(
   );
 }
 
-export async function markWelcomeSurveyCompleted(
-  userId: string
-): Promise<DBUserAdditional> {
-  if (!userId || userId.trim() === "") {
-    throw new Error("User ID is required to complete the survey");
-  }
-
-  return withDbErrorHandling(
-    async () => {
-      const [record] = await db
-        .insert(userAdditional)
-        .values({
-          userId,
-          surveyCompletedAt: new Date(),
-          updatedAt: new Date()
-        })
-        .onConflictDoUpdate({
-          target: userAdditional.userId,
-          set: {
-            surveyCompletedAt: new Date(),
-            updatedAt: new Date()
-          }
-        })
-        .returning();
-
-      if (!record) {
-        throw new Error("Survey completion could not be saved");
-      }
-
-      return record;
-    },
-    {
-      actionName: "markWelcomeSurveyCompleted",
-      context: { userId },
-      errorMessage: "Failed to complete survey. Please try again."
-    }
-  );
-}
-
 export async function updateTargetAudiences(
   userId: string,
-  targetAudiences: string
+  targetAudiences: NonNullable<InsertDBUserAdditional["targetAudiences"]>
 ): Promise<DBUserAdditional> {
   if (!userId || userId.trim() === "") {
     throw new Error("User ID is required to update target audiences");
@@ -169,7 +131,11 @@ export async function updateUserProfile(
   userId: string,
   updates: Pick<
     InsertDBUserAdditional,
-    "agentName" | "brokerageName" | "agentTitle" | "avatarImageUrl" | "brokerLogoUrl"
+    | "agentName"
+    | "brokerageName"
+    | "agentTitle"
+    | "headshotUrl"
+    | "personalLogoUrl"
   >
 ): Promise<DBUserAdditional> {
   if (!userId || userId.trim() === "") {
@@ -218,7 +184,7 @@ export async function updateWritingStyle(
   userId: string,
   updates: Pick<
     InsertDBUserAdditional,
-    "writingStylePreset" | "writingStyleCustom" | "writingStyleExamples"
+    "writingToneLevel" | "writingStyleCustom"
   >
 ): Promise<DBUserAdditional> {
   if (!userId || userId.trim() === "") {
@@ -255,6 +221,81 @@ export async function updateWritingStyle(
       actionName: "updateWritingStyle",
       context: { userId },
       errorMessage: "Failed to save writing style. Please try again."
+    }
+  );
+}
+
+export async function ensureGoogleHeadshot(
+  userId: string,
+  googleImageUrl: string
+): Promise<string | null> {
+  if (!userId || userId.trim() === "") {
+    throw new Error("User ID is required to update headshot");
+  }
+  if (!googleImageUrl) {
+    return null;
+  }
+
+  return withDbErrorHandling(
+    async () => {
+      const [existing] = await db
+        .select({ headshotUrl: userAdditional.headshotUrl })
+        .from(userAdditional)
+        .where(eq(userAdditional.userId, userId));
+
+      if (existing?.headshotUrl) {
+        return existing.headshotUrl;
+      }
+
+      const response = await fetch(googleImageUrl, { cache: "no-store" });
+      if (!response.ok) {
+        throw new Error("Failed to download Google headshot");
+      }
+
+      const contentType = response.headers.get("content-type") || "image/jpeg";
+      const extension = contentType.includes("png")
+        ? "png"
+        : contentType.includes("webp")
+        ? "webp"
+        : "jpg";
+      const fileName = `google-headshot.${extension}`;
+      const buffer = await response.arrayBuffer();
+
+      const uploadResult = await storageService.uploadFile({
+        fileBuffer: buffer,
+        fileName,
+        contentType,
+        options: {
+          folder: `user_${userId}/branding`
+        }
+      });
+
+      if (!uploadResult.success || !uploadResult.url) {
+        throw new Error(uploadResult.error || "Headshot upload failed");
+      }
+
+      const [record] = await db
+        .insert(userAdditional)
+        .values({
+          userId,
+          headshotUrl: uploadResult.url,
+          updatedAt: new Date()
+        })
+        .onConflictDoUpdate({
+          target: userAdditional.userId,
+          set: {
+            headshotUrl: uploadResult.url,
+            updatedAt: new Date()
+          }
+        })
+        .returning();
+
+      return record?.headshotUrl ?? uploadResult.url;
+    },
+    {
+      actionName: "ensureGoogleHeadshot",
+      context: { userId },
+      errorMessage: "Failed to save Google headshot"
     }
   );
 }

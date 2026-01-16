@@ -1,4 +1,4 @@
-import type { MarketData, MarketLocation } from "@shared/types/market";
+import type { MarketData, MarketLocation } from "@web/src/types/market";
 import { createChildLogger, logger as baseLogger } from "@web/src/lib/logger";
 import { Redis } from "@upstash/redis";
 
@@ -7,8 +7,7 @@ const logger = createChildLogger(baseLogger, {
 });
 
 const RENTCAST_API_URL = "https://api.rentcast.io/v1/markets";
-const FRED_API_URL =
-  "https://api.stlouisfed.org/fred/series/observations";
+const FRED_API_URL = "https://api.stlouisfed.org/fred/series/observations";
 const RENTCAST_DATA_TYPE = "All";
 const RENTCAST_HISTORY_RANGE = "6";
 const NOT_AVAILABLE = "N/A";
@@ -213,7 +212,9 @@ function getSaleData(payload: RentCastMarketPayload): Record<string, unknown> {
   return {};
 }
 
-function getRentalData(payload: RentCastMarketPayload): Record<string, unknown> {
+function getRentalData(
+  payload: RentCastMarketPayload
+): Record<string, unknown> {
   const rentalData = payload.rentalData;
   if (rentalData && typeof rentalData === "object") {
     return rentalData;
@@ -491,7 +492,9 @@ export async function getRentCastMarketData(
   const formattedPriceChange = formatPercent(priceChangeYoy);
   const formattedActiveListings = formatCount(activeListings);
   const formattedMonthsSupply =
-    monthsOfSupply === null ? NOT_AVAILABLE : `${monthsOfSupply.toFixed(1)} months`;
+    monthsOfSupply === null
+      ? NOT_AVAILABLE
+      : `${monthsOfSupply.toFixed(1)} months`;
   const formattedAvgDom =
     avgDom === null ? NOT_AVAILABLE : `${avgDom.toFixed(0)} days`;
   const formattedSaleToList = formatPercent(saleToListRatio);

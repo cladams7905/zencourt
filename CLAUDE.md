@@ -133,7 +133,7 @@ All tables enforce user isolation via RLS policies. Stack Auth provides authenti
 **Storage Path Pattern:**
 
 ```
-user_{userId}/projects/project_{projectId}/videos/video_{videoAssetId}/...
+user_{userId}/listings/listing_{listingId}/videos/video_{videoAssetId}/...
 ```
 
 ## Critical Architectural Patterns

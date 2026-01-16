@@ -2,10 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { SurveyPage, type SurveyFormData } from "./SurveyPage";
-import {
-  completeWelcomeSurvey,
-  markWelcomeSurveyCompleted
-} from "@web/src/server/actions/db/userAdditional";
+import { completeWelcomeSurvey } from "@web/src/server/actions/db/userAdditional";
 
 interface SurveyClientProps {
   googleMapsApiKey: string;
@@ -34,23 +31,14 @@ export const SurveyClient = ({
       referralSource: data.referralSource,
       referralSourceOther: data.referralSourceOther ?? null,
       location: formatLocation(data.location),
-      targetAudiences: JSON.stringify(data.targetAudiences),
+      targetAudiences: data.targetAudiences,
       weeklyPostingFrequency: data.weeklyPostingFrequency
     });
 
     router.push("/");
   };
 
-  const handleSkip = async () => {
-    await markWelcomeSurveyCompleted(userId);
-    router.push("/");
-  };
-
   return (
-    <SurveyPage
-      googleMapsApiKey={googleMapsApiKey}
-      onSubmit={handleSubmit}
-      onSkip={handleSkip}
-    />
+    <SurveyPage googleMapsApiKey={googleMapsApiKey} onSubmit={handleSubmit} />
   );
 };

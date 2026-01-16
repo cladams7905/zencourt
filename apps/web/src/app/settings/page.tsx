@@ -19,11 +19,18 @@ export default async function SettingsPage() {
   const isGoogleUser =
     user.oauthProviders?.some((provider) => provider.id === "google") ?? false;
 
+  const defaultAgentName =
+    nameParts.length >= 2
+      ? `${nameParts[0]} ${nameParts[nameParts.length - 1]}`
+      : "";
+
   const userName = isGoogleUser
     ? nameParts.length >= 2
       ? `${nameParts[0]} ${nameParts[nameParts.length - 1]}`
       : displayName || emailUsername || email || "User"
     : email || emailUsername || displayName || "User";
+
+  const defaultHeadshotUrl = isGoogleUser ? user.profileImageUrl ?? "" : "";
 
   const paymentPlanLabels: Record<string, string> = {
     free: "Free",
@@ -42,6 +49,8 @@ export default async function SettingsPage() {
       userEmail={email}
       userName={userName}
       userAvatar={user.profileImageUrl ?? undefined}
+      defaultAgentName={defaultAgentName}
+      defaultHeadshotUrl={defaultHeadshotUrl}
       paymentPlan={paymentPlanLabel}
       location={userAdditional.location ?? undefined}
     />

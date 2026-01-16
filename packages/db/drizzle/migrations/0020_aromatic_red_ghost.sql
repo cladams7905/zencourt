@@ -1,0 +1,4 @@
+CREATE TYPE "public"."referral_source" AS ENUM('facebook', 'google_search', 'instagram', 'linkedin', 'word_of_mouth', 'conference', 'referral', 'online_ad', 'other');--> statement-breakpoint
+CREATE TYPE "public"."target_audience" AS ENUM('luxury_homebuyers', 'first_time_homebuyers', 'military_veterans', 'real_estate_investors', 'downsizers_retirees', 'growing_families', 'job_transferees', 'vacation_property_buyers');--> statement-breakpoint
+ALTER TABLE "user_additional" ALTER COLUMN "referral_source" SET DATA TYPE "public"."referral_source" USING "referral_source"::"public"."referral_source";--> statement-breakpoint
+ALTER TABLE "user_additional" ALTER COLUMN "target_audiences" SET DATA TYPE "public"."target_audience"[] USING "target_audiences"::"public"."target_audience"[];

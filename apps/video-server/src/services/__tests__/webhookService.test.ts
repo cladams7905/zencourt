@@ -79,7 +79,7 @@ describe("WebhookService", () => {
       secret: "test-secret",
       payload: {
         jobId: "test-job-123",
-        projectId: "test-project",
+        listingId: "test-listing",
         status: "completed" as const,
         timestamp: "2025-01-01T00:00:00.000Z",
         result: {
@@ -192,7 +192,7 @@ describe("WebhookService", () => {
         ...baseOptions,
         payload: {
           jobId: "test-job-123",
-          projectId: "test-project",
+          listingId: "test-listing",
           status: "failed" as const,
           timestamp: "2025-01-01T00:00:00.000Z",
           error: {
@@ -262,7 +262,7 @@ describe("WebhookService", () => {
     it("should have correct WebhookPayload type", () => {
       const payload: import("@shared/types/api").VideoJobWebhookPayload = {
         jobId: "test",
-        projectId: "project",
+        listingId: "listing",
         status: "completed",
         timestamp: new Date().toISOString(),
         result: {
@@ -282,7 +282,7 @@ describe("WebhookService", () => {
         secret: "test-secret",
         payload: {
           jobId: "test",
-          projectId: "project",
+          listingId: "listing",
           status: "failed",
           timestamp: new Date().toISOString(),
           error: {

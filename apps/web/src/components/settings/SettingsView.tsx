@@ -7,7 +7,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { AccountTab } from "./AccountTab";
 import { BrandingTab } from "./BrandingTab";
 import { Button } from "../ui/button";
-import { Bell, Mic2, Plus, UserCircle } from "lucide-react";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger
+} from "../ui/accordion";
+import { Card } from "../ui/card";
+import { Bell, PenTool, Plus, UserCircle } from "lucide-react";
 import { Badge } from "../ui/badge";
 
 interface SettingsViewProps {
@@ -16,6 +23,8 @@ interface SettingsViewProps {
   userEmail: string;
   userName: string;
   userAvatar?: string;
+  defaultAgentName?: string;
+  defaultHeadshotUrl?: string;
   paymentPlan: string;
   location?: string;
 }
@@ -26,9 +35,44 @@ export function SettingsView({
   userEmail,
   userName,
   userAvatar,
+  defaultAgentName,
+  defaultHeadshotUrl,
   paymentPlan,
   location
 }: SettingsViewProps) {
+  const agentName = userAdditional.agentName || userName;
+  const brokerageName = userAdditional.brokerageName || "Your Brokerage";
+  const agentTitle = userAdditional.agentTitle || "";
+  const writingTone = userAdditional.writingToneLevel;
+  const writingToneLabel = (() => {
+    const numeric = Number(writingTone);
+    if (!Number.isNaN(numeric)) {
+      const scaleLabels: Record<number, string> = {
+        1: "Very informal",
+        2: "Informal",
+        3: "Conversational",
+        4: "Formal",
+        5: "Very formal"
+      };
+      return scaleLabels[numeric] ?? "Custom";
+    }
+    const legacyLabels: Record<string, string> = {
+      professional: "Professional",
+      casual: "Casual",
+      friendly: "Friendly",
+      enthusiastic: "Enthusiastic",
+      educational: "Educational"
+    };
+    return (writingTone && legacyLabels[writingTone]) || "Custom";
+  })();
+  const writingStyleNote = userAdditional.writingStyleCustom?.trim();
+  const headline = location
+    ? `Just Listed in ${location}`
+    : "Just Listed: A Fresh New Opportunity";
+  const signature = [agentName, agentTitle, brokerageName]
+    .filter(Boolean)
+    .join(" · ");
+
   return (
     <div className="flex h-screen overflow-hidden">
       {/* Sidebar */}
@@ -71,32 +115,76 @@ export function SettingsView({
         </header>
 
         {/* Content with Vertical Tabs */}
-        <div className="px-8 py-8 max-w-5xl mx-auto 2xl:-translate-x-24">
+        <div className="px-8 py-8 max-w-5xl mx-auto">
           <Tabs
             defaultValue="account"
             orientation="vertical"
-            className="flex flex-row gap-8"
+            className="flex flex-row gap-8 min-w-0"
           >
-            {/* Vertical Tab List */}
-            <TabsList className="flex-col h-fit w-48 bg-background/80 backdrop-blur-md p-2 gap-2 sticky top-[110px] border border-border rounded-xl py-2">
-              <TabsTrigger
-                value="account"
-                className="w-full justify-start gap-3 py-2 px-3 rounded-lg transition-colors hover:bg-secondary data-[state=active]:bg-secondary"
-              >
-                <UserCircle className="h-5 w-5" />
-                Account
-              </TabsTrigger>
-              <TabsTrigger
-                value="branding"
-                className="w-full justify-start gap-3 py-2 px-3 rounded-lg transition-colors hover:bg-secondary data-[state=active]:bg-secondary"
-              >
-                <Mic2 className="h-5 w-5" />
-                Branding
-              </TabsTrigger>
-            </TabsList>
+            {/* Vertical Tab List + Preview */}
+            <div className="flex w-56 flex-col gap-4">
+              <TabsList className="flex-col h-fit w-full bg-secondary p-2 gap-2 sticky top-[110px] rounded-xl py-2">
+                <TabsTrigger
+                  value="account"
+                  className="w-full justify-start gap-3 py-2 px-3 rounded-lg transition-colors text-muted-foreground hover:text-foreground data-[state=active]:shadow-sm data-[state=active]:text-foreground data-[state=active]:bg-background"
+                >
+                  <UserCircle className="h-5 w-5" />
+                  Account
+                </TabsTrigger>
+                <TabsTrigger
+                  value="branding"
+                  className="w-full justify-start gap-3 py-2 px-3 rounded-lg transition-colors text-muted-foreground hover:text-foreground data-[state=active]:shadow-sm data-[state=active]:text-foreground data-[state=active]:bg-background"
+                >
+                  <PenTool className="h-5 w-5" />
+                  Branding
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="branding" className="mt-0">
+                <Card className="bg-secondary border-none sticky top-[225px]">
+                  <Accordion type="single" collapsible>
+                    <AccordionItem value="example" className="border-none">
+                      <AccordionTrigger className="px-4 py-3 hover:no-underline font-body">
+                        <div className="flex flex-col text-left gap-1">
+                          <span className="text-base font-header">
+                            Example Post
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            Preview based on your current preferences.
+                          </span>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="px-4 pb-4">
+                        <div className="space-y-3 text-sm">
+                          <div className="text-xs uppercase tracking-wide text-muted-foreground">
+                            {writingToneLabel} Tone
+                          </div>
+                          <div className="font-semibold text-foreground">
+                            {headline}
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            Discover a home that balances comfort and style,
+                            curated for modern living. Reach out for a private
+                            walkthrough and neighborhood insights.
+                          </p>
+                          {writingStyleNote ? (
+                            <div className="rounded-md border border-dashed border-border/70 bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+                              {writingStyleNote}
+                            </div>
+                          ) : null}
+                          <div className="text-xs text-muted-foreground">
+                            {signature}
+                          </div>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
+                </Card>
+              </TabsContent>
+            </div>
 
             {/* Tab Content */}
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <TabsContent value="account" className="mt-0 space-y-6">
                 <AccountTab
                   userId={userId}
@@ -107,7 +195,12 @@ export function SettingsView({
               </TabsContent>
 
               <TabsContent value="branding" className="mt-0 space-y-6">
-                <BrandingTab userId={userId} userAdditional={userAdditional} />
+                <BrandingTab
+                  userId={userId}
+                  userAdditional={userAdditional}
+                  defaultAgentName={defaultAgentName}
+                  defaultHeadshotUrl={defaultHeadshotUrl}
+                />
               </TabsContent>
             </div>
           </Tabs>

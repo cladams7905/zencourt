@@ -37,7 +37,6 @@ interface VideoContext {
   contentId: string;
   listingId: string;
   userId: string;
-  projectId: string; // backward-compat logging alias
 }
 
 class VideoGenerationService {
@@ -77,8 +76,7 @@ class VideoGenerationService {
       videoId: record.videoId,
       contentId: record.contentId,
       listingId: record.listingId,
-      userId: record.userId,
-      projectId: record.listingId
+      userId: record.userId
     };
 
     this.videoContextCache.set(videoId, context);
@@ -522,7 +520,7 @@ class VideoGenerationService {
           metadata: {
             jobId: job.id,
             videoId: job.videoContentId,
-            projectId: videoContext.projectId,
+            listingId: videoContext.listingId,
             userId: videoContext.userId,
             generationModel: job.generationModel || "kling1.6"
           }
@@ -534,7 +532,7 @@ class VideoGenerationService {
           metadata: {
             jobId: job.id,
             videoId: job.videoContentId,
-            projectId: videoContext.projectId,
+            listingId: videoContext.listingId,
             userId: videoContext.userId
           }
         })

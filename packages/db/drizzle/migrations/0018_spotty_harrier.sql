@@ -1,0 +1,1 @@
+ALTER TABLE "user_additional" DROP COLUMN "writing_style_examples";

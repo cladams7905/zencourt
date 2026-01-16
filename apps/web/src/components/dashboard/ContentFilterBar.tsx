@@ -55,7 +55,7 @@ const ContentFilterBar = ({
           </span>
           <div className="w-28 h-2 bg-secondary rounded-full overflow-hidden">
             <div
-              className="h-full bg-muted-foreground/40 rounded-full transition-all"
+              className="h-full bg-foreground rounded-full transition-all"
               style={{ width: `${generationPercentage}%` }}
             />
           </div>

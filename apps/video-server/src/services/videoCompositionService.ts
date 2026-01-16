@@ -148,7 +148,7 @@ export class VideoCompositionService {
 
       // Step 7: Upload to Backblaze B2
       logger.info(
-        { projectId, finalVideoId },
+        { listingId, finalVideoId },
         "[VideoComposition] Uploading final video and thumbnail to Backblaze B2"
       );
 

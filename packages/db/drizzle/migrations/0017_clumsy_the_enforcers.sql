@@ -1,0 +1,2 @@
+ALTER TABLE "user_additional" RENAME COLUMN "avatar_image_url" TO "headshot_image_url";--> statement-breakpoint
+ALTER TABLE "user_additional" RENAME COLUMN "broker_logo_image_url" TO "personal_logo_image_url";

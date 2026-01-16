@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import type { CommunityData, MarketData } from "@shared/types/market";
+import type { CommunityData, MarketData } from "@web/src/types/market";
 
 type PromptValues = Record<string, string | number | null | undefined>;
 

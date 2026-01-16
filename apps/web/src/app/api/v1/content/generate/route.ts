@@ -72,9 +72,9 @@ function getRecentHooksKey(userId: string, category: string): string {
 }
 
 type UserAdditionalSnapshot = {
-  targetAudiences: string | null;
+  targetAudiences: string[] | null;
   location: string | null;
-  writingStylePreset: string | null;
+  writingToneLevel: number | null;
   writingStyleCustom: string | null;
   agentName: string;
   brokerageName: string;
@@ -87,7 +87,7 @@ async function getUserAdditionalSnapshot(
     .select({
       targetAudiences: userAdditional.targetAudiences,
       location: userAdditional.location,
-      writingStylePreset: userAdditional.writingStylePreset,
+      writingToneLevel: userAdditional.writingToneLevel,
       writingStyleCustom: userAdditional.writingStyleCustom,
       agentName: userAdditional.agentName,
       brokerageName: userAdditional.brokerageName
@@ -98,7 +98,7 @@ async function getUserAdditionalSnapshot(
   return {
     targetAudiences: record?.targetAudiences ?? null,
     location: record?.location ?? null,
-    writingStylePreset: record?.writingStylePreset ?? null,
+    writingToneLevel: record?.writingToneLevel ?? null,
     writingStyleCustom: record?.writingStyleCustom ?? null,
     agentName: record?.agentName ?? "",
     brokerageName: record?.brokerageName ?? ""
@@ -106,22 +106,13 @@ async function getUserAdditionalSnapshot(
 }
 
 function parsePrimaryAudienceSegments(
-  targetAudiences: string | null
+  targetAudiences: string[] | null
 ): string[] {
-  if (!targetAudiences) {
+  if (!targetAudiences || targetAudiences.length === 0) {
     return [];
   }
 
-  try {
-    const parsed = JSON.parse(targetAudiences);
-    if (Array.isArray(parsed) && parsed.length > 0) {
-      return [String(parsed[0])];
-    }
-  } catch (error) {
-    logger.warn({ error, targetAudiences }, "Failed to parse target audiences");
-  }
-
-  return [];
+  return [String(targetAudiences[0])];
 }
 
 function getClaudeApiKey(): string {
@@ -191,11 +182,11 @@ function validateGeneratedItems(
 }
 
 function buildWritingStyleDescription(
-  preset: string | null,
+  preset: number | string | null,
   custom: string | null
 ): string {
   const DEFAULT_STYLE =
-    "Friendly, conversational, use occasional exclamation points and texting lingo (lol, tbh, idk, haha, soooo, wayyy)";
+    "Friendly, conversational, and professional with clear, concise language";
 
   if (!preset && !custom) {
     return DEFAULT_STYLE;
@@ -203,15 +194,16 @@ function buildWritingStyleDescription(
 
   const parts: string[] = [];
 
-  if (preset) {
-    const presetDescriptions: Record<string, string> = {
-      professional: "Professional, polished tone with industry terminology",
-      casual: "Casual, friendly style with relaxed language",
-      friendly: "Warm, approachable tone that builds rapport",
-      enthusiastic: "Energetic, upbeat style with exclamation points",
-      educational: "Informative, teaching-focused with clear explanations"
+  if (preset !== null && preset !== undefined && preset !== "") {
+    const numeric = Number(preset);
+    const toneDescriptions: Record<number, string> = {
+      1: "Very informal, uses texting lingo, conversational and playful",
+      2: "Informal, warm, relaxed, approachable voice",
+      3: "Conversational, casual-professional tone, clear and concise",
+      4: "Formal, polished, authoritative tone with minimal slang",
+      5: "Very formal, highly professional and structured voice"
     };
-    parts.push(presetDescriptions[preset] || preset);
+    parts.push(toneDescriptions[numeric] || DEFAULT_STYLE);
   }
 
   if (custom) {
@@ -275,10 +267,13 @@ export async function POST(request: NextRequest) {
     // Enhance agent profile with user's data from database
     const enhancedAgentProfile = {
       ...body.agent_profile,
-      agent_name: userAdditionalSnapshot.agentName || body.agent_profile.agent_name,
-      brokerage_name: userAdditionalSnapshot.brokerageName || body.agent_profile.brokerage_name,
+      agent_name:
+        userAdditionalSnapshot.agentName || body.agent_profile.agent_name,
+      brokerage_name:
+        userAdditionalSnapshot.brokerageName ||
+        body.agent_profile.brokerage_name,
       writing_style_description: buildWritingStyleDescription(
-        userAdditionalSnapshot.writingStylePreset,
+        userAdditionalSnapshot.writingToneLevel,
         userAdditionalSnapshot.writingStyleCustom
       )
     };

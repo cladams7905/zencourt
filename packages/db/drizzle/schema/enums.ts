@@ -30,6 +30,32 @@ export const paymentPlanEnum = pgEnum("payment_plan", [
   "enterprise"
 ]);
 
+export const referralSourceEnum = pgEnum("referral_source", [
+  "facebook",
+  "google_search",
+  "instagram",
+  "linkedin",
+  "word_of_mouth",
+  "conference",
+  "referral",
+  "online_ad",
+  "other"
+]);
+
+export const targetAudienceEnum = pgEnum("target_audience", [
+  "luxury_homebuyers",
+  "first_time_homebuyers",
+  "military_veterans",
+  "real_estate_investors",
+  "downsizers_retirees",
+  "growing_families",
+  "job_transferees",
+  "vacation_property_buyers"
+]);
+
+export type ReferralSource = (typeof referralSourceEnum.enumValues)[number];
+export type TargetAudience = (typeof targetAudienceEnum.enumValues)[number];
+
 export const socialPlatformEnum = pgEnum("social_platform", [
   "instagram",
   "facebook",

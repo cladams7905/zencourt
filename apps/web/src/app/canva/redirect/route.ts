@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
     const redirectUrl = buildReturnUrl(request.url, {
       status: "error",
       message: "State mismatch. Please restart the Canva connection flow.",
-      state
+      state: state ?? undefined
     });
     const response = NextResponse.redirect(redirectUrl);
     response.cookies.delete("canva_oauth_state");

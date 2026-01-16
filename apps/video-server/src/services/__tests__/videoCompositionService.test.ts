@@ -211,7 +211,7 @@ describe('VideoCompositionService', () => {
         contentType: 'video/mp4',
         metadata: expect.objectContaining({
           userId: 'user123',
-          projectId: 'project456',
+          listingId: 'project456',
           videoId: 'video789',
         }),
       });

@@ -64,8 +64,8 @@ const upload = multer({
  * - file: File to upload (required)
  * - folder: Folder/prefix for the file (default: "uploads")
  * - userId: User ID for organized storage (optional)
- * - projectId: Project ID for organized storage (optional)
- * - videoId: Video ID to nest under /videos/video_{videoId} (optional, requires userId & projectId)
+ * - listingId: Listing ID for organized storage (optional)
+ * - videoId: Video ID to nest under /videos/video_{videoId} (optional, requires userId & listingId)
  *
  * Returns:
  * - url: Public storage URL
@@ -88,21 +88,21 @@ router.post(
 
       const folder = (req.body.folder as string) || "uploads";
       const userId = req.body.userId as string | undefined;
-      const projectId = req.body.projectId as string | undefined;
+      const listingId = req.body.listingId as string | undefined;
       const videoId = req.body.videoId as string | undefined;
 
       // Generate storage key based on provided metadata
       let key: string;
-      if (userId && projectId) {
+      if (userId && listingId) {
         key = buildUserListingVideoKey(
           userId,
-          projectId,
+          listingId,
           file.originalname,
           videoId
         );
         logger.info(
-          { userId, projectId, videoId, filename: file.originalname, key },
-          "[Storage] Uploading file with user/project path"
+          { userId, listingId, videoId, filename: file.originalname, key },
+          "[Storage] Uploading file with user/listing path"
         );
       } else {
         key = buildGenericUploadKey(folder, file.originalname);
@@ -121,7 +121,7 @@ router.post(
           originalName: file.originalname,
           uploadedAt: new Date().toISOString(),
           ...(userId && { userId }),
-          ...(projectId && { projectId })
+          ...(listingId && { listingId })
         }
       });
 
@@ -316,7 +316,7 @@ router.post(
  * - files: Array of files to upload (required)
  * - folder: Folder/prefix for the files (default: "uploads")
  * - userId: User ID for organized storage (optional)
- * - projectId: Project ID for organized storage (optional)
+ * - listingId: Listing ID for organized storage (optional)
  *
  * Returns:
  * - results: Array of upload results for each file
@@ -340,14 +340,14 @@ router.post(
 
       const folder = (req.body.folder as string) || "uploads";
       const userId = req.body.userId as string | undefined;
-      const projectId = req.body.projectId as string | undefined;
+      const listingId = req.body.listingId as string | undefined;
 
       logger.info(
         {
           fileCount: files.length,
           folder,
           userId,
-          projectId
+          listingId
         },
         "[Storage Batch] Starting batch upload"
       );
@@ -358,10 +358,10 @@ router.post(
           try {
             // Generate storage key based on provided metadata
             let key: string;
-            if (userId && projectId) {
+            if (userId && listingId) {
               key = buildUserListingVideoKey(
                 userId,
-                projectId,
+                listingId,
                 file.originalname
               );
             } else {
@@ -377,7 +377,7 @@ router.post(
                 originalName: file.originalname,
                 uploadedAt: new Date().toISOString(),
                 ...(userId && { userId }),
-                ...(projectId && { projectId })
+                ...(listingId && { listingId })
               }
             });
 
