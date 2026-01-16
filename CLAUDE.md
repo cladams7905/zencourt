@@ -156,6 +156,8 @@ Also use shared helpers for storage URL parsing/building (`extractStorageKeyFrom
 
 **Signed URL naming:** server-side helpers use `getSignedDownloadUrl*` (see `apps/web/src/server/utils/storageUrls.ts` and `apps/video-server/src/services/storageService.ts`).
 
+**Optional CDN:** set `STORAGE_PUBLIC_BASE_URL` to a CDN origin (e.g., `https://cdn.yourdomain.com`) to have storage services generate public URLs against the CDN instead of the raw B2 endpoint. Add the same env var to Vercel + video-server, and allow the hostname in `apps/web/next.config.ts` for `next/image`.
+
 ### 3. Video Job Architecture
 
 Each video generation is split into multiple `video_asset_jobs` (one per room). This enables:

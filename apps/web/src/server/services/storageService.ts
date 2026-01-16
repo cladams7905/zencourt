@@ -53,7 +53,8 @@ const storageClient = new S3Client({
 const STORAGE_CONFIG = {
   region: storageConfig.region,
   bucket: storageConfig.bucket,
-  endpoint: storageConfig.endpoint
+  endpoint: storageConfig.endpoint,
+  publicBaseUrl: storageConfig.publicBaseUrl
 } as const;
 
 type UploadContext = {
@@ -287,7 +288,7 @@ export class StorageService {
     return {
       key: context.key,
       url: buildStoragePublicUrl(
-        STORAGE_CONFIG.endpoint,
+        STORAGE_CONFIG.publicBaseUrl ?? STORAGE_CONFIG.endpoint,
         STORAGE_CONFIG.bucket,
         context.key
       )

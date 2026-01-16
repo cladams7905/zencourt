@@ -359,7 +359,11 @@ export class StorageService {
    * Execute an operation with exponential backoff retry
    */
   private buildObjectUrl(bucket: string, key: string): string {
-    return buildStoragePublicUrl(STORAGE_CONFIG.endpoint, bucket, key);
+    return buildStoragePublicUrl(
+      STORAGE_CONFIG.publicBaseUrl ?? STORAGE_CONFIG.endpoint,
+      bucket,
+      key
+    );
   }
 
   /**

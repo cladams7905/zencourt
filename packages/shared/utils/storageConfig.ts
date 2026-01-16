@@ -4,6 +4,7 @@ export type StorageEnvConfig = {
   B2_BUCKET_NAME?: string;
   B2_KEY_ID?: string;
   B2_APPLICATION_KEY?: string;
+  STORAGE_PUBLIC_BASE_URL?: string;
 };
 
 export type StorageConfig = {
@@ -12,6 +13,7 @@ export type StorageConfig = {
   bucket: string;
   keyId: string;
   applicationKey: string;
+  publicBaseUrl?: string;
 };
 
 type StorageConfigOptions = {
@@ -27,6 +29,7 @@ export function buildStorageConfigFromEnv(
   const keyId = env.B2_KEY_ID?.trim();
   const applicationKey = env.B2_APPLICATION_KEY?.trim();
   const region = env.B2_REGION?.trim() || options.defaultRegion;
+  const publicBaseUrl = env.STORAGE_PUBLIC_BASE_URL?.trim();
 
   if (!endpoint) {
     throw new Error("B2_ENDPOINT environment variable is required");
@@ -49,6 +52,9 @@ export function buildStorageConfigFromEnv(
     region,
     bucket,
     keyId,
-    applicationKey
+    applicationKey,
+    publicBaseUrl: publicBaseUrl
+      ? publicBaseUrl.replace(/\/+$/, "")
+      : undefined
   };
 }

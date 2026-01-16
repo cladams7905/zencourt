@@ -26,7 +26,8 @@ export const storageClient = new S3Client({
 export const STORAGE_CONFIG = {
   region: storageConfig.region,
   bucket: storageConfig.bucket,
-  endpoint: storageConfig.endpoint
+  endpoint: storageConfig.endpoint,
+  publicBaseUrl: storageConfig.publicBaseUrl
 } as const;
 
 logger.info(

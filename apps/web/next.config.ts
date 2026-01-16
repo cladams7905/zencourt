@@ -1,5 +1,26 @@
 import type { NextConfig } from "next";
+import type { RemotePattern } from "next/dist/shared/lib/image-config";
 import path from "path";
+
+const storagePublicBaseUrl = process.env.STORAGE_PUBLIC_BASE_URL || "";
+const storagePublicPattern: RemotePattern | null = (() => {
+  if (!storagePublicBaseUrl) {
+    return null;
+  }
+  try {
+    const url = new URL(storagePublicBaseUrl);
+    const pathname = url.pathname.endsWith("/")
+      ? `${url.pathname}**`
+      : `${url.pathname}/**`;
+    return {
+      protocol: url.protocol.replace(":", "") as RemotePattern["protocol"],
+      hostname: url.hostname,
+      pathname
+    };
+  } catch {
+    return null;
+  }
+})();
 
 const nextConfig: NextConfig = {
   reactStrictMode: false,
@@ -72,7 +93,8 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "f005.backblazeb2.com",
         pathname: "/**"
-      }
+      },
+      ...(storagePublicPattern ? [storagePublicPattern] : [])
     ]
   }
 };
