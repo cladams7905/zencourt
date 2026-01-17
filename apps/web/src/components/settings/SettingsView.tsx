@@ -131,8 +131,8 @@ export function SettingsView({
             className="flex flex-row gap-8 min-w-0"
           >
             {/* Vertical Tab List + Preview */}
-            <div className="flex w-56 flex-col gap-4">
-              <TabsList className="flex-col h-fit w-full bg-secondary p-2 gap-2 sticky top-[110px] rounded-xl py-2">
+            <div className="sticky top-[110px] flex w-56 flex-col gap-4 self-start">
+              <TabsList className="flex-col h-fit w-full bg-secondary p-2 gap-2 rounded-xl py-2">
                 <TabsTrigger
                   value="account"
                   className="w-full justify-start gap-3 py-2 px-3 rounded-lg transition-colors text-muted-foreground hover:text-foreground data-[state=active]:shadow-sm data-[state=active]:text-foreground data-[state=active]:bg-background"
@@ -161,7 +161,7 @@ export function SettingsView({
                 forceMount
                 className="mt-0 data-[state=inactive]:hidden"
               >
-                <Card className="bg-secondary border-none sticky top-[272px]">
+                <Card className="bg-secondary border-none">
                   <Accordion type="single" collapsible>
                     <AccordionItem value="example" className="border-none">
                       <AccordionTrigger className="px-4 py-3 hover:no-underline font-body">
@@ -201,6 +201,17 @@ export function SettingsView({
                   </Accordion>
                 </Card>
               </TabsContent>
+
+              <p className="text-xs text-muted-foreground pl-2">
+                Have a question about your account? Email{" "}
+                <a
+                  href="mailto:team@zencourt.app"
+                  className="text-foreground underline"
+                >
+                  team@zencourt.app
+                </a>
+                .
+              </p>
             </div>
 
             {/* Tab Content */}
