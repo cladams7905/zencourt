@@ -5,4 +5,7 @@ import { stackClientApp } from "./client";
 
 export const stackServerApp = new StackServerApp({
   inheritsFrom: stackClientApp,
+  urls: {
+    passwordReset: "/reset-password"
+  }
 });

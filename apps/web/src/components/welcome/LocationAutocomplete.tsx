@@ -20,6 +20,7 @@ interface LocationAutocompleteProps {
   onChange: (location: LocationData | null) => void;
   apiKey: string;
   placeholder?: string;
+  initialValue?: string;
   className?: string;
 }
 
@@ -28,6 +29,7 @@ export const LocationAutocomplete = ({
   onChange,
   apiKey,
   placeholder = "Enter your ZIP code",
+  initialValue,
   className
 }: LocationAutocompleteProps) => {
   const [inputValue, setInputValue] = React.useState("");
@@ -44,6 +46,7 @@ export const LocationAutocomplete = ({
     null
   );
   const blurTimeoutRef = React.useRef<number | null>(null);
+  const hasUserEditedRef = React.useRef(false);
 
   // Load Google Maps script
   React.useEffect(() => {
@@ -78,6 +81,12 @@ export const LocationAutocomplete = ({
       }
     };
   }, []);
+
+  React.useEffect(() => {
+    if (!value && !inputValue && initialValue && !hasUserEditedRef.current) {
+      setInputValue(initialValue);
+    }
+  }, [initialValue, inputValue, value]);
 
   const parseAddressComponents = React.useCallback(
     (
@@ -207,6 +216,7 @@ export const LocationAutocomplete = ({
 
   // Handle clear
   const handleClear = () => {
+    hasUserEditedRef.current = true;
     onChange(null);
     setInputValue("");
     setSuggestions([]);
@@ -266,6 +276,7 @@ export const LocationAutocomplete = ({
               // If there's a selected value, clear it first
               onChange(null);
             }
+            hasUserEditedRef.current = true;
             setInputValue(e.target.value);
             setShowSuggestions(true);
           }}

@@ -56,12 +56,12 @@ const DashboardSidebar = ({
   return (
     <aside
       className={cn(
-        "w-[260px] shrink-0 flex flex-col border-r border-border bg-secondary",
+        "w-[260px] shrink-0 flex flex-col border-r border-border/50 bg-secondary",
         className
       )}
     >
       {/* Logo Section */}
-      <div className="pt-5 pb-6 flex items-center just px-6 gap-3 border-b border-border/50">
+      <div className="pt-5 pb-6 flex items-center just px-6 gap-3 border-b border-border">
         <Image
           src={Logo}
           alt="Zencourt Logo"
@@ -516,8 +516,8 @@ const DashboardSidebarStatic = ({
       </nav>
 
       {/* User Profile */}
-      <div className="p-6 border-t border-border/50">
-        <div className="w-full flex items-center gap-3 px-2 py-2 rounded-xl bg-foreground/5 border border-border/50">
+      <div className="p-6 border-t border-border">
+        <div className="w-full flex items-center gap-3 px-2 py-2 rounded-xl bg-foreground/5 border border-border">
           {userAvatar ? (
             <Image
               src={userAvatar}

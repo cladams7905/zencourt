@@ -180,6 +180,46 @@ export async function updateUserProfile(
   );
 }
 
+export async function updateUserLocation(
+  userId: string,
+  location: InsertDBUserAdditional["location"]
+): Promise<DBUserAdditional> {
+  if (!userId || userId.trim() === "") {
+    throw new Error("User ID is required to update location");
+  }
+
+  return withDbErrorHandling(
+    async () => {
+      const [record] = await db
+        .insert(userAdditional)
+        .values({
+          userId,
+          location,
+          updatedAt: new Date()
+        })
+        .onConflictDoUpdate({
+          target: userAdditional.userId,
+          set: {
+            location,
+            updatedAt: new Date()
+          }
+        })
+        .returning();
+
+      if (!record) {
+        throw new Error("Location could not be saved");
+      }
+
+      return record;
+    },
+    {
+      actionName: "updateUserLocation",
+      context: { userId, location },
+      errorMessage: "Failed to save location. Please try again."
+    }
+  );
+}
+
 export async function updateWritingStyle(
   userId: string,
   updates: Pick<

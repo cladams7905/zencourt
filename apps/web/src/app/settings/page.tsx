@@ -41,6 +41,7 @@ export default async function SettingsPage() {
 
   const paymentPlanLabel =
     paymentPlanLabels[userAdditional.paymentPlan] ?? "Free";
+  const googleMapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
 
   return (
     <SettingsView
@@ -53,6 +54,7 @@ export default async function SettingsPage() {
       defaultHeadshotUrl={defaultHeadshotUrl}
       paymentPlan={paymentPlanLabel}
       location={userAdditional.location ?? undefined}
+      googleMapsApiKey={googleMapsApiKey}
     />
   );
 }

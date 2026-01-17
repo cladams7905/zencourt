@@ -3,22 +3,12 @@
 import { useRouter } from "next/navigation";
 import { SurveyPage, type SurveyFormData } from "./SurveyPage";
 import { completeWelcomeSurvey } from "@web/src/server/actions/db/userAdditional";
+import { formatLocationForStorage } from "@web/src/lib/location";
 
 interface SurveyClientProps {
   googleMapsApiKey: string;
   userId: string;
 }
-
-const formatLocation = (location: SurveyFormData["location"]): string => {
-  if (location.country === "United States") {
-    const stateAndZip = [location.state, location.postalCode]
-      .filter(Boolean)
-      .join(" ");
-    return [location.city, stateAndZip].filter(Boolean).join(", ");
-  }
-
-  return [location.city, location.country].filter(Boolean).join(", ");
-};
 
 export const SurveyClient = ({
   googleMapsApiKey,
@@ -30,7 +20,7 @@ export const SurveyClient = ({
     await completeWelcomeSurvey(userId, {
       referralSource: data.referralSource,
       referralSourceOther: data.referralSourceOther ?? null,
-      location: formatLocation(data.location),
+      location: formatLocationForStorage(data.location),
       targetAudiences: data.targetAudiences,
       weeklyPostingFrequency: data.weeklyPostingFrequency
     });

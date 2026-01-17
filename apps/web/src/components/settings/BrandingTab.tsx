@@ -13,14 +13,6 @@ import {
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle
-} from "../ui/alert-dialog";
 import { Textarea } from "../ui/textarea";
 import { Slider } from "../ui/slider";
 import { Upload, X } from "lucide-react";
@@ -30,7 +22,7 @@ import {
   updateWritingStyle,
   updateTargetAudiences
 } from "@web/src/server/actions/db/userAdditional";
-import Image from "next/image";
+import { LoadingImage } from "../ui/loading-image";
 import {
   getSignedDownloadUrl,
   uploadFile
@@ -45,6 +37,8 @@ interface BrandingTabProps {
   userAdditional: DBUserAdditional;
   defaultAgentName?: string;
   defaultHeadshotUrl?: string;
+  onDirtyChange?: (dirty: boolean) => void;
+  onRegisterSave?: (save: () => Promise<void>) => void;
 }
 
 type BrandingProfileState = {
@@ -107,7 +101,9 @@ export function BrandingTab({
   userId,
   userAdditional,
   defaultAgentName,
-  defaultHeadshotUrl
+  defaultHeadshotUrl,
+  onDirtyChange,
+  onRegisterSave
 }: BrandingTabProps) {
   const router = useRouter();
   const [isSavingProfile, setIsSavingProfile] = React.useState(false);
@@ -341,104 +337,9 @@ export function BrandingTab({
     return isAgentInfoDirty || isTargetAudiencesDirty || isWritingStyleDirty;
   }, [isAgentInfoDirty, isTargetAudiencesDirty, isWritingStyleDirty]);
 
-  const [isUnsavedDialogOpen, setIsUnsavedDialogOpen] = React.useState(false);
-  const [pendingNavigation, setPendingNavigation] = React.useState<
-    string | null
-  >(null);
-  const [isSavingAll, setIsSavingAll] = React.useState(false);
-
-  const handleSaveAllChanges = async () => {
-    setIsSavingAll(true);
-    if (isAgentInfoDirty) {
-      await handleSaveAgentInfo();
-    }
-    if (isTargetAudiencesDirty) {
-      await handleSaveTargetAudiences();
-    }
-    if (isWritingStyleDirty) {
-      await handleSaveWritingStyle();
-    }
-    setIsSavingAll(false);
-  };
-
-  const handleCancelNavigation = () => {
-    setIsUnsavedDialogOpen(false);
-    setPendingNavigation(null);
-  };
-
-  const handleDiscardNavigation = () => {
-    const nextUrl = pendingNavigation;
-    setIsUnsavedDialogOpen(false);
-    setPendingNavigation(null);
-    if (nextUrl) {
-      router.push(nextUrl);
-    }
-  };
-
-  const handleConfirmSaveNavigation = async () => {
-    await handleSaveAllChanges();
-    const nextUrl = pendingNavigation;
-    setIsUnsavedDialogOpen(false);
-    setPendingNavigation(null);
-    if (nextUrl) {
-      router.push(nextUrl);
-    }
-  };
-
   React.useEffect(() => {
-    if (!hasUnsavedChanges) {
-      return;
-    }
-
-    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-      event.returnValue = "";
-    };
-
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [hasUnsavedChanges]);
-
-  React.useEffect(() => {
-    const handleClick = (event: MouseEvent) => {
-      if (!hasUnsavedChanges) {
-        return;
-      }
-      if (event.defaultPrevented) {
-        return;
-      }
-      if (event.button !== 0 || event.metaKey || event.ctrlKey) {
-        return;
-      }
-      const target = event.target as HTMLElement | null;
-      const anchor = target?.closest("a");
-      if (!anchor) {
-        return;
-      }
-      if (
-        anchor.target === "_blank" ||
-        anchor.hasAttribute("download") ||
-        anchor.getAttribute("data-ignore-unsaved") === "true"
-      ) {
-        return;
-      }
-      const href = anchor.getAttribute("href");
-      if (!href || href.startsWith("#")) {
-        return;
-      }
-      const nextUrl = new URL(href, window.location.href);
-      const currentUrl = new URL(window.location.href);
-      if (nextUrl.href === currentUrl.href) {
-        return;
-      }
-      event.preventDefault();
-      setPendingNavigation(nextUrl.toString());
-      setIsUnsavedDialogOpen(true);
-    };
-
-    document.addEventListener("click", handleClick, true);
-    return () => document.removeEventListener("click", handleClick, true);
-  }, [hasUnsavedChanges]);
+    onDirtyChange?.(hasUnsavedChanges);
+  }, [hasUnsavedChanges, onDirtyChange]);
 
   React.useEffect(() => {
     if (
@@ -507,7 +408,7 @@ export function BrandingTab({
     }
   };
 
-  const handleSaveAgentInfo = async () => {
+  const handleSaveAgentInfo = React.useCallback(async () => {
     setIsSavingProfile(true);
     try {
       await updateUserProfile(userId, {
@@ -530,7 +431,7 @@ export function BrandingTab({
     } finally {
       setIsSavingProfile(false);
     }
-  };
+  }, [agentName, agentTitle, brokerageName, router, userId]);
 
   const handleImageUpload = async (
     file: File,
@@ -599,7 +500,7 @@ export function BrandingTab({
     });
   };
 
-  const handleSaveWritingStyle = async () => {
+  const handleSaveWritingStyle = React.useCallback(async () => {
     setIsLoadingStyle(true);
     try {
       await updateWritingStyle(userId, {
@@ -617,9 +518,9 @@ export function BrandingTab({
     } finally {
       setIsLoadingStyle(false);
     }
-  };
+  }, [router, userId, writingToneLevel, writingStyleCustom]);
 
-  const handleSaveTargetAudiences = async () => {
+  const handleSaveTargetAudiences = React.useCallback(async () => {
     setIsLoadingAudiences(true);
     try {
       await updateTargetAudiences(userId, targetAudiences);
@@ -633,7 +534,30 @@ export function BrandingTab({
     } finally {
       setIsLoadingAudiences(false);
     }
-  };
+  }, [router, targetAudiences, userId]);
+
+  const handleSaveAllChanges = React.useCallback(async () => {
+    if (isAgentInfoDirty) {
+      await handleSaveAgentInfo();
+    }
+    if (isTargetAudiencesDirty) {
+      await handleSaveTargetAudiences();
+    }
+    if (isWritingStyleDirty) {
+      await handleSaveWritingStyle();
+    }
+  }, [
+    handleSaveAgentInfo,
+    handleSaveTargetAudiences,
+    handleSaveWritingStyle,
+    isAgentInfoDirty,
+    isTargetAudiencesDirty,
+    isWritingStyleDirty
+  ]);
+
+  React.useEffect(() => {
+    onRegisterSave?.(handleSaveAllChanges);
+  }, [handleSaveAllChanges, onRegisterSave]);
 
   return (
     <div className="grid gap-6">
@@ -708,11 +632,11 @@ export function BrandingTab({
                             : "h-40 w-40"
                         )}
                       >
-                        <Image
+                        <LoadingImage
                           {...getPreviewImageProps(avatarPreviewUrl)}
                           alt="Profile preview"
                           fill
-                          className="object-cover"
+                          className="object-cover transition duration-300"
                         />
                         <Button
                           type="button"
@@ -775,12 +699,12 @@ export function BrandingTab({
                 >
                   {brokerLogoPreviewUrl ? (
                     <div className="relative inline-flex max-w-full rounded-lg overflow-hidden border border-border bg-white">
-                      <Image
+                      <LoadingImage
                         {...getPreviewImageProps(brokerLogoPreviewUrl)}
                         alt="Logo preview"
                         width={320}
                         height={120}
-                        className="h-auto w-auto max-h-24 max-w-full object-contain"
+                        className="h-auto w-auto max-h-24 max-w-full object-contain transition duration-300"
                       />
                       <Button
                         type="button"
@@ -981,40 +905,6 @@ export function BrandingTab({
           )}
         </CardContent>
       </Card>
-
-      <AlertDialog
-        open={isUnsavedDialogOpen}
-        onOpenChange={(open) => {
-          setIsUnsavedDialogOpen(open);
-          if (!open) {
-            setPendingNavigation(null);
-          }
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Save changes before leaving?</AlertDialogTitle>
-            <AlertDialogDescription>
-              You have unsaved changes in your branding settings. Save them
-              before navigating away.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <Button variant="outline" onClick={handleCancelNavigation}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleDiscardNavigation}>
-              Discard
-            </Button>
-            <Button
-              onClick={handleConfirmSaveNavigation}
-              disabled={isSavingAll}
-            >
-              {isSavingAll ? "Saving..." : "Save Changes"}
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

@@ -6,6 +6,8 @@ import { DashboardSidebar } from "../dashboard/DashboardSidebar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { AccountTab } from "./AccountTab";
 import { BrandingTab } from "./BrandingTab";
+import { SubscriptionTab } from "./SubscriptionTab";
+import { SettingsUnsavedChangesDialog } from "./SettingsUnsavedChangesDialog";
 import { Button } from "../ui/button";
 import {
   Accordion,
@@ -14,8 +16,7 @@ import {
   AccordionTrigger
 } from "../ui/accordion";
 import { Card } from "../ui/card";
-import { Bell, PenTool, Plus, UserCircle } from "lucide-react";
-import { Badge } from "../ui/badge";
+import { Bell, CreditCard, PenTool, Plus, UserCircle } from "lucide-react";
 
 interface SettingsViewProps {
   userId: string;
@@ -27,6 +28,7 @@ interface SettingsViewProps {
   defaultHeadshotUrl?: string;
   paymentPlan: string;
   location?: string;
+  googleMapsApiKey: string;
 }
 
 export function SettingsView({
@@ -38,8 +40,22 @@ export function SettingsView({
   defaultAgentName,
   defaultHeadshotUrl,
   paymentPlan,
-  location
+  location,
+  googleMapsApiKey
 }: SettingsViewProps) {
+  const [isBrandingDirty, setIsBrandingDirty] = React.useState(false);
+  const [isLocationDirty, setIsLocationDirty] = React.useState(false);
+  const brandingSaveRef = React.useRef<() => Promise<void>>(async () => {});
+  const locationSaveRef = React.useRef<() => Promise<void>>(async () => {});
+
+  const handleSaveAllChanges = React.useCallback(async () => {
+    if (isBrandingDirty) {
+      await brandingSaveRef.current();
+    }
+    if (isLocationDirty) {
+      await locationSaveRef.current();
+    }
+  }, [isBrandingDirty, isLocationDirty]);
   const agentName = userAdditional.agentName || userName;
   const brokerageName = userAdditional.brokerageName || "Your Brokerage";
   const agentTitle = userAdditional.agentTitle || "";
@@ -85,7 +101,7 @@ export function SettingsView({
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto bg-background">
         {/* Header with Settings title */}
-        <header className="sticky top-0 z-30 bg-background/90 backdrop-blur-md px-8 py-5 flex justify-between items-center border-b border-border/50">
+        <header className="sticky top-0 z-30 bg-background/90 backdrop-blur-md px-8 py-5 flex justify-between items-center border-b border-border">
           <h1 className="text-2xl font-header font-medium text-foreground">
             Settings
           </h1>
@@ -95,13 +111,6 @@ export function SettingsView({
               <Plus className="h-5 w-5" />
               <span>New</span>
             </Button>
-
-            <Badge
-              variant="outline"
-              className="text-sm font-medium px-3 py-1.5 bg-background"
-            >
-              {location}
-            </Badge>
 
             <Button
               size="icon"
@@ -138,10 +147,21 @@ export function SettingsView({
                   <PenTool className="h-5 w-5" />
                   Branding
                 </TabsTrigger>
+                <TabsTrigger
+                  value="subscription"
+                  className="w-full justify-start gap-3 py-2 px-3 rounded-lg transition-colors text-muted-foreground hover:text-foreground data-[state=active]:shadow-sm data-[state=active]:text-foreground data-[state=active]:bg-background"
+                >
+                  <CreditCard className="h-5 w-5" />
+                  Subscription
+                </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="branding" className="mt-0">
-                <Card className="bg-secondary border-none sticky top-[225px]">
+              <TabsContent
+                value="branding"
+                forceMount
+                className="mt-0 data-[state=inactive]:hidden"
+              >
+                <Card className="bg-secondary border-none sticky top-[272px]">
                   <Accordion type="single" collapsible>
                     <AccordionItem value="example" className="border-none">
                       <AccordionTrigger className="px-4 py-3 hover:no-underline font-body">
@@ -190,21 +210,41 @@ export function SettingsView({
                   userId={userId}
                   userEmail={userEmail}
                   location={userAdditional.location}
-                  paymentPlan={userAdditional.paymentPlan}
+                  googleMapsApiKey={googleMapsApiKey}
+                  onDirtyChange={setIsLocationDirty}
+                  onRegisterSave={(save) => {
+                    locationSaveRef.current = save;
+                  }}
                 />
               </TabsContent>
 
-              <TabsContent value="branding" className="mt-0 space-y-6">
+              <TabsContent
+                value="branding"
+                forceMount
+                className="mt-0 space-y-6 data-[state=inactive]:hidden"
+              >
                 <BrandingTab
                   userId={userId}
                   userAdditional={userAdditional}
                   defaultAgentName={defaultAgentName}
                   defaultHeadshotUrl={defaultHeadshotUrl}
+                  onDirtyChange={setIsBrandingDirty}
+                  onRegisterSave={(save) => {
+                    brandingSaveRef.current = save;
+                  }}
                 />
+              </TabsContent>
+
+              <TabsContent value="subscription" className="mt-0 space-y-6">
+                <SubscriptionTab paymentPlan={paymentPlan} />
               </TabsContent>
             </div>
           </Tabs>
         </div>
+        <SettingsUnsavedChangesDialog
+          isDirty={isBrandingDirty || isLocationDirty}
+          onSave={handleSaveAllChanges}
+        />
       </main>
     </div>
   );

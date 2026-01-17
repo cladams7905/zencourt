@@ -3,26 +3,23 @@
 import * as React from "react";
 import { cn } from "../ui/utils";
 import { Button } from "../ui/button";
-import { Badge } from "../ui/badge";
 import { Plus, Bell } from "lucide-react";
 
 interface DashboardHeaderProps {
   className?: string;
   userName?: string;
-  location?: string;
   hasNotifications?: boolean;
 }
 
 const DashboardHeader = ({
   className,
   userName = "User",
-  location = "United States",
   hasNotifications = true
 }: DashboardHeaderProps) => {
   return (
     <header
       className={cn(
-        "sticky top-0 z-30 bg-background/90 backdrop-blur-md px-8 py-5 flex justify-between items-center border-b border-border/50",
+        "sticky top-0 z-30 bg-background/90 backdrop-blur-md px-8 py-5 flex justify-between items-center border-b border-border",
         className
       )}
     >
@@ -35,13 +32,6 @@ const DashboardHeader = ({
           <Plus className="h-5 w-5" />
           <span>New</span>
         </Button>
-
-        <Badge
-          variant="outline"
-          className="text-sm font-medium px-3 py-1.5 bg-background"
-        >
-          {location}
-        </Badge>
 
         <Button
           size="icon"

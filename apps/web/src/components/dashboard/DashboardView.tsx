@@ -104,12 +104,14 @@ const defaultAgentProfile = {
 
 const SESSION_STORAGE_KEY = "zencourt.generatedContent";
 const SESSION_TTL_MS = 60 * 60 * 1000;
-const DEFAULT_GENERATED_STATE: Record<ContentType, Record<string, ContentItem[]>> =
-  {
-    videos: {},
-    posts: {},
-    stories: {}
-  };
+const DEFAULT_GENERATED_STATE: Record<
+  ContentType,
+  Record<string, ContentItem[]>
+> = {
+  videos: {},
+  posts: {},
+  stories: {}
+};
 
 const GENERATED_BATCH_SIZE = 4;
 
@@ -337,8 +339,8 @@ const DashboardView = ({
           }
         };
       });
-        streamBufferRef.current = "";
-        parsedItemsRef.current = [];
+      streamBufferRef.current = "";
+      parsedItemsRef.current = [];
 
       const [city, state] =
         location?.split(",")?.map((part) => part.trim()) ?? [];
@@ -362,8 +364,8 @@ const DashboardView = ({
       };
 
       try {
-      console.debug("Generating content", { category, contentType });
-      const response = await fetch("/api/v1/content/generate", {
+        console.debug("Generating content", { category, contentType });
+        const response = await fetch("/api/v1/content/generate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
@@ -382,71 +384,108 @@ const DashboardView = ({
           throw new Error("Streaming response not available");
         }
 
-      const decoder = new TextDecoder();
-      let buffer = "";
-      let didReceiveDone = false;
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let didReceiveDone = false;
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) {
-          break;
-        }
-        buffer += decoder.decode(value, { stream: true });
-        const parts = buffer.split("\n\n");
-        buffer = parts.pop() ?? "";
-
-        for (const part of parts) {
-          const line = part
-            .split("\n")
-            .find((entry) => entry.startsWith("data:"));
-          if (!line) {
-            continue;
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) {
+            break;
           }
-          const payload = line.replace(/^data:\s*/, "");
-          if (!payload) {
-            continue;
-          }
-          const event = JSON.parse(payload) as
-            | { type: "delta"; text: string }
-            | {
-                type: "done";
-                items: {
-                  hook: string;
-                  hook_subheader?: string | null;
-                  body?: { header: string; content: string }[] | null;
-                  caption?: string | null;
-                }[];
-              }
-            | { type: "error"; message: string };
+          buffer += decoder.decode(value, { stream: true });
+          const parts = buffer.split("\n\n");
+          buffer = parts.pop() ?? "";
 
-          if (event.type === "delta") {
-            streamBufferRef.current += event.text;
-            const parsedItems = extractJsonItemsFromStream(
-              streamBufferRef.current
-            );
-            if (parsedItems.length > parsedItemsRef.current.length) {
-              const newItems = parsedItems.slice(
-                parsedItemsRef.current.length
+          for (const part of parts) {
+            const line = part
+              .split("\n")
+              .find((entry) => entry.startsWith("data:"));
+            if (!line) {
+              continue;
+            }
+            const payload = line.replace(/^data:\s*/, "");
+            if (!payload) {
+              continue;
+            }
+            const event = JSON.parse(payload) as
+              | { type: "delta"; text: string }
+              | {
+                  type: "done";
+                  items: {
+                    hook: string;
+                    hook_subheader?: string | null;
+                    body?: { header: string; content: string }[] | null;
+                    caption?: string | null;
+                  }[];
+                }
+              | { type: "error"; message: string };
+
+            if (event.type === "delta") {
+              streamBufferRef.current += event.text;
+              const parsedItems = extractJsonItemsFromStream(
+                streamBufferRef.current
               );
-              parsedItemsRef.current = parsedItems;
+              if (parsedItems.length > parsedItemsRef.current.length) {
+                const newItems = parsedItems.slice(
+                  parsedItemsRef.current.length
+                );
+                parsedItemsRef.current = parsedItems;
+                setGeneratedContentItems((prev) => {
+                  const currentTypeMap = prev[contentType] ?? {};
+                  const updatedCategory = [...(currentTypeMap[category] ?? [])];
+                  const baseIndex = batchBaseIndexRef.current[category] ?? 0;
+                  const startIndex =
+                    baseIndex +
+                    (parsedItemsRef.current.length - newItems.length);
+                  newItems.forEach((item, idx) => {
+                    const index = startIndex + idx;
+                    updatedCategory[index] = {
+                      id: `generated-${category}-${index}`,
+                      aspectRatio: "square" as const,
+                      isFavorite: false,
+                      hook: item.hook,
+                      hookSubheader: item.hook_subheader ?? null,
+                      caption: item.caption ?? null,
+                      body: item.body ?? null
+                    };
+                  });
+                  return {
+                    ...prev,
+                    [contentType]: {
+                      ...currentTypeMap,
+                      [category]: updatedCategory
+                    }
+                  };
+                });
+              }
+            }
+
+            if (event.type === "error") {
+              throw new Error(event.message);
+            }
+
+            if (event.type === "done") {
+              didReceiveDone = true;
+              const generatedItems = event.items.map((item, index) => ({
+                id: `generated-${contentType}-${category}-${
+                  (batchBaseIndexRef.current[category] ?? 0) + index
+                }`,
+                aspectRatio: "square" as const,
+                isFavorite: false,
+                hook: item.hook,
+                hookSubheader: item.hook_subheader ?? null,
+                caption: item.caption ?? null,
+                body: item.body ?? null
+              }));
+
               setGeneratedContentItems((prev) => {
                 const currentTypeMap = prev[contentType] ?? {};
                 const updatedCategory = [...(currentTypeMap[category] ?? [])];
                 const baseIndex = batchBaseIndexRef.current[category] ?? 0;
-                const startIndex =
-                  baseIndex + (parsedItemsRef.current.length - newItems.length);
-                newItems.forEach((item, idx) => {
-                  const index = startIndex + idx;
-                  updatedCategory[index] = {
-                    id: `generated-${category}-${index}`,
-                    aspectRatio: "square" as const,
-                    isFavorite: false,
-                    hook: item.hook,
-                    hookSubheader: item.hook_subheader ?? null,
-                    caption: item.caption ?? null,
-                    body: item.body ?? null
-                  };
-                });
+                for (let i = 0; i < generatedItems.length; i += 1) {
+                  updatedCategory[baseIndex + i] = generatedItems[i];
+                }
                 return {
                   ...prev,
                   [contentType]: {
@@ -457,48 +496,12 @@ const DashboardView = ({
               });
             }
           }
-
-          if (event.type === "error") {
-            throw new Error(event.message);
-          }
-
-          if (event.type === "done") {
-            didReceiveDone = true;
-            const generatedItems = event.items.map((item, index) => ({
-              id: `generated-${contentType}-${category}-${
-                (batchBaseIndexRef.current[category] ?? 0) + index
-              }`,
-              aspectRatio: "square" as const,
-              isFavorite: false,
-              hook: item.hook,
-              hookSubheader: item.hook_subheader ?? null,
-              caption: item.caption ?? null,
-              body: item.body ?? null
-            }));
-
-            setGeneratedContentItems((prev) => {
-              const currentTypeMap = prev[contentType] ?? {};
-              const updatedCategory = [...(currentTypeMap[category] ?? [])];
-              const baseIndex = batchBaseIndexRef.current[category] ?? 0;
-              for (let i = 0; i < generatedItems.length; i += 1) {
-                updatedCategory[baseIndex + i] = generatedItems[i];
-              }
-              return {
-                ...prev,
-                [contentType]: {
-                  ...currentTypeMap,
-                  [category]: updatedCategory
-                }
-              };
-            });
-          }
         }
-      }
 
-      if (!didReceiveDone) {
-        throw new Error("Stream ended before completing output.");
-      }
-    } catch (error) {
+        if (!didReceiveDone) {
+          throw new Error("Stream ended before completing output.");
+        }
+      } catch (error) {
         if ((error as Error).name === "AbortError") {
           return;
         }
@@ -523,12 +526,12 @@ const DashboardView = ({
             }
           };
         });
-    } finally {
-      if (activeControllerRef.current === localController) {
-        activeControllerRef.current = null;
+      } finally {
+        if (activeControllerRef.current === localController) {
+          activeControllerRef.current = null;
+        }
+        setIsGenerating(false);
       }
-      setIsGenerating(false);
-    }
     },
     [
       activeFilters,
@@ -572,12 +575,7 @@ const DashboardView = ({
     generateContent(category, controller);
 
     return () => controller.abort();
-  }, [
-    activeFilters,
-    contentType,
-    generateContent,
-    hasSelectedFilter
-  ]);
+  }, [activeFilters, contentType, generateContent, hasSelectedFilter]);
 
   const activeFilter = activeFilters[0];
   const activeCategory = activeFilter ? categoryMap[activeFilter] : null;
@@ -594,7 +592,7 @@ const DashboardView = ({
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto relative bg-background">
         {/* Header */}
-        <DashboardHeader userName={headerName} location={location} />
+        <DashboardHeader userName={headerName} />
 
         {/* Content */}
         <div className="px-8 py-8 max-w-[1600px] mx-auto space-y-10">
@@ -665,7 +663,9 @@ const DashboardView = ({
                 0) > 0 && (
                 <div className="mt-10">
                   <ContentGrid
-                    items={generatedContentItems[contentType]?.[activeCategory] ?? []}
+                    items={
+                      generatedContentItems[contentType]?.[activeCategory] ?? []
+                    }
                     onFavoriteToggle={handleFavoriteToggle}
                     onEdit={(id) => console.log("Edit", id)}
                     onDownload={(id) => console.log("Download", id)}
