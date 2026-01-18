@@ -31,7 +31,7 @@ export function SubscriptionTab({ paymentPlan }: SubscriptionTabProps) {
 
   return (
     <div className="grid gap-6">
-      <Card>
+      <Card id="subscription">
         <CardHeader>
           <div className="flex items-center gap-2">
             <CardTitle>Subscription</CardTitle>

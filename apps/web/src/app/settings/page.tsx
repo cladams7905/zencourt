@@ -1,7 +1,10 @@
 import { redirect } from "next/navigation";
 import { SettingsView } from "../../components/settings/SettingsView";
 import { getUser } from "@web/src/server/actions/db/users";
-import { getOrCreateUserAdditional } from "@web/src/server/actions/db/userAdditional";
+import {
+  getOrCreateUserAdditional,
+  markProfileCompleted
+} from "@web/src/server/actions/db/userAdditional";
 
 export default async function SettingsPage() {
   const user = await getUser();
@@ -11,6 +14,9 @@ export default async function SettingsPage() {
   }
 
   const userAdditional = await getOrCreateUserAdditional(user.id);
+  if (!userAdditional.profileCompletedAt && userAdditional.agentName.trim()) {
+    await markProfileCompleted(user.id);
+  }
 
   const email = user.primaryEmail ?? "";
   const emailUsername = email.split("@")[0] ?? "";

@@ -43,6 +43,8 @@ export function SettingsView({
   location,
   googleMapsApiKey
 }: SettingsViewProps) {
+  const [activeTab, setActiveTab] = React.useState("account");
+  const [pendingHash, setPendingHash] = React.useState<string | null>(null);
   const [isBrandingDirty, setIsBrandingDirty] = React.useState(false);
   const [isLocationDirty, setIsLocationDirty] = React.useState(false);
   const brandingSaveRef = React.useRef<() => Promise<void>>(async () => {});
@@ -56,6 +58,50 @@ export function SettingsView({
       await locationSaveRef.current();
     }
   }, [isBrandingDirty, isLocationDirty]);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const syncFromHash = () => {
+      const hash = window.location.hash;
+      if (!hash) {
+        return;
+      }
+      const tabFromHash: Record<string, string> = {
+        "#account": "account",
+        "#profile": "branding",
+        "#writing-style": "branding",
+        "#media": "branding",
+        "#target-audiences": "branding",
+        "#subscription": "subscription"
+      };
+      setPendingHash(hash);
+      const nextTab = tabFromHash[hash];
+      if (nextTab) {
+        setActiveTab(nextTab);
+      }
+    };
+
+    syncFromHash();
+    window.addEventListener("hashchange", syncFromHash);
+    return () => window.removeEventListener("hashchange", syncFromHash);
+  }, []);
+
+  React.useEffect(() => {
+    if (!pendingHash) {
+      return;
+    }
+    window.requestAnimationFrame(() => {
+      const targetId = pendingHash.replace("#", "");
+      const element = document.getElementById(targetId);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+      setPendingHash(null);
+    });
+  }, [activeTab, pendingHash]);
   const agentName = userAdditional.agentName || userName;
   const brokerageName = userAdditional.brokerageName || "Your Brokerage";
   const agentTitle = userAdditional.agentTitle || "";
@@ -126,7 +172,8 @@ export function SettingsView({
         {/* Content with Vertical Tabs */}
         <div className="px-8 py-8 max-w-5xl mx-auto">
           <Tabs
-            defaultValue="account"
+            value={activeTab}
+            onValueChange={setActiveTab}
             orientation="vertical"
             className="flex flex-row gap-8 min-w-0"
           >
@@ -243,6 +290,7 @@ export function SettingsView({
                   onRegisterSave={(save) => {
                     brandingSaveRef.current = save;
                   }}
+                  isActive={activeTab === "branding"}
                 />
               </TabsContent>
 

@@ -18,6 +18,7 @@ import { Slider } from "../ui/slider";
 import { Upload, X } from "lucide-react";
 import {
   ensureGoogleHeadshot,
+  markWritingStyleCompleted,
   updateUserProfile,
   updateWritingStyle,
   updateTargetAudiences
@@ -39,6 +40,7 @@ interface BrandingTabProps {
   defaultHeadshotUrl?: string;
   onDirtyChange?: (dirty: boolean) => void;
   onRegisterSave?: (save: () => Promise<void>) => void;
+  isActive?: boolean;
 }
 
 type BrandingProfileState = {
@@ -103,7 +105,8 @@ export function BrandingTab({
   defaultAgentName,
   defaultHeadshotUrl,
   onDirtyChange,
-  onRegisterSave
+  onRegisterSave,
+  isActive = true
 }: BrandingTabProps) {
   const router = useRouter();
   const [isSavingProfile, setIsSavingProfile] = React.useState(false);
@@ -169,6 +172,10 @@ export function BrandingTab({
     brokerageName: userAdditional.brokerageName || "",
     agentTitle: userAdditional.agentTitle || ""
   }));
+  const [hasMarkedWritingStyle, setHasMarkedWritingStyle] = React.useState(
+    Boolean(userAdditional.writingStyleCompletedAt)
+  );
+  const writingStyleSentinelRef = React.useRef<HTMLDivElement | null>(null);
   const getPreviewImageProps = React.useCallback((url: string) => {
     if (!url) {
       return { src: "", unoptimized: false };
@@ -360,6 +367,31 @@ export function BrandingTab({
     }
     brokerLogoPreviewRef.current = brokerLogoPreviewUrl || null;
   }, [brokerLogoPreviewUrl]);
+
+  React.useEffect(() => {
+    if (!isActive || hasMarkedWritingStyle) {
+      return;
+    }
+    const sentinel = writingStyleSentinelRef.current;
+    if (!sentinel) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) {
+          return;
+        }
+        setHasMarkedWritingStyle(true);
+        void markWritingStyleCompleted(userId);
+        observer.disconnect();
+      },
+      { threshold: 0.2 }
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMarkedWritingStyle, isActive, userId]);
 
   React.useEffect(() => {
     return () => {
@@ -562,7 +594,7 @@ export function BrandingTab({
   return (
     <div className="grid gap-6">
       {/* Agent Branding */}
-      <Card>
+      <Card id="profile">
         <CardHeader>
           <div className="flex items-center gap-2">
             <CardTitle>Agent Information</CardTitle>
@@ -768,7 +800,7 @@ export function BrandingTab({
       </Card>
 
       {/* Target Audiences */}
-      <Card>
+      <Card id="target-audiences">
         <CardHeader>
           <div className="flex items-center gap-2">
             <CardTitle>Target Audiences</CardTitle>
@@ -835,7 +867,7 @@ export function BrandingTab({
       </Card>
 
       {/* Writing Style */}
-      <Card>
+      <Card id="writing-style">
         <CardHeader>
           <div className="flex items-center gap-2">
             <CardTitle>Writing Style</CardTitle>
@@ -905,6 +937,8 @@ export function BrandingTab({
           )}
         </CardContent>
       </Card>
+
+      <div id="media" ref={writingStyleSentinelRef} className="h-px" />
     </div>
   );
 }

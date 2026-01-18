@@ -126,7 +126,7 @@ export function AccountTab({
   return (
     <div className="grid gap-6">
       {/* Authentication */}
-      <Card>
+      <Card id="account">
         <CardHeader>
           <div className="flex items-center gap-2">
             <CardTitle>Account Details</CardTitle>

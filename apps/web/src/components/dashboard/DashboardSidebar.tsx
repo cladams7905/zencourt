@@ -292,14 +292,14 @@ const DashboardSidebar = ({
           >
             <DropdownMenuItem
               className="rounded-lg px-3 py-2.5 cursor-pointer focus:bg-secondary transition-all duration-150 group"
-              onClick={() => router.push("/settings")}
+              onClick={() => router.push("/settings#account")}
             >
               <Settings className="mr-3 h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
               <span className="text-sm font-medium">Account Settings</span>
             </DropdownMenuItem>
             <DropdownMenuItem
               className="rounded-lg px-3 py-2.5 cursor-pointer focus:bg-secondary transition-all duration-150 group"
-              onClick={() => console.log("Manage subscription clicked")}
+              onClick={() => router.push("/settings#subscription")}
             >
               <CreditCard className="mr-3 h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
               <span className="text-sm font-medium">Manage Subscription</span>

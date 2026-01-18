@@ -149,8 +149,8 @@ export async function updateUserProfile(
         updatedAt: new Date()
       };
 
-      // Mark as completed if name and brokerage are provided
-      if (updates.agentName && updates.brokerageName) {
+      // Mark as completed if display name is provided
+      if (updates.agentName && updates.agentName.trim()) {
         Object.assign(profileUpdates, { profileCompletedAt: new Date() });
       }
 
@@ -261,6 +261,70 @@ export async function updateWritingStyle(
       actionName: "updateWritingStyle",
       context: { userId },
       errorMessage: "Failed to save writing style. Please try again."
+    }
+  );
+}
+
+export async function markProfileCompleted(
+  userId: string
+): Promise<DBUserAdditional> {
+  if (!userId || userId.trim() === "") {
+    throw new Error("User ID is required to mark profile completion");
+  }
+
+  return withDbErrorHandling(
+    async () => {
+      const [record] = await db
+        .update(userAdditional)
+        .set({
+          profileCompletedAt: new Date(),
+          updatedAt: new Date()
+        })
+        .where(eq(userAdditional.userId, userId))
+        .returning();
+
+      if (!record) {
+        throw new Error("Profile completion could not be saved");
+      }
+
+      return record;
+    },
+    {
+      actionName: "markProfileCompleted",
+      context: { userId },
+      errorMessage: "Failed to update profile completion. Please try again."
+    }
+  );
+}
+
+export async function markWritingStyleCompleted(
+  userId: string
+): Promise<DBUserAdditional> {
+  if (!userId || userId.trim() === "") {
+    throw new Error("User ID is required to mark writing style completion");
+  }
+
+  return withDbErrorHandling(
+    async () => {
+      const [record] = await db
+        .update(userAdditional)
+        .set({
+          writingStyleCompletedAt: new Date(),
+          updatedAt: new Date()
+        })
+        .where(eq(userAdditional.userId, userId))
+        .returning();
+
+      if (!record) {
+        throw new Error("Writing style completion could not be saved");
+      }
+
+      return record;
+    },
+    {
+      actionName: "markWritingStyleCompleted",
+      context: { userId },
+      errorMessage: "Failed to update writing style completion. Please try again."
     }
   );
 }
