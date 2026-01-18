@@ -10,14 +10,16 @@ import {
   LayoutDashboard,
   Calendar,
   FileEdit,
+  Film,
   Heart,
   Clock,
   Archive,
   Plus,
   ChevronDown,
   Settings,
-  CreditCard,
-  LogOut
+  LogOut,
+  CircleQuestionMark,
+  MessageCircle
 } from "lucide-react";
 import Image from "next/image";
 import Logo from "../../../public/zencourt-logo.png";
@@ -28,6 +30,17 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger
 } from "../ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from "../ui/dialog";
+import { Label } from "../ui/label";
+import { Textarea } from "../ui/textarea";
+import { toast } from "sonner";
 import Link from "next/link";
 
 interface DashboardSidebarProps {
@@ -47,10 +60,44 @@ const DashboardSidebar = ({
   const router = useRouter();
   const [contentExpanded, setContentExpanded] = React.useState(true);
   const [listingsExpanded, setListingsExpanded] = React.useState(true);
+  const [isFeedbackOpen, setIsFeedbackOpen] = React.useState(false);
+  const [feedbackRating, setFeedbackRating] = React.useState<number | null>(
+    null
+  );
+  const [feedbackMessage, setFeedbackMessage] = React.useState("");
 
   const handleLogout = async () => {
     await user?.signOut();
     router.push("/");
+  };
+
+  const handleFeedbackOpenChange = (open: boolean) => {
+    setIsFeedbackOpen(open);
+    if (!open) {
+      setFeedbackRating(null);
+      setFeedbackMessage("");
+    }
+  };
+
+  const handleFeedbackSend = () => {
+    if (!feedbackRating) {
+      toast.error("Please choose a rating before sending.");
+      return;
+    }
+
+    const subject = `Zencourt feedback (${feedbackRating}/5)`;
+    const body = [
+      `Rating: ${feedbackRating}/5`,
+      "",
+      "Suggestions:",
+      feedbackMessage.trim() || "No additional feedback."
+    ].join("\n");
+
+    window.location.href = `mailto:team@zencourt.app?subject=${encodeURIComponent(
+      subject
+    )}&body=${encodeURIComponent(body)}`;
+    toast.success("Feedback ready to send.");
+    handleFeedbackOpenChange(false);
   };
 
   return (
@@ -248,6 +295,36 @@ const DashboardSidebar = ({
             </div>
           )}
         </div>
+
+        {/* Divider */}
+        <div className="py-4">
+          <div className="h-px bg-border w-full" />
+        </div>
+
+        {/* Media + Settings Section */}
+        <div className="space-y-1">
+          <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            <span>Manage</span>
+          </div>
+          <Link href="/media">
+            <Button
+              variant="ghost"
+              className="w-full justify-start gap-3 hover:bg-foreground/5"
+            >
+              <Film className="h-5 w-5" />
+              <span className="text-sm font-medium">My media</span>
+            </Button>
+          </Link>
+          <Link href="/settings#account">
+            <Button
+              variant="ghost"
+              className="w-full justify-start gap-3 hover:bg-foreground/5"
+            >
+              <Settings className="h-5 w-5" />
+              <span className="text-sm font-medium">Settings</span>
+            </Button>
+          </Link>
+        </div>
       </nav>
 
       {/* User Profile */}
@@ -288,21 +365,23 @@ const DashboardSidebar = ({
             align="end"
             side="top"
             sideOffset={8}
-            className="w-56 bg-popover/95 backdrop-blur-xl border-border/50 shadow-2xl rounded-xl p-1.5"
+            className="w-52 bg-popover/95 backdrop-blur-xl border-border/50 shadow-2xl rounded-xl p-1.5"
           >
             <DropdownMenuItem
               className="rounded-lg px-3 py-2.5 cursor-pointer focus:bg-secondary transition-all duration-150 group"
-              onClick={() => router.push("/settings#account")}
+              onSelect={() => setIsFeedbackOpen(true)}
             >
-              <Settings className="mr-3 h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-              <span className="text-sm font-medium">Account Settings</span>
+              <MessageCircle className="mr-3 h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+              <span className="text-sm font-medium">Feedback</span>
             </DropdownMenuItem>
             <DropdownMenuItem
+              asChild
               className="rounded-lg px-3 py-2.5 cursor-pointer focus:bg-secondary transition-all duration-150 group"
-              onClick={() => router.push("/settings#subscription")}
             >
-              <CreditCard className="mr-3 h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-              <span className="text-sm font-medium">Manage Subscription</span>
+              <a href="mailto:team@zencourt.app">
+                <CircleQuestionMark className="mr-3 h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+                <span className="text-sm font-medium">Get help</span>
+              </a>
             </DropdownMenuItem>
             <DropdownMenuSeparator className="my-1.5 bg-border/50" />
             <DropdownMenuItem
@@ -314,6 +393,59 @@ const DashboardSidebar = ({
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        <Dialog open={isFeedbackOpen} onOpenChange={handleFeedbackOpenChange}>
+          <DialogContent className="sm:max-w-[480px]">
+            <DialogHeader>
+              <DialogTitle>Share feedback</DialogTitle>
+              <DialogDescription>
+                Tell us what we should improve or build next.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Rating</Label>
+                <div className="grid grid-cols-5 gap-2">
+                  {[1, 2, 3, 4, 5].map((value) => (
+                    <Button
+                      key={value}
+                      type="button"
+                      variant={feedbackRating === value ? "default" : "outline"}
+                      className="h-9"
+                      onClick={() => setFeedbackRating(value)}
+                    >
+                      {value}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="feedback-message">Suggestion</Label>
+                <Textarea
+                  id="feedback-message"
+                  placeholder="What should we do better?"
+                  value={feedbackMessage}
+                  onChange={(event) => setFeedbackMessage(event.target.value)}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => handleFeedbackOpenChange(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={handleFeedbackSend}
+                disabled={!feedbackRating}
+              >
+                Send feedback
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </aside>
   );
@@ -512,6 +644,30 @@ const DashboardSidebarStatic = ({
               </Button>
             </div>
           )}
+        </div>
+
+        <div className="py-4">
+          <div className="h-px bg-border w-full" />
+        </div>
+
+        <div className="space-y-1">
+          <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            <span>Manage</span>
+          </div>
+          <Button
+            variant="ghost"
+            className="w-full justify-start gap-3 hover:bg-foreground/5"
+          >
+            <Film className="h-5 w-5" />
+            <span className="text-sm font-medium">My media</span>
+          </Button>
+          <Button
+            variant="ghost"
+            className="w-full justify-start gap-3 hover:bg-foreground/5"
+          >
+            <Settings className="h-5 w-5" />
+            <span className="text-sm font-medium">Settings</span>
+          </Button>
         </div>
       </nav>
 
