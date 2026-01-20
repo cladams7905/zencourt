@@ -38,7 +38,7 @@ export function Testimonials() {
           {testimonials.map((testimonial, index) => (
             <div
               key={index}
-              className="min-w-[300px] md:min-w-[400px] bg-accent/20 p-8 rounded-2xl snap-center border border-border flex flex-col justify-between"
+              className="min-w-[300px] md:min-w-[400px] bg-secondary/20 p-8 rounded-2xl snap-center border border-border flex flex-col justify-between"
             >
               <div>
                 <div className="flex items-center gap-1 mb-6 text-foreground">

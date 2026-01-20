@@ -96,7 +96,7 @@ const ScheduleCard = ({
             size="icon"
             variant="default"
             onClick={onAddClick}
-            className="absolute -top-1 -right-1 h-7 w-7 rounded-full"
+            className="absolute -top-1 -right-1 h-7 w-7"
           >
             <Plus className="h-4 w-4 text-primary-foreground" />
           </Button>
@@ -113,11 +113,11 @@ const ScheduleCard = ({
               >
                 {/* Thumbnail */}
                 {post.thumbnail ? (
-                  <div className="relative h-14 w-14 rounded-md bg-muted-foreground/5 overflow-hidden shrink-0">
-                    <div className="h-full w-full bg-linear-to-br from-accent/20 to-accent/5" />
+                  <div className="relative h-14 w-14 rounded-lg bg-muted-foreground/5 overflow-hidden shrink-0">
+                    <div className="h-full w-full bg-linear-to-br from-secondary/20 to-secondary/5" />
                   </div>
                 ) : (
-                  <div className="relative h-14 w-14 rounded-md bg-muted overflow-hidden flex items-center justify-center shrink-0">
+                  <div className="relative h-14 w-14 rounded-lg bg-muted overflow-hidden flex items-center justify-center shrink-0">
                     <FileEdit className="h-5 w-5 text-muted-foreground" />
                   </div>
                 )}

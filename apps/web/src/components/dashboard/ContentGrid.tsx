@@ -55,7 +55,7 @@ const ContentGridItem = ({
   if (item.isLoading) {
     return (
       <div className="break-inside-avoid relative rounded-2xl mb-6 animate-pulse">
-        <div className="rounded-xl border border-border bg-secondary p-4">
+        <div className="rounded-lg border border-border bg-secondary p-4">
           <div className="h-5 w-4/5 rounded bg-muted-foreground/20" />
           <div className="mt-3 h-4 w-2/3 rounded bg-muted-foreground/20" />
           <div className="mt-5 h-4 w-full rounded bg-muted-foreground/20" />
@@ -76,7 +76,7 @@ const ContentGridItem = ({
       {item.thumbnail && (
         <div
           className={cn(
-            "relative group rounded-xl overflow-hidden cursor-pointer",
+            "relative group rounded-lg overflow-hidden cursor-pointer",
             item.aspectRatio === "vertical" && "aspect-9/16"
           )}
         >
@@ -117,7 +117,7 @@ const ContentGridItem = ({
 
           {/* Action Buttons */}
           <div className="absolute bottom-4 left-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-            <div className="flex gap-2 p-1.5 rounded-md bg-black/20 backdrop-blur-sm">
+            <div className="flex gap-2 p-1.5 rounded-lg bg-black/20 backdrop-blur-sm">
               <Button
                 size="icon"
                 variant="ghost"
@@ -157,7 +157,7 @@ const ContentGridItem = ({
       )}
 
       {hasTextContent && (
-        <div className="rounded-xl border border-border bg-background/80 p-4 shadow-sm">
+        <div className="rounded-lg border border-border bg-background/80 p-4 shadow-sm">
           {item.hook && (
             <p className="text-sm font-semibold text-foreground">{item.hook}</p>
           )}

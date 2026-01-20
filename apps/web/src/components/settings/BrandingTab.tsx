@@ -646,7 +646,7 @@ export function BrandingTab({
                 <label
                   htmlFor="avatarUpload"
                   className={cn(
-                    "flex w-full min-w-0 items-center justify-center rounded-xl border border-dashed border-border p-4 transition-colors h-50",
+                    "flex w-full min-w-0 items-center justify-center rounded-lg border border-dashed border-border p-4 transition-colors h-50",
                     !isUploadingAvatar &&
                       !isSavingProfile &&
                       "cursor-pointer hover:bg-secondary",
@@ -721,7 +721,7 @@ export function BrandingTab({
                 <label
                   htmlFor="brokerLogoUpload"
                   className={cn(
-                    "inline-flex w-full min-w-0 items-center justify-center rounded-xl border border-dashed border-border p-4 transition-colors h-50",
+                    "inline-flex w-full min-w-0 items-center justify-center rounded-lg border border-dashed border-border p-4 transition-colors h-50",
                     !isUploadingBrokerLogo &&
                       !isSavingProfile &&
                       "cursor-pointer hover:bg-secondary",
@@ -833,7 +833,7 @@ export function BrandingTab({
                 >
                   <Icon
                     className={cn(
-                      "h-5 w-5 mt-0.5 shrink-0 text-accent-foreground"
+                      "h-5 w-5 mt-0.5 shrink-0 text-secondary-foreground"
                     )}
                   />
                   <div className="flex-1 min-w-0">
@@ -904,7 +904,7 @@ export function BrandingTab({
               <p className="mt-2 text-xs text-muted-foreground">
                 {toneMeta.description}
               </p>
-              <div className="mt-3 rounded-md border border-dashed border-border bg-muted px-3 py-2 text-xs text-muted-foreground italic">
+              <div className="mt-3 rounded-lg border border-dashed border-border bg-muted px-3 py-2 text-xs text-muted-foreground italic">
                 &quot;{toneMeta.example}&quot;
               </div>
             </div>

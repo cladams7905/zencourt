@@ -5,7 +5,7 @@ export function CTASection() {
   return (
     <section className="py-24 relative overflow-hidden bg-primary" id="pricing">
       {/* Background Decoration with grain */}
-      <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/4 w-96 h-96 bg-accent/10 rounded-full blur-[100px] pointer-events-none grain-overlay" />
+      <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/4 w-96 h-96 bg-secondary/10 rounded-full blur-[100px] pointer-events-none grain-overlay" />
       <div className="absolute bottom-0 left-0 translate-y-1/2 -translate-x-1/4 w-96 h-96 bg-white/5 rounded-full blur-[100px] pointer-events-none grain-light" />
 
       <div className="relative max-w-4xl mx-auto px-4 text-center z-10">

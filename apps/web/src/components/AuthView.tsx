@@ -11,9 +11,9 @@ export function AuthView({ children }: AuthViewProps) {
   return (
     <div className="min-h-screen flex">
       {/* Left Panel - Visual Brand Side */}
-      <div className="hidden lg:flex lg:w-1/2 relative bg-linear-to-br from-accent via-white to-accent/20 overflow-hidden">
+      <div className="hidden lg:flex lg:w-1/2 relative bg-linear-to-br from-secondary via-white to-secondary/20 overflow-hidden">
         {/* Decorative Background Elements */}
-        <div className="absolute top-1/4 -left-24 w-96 h-96 bg-accent/30 rounded-full blur-3xl" />
+        <div className="absolute top-1/4 -left-24 w-96 h-96 bg-secondary/30 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 -right-24 w-96 h-96 bg-secondary/40 rounded-full blur-3xl" />
 
         {/* Content */}
@@ -37,7 +37,7 @@ export function AuthView({ children }: AuthViewProps) {
             <h2 className="text-4xl lg:text-5xl font-header font-semibold text-foreground leading-[1.1] mb-6">
               Turn listings into{" "}
               <span className="relative inline-block">
-                <span className="absolute inset-x-0 bottom-2 h-3 bg-accent/40 -z-10 transform -rotate-1 rounded-sm" />
+                <span className="absolute inset-x-0 bottom-2 h-3 bg-secondary/40 -z-10 transform -rotate-1 rounded-sm" />
                 viral content
               </span>
             </h2>
@@ -102,14 +102,14 @@ export function AuthView({ children }: AuthViewProps) {
             By continuing, you agree to our{" "}
             <a
               href="#"
-              className="text-foreground hover:text-accent transition-colors underline"
+              className="text-foreground hover:text-secondary transition-colors underline"
             >
               Terms of Service
             </a>{" "}
             and{" "}
             <a
               href="#"
-              className="text-foreground hover:text-accent transition-colors underline"
+              className="text-foreground hover:text-secondary transition-colors underline"
             >
               Privacy Policy
             </a>

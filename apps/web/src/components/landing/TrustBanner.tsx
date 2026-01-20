@@ -11,7 +11,7 @@ const companies = [
 
 export function TrustBanner() {
   return (
-    <section className="border-y border-border bg-accent/20 py-10 overflow-hidden">
+    <section className="border-y border-border bg-secondary/20 py-10 overflow-hidden">
       <div className="text-center mb-8">
         <p className="text-sm font-semibold text-muted-foreground uppercase tracking-widest">
           Trusted by realtors at

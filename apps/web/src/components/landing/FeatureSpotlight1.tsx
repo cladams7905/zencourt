@@ -10,7 +10,7 @@ import {
 
 export function FeatureSpotlight1() {
   return (
-    <section className="py-24 bg-accent/10 border-t border-border relative grain-overlay">
+    <section className="py-24 bg-secondary/10 border-t border-border relative grain-overlay">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col lg:flex-row items-center gap-16 lg:gap-24">
           {/* Left: Text Content */}
@@ -25,7 +25,7 @@ export function FeatureSpotlight1() {
             </p>
             <div className="space-y-8">
               <div className="flex gap-5 group">
-                <div className="shrink-0 w-12 h-12 bg-background rounded-xl border border-border flex items-center justify-center shadow-sm group-hover:border-accent transition-colors">
+                <div className="shrink-0 w-12 h-12 bg-background rounded-lg border border-border flex items-center justify-center shadow-sm group-hover:border-secondary transition-colors">
                   <Brain className="h-6 w-6 text-foreground" />
                 </div>
                 <div>
@@ -39,7 +39,7 @@ export function FeatureSpotlight1() {
                 </div>
               </div>
               <div className="flex gap-5 group">
-                <div className="shrink-0 w-12 h-12 bg-background rounded-xl border border-border flex items-center justify-center shadow-sm group-hover:border-accent transition-colors">
+                <div className="shrink-0 w-12 h-12 bg-background rounded-lg border border-border flex items-center justify-center shadow-sm group-hover:border-secondary transition-colors">
                   <Palette className="h-6 w-6 text-foreground" />
                 </div>
                 <div>
@@ -53,7 +53,7 @@ export function FeatureSpotlight1() {
                 </div>
               </div>
               <div className="flex gap-5 group">
-                <div className="shrink-0 w-12 h-12 bg-background rounded-xl border border-border flex items-center justify-center shadow-sm group-hover:border-accent transition-colors">
+                <div className="shrink-0 w-12 h-12 bg-background rounded-lg border border-border flex items-center justify-center shadow-sm group-hover:border-secondary transition-colors">
                   <MapPin className="h-6 w-6 text-foreground" />
                 </div>
                 <div>
@@ -72,7 +72,7 @@ export function FeatureSpotlight1() {
           {/* Right: Phone Mockup */}
           <div className="w-full lg:w-1/2 relative">
             <div className="relative mx-auto w-[300px] h-[600px] bg-primary rounded-[2.5rem] p-3 shadow-2xl ring-1 ring-primary/5">
-              <div className="h-full w-full bg-linear-to-br from-secondary to-accent/20 rounded-4xl overflow-hidden relative">
+              <div className="h-full w-full bg-linear-to-br from-secondary to-secondary/20 rounded-4xl overflow-hidden relative">
                 {/* AI Generated Badge */}
                 <div className="absolute top-6 left-1/2 -translate-x-1/2 px-4 py-1.5 bg-black/40 backdrop-blur-md rounded-full border border-white/10 z-20 flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
@@ -128,7 +128,7 @@ export function FeatureSpotlight1() {
             </div>
 
             {/* Background Decoration */}
-            <div className="absolute -top-10 -right-10 w-64 h-64 bg-accent/30 rounded-full blur-3xl -z-10 mix-blend-multiply" />
+            <div className="absolute -top-10 -right-10 w-64 h-64 bg-secondary/30 rounded-full blur-3xl -z-10 mix-blend-multiply" />
             <div className="absolute -bottom-10 -left-10 w-64 h-64 bg-purple-100/50 rounded-full blur-3xl -z-10 mix-blend-multiply" />
           </div>
         </div>

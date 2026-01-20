@@ -253,7 +253,7 @@ export const SurveyPage = ({
                                 isDisabled && "opacity-50 cursor-not-allowed"
                               )}
                             >
-                              <Icon className="h-5 w-5 shrink-0 text-accent-foreground mt-0.5" />
+                              <Icon className="h-5 w-5 shrink-0 text-secondary-foreground mt-0.5" />
                               <div className="flex-1 min-w-0">
                                 <div className="text-sm font-bold text-foreground mb-0.5">
                                   {audience.label}

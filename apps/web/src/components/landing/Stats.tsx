@@ -12,7 +12,7 @@ export function Stats() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center divide-x divide-white/10">
           {stats.map((stat, index) => (
             <div key={index} className="px-4">
-              <div className="text-4xl md:text-5xl font-header font-bold mb-2 text-accent">
+              <div className="text-4xl md:text-5xl font-header font-bold mb-2 text-secondary">
                 {stat.value}
               </div>
               <div className="text-xs sm:text-sm text-primary-foreground/70 font-medium uppercase tracking-wider">

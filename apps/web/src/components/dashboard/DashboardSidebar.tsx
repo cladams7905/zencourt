@@ -7,6 +7,13 @@ import { cn } from "../ui/utils";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "../ui/select";
+import {
   LayoutDashboard,
   Calendar,
   FileEdit,
@@ -19,7 +26,8 @@ import {
   Settings,
   LogOut,
   CircleQuestionMark,
-  MessageCircle
+  MessageCircle,
+  ArrowBigUpDash
 } from "lucide-react";
 import Image from "next/image";
 import Logo from "../../../public/zencourt-logo.png";
@@ -61,10 +69,9 @@ const DashboardSidebar = ({
   const [contentExpanded, setContentExpanded] = React.useState(true);
   const [listingsExpanded, setListingsExpanded] = React.useState(true);
   const [isFeedbackOpen, setIsFeedbackOpen] = React.useState(false);
-  const [feedbackRating, setFeedbackRating] = React.useState<number | null>(
-    null
-  );
+  const [feedbackType, setFeedbackType] = React.useState("");
   const [feedbackMessage, setFeedbackMessage] = React.useState("");
+  const displayedEmail = user?.primaryEmail ?? "";
 
   const handleLogout = async () => {
     await user?.signOut();
@@ -74,20 +81,20 @@ const DashboardSidebar = ({
   const handleFeedbackOpenChange = (open: boolean) => {
     setIsFeedbackOpen(open);
     if (!open) {
-      setFeedbackRating(null);
+      setFeedbackType("");
       setFeedbackMessage("");
     }
   };
 
   const handleFeedbackSend = () => {
-    if (!feedbackRating) {
-      toast.error("Please choose a rating before sending.");
+    if (!feedbackType) {
+      toast.error("Please choose a suggestion type before sending.");
       return;
     }
 
-    const subject = `Zencourt feedback (${feedbackRating}/5)`;
+    const subject = `Zencourt feedback (${feedbackType})`;
     const body = [
-      `Rating: ${feedbackRating}/5`,
+      `Type: ${feedbackType}`,
       "",
       "Suggestions:",
       feedbackMessage.trim() || "No additional feedback."
@@ -108,7 +115,7 @@ const DashboardSidebar = ({
       )}
     >
       {/* Logo Section */}
-      <div className="pt-5 pb-6 flex items-center just px-6 gap-3 border-b border-border">
+      <Link href={"/"} className="pt-5 pb-2 flex items-center just px-6 gap-3">
         <Image
           src={Logo}
           alt="Zencourt Logo"
@@ -119,7 +126,7 @@ const DashboardSidebar = ({
         <span className="text-foreground font-header text-2xl font-semibold tracking-tight">
           zencourt
         </span>
-      </div>
+      </Link>
 
       {/* Navigation */}
       <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
@@ -306,24 +313,26 @@ const DashboardSidebar = ({
           <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             <span>Manage</span>
           </div>
-          <Link href="/media">
-            <Button
-              variant="ghost"
-              className="w-full justify-start gap-3 hover:bg-foreground/5"
-            >
-              <Film className="h-5 w-5" />
-              <span className="text-sm font-medium">My media</span>
-            </Button>
-          </Link>
-          <Link href="/settings#account">
-            <Button
-              variant="ghost"
-              className="w-full justify-start gap-3 hover:bg-foreground/5"
-            >
-              <Settings className="h-5 w-5" />
-              <span className="text-sm font-medium">Settings</span>
-            </Button>
-          </Link>
+          <div className="flex flex-col gap-1 mb-4">
+            <Link href="/media">
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-3 hover:bg-foreground/5"
+              >
+                <Film className="h-5 w-5" />
+                <span className="text-sm font-medium">My media</span>
+              </Button>
+            </Link>
+            <Link href="/settings#account">
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-3 hover:bg-foreground/5"
+              >
+                <Settings className="h-5 w-5" />
+                <span className="text-sm font-medium">Settings</span>
+              </Button>
+            </Link>
+          </div>
         </div>
       </nav>
 
@@ -331,7 +340,7 @@ const DashboardSidebar = ({
       <div className="p-6 border-t border-border/50">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="w-full flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-foreground/5 cursor-pointer transition-all duration-200 group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+            <button className="w-full flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-foreground/5 cursor-pointer transition-all duration-200 group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
               {userAvatar ? (
                 <Image
                   src={userAvatar}
@@ -365,8 +374,25 @@ const DashboardSidebar = ({
             align="end"
             side="top"
             sideOffset={8}
-            className="w-52 bg-popover/95 backdrop-blur-xl border-border/50 shadow-2xl rounded-xl p-1.5"
+            className="w-52 bg-popover/95 backdrop-blur-xl border-border/50 shadow-2xl rounded-lg p-1.5"
           >
+            {displayedEmail ? (
+              <div className="px-3 pb-1">
+                <span className="text-xs text-muted-foreground truncate">
+                  {displayedEmail}
+                </span>
+              </div>
+            ) : null}
+            <DropdownMenuItem
+              asChild
+              className="rounded-lg px-3 py-2.5 cursor-pointer focus:bg-secondary transition-all duration-150 group"
+            >
+              <Link href="/settings#billing">
+                <ArrowBigUpDash className="mr-3 h-6 w-6 text-muted-foreground group-hover:text-foreground transition-colors" />
+                <span className="text-sm font-medium">Upgrade plan</span>
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator className="my-1.5 bg-border/50" />
             <DropdownMenuItem
               className="rounded-lg px-3 py-2.5 cursor-pointer focus:bg-secondary transition-all duration-150 group"
               onSelect={() => setIsFeedbackOpen(true)}
@@ -403,20 +429,20 @@ const DashboardSidebar = ({
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label>Rating</Label>
-                <div className="grid grid-cols-5 gap-2">
-                  {[1, 2, 3, 4, 5].map((value) => (
-                    <Button
-                      key={value}
-                      type="button"
-                      variant={feedbackRating === value ? "default" : "outline"}
-                      className="h-9"
-                      onClick={() => setFeedbackRating(value)}
-                    >
-                      {value}
-                    </Button>
-                  ))}
-                </div>
+                <Label htmlFor="feedback-type">Type</Label>
+                <Select value={feedbackType} onValueChange={setFeedbackType}>
+                  <SelectTrigger id="feedback-type">
+                    <SelectValue placeholder="Select a suggestion type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Bug">Bug</SelectItem>
+                    <SelectItem value="Feature request">
+                      Feature request
+                    </SelectItem>
+                    <SelectItem value="Billing">Billing</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="feedback-message">Suggestion</Label>
@@ -439,7 +465,7 @@ const DashboardSidebar = ({
               <Button
                 type="button"
                 onClick={handleFeedbackSend}
-                disabled={!feedbackRating}
+                disabled={!feedbackType}
               >
                 Send feedback
               </Button>
@@ -673,7 +699,7 @@ const DashboardSidebarStatic = ({
 
       {/* User Profile */}
       <div className="p-6 border-t border-border">
-        <div className="w-full flex items-center gap-3 px-2 py-2 rounded-xl bg-foreground/5 border border-border">
+        <div className="w-full flex items-center gap-3 px-2 py-2 rounded-lg bg-foreground/5 border border-border">
           {userAvatar ? (
             <Image
               src={userAvatar}

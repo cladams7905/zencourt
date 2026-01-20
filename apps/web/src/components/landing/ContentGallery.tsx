@@ -27,7 +27,7 @@ export function ContentGallery() {
         <div className="columns-1 md:columns-2 lg:columns-3 gap-6 space-y-6">
           {/* Reel Card 1 */}
           <div className="break-inside-avoid relative rounded-2xl overflow-hidden shadow-md group cursor-pointer">
-            <div className="aspect-9/16 bg-linear-to-br from-accent/20 to-secondary relative">
+            <div className="aspect-9/16 bg-linear-to-br from-secondary/20 to-secondary relative">
               <div className="absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-transparent opacity-60" />
               <div className="absolute bottom-4 left-4 right-4 text-white">
                 <div className="flex items-center gap-2 mb-2">
@@ -62,7 +62,7 @@ export function ContentGallery() {
               </div>
               <span className="text-muted-foreground text-sm">•••</span>
             </div>
-            <div className="aspect-square bg-linear-to-br from-secondary to-accent/20 relative" />
+            <div className="aspect-square bg-linear-to-br from-secondary to-secondary/20 relative" />
             <div className="p-4">
               <div className="flex gap-4 mb-3">
                 <Heart className="h-5 w-5 text-foreground" />
@@ -98,20 +98,20 @@ export function ContentGallery() {
           </div>
 
           {/* Story View Card */}
-          <div className="break-inside-avoid relative rounded-2xl overflow-hidden shadow-lg group hover:ring-4 ring-accent/30 transition-all">
-            <div className="aspect-9/15 bg-linear-to-br from-accent/30 to-secondary relative">
+          <div className="break-inside-avoid relative rounded-2xl overflow-hidden shadow-lg group hover:ring-4 ring-secondary/30 transition-all">
+            <div className="aspect-9/15 bg-linear-to-br from-secondary/30 to-secondary relative">
               <div className="absolute top-4 left-0 right-0 px-3 flex gap-1">
                 <div className="h-0.5 flex-1 bg-white rounded-full" />
                 <div className="h-0.5 flex-1 bg-white/40 rounded-full" />
               </div>
               <div className="absolute top-8 left-4 flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full border-2 border-accent bg-secondary overflow-hidden" />
+                <div className="w-8 h-8 rounded-full border-2 border-secondary bg-secondary overflow-hidden" />
                 <span className="text-white text-sm font-medium shadow-black drop-shadow-md">
                   Zencourt
                 </span>
                 <span className="text-white/70 text-xs">2h</span>
               </div>
-              <div className="absolute bottom-12 inset-x-8 bg-white/90 backdrop-blur-md p-4 rounded-xl text-center shadow-lg transform translate-y-2 opacity-90 group-hover:translate-y-0 group-hover:opacity-100 transition-all">
+              <div className="absolute bottom-12 inset-x-8 bg-white/90 backdrop-blur-md p-4 rounded-lg text-center shadow-lg transform translate-y-2 opacity-90 group-hover:translate-y-0 group-hover:opacity-100 transition-all">
                 <p className="text-xs font-bold text-foreground uppercase tracking-wide mb-1">
                   Open House
                 </p>
@@ -128,7 +128,7 @@ export function ContentGallery() {
           {/* Property Listing Card */}
           <div className="break-inside-avoid bg-background rounded-2xl border border-border shadow-md overflow-hidden">
             <div className="relative">
-              <div className="w-full aspect-4/3 bg-linear-to-br from-secondary to-accent/20" />
+              <div className="w-full aspect-4/3 bg-linear-to-br from-secondary to-secondary/20" />
               <div className="absolute top-3 right-3 bg-black/50 backdrop-blur px-2 py-1 rounded text-white text-xs font-medium">
                 1/5
               </div>
@@ -143,13 +143,13 @@ export function ContentGallery() {
                     $1,250,000 • 2 Bed • 2 Bath
                   </p>
                 </div>
-                <Bookmark className="h-5 w-5 text-muted-foreground cursor-pointer hover:text-accent transition-colors" />
+                <Bookmark className="h-5 w-5 text-muted-foreground cursor-pointer hover:text-secondary transition-colors" />
               </div>
             </div>
           </div>
 
           {/* Testimonial Quote Card */}
-          <div className="break-inside-avoid bg-accent/20 p-8 rounded-2xl border border-accent/20 flex flex-col items-center justify-center text-center aspect-square md:aspect-auto">
+          <div className="break-inside-avoid bg-secondary/20 p-8 rounded-2xl border border-secondary/20 flex flex-col items-center justify-center text-center aspect-square md:aspect-auto">
             <Sparkles className="h-8 w-8 text-foreground mb-3" />
             <p className="font-header text-foreground font-medium text-lg italic leading-relaxed">
               &quot;Sold in record time thanks to these automated reels!&quot;
@@ -161,7 +161,7 @@ export function ContentGallery() {
 
           {/* TikTok Style Reel */}
           <div className="break-inside-avoid relative rounded-2xl overflow-hidden shadow-md group cursor-pointer">
-            <div className="aspect-9/16 bg-linear-to-br from-secondary to-accent/10 relative">
+            <div className="aspect-9/16 bg-linear-to-br from-secondary to-secondary/10 relative">
               <div className="absolute inset-0 bg-linear-to-b from-transparent via-transparent to-black/80" />
               <div className="absolute bottom-0 inset-x-0 p-5 text-white">
                 <div className="flex items-center gap-3 mb-3">
@@ -183,7 +183,7 @@ export function ContentGallery() {
 
           {/* Scheduled Post Card */}
           <div className="break-inside-avoid bg-primary text-primary-foreground rounded-2xl shadow-lg relative group overflow-hidden cursor-pointer aspect-square flex flex-col items-center justify-center text-center p-6">
-            <div className="absolute inset-0 bg-linear-to-br from-accent/10 to-transparent opacity-40" />
+            <div className="absolute inset-0 bg-linear-to-br from-secondary/10 to-transparent opacity-40" />
             <div className="relative z-10">
               <span className="inline-block px-3 py-1 bg-white/20 backdrop-blur rounded-full text-[10px] font-bold uppercase mb-3">
                 Scheduled
@@ -195,7 +195,7 @@ export function ContentGallery() {
                 Posting tomorrow at 9AM
               </p>
             </div>
-            <div className="absolute bottom-0 left-0 h-1 bg-accent w-full transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-500" />
+            <div className="absolute bottom-0 left-0 h-1 bg-secondary w-full transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-500" />
           </div>
         </div>
 

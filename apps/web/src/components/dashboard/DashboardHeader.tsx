@@ -28,7 +28,7 @@ const DashboardHeader = ({
       </h1>
 
       <div className="flex items-center gap-4">
-        <Button size="default" className="gap-2 rounded-full shadow-sm">
+        <Button size="default" className="gap-2 shadow-sm">
           <Plus className="h-5 w-5" />
           <span>New</span>
         </Button>
@@ -36,7 +36,7 @@ const DashboardHeader = ({
         <Button
           size="icon"
           variant="ghost"
-          className="relative hover:bg-accent/20 rounded-full"
+          className="relative"
         >
           <Bell className="h-5 w-5" />
           {hasNotifications && (

@@ -9,7 +9,7 @@ export function Hero() {
         <h1 className="text-display-lg font-header font-semibold text-foreground mb-8">
           Effortless Social Media Marketing for{" "}
           <span className="relative inline-block px-2">
-            <span className="absolute inset-x-0 bottom-2 h-4 bg-accent/40 -z-10 transform -rotate-1 rounded-sm grain-overlay" />
+            <span className="absolute inset-x-0 bottom-2 h-4 bg-secondary/40 -z-10 transform -rotate-1 rounded-sm grain-overlay" />
             Real Estate
           </span>
         </h1>
@@ -32,7 +32,7 @@ export function Hero() {
       </div>
 
       {/* Background decoration with grain */}
-      <div className="absolute top-0 right-0 -translate-y-12 translate-x-1/4 w-[600px] h-[600px] bg-accent/10 rounded-full blur-[120px] -z-10 pointer-events-none grain-overlay" />
+      <div className="absolute top-0 right-0 -translate-y-12 translate-x-1/4 w-[600px] h-[600px] bg-secondary/10 rounded-full blur-[120px] -z-10 pointer-events-none grain-overlay" />
       <div className="absolute top-20 left-0 translate-y-12 -translate-x-1/4 w-[500px] h-[500px] bg-secondary/40 rounded-full blur-[100px] -z-10 pointer-events-none grain-light" />
     </section>
   );

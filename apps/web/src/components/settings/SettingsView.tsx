@@ -148,12 +148,17 @@ export function SettingsView({
       <main className="flex-1 overflow-y-auto bg-background">
         {/* Header with Settings title */}
         <header className="sticky top-0 z-30 bg-background/90 backdrop-blur-md px-8 py-5 flex justify-between items-center border-b border-border">
-          <h1 className="text-2xl font-header font-medium text-foreground">
-            Settings
-          </h1>
+          <div>
+            <h1 className="text-2xl font-header font-medium text-foreground">
+              Settings
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Manage your account and branding details
+            </p>
+          </div>
 
           <div className="flex items-center gap-4">
-            <Button size="default" className="gap-2 rounded-full shadow-sm">
+            <Button size="default" className="gap-2 shadow-sm">
               <Plus className="h-5 w-5" />
               <span>New</span>
             </Button>
@@ -161,7 +166,7 @@ export function SettingsView({
             <Button
               size="icon"
               variant="ghost"
-              className="relative hover:bg-accent/20 rounded-full"
+              className="relative"
             >
               <Bell className="h-5 w-5" />
               <span className="absolute top-2 right-2 h-2 w-2 bg-primary rounded-full border-2 border-background" />
@@ -178,8 +183,8 @@ export function SettingsView({
             className="flex flex-row gap-8 min-w-0"
           >
             {/* Vertical Tab List + Preview */}
-            <div className="sticky top-[110px] flex w-56 flex-col gap-4 self-start">
-              <TabsList className="flex-col h-fit w-full bg-secondary p-2 gap-2 rounded-xl py-2">
+            <div className="sticky top-[124px] flex w-56 flex-col gap-4 self-start">
+              <TabsList className="flex-col h-fit w-full bg-secondary p-2 gap-2 rounded-lg py-2">
                 <TabsTrigger
                   value="account"
                   className="w-full justify-start gap-3 py-2 px-3 rounded-lg transition-colors text-muted-foreground hover:text-foreground data-[state=active]:shadow-sm data-[state=active]:text-foreground data-[state=active]:bg-background"
@@ -235,7 +240,7 @@ export function SettingsView({
                             walkthrough and neighborhood insights.
                           </p>
                           {writingStyleNote ? (
-                            <div className="rounded-md border border-dashed border-border/70 bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+                            <div className="rounded-lg border border-dashed border-border/70 bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
                               {writingStyleNote}
                             </div>
                           ) : null}

@@ -9,7 +9,7 @@ export function FeatureSpotlight2() {
           {/* Right: Text Content */}
           <div className="w-full lg:w-1/2 space-y-8">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-secondary border border-border">
-              <span className="w-2 h-2 rounded-full bg-accent" />
+              <span className="w-2 h-2 rounded-full bg-secondary" />
               <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                 New Feature
               </span>
@@ -26,7 +26,7 @@ export function FeatureSpotlight2() {
               instantly with smooth transitions and synchronized audio.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 pt-4">
-              <div className="flex items-center gap-3 p-4 bg-secondary rounded-xl border border-border w-full sm:w-auto">
+              <div className="flex items-center gap-3 p-4 bg-secondary rounded-lg border border-border w-full sm:w-auto">
                 <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-xs shadow-sm">
                   Cv
                 </div>
@@ -39,7 +39,7 @@ export function FeatureSpotlight2() {
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-3 p-4 bg-secondary rounded-xl border border-border w-full sm:w-auto">
+              <div className="flex items-center gap-3 p-4 bg-secondary rounded-lg border border-border w-full sm:w-auto">
                 <div className="w-10 h-10 bg-black rounded-lg flex items-center justify-center text-white shadow-sm">
                   <Film className="h-5 w-5" />
                 </div>
@@ -55,7 +55,7 @@ export function FeatureSpotlight2() {
             </div>
             <Link
               href="/handler/sign-in"
-              className="inline-flex items-center text-foreground font-medium hover:text-accent transition-colors group mt-4"
+              className="inline-flex items-center text-foreground font-medium hover:text-secondary transition-colors group mt-4"
             >
               Try Video Generation
               <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
@@ -90,7 +90,7 @@ export function FeatureSpotlight2() {
                         num > 1 ? "grayscale opacity-70" : ""
                       }`}
                     >
-                      <div className="w-full h-full bg-linear-to-br from-accent/30 to-secondary" />
+                      <div className="w-full h-full bg-linear-to-br from-secondary/30 to-secondary" />
                       <div className="absolute top-1 left-1 bg-background/90 px-1.5 py-0.5 rounded text-[8px] font-bold">
                         0{num}
                       </div>
@@ -99,13 +99,13 @@ export function FeatureSpotlight2() {
                 </div>
 
                 {/* Arrow */}
-                <div className="flex flex-col items-center justify-center text-accent">
+                <div className="flex flex-col items-center justify-center text-secondary">
                   <ArrowRight className="h-8 w-8 animate-pulse" />
                 </div>
 
                 {/* Output Video */}
-                <div className="flex-1 aspect-9/16 bg-primary rounded-xl overflow-hidden relative shadow-lg group">
-                  <div className="w-full h-full bg-linear-to-br from-accent/20 to-secondary opacity-90 group-hover:scale-105 transition-transform duration-700" />
+                <div className="flex-1 aspect-9/16 bg-primary rounded-lg overflow-hidden relative shadow-lg group">
+                  <div className="w-full h-full bg-linear-to-br from-secondary/20 to-secondary opacity-90 group-hover:scale-105 transition-transform duration-700" />
                   <div className="absolute inset-0 bg-linear-to-t from-black/60 to-transparent" />
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="w-12 h-12 bg-white/20 backdrop-blur rounded-full flex items-center justify-center border border-white/40 cursor-pointer hover:bg-white/30 transition-colors">

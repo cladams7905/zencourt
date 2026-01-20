@@ -3,7 +3,8 @@
 import * as React from "react";
 import { cn } from "../ui/utils";
 import { Button } from "../ui/button";
-import { ChevronDown } from "lucide-react";
+import { PillTabs } from "../ui/pill-tabs";
+import { ChevronDown, Settings } from "lucide-react";
 
 type ContentType = "videos" | "posts" | "stories";
 
@@ -65,73 +66,47 @@ const ContentFilterBar = ({
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
         {/* Type Tabs */}
-        <div className="bg-secondary p-1 rounded-xl flex items-center shrink-0">
-          <Button
-            size="sm"
-            variant={activeType === "videos" ? "default" : "ghost"}
-            className={cn(
-              "rounded-lg px-4 py-2 transition-all",
-              activeType === "videos"
-                ? "bg-background text-foreground shadow-sm hover:bg-background"
-                : "text-muted-foreground hover:text-foreground"
-            )}
-            onClick={() => onTypeChange?.("videos")}
-          >
-            Videos
-          </Button>
-          <Button
-            size="sm"
-            variant={activeType === "posts" ? "default" : "ghost"}
-            className={cn(
-              "rounded-lg px-4 py-2 transition-all",
-              activeType === "posts"
-                ? "bg-background text-foreground shadow-sm hover:bg-background"
-                : "text-muted-foreground hover:text-foreground"
-            )}
-            onClick={() => onTypeChange?.("posts")}
-          >
-            Posts
-          </Button>
-          <Button
-            size="sm"
-            variant={activeType === "stories" ? "default" : "ghost"}
-            className={cn(
-              "rounded-lg px-4 py-2 transition-all",
-              activeType === "stories"
-                ? "bg-background text-foreground shadow-sm hover:bg-background"
-                : "text-muted-foreground hover:text-foreground"
-            )}
-            onClick={() => onTypeChange?.("stories")}
-          >
-            Stories
-          </Button>
-        </div>
+        <PillTabs
+          value={activeType}
+          onValueChange={onTypeChange}
+          className="shrink-0"
+          options={[
+            { value: "videos", label: "Videos" },
+            { value: "posts", label: "Posts" },
+            { value: "stories", label: "Stories" }
+          ]}
+        />
 
         {/* Filter Chips */}
-        <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide max-w-full justify-end w-full sm:w-auto">
-          {filters.map((filter) => {
-            const isActive = activeFilters.includes(filter.label);
-            const isListings = filter.id === "listings";
+        <div className="flex w-full items-center gap-2 sm:w-auto">
+          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide max-w-full justify-end w-full sm:w-auto">
+            {filters.map((filter) => {
+              const isActive = activeFilters.includes(filter.label);
+              const isListings = filter.id === "listings";
 
-            return (
-              <Button
-                key={filter.id}
-                size="sm"
-                variant={isActive ? "default" : "outline"}
-                className={cn(
-                  "rounded-full text-xs font-medium whitespace-nowrap transition-all",
-                  isActive
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-background border-border hover:border-foreground/20",
-                  isListings && "gap-1.5"
-                )}
-                onClick={() => onFilterToggle?.(filter.label)}
-              >
-                {filter.label}
-                {isListings && <ChevronDown className="h-3 w-3" />}
-              </Button>
-            );
-          })}
+              return (
+                <Button
+                  key={filter.id}
+                  size="sm"
+                  variant={isActive ? "default" : "outline"}
+                  className={cn(
+                    " text-xs font-medium whitespace-nowrap transition-all",
+                    isActive
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-background border-border hover:border-foreground/20",
+                    isListings && "gap-1.5"
+                  )}
+                  onClick={() => onFilterToggle?.(filter.label)}
+                >
+                  {filter.label}
+                  {isListings && <ChevronDown className="h-3 w-3" />}
+                </Button>
+              );
+            })}
+          </div>
+          <Button size="icon" variant="ghost" className="shrink-0">
+            <Settings className="h-4 w-4" />
+          </Button>
         </div>
       </div>
     </div>
