@@ -16,11 +16,17 @@ export default async function MediaPage() {
   const userAdditional = await getOrCreateUserAdditional(user.id);
   const userMedia = await getUserMedia(user.id);
   const signedUserMediaUrls = await Promise.all(
-    userMedia.map((media) => getSignedDownloadUrlSafe(media.url))
+    userMedia.map((media) =>
+      Promise.all([
+        getSignedDownloadUrlSafe(media.url),
+        getSignedDownloadUrlSafe(media.thumbnailUrl ?? undefined)
+      ])
+    )
   );
   const signedUserMedia = userMedia.map((media, index) => ({
     ...media,
-    url: signedUserMediaUrls[index] ?? media.url
+    url: signedUserMediaUrls[index]?.[0] ?? media.url,
+    thumbnailUrl: signedUserMediaUrls[index]?.[1] ?? media.thumbnailUrl
   }));
   const { sidebarName } = getUserDisplayNames(user);
   const paymentPlanLabel = getPaymentPlanLabel(userAdditional.paymentPlan);

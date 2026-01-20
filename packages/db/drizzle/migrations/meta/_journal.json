@@ -155,6 +155,13 @@
       "when": 1768882241207,
       "tag": "0021_fast_cammi",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1768927355761,
+      "tag": "0022_lovely_tana_nile",
+      "breakpoints": true
     }
   ]
 }

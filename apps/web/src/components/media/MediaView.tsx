@@ -4,6 +4,7 @@ import * as React from "react";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
 import { LoadingImage } from "../ui/loading-image";
+import { LoadingVideo } from "../ui/loading-video";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -29,12 +30,14 @@ import {
   Film,
   Image as ImageIcon,
   Plus,
-  Upload
+  Upload,
+  X
 } from "lucide-react";
 import { toast } from "sonner";
 import type { DBUserMedia, UserMediaType } from "@shared/types/models";
 import {
   createUserMediaRecords,
+  deleteUserMedia,
   getUserMediaUploadUrls
 } from "@web/src/server/actions/db/userMedia";
 import {
@@ -74,38 +77,32 @@ const formatUploadDate = (value: Date | string) => {
   }).format(date);
 };
 
-const MediaCard = ({ item }: { item: DBUserMedia }) => {
+const MediaCard = ({
+  item,
+  onDelete
+}: {
+  item: DBUserMedia;
+  onDelete: (item: DBUserMedia) => void;
+}) => {
   const typeIcon = item.type === "video" ? Film : ImageIcon;
   const TypeIcon = typeIcon;
   const aspectRatio = item.type === "video" ? "9 / 16" : "4 / 3";
-  const videoRef = React.useRef<HTMLVideoElement>(null);
-
   return (
-    <div className="break-inside-avoid mb-6 rounded-xl border border-border/60 bg-card shadow-sm">
+    <div className="group break-inside-avoid mb-6 rounded-xl border border-border/60 bg-card shadow-sm">
       <div className="relative overflow-hidden rounded-xl">
         <div className="relative w-full" style={{ aspectRatio }}>
           {item.type === "video" ? (
-            <video
-              ref={videoRef}
-              src={item.url}
-              className="h-full w-full object-cover"
+            <LoadingVideo
+              videoSrc={item.url}
+              thumbnailSrc={item.thumbnailUrl ?? undefined}
+              thumbnailAlt="Video preview"
+              className="h-full w-full"
+              imageClassName="object-cover"
+              videoClassName="object-cover"
               muted
               loop
               playsInline
               preload="metadata"
-              onMouseEnter={() => {
-                const video = videoRef.current;
-                if (video) {
-                  void video.play();
-                }
-              }}
-              onMouseLeave={() => {
-                const video = videoRef.current;
-                if (video) {
-                  video.pause();
-                  video.currentTime = 0;
-                }
-              }}
             />
           ) : (
             <LoadingImage
@@ -126,6 +123,23 @@ const MediaCard = ({ item }: { item: DBUserMedia }) => {
               {item.type}
             </span>
           </Badge>
+        </div>
+
+        <div className="absolute top-3 right-3 z-10 opacity-0 transition-opacity group-hover:opacity-100">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 bg-background/70 backdrop-blur-sm hover:bg-background rounded-full"
+            aria-label="Delete media"
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              onDelete(item);
+            }}
+          >
+            <X className="h-4 w-4" />
+          </Button>
         </div>
 
         <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-xs text-white/90 pointer-events-none">
@@ -156,6 +170,11 @@ const MediaView = ({
   const [isDragging, setIsDragging] = React.useState(false);
   const [isUploading, setIsUploading] = React.useState(false);
   const [visibleCount, setVisibleCount] = React.useState(MEDIA_PAGE_SIZE);
+  const [isDeleteOpen, setIsDeleteOpen] = React.useState(false);
+  const [mediaToDelete, setMediaToDelete] = React.useState<DBUserMedia | null>(
+    null
+  );
+  const [isDeleting, setIsDeleting] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const loadMoreRef = React.useRef<HTMLDivElement>(null);
 
@@ -328,6 +347,66 @@ const MediaView = ({
     );
   };
 
+  const createVideoThumbnailBlob = React.useCallback(
+    (file: File): Promise<Blob | null> =>
+      new Promise((resolve) => {
+        const video = document.createElement("video");
+        const url = URL.createObjectURL(file);
+        let timeoutId: number | undefined = undefined
+
+        const cleanup = () => {
+          URL.revokeObjectURL(url);
+          video.remove();
+          if (timeoutId) {
+            window.clearTimeout(timeoutId);
+          }
+        };
+
+        const handleError = () => {
+          cleanup();
+          resolve(null);
+        };
+
+        video.preload = "metadata";
+        video.muted = true;
+        video.playsInline = true;
+        video.src = url;
+
+        video.onloadedmetadata = () => {
+          const seekTime = Math.min(0.1, video.duration || 0.1);
+          video.currentTime = seekTime;
+        };
+
+        video.onseeked = () => {
+          const canvas = document.createElement("canvas");
+          const maxWidth = 480;
+          const scale = Math.min(1, maxWidth / video.videoWidth);
+          const width = Math.max(1, Math.round(video.videoWidth * scale));
+          const height = Math.max(1, Math.round(video.videoHeight * scale));
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) {
+            handleError();
+            return;
+          }
+          ctx.drawImage(video, 0, 0, width, height);
+          canvas.toBlob(
+            (blob) => {
+              cleanup();
+              resolve(blob);
+            },
+            "image/jpeg",
+            0.7
+          );
+        };
+
+        video.onerror = handleError;
+        timeoutId = window.setTimeout(handleError, 4000);
+      }),
+    []
+  );
+
   const uploadFileWithProgress = async (
     uploadUrl: string,
     file: File,
@@ -390,6 +469,13 @@ const MediaView = ({
         toast.error(`${failed.length} file(s) failed validation.`);
       }
 
+      type UploadResult = {
+        key: string;
+        type: UserMediaType;
+        thumbnailKey?: string;
+        thumbnailFailed: boolean;
+      };
+
       const uploadResults = await Promise.all(
         uploads.map(async (upload) => {
           const file = fileMap.get(upload.id);
@@ -409,23 +495,60 @@ const MediaView = ({
             return null;
           }
 
+          let thumbnailKey: string | undefined;
+          let thumbnailFailed = false;
+          if (upload.thumbnailUploadUrl && upload.thumbnailKey) {
+            const thumbnailBlob = await createVideoThumbnailBlob(file);
+            if (thumbnailBlob) {
+              const thumbnailResponse = await fetch(upload.thumbnailUploadUrl, {
+                method: "PUT",
+                body: thumbnailBlob,
+                headers: {
+                  "Content-Type": "image/jpeg"
+                }
+              });
+              if (thumbnailResponse.ok) {
+                thumbnailKey = upload.thumbnailKey;
+              } else {
+                thumbnailFailed = true;
+              }
+            } else {
+              thumbnailFailed = true;
+            }
+          }
+
           return {
             key: upload.key,
-            type: upload.type
-          };
+            type: upload.type,
+            thumbnailKey,
+            thumbnailFailed
+          } as UploadResult;
         })
       );
 
       const successfulUploads = uploadResults.filter(
-        (result): result is { key: string; type: UserMediaType } => !!result
+        (result): result is UploadResult => result !== null
       );
 
       if (successfulUploads.length > 0) {
         const created = await createUserMediaRecords(
           userId,
-          successfulUploads
+          successfulUploads.map((result) => ({
+            key: result.key,
+            type: result.type,
+            thumbnailKey: result.thumbnailKey
+          }))
         );
         setMediaItems((prev) => [...created, ...prev]);
+      }
+
+      const thumbnailFailures = successfulUploads.filter(
+        (result) => result.thumbnailFailed
+      ).length;
+      if (thumbnailFailures > 0) {
+        toast.error(
+          `${thumbnailFailures} video thumbnail(s) could not be generated.`
+        );
       }
 
       const failedUploads = uploads.filter((upload) => failedIds.has(upload.id));
@@ -462,6 +585,34 @@ const MediaView = ({
       );
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  const handleRequestDelete = React.useCallback((item: DBUserMedia) => {
+    setMediaToDelete(item);
+    setIsDeleteOpen(true);
+  }, []);
+
+  const handleConfirmDelete = async () => {
+    if (!mediaToDelete || isDeleting) {
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      await deleteUserMedia(userId, mediaToDelete.id);
+      setMediaItems((prev) =>
+        prev.filter((item) => item.id !== mediaToDelete.id)
+      );
+      toast.success("Media deleted.");
+      setIsDeleteOpen(false);
+      setMediaToDelete(null);
+    } catch (error) {
+      toast.error(
+        (error as Error).message || "Failed to delete media. Please try again."
+      );
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -587,7 +738,11 @@ const MediaView = ({
               hasFilteredBrandKitMedia ? (
                 <div className="columns-1 gap-6 sm:columns-2 xl:columns-3 2xl:columns-4">
                   {visibleBrandKitItems.map((item) => (
-                    <MediaCard key={item.id} item={item} />
+                    <MediaCard
+                      key={item.id}
+                      item={item}
+                      onDelete={handleRequestDelete}
+                    />
                   ))}
                 </div>
               ) : (
@@ -762,6 +917,44 @@ const MediaView = ({
                 disabled={isUploading || pendingFiles.length === 0}
               >
                 {isUploading ? "Uploading..." : "Upload media"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog
+          open={isDeleteOpen}
+          onOpenChange={(open) => {
+            setIsDeleteOpen(open);
+            if (!open) {
+              setMediaToDelete(null);
+            }
+          }}
+        >
+          <DialogContent className="sm:max-w-[420px]">
+            <DialogHeader>
+              <DialogTitle>Delete media?</DialogTitle>
+              <DialogDescription>
+                This will permanently delete the media file and remove it from
+                your library.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setIsDeleteOpen(false)}
+                disabled={isDeleting}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={handleConfirmDelete}
+                disabled={!mediaToDelete || isDeleting}
+              >
+                {isDeleting ? "Deleting..." : "Delete"}
               </Button>
             </DialogFooter>
           </DialogContent>

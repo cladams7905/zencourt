@@ -1,8 +1,13 @@
 "use server";
 
-import { db, userMedia, userAdditional, eq, desc } from "@db/client";
+import { db, userMedia, userAdditional, eq, and, desc } from "@db/client";
 import type { DBUserMedia, UserMediaType } from "@shared/types/models";
-import { getUserMediaPath, getUserMediaFolder } from "@shared/utils/storagePaths";
+import {
+  getUserMediaPath,
+  getUserMediaFolder,
+  getUserMediaThumbnailFolder,
+  getUserMediaThumbnailPath
+} from "@shared/utils/storagePaths";
 import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES } from "@shared/utils/mediaUpload";
 import { withDbErrorHandling } from "../_utils";
 import { nanoid } from "nanoid";
@@ -46,6 +51,9 @@ type UserMediaSignedUpload = {
   key: string;
   uploadUrl: string;
   publicUrl: string;
+  thumbnailKey?: string;
+  thumbnailUploadUrl?: string;
+  thumbnailPublicUrl?: string;
 };
 
 type UserMediaUploadUrlResult = {
@@ -132,13 +140,30 @@ export async function getUserMediaUploadUrls(
             continue;
           }
 
+          const thumbnailKey = getUserMediaThumbnailPath(userId, file.fileName);
+          const thumbnailSigned = await storageService.getSignedUploadUrl(
+            thumbnailKey,
+            "image/jpeg"
+          );
+          if (!thumbnailSigned.success) {
+            failed.push({
+              id: file.id,
+              fileName: file.fileName,
+              error: thumbnailSigned.error
+            });
+            continue;
+          }
+
           uploads.push({
             id: file.id,
             fileName: file.fileName,
             type: "video",
             key,
             uploadUrl: signed.url,
-            publicUrl: storageService.buildPublicUrlForKey(key)
+            publicUrl: storageService.buildPublicUrlForKey(key),
+            thumbnailKey,
+            thumbnailUploadUrl: thumbnailSigned.url,
+            thumbnailPublicUrl: storageService.buildPublicUrlForKey(thumbnailKey)
           });
           continue;
         }
@@ -163,6 +188,7 @@ export async function getUserMediaUploadUrls(
 type UserMediaRecordInput = {
   key: string;
   type: UserMediaType;
+  thumbnailKey?: string;
 };
 
 export async function createUserMediaRecords(
@@ -181,6 +207,7 @@ export async function createUserMediaRecords(
     async () => {
       const imagePrefix = getUserMediaFolder(userId, "image");
       const videoPrefix = getUserMediaFolder(userId, "video");
+      const thumbnailPrefix = getUserMediaThumbnailFolder(userId);
       const now = new Date();
 
       const rows = uploads.map((upload) => {
@@ -190,11 +217,20 @@ export async function createUserMediaRecords(
           throw new Error("Invalid media upload key");
         }
 
+        if (upload.thumbnailKey) {
+          if (!upload.thumbnailKey.startsWith(`${thumbnailPrefix}/`)) {
+            throw new Error("Invalid media thumbnail upload key");
+          }
+        }
+
         return {
           id: nanoid(),
           userId,
           type: upload.type,
           url: storageService.buildPublicUrlForKey(upload.key),
+          thumbnailUrl: upload.thumbnailKey
+            ? storageService.buildPublicUrlForKey(upload.thumbnailKey)
+            : null,
           usageCount: 0,
           uploadedAt: now
         };
@@ -203,11 +239,17 @@ export async function createUserMediaRecords(
       const created = await db.insert(userMedia).values(rows).returning();
 
       const signedUrls = await Promise.all(
-        created.map((media) => getSignedDownloadUrlSafe(media.url))
+        created.map((media) =>
+          Promise.all([
+            getSignedDownloadUrlSafe(media.url),
+            getSignedDownloadUrlSafe(media.thumbnailUrl ?? undefined)
+          ])
+        )
       );
       const signedMedia = created.map((media, index) => ({
         ...media,
-        url: signedUrls[index] ?? media.url
+        url: signedUrls[index]?.[0] ?? media.url,
+        thumbnailUrl: signedUrls[index]?.[1] ?? media.thumbnailUrl
       }));
 
       await db
@@ -231,6 +273,55 @@ export async function createUserMediaRecords(
       actionName: "createUserMediaRecords",
       context: { userId, uploadCount: uploads.length },
       errorMessage: "Failed to save media. Please try again."
+    }
+  );
+}
+
+export async function deleteUserMedia(
+  userId: string,
+  mediaId: string
+): Promise<void> {
+  if (!userId || userId.trim() === "") {
+    throw new Error("User ID is required to delete media");
+  }
+
+  if (!mediaId || mediaId.trim() === "") {
+    throw new Error("Media ID is required to delete media");
+  }
+
+  return withDbErrorHandling(
+    async () => {
+      const [media] = await db
+        .select()
+        .from(userMedia)
+        .where(and(eq(userMedia.id, mediaId), eq(userMedia.userId, userId)))
+        .limit(1);
+
+      if (!media) {
+        throw new Error("Media not found");
+      }
+
+      const urlsToDelete = [media.url, media.thumbnailUrl].filter(
+        (url): url is string => Boolean(url)
+      );
+
+      const deleteResults = await Promise.all(
+        urlsToDelete.map((url) => storageService.deleteFile(url))
+      );
+
+      const failedDelete = deleteResults.find((result) => !result.success);
+      if (failedDelete && "error" in failedDelete) {
+        throw new Error(failedDelete.error || "Failed to delete media file");
+      }
+
+      await db
+        .delete(userMedia)
+        .where(and(eq(userMedia.id, mediaId), eq(userMedia.userId, userId)));
+    },
+    {
+      actionName: "deleteUserMedia",
+      context: { userId, mediaId },
+      errorMessage: "Failed to delete media. Please try again."
     }
   );
 }

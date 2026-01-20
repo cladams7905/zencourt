@@ -198,6 +198,19 @@ export function getUserMediaFolder(
 }
 
 /**
+ * Get the folder path for user media thumbnails
+ * Format: user_{userId}/media/thumbnails
+ */
+export function getUserMediaThumbnailFolder(userId: string): string {
+  if (!userId) {
+    throw new Error("User ID is required for user media thumbnails");
+  }
+
+  const safeUserId = sanitizePathSegment(userId);
+  return `user_${safeUserId}/media/thumbnails`;
+}
+
+/**
  * Get the full storage key/path for user media
  * Format: user_{userId}/media/{images|videos}/{filename}
  */
@@ -214,6 +227,23 @@ export function getUserMediaPath(
   const uniqueName = `${base}-${Date.now()}-${nanoid(6)}${extension}`;
 
   return `${getUserMediaFolder(userId, type)}/${uniqueName}`;
+}
+
+/**
+ * Get the full storage key/path for user media thumbnails
+ * Format: user_{userId}/media/thumbnails/{filename}
+ */
+export function getUserMediaThumbnailPath(
+  userId: string,
+  filename: string
+): string {
+  const sanitized = sanitizeFilename(filename);
+  const extensionIndex = sanitized.lastIndexOf(".");
+  const base =
+    extensionIndex > 0 ? sanitized.slice(0, extensionIndex) : sanitized;
+  const uniqueName = `${base}-thumb-${Date.now()}-${nanoid(6)}.jpg`;
+
+  return `${getUserMediaThumbnailFolder(userId)}/${uniqueName}`;
 }
 
 /**
