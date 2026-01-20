@@ -5,27 +5,15 @@ import { eq } from "drizzle-orm";
 import { db, content } from "@db/client";
 import type { DBContent, InsertDBContent } from "@shared/types/models";
 import { withDbErrorHandling } from "../_utils";
-import { getSignedDownloadUrlSafe } from "../../utils/storageUrls";
+import {
+  DEFAULT_THUMBNAIL_TTL_SECONDS,
+  resolveSignedDownloadUrl
+} from "../../utils/storageUrls";
 
 type CreateContentInput = Omit<
   InsertDBContent,
   "id" | "createdAt" | "updatedAt"
 > & { id?: string };
-
-const CONTENT_THUMBNAIL_TTL_SECONDS = 6 * 60 * 60; // 6 hours
-
-async function resolveThumbnailUrl(
-  url?: string | null
-): Promise<string | null> {
-  if (!url) {
-    return url ?? null;
-  }
-  const signed = await getSignedDownloadUrlSafe(
-    url,
-    CONTENT_THUMBNAIL_TTL_SECONDS
-  );
-  return signed ?? url ?? null;
-}
 
 /**
  * Create new content for a listing
@@ -55,7 +43,10 @@ export async function createContent(
 
       return {
         ...newContent,
-        thumbnailUrl: await resolveThumbnailUrl(newContent.thumbnailUrl)
+        thumbnailUrl: await resolveSignedDownloadUrl(
+          newContent.thumbnailUrl,
+          DEFAULT_THUMBNAIL_TTL_SECONDS
+        )
       };
     },
     {
@@ -98,7 +89,10 @@ export async function updateContent(
 
       return {
         ...updatedContent,
-        thumbnailUrl: await resolveThumbnailUrl(updatedContent.thumbnailUrl)
+        thumbnailUrl: await resolveSignedDownloadUrl(
+          updatedContent.thumbnailUrl,
+          DEFAULT_THUMBNAIL_TTL_SECONDS
+        )
       };
     },
     {
@@ -132,7 +126,10 @@ export async function getContentByListingId(
       return Promise.all(
         contentRows.map(async (item) => ({
           ...item,
-          thumbnailUrl: await resolveThumbnailUrl(item.thumbnailUrl)
+          thumbnailUrl: await resolveSignedDownloadUrl(
+            item.thumbnailUrl,
+            DEFAULT_THUMBNAIL_TTL_SECONDS
+          )
         }))
       );
     },
@@ -170,7 +167,10 @@ export async function getContentById(
       }
       return {
         ...contentRecord,
-        thumbnailUrl: await resolveThumbnailUrl(contentRecord.thumbnailUrl)
+        thumbnailUrl: await resolveSignedDownloadUrl(
+          contentRecord.thumbnailUrl,
+          DEFAULT_THUMBNAIL_TTL_SECONDS
+        )
       };
     },
     {

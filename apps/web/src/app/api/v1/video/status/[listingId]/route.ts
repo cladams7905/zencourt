@@ -4,8 +4,14 @@ import {
   requireListingAccess
 } from "../../../_utils";
 import { getListingVideoStatus } from "@web/src/server/services/videoStatusService";
+import { createChildLogger } from "@shared/utils";
+import {logger as baseLogger} from "@web/src/lib/logger";
 
 export const runtime = "nodejs";
+
+const logger = createChildLogger(baseLogger, {
+  module: "video-status-route"
+});
 
 export async function GET(
   _request: NextRequest,
@@ -34,7 +40,7 @@ export async function GET(
       data: payload
     });
   } catch (error) {
-    console.error("Failed to load video status:", error);
+    logger.error(error, "Failed to load video status");
     return NextResponse.json(
       {
         success: false,

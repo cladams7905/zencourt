@@ -24,6 +24,7 @@ export interface StorageUploadRequest {
     folder?: string;
     userId?: string;
     listingId?: string;
+    storageKey?: string;
   };
 }
 

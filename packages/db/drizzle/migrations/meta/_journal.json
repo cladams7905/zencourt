@@ -148,6 +148,13 @@
       "when": 1768597811491,
       "tag": "0020_aromatic_red_ghost",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1768882241207,
+      "tag": "0021_fast_cammi",
+      "breakpoints": true
     }
   ]
 }

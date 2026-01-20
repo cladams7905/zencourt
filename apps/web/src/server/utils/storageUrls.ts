@@ -15,6 +15,7 @@ const logger = createChildLogger(baseLogger, {
 const storageEndpoint = process.env.B2_ENDPOINT || null;
 
 const DEFAULT_SIGNED_URL_TTL_SECONDS = 60 * 60; // 1 hour
+export const DEFAULT_THUMBNAIL_TTL_SECONDS = 6 * 60 * 60; // 6 hours
 const CACHE_SAFETY_BUFFER_SECONDS = 60;
 
 type SignedUrlCacheEntry = {
@@ -130,6 +131,14 @@ export async function getSignedDownloadUrlSafe(
   } catch {
     return url ?? undefined;
   }
+}
+
+export async function resolveSignedDownloadUrl(
+  url?: string | null,
+  expiresIn: number = DEFAULT_SIGNED_URL_TTL_SECONDS
+): Promise<string | null> {
+  const signed = await getSignedDownloadUrlSafe(url, expiresIn);
+  return signed ?? null;
 }
 
 export async function getSignedDownloadUrls(

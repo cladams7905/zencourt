@@ -170,6 +170,44 @@ export class StorageService {
     };
   }
 
+  async getSignedUploadUrl(
+    key: string,
+    contentType: string,
+    expiresIn: number = 900
+  ): Promise<{ success: true; url: string } | { success: false; error: string }> {
+    try {
+      const command = new PutObjectCommand({
+        Bucket: STORAGE_CONFIG.bucket,
+        Key: key,
+        ContentType: contentType
+      });
+
+      const signedUrl = await getSignedUrl(this.client, command, { expiresIn });
+      logger.info({ key, expiresIn }, "Generated signed upload URL");
+
+      return { success: true, url: signedUrl };
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to generate signed upload URL";
+      logger.error({ err: error, key }, "Signed upload URL error");
+
+      return {
+        success: false,
+        error: message
+      };
+    }
+  }
+
+  buildPublicUrlForKey(key: string): string {
+    return buildStoragePublicUrl(
+      STORAGE_CONFIG.publicBaseUrl ?? STORAGE_CONFIG.endpoint,
+      STORAGE_CONFIG.bucket,
+      key
+    );
+  }
+
   /**
    * Delete a file from storage.
    */
@@ -191,39 +229,6 @@ export class StorageService {
     } catch (error) {
       const message = error instanceof Error ? error.message : "Delete failed";
       logger.error({ err: error, url }, "Delete error");
-
-      return {
-        success: false,
-        error: message
-      };
-    }
-  }
-
-  /**
-   * Generate a pre-signed URL for temporary access.
-   */
-  async getSignedUploadUrl(
-    key: string,
-    expiresIn: number = 3600
-  ): Promise<
-    { success: true; signedUrl: string } | { success: false; error: string }
-  > {
-    try {
-      const command = new PutObjectCommand({
-        Bucket: STORAGE_CONFIG.bucket,
-        Key: key
-      });
-
-      const signedUrl = await getSignedUrl(this.client, command, { expiresIn });
-      logger.info({ key, expiresIn }, "Generated signed URL");
-
-      return { success: true, signedUrl };
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Failed to generate signed URL";
-      logger.error({ err: error, key }, "Signed URL error");
 
       return {
         success: false,
@@ -301,12 +306,14 @@ export class StorageService {
     const {
       folder = "uploads",
       userId,
-      listingId
+      listingId,
+      storageKey
     } = uploadRequest.options || {};
-    const key =
-      userId && listingId
-        ? getListingImagePath(userId, listingId, uploadRequest.fileName)
-        : getGenericUploadPath(folder, uploadRequest.fileName);
+    const key = storageKey
+      ? storageKey
+      : userId && listingId
+      ? getListingImagePath(userId, listingId, uploadRequest.fileName)
+      : getGenericUploadPath(folder, uploadRequest.fileName);
 
     return {
       key,

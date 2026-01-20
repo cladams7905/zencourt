@@ -6,6 +6,7 @@ import { getOrCreateUserAdditional, getUserProfileCompletion } from "../server/a
 import { LandingPage } from "../components/landing/LandingPage";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { getLocationLabel, getPaymentPlanLabel, getUserDisplayNames } from "../lib/userDisplay";
 
 export const dynamic = "force-dynamic";
 
@@ -25,14 +26,7 @@ export const metadata: Metadata = {
 };
 
 export default async function Home() {
-  let user = null;
-
-  try {
-    user = await getUser();
-  } catch (error) {
-    // No authenticated user - show landing page
-    console.log("No authenticated user, showing landing page");
-  }
+  const user = await getUser();
 
   // If user is authenticated and has completed welcome survey, show dashboard
   if (user) {
@@ -41,46 +35,9 @@ export default async function Home() {
       redirect("/welcome");
     }
 
-    const email = user.primaryEmail ?? "";
-    const emailUsername = email.split("@")[0] ?? "";
-    const displayName = user.displayName?.trim() ?? "";
-    const nameParts = displayName.split(/\s+/).filter(Boolean);
-    const isGoogleUser =
-      user.oauthProviders?.some((provider) => provider.id === "google") ?? false;
-
-    const headerName = isGoogleUser
-      ? nameParts[0] || displayName || emailUsername || "there"
-      : emailUsername || email || displayName || "there";
-
-    const sidebarName = isGoogleUser
-      ? nameParts.length >= 2
-        ? `${nameParts[0]} ${nameParts[nameParts.length - 1]}`
-        : displayName || emailUsername || email || "User"
-      : email || emailUsername || displayName || "User";
-
-    const locationLabel = (() => {
-      if (!userAdditional.location) {
-        return "Location not set";
-      }
-      const parts = userAdditional.location
-        .split(",")
-        .map((part) => part.trim())
-        .filter(Boolean);
-      if (parts.length >= 2) {
-        return `${parts[0]}, ${parts[1]}`;
-      }
-      return userAdditional.location;
-    })();
-
-    const paymentPlanLabels: Record<string, string> = {
-      free: "Free",
-      starter: "Starter",
-      growth: "Growth",
-      enterprise: "Enterprise"
-    };
-
-    const paymentPlanLabel =
-      paymentPlanLabels[userAdditional.paymentPlan] ?? "Free";
+    const { headerName, sidebarName } = getUserDisplayNames(user);
+    const locationLabel = getLocationLabel(userAdditional.location);
+    const paymentPlanLabel = getPaymentPlanLabel(userAdditional.paymentPlan);
 
     const listings: DBListing[] = await getUserListings(user.id);
     const profileCompletion = await getUserProfileCompletion(user.id);

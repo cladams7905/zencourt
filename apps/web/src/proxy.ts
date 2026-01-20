@@ -19,7 +19,10 @@ export async function proxy(request: NextRequest) {
 
   if (!hasStackSession) {
     const redirectUrl = new URL("/handler/sign-in", request.url);
-    redirectUrl.searchParams.set("callbackUrl", request.nextUrl.pathname);
+    redirectUrl.searchParams.set(
+      "callbackUrl",
+      `${request.nextUrl.pathname}${request.nextUrl.search}`
+    );
     return NextResponse.redirect(redirectUrl);
   }
 

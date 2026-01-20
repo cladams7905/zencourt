@@ -5,24 +5,12 @@ import { eq, and, like, desc } from "drizzle-orm";
 import { db, listings, content } from "@db/client";
 import { DBListing, InsertDBListing } from "@shared/types/models";
 import { withDbErrorHandling } from "../_utils";
-import { getSignedDownloadUrlSafe } from "../../utils/storageUrls";
+import {
+  DEFAULT_THUMBNAIL_TTL_SECONDS,
+  resolveSignedDownloadUrl
+} from "../../utils/storageUrls";
 
 type ContentRecord = typeof content.$inferSelect;
-
-const LISTING_THUMBNAIL_TTL_SECONDS = 6 * 60 * 60; // 6 hours
-
-async function resolveThumbnailUrl(
-  url?: string | null
-): Promise<string | null> {
-  if (!url) {
-    return url ?? null;
-  }
-  const signed = await getSignedDownloadUrlSafe(
-    url,
-    LISTING_THUMBNAIL_TTL_SECONDS
-  );
-  return signed ?? url ?? null;
-}
 
 async function withSignedContentThumbnails(
   contentList: ContentRecord[]
@@ -33,7 +21,10 @@ async function withSignedContentThumbnails(
   return Promise.all(
     contentList.map(async (item) => ({
       ...item,
-      thumbnailUrl: await resolveThumbnailUrl(item.thumbnailUrl)
+      thumbnailUrl: await resolveSignedDownloadUrl(
+        item.thumbnailUrl,
+        DEFAULT_THUMBNAIL_TTL_SECONDS
+      )
     }))
   );
 }
@@ -221,7 +212,10 @@ export async function getUserListings(
           return {
             ...listing,
             contents: signedContent,
-            thumbnailUrl: await resolveThumbnailUrl(listing.thumbnailUrl)
+            thumbnailUrl: await resolveSignedDownloadUrl(
+              listing.thumbnailUrl,
+              DEFAULT_THUMBNAIL_TTL_SECONDS
+            )
           };
         })
       );

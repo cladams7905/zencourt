@@ -5,6 +5,13 @@ import {
   getOrCreateUserAdditional,
   markProfileCompleted
 } from "@web/src/server/actions/db/userAdditional";
+import {
+  getDefaultAgentName,
+  getDefaultHeadshotUrl,
+  getPaymentPlanLabel,
+  getUserDisplayNames,
+  getUserEmailInfo
+} from "@web/src/lib/userDisplay";
 
 export default async function SettingsPage() {
   const user = await getUser();
@@ -18,35 +25,14 @@ export default async function SettingsPage() {
     await markProfileCompleted(user.id);
   }
 
-  const email = user.primaryEmail ?? "";
-  const emailUsername = email.split("@")[0] ?? "";
-  const displayName = user.displayName?.trim() ?? "";
-  const nameParts = displayName.split(/\s+/).filter(Boolean);
-  const isGoogleUser =
-    user.oauthProviders?.some((provider) => provider.id === "google") ?? false;
+  const { email } = getUserEmailInfo(user);
+  const defaultAgentName = getDefaultAgentName(user);
 
-  const defaultAgentName =
-    nameParts.length >= 2
-      ? `${nameParts[0]} ${nameParts[nameParts.length - 1]}`
-      : "";
+  const { sidebarName: userName } = getUserDisplayNames(user);
 
-  const userName = isGoogleUser
-    ? nameParts.length >= 2
-      ? `${nameParts[0]} ${nameParts[nameParts.length - 1]}`
-      : displayName || emailUsername || email || "User"
-    : email || emailUsername || displayName || "User";
+  const defaultHeadshotUrl = getDefaultHeadshotUrl(user);
 
-  const defaultHeadshotUrl = isGoogleUser ? user.profileImageUrl ?? "" : "";
-
-  const paymentPlanLabels: Record<string, string> = {
-    free: "Free",
-    starter: "Starter",
-    growth: "Growth",
-    enterprise: "Enterprise"
-  };
-
-  const paymentPlanLabel =
-    paymentPlanLabels[userAdditional.paymentPlan] ?? "Free";
+  const paymentPlanLabel = getPaymentPlanLabel(userAdditional.paymentPlan);
   const googleMapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
 
   return (

@@ -22,6 +22,12 @@ import {
 import { ArrowRight, ArrowLeft } from "lucide-react";
 import type { ReferralSource, TargetAudience } from "@db/client";
 import { audienceCategories } from "../settings/audienceCategories";
+import {logger as baseLogger, createChildLogger} from "@web/src/lib/logger";
+import { toast } from "sonner";
+
+const logger = createChildLogger(baseLogger, {
+  module: "welcome-survey"
+});
 
 export interface SurveyFormData {
   referralSource: ReferralSource;
@@ -143,8 +149,8 @@ export const SurveyPage = ({
         weeklyPostingFrequency
       });
     } catch (error) {
-      console.error("Survey submission error:", error);
-      // In production, show error toast
+      logger.error(error, "Survey submission error");
+      toast.error("Survey submission error: " + error)
     } finally {
       setIsSubmitting(false);
     }

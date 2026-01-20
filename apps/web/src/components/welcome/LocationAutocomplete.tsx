@@ -5,6 +5,14 @@ import { Loader2, MapPin, X } from "lucide-react";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { cn } from "../ui/utils";
+import { createChildLogger } from "@shared/utils";
+import {logger as baseLogger} from "@web/src/lib/logger";
+import { toast } from "sonner";
+
+const logger = createChildLogger(baseLogger, {
+  module: "location-autocomplete"
+});
+
 
 export interface LocationData {
   city: string;
@@ -145,7 +153,8 @@ export const LocationAutocomplete = ({
 
       setSuggestions(result?.predictions || []);
     } catch (error) {
-      console.error("Error fetching suggestions:", error);
+      logger.error(error, "Error fetching suggestions");
+      toast.error("Error fetching suggestions: " + error)
       setSuggestions([]);
     } finally {
       setIsLoading(false);

@@ -181,6 +181,42 @@ export function getGenericUploadPath(folder: string, filename: string): string {
 }
 
 /**
+ * Get the folder path for user media uploads
+ * Format: user_{userId}/media/{images|videos}
+ */
+export function getUserMediaFolder(
+  userId: string,
+  type: "image" | "video"
+): string {
+  if (!userId) {
+    throw new Error("User ID is required for user media storage");
+  }
+
+  const safeUserId = sanitizePathSegment(userId);
+  const folder = type === "video" ? "videos" : "images";
+  return `user_${safeUserId}/media/${folder}`;
+}
+
+/**
+ * Get the full storage key/path for user media
+ * Format: user_{userId}/media/{images|videos}/{filename}
+ */
+export function getUserMediaPath(
+  userId: string,
+  type: "image" | "video",
+  filename: string
+): string {
+  const sanitized = sanitizeFilename(filename);
+  const extensionIndex = sanitized.lastIndexOf(".");
+  const base =
+    extensionIndex > 0 ? sanitized.slice(0, extensionIndex) : sanitized;
+  const extension = extensionIndex > 0 ? sanitized.slice(extensionIndex) : "";
+  const uniqueName = `${base}-${Date.now()}-${nanoid(6)}${extension}`;
+
+  return `${getUserMediaFolder(userId, type)}/${uniqueName}`;
+}
+
+/**
  * Build the user/listing-scoped storage key that mirrors the structure shared by
  * both the Vercel app and the video server so assets stay co-located.
  */
