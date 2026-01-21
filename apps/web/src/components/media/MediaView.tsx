@@ -653,7 +653,7 @@ const MediaView = ({
         </header>
 
         <div className="mx-auto flex max-w-[1600px] flex-col gap-10 px-8 py-8">
-          <div className="rounded-lg bg-secondary px-4 py-3 max-w-3xl">
+          <div className="rounded-lg bg-secondary border border-border/60 px-4 py-3 max-w-3xl">
             <p className="text-sm font-semibold text-foreground">
               How to use the media library
             </p>

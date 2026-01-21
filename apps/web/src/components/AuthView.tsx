@@ -11,10 +11,10 @@ export function AuthView({ children }: AuthViewProps) {
   return (
     <div className="min-h-screen flex">
       {/* Left Panel - Visual Brand Side */}
-      <div className="hidden lg:flex lg:w-1/2 relative bg-linear-to-br from-secondary via-white to-secondary/20 overflow-hidden">
+      <div className="hidden lg:flex lg:w-1/2 relative bg-linear-to-br from-accent via-white to-accent/20 overflow-hidden">
         {/* Decorative Background Elements */}
-        <div className="absolute top-1/4 -left-24 w-96 h-96 bg-secondary/30 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 -right-24 w-96 h-96 bg-secondary/40 rounded-full blur-3xl" />
+        <div className="absolute top-1/4 -left-24 w-96 h-96 bg-accent/30 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 -right-24 w-96 h-96 bg-accent/40 rounded-full blur-3xl" />
 
         {/* Content */}
         <div className="relative z-10 flex flex-col justify-between p-16 w-full">

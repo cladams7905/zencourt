@@ -112,7 +112,7 @@ export const LocationDetailsPanel = ({
   }, [hasErrors, onValidationChange]);
 
   return (
-    <div className="rounded-lg border border-border bg-secondary p-3 text-sm">
+    <div className="rounded-lg border border-border/60 bg-secondary p-3 text-sm">
       <div className="flex items-center justify-between">
         <span className="font-medium">Suggested details</span>
         <Button

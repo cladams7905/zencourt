@@ -29,7 +29,7 @@ function PillTabs<T extends string>({
   return (
     <div
       className={cn(
-        "flex w-fit items-center rounded-lg bg-secondary p-1",
+        "flex w-fit items-center rounded-lg bg-secondary border border-border/60 p-1",
         className
       )}
     >

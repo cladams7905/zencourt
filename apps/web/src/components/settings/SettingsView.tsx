@@ -184,7 +184,7 @@ export function SettingsView({
           >
             {/* Vertical Tab List + Preview */}
             <div className="sticky top-[124px] flex w-56 flex-col gap-4 self-start">
-              <TabsList className="flex-col h-fit w-full bg-secondary p-2 gap-2 rounded-lg py-2">
+              <TabsList className="flex-col h-fit w-full bg-secondary border border-border/60 p-2 gap-2 rounded-lg py-2">
                 <TabsTrigger
                   value="account"
                   className="w-full justify-start gap-3 py-2 px-3 rounded-lg transition-colors text-muted-foreground hover:text-foreground data-[state=active]:shadow-sm data-[state=active]:text-foreground data-[state=active]:bg-background"
@@ -213,9 +213,9 @@ export function SettingsView({
                 forceMount
                 className="mt-0 data-[state=inactive]:hidden"
               >
-                <Card className="bg-secondary border-none">
+                <Card className="bg-secondary border-border/60">
                   <Accordion type="single" collapsible>
-                    <AccordionItem value="example" className="border-none">
+                    <AccordionItem value="example">
                       <AccordionTrigger className="px-4 py-3 hover:no-underline font-body">
                         <div className="flex flex-col text-left gap-1">
                           <span className="text-base font-header">

@@ -216,36 +216,6 @@ export const LocationAutocomplete = ({
     [extractZip]
   );
 
-  const getUserCoordinates = React.useCallback(
-    (): Promise<{ lat: number; lng: number } | null> => {
-      if (
-        typeof window === "undefined" ||
-        !("geolocation" in navigator) ||
-        !navigator.geolocation
-      ) {
-        return Promise.resolve(null);
-      }
-
-      return new Promise((resolve) => {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            resolve({
-              lat: position.coords.latitude,
-              lng: position.coords.longitude
-            });
-          },
-          () => resolve(null),
-          {
-            enableHighAccuracy: false,
-            timeout: 8000,
-            maximumAge: 0
-          }
-        );
-      });
-    },
-    []
-  );
-
   const parseAddressComponents = React.useCallback(
     (
       components: google.maps.GeocoderAddressComponent[]
