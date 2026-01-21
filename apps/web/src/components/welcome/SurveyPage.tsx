@@ -18,12 +18,17 @@ import {
 import {
   LocationAutocomplete,
   type LocationData
-} from "./LocationAutocomplete";
+} from "../location/LocationAutocomplete";
+import { LocationDetailsPanel } from "../location/LocationDetailsPanel";
 import { ArrowRight, ArrowLeft } from "lucide-react";
 import type { ReferralSource, TargetAudience } from "@db/client";
 import { audienceCategories } from "../settings/audienceCategories";
-import {logger as baseLogger, createChildLogger} from "@web/src/lib/logger";
+import {
+  logger as baseLogger,
+  createChildLogger
+} from "@web/src/lib/logger";
 import { toast } from "sonner";
+import { normalizeCountyName } from "@web/src/lib/locationHelpers";
 
 const logger = createChildLogger(baseLogger, {
   module: "welcome-survey"
@@ -72,6 +77,25 @@ export const SurveyPage = ({
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [currentStep, setCurrentStep] = React.useState(0);
   const [api, setApi] = React.useState<CarouselApi>();
+  const suggestedCounty = location?.county ?? "";
+  const suggestedServiceAreas = location?.serviceAreas ?? [];
+  const suggestedServiceAreasText = suggestedServiceAreas.join(", ");
+  const [isEditingLocationDetails, setIsEditingLocationDetails] =
+    React.useState(false);
+  const [countyOverride, setCountyOverride] = React.useState("");
+  const [serviceAreasOverride, setServiceAreasOverride] = React.useState("");
+  const [locationHasErrors, setLocationHasErrors] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!location) {
+      setCountyOverride("");
+      setServiceAreasOverride("");
+      setIsEditingLocationDetails(false);
+      return;
+    }
+    setCountyOverride(suggestedCounty);
+    setServiceAreasOverride(suggestedServiceAreasText);
+  }, [location, suggestedCounty, suggestedServiceAreasText]);
 
   // Sync carousel API with current step
   React.useEffect(() => {
@@ -82,13 +106,14 @@ export const SurveyPage = ({
     });
   }, [api]);
 
+
   // Step validation
   const stepValidation = React.useMemo(
     () => ({
       0: true, // Welcome screen - always valid
       1: targetAudiences.length >= 1 && targetAudiences.length <= 3,
       2: weeklyPostingFrequency >= 0 && weeklyPostingFrequency <= 7,
-      3: !!location && Boolean(location.postalCode),
+      3: !!location && Boolean(location.postalCode) && !locationHasErrors,
       4:
         !!referralSource &&
         (referralSource !== "other" || referralSourceOther.trim().length > 0)
@@ -98,7 +123,8 @@ export const SurveyPage = ({
       weeklyPostingFrequency,
       location,
       referralSource,
-      referralSourceOther
+      referralSourceOther,
+      locationHasErrors
     ]
   );
 
@@ -140,11 +166,25 @@ export const SurveyPage = ({
 
     setIsSubmitting(true);
     try {
+      const resolvedCounty = normalizeCountyName(
+        countyOverride.trim() || suggestedCounty
+      );
+      const resolvedServiceAreas = serviceAreasOverride
+        .split(",")
+        .map((area) => area.trim())
+        .filter(Boolean);
       await onSubmit({
         referralSource: referralSource as ReferralSource,
         referralSourceOther:
           referralSource === "other" ? referralSourceOther : undefined,
-        location,
+        location: {
+          ...location,
+          county: resolvedCounty || location.county,
+          serviceAreas:
+            resolvedServiceAreas.length > 0
+              ? resolvedServiceAreas
+              : suggestedServiceAreas
+        },
         targetAudiences,
         weeklyPostingFrequency
       });
@@ -192,7 +232,11 @@ export const SurveyPage = ({
           <div className="w-full max-w-2xl mx-auto px-8 lg:px-12 py-8">
             {/* Survey Carousel */}
             <form onSubmit={handleSubmit}>
-              <Carousel setApi={setApi} className="w-full">
+              <Carousel
+                setApi={setApi}
+                className="w-full"
+                opts={{ watchDrag: false }}
+              >
                 <CarouselContent className="px-2">
                   {/* Step 0: Welcome Screen */}
                   <CarouselItem>
@@ -357,7 +401,30 @@ export const SurveyPage = ({
                         onChange={setLocation}
                         apiKey={googleMapsApiKey}
                         placeholder="Enter your ZIP code"
+                        autoFillFromGeolocation={currentStep === 3}
                       />
+                      {location && (
+                        <LocationDetailsPanel
+                          suggestedCounty={suggestedCounty}
+                          suggestedServiceAreas={suggestedServiceAreas}
+                          state={location?.state ?? ""}
+                          isEditing={isEditingLocationDetails}
+                          onToggleEdit={() => {
+                            if (isEditingLocationDetails) {
+                              setCountyOverride(suggestedCounty);
+                              setServiceAreasOverride(suggestedServiceAreasText);
+                            }
+                            setIsEditingLocationDetails(
+                              !isEditingLocationDetails
+                            );
+                          }}
+                          countyValue={countyOverride}
+                          serviceAreasValue={serviceAreasOverride}
+                          onCountyChange={setCountyOverride}
+                          onServiceAreasChange={setServiceAreasOverride}
+                          onValidationChange={setLocationHasErrors}
+                        />
+                      )}
                     </div>
                   </CarouselItem>
                   {/* Step 4: Referral Source */}

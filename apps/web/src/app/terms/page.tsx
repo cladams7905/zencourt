@@ -16,6 +16,9 @@ export default function TermsPage() {
           The service is provided on an as-is basis without warranties of any
           kind. We may update these terms from time to time by posting a new
           version on this page.
+
+          Zencourt will ask to know your device location for the purpose of determining 
+          your primary service areas.
         </p>
       </section>
 

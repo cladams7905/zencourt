@@ -5,14 +5,16 @@ import { Loader2, MapPin, X } from "lucide-react";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { cn } from "../ui/utils";
-import { createChildLogger } from "@shared/utils";
-import {logger as baseLogger} from "@web/src/lib/logger";
+import { logger as baseLogger, createChildLogger } from "@web/src/lib/logger";
+import {
+  loadCityDataset,
+  normalizeCountyName
+} from "@web/src/lib/locationHelpers";
 import { toast } from "sonner";
 
 const logger = createChildLogger(baseLogger, {
   module: "location-autocomplete"
 });
-
 
 export interface LocationData {
   city: string;
@@ -25,18 +27,7 @@ export interface LocationData {
   formattedAddress: string;
 }
 
-type CityRecord = {
-  city: string;
-  city_ascii: string;
-  state_id: string;
-  county_name: string;
-  lat: number;
-  lng: number;
-  population: number;
-  zips: string;
-};
-
-const SERVICE_AREA_RADIUS_KM = 20;
+const SERVICE_AREA_RADIUS_KM = 35;
 const MAX_SERVICE_AREAS = 3;
 
 interface LocationAutocompleteProps {
@@ -46,6 +37,7 @@ interface LocationAutocompleteProps {
   placeholder?: string;
   initialValue?: string;
   className?: string;
+  autoFillFromGeolocation?: boolean;
 }
 
 export const LocationAutocomplete = ({
@@ -54,7 +46,8 @@ export const LocationAutocomplete = ({
   apiKey,
   placeholder = "Enter your ZIP code",
   initialValue,
-  className
+  className,
+  autoFillFromGeolocation = false
 }: LocationAutocompleteProps) => {
   const [inputValue, setInputValue] = React.useState("");
   const [suggestions, setSuggestions] = React.useState<
@@ -63,6 +56,9 @@ export const LocationAutocomplete = ({
   const [isLoading, setIsLoading] = React.useState(false);
   const [isScriptLoaded, setIsScriptLoaded] = React.useState(false);
   const [showSuggestions, setShowSuggestions] = React.useState(false);
+  const [validationError, setValidationError] = React.useState<string | null>(
+    null
+  );
   const inputRef = React.useRef<HTMLInputElement>(null);
   const autocompleteService =
     React.useRef<google.maps.places.AutocompleteService | null>(null);
@@ -71,9 +67,7 @@ export const LocationAutocomplete = ({
   );
   const blurTimeoutRef = React.useRef<number | null>(null);
   const hasUserEditedRef = React.useRef(false);
-
-  const cityDataRef = React.useRef<CityRecord[] | null>(null);
-  const cityDataPromiseRef = React.useRef<Promise<CityRecord[]> | null>(null);
+  const hasAutoFilledRef = React.useRef(false);
 
   // Load Google Maps script
   React.useEffect(() => {
@@ -115,91 +109,6 @@ export const LocationAutocomplete = ({
     }
   }, [initialValue, inputValue, value]);
 
-  const parseCsvLine = React.useCallback((line: string): string[] => {
-    const result: string[] = [];
-    let current = "";
-    let inQuotes = false;
-
-    for (let i = 0; i < line.length; i += 1) {
-      const char = line[i];
-      if (char === "\"") {
-        const nextChar = line[i + 1];
-        if (inQuotes && nextChar === "\"") {
-          current += "\"";
-          i += 1;
-          continue;
-        }
-        inQuotes = !inQuotes;
-        continue;
-      }
-
-      if (char === "," && !inQuotes) {
-        result.push(current);
-        current = "";
-        continue;
-      }
-
-      current += char;
-    }
-
-    result.push(current);
-    return result;
-  }, []);
-
-  const loadCityDataset = React.useCallback(async (): Promise<CityRecord[]> => {
-    if (cityDataRef.current) {
-      return cityDataRef.current;
-    }
-    if (cityDataPromiseRef.current) {
-      return cityDataPromiseRef.current;
-    }
-
-    cityDataPromiseRef.current = (async () => {
-      const response = await fetch("/uscities.csv");
-      const text = await response.text();
-      const lines = text.split("\n").filter(Boolean);
-      if (lines.length === 0) {
-        return [];
-      }
-
-      const header = parseCsvLine(lines[0]);
-      const headerIndex = new Map(
-        header.map((key, index) => [key.trim(), index])
-      );
-
-      const getValue = (row: string[], key: string): string =>
-        row[headerIndex.get(key) ?? -1] ?? "";
-
-      const records: CityRecord[] = [];
-      for (let i = 1; i < lines.length; i += 1) {
-        const row = parseCsvLine(lines[i]);
-        const lat = Number(getValue(row, "lat"));
-        const lng = Number(getValue(row, "lng"));
-        const population = Number(getValue(row, "population"));
-        if (Number.isNaN(lat) || Number.isNaN(lng)) {
-          continue;
-        }
-        records.push({
-          city: getValue(row, "city"),
-          city_ascii: getValue(row, "city_ascii"),
-          state_id: getValue(row, "state_id"),
-          county_name: getValue(row, "county_name"),
-          lat,
-          lng,
-          population: Number.isNaN(population) ? 0 : population,
-          zips: getValue(row, "zips")
-        });
-      }
-
-      cityDataRef.current = records;
-      return records;
-    })();
-
-    const records = await cityDataPromiseRef.current;
-    cityDataPromiseRef.current = null;
-    return records;
-  }, [parseCsvLine]);
-
   const haversineKm = React.useCallback(
     (lat1: number, lng1: number, lat2: number, lng2: number): number => {
       const toRad = (value: number) => (value * Math.PI) / 180;
@@ -220,115 +129,121 @@ export const LocationAutocomplete = ({
 
   const resolveServiceAreasFromDataset = React.useCallback(
     async (input: {
-      city: string;
       state: string;
-      postalCode?: string;
+      lat: number;
+      lng: number;
     }): Promise<{ county: string; serviceAreas: string[] } | null> => {
       const records = await loadCityDataset();
       if (records.length === 0) {
-        console.debug("location-dataset:empty");
         return null;
       }
 
-      const zipToken = input.postalCode?.trim() ?? "";
-      const cityLower = input.city.toLowerCase();
       const stateUpper = input.state.toUpperCase();
 
-      const zipMatch = zipToken
-        ? records.filter((record) => {
-            const zips = ` ${record.zips} `;
-            return (
-              record.state_id === stateUpper &&
-              zips.includes(` ${zipToken} `)
-            );
-          })
-        : [];
+      const candidates = records
+        .filter((record) => record.state_id === stateUpper)
+        .map((record) => ({
+          record,
+          distance: haversineKm(input.lat, input.lng, record.lat, record.lng)
+        }))
+        .filter((entry) => entry.distance <= SERVICE_AREA_RADIUS_KM);
 
-      console.debug("location-dataset:zip-match", {
-        zipToken,
-        stateUpper,
-        city: input.city,
-        matches: zipMatch.length
-      });
-
-      const cityMatch =
-        zipMatch.length > 0
-          ? zipMatch
-          : records.filter((record) => {
-              const name = (record.city_ascii || record.city).toLowerCase();
-              return record.state_id === stateUpper && name === cityLower;
-            });
-
-      if (cityMatch.length === 0) {
-        console.debug("location-dataset:city-match-empty", {
-          city: input.city,
-          state: input.state
-        });
+      if (candidates.length === 0) {
         return null;
       }
 
       const primary =
-        zipMatch.length > 0
-          ? zipMatch
-              .filter((record) => {
-                const name = (record.city_ascii || record.city).toLowerCase();
-                return name === cityLower;
-              })
-              .sort((a, b) => b.population - a.population)[0] ??
-            zipMatch.sort((a, b) => b.population - a.population)[0]
-          : cityMatch.sort((a, b) => b.population - a.population)[0];
-      if (!zipMatch.length) {
-        console.debug("location-dataset:zip-miss", {
-          city: input.city,
-          state: input.state,
-          primaryCity: primary?.city
-        });
+        candidates
+          .slice()
+          .sort((a, b) => a.distance - b.distance)[0]?.record ??
+        candidates.sort((a, b) => b.record.population - a.record.population)[0]
+          ?.record;
+
+      if (!primary) {
         return null;
       }
-      console.debug("location-dataset:primary", {
-        primaryCity: primary.city,
-        county: primary.county_name,
-        population: primary.population,
-        lat: primary.lat,
-        lng: primary.lng
-      });
-      const county = primary.county_name;
-      const baseLat = primary.lat;
-      const baseLng = primary.lng;
 
-      const candidates = records.filter(
-        (record) =>
-          record.state_id === stateUpper &&
-          record.county_name === county &&
-          record.city !== primary.city &&
-          haversineKm(baseLat, baseLng, record.lat, record.lng) <=
-            SERVICE_AREA_RADIUS_KM
-      );
-
+      const county = normalizeCountyName(primary.county_name);
       const serviceAreas = candidates
-        .sort((a, b) => b.population - a.population)
-        .slice(0, MAX_SERVICE_AREAS)
-        .map((record) => record.city);
+        .slice()
+        .sort((a, b) => a.distance - b.distance)
+        .reduce<string[]>((acc, entry) => {
+          if (!acc.includes(entry.record.city)) {
+            acc.push(entry.record.city);
+          }
+          return acc;
+        }, [])
+        .slice(0, MAX_SERVICE_AREAS);
 
-      if (
-        primary.city &&
-        !serviceAreas.some(
-          (name) => name.toLowerCase() === primary.city.toLowerCase()
-        )
-      ) {
+      if (!serviceAreas.includes(primary.city)) {
         serviceAreas.unshift(primary.city);
       }
 
-      console.debug("location-dataset:service-areas", {
-        county,
-        radiusKm: SERVICE_AREA_RADIUS_KM,
-        candidates: candidates.length,
-        serviceAreas
-      });
-
       return { county, serviceAreas };
     },
-    [haversineKm, loadCityDataset]
+    [haversineKm]
+  );
+
+  const extractZip = React.useCallback((zips: string): string => {
+    const match = zips.match(/\b\d{5}\b/);
+    return match ? match[0] : "";
+  }, []);
+
+  const resolveZipFromDataset = React.useCallback(
+    async (city: string, state: string): Promise<string> => {
+      if (!city || !state) {
+        return "";
+      }
+      const records = await loadCityDataset();
+      if (records.length === 0) {
+        return "";
+      }
+      const cityLower = city.toLowerCase();
+      const stateUpper = state.toUpperCase();
+      const matches = records.filter((record) => {
+        if (record.state_id !== stateUpper) {
+          return false;
+        }
+        const name = (record.city_ascii || record.city).toLowerCase();
+        return name === cityLower;
+      });
+      if (matches.length === 0) {
+        return "";
+      }
+      const best = matches.sort((a, b) => b.population - a.population)[0];
+      return extractZip(best?.zips ?? "");
+    },
+    [extractZip]
+  );
+
+  const getUserCoordinates = React.useCallback(
+    (): Promise<{ lat: number; lng: number } | null> => {
+      if (
+        typeof window === "undefined" ||
+        !("geolocation" in navigator) ||
+        !navigator.geolocation
+      ) {
+        return Promise.resolve(null);
+      }
+
+      return new Promise((resolve) => {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            resolve({
+              lat: position.coords.latitude,
+              lng: position.coords.longitude
+            });
+          },
+          () => resolve(null),
+          {
+            enableHighAccuracy: false,
+            timeout: 8000,
+            maximumAge: 0
+          }
+        );
+      });
+    },
+    []
   );
 
   const parseAddressComponents = React.useCallback(
@@ -349,7 +264,7 @@ export const LocationAutocomplete = ({
         } else if (component.types.includes("administrative_area_level_1")) {
           state = component.short_name;
         } else if (component.types.includes("administrative_area_level_2")) {
-          county = component.long_name;
+          county = normalizeCountyName(component.long_name);
         } else if (component.types.includes("country")) {
           country = component.long_name;
         } else if (component.types.includes("postal_code")) {
@@ -388,7 +303,7 @@ export const LocationAutocomplete = ({
     try {
       const result = await autocompleteService.current.getPlacePredictions({
         input: query,
-        types: ["postal_code"],
+        types: ["(regions)"],
         componentRestrictions: { country: "us" }
       });
 
@@ -413,24 +328,7 @@ export const LocationAutocomplete = ({
     return () => clearTimeout(timer);
   }, [inputValue, value, fetchSuggestions]);
 
-  // Parse address components
-
   // Handle place selection
-  const resolveNearbyCities = React.useCallback(
-    async (input: {
-      city: string;
-      state: string;
-      postalCode?: string;
-    }): Promise<{ county: string; serviceAreas: string[] } | null> => {
-      const datasetResult = await resolveServiceAreasFromDataset(input);
-      if (datasetResult) {
-        return datasetResult;
-      }
-      return null;
-    },
-    [resolveServiceAreasFromDataset]
-  );
-
   const resolveGeoFallback = React.useCallback(
     (location: google.maps.LatLng): Promise<{
       county: string;
@@ -452,7 +350,7 @@ export const LocationAutocomplete = ({
             const components = result.address_components || [];
             const { county } = parseAddressComponents(components);
             if (!resolvedCounty && county) {
-              resolvedCounty = county;
+              resolvedCounty = normalizeCountyName(county);
             }
             for (const component of components) {
               if (
@@ -474,6 +372,139 @@ export const LocationAutocomplete = ({
     },
     [parseAddressComponents]
   );
+
+  const applyLocationSelection = React.useCallback(
+    async (
+      locationData: LocationData,
+      serviceAreas: string[],
+      resolvedCounty?: string
+    ) => {
+      const resolvedPostal =
+        locationData.postalCode ||
+        (await resolveZipFromDataset(locationData.city, locationData.state));
+
+      if (!resolvedPostal) {
+        setValidationError("Please include a ZIP code to continue.");
+        const displayText = formatLocationDisplay(locationData);
+        setInputValue(displayText);
+        setSuggestions([]);
+        setShowSuggestions(false);
+        onChange(null);
+        return;
+      }
+
+      const nextLocation = {
+        ...locationData,
+        postalCode: resolvedPostal,
+        county: resolvedCounty || locationData.county,
+        serviceAreas
+      };
+      onChange(nextLocation);
+      const displayText = formatLocationDisplay(nextLocation);
+      setInputValue(displayText);
+      setSuggestions([]);
+      setShowSuggestions(false);
+      setValidationError(null);
+    },
+    [formatLocationDisplay, onChange, resolveZipFromDataset]
+  );
+
+  React.useEffect(() => {
+    if (
+      !autoFillFromGeolocation ||
+      hasAutoFilledRef.current ||
+      value ||
+      inputValue ||
+      hasUserEditedRef.current ||
+      !isScriptLoaded ||
+      !window.google
+    ) {
+      return;
+    }
+
+    if (!("geolocation" in navigator) || !navigator.geolocation) {
+      return;
+    }
+
+    hasAutoFilledRef.current = true;
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        const geocoder = new window.google.maps.Geocoder();
+        geocoder.geocode(
+          {
+            location: { lat, lng }
+          },
+          (results, status) => {
+            if (
+              status !== window.google.maps.GeocoderStatus.OK ||
+              !results?.length
+            ) {
+              return;
+            }
+            const result = results[0];
+            const { city, state, country, postalCode, county } =
+              parseAddressComponents(result.address_components || []);
+            const locationData: LocationData = {
+              city,
+              state,
+              country,
+              postalCode,
+              county,
+              placeId: result.place_id || "",
+              formattedAddress: result.formatted_address || ""
+            };
+
+            const geometryLocation =
+              result.geometry?.location ??
+              new window.google.maps.LatLng(lat, lng);
+
+            Promise.all([
+              resolveServiceAreasFromDataset({
+                state,
+                lat,
+                lng
+              }),
+              resolveGeoFallback(geometryLocation)
+            ]).then(([datasetResult, fallback]) => {
+              const fallbackAreas =
+                datasetResult?.serviceAreas &&
+                datasetResult.serviceAreas.length > 0
+                  ? datasetResult.serviceAreas
+                  : fallback.serviceAreas.length > 0
+                    ? fallback.serviceAreas
+                    : fallback.county
+                      ? [fallback.county]
+                      : [];
+              const resolvedCounty =
+                county || datasetResult?.county || fallback.county;
+              applyLocationSelection(
+                locationData,
+                fallbackAreas,
+                resolvedCounty
+              );
+            });
+          }
+        );
+      },
+      () => {},
+      {
+        enableHighAccuracy: false,
+        timeout: 8000,
+        maximumAge: 0
+      }
+    );
+  }, [
+    autoFillFromGeolocation,
+    inputValue,
+    isScriptLoaded,
+    parseAddressComponents,
+    resolveGeoFallback,
+    resolveServiceAreasFromDataset,
+    value,
+    applyLocationSelection
+  ]);
 
   const handleSelectPlace = (
     prediction: google.maps.places.AutocompletePrediction
@@ -509,38 +540,19 @@ export const LocationAutocomplete = ({
             formattedAddress: place.formatted_address || ""
           };
 
-          const finalize = (
-            nextPostal: string,
-            serviceAreas: string[],
-            resolvedCounty?: string
-          ) => {
-            const nextLocation = {
-              ...locationData,
-              postalCode: locationData.postalCode || nextPostal,
-              county: resolvedCounty || locationData.county,
-              serviceAreas: serviceAreas.filter(
-                (name) => name.toLowerCase() !== city.toLowerCase()
-              )
-            };
-            onChange(nextLocation);
-            const displayText = formatLocationDisplay(nextLocation);
-            setInputValue(displayText);
-            setSuggestions([]);
-            setShowSuggestions(false);
-          };
-
           const geometryLocation = place.geometry?.location;
           if (geometryLocation) {
             Promise.all([
-              resolveNearbyCities({
-                city,
+              resolveServiceAreasFromDataset({
                 state,
-                postalCode
+                lat: geometryLocation.lat(),
+                lng: geometryLocation.lng()
               }),
               resolveGeoFallback(geometryLocation)
             ]).then(([datasetResult, fallback]) => {
               const fallbackAreas =
-                datasetResult?.serviceAreas && datasetResult.serviceAreas.length > 0
+                datasetResult?.serviceAreas &&
+                datasetResult.serviceAreas.length > 0
                   ? datasetResult.serviceAreas
                   : fallback.serviceAreas.length > 0
                     ? fallback.serviceAreas
@@ -549,10 +561,14 @@ export const LocationAutocomplete = ({
                       : [];
               const resolvedCounty =
                 county || datasetResult?.county || fallback.county;
-              finalize("", fallbackAreas, resolvedCounty);
+              applyLocationSelection(
+                locationData,
+                fallbackAreas,
+                resolvedCounty
+              );
             });
           } else {
-            finalize("", []);
+            applyLocationSelection(locationData, []);
           }
         }
         setIsLoading(false);
@@ -567,6 +583,7 @@ export const LocationAutocomplete = ({
     setInputValue("");
     setSuggestions([]);
     setShowSuggestions(false);
+    setValidationError(null);
     inputRef.current?.focus();
   };
 
@@ -603,15 +620,16 @@ export const LocationAutocomplete = ({
           const geometryLocation = result.geometry?.location;
           if (geometryLocation) {
             Promise.all([
-              resolveNearbyCities({
-                city,
+              resolveServiceAreasFromDataset({
                 state,
-                postalCode
+                lat: geometryLocation.lat(),
+                lng: geometryLocation.lng()
               }),
               resolveGeoFallback(geometryLocation)
             ]).then(([datasetResult, fallback]) => {
               const fallbackAreas =
-                datasetResult?.serviceAreas && datasetResult.serviceAreas.length > 0
+                datasetResult?.serviceAreas &&
+                datasetResult.serviceAreas.length > 0
                   ? datasetResult.serviceAreas
                   : fallback.serviceAreas.length > 0
                     ? fallback.serviceAreas
@@ -620,28 +638,24 @@ export const LocationAutocomplete = ({
                       : [];
               const resolvedCounty =
                 county || datasetResult?.county || fallback.county;
-              const filteredAreas = fallbackAreas.filter(
-                (name) => name.toLowerCase() !== city.toLowerCase()
+              applyLocationSelection(
+                locationData,
+                fallbackAreas,
+                resolvedCounty
               );
-              onChange({
-                ...locationData,
-                county: resolvedCounty || locationData.county,
-                serviceAreas: filteredAreas
-              });
-              setInputValue(formatLocationDisplay(locationData));
-              setSuggestions([]);
-              setShowSuggestions(false);
             });
           } else {
-            onChange({ ...locationData, serviceAreas: [] });
-            setInputValue(formatLocationDisplay(locationData));
-            setSuggestions([]);
-            setShowSuggestions(false);
+            applyLocationSelection(locationData, []);
           }
         }
       );
     },
-    [formatLocationDisplay, onChange, parseAddressComponents, resolveNearbyCities, resolveGeoFallback]
+    [
+      applyLocationSelection,
+      parseAddressComponents,
+      resolveGeoFallback,
+      resolveServiceAreasFromDataset
+    ]
   );
 
   return (
@@ -659,6 +673,9 @@ export const LocationAutocomplete = ({
             hasUserEditedRef.current = true;
             setInputValue(e.target.value);
             setShowSuggestions(true);
+            if (validationError) {
+              setValidationError(null);
+            }
           }}
           onFocus={() => {
             if (!value) {
@@ -728,6 +745,9 @@ export const LocationAutocomplete = ({
           </div>
         )}
       </div>
+      {validationError && (
+        <p className="mt-2 text-xs text-destructive">{validationError}</p>
+      )}
     </div>
   );
 };

@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { SurveyPage, type SurveyFormData } from "./SurveyPage";
 import { completeWelcomeSurvey } from "@web/src/server/actions/db/userAdditional";
-import { formatLocationForStorage } from "@web/src/lib/location";
+import { formatLocationForStorage } from "@web/src/lib/locationHelpers";
 
 interface SurveyClientProps {
   googleMapsApiKey: string;

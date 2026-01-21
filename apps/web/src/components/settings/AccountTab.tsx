@@ -19,9 +19,13 @@ import { toast } from "sonner";
 import {
   LocationAutocomplete,
   type LocationData
-} from "../welcome/LocationAutocomplete";
+} from "../location/LocationAutocomplete";
 import { updateUserLocation } from "@web/src/server/actions/db/userAdditional";
-import { formatLocationForStorage } from "@web/src/lib/location";
+import {
+  formatLocationForStorage,
+  normalizeCountyName
+} from "@web/src/lib/locationHelpers";
+import { LocationDetailsPanel } from "../location/LocationDetailsPanel";
 
 interface AccountTabProps {
   userId: string;
@@ -52,6 +56,26 @@ export function AccountTab({
   );
   const [isSavingLocation, setIsSavingLocation] = React.useState(false);
   const [savedLocation, setSavedLocation] = React.useState(location ?? "");
+  const [isEditingLocationDetails, setIsEditingLocationDetails] =
+    React.useState(false);
+  const [countyOverride, setCountyOverride] = React.useState("");
+  const [serviceAreasOverride, setServiceAreasOverride] = React.useState("");
+  const [locationHasErrors, setLocationHasErrors] = React.useState(false);
+
+  const suggestedCounty = locationValue?.county ?? "";
+  const suggestedServiceAreas = React.useMemo(() => locationValue?.serviceAreas ?? [], [locationValue?.serviceAreas]);
+  const suggestedServiceAreasText = suggestedServiceAreas.join(", ");
+
+  React.useEffect(() => {
+    if (!locationValue) {
+      setCountyOverride("");
+      setServiceAreasOverride("");
+      setIsEditingLocationDetails(false);
+      return;
+    }
+    setCountyOverride(suggestedCounty);
+    setServiceAreasOverride(suggestedServiceAreasText);
+  }, [locationValue, suggestedCounty, suggestedServiceAreasText]);
 
   const handlePasswordReset = async () => {
     if (!displayedEmail) {
@@ -84,8 +108,22 @@ export function AccountTab({
   }, [locationValue]);
 
   const isLocationDirty = React.useMemo(() => {
-    return Boolean(locationValue) && locationDraft !== savedLocation;
-  }, [locationDraft, locationValue, savedLocation]);
+    if (!locationValue) {
+      return false;
+    }
+    const overridesDirty =
+      countyOverride.trim() !== suggestedCounty.trim() ||
+      serviceAreasOverride.trim() !== suggestedServiceAreasText.trim();
+    return locationDraft !== savedLocation || overridesDirty;
+  }, [
+    locationDraft,
+    locationValue,
+    savedLocation,
+    countyOverride,
+    serviceAreasOverride,
+    suggestedCounty,
+    suggestedServiceAreasText
+  ]);
 
   React.useEffect(() => {
     if (locationValue) {
@@ -105,9 +143,20 @@ export function AccountTab({
     const formattedLocation = formatLocationForStorage(locationValue);
     setIsSavingLocation(true);
     try {
+      const resolvedCounty = normalizeCountyName(
+        countyOverride.trim() || suggestedCounty
+      );
+      const resolvedServiceAreas = serviceAreasOverride
+        .split(",")
+        .map((area) => area.trim())
+        .filter(Boolean);
+
       await updateUserLocation(userId, formattedLocation, {
-        county: locationValue.county ?? null,
-        serviceAreas: locationValue.serviceAreas ?? null
+        county: resolvedCounty || null,
+        serviceAreas:
+          resolvedServiceAreas.length > 0
+            ? resolvedServiceAreas
+            : suggestedServiceAreas
       });
       setSavedLocation(formattedLocation);
       toast.success("Location updated.");
@@ -116,7 +165,14 @@ export function AccountTab({
     } finally {
       setIsSavingLocation(false);
     }
-  }, [locationValue, userId]);
+  }, [
+    locationValue,
+    userId,
+    countyOverride,
+    suggestedCounty,
+    serviceAreasOverride,
+    suggestedServiceAreas
+  ]);
 
   React.useEffect(() => {
     onDirtyChange?.(isLocationDirty);
@@ -210,7 +266,7 @@ export function AccountTab({
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
-            <Label htmlFor="location">Service Area</Label>
+            <Label htmlFor="location">Current Location</Label>
             <LocationAutocomplete
               value={locationValue}
               onChange={handleLocationChange}
@@ -220,13 +276,33 @@ export function AccountTab({
               className={isSavingLocation ? "opacity-70" : undefined}
             />
             <p className="text-sm text-muted-foreground">
-              Update by entering your ZIP code.
+              Update by entering your city or ZIP code.
             </p>
+            {locationValue && (
+              <LocationDetailsPanel
+                suggestedCounty={suggestedCounty}
+                suggestedServiceAreas={suggestedServiceAreas}
+                state={locationValue?.state ?? ""}
+                isEditing={isEditingLocationDetails}
+                onToggleEdit={() => {
+                  if (isEditingLocationDetails) {
+                    setCountyOverride(suggestedCounty);
+                    setServiceAreasOverride(suggestedServiceAreasText);
+                  }
+                  setIsEditingLocationDetails(!isEditingLocationDetails);
+                }}
+                countyValue={countyOverride}
+                serviceAreasValue={serviceAreasOverride}
+                onCountyChange={setCountyOverride}
+                onServiceAreasChange={setServiceAreasOverride}
+                onValidationChange={setLocationHasErrors}
+              />
+            )}
             {isLocationDirty && (
               <div className="flex justify-end pt-2">
                 <Button
                   onClick={handleSaveLocation}
-                  disabled={isSavingLocation}
+                  disabled={isSavingLocation || locationHasErrors}
                 >
                   {isSavingLocation ? "Saving..." : "Save Location"}
                 </Button>
