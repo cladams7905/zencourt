@@ -2,18 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
-  const isHandlerPage = pathname.startsWith("/handler");
-  const isWebhook = pathname.startsWith("/api/v1/webhooks");
-  const isNextInternal =
-    pathname.startsWith("/_next") || pathname === "/_not-found";
-  const isRootPage = pathname === "/";
+  const allowedPathPrefixes = ["/handler", "/api/v1/webhooks", "/_next"];
+  const allowedExactPaths = ["/", "/_not-found", "/terms", "/privacy"];
 
   const hasStackSession =
     Boolean(request.cookies.get("stack-access")?.value) ||
     Boolean(request.cookies.get("stack-refresh")?.value);
 
   // Allow requests that should bypass auth entirely (including root page for landing)
-  if (isHandlerPage || isWebhook || isNextInternal || isRootPage) {
+  if (
+    allowedExactPaths.includes(pathname) ||
+    allowedPathPrefixes.some((prefix) => pathname.startsWith(prefix))
+  ) {
     return NextResponse.next();
   }
 

@@ -120,10 +120,10 @@ export function Footer() {
             © 2024 Zencourt Inc. All rights reserved.
           </p>
           <div className="flex gap-6 text-xs text-muted-foreground">
-            <Link href="#" className="hover:text-foreground">
+            <Link href="/privacy" className="hover:text-foreground">
               Privacy Policy
             </Link>
-            <Link href="#" className="hover:text-foreground">
+            <Link href="/terms" className="hover:text-foreground">
               Terms of Service
             </Link>
           </div>

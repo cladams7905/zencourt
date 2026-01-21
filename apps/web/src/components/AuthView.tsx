@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import Image from "next/image";
+import Link from "next/link";
 
 interface AuthViewProps {
   title?: string;
@@ -100,19 +101,19 @@ export function AuthView({ children }: AuthViewProps) {
           {/* Footer Note */}
           <p className="mt-8 text-center text-sm text-muted-foreground">
             By continuing, you agree to our{" "}
-            <a
-              href="#"
-              className="text-foreground hover:text-secondary transition-colors underline"
+            <Link
+              href="/terms"
+              className="text-foreground transition-colors underline"
             >
               Terms of Service
-            </a>{" "}
+            </Link>{" "}
             and{" "}
-            <a
-              href="#"
-              className="text-foreground hover:text-secondary transition-colors underline"
+            <Link
+              href="/privacy"
+              className="text-foreground transition-colors underline"
             >
               Privacy Policy
-            </a>
+            </Link>
           </p>
         </div>
       </div>
