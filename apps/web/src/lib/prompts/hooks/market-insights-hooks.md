@@ -69,7 +69,7 @@ These hook templates are specifically designed for market update content, data-d
 - The {county} market is shifting: what you need to know
 - Signs of a {buyer's/seller's/balanced} market in {city}
 - Inventory levels in {location}: what the data shows
-- Days on market are {increasing/decreasing} in {county}—here's why
+- Days on market are {increasing/decreasing} in {county}, here's why
 - Multiple offers are {back/gone} in {city}
 - Price reductions in {county}: what's really happening
 - Market velocity in {city}: how fast are homes selling?
@@ -91,7 +91,7 @@ These hook templates are specifically designed for market update content, data-d
 - Price appreciation in {location}: {year}-over-{year}
 - What homes are actually selling for in {city} (vs. list price)
 - The pricing sweet spot in {county} right now
-- Luxury price point shifts in {location}
+- {market} price point shifts in {location}
 - Entry-level home prices in {city}: what you need to know
 - How much home you can afford with today's rates in {county}
 - Price trends by property type in {location}
@@ -110,7 +110,7 @@ These hook templates are specifically designed for market update content, data-d
 - Why aren't more people listing in {location}?
 - Pocket listings in {city}: the hidden market
 - New construction inventory in {county}
-- Luxury inventory levels in {location}
+- {market} inventory levels in {location}
 - Starter home shortage in {city}: the data
 - How long does inventory last in {county} these days?
 
@@ -225,7 +225,7 @@ These hook templates are specifically designed for market update content, data-d
 
 4. **Match data to audience:** Investors want cap rates and ROI. First-time buyers want affordability. Tailor the market angle to the audience directive.
 
-5. **Lead with insight, not just data:** "Home prices up 4%" is boring. "Home prices up 4%—here's what that means for your down payment" is actionable.
+5. **Lead with insight, not just data:** "Home prices up 4%" is boring. "Home prices up 4%, here's what that means for your down payment" is actionable.
 
 6. **Balance optimism and honesty:** Don't spin bad market news. Present reality with context and actionable guidance.
 

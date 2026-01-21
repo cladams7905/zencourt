@@ -21,6 +21,8 @@ export const SurveyClient = ({
       referralSource: data.referralSource,
       referralSourceOther: data.referralSourceOther ?? null,
       location: formatLocationForStorage(data.location),
+      county: data.location.county ?? null,
+      serviceAreas: data.location.serviceAreas ?? null,
       targetAudiences: data.targetAudiences,
       weeklyPostingFrequency: data.weeklyPostingFrequency
     });

@@ -150,5 +150,5 @@ These hook templates are specifically designed for community-focused content, ne
 | Downsizers        | Walkability, healthcare access, cultural amenities, quiet areas    |
 | Luxury            | Exclusive enclaves, fine dining, private clubs, prestige addresses |
 | Vacation          | Recreation, seasonal activities, tourism infrastructure            |
-| Relocators        | Everything—they need full orientation to the area                  |
+| Relocators        | Everything, they need full orientation to the area                 |
 | Military          | Base proximity, military-friendly communities, veteran resources   |

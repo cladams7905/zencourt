@@ -2,3 +2,4 @@
 .next
 .cursor
 node_modules/
+src/lib/prompts/logs/

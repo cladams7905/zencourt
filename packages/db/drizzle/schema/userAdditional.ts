@@ -1,5 +1,11 @@
 import { authenticatedRole, authUid, crudPolicy } from "drizzle-orm/neon";
-import { index, integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import {
+  index,
+  integer,
+  pgTable,
+  text,
+  timestamp
+} from "drizzle-orm/pg-core";
 
 import {
   accountTypeEnum,
@@ -26,6 +32,8 @@ export const userAdditional = pgTable(
     agentName: text("agent_name").notNull().default(""),
     brokerageName: text("brokerage_name").notNull().default(""),
     agentTitle: text("agent_title"),
+    county: text("county"),
+    serviceAreas: text("service_areas").array(),
     writingToneLevel: integer("writing_tone_level").notNull().default(3),
     writingStyleCustom: text("writing_style_custom"),
     profileCompletedAt: timestamp("profile_completed_at"),

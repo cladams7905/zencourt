@@ -12,8 +12,12 @@ export type AgentProfileInput = {
   city: string;
   state: string;
   zip_code: string;
+  county?: string | null;
   service_areas?: string | null;
+  writing_tone_level: number;
+  writing_tone_label: string;
   writing_style_description: string;
+  writing_style_notes?: string | null;
 };
 
 export type MarketDataInput = MarketData;
@@ -69,6 +73,11 @@ const CATEGORY_HOOK_FILES: Record<string, string> = {
   seasonal: "hooks/seasonal_hooks.md"
 };
 
+const HOOK_WORD_MIN = 3;
+const HOOK_WORD_MAX = 10;
+const HOOK_SAMPLE_COUNT = 10;
+const SUBHEADER_SAMPLE_COUNT = 6;
+
 async function readPromptFile(relativePath: string): Promise<string> {
   if (promptCache.has(relativePath)) {
     return promptCache.get(relativePath)!;
@@ -78,6 +87,208 @@ async function readPromptFile(relativePath: string): Promise<string> {
   const content = await readFile(fullPath, "utf8");
   promptCache.set(relativePath, content);
   return content;
+}
+
+function countTemplateWords(template: string): number {
+  const normalized = template
+    .replace(/[{}]/g, "")
+    .replace(/[$]/g, "")
+    .replace(/[^a-zA-Z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!normalized) {
+    return 0;
+  }
+
+  return normalized.split(" ").length;
+}
+
+function extractTemplateLines(content: string): string[] {
+  return content
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith("- "))
+    .map((line) => line.slice(2).trim())
+    .filter(Boolean);
+}
+
+function uniqueTemplates(templates: string[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+
+  for (const template of templates) {
+    const normalized = template.replace(/\s+/g, " ").trim();
+    if (!seen.has(normalized)) {
+      seen.add(normalized);
+      result.push(normalized);
+    }
+  }
+
+  return result;
+}
+
+function sampleTemplates(templates: string[], count: number): string[] {
+  if (templates.length <= count) {
+    return templates;
+  }
+
+  const shuffled = [...templates];
+  for (let i = shuffled.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+
+  return shuffled.slice(0, count);
+}
+
+function formatTemplateList(templates: string[]): string {
+  if (templates.length === 0) {
+    return "- (none available)";
+  }
+  return `- ${templates.join("\n- ")}`;
+}
+
+function cleanSummaryText(value: string): string {
+  return value.replace(/—/g, ",").replace(/\s+/g, " ").trim();
+}
+
+function extractSectionText(
+  lines: string[],
+  heading: string
+): string | null {
+  const headingIndex = lines.findIndex((line) => line.trim() === heading);
+  if (headingIndex === -1) {
+    return null;
+  }
+
+  const collected: string[] = [];
+  for (let i = headingIndex + 1; i < lines.length; i += 1) {
+    const line = lines[i].trim();
+    if (!line) {
+      if (collected.length > 0) {
+        break;
+      }
+      continue;
+    }
+    if (line.startsWith("### ") || line.startsWith("## ")) {
+      break;
+    }
+    if (line.startsWith("<")) {
+      break;
+    }
+    collected.push(line);
+  }
+
+  if (collected.length === 0) {
+    return null;
+  }
+
+  return cleanSummaryText(collected.join(" "));
+}
+
+function extractBulletSection(
+  lines: string[],
+  marker: string
+): string[] {
+  const markerIndex = lines.findIndex((line) =>
+    line.trim().startsWith(marker)
+  );
+  if (markerIndex === -1) {
+    return [];
+  }
+
+  const bullets: string[] = [];
+  for (let i = markerIndex + 1; i < lines.length; i += 1) {
+    const line = lines[i].trim();
+    if (!line) {
+      if (bullets.length > 0) {
+        break;
+      }
+      continue;
+    }
+    if (!line.startsWith("- ")) {
+      break;
+    }
+    bullets.push(cleanSummaryText(line.slice(2)));
+  }
+
+  return bullets;
+}
+
+function buildAudienceSummary(content: string): string {
+  const lines = content.split("\n");
+  const titleMatch = content.match(/^##\s+(.+)$/m);
+  const toneMatch = content.match(/^\*\*Tone:\*\*\s*(.+)$/m);
+  const corePainPoints = extractBulletSection(lines, "**Core pain points:**");
+  const keyTopics = extractSectionText(lines, "### Key Topics");
+  const dataEmphasis = extractSectionText(lines, "### Data Emphasis");
+
+  const summaryParts: string[] = [];
+  if (titleMatch?.[1]) {
+    summaryParts.push(`Audience: ${titleMatch[1].trim()}`);
+  }
+  if (toneMatch?.[1]) {
+    summaryParts.push(`Tone: ${cleanSummaryText(toneMatch[1])}`);
+  }
+  if (corePainPoints.length > 0) {
+    summaryParts.push(
+      `Core pain points:\n- ${corePainPoints.join("\n- ")}`
+    );
+  }
+  if (keyTopics) {
+    summaryParts.push(`Key topics: ${keyTopics}`);
+  }
+  if (dataEmphasis) {
+    summaryParts.push(`Data emphasis: ${dataEmphasis}`);
+  }
+
+  return summaryParts.length > 0
+    ? `<audience_summary>\n${summaryParts.join("\n")}\n</audience_summary>`
+    : "";
+}
+
+function hasMeaningfulValue(value: string | null | undefined): value is string {
+  if (!value) {
+    return false;
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return false;
+  }
+  const normalized = trimmed.toLowerCase();
+  return normalized !== "n/a" && normalized !== "na" && normalized !== "null";
+}
+
+function buildMarketDataXml(data: MarketDataInput): string {
+  const location = `${data.city}, ${data.state}`;
+  const fields: Array<[string, string | null | undefined]> = [
+    ["summary", data.market_conditions_narrative || data.housing_market_summary],
+    ["median_home_price", data.median_home_price],
+    ["price_change_yoy", data.price_change_yoy],
+    ["active_listings", data.active_listings],
+    ["months_of_supply", data.months_of_supply],
+    ["avg_dom", data.avg_dom],
+    ["sale_to_list_ratio", data.sale_to_list_ratio],
+    ["median_rent", data.median_rent],
+    ["rent_change_yoy", data.rent_change_yoy],
+    ["rate_30yr", data.rate_30yr],
+    ["estimated_monthly_payment", data.estimated_monthly_payment],
+    ["median_household_income", data.median_household_income],
+    ["affordability_index", data.affordability_index],
+    ["entry_level_price", data.entry_level_price],
+    ["entry_level_payment", data.entry_level_payment]
+  ];
+
+  const lines = fields
+    .filter(([, value]) => hasMeaningfulValue(value))
+    .map(([key, value]) => `${key}: ${value}`);
+
+  return [
+    `<market_data location="${location}" zip_code="${data.zip_code}" as_of="${data.data_timestamp}">`,
+    ...lines,
+    "</market_data>"
+  ].join("\n");
 }
 
 function interpolateTemplate(template: string, values: PromptValues): string {
@@ -108,16 +319,39 @@ async function loadAudienceDirectives(segments: string[]): Promise<string> {
   return directives.join("\n\n");
 }
 
-async function loadHookTemplates(category: string): Promise<string> {
-  const globalHooks = await readPromptFile("hooks/global-hooks.md");
+async function loadHookTemplates(category: string): Promise<{
+  hookTemplates: string[];
+  subheaderTemplates: string[];
+}> {
+  const globalHooksContent = await readPromptFile("hooks/global-hooks.md");
   const categoryFile = CATEGORY_HOOK_FILES[category];
+  const categoryHooksContent = categoryFile
+    ? await readPromptFile(categoryFile)
+    : "";
 
-  if (!categoryFile) {
-    return globalHooks;
+  const combinedTemplates = uniqueTemplates(
+    extractTemplateLines(`${globalHooksContent}\n${categoryHooksContent}`)
+  );
+
+  const hookCandidates: string[] = [];
+  const subheaderCandidates: string[] = [];
+
+  for (const template of combinedTemplates) {
+    const wordCount = countTemplateWords(template);
+    if (wordCount >= HOOK_WORD_MIN && wordCount <= HOOK_WORD_MAX) {
+      hookCandidates.push(template);
+      continue;
+    }
+    subheaderCandidates.push(template);
   }
 
-  const categoryHooks = await readPromptFile(categoryFile);
-  return `${globalHooks}\n\n${categoryHooks}`;
+  return {
+    hookTemplates: sampleTemplates(hookCandidates, HOOK_SAMPLE_COUNT),
+    subheaderTemplates: sampleTemplates(
+      subheaderCandidates,
+      SUBHEADER_SAMPLE_COUNT
+    )
+  };
 }
 
 export async function buildSystemPrompt(input: PromptAssemblyInput) {
@@ -125,14 +359,29 @@ export async function buildSystemPrompt(input: PromptAssemblyInput) {
   const audienceDirective = await loadAudienceDirectives(
     input.audience_segments
   );
-  const hookTemplates = await loadHookTemplates(input.category);
+  const audienceSummary = audienceDirective
+    ? buildAudienceSummary(audienceDirective)
+    : "";
+  const { hookTemplates, subheaderTemplates } = await loadHookTemplates(
+    input.category
+  );
   const agentTemplate = await readPromptFile("agent-profile.md");
-  const marketTemplate = await readPromptFile("market-data.md");
   const communityTemplate = await readPromptFile("community-data.md");
+  const complianceQuality = await readPromptFile("compliance-quality.md");
+  const outputRequirements = await readPromptFile("output-requirements.md");
 
-  const agentProfile = interpolateTemplate(agentTemplate, input.agent_profile);
+  const styleNotes = input.agent_profile.writing_style_notes?.trim();
+  const styleNotesBlock = styleNotes
+    ? `Additional style notes (must follow): ${styleNotes}`
+    : "";
+  const agentProfileValues = {
+    ...input.agent_profile,
+    writing_style_description: input.agent_profile.writing_style_description,
+    writing_style_notes_block: styleNotesBlock
+  };
+  const agentProfile = interpolateTemplate(agentTemplate, agentProfileValues);
   const marketData = input.market_data
-    ? interpolateTemplate(marketTemplate, input.market_data)
+    ? buildMarketDataXml(input.market_data)
     : "";
   const communityData = input.community_data
     ? interpolateTemplate(communityTemplate, input.community_data)
@@ -140,7 +389,9 @@ export async function buildSystemPrompt(input: PromptAssemblyInput) {
 
   const outputDirective = `
 <output_requirements>
-Return a JSON array of exactly 4 items. Each item must match the JSON schema in the base prompt. Output JSON only.
+${outputRequirements}
+
+Return a JSON array of exactly 4 items. Each item must match the JSON schema. Output JSON only.
 Constraints:
 - Prefer single-image posts when possible.
 - Add new lines between every 1-2 sentences to make it easier to read.
@@ -148,20 +399,24 @@ Constraints:
 - If carousel, max 5 slides.
 - Captions must be concise and vary in length. Use this mix: 2 short (1-3 sentences), 1 medium (4-6 sentences), 1 long (7-10 sentences).
 - Captions must not exceed ~700 characters.
-- You must select hook phrasing from the hook templates below. Do not invent a hook style that isn't clearly derived from the list.
+- Writing style must match the writing style description and tone level. If a template conflicts with the required tone, rephrase it in the same structure and length.
+- Hooks must be based on the hook templates below. Do not invent a hook style that isn't clearly derived from the list.
+- Hook subheaders should be based on the subheader templates below when used.
+- Avoid engagement bait or false urgency.
 </output_requirements>`;
 
   const marketBlock =
     input.category === "market_insights" && marketData
-      ? `\n\n<market_data>\n${marketData}\n</market_data>`
+      ? `\n\n${marketData}`
       : "";
   const communityBlock =
     input.category === "community" && communityData
       ? `\n\n<community_data>\n${communityData}\n</community_data>`
       : "";
+  const recentHooks = input.recent_hooks?.slice(0, 8) ?? [];
   const recentHooksBlock =
-    input.recent_hooks && input.recent_hooks.length > 0
-      ? `\n\n<recent_hooks>\nDo NOT reuse or closely paraphrase any of these hooks:\n- ${input.recent_hooks.join(
+    recentHooks.length > 0
+      ? `\n\n<recent_hooks>\nDo NOT reuse or closely paraphrase any of these hooks:\n- ${recentHooks.join(
           "\n- "
         )}\n</recent_hooks>`
       : "";
@@ -169,18 +424,25 @@ Constraints:
   return `
 ${baseSystemPrompt}
 
-<audience_directive>
-${audienceDirective}
-</audience_directive>
+${agentProfile}
+
+${audienceSummary}
 
 <hooks>
-Use these hook templates as the required source for your hook phrasing. Pick one per item and adapt it with specifics. Do not ignore this list.
-${hookTemplates}
+Use these hook templates as the required source for hook phrasing. Pick one per item and adapt it with specifics.
+Hooks must be 3-10 words and come from the hook templates list.
+Subheaders can be longer and should draw from the subheader templates list.
+<hook_templates>
+${formatTemplateList(hookTemplates)}
+</hook_templates>
+<subheader_templates>
+${formatTemplateList(subheaderTemplates)}
+</subheader_templates>
 </hooks>
 
-<agent_profile>
-${agentProfile}
-</agent_profile>${marketBlock}${communityBlock}${recentHooksBlock}
+${recentHooksBlock}${marketBlock}${communityBlock}
+
+${complianceQuality}
 
 ${outputDirective}
 `.trim();

@@ -7,6 +7,10 @@ import type {
 } from "@shared/types/models";
 import { withDbErrorHandling } from "../_utils";
 import storageService from "@web/src/server/services/storageService";
+type LocationDetailsInput = Pick<
+  InsertDBUserAdditional,
+  "county" | "serviceAreas"
+>;
 
 export async function getOrCreateUserAdditional(
   userId: string
@@ -45,6 +49,8 @@ export async function completeWelcomeSurvey(
     | "referralSource"
     | "referralSourceOther"
     | "location"
+    | "county"
+    | "serviceAreas"
     | "targetAudiences"
     | "weeklyPostingFrequency"
   >
@@ -57,6 +63,8 @@ export async function completeWelcomeSurvey(
     async () => {
       const surveyUpdates = {
         ...updates,
+        county: updates.county ?? null,
+        serviceAreas: updates.serviceAreas ?? null,
         surveyCompletedAt: new Date(),
         updatedAt: new Date()
       };
@@ -182,7 +190,8 @@ export async function updateUserProfile(
 
 export async function updateUserLocation(
   userId: string,
-  location: InsertDBUserAdditional["location"]
+  location: InsertDBUserAdditional["location"],
+  details?: LocationDetailsInput
 ): Promise<DBUserAdditional> {
   if (!userId || userId.trim() === "") {
     throw new Error("User ID is required to update location");
@@ -195,12 +204,16 @@ export async function updateUserLocation(
         .values({
           userId,
           location,
+          county: details?.county ?? null,
+          serviceAreas: details?.serviceAreas ?? null,
           updatedAt: new Date()
         })
         .onConflictDoUpdate({
           target: userAdditional.userId,
           set: {
             location,
+            county: details?.county ?? null,
+            serviceAreas: details?.serviceAreas ?? null,
             updatedAt: new Date()
           }
         })

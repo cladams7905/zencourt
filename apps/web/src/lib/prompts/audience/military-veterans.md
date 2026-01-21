@@ -1,7 +1,5 @@
 ## Military & Veterans
 
-<audience_directive segment="military">
-
 ### Psychology Profile
 
 **Who they are:** Ages 22-55+, active duty, reserves, Guard, veterans, and military retirees with VA loan eligibility. Subject to PCS moves every 2-4 years (active duty). Concentrated near military installations. Income varies by rank ($35K-$150K+). BAH (housing allowance) is central to affordability thinking.
@@ -42,5 +40,3 @@ VA loan eligibility, Certificate of Eligibility, VA funding fee, zero down payme
 ### Data Emphasis
 
 Frame affordability in BAH terms—that's how military buyers think. Provide explicit break-even analysis for expected tour length. Address VA offer competitiveness honestly. Show installation-specific inventory and pricing. Build trust through demonstrated military-life knowledge.
-
-</audience_directive>

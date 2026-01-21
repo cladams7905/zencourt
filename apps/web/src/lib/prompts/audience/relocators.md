@@ -1,7 +1,5 @@
 ## Relocators & Job Transferees
 
-<audience_directive segment="relocators">
-
 ### Psychology Profile
 
 **Who they are:** Ages 28-55, moving to new city for career opportunity, corporate transfer, or life change. May have relocation package or be self-funding. Timeline is compressed (often 30-90 days). Starting from zero local knowledge—need to become experts in weeks, not years.
@@ -42,5 +40,3 @@ Best neighborhoods for families/professionals, commute times, school district co
 ### Data Emphasis
 
 Always provide origin-city comparisons ("Coming from [X], your budget gets you [Y] here"). Lead with market pace—how fast must they move? Show neighborhood-specific pricing. Address timeline feasibility directly. Be their "borrowed local knowledge."
-
-</audience_directive>

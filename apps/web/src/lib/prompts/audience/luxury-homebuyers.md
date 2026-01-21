@@ -1,7 +1,5 @@
 ## Luxury Homebuyers
 
-<audience_directive segment="luxury">
-
 ### Psychology Profile
 
 **Who they are:** Ages 40-65, high-net-worth individuals at $1M-$10M+ price points. Executives, entrepreneurs, physicians, attorneys, finance professionals, inherited wealth. Accustomed to premium service in all aspects of life. Often have multiple properties.
@@ -43,5 +41,3 @@ Custom architecture, chef's kitchen, wine cellar, home theater, infinity pool, e
 Segment all data to relevant luxury threshold—never blend with broader market. Lead with inventory scarcity at price point. Present price-per-square-foot with quality context. Address off-market activity percentage. Position data as intelligence, not sales pressure.
 
 **Content aesthetic requirements:** Professional photography only. Cinematic video. Clean, minimal graphics. Concise, refined copy. No exclamation points.
-
-</audience_directive>

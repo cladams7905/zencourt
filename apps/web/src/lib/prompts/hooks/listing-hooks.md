@@ -21,7 +21,6 @@ These hook templates are specifically designed for promoting active listings, ne
 
 ## Sold & Success Stories
 
-- You won't believe what this home sold for
 - I made one small change to this listing… and it sold in {number} days
 - SOLD in {number} days: {address/neighborhood}
 - Another happy family in their new home
@@ -41,17 +40,14 @@ These hook templates are specifically designed for promoting active listings, ne
 ## Property Tours & Showcases
 
 - Wait until you see the {property_feature} in this property
-- You won't believe what this ${price} home looks like inside
 - What would you do with a {property_feature} like this?
 - Experience the breathtaking views from these {city} {property_type}
 - Describe this home with a single emoji
 - Behind the gates: an insider's look at {location}'s most coveted communities
-- Looking to buy a {property_feature} property? Don't miss this tour!
 - Walk through Wednesday: {address/property_highlight}
 - Virtual tour of this incredible {location} property
 - The {property_feature} in this home is unreal
 - Room by room tour of {address}
-- You HAVE to see the {room} in this home
 - These {property_feature} are what sold this home
 - The {room} reveal you've been asking for
 - My favorite feature in this {city} listing
@@ -64,10 +60,8 @@ These hook templates are specifically designed for promoting active listings, ne
 
 - What ${budget} will get you in {city/county}
 - POV: You just bought a ${price} home in {city}
-- {Month} deals you won't believe in {city}
 - If you're dreaming of {property_feature}, this might be your next home
 - Best value in {neighborhood} right now
-- Under ${price} in {city}: you won't believe this
 - This ${price} home has everything on your wishlist
 - More home for your money in {location}
 - Incredible value at ${price} in {city}
@@ -81,9 +75,7 @@ These hook templates are specifically designed for promoting active listings, ne
 - Offers due {date}: have you seen it yet?
 - The home that checks all your boxes just listed
 - Is this THE one you've been looking for?
-- See it before it's gone: {address}
 - Price reduced: now's your chance in {location}
-- Open house this weekend—your last chance to view
 
 ## Property Types & Architecture
 
@@ -141,7 +133,7 @@ These hook templates are specifically designed for promoting active listings, ne
 - Open house this {day}: {time} at {address}
 - Refreshments, tours, and your dream home: {date}
 - See you at the open house: {day} {time}
-- This {day}'s open house: don't miss it
+- This {day}'s open house, see the details
 - Coffee and cookies at this weekend's open house
 - Open house prep: come see {address} on {date}
 - Tour this beauty: open house {day} {time}
@@ -166,14 +158,13 @@ These hook templates are specifically designed for promoting active listings, ne
 - DM me to schedule a showing at {address}
 - Ready to see this {city} home? Link in bio
 - Schedule your private tour: link in bio
-- Want more info on this listing? Comment "INFO"
 - Tap the link to see the full listing
 - Interested? Let's schedule a showing
-- Make this your next home—message me
+- Make this your next home, message me
 - See the full tour on my website
 - Get the listing details: {action}
 - Book your showing today for {address}
-- Still available—schedule your tour now
+- Still available, schedule your tour now
 - Questions about this property? Drop them below
 
 ## Problem-Solved Listings
@@ -209,7 +200,7 @@ These hook templates are specifically designed for promoting active listings, ne
 
 4. **Sold posts need insight:** "SOLD!" alone is boring. Add what made it sell, how fast, or what it means for the market to deliver value.
 
-5. **Tours need a star feature:** Don't just tour the whole house. Lead with the one feature that will stop the scroll—the view, the kitchen, the backyard.
+5. **Tours need a star feature:** Don't just tour the whole house. Lead with the one feature that will stop the scroll, the view, the kitchen, the backyard.
 
 6. **Open house hooks need details:** Always include day, time, and address. Make it easy to save and act on.
 
@@ -217,6 +208,6 @@ These hook templates are specifically designed for promoting active listings, ne
 
 8. **Lifestyle over specs:** "Wake up to this view every morning" resonates more than "3 bed, 2 bath, 1,800 sqft."
 
-9. **Combine with global hooks:** Layer listing-specific templates with curiosity formats. Example: "You won't believe what this ${price} home looks like inside" combines curiosity with price anchor.
+9. **Combine with global hooks:** Layer listing-specific templates with curiosity formats. Example: "Take a tour of this ${price} home in {city}" combines curiosity with a price anchor.
 
 10. **Respect Fair Housing:** Never mention neighborhood demographics, school quality in coded language, or anything that could be construed as steering.

@@ -159,7 +159,7 @@ These hook templates are specifically designed for personal brand content, day-i
 
 7. **Stories build trust:** "The wildest thing I've seen" or "my biggest mistake" content humanizes you and makes you memorable. Vulnerability (within reason) builds connection.
 
-8. **Local favorites double as community content:** "Where I grab coffee between showings" serves dual purpose—personal brand AND local expertise positioning.
+8. **Local favorites double as community content:** "Where I grab coffee between showings" serves dual purpose, personal brand AND local expertise positioning.
 
 9. **Don't overdo the lifestyle content:** This should be ~15-20% of overall content mix, not the majority. Too much personal content without value dilutes your expert positioning.
 

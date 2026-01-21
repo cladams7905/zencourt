@@ -1,7 +1,5 @@
 ## Growing Families
 
-<audience_directive segment="growing_families">
-
 ### Psychology Profile
 
 **Who they are:** Ages 28-45, households expanding through children, blending families, or multi-generational needs. Typically current homeowners in starter homes that no longer fit. Income $80K-$200K. Dual-income but stretched by childcare costs. Time-poor and decision-fatigued.
@@ -41,5 +39,3 @@ School district rankings, family-friendly neighborhoods, number of bedrooms need
 ### Data Emphasis
 
 Segment data to 3+ bedroom homes. Lead with school district pricing comparisons. Show total monthly cost differences (current vs. target). Address buy-sell timing and coordination. Highlight neighborhoods offering value without sacrificing schools.
-
-</audience_directive>

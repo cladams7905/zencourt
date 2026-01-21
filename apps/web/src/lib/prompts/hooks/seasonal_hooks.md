@@ -143,7 +143,7 @@ These hook templates are specifically designed for time-sensitive content tied t
 
 - May flowers = peak selling season in {city}
 - Memorial Day weekend: prime showing time
-- Summer's almost here: last chance for spring deals
+- Summer's almost here: spring deals recap in {city}
 - The busiest month in {city} real estate
 - Memorial Day open house tour in {location}
 - Mother's Day gift: a dream home in {city}
@@ -270,7 +270,7 @@ These hook templates are specifically designed for time-sensitive content tied t
 
 3. **Localize aggressively:** "{Holiday} in {city}" is far more engaging than generic holiday content. Reference local events, traditions, and spots.
 
-4. **Connect season to real estate:** Every seasonal hook should tie back to buying, selling, or homeownership. "Best pumpkin patches" alone is just lifestyle content—"Best pumpkin patches near {neighborhood}" connects to location value.
+4. **Connect season to real estate:** Every seasonal hook should tie back to buying, selling, or homeownership. "Best pumpkin patches" alone is just lifestyle content, "Best pumpkin patches near {neighborhood}" connects to location value.
 
 5. **Don't force it:** Not every holiday needs real estate content. If the connection feels strained ("President's Day home deals!"), skip it.
 

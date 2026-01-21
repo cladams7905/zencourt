@@ -105,7 +105,10 @@ export function AccountTab({
     const formattedLocation = formatLocationForStorage(locationValue);
     setIsSavingLocation(true);
     try {
-      await updateUserLocation(userId, formattedLocation);
+      await updateUserLocation(userId, formattedLocation, {
+        county: locationValue.county ?? null,
+        serviceAreas: locationValue.serviceAreas ?? null
+      });
       setSavedLocation(formattedLocation);
       toast.success("Location updated.");
     } catch (error) {

@@ -5,6 +5,8 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
 import { ApiError, requireAuthenticatedUser } from "../../_utils";
 import {
   buildSystemPrompt,
@@ -28,6 +30,48 @@ const CLAUDE_MODEL = "claude-haiku-4-5-20251001";
 const DEFAULT_BATCH_SIZE = 4;
 const RECENT_HOOKS_TTL_SECONDS = 60 * 60 * 24 * 7;
 const RECENT_HOOKS_MAX = 50;
+const DEFAULT_TONE_LEVEL = 3;
+
+const TONE_DESCRIPTIONS: Record<number, string> = {
+  1: "Very informal, uses texting lingo, conversational and playful",
+  2: "Informal, warm, relaxed, approachable voice",
+  3: "Conversational, casual-professional tone, clear and concise",
+  4: "Formal, polished, authoritative tone with minimal slang",
+  5: "Very formal, highly professional and structured voice"
+};
+
+const OUTPUT_LOGS_DIR = "src/lib/prompts/logs";
+
+function shouldWritePromptLog(): boolean {
+  return process.env.NODE_ENV === "development" && !process.env.VERCEL;
+}
+
+async function writePromptLog(payload: {
+  userId: string;
+  systemPrompt: string;
+  userPrompt: string;
+}): Promise<void> {
+  if (!shouldWritePromptLog()) {
+    return;
+  }
+
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const filename = `${timestamp}_${payload.userId}.txt`;
+  const outputDir = path.join(process.cwd(), OUTPUT_LOGS_DIR);
+  const outputPath = path.join(outputDir, filename);
+  const content = [
+    "=== SYSTEM PROMPT ===",
+    payload.systemPrompt,
+    "",
+    "=== USER PROMPT ===",
+    payload.userPrompt,
+    ""
+  ].join("\n");
+
+  await mkdir(outputDir, { recursive: true });
+  await writeFile(outputPath, content, "utf8");
+}
+
 
 type ClaudeMessage = {
   role: "user";
@@ -78,6 +122,8 @@ type UserAdditionalSnapshot = {
   writingStyleCustom: string | null;
   agentName: string;
   brokerageName: string;
+  county: string | null;
+  serviceAreas: string[] | null;
 };
 
 async function getUserAdditionalSnapshot(
@@ -90,7 +136,9 @@ async function getUserAdditionalSnapshot(
       writingToneLevel: userAdditional.writingToneLevel,
       writingStyleCustom: userAdditional.writingStyleCustom,
       agentName: userAdditional.agentName,
-      brokerageName: userAdditional.brokerageName
+      brokerageName: userAdditional.brokerageName,
+      county: userAdditional.county,
+      serviceAreas: userAdditional.serviceAreas
     })
     .from(userAdditional)
     .where(eq(userAdditional.userId, userId));
@@ -101,7 +149,9 @@ async function getUserAdditionalSnapshot(
     writingToneLevel: record?.writingToneLevel ?? null,
     writingStyleCustom: record?.writingStyleCustom ?? null,
     agentName: record?.agentName ?? "",
-    brokerageName: record?.brokerageName ?? ""
+    brokerageName: record?.brokerageName ?? "",
+    county: record?.county ?? null,
+    serviceAreas: record?.serviceAreas ?? null
   };
 }
 
@@ -195,15 +245,8 @@ function buildWritingStyleDescription(
   const parts: string[] = [];
 
   if (preset !== null && preset !== undefined && preset !== "") {
-    const numeric = Number(preset);
-    const toneDescriptions: Record<number, string> = {
-      1: "Very informal, uses texting lingo, conversational and playful",
-      2: "Informal, warm, relaxed, approachable voice",
-      3: "Conversational, casual-professional tone, clear and concise",
-      4: "Formal, polished, authoritative tone with minimal slang",
-      5: "Very formal, highly professional and structured voice"
-    };
-    parts.push(toneDescriptions[numeric] || DEFAULT_STYLE);
+    const numeric = normalizeToneLevel(Number(preset));
+    parts.push(TONE_DESCRIPTIONS[numeric] || DEFAULT_STYLE);
   }
 
   if (custom) {
@@ -211,6 +254,21 @@ function buildWritingStyleDescription(
   }
 
   return parts.join(". ");
+}
+
+function normalizeToneLevel(level: number | null): number {
+  if (level === null || Number.isNaN(level)) {
+    return DEFAULT_TONE_LEVEL;
+  }
+  if (level < 1 || level > 5) {
+    return DEFAULT_TONE_LEVEL;
+  }
+  return Math.round(level);
+}
+
+function getWritingToneLabel(level: number | null): string {
+  const normalized = normalizeToneLevel(level);
+  return TONE_DESCRIPTIONS[normalized] || TONE_DESCRIPTIONS[DEFAULT_TONE_LEVEL];
 }
 
 export async function POST(request: NextRequest) {
@@ -265,6 +323,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Enhance agent profile with user's data from database
+    const writingToneLevel = normalizeToneLevel(
+      userAdditionalSnapshot.writingToneLevel
+    );
+    const writingToneLabel = getWritingToneLabel(writingToneLevel);
+
     const enhancedAgentProfile = {
       ...body.agent_profile,
       agent_name:
@@ -272,10 +335,16 @@ export async function POST(request: NextRequest) {
       brokerage_name:
         userAdditionalSnapshot.brokerageName ||
         body.agent_profile.brokerage_name,
+      zip_code: body.agent_profile.zip_code,
+      county: userAdditionalSnapshot.county ?? "",
+      service_areas: userAdditionalSnapshot.serviceAreas?.join(", ") ?? "",
+      writing_tone_level: writingToneLevel,
+      writing_tone_label: writingToneLabel,
       writing_style_description: buildWritingStyleDescription(
-        userAdditionalSnapshot.writingToneLevel,
-        userAdditionalSnapshot.writingStyleCustom
-      )
+        writingToneLevel,
+        null
+      ),
+      writing_style_notes: userAdditionalSnapshot.writingStyleCustom ?? null
     };
 
     const promptInput: PromptAssemblyInput = {
@@ -288,6 +357,11 @@ export async function POST(request: NextRequest) {
 
     const systemPrompt = await buildSystemPrompt(promptInput);
     const userPrompt = buildUserPrompt(promptInput);
+    await writePromptLog({
+      userId: user.id,
+      systemPrompt,
+      userPrompt
+    });
 
     const messages: ClaudeMessage[] = [
       {

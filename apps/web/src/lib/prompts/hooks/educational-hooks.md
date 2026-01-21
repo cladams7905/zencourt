@@ -51,7 +51,6 @@ These hook templates are specifically designed for educational content, how-to g
 ## Quick Tips & Hacks
 
 - Quick hack…
-- This simple hack will blow your mind
 - Protip: {tip}
 - Life hack: {tip}
 - Homebuying pro tip: {tip}
@@ -118,7 +117,7 @@ These hook templates are specifically designed for educational content, how-to g
 - 3 simple {topic} tips that changed my {outcome}
 - {number} things you can do right now to improve {metric}
 - Three things that made {task} easier
-- This one feature adds thousands to your home value—and almost no one talks about it
+- This one feature adds thousands to your home value, and almost no one talks about it
 - {number} home upgrades with high returns
 - How to instantly upgrade your {metric}
 - Simple changes that increase {outcome}
@@ -316,7 +315,7 @@ These hook templates are specifically designed for educational content, how-to g
 
 5. **Mistakes content has high engagement:** People are loss-averse. "Mistakes to avoid" often outperforms "tips to follow" on the same topic.
 
-6. **How-to needs clear steps:** Don't just explain what to do—break it into actionable steps they can follow immediately.
+6. **How-to needs clear steps:** Don't just explain what to do. Break it into actionable steps they can follow immediately.
 
 7. **Demographic-specific content resonates:** "{demographic} guide to {topic}" signals you understand their unique situation. Use audience directive keywords.
 

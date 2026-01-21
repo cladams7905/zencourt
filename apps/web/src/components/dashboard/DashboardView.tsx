@@ -94,10 +94,10 @@ const defaultAgentProfile = {
   agent_name: "Alex Rivera",
   brokerage_name: "Zencourt Realty",
   agent_title: "Realtor",
-  city: "Austin",
-  state: "TX",
-  zip_code: "78701",
-  service_areas: "Downtown Austin, East Austin, South Congress",
+  city: "",
+  state: "",
+  zip_code: "",
+  service_areas: "",
   writing_style_description:
     "Friendly, conversational, use occasional exclamation points and texting lingo (lol, tbh, idk, haha, soooo, wayyy)"
 };
@@ -344,11 +344,14 @@ const DashboardView = ({
 
       const [city, state] =
         location?.split(",")?.map((part) => part.trim()) ?? [];
+      const zipMatch = location?.match(/\b\d{5}(?:-\d{4})?\b/);
+      const zipCode = zipMatch?.[0] ?? "";
       const agentProfile = {
         ...defaultAgentProfile,
         agent_name: headerName || defaultAgentProfile.agent_name,
         city: city || defaultAgentProfile.city,
-        state: state || defaultAgentProfile.state
+        state: state || defaultAgentProfile.state,
+        zip_code: zipCode || defaultAgentProfile.zip_code
       };
       const filterFocus = activeFilters[0] ?? "";
 

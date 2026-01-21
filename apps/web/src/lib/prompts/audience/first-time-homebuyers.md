@@ -1,7 +1,5 @@
 ## First-Time Homebuyers
 
-<audience_directive segment="first_time_buyers">
-
 ### Psychology Profile
 
 **Who they are:** Ages 25-40, transitioning from renting to ownership. Mix of single professionals, couples, and young families. Income $60K-$150K. Research-obsessed but overwhelmed by unfamiliar process. This is likely their largest financial decision ever.
@@ -37,5 +35,3 @@ FHA loans, down payment assistance, pre-approval vs pre-qualification, PMI, clos
 ### Data Emphasis
 
 Lead with entry-level price points (lower quartile, not median). Always translate prices into monthly payments. Highlight low down payment options (3%, 3.5%). Compare to rent costs. Frame affordability optimistically with realistic pathways.
-
-</audience_directive>

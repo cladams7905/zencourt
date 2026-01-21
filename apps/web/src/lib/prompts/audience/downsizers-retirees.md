@@ -1,7 +1,5 @@
 ## Downsizers & Retirees
 
-<audience_directive segment="downsizers">
-
 ### Psychology Profile
 
 **Who they are:** Ages 55-75, transitioning from larger family homes to smaller, manageable properties. Typically lived in current home 15-30+ years. Empty nesters, retirees, or those planning ahead. Asset-rich (significant home equity), often mortgage-free. Technology comfort varies widely.
@@ -42,5 +40,3 @@ Leaving family home, decluttering strategies, single-story homes, 55+ communitie
 ### Data Emphasis
 
 Frame equity in tangible terms (what it can fund/purchase). Compare total monthly costs (staying vs. downsizing). Show right-sized inventory availability. Never create urgency—data should inform, not pressure. Acknowledge non-financial value alongside financial reality.
-
-</audience_directive>

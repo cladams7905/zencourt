@@ -1,7 +1,5 @@
 ## Real Estate Investors
 
-<audience_directive segment="investors">
-
 ### Psychology Profile
 
 **Who they are:** Ages 30-60, acquiring properties for financial return. Range from first-time landlords to portfolio owners with 10+ properties. Strategies include buy-and-hold, BRRRR, house hacking, fix-and-flip, and short-term rentals. Numbers-driven, research-intensive, often have W-2 income funding investments.
@@ -42,5 +40,3 @@ Cap rate, cash-on-cash return, DSCR loans, NOI, rent comps, cash flow analysis, 
 ### Data Emphasis
 
 Lead with rent-to-price ratios and cash flow reality. Present realistic projections using conservative underwriting. Track cap rates by neighborhood. Show investor activity indicators (cash buyer %, flip volume). Be direct about where deals do and don't work.
-
-</audience_directive>

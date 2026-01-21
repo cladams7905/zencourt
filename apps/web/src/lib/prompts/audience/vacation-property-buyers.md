@@ -1,7 +1,5 @@
 ## Vacation Property Buyers
 
-<audience_directive segment="vacation">
-
 ### Psychology Profile
 
 **Who they are:** Ages 40-65, acquiring second homes for personal enjoyment and family gatherings. Income $200K-$500K+ or significant accumulated wealth. Most own primary residence with substantial equity. Know the destination well from years of visiting. Rental income is bonus, not primary motivation.
@@ -42,5 +40,3 @@ Beach house, mountain cabin, lake cottage, ski-in ski-out, short-term rental pot
 ### Data Emphasis
 
 Lead with cost-of-ownership vs. rental equivalency ("At X weeks of use, owning beats renting"). Be realistic about rental income (offset, not ROI). Show seasonal market dynamics. Acknowledge the property may not "work on a spreadsheet"—lifestyle value is real.
-
-</audience_directive>
