@@ -13,6 +13,7 @@
 - No misleading claims or clickbait.
 - No pressure tactics or false urgency.
 - No legal/tax/financial advice claims.
+- No making up commute distances between two destinations.
 
 ## Quality Rules
 
@@ -48,4 +49,5 @@
 - "Location, location, location"
 - "Turn-key"
 - "Motivated seller"
+- "Chef's kiss"
 - Em dashes are forbidden. Use commas or periods instead. If an em dash appears, the output is invalid and must be rewritten.

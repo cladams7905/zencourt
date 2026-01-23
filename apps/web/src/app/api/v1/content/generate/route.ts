@@ -20,6 +20,10 @@ import {
   getRentCastMarketData,
   parseMarketLocation
 } from "@web/src/server/services/marketDataService";
+import {
+  getCityDescription,
+  getCommunityDataByZipAndAudience
+} from "@web/src/server/services/communityDataService";
 
 const logger = createChildLogger(baseLogger, {
   module: "content-generate-route"
@@ -27,20 +31,57 @@ const logger = createChildLogger(baseLogger, {
 
 const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
 const CLAUDE_MODEL = "claude-haiku-4-5-20251001";
-const DEFAULT_BATCH_SIZE = 4;
 const RECENT_HOOKS_TTL_SECONDS = 60 * 60 * 24 * 7;
 const RECENT_HOOKS_MAX = 50;
 const DEFAULT_TONE_LEVEL = 3;
 
 const TONE_DESCRIPTIONS: Record<number, string> = {
-  1: "Very informal, uses texting lingo, conversational and playful",
-  2: "Informal, warm, relaxed, approachable voice",
-  3: "Conversational, casual-professional tone, clear and concise",
+  1: "Very informal, uses texting lingo, and uses lots of exclamation points",
+  2: "Informal, warm, relaxed, approachable voice, uses some exclamation points",
+  3: "Conversational, casual-professional tone, clear and concise, uses some exclamation points",
   4: "Formal, polished, authoritative tone with minimal slang",
   5: "Very formal, highly professional and structured voice"
 };
 
 const OUTPUT_LOGS_DIR = "src/lib/prompts/logs";
+
+const CONTENT_ITEM_SCHEMA = {
+  type: "object",
+  properties: {
+    hook: { type: "string" },
+    hook_subheader: { anyOf: [{ type: "string" }, { type: "null" }] },
+    body: {
+      anyOf: [
+        { type: "null" },
+        {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              header: { type: "string" },
+              content: { type: "string" }
+            },
+            required: ["header", "content"],
+            additionalProperties: false
+          }
+        }
+      ]
+    },
+    cta: { anyOf: [{ type: "string" }, { type: "null" }] },
+    caption: { type: "string" }
+  },
+  required: ["hook", "hook_subheader", "body", "cta", "caption"],
+  additionalProperties: false
+};
+
+const OUTPUT_FORMAT = {
+  type: "json_schema",
+  schema: {
+    type: "array",
+    items: CONTENT_ITEM_SCHEMA,
+    minItems: 1
+  }
+};
 
 function shouldWritePromptLog(): boolean {
   return process.env.NODE_ENV === "development" && !process.env.VERCEL;
@@ -113,6 +154,96 @@ function getRedisClient(): Redis | null {
 
 function getRecentHooksKey(userId: string, category: string): string {
   return `recent_hooks:${userId}:${category}`;
+}
+
+const COMMUNITY_CATEGORY_KEYS = [
+  "neighborhoods_list",
+  "dining_list",
+  "coffee_brunch_list",
+  "nature_outdoors_list",
+  "entertainment_list",
+  "attractions_list",
+  "sports_rec_list",
+  "arts_culture_list",
+  "nightlife_social_list",
+  "fitness_wellness_list",
+  "shopping_list",
+  "education_list",
+  "community_events_list"
+] as const;
+
+type CommunityCategoryKey = (typeof COMMUNITY_CATEGORY_KEYS)[number];
+
+function getCommunityCategoryCycleKey(userId: string): string {
+  return `community_category_cycle:${userId}`;
+}
+
+function shuffleArray<T>(values: readonly T[]): T[] {
+  const result = [...values];
+  for (let i = result.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
+async function selectCommunityCategories(
+  redis: Redis | null,
+  userId: string,
+  count: number,
+  availableKeys: CommunityCategoryKey[]
+): Promise<CommunityCategoryKey[]> {
+  if (availableKeys.length === 0) {
+    return [];
+  }
+  if (!redis) {
+    return shuffleArray(availableKeys).slice(0, count);
+  }
+
+  const key = getCommunityCategoryCycleKey(userId);
+  let remaining: CommunityCategoryKey[] | null = null;
+
+  try {
+    const cached = await redis.get<CommunityCategoryKey[]>(key);
+    if (Array.isArray(cached)) {
+      remaining = cached.filter((item) => availableKeys.includes(item));
+    }
+  } catch (error) {
+    logger.warn(
+      { userId, error: error instanceof Error ? error.message : String(error) },
+      "Failed to read community category cycle cache"
+    );
+  }
+
+  if (!remaining || remaining.length === 0) {
+    remaining = shuffleArray(availableKeys);
+  }
+
+  let selected: CommunityCategoryKey[] = [];
+  if (remaining.length >= count) {
+    selected = remaining.slice(0, count);
+    remaining = remaining.slice(count);
+  } else {
+    const carry = [...remaining];
+    let refill = shuffleArray(availableKeys);
+    if (carry.length === 1 && refill.length > 1 && refill[0] === carry[0]) {
+      refill = refill.slice(1).concat(refill[0]);
+    }
+    const need = count - carry.length;
+    selected = carry.concat(refill.slice(0, need));
+    remaining = refill.slice(need);
+  }
+
+  try {
+    await redis.set(key, remaining);
+  } catch (error) {
+    logger.warn(
+      { userId, error: error instanceof Error ? error.message : String(error) },
+      "Failed to write community category cycle cache"
+    );
+  }
+
+  return selected;
 }
 
 type UserAdditionalSnapshot = {
@@ -212,10 +343,7 @@ function extractTextDelta(payload: {
   return payload.delta.text ?? null;
 }
 
-function validateGeneratedItems(
-  items: unknown,
-  expectedCount: number
-): asserts items is unknown[] {
+function validateGeneratedItems(items: unknown): asserts items is unknown[] {
   if (!Array.isArray(items)) {
     throw new ApiError(502, {
       error: "Invalid response",
@@ -223,10 +351,10 @@ function validateGeneratedItems(
     });
   }
 
-  if (items.length !== expectedCount) {
+  if (items.length === 0) {
     throw new ApiError(502, {
       error: "Invalid response",
-      message: `Claude response did not contain exactly ${expectedCount} items`
+      message: "Claude response did not contain any items"
     });
   }
 }
@@ -303,6 +431,9 @@ export async function POST(request: NextRequest) {
 
     const marketLocation = parseMarketLocation(userAdditionalSnapshot.location);
     let marketData = null;
+    let communityData = null;
+    let cityDescription = null;
+    let communityCategoryKeys: CommunityCategoryKey[] | null = null;
 
     if (body.category === "market_insights") {
       if (!marketLocation) {
@@ -320,6 +451,38 @@ export async function POST(request: NextRequest) {
           message: "RentCast is not configured. Please try again later."
         });
       }
+    }
+    if (body.category === "community" && marketLocation) {
+      communityData = await getCommunityDataByZipAndAudience(
+        marketLocation.zip_code,
+        audienceSegments[0],
+        userAdditionalSnapshot.serviceAreas,
+        marketLocation.city,
+        marketLocation.state
+      );
+    }
+
+    if (body.category === "community" && communityData) {
+      const availableKeys = COMMUNITY_CATEGORY_KEYS.filter((key) => {
+        const value = communityData?.[key];
+        if (!value) {
+          return false;
+        }
+        const normalized = value.trim().toLowerCase();
+        return normalized !== "" && !normalized.includes("(none found)");
+      });
+      communityCategoryKeys = await selectCommunityCategories(
+        redis,
+        user.id,
+        2,
+        availableKeys
+      );
+    }
+
+    if (body.category === "community" || body.category === "seasonal") {
+      const city = marketLocation?.city ?? body.agent_profile.city;
+      const state = marketLocation?.state ?? body.agent_profile.state;
+      cityDescription = await getCityDescription(city, state);
     }
 
     // Enhance agent profile with user's data from database
@@ -352,7 +515,10 @@ export async function POST(request: NextRequest) {
       agent_profile: enhancedAgentProfile,
       audience_segments: audienceSegments,
       recent_hooks: recentHooks,
-      market_data: marketData
+      market_data: marketData,
+      community_data: communityData,
+      city_description: cityDescription,
+      community_category_keys: communityCategoryKeys
     };
 
     const systemPrompt = await buildSystemPrompt(promptInput);
@@ -375,14 +541,16 @@ export async function POST(request: NextRequest) {
       headers: {
         "Content-Type": "application/json",
         "x-api-key": getClaudeApiKey(),
-        "anthropic-version": "2023-06-01"
+        "anthropic-version": "2023-06-01",
+        "anthropic-beta": "structured-outputs-2025-11-13"
       },
       body: JSON.stringify({
         model: CLAUDE_MODEL,
         max_tokens: 2800,
         system: systemPrompt,
         messages,
-        stream: true
+        stream: true,
+        output_format: OUTPUT_FORMAT
       })
     });
 
@@ -480,7 +648,7 @@ export async function POST(request: NextRequest) {
             return;
           }
 
-          validateGeneratedItems(parsed, DEFAULT_BATCH_SIZE);
+          validateGeneratedItems(parsed);
 
           if (redis) {
             const hooks = (parsed as { hook?: string }[])
@@ -503,7 +671,7 @@ export async function POST(request: NextRequest) {
               items: parsed as unknown[],
               meta: {
                 model: CLAUDE_MODEL,
-                batch_size: DEFAULT_BATCH_SIZE
+                batch_size: (parsed as unknown[]).length
               }
             })
           );

@@ -342,8 +342,9 @@ const DashboardView = ({
       streamBufferRef.current = "";
       parsedItemsRef.current = [];
 
-      const [city, state] =
+      const [city, rawState] =
         location?.split(",")?.map((part) => part.trim()) ?? [];
+      const state = rawState?.split(" ")[0] ?? "";
       const zipMatch = location?.match(/\b\d{5}(?:-\d{4})?\b/);
       const zipCode = zipMatch?.[0] ?? "";
       const agentProfile = {
@@ -673,6 +674,20 @@ const DashboardView = ({
                     onEdit={(id) => console.log("Edit", id)}
                     onDownload={(id) => console.log("Download", id)}
                     onShare={(id) => console.log("Share", id)}
+                    onDelete={(id) => {
+                      setGeneratedContentItems((prev) => {
+                        const current =
+                          prev[contentType]?.[activeCategory] ?? [];
+                        const next = current.filter((item) => item.id !== id);
+                        return {
+                          ...prev,
+                          [contentType]: {
+                            ...prev[contentType],
+                            [activeCategory]: next
+                          }
+                        };
+                      });
+                    }}
                   />
                 </div>
               )}

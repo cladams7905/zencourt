@@ -10,6 +10,7 @@
 - **Zip Code:** {zip_code}
 - **County:** {county}
 - **Service Areas:** {service_areas}
+- **Area Description:** {area_description}
 
 ## Writing Style
 - **Tone Level (1-5):** {writing_tone_level}

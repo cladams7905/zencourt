@@ -36,6 +36,8 @@ export type PromptAssemblyInput = {
   agent_profile: AgentProfileInput;
   market_data?: MarketDataInput | null;
   community_data?: CommunityDataInput | null;
+  city_description?: string | null;
+  community_category_keys?: Array<keyof CommunityDataInput> | null;
   content_request?: ContentRequestInput | null;
   recent_hooks?: string[] | null;
 };
@@ -87,6 +89,94 @@ async function readPromptFile(relativePath: string): Promise<string> {
   const content = await readFile(fullPath, "utf8");
   promptCache.set(relativePath, content);
   return content;
+}
+
+const COMMUNITY_DATA_DEFAULT = "- (none found)";
+
+type CommunityTemplateSection = {
+  key: string | null;
+  lines: string[];
+};
+
+function parseCommunityTemplate(template: string): {
+  header: string[];
+  sections: CommunityTemplateSection[];
+} {
+  const lines = template.split("\n");
+  const header: string[] = [];
+  const sections: CommunityTemplateSection[] = [];
+  let current: CommunityTemplateSection | null = null;
+  let hasSection = false;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    const isLabel = trimmed.endsWith(":") && trimmed.length > 1;
+    if (isLabel) {
+      hasSection = true;
+      if (current) {
+        sections.push(current);
+      }
+      current = { key: null, lines: [line] };
+      continue;
+    }
+
+    if (!hasSection) {
+      header.push(line);
+      continue;
+    }
+
+    if (!current) {
+      current = { key: null, lines: [] };
+    }
+
+    current.lines.push(line);
+    if (!current.key) {
+      const match = line.match(/\{([a-zA-Z0-9_]+)\}/);
+      if (match?.[1]) {
+        current.key = match[1];
+      }
+    }
+  }
+
+  if (current) {
+    sections.push(current);
+  }
+
+  return { header, sections };
+}
+
+function buildCommunityDataPrompt(
+  communityData: CommunityDataInput,
+  template: string,
+  selectedKeys?: Array<keyof CommunityDataInput> | null
+): string {
+  const values: PromptValues = {};
+  for (const [key, value] of Object.entries(communityData)) {
+    if (typeof value === "string" && hasMeaningfulValue(value)) {
+      values[key] = value;
+    } else {
+      values[key] = COMMUNITY_DATA_DEFAULT;
+    }
+  }
+
+  const { header, sections } = parseCommunityTemplate(template);
+  const allowed = selectedKeys
+    ? new Set<string>(selectedKeys.map(String))
+    : null;
+  const parts: string[] = [];
+
+  if (header.length > 0) {
+    parts.push(header.join("\n"));
+  }
+
+  for (const section of sections) {
+    if (allowed && section.key && !allowed.has(section.key)) {
+      continue;
+    }
+    parts.push(interpolateTemplate(section.lines.join("\n"), values));
+  }
+
+  return parts.join("\n").trim();
 }
 
 function countTemplateWords(template: string): number {
@@ -377,33 +467,20 @@ export async function buildSystemPrompt(input: PromptAssemblyInput) {
   const agentProfileValues = {
     ...input.agent_profile,
     writing_style_description: input.agent_profile.writing_style_description,
-    writing_style_notes_block: styleNotesBlock
+    writing_style_notes_block: styleNotesBlock,
+    area_description: input.city_description?.trim() ?? ""
   };
   const agentProfile = interpolateTemplate(agentTemplate, agentProfileValues);
   const marketData = input.market_data
     ? buildMarketDataXml(input.market_data)
     : "";
   const communityData = input.community_data
-    ? interpolateTemplate(communityTemplate, input.community_data)
+    ? buildCommunityDataPrompt(
+        input.community_data,
+        communityTemplate,
+        input.community_category_keys
+      )
     : "";
-
-  const outputDirective = `
-<output_requirements>
-${outputRequirements}
-
-Return a JSON array of exactly 4 items. Each item must match the JSON schema. Output JSON only.
-Constraints:
-- Prefer single-image posts when possible.
-- Add new lines between every 1-2 sentences to make it easier to read.
-- Hooks should always be between 3-10 words (if longer, move part of the hook to the subheader)
-- If carousel, max 5 slides.
-- Captions must be concise and vary in length. Use this mix: 2 short (1-3 sentences), 1 medium (4-6 sentences), 1 long (7-10 sentences).
-- Captions must not exceed ~700 characters.
-- Writing style must match the writing style description and tone level. If a template conflicts with the required tone, rephrase it in the same structure and length.
-- Hooks must be based on the hook templates below. Do not invent a hook style that isn't clearly derived from the list.
-- Hook subheaders should be based on the subheader templates below when used.
-- Avoid engagement bait or false urgency.
-</output_requirements>`;
 
   const marketBlock =
     input.category === "market_insights" && marketData
@@ -444,7 +521,7 @@ ${recentHooksBlock}${marketBlock}${communityBlock}
 
 ${complianceQuality}
 
-${outputDirective}
+${outputRequirements}
 `.trim();
 }
 

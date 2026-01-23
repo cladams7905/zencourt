@@ -47,6 +47,7 @@ These hook templates are specifically designed for educational content, how-to g
 - Doing {topic} yourself: what you need to know
 - How long does it take to {action}?
 - The timeline for {topic} in {location}
+- Broken {appliance}? Try this first
 
 ## Quick Tips & Hacks
 

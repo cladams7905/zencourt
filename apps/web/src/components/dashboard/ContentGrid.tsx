@@ -3,7 +3,7 @@
 import * as React from "react";
 import { cn } from "../ui/utils";
 import { Button } from "../ui/button";
-import { Heart, Edit, Download, Share2 } from "lucide-react";
+import { Heart, Edit, Download, Share2, Trash2 } from "lucide-react";
 import Image from "next/image";
 
 type AspectRatio = "square" | "vertical" | "horizontal";
@@ -33,6 +33,7 @@ interface ContentGridProps {
   onEdit?: (id: string) => void;
   onDownload?: (id: string) => void;
   onShare?: (id: string) => void;
+  onDelete?: (id: string) => void;
 }
 
 const ContentGridItem = ({
@@ -40,13 +41,15 @@ const ContentGridItem = ({
   onFavoriteToggle,
   onEdit,
   onDownload,
-  onShare
+  onShare,
+  onDelete
 }: {
   item: ContentItem;
   onFavoriteToggle?: (id: string) => void;
   onEdit?: (id: string) => void;
   onDownload?: (id: string) => void;
   onShare?: (id: string) => void;
+  onDelete?: (id: string) => void;
 }) => {
   const hasTextContent = Boolean(
     item.hook || item.hookSubheader || item.caption || item.body?.length
@@ -95,6 +98,20 @@ const ContentGridItem = ({
 
           {/* Favorite Button */}
           <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            {onDelete && (
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={(e) => {
+                  e.preventDefault();
+                  onDelete(item.id);
+                }}
+                className="h-6 w-6 rounded-full backdrop-blur-md border border-background/30 bg-background/20 text-red-100 hover:bg-red-500/40 hover:border-red-200/70"
+                aria-label="Dismiss content"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            )}
             <Button
               size="icon"
               variant="ghost"
@@ -157,7 +174,21 @@ const ContentGridItem = ({
       )}
 
       {hasTextContent && (
-        <div className="rounded-lg border border-border bg-background/80 p-4 shadow-sm">
+        <div className="group relative rounded-lg border border-border bg-background/80 p-4 shadow-sm">
+          {onDelete && !item.thumbnail && (
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={(e) => {
+                e.preventDefault();
+                onDelete(item.id);
+              }}
+              className="absolute top-3 right-3 h-7 w-7 rounded-full border border-border/60 bg-background/70 text-destructive opacity-0 transition-opacity group-hover:opacity-100"
+              aria-label="Dismiss content"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
           {item.hook && (
             <p className="text-sm font-semibold text-foreground">{item.hook}</p>
           )}
@@ -197,7 +228,8 @@ const ContentGrid = ({
   onFavoriteToggle,
   onEdit,
   onDownload,
-  onShare
+  onShare,
+  onDelete
 }: ContentGridProps) => {
   return (
     <div className={cn("columns-2 md:columns-3 xl:columns-4 gap-6", className)}>
@@ -209,6 +241,7 @@ const ContentGrid = ({
           onEdit={onEdit}
           onDownload={onDownload}
           onShare={onShare}
+          onDelete={onDelete}
         />
       ))}
     </div>

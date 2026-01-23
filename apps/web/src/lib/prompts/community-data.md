@@ -1,134 +1,36 @@
-# Community Places Data Template (Trimmed)
+# Community Places Data
 
-This template defines local places and points of interest injected into community-focused content generation. All fields are populated dynamically from Google Places API responses.
+Important Note: For each post, focus on exactly one of the community categories listed below instead of covering many categories in a single post. That means that since you should output JSON content for 4 posts, there should be 2 posts covering content of the first category listed below, and 2 posts covering content of the second category. 
 
----
+Do not make up content about a location. If it is not listed in the description, it should not be stated.
 
-## Template Structure
+neighborhoods:
+{neighborhoods_list}
 
-```xml
-<community_data location="{city}, {state}" zip_code="{zip_code}" as_of="{data_timestamp}">
+dining:
+{dining_list}
 
-## Location Overview
-- **City:** {city}
-- **State:** {state}
-- **Neighborhoods Covered:** {neighborhoods_list}
-- **Local Nickname/Identity:** {local_nickname}
+coffee_brunch:
+{coffee_brunch_list}
 
-## Dining & Coffee
-### Top-Rated Restaurants
-{restaurants_list}
+nature_outdoors:
+{nature_outdoors_list}
 
-### Coffee Shops & Cafes
-{coffee_shops_list}
-
-### Brunch Spots
-{brunch_spots_list}
-
-## Outdoor & Recreation
-### Parks & Green Spaces
-{parks_list}
-
-### Hiking Trails
-{trails_list}
-
-## Schools & Family
-### Top-Rated Public Schools
-{public_schools_list}
-
-### Family Activities
-{family_activities_list}
-
-## Shopping & Community
-### Shopping Districts & Malls
+entertainment:
+{entertainment_list}
+attractions:
+{attractions_list}
+sports_rec:
+{sports_rec_list}
+arts_culture:
+{arts_culture_list}
+nightlife_social:
+{nightlife_social_list}
+fitness_wellness:
+{fitness_wellness_list}
+shopping:
 {shopping_list}
-
-### Farmers Markets
-{farmers_markets_list}
-
-### Annual Events & Festivals
-{annual_events_list}
-
-## Local Favorites Summary
-{local_favorites_narrative}
-
-</community_data>
-```
-
----
-
-## Field Definitions
-
-### Header Attributes
-
-**location** (required)
-City and state for this community data.
-
-**zip_code** (required)
-Primary zip code for this data pull.
-
-**as_of** (required)
-Timestamp indicating data freshness. ISO 8601 format.
-
----
-
-### Location Overview
-
-**neighborhoods_list** (required)
-Comma-separated list of key neighborhoods.
-
-**local_nickname** (optional)
-Short descriptor for the city's identity or nickname.
-
----
-
-### Dining & Coffee
-
-**restaurants_list** (required)
-Top-rated restaurants (name + brief descriptor).
-
-**coffee_shops_list** (required)
-Popular coffee shops/cafes (name + brief descriptor).
-
-**brunch_spots_list** (optional)
-Notable brunch locations.
-
----
-
-### Outdoor & Recreation
-
-**parks_list** (required)
-Major parks or green spaces.
-
-**trails_list** (optional)
-Popular hiking or walking trails.
-
----
-
-### Schools & Family
-
-**public_schools_list** (required)
-Top-rated public schools relevant to the area.
-
-**family_activities_list** (optional)
-Kid-friendly activities and venues.
-
----
-
-### Shopping & Community
-
-**shopping_list** (optional)
-Major shopping districts or malls.
-
-**farmers_markets_list** (optional)
-Recurring markets or local vendor hubs.
-
-**annual_events_list** (optional)
-Key annual events or festivals.
-
----
-
-### Local Favorites Summary
-
-**local_favorites_narrative** (generated)
-Short narrative summary for quick context.
+education:
+{education_list}
+community_events:
+{community_events_list}
