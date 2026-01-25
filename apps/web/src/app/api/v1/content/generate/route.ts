@@ -170,9 +170,9 @@ const COMMUNITY_CATEGORY_KEYS = [
   "shopping_list",
   "education_list",
   "community_events_list"
-] as const;
+];
 
-type CommunityCategoryKey = (typeof COMMUNITY_CATEGORY_KEYS)[number];
+type CommunityCategoryKey = string;
 
 function getCommunityCategoryCycleKey(userId: string): string {
   return `community_category_cycle:${userId}`;
@@ -463,20 +463,31 @@ export async function POST(request: NextRequest) {
     }
 
     if (body.category === "community" && communityData) {
+      const seasonalSections = communityData.seasonal_geo_sections ?? {};
+      const seasonalKeys = Object.entries(seasonalSections)
+        .filter(([, value]) => {
+          if (!value) {
+            return false;
+          }
+          const normalized = value.trim().toLowerCase();
+          return normalized !== "" && !normalized.includes("(none found)");
+        })
+        .map(([key]) => key);
       const availableKeys = COMMUNITY_CATEGORY_KEYS.filter((key) => {
-        const value = communityData?.[key];
-        if (!value) {
+        const value = (communityData as Record<string, unknown>)[key];
+        if (typeof value !== "string") {
           return false;
         }
         const normalized = value.trim().toLowerCase();
         return normalized !== "" && !normalized.includes("(none found)");
-      });
-      communityCategoryKeys = await selectCommunityCategories(
+      }).concat(seasonalKeys);
+      const selectedKeys = await selectCommunityCategories(
         redis,
         user.id,
         2,
         availableKeys
       );
+      communityCategoryKeys = selectedKeys;
     }
 
     if (body.category === "community" || body.category === "seasonal") {
@@ -517,6 +528,8 @@ export async function POST(request: NextRequest) {
       recent_hooks: recentHooks,
       market_data: marketData,
       community_data: communityData,
+      community_data_extra_sections:
+        communityData?.seasonal_geo_sections ?? null,
       city_description: cityDescription,
       community_category_keys: communityCategoryKeys
     };

@@ -12,9 +12,7 @@ const RENTCAST_DATA_TYPE = "All";
 const RENTCAST_HISTORY_RANGE = "6";
 const NOT_AVAILABLE = "N/A";
 const RENTCAST_CACHE_KEY_PREFIX = "rentcast";
-const FRED_CACHE_KEY_PREFIX = "fred";
 const DEFAULT_RENTCAST_TTL_DAYS = 30;
-const DEFAULT_FRED_TTL_DAYS = 7;
 const DEFAULT_FRED_MORTGAGE_SERIES = "MORTGAGE30US";
 const DEFAULT_FRED_INCOME_SERIES = "MEHOINUSA672N";
 
@@ -97,10 +95,6 @@ function getRentCastCacheKey(zipCode: string): string {
   return `${RENTCAST_CACHE_KEY_PREFIX}:${zipCode}`;
 }
 
-function getFredCacheKey(seriesId: string): string {
-  return `${FRED_CACHE_KEY_PREFIX}:${seriesId}`;
-}
-
 function getRentCastCacheTtlSeconds(): number {
   const override = process.env.RENTCAST_CACHE_TTL_DAYS;
   if (!override) {
@@ -110,20 +104,6 @@ function getRentCastCacheTtlSeconds(): number {
   const parsed = Number.parseInt(override, 10);
   if (!Number.isFinite(parsed) || parsed <= 0) {
     return DEFAULT_RENTCAST_TTL_DAYS * 24 * 60 * 60;
-  }
-
-  return parsed * 24 * 60 * 60;
-}
-
-function getFredCacheTtlSeconds(): number {
-  const override = process.env.FRED_CACHE_TTL_DAYS;
-  if (!override) {
-    return DEFAULT_FRED_TTL_DAYS * 24 * 60 * 60;
-  }
-
-  const parsed = Number.parseInt(override, 10);
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    return DEFAULT_FRED_TTL_DAYS * 24 * 60 * 60;
   }
 
   return parsed * 24 * 60 * 60;
@@ -311,25 +291,10 @@ type FredObservationResponse = {
   observations?: Array<Record<string, unknown>>;
 };
 
-async function getFredSeriesLatestValue(
-  seriesId: string,
-  redis: Redis | null
-): Promise<number | null> {
+async function getFredSeriesLatestValue(seriesId: string): Promise<number | null> {
   const apiKey = getFredApiKey();
   if (!apiKey) {
     return null;
-  }
-
-  const cacheKey = getFredCacheKey(seriesId);
-  if (redis) {
-    try {
-      const cached = await redis.get<number>(cacheKey);
-      if (typeof cached === "number") {
-        return cached;
-      }
-    } catch (error) {
-      logger.warn({ error }, "Failed to read FRED cache");
-    }
   }
 
   const url = new URL(FRED_API_URL);
@@ -339,7 +304,16 @@ async function getFredSeriesLatestValue(
   url.searchParams.set("sort_order", "desc");
   url.searchParams.set("limit", "1");
 
-  const response = await fetch(url, { method: "GET" });
+  let response: Response;
+  try {
+    response = await fetch(url, { method: "GET" });
+  } catch (error) {
+    logger.warn(
+      { error, seriesId },
+      "FRED request failed"
+    );
+    return null;
+  }
   if (!response.ok) {
     const errorText = await response.text().catch(() => "");
     logger.warn(
@@ -358,16 +332,6 @@ async function getFredSeriesLatestValue(
   const value = pickObservationValue(observation);
   if (value === null) {
     return null;
-  }
-
-  if (redis) {
-    try {
-      await redis.set(cacheKey, value, {
-        ex: getFredCacheTtlSeconds()
-      });
-    } catch (error) {
-      logger.warn({ error }, "Failed to write FRED cache");
-    }
   }
 
   return value;
@@ -484,8 +448,8 @@ export async function getRentCastMarketData(
     process.env.FRED_INCOME_SERIES ?? DEFAULT_FRED_INCOME_SERIES;
 
   const [mortgageRate, medianIncome] = await Promise.all([
-    getFredSeriesLatestValue(mortgageSeries, redis),
-    getFredSeriesLatestValue(incomeSeries, redis)
+    getFredSeriesLatestValue(mortgageSeries),
+    getFredSeriesLatestValue(incomeSeries)
   ]);
 
   const formattedMedianPrice = formatCurrency(medianHomePrice);

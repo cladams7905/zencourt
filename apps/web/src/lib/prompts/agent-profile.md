@@ -11,6 +11,7 @@
 - **County:** {county}
 - **Service Areas:** {service_areas}
 - **Area Description:** {area_description}
+- **Time of Year:** {time_of_year}
 
 ## Writing Style
 - **Tone Level (1-5):** {writing_tone_level}

@@ -8,12 +8,13 @@ import { Redis } from "@upstash/redis";
 import {
   fetchPlaceDetails,
   fetchPlaces,
+  PlaceDetailsResponse,
   type PlaceResult
 } from "./communityPlacesClient";
-import { KeywordExtractor } from "./communityKeywords";
+import { GEO_SEASON_QUERY_PACK } from "./geographicQueries";
+import { HOLIDAY_QUERY_PACK } from "./holidaySeasonQueries";
 import {
   COMMUNITY_CACHE_KEY_PREFIX,
-  DEFAULT_COMMUNITY_TTL_DAYS,
   DEFAULT_SEARCH_RADIUS_METERS,
   MAX_PLACE_DISTANCE_KM,
   DISTANCE_SCORE_WEIGHT,
@@ -33,8 +34,6 @@ import {
   CALIFORNIA_STATES,
   HAWAII_STATES,
   ALASKA_STATES,
-  GEO_QUERY_PACKS,
-  SEASON_QUERY_PACKS,
   AUDIENCE_SEGMENT_ALIASES,
   NORMALIZED_AUDIENCE_SEGMENTS,
   NEIGHBORHOOD_REJECT_TERMS,
@@ -49,12 +48,11 @@ import {
   getAudienceAugmentLimit,
   getCategoryFallbackQueries,
   getCategoryMinPrimaryResults,
+  getCategoryTargetQueryCount,
   type AudienceSegment,
   type AudienceAugmentCategory,
   type CategoryKey
 } from "./communityDataConfig";
-
-const keywordExtractor = new KeywordExtractor();
 
 const logger = createChildLogger(baseLogger, {
   module: "community-data-service"
@@ -63,8 +61,8 @@ const logger = createChildLogger(baseLogger, {
 const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
 const CITY_DESCRIPTION_MODEL = "claude-haiku-4-5-20251001";
 const CITY_DESCRIPTION_MAX_TOKENS = 160;
-const COMMUNITY_AUDIENCE_DELTA_TTL_SECONDS = 60 * 60 * 24;
-const PLACE_POOL_REFRESH_DAYS = 14;
+const COMMUNITY_AUDIENCE_DELTA_TTL_SECONDS = 60 * 60 * 12;
+const PLACE_DETAILS_CACHE_TTL_SECONDS = 60 * 60 * 12;
 
 let redisClient: Redis | null | undefined;
 let cachedCityDatasetPath: string | null | undefined;
@@ -87,34 +85,45 @@ type ScoredPlace = {
   reviewCount: number;
   address: string;
   category: string;
-  website?: string;
   summary?: string;
   keywords?: string[];
   placeId?: string;
   distanceKm?: number;
+  sourceQueries?: string[];
 };
 
 type AudienceDelta = Partial<Record<AudienceAugmentCategory, string>>;
-
-type PlaceDetailsCache = {
-  summary?: string;
-  keywords?: string[];
-};
 
 /**
  * Cached pool of scored places for a category.
  * Stores ALL query results so we can randomly sample on each request.
  */
 type CachedPlacePool = {
-  places: ScoredPlace[];
+  items?: CachedPlacePoolItem[];
+  placeIds?: string[];
   fetchedAt: string;
   queryCount: number;
+};
+
+type CachedPlacePoolItem = {
+  placeId: string;
+  sourceQueries: string[] | undefined;
 };
 
 type QueryOverrides = {
   minRating?: number;
   minReviews?: number;
 };
+
+const GENERIC_TYPE_KEYWORDS = new Set([
+  "establishment",
+  "point of interest",
+  "food",
+  "store",
+  "place of worship",
+  "locality",
+  "neighborhood"
+]);
 
 type ClaudeMessageResponse = {
   content?: Array<{
@@ -197,11 +206,26 @@ function getCommunityAudienceCacheKey(
   return signature ? `${base}:sa:${signature}` : base;
 }
 
-function getPlaceDetailsCacheKey(
-  placeId: string,
-  category: string
+function getCommunityCategoryCacheKey(
+  zipCode: string,
+  category: string,
+  city?: string | null,
+  state?: string | null
 ): string {
-  return `${COMMUNITY_CACHE_KEY_PREFIX}:place:${placeId}:${category}`;
+  const base = getCommunityCacheKey(zipCode, city, state);
+  return `${base}:cat:${category}`;
+}
+
+function getCommunitySeasonalCacheKey(
+  zipCode: string,
+  city?: string | null,
+  state?: string | null
+): string {
+  return `${getCommunityCacheKey(zipCode, city, state)}:seasonal`;
+}
+
+function getPlaceDetailsCacheKey(placeId: string): string {
+  return `${COMMUNITY_CACHE_KEY_PREFIX}:place:${placeId}`;
 }
 
 function getPlacePoolCacheKey(
@@ -220,31 +244,31 @@ function getPlacePoolCacheKey(
   return signature ? `${withAudience}:sa:${signature}` : withAudience;
 }
 
+function getSecondsUntilEndOfMonth(now = new Date()): number {
+  const year = now.getUTCFullYear();
+  const month = now.getUTCMonth();
+  const nextMonthStart = new Date(Date.UTC(year, month + 1, 1, 0, 0, 0));
+  const diffMs = nextMonthStart.getTime() - now.getTime();
+  return Math.max(60, Math.ceil(diffMs / 1000));
+}
+
 function getCommunityCacheTtlSeconds(): number {
-  const override = process.env.COMMUNITY_CACHE_TTL_DAYS;
-  if (!override) {
-    return DEFAULT_COMMUNITY_TTL_DAYS * 24 * 60 * 60;
-  }
-
-  const parsed = Number.parseInt(override, 10);
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    return DEFAULT_COMMUNITY_TTL_DAYS * 24 * 60 * 60;
-  }
-
-  return parsed * 24 * 60 * 60;
+  return getSecondsUntilEndOfMonth();
 }
 
 function isPoolStale(fetchedAt?: string): boolean {
   if (!fetchedAt) {
     return true;
   }
-  const timestamp = Date.parse(fetchedAt);
-  if (Number.isNaN(timestamp)) {
+  const fetchedDate = new Date(fetchedAt);
+  if (Number.isNaN(fetchedDate.getTime())) {
     return true;
   }
-  const ageMs = Date.now() - timestamp;
-  const maxAgeMs = PLACE_POOL_REFRESH_DAYS * 24 * 60 * 60 * 1000;
-  return ageMs > maxAgeMs;
+  const now = new Date();
+  return (
+    fetchedDate.getUTCFullYear() !== now.getUTCFullYear()
+    || fetchedDate.getUTCMonth() !== now.getUTCMonth()
+  );
 }
 
 function buildServiceAreasSignature(serviceAreas?: string[] | null): string | null {
@@ -624,7 +648,7 @@ function getSearchAnchors(location: CityRecord): SearchAnchor[] {
   return unique.length > 0 ? unique : [{ lat: location.lat, lng: location.lng }];
 }
 
-type GeoPackKey =
+type GeoSeasonRegionKey =
   | "pacific_northwest"
   | "mountain"
   | "desert_southwest"
@@ -635,55 +659,71 @@ type GeoPackKey =
   | "great_lakes"
   | "california"
   | "hawaii"
-  | "alaska"
-  | "warm"
-  | "cold";
+  | "alaska";
 
-type SeasonKey = "winter" | "spring" | "summer" | "fall";
+const GEO_SEASON_MONTH_KEYS = [
+  "january",
+  "february",
+  "march",
+  "april",
+  "may",
+  "june",
+  "july",
+  "august",
+  "september",
+  "october",
+  "november",
+  "december"
+] as const;
 
-/**
- * Derive geo pack keys based on state and latitude.
- * Each state maps to exactly ONE regional pack, plus optional warm/cold climate modifier.
- */
-function deriveGeoPackKeys(location: CityRecord): GeoPackKey[] {
-  const packs: GeoPackKey[] = [];
+type GeoSeasonMonthKey = (typeof GEO_SEASON_MONTH_KEYS)[number];
+
+function getUtcMonthKey(date = new Date()): GeoSeasonMonthKey {
+  return GEO_SEASON_MONTH_KEYS[date.getUTCMonth()] ?? "january";
+}
+
+function deriveGeoSeasonRegionKey(location: CityRecord): GeoSeasonRegionKey | null {
   const state = location.state_id;
 
-  // Regional packs - each state belongs to exactly one region
   if (PACIFIC_NORTHWEST_STATES.has(state)) {
-    packs.push("pacific_northwest");
-  } else if (MOUNTAIN_STATES.has(state)) {
-    packs.push("mountain");
-  } else if (DESERT_SOUTHWEST_STATES.has(state)) {
-    packs.push("desert_southwest");
-  } else if (GULF_COAST_STATES.has(state)) {
-    packs.push("gulf_coast");
-  } else if (ATLANTIC_SOUTH_STATES.has(state)) {
-    packs.push("atlantic_south");
-  } else if (MID_ATLANTIC_STATES.has(state)) {
-    packs.push("mid_atlantic");
-  } else if (NEW_ENGLAND_STATES.has(state)) {
-    packs.push("new_england");
-  } else if (GREAT_LAKES_STATES.has(state)) {
-    packs.push("great_lakes");
-  } else if (CALIFORNIA_STATES.has(state)) {
-    packs.push("california");
-  } else if (HAWAII_STATES.has(state)) {
-    packs.push("hawaii");
-  } else if (ALASKA_STATES.has(state)) {
-    packs.push("alaska");
+    return "pacific_northwest";
+  }
+  if (MOUNTAIN_STATES.has(state)) {
+    return "mountain";
+  }
+  if (DESERT_SOUTHWEST_STATES.has(state)) {
+    return "desert_southwest";
+  }
+  if (GULF_COAST_STATES.has(state)) {
+    return "gulf_coast";
+  }
+  if (ATLANTIC_SOUTH_STATES.has(state)) {
+    return "atlantic_south";
+  }
+  if (MID_ATLANTIC_STATES.has(state)) {
+    return "mid_atlantic";
+  }
+  if (NEW_ENGLAND_STATES.has(state)) {
+    return "new_england";
+  }
+  if (GREAT_LAKES_STATES.has(state)) {
+    return "great_lakes";
+  }
+  if (CALIFORNIA_STATES.has(state)) {
+    return "california";
+  }
+  if (HAWAII_STATES.has(state)) {
+    return "hawaii";
+  }
+  if (ALASKA_STATES.has(state)) {
+    return "alaska";
   }
 
-  // Climate modifiers (can supplement regional pack)
-  // Warm: subtropical regions (lat <= 32)
-  // Cold: northern regions (lat >= 44)
-  if (location.lat <= 32) {
-    packs.push("warm");
-  } else if (location.lat >= 44) {
-    packs.push("cold");
-  }
+  return null;
+}
 
-  return packs;
+function normalizeQueryKey(query: string): string {
+  return query.toLowerCase().trim();
 }
 
 function mergeUniqueQueries(base: string[], additions: string[]): string[] {
@@ -700,62 +740,115 @@ function mergeUniqueQueries(base: string[], additions: string[]): string[] {
   return merged;
 }
 
-function applyGeoQueryPacks(
+function buildSeasonalQueries(
   location: CityRecord,
   category: CategoryKey,
-  queries: string[]
-): string[] {
-  const packs = deriveGeoPackKeys(location);
-  if (packs.length === 0) {
-    return queries;
+  queries: string[],
+  date = new Date(),
+  allowedCategories?: Set<CategoryKey>,
+  usedSeasonalHeaders?: Set<string>
+): { queries: string[]; seasonalQueries: Set<string> } {
+  if (allowedCategories && !allowedCategories.has(category)) {
+    return {
+      queries: [...queries],
+      seasonalQueries: new Set()
+    };
   }
-  const packQueries = packs.flatMap(
-    (pack) => GEO_QUERY_PACKS[category]?.[pack] ?? []
-  );
-  return mergeUniqueQueries(queries, packQueries);
+  const region = deriveGeoSeasonRegionKey(location);
+  const monthKey = getUtcMonthKey(date);
+  const holiday = HOLIDAY_QUERY_PACK[category]?.[monthKey] ?? [];
+  const geoSeason = region
+    ? (GEO_SEASON_QUERY_PACK[category]?.[region]?.[monthKey] ?? [])
+    : [];
+  const seasonal = mergeUniqueQueries(holiday, geoSeason);
+  const available = usedSeasonalHeaders
+    ? seasonal.filter((query) => !usedSeasonalHeaders.has(normalizeQueryKey(query)))
+    : seasonal;
+  const sampledSeasonal = available.length > 1 ? sampleRandom(available, 1) : available;
+  if (usedSeasonalHeaders && sampledSeasonal.length > 0) {
+    usedSeasonalHeaders.add(normalizeQueryKey(sampledSeasonal[0]));
+  }
+  const combined = mergeUniqueQueries(sampledSeasonal, queries);
+  return {
+    queries: combined,
+    seasonalQueries: new Set(sampledSeasonal.map(normalizeQueryKey))
+  };
 }
 
-function deriveSeason(location: CityRecord, date = new Date()): SeasonKey {
-  const month = date.getMonth(); // 0-11
-  const isNorthern = location.lat >= 40;
-  const isSouthern = location.lat <= 30;
-
-  if (isNorthern) {
-    if (month <= 1 || month === 11) return "winter";
-    if (month >= 2 && month <= 4) return "spring";
-    if (month >= 5 && month <= 7) return "summer";
-    return "fall";
+function seededShuffle<T>(values: T[], seed: string): T[] {
+  const hashed = createHash("sha1").update(seed).digest("hex");
+  const result = [...values];
+  let seedIndex = 0;
+  for (let i = result.length - 1; i > 0; i--) {
+    const slice = hashed.slice(seedIndex, seedIndex + 8);
+    const fallback = createHash("sha1").update(`${seed}:${i}`).digest("hex").slice(0, 8);
+    const hex = slice.length === 8 ? slice : fallback;
+    seedIndex = (seedIndex + 8) % hashed.length;
+    const rand = Number.parseInt(hex, 16);
+    const j = rand % (i + 1);
+    [result[i], result[j]] = [result[j], result[i]];
   }
-
-  if (isSouthern) {
-    if (month <= 1 || month === 11) return "fall";
-    if (month >= 2 && month <= 4) return "spring";
-    if (month >= 5 && month <= 8) return "summer";
-    return "fall";
-  }
-
-  if (month <= 1 || month === 11) return "winter";
-  if (month >= 2 && month <= 4) return "spring";
-  if (month >= 5 && month <= 7) return "summer";
-  return "fall";
+  return result;
 }
 
-function applySeasonQueryPacks(
-  location: CityRecord,
-  category: CategoryKey,
-  queries: string[]
-): string[] {
-  const season = deriveSeason(location);
-  const seasonal = SEASON_QUERY_PACKS[category]?.[season] ?? [];
-  return mergeUniqueQueries(seasonal, queries);
+function pickSeasonalCategories(
+  seed: string,
+  categories: CategoryKey[],
+  count: number
+): CategoryKey[] {
+  if (categories.length <= count) {
+    return [...categories];
+  }
+  const shuffled = seededShuffle(categories, seed);
+  return shuffled.slice(0, count);
 }
+
+const LOW_PRIORITY_ANCHOR_CATEGORIES = new Set<CategoryKey>([
+  "entertainment",
+  "attractions",
+  "sports_rec",
+  "arts_culture",
+  "fitness_wellness",
+  "shopping",
+  "education",
+  "community_events"
+]);
+
+const CATEGORY_FIELD_MAP: Record<CategoryKey, keyof CommunityData> = {
+  neighborhoods: "neighborhoods_list",
+  dining: "dining_list",
+  coffee_brunch: "coffee_brunch_list",
+  nature_outdoors: "nature_outdoors_list",
+  entertainment: "entertainment_list",
+  attractions: "attractions_list",
+  sports_rec: "sports_rec_list",
+  arts_culture: "arts_culture_list",
+  nightlife_social: "nightlife_social_list",
+  fitness_wellness: "fitness_wellness_list",
+  shopping: "shopping_list",
+  education: "education_list",
+  community_events: "community_events_list"
+};
+
+const NEIGHBORHOOD_FIELD_MAP: Record<
+  (typeof NEIGHBORHOOD_QUERIES)[number]["key"],
+  keyof CommunityData
+> = {
+  neighborhoods_general: "neighborhoods_list",
+  neighborhoods_family: "neighborhoods_family_list",
+  neighborhoods_senior: "neighborhoods_senior_list"
+};
 
 async function fetchPlacesWithAnchors(
   query: string,
   location: CityRecord,
-  maxResults: number
+  maxResults: number,
+  category?: CategoryKey,
+  forceSingleAnchor?: boolean
 ): Promise<PlaceResult[]> {
-  const anchors = getSearchAnchors(location);
+  const anchors = (forceSingleAnchor || (category && LOW_PRIORITY_ANCHOR_CATEGORIES.has(category)))
+    ? [{ lat: location.lat, lng: location.lng }]
+    : getSearchAnchors(location);
   const perAnchorMax = Math.max(3, Math.ceil(maxResults / anchors.length));
   const results = await Promise.all(
     anchors.map((anchor) =>
@@ -852,20 +945,28 @@ function extractDisplayName(place: PlaceResult): string {
   return place.displayName?.text?.trim() || "";
 }
 
-function getPlaceDistanceKm(
+function getPrimaryDistanceKm(
   place: PlaceResult,
-  distanceCache: DistanceCache,
-  serviceAreaCache?: ServiceAreaDistanceCache | null
+  distanceCache: DistanceCache
 ): number | null {
   const latitude = place.location?.latitude;
   const longitude = place.location?.longitude;
   if (latitude === undefined || longitude === undefined) {
     return null;
   }
-  if (serviceAreaCache) {
-    return serviceAreaCache.getDistanceKm(latitude, longitude);
-  }
   return distanceCache.getDistanceKm(latitude, longitude);
+}
+
+function getServiceAreaDistanceKm(
+  place: PlaceResult,
+  serviceAreaCache?: ServiceAreaDistanceCache | null
+): number | null {
+  const latitude = place.location?.latitude;
+  const longitude = place.location?.longitude;
+  if (!serviceAreaCache || latitude === undefined || longitude === undefined) {
+    return null;
+  }
+  return serviceAreaCache.getDistanceKm(latitude, longitude);
 }
 
 function toScoredPlaces(
@@ -873,7 +974,8 @@ function toScoredPlaces(
   category: string,
   distanceCache: DistanceCache,
   serviceAreaCache?: ServiceAreaDistanceCache | null,
-  overrides?: QueryOverrides | null
+  overrides?: QueryOverrides | null,
+  sourceQuery?: string
 ): ScoredPlace[] {
   if (!places || places.length === 0) {
     return [];
@@ -881,11 +983,7 @@ function toScoredPlaces(
 
   return places
     .filter((place) => {
-      const distance = getPlaceDistanceKm(
-        place,
-        distanceCache,
-        serviceAreaCache
-      );
+      const distance = getPrimaryDistanceKm(place, distanceCache);
       return distance === null || distance <= MAX_PLACE_DISTANCE_KM;
     })
     .filter((place) => {
@@ -917,10 +1015,20 @@ function toScoredPlaces(
       reviewCount: place.userRatingCount ?? 0,
       address: place.formattedAddress ?? "",
       category,
-      website: place.websiteUri,
       placeId: place.id,
+      sourceQueries: sourceQuery ? [sourceQuery] : undefined,
       distanceKm:
-        getPlaceDistanceKm(place, distanceCache, serviceAreaCache) ?? undefined
+        (() => {
+          const primaryDistance = getPrimaryDistanceKm(place, distanceCache);
+          const serviceDistance = getServiceAreaDistanceKm(
+            place,
+            serviceAreaCache
+          );
+          if (serviceDistance !== null) {
+            return Math.min(serviceDistance, primaryDistance ?? serviceDistance);
+          }
+          return primaryDistance ?? undefined;
+        })()
     }))
     .filter((place) => place.name);
 }
@@ -944,21 +1052,98 @@ function rankPlaces(places: ScoredPlace[]): ScoredPlace[] {
 }
 
 function dedupePlaces(places: ScoredPlace[]): ScoredPlace[] {
-  const seen = new Set<string>();
-  const result: ScoredPlace[] = [];
+  const seen = new Map<string, ScoredPlace>();
 
   for (const place of places) {
-    const key = `${place.name}|${place.address}`
-      .toLowerCase()
-      .replace(/[^a-z0-9|]+/g, "");
-    if (seen.has(key)) {
+    const key = place.placeId
+      ? `place:${place.placeId}`
+      : `${place.name}|${place.address}`
+          .toLowerCase()
+          .replace(/[^a-z0-9|]+/g, "");
+    const existing = seen.get(key);
+    if (!existing) {
+      seen.set(key, place);
       continue;
     }
-    seen.add(key);
-    result.push(place);
+    if (place.summary && !existing.summary) {
+      existing.summary = place.summary;
+    }
+    if (place.keywords && (!existing.keywords || existing.keywords.length === 0)) {
+      existing.keywords = place.keywords;
+    }
+    if (place.sourceQueries && place.sourceQueries.length > 0) {
+      const merged = new Set([
+        ...(existing.sourceQueries ?? []),
+        ...place.sourceQueries
+      ]);
+      existing.sourceQueries = Array.from(merged);
+    }
+    const existingScore = existing.reviewCount + existing.rating;
+    const incomingScore = place.reviewCount + place.rating;
+    if (incomingScore > existingScore) {
+      existing.rating = place.rating;
+      existing.reviewCount = place.reviewCount;
+      if (place.address && !existing.address) {
+        existing.address = place.address;
+      }
+      if (place.distanceKm !== undefined) {
+        existing.distanceKm = place.distanceKm;
+      }
+      if (place.placeId) {
+        existing.placeId = place.placeId;
+      }
+    }
   }
 
-  return result;
+  return Array.from(seen.values());
+}
+
+async function fetchScoredPlacesForQueries(params: {
+  queries: string[];
+  category: string;
+  maxResults: number;
+  location: CityRecord;
+  distanceCache: DistanceCache;
+  serviceAreaCache?: ServiceAreaDistanceCache | null;
+  seasonalQueries: Set<string>;
+  overridesForQuery?: (query: string) => QueryOverrides | null | undefined;
+}): Promise<ScoredPlace[]> {
+  const {
+    queries,
+    category,
+    maxResults,
+    location,
+    distanceCache,
+    serviceAreaCache,
+    seasonalQueries,
+    overridesForQuery
+  } = params;
+  if (!queries || queries.length === 0) {
+    return [];
+  }
+  const scored = await Promise.all(
+    queries.map(async (query) => {
+      const sourceQuery = seasonalQueries.has(normalizeQueryKey(query))
+        ? query
+        : undefined;
+      const results = await fetchPlacesWithAnchors(
+        query,
+        location,
+        maxResults,
+        category as CategoryKey,
+        Boolean(sourceQuery)
+      );
+      return toScoredPlaces(
+        results,
+        category,
+        distanceCache,
+        serviceAreaCache,
+        overridesForQuery ? overridesForQuery(query) ?? undefined : undefined,
+        sourceQuery
+      );
+    })
+  );
+  return scored.flat();
 }
 
 /**
@@ -970,60 +1155,35 @@ function dedupePlaces(places: ScoredPlace[]): ScoredPlace[] {
  * - Sample with bias: 60% from top, 30% from middle, 10% from bottom
  * - Shuffle final selection for variety in order
  */
-function sampleFromPool(pool: ScoredPlace[], count: number): ScoredPlace[] {
+function sampleFromPool<T>(pool: T[], count: number): T[] {
   if (pool.length <= count) {
-    // Pool smaller than requested, shuffle and return all
     return shuffleArray([...pool]);
   }
 
-  // Sort by quality score (same logic as rankPlaces)
-  const sorted = [...pool].sort((a, b) => {
-    const distanceA =
-      a.distanceKm !== undefined
-        ? Math.min(a.distanceKm, DISTANCE_SCORE_CAP_KM) * DISTANCE_SCORE_WEIGHT
-        : 0;
-    const distanceB =
-      b.distanceKm !== undefined
-        ? Math.min(b.distanceKm, DISTANCE_SCORE_CAP_KM) * DISTANCE_SCORE_WEIGHT
-        : 0;
-    const scoreA =
-      Math.log10(a.reviewCount + 1) * 10 + (a.rating || 0) - distanceA;
-    const scoreB =
-      Math.log10(b.reviewCount + 1) * 10 + (b.rating || 0) - distanceB;
-    return scoreB - scoreA;
-  });
+  const topTierEnd = Math.max(1, Math.floor(pool.length * 0.2));
+  const midTierEnd = Math.max(topTierEnd + 1, Math.floor(pool.length * 0.7));
 
-  // Define tier boundaries
-  const topTierEnd = Math.max(1, Math.floor(sorted.length * 0.2));
-  const midTierEnd = Math.max(topTierEnd + 1, Math.floor(sorted.length * 0.7));
+  const topTier = pool.slice(0, topTierEnd);
+  const midTier = pool.slice(topTierEnd, midTierEnd);
+  const bottomTier = pool.slice(midTierEnd);
 
-  const topTier = sorted.slice(0, topTierEnd);
-  const midTier = sorted.slice(topTierEnd, midTierEnd);
-  const bottomTier = sorted.slice(midTierEnd);
-
-  // Calculate how many to sample from each tier
   const topCount = Math.min(Math.ceil(count * 0.6), topTier.length);
   const midCount = Math.min(Math.ceil(count * 0.3), midTier.length);
   const bottomCount = Math.min(count - topCount - midCount, bottomTier.length);
 
-  // Random sample from each tier
-  const sampled: ScoredPlace[] = [
+  const sampled: T[] = [
     ...sampleRandom(topTier, topCount),
     ...sampleRandom(midTier, midCount),
     ...sampleRandom(bottomTier, Math.max(0, bottomCount))
   ];
 
-  // If we still need more (due to small tiers), fill from remaining
   if (sampled.length < count) {
-    const sampledIds = new Set(sampled.map((p) => p.placeId || p.name));
-    const remaining = sorted.filter(
-      (p) => !sampledIds.has(p.placeId || p.name)
-    );
+    const sampledIds = new Set(sampled);
+    const remaining = pool.filter((id) => !sampledIds.has(id));
     const needed = count - sampled.length;
     sampled.push(...sampleRandom(remaining, needed));
   }
 
-  // Shuffle final result so order varies
   return shuffleArray(sampled.slice(0, count));
 }
 
@@ -1069,6 +1229,60 @@ function formatPlaceList(
     .join("\n");
 }
 
+function buildSeasonalQuerySections(
+  grouped: Record<string, ScoredPlace[]>,
+  maxPerQuery: number,
+  maxHeaders: number
+): Record<string, string> {
+  const queryMap = new Map<string, { query: string; places: ScoredPlace[] }>();
+
+  for (const places of Object.values(grouped)) {
+    for (const place of places) {
+      const queries = place.sourceQueries ?? [];
+      for (const query of queries) {
+        const key = normalizeQueryKey(query);
+        const entry = queryMap.get(key);
+        if (entry) {
+          entry.places.push(place);
+        } else {
+          queryMap.set(key, { query, places: [place] });
+        }
+      }
+    }
+  }
+
+  const queries = Array.from(queryMap.values());
+  const chosen = sampleRandom(queries, maxHeaders);
+  const sections: Record<string, string> = {};
+  for (const { query, places } of chosen) {
+    const list = formatPlaceList(places, maxPerQuery, true);
+    if (!list || list.includes("(none found)")) {
+      continue;
+    }
+    sections[query] = list;
+  }
+
+  return sections;
+}
+
+function estimateSearchCallsForQueries(
+  location: CityRecord,
+  category: CategoryKey,
+  queries: string[],
+  seasonalQueries: Set<string>
+): number {
+  if (queries.length === 0) {
+    return 0;
+  }
+  const anchorCount = getSearchAnchors(location).length;
+  const baseAnchors = LOW_PRIORITY_ANCHOR_CATEGORIES.has(category) ? 1 : anchorCount;
+  return queries.reduce((total, query) => {
+    const normalized = normalizeQueryKey(query);
+    const anchorsForQuery = seasonalQueries.has(normalized) ? 1 : baseAnchors;
+    return total + anchorsForQuery;
+  }, 0);
+}
+
 function trimList(list: string, max: number, stripKeywords: boolean): string {
   if (!list) {
     return "- (none found)";
@@ -1092,31 +1306,112 @@ function trimList(list: string, max: number, stripKeywords: boolean): string {
     .join("\n");
 }
 
+function buildPoolItems(
+  places: ScoredPlace[],
+  category: string
+): CachedPlacePoolItem[] {
+  const poolMax = getCategoryPoolMax(category);
+  const ranked = rankPlaces(dedupePlaces(places));
+  const limited = poolMax > 0 ? ranked.slice(0, poolMax) : ranked;
+  return limited
+    .map((place) =>
+      place.placeId
+        ? { placeId: place.placeId, sourceQueries: place.sourceQueries }
+        : null
+    )
+    .filter((item): item is CachedPlacePoolItem => Boolean(item));
+}
+
 async function buildCategoryListWithDetails(
   category: string,
   places: ScoredPlace[],
   max: number
 ): Promise<string> {
   const deduped = rankPlaces(dedupePlaces(places));
-  const detailResults = await Promise.all(
-    deduped.map(async (place) => {
-      if (!place.placeId) {
-        return { place, summary: "", keywords: [] as string[] };
+  // Only fetch details for places we'll actually display
+  // Search API already provides rating/reviewCount for ranking, details adds summary/keywords for display
+  const toHydrate = deduped.slice(0, max);
+  await Promise.all(
+    toHydrate.map(async (place) => {
+      if (place.summary || (place.keywords && place.keywords.length > 0)) {
+        return;
       }
-      const details = await fetchPlaceDetailsKeywords(place.placeId, category);
-      return {
-        place,
-        summary: details.summary ?? "",
-        keywords: details.keywords ?? []
-      };
+      if (!place.placeId) {
+        return;
+      }
+      const details = await getPlaceDetailsCached(place.placeId);
+      if (!details) {
+        return;
+      }
+      if (!place.name) {
+        place.name = details.displayName?.text?.trim() || place.name;
+      }
+      if (!place.address) {
+        place.address = details.formattedAddress ?? place.address;
+      }
+      place.rating = details.rating ?? place.rating;
+      place.reviewCount = details.userRatingCount ?? place.reviewCount;
+      const { summary, keywords } = deriveSummaryKeywords(
+        details
+      );
+      place.summary = summary;
+      place.keywords = keywords;
     })
   );
-  for (const { place, summary, keywords } of detailResults) {
-    place.summary = summary || undefined;
-    place.keywords = keywords;
-  }
 
-  return formatPlaceList(deduped, max, true);
+  return formatPlaceList(toHydrate, max, true);
+}
+
+function deriveSummaryKeywords(
+  details: PlaceDetailsResponse,
+): { summary?: string; keywords?: string[] } {
+  const summary = details.generativeSummary?.overview?.text?.trim();
+  if (summary) {
+    return { summary };
+  }
+  const primary = details.primaryType ?? "";
+  const types = details.types ?? [];
+  const normalized = [primary, ...types]
+    .filter(Boolean)
+    .map((value) => value.replace(/_/g, " ").toLowerCase())
+    .filter((value) => !GENERIC_TYPE_KEYWORDS.has(value));
+  const keywords = normalized.length > 0
+    ? Array.from(new Set(normalized)).slice(0, 4)
+    : [];
+  return keywords.length > 0 ? { keywords } : {};
+}
+
+async function hydratePlacesFromItems(
+  items: CachedPlacePoolItem[],
+  category: string
+): Promise<ScoredPlace[]> {
+  const results = await Promise.all(
+    items.map(async (item): Promise<ScoredPlace | null> => {
+      const { placeId, sourceQueries } = item;
+      const details = await getPlaceDetailsCached(placeId);
+      if (!details) {
+        return null;
+      }
+      const name = details.displayName?.text?.trim() || "";
+      if (!name) {
+        return null;
+      }
+      const { summary, keywords } = deriveSummaryKeywords(details);
+      const place: ScoredPlace = {
+        name,
+        rating: details.rating ?? 0,
+        reviewCount: details.userRatingCount ?? 0,
+        address: details.formattedAddress ?? "",
+        category,
+        summary,
+        keywords,
+        placeId,
+        sourceQueries
+      };
+      return place;
+    })
+  );
+  return results.filter((place) => place !== null);
 }
 
 /**
@@ -1136,16 +1431,16 @@ async function getPooledCategoryPlaces(
   city?: string | null,
   state?: string | null,
   audience?: string | null
-): Promise<ScoredPlace[]> {
+): Promise<CachedPlacePoolItem[]> {
   const refreshPool = async () => {
     try {
       const freshPlaces = await fetchPlacesFn();
-      const dedupedPool = dedupePlaces(freshPlaces);
-      if (dedupedPool.length > 0) {
+      const items = buildPoolItems(freshPlaces, category);
+      if (items.length > 0) {
         await setCachedPlacePool(
           zipCode,
           category,
-          dedupedPool,
+          items,
           audience,
           serviceAreas,
           city,
@@ -1175,29 +1470,35 @@ async function getPooledCategoryPlaces(
     state
   );
 
-  let pool: ScoredPlace[];
+  let pool: CachedPlacePoolItem[];
 
-  if (cachedPool && cachedPool.places.length > 0 && !isPoolStale(cachedPool.fetchedAt)) {
-    pool = cachedPool.places;
-  } else if (cachedPool && cachedPool.places.length > 0) {
-    pool = cachedPool.places;
+  const cachedItems = cachedPool?.items && cachedPool.items.length > 0
+    ? cachedPool.items
+    : (cachedPool?.placeIds && cachedPool.placeIds.length > 0
+        ? cachedPool.placeIds.map((placeId) => ({ placeId, sourceQueries: undefined }))
+        : []);
+
+  if (cachedItems.length > 0 && cachedPool && !isPoolStale(cachedPool.fetchedAt)) {
+    pool = cachedItems;
+  } else if (cachedItems.length > 0 && cachedPool) {
+    pool = cachedItems;
     void refreshPool();
   } else {
     // Fetch fresh places and cache the full pool
     const freshPlaces = await fetchPlacesFn();
-    const dedupedPool = dedupePlaces(freshPlaces);
-    if (dedupedPool.length > 0) {
+    const items = buildPoolItems(freshPlaces, category);
+    if (items.length > 0) {
       await setCachedPlacePool(
         zipCode,
         category,
-        dedupedPool,
+        items,
         audience,
         serviceAreas,
         city,
         state
       );
     }
-    pool = dedupedPool;
+    pool = items;
   }
 
   // Sample from the pool to get varied results
@@ -1229,39 +1530,94 @@ async function buildAudienceAugmentDelta(
     return {};
   }
 
+  const seasonalCategories: CategoryKey[] = [];
+  const allowedSeasonalCategories = new Set<CategoryKey>();
+  const usedSeasonalHeaders = new Set<string>();
   const delta: AudienceDelta = {};
+  let searchCallsEstimated = 0;
+  let fallbackSearchCallsEstimated = 0;
+  let detailsCallsEstimated = 0;
+  const categoriesFetched: AudienceAugmentCategory[] = [];
+  const categoriesFromCache: AudienceAugmentCategory[] = [];
+  logger.info(
+    {
+      zipCode,
+      audienceSegment,
+      month: getUtcMonthKey(),
+      seasonalCategories
+    },
+    "Selected seasonal categories for audience delta"
+  );
 
   for (const category of AUDIENCE_AUGMENT_CATEGORIES) {
     const rawQueries = queriesByCategory[category] ?? [];
+    const fallbackQueries = getCategoryFallbackQueries(category);
+    const desiredQueryCount = getCategoryTargetQueryCount(category);
+    let combinedQueries = rawQueries;
+    if (rawQueries.length === 0) {
+      combinedQueries = fallbackQueries.slice(0, desiredQueryCount);
+    } else if (rawQueries.length < desiredQueryCount) {
+      combinedQueries = mergeUniqueQueries(
+        rawQueries,
+        fallbackQueries.slice(0, desiredQueryCount - rawQueries.length)
+      );
+    }
 
     // Step 1: Apply geo/season packs to audience queries (LOCALIZED)
-    const localizedQueries = applySeasonQueryPacks(
+    const { queries: localizedQueries, seasonalQueries } = buildSeasonalQueries(
       location,
       category,
-      applyGeoQueryPacks(location, category, rawQueries)
+      combinedQueries,
+      undefined,
+      allowedSeasonalCategories,
+      usedSeasonalHeaders
     );
+    if (seasonalQueries.size > 0) {
+      logger.info(
+        {
+          zipCode,
+          audienceSegment,
+          category,
+          seasonalQueries: Array.from(seasonalQueries)
+        },
+        "Audience seasonal queries selected"
+      );
+    }
 
     if (localizedQueries.length === 0) {
       continue;
     }
 
+    searchCallsEstimated += estimateSearchCallsForQueries(
+      location,
+      category,
+      localizedQueries,
+      seasonalQueries
+    );
+    if (fallbackQueries.length > 0) {
+      fallbackSearchCallsEstimated += estimateSearchCallsForQueries(
+        location,
+        category,
+        fallbackQueries,
+        new Set()
+      );
+    }
+    detailsCallsEstimated += getCategoryDisplayLimit(category);
+
     const maxPerQuery = getAudienceAugmentLimit(audienceSegment, category);
 
     // Create fetch function for pool caching
     const fetchAudiencePlaces = async (): Promise<ScoredPlace[]> => {
-      // Run audience-specific queries FIRST
-      const primaryResults = await Promise.all(
-        localizedQueries.map((query: string) =>
-          fetchPlacesWithAnchors(query, location, maxPerQuery)
-        )
-      );
-
-      let places = toScoredPlaces(
-        primaryResults.flat(),
+      // Run audience-specific queries FIRST (with optional fallback fill)
+      let places = await fetchScoredPlacesForQueries({
+        queries: localizedQueries,
         category,
+        maxResults: maxPerQuery,
+        location,
         distanceCache,
-        serviceAreaCache
-      );
+        serviceAreaCache,
+        seasonalQueries
+      });
 
       // Check if we need fallback queries
       const minPrimary = getCategoryMinPrimaryResults(category);
@@ -1269,26 +1625,17 @@ async function buildAudienceAugmentDelta(
 
       if (minPrimary <= 0 || deduped.length < minPrimary) {
         // Run fallback queries to fill gaps
-        const fallbackQueries = getCategoryFallbackQueries(category);
         if (fallbackQueries.length > 0) {
-          const fallbackScored = await Promise.all(
-            fallbackQueries.map(async (query: string) => {
-              const overrides = getQueryOverrides(category, query);
-              const results = await fetchPlacesWithAnchors(
-                query,
-                location,
-                maxPerQuery
-              );
-              return toScoredPlaces(
-                results,
-                category,
-                distanceCache,
-                serviceAreaCache,
-                overrides
-              );
-            })
-          );
-          const fallbackPlaces = fallbackScored.flat();
+          const fallbackPlaces = await fetchScoredPlacesForQueries({
+            queries: fallbackQueries,
+            category,
+            maxResults: maxPerQuery,
+            location,
+            distanceCache,
+            serviceAreaCache,
+            seasonalQueries,
+            overridesForQuery: (query) => getQueryOverrides(category, query)
+          });
           // Merge: primary results first, then fallback
           places = [...places, ...fallbackPlaces];
         }
@@ -1298,7 +1645,7 @@ async function buildAudienceAugmentDelta(
     };
 
     // Use pool caching: cache all results, sample for variety
-    const sampled = await getPooledCategoryPlaces(
+    const sampledItems = await getPooledCategoryPlaces(
       zipCode,
       category,
       fetchAudiencePlaces,
@@ -1307,15 +1654,39 @@ async function buildAudienceAugmentDelta(
       preferredState,
       audienceSegment // Include audience in cache key
     );
+    if (sampledItems.length > 0) {
+      categoriesFromCache.push(category);
+    } else {
+      categoriesFetched.push(category);
+    }
 
-    const formatted = await buildCategoryListWithDetails(
-      category,
-      sampled,
-      sampled.length // Already sampled to display limit
-    );
+    const sampledPlaces = await hydratePlacesFromItems(sampledItems, category);
+    // Skip buildCategoryListWithDetails - places already have details from hydration
+    const formatted = formatPlaceList(sampledPlaces, sampledPlaces.length, true);
     if (!formatted.includes("(none found)")) {
       delta[category] = formatted;
     }
+  }
+
+  if (categoriesFetched.length > 0) {
+    logger.info(
+      {
+        zipCode,
+        audienceSegment,
+        categoriesFromCache,
+        categoriesFetched,
+        searchCallsEstimated,
+        fallbackSearchCallsEstimated,
+        detailsCallsEstimated,
+        totalCallsEstimated:
+          searchCallsEstimated + detailsCallsEstimated,
+        costEstimateUsd: Number(
+          ((searchCallsEstimated + detailsCallsEstimated) * 0.02187).toFixed(4)
+        ),
+        seasonalCategories
+      },
+      "Community audience refresh estimated Google calls"
+    );
   }
 
   return delta;
@@ -1325,15 +1696,6 @@ function applyAudienceDelta(
   communityData: CommunityData,
   delta: AudienceDelta
 ): CommunityData {
-  const fieldMap: Record<AudienceAugmentCategory, keyof CommunityData> = {
-    dining: "dining_list",
-    nature_outdoors: "nature_outdoors_list",
-    entertainment: "entertainment_list",
-    sports_rec: "sports_rec_list",
-    fitness_wellness: "fitness_wellness_list",
-    shopping: "shopping_list"
-  };
-
   const normalizeListKey = (line: string): string =>
     line
       .replace(/^\-\s*/g, "")
@@ -1384,7 +1746,7 @@ function applyAudienceDelta(
   let updated = { ...communityData };
 
   for (const category of Object.keys(delta) as AudienceAugmentCategory[]) {
-    const field = fieldMap[category];
+    const field = CATEGORY_FIELD_MAP[category];
     const deltaList = delta[category];
     if (!deltaList || !field) {
       continue;
@@ -1394,6 +1756,10 @@ function applyAudienceDelta(
     }
     const max = getCategoryDisplayLimit(category);
     const baseList = communityData[field];
+    // Only merge string lists, skip non-string fields like seasonal_geo_sections
+    if (typeof baseList !== "string") {
+      continue;
+    }
     updated = {
       ...updated,
       [field]: mergeLists(deltaList, baseList, max)
@@ -1406,6 +1772,7 @@ function applyAudienceDelta(
 function trimCommunityDataLists(communityData: CommunityData): CommunityData {
   return {
     ...communityData,
+    seasonal_geo_sections: communityData.seasonal_geo_sections ?? {},
     neighborhoods_list: trimList(
       communityData.neighborhoods_list,
       getCategoryDisplayLimit("neighborhoods"),
@@ -1474,40 +1841,38 @@ function trimCommunityDataLists(communityData: CommunityData): CommunityData {
   };
 }
 
-
-async function fetchPlaceDetailsKeywords(
-  placeId: string,
-  category: string
-): Promise<PlaceDetailsCache> {
-  const cached = await getCachedPlaceDetails(placeId, category);
-  if (cached) {
-    return cached;
+function countListItems(list: string | undefined): number {
+  if (!list) {
+    return 0;
   }
-
-  const details = await fetchPlaceDetails(placeId);
-  if (!details) {
-    return { keywords: [] };
-  }
-
-  const summary = details.generativeSummary?.overview?.text?.trim();
-  if (summary) {
-    const payload = { summary };
-    await setCachedPlaceDetails(placeId, category, payload);
-    return payload;
-  }
-
-  // Use the unified KeywordExtractor with details only.
-  // Base lists avoid type/name keywords unless details are fetched.
-  const keywords = keywordExtractor.extract({
-    place: { id: placeId } as PlaceResult, // Minimal placeholder
-    category,
-    details
-  });
-
-  const payload = { keywords };
-  await setCachedPlaceDetails(placeId, category, payload);
-  return payload;
+  return list
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .filter((line) => !line.includes("(none found)")).length;
 }
+
+function getAudienceSkipCategories(delta: AudienceDelta | null): Set<CategoryKey> {
+  const skip = new Set<CategoryKey>();
+  if (!delta) {
+    return skip;
+  }
+
+  for (const category of AUDIENCE_AUGMENT_CATEGORIES) {
+    const list = delta[category];
+    if (!list || list.includes("(none found)")) {
+      continue;
+    }
+    const count = countListItems(list);
+    const minPrimary = getCategoryMinPrimaryResults(category);
+    if (minPrimary <= 0 || count >= minPrimary) {
+      skip.add(category);
+    }
+  }
+
+  return skip;
+}
+
 
 async function getCachedCommunityData(
   zipCode: string,
@@ -1528,6 +1893,81 @@ async function getCachedCommunityData(
     logger.warn(
       { zipCode, error: error instanceof Error ? error.message : String(error) },
       "Failed to read community data from cache"
+    );
+    return null;
+  }
+}
+
+async function getCachedCommunityCategoryList(
+  zipCode: string,
+  category: string,
+  city?: string | null,
+  state?: string | null
+): Promise<string | null> {
+  const redis = getRedisClient();
+  if (!redis) {
+    return null;
+  }
+
+  try {
+    const cached = await redis.get<string>(
+      getCommunityCategoryCacheKey(zipCode, category, city, state)
+    );
+    return cached ?? null;
+  } catch (error) {
+    logger.warn(
+      {
+        zipCode,
+        category,
+        error: error instanceof Error ? error.message : String(error)
+      },
+      "Failed to read community category list from cache"
+    );
+    return null;
+  }
+}
+
+async function getCachedSeasonalSections(
+  zipCode: string,
+  city?: string | null,
+  state?: string | null
+): Promise<Record<string, string> | null> {
+  const redis = getRedisClient();
+  if (!redis) {
+    return null;
+  }
+
+  try {
+    const cached = await redis.get<Record<string, string>>(
+      getCommunitySeasonalCacheKey(zipCode, city, state)
+    );
+    return cached ?? null;
+  } catch (error) {
+    logger.warn(
+      { zipCode, error: error instanceof Error ? error.message : String(error) },
+      "Failed to read seasonal sections from cache"
+    );
+    return null;
+  }
+}
+
+async function getCachedPlaceDetails(
+  placeId: string
+): Promise<PlaceDetailsResponse | null> {
+  const redis = getRedisClient();
+  if (!redis) {
+    return null;
+  }
+
+  try {
+    const cached = await redis.get<PlaceDetailsResponse>(
+      getPlaceDetailsCacheKey(placeId)
+    );
+    return cached ?? null;
+  } catch (error) {
+    logger.warn(
+      { placeId, error: error instanceof Error ? error.message : String(error) },
+      "Failed to read place details from cache"
     );
     return null;
   }
@@ -1564,33 +2004,6 @@ async function getCachedAudienceDelta(
         error: error instanceof Error ? error.message : String(error)
       },
       "Failed to read community audience delta from cache"
-    );
-    return null;
-  }
-}
-
-async function getCachedPlaceDetails(
-  placeId: string,
-  category: string
-): Promise<PlaceDetailsCache | null> {
-  const redis = getRedisClient();
-  if (!redis) {
-    return null;
-  }
-
-  try {
-    const cached = await redis.get<PlaceDetailsCache>(
-      getPlaceDetailsCacheKey(placeId, category)
-    );
-    return cached ?? null;
-  } catch (error) {
-    logger.warn(
-      {
-        placeId,
-        category,
-        error: error instanceof Error ? error.message : String(error)
-      },
-      "Failed to read place details from cache"
     );
     return null;
   }
@@ -1658,6 +2071,96 @@ async function setCachedCommunityData(
   }
 }
 
+async function setCachedCommunityCategoryList(
+  zipCode: string,
+  category: string,
+  list: string,
+  city?: string | null,
+  state?: string | null
+): Promise<void> {
+  const redis = getRedisClient();
+  if (!redis) {
+    return;
+  }
+
+  try {
+    await redis.set(
+      getCommunityCategoryCacheKey(zipCode, category, city, state),
+      list,
+      { ex: getCommunityCacheTtlSeconds() }
+    );
+  } catch (error) {
+    logger.warn(
+      {
+        zipCode,
+        category,
+        error: error instanceof Error ? error.message : String(error)
+      },
+      "Failed to write community category list to cache"
+    );
+  }
+}
+
+async function setCachedSeasonalSections(
+  zipCode: string,
+  sections: Record<string, string>,
+  city?: string | null,
+  state?: string | null
+): Promise<void> {
+  const redis = getRedisClient();
+  if (!redis) {
+    return;
+  }
+
+  try {
+    await redis.set(
+      getCommunitySeasonalCacheKey(zipCode, city, state),
+      sections,
+      { ex: getCommunityCacheTtlSeconds() }
+    );
+  } catch (error) {
+    logger.warn(
+      { zipCode, error: error instanceof Error ? error.message : String(error) },
+      "Failed to write seasonal sections to cache"
+    );
+  }
+}
+
+async function setCachedPlaceDetails(
+  placeId: string,
+  payload: PlaceDetailsResponse
+): Promise<void> {
+  const redis = getRedisClient();
+  if (!redis) {
+    return;
+  }
+
+  try {
+    await redis.set(getPlaceDetailsCacheKey(placeId), payload, {
+      ex: PLACE_DETAILS_CACHE_TTL_SECONDS
+    });
+  } catch (error) {
+    logger.warn(
+      { placeId, error: error instanceof Error ? error.message : String(error) },
+      "Failed to write place details to cache"
+    );
+  }
+}
+
+async function getPlaceDetailsCached(
+  placeId: string
+): Promise<PlaceDetailsResponse | null> {
+  const cached = await getCachedPlaceDetails(placeId);
+  if (cached) {
+    return cached;
+  }
+  const details = await fetchPlaceDetails(placeId);
+  if (details) {
+    await setCachedPlaceDetails(placeId, details);
+  }
+  return details ?? null;
+}
+
 async function setCachedAudienceDelta(
   zipCode: string,
   audienceSegment: string,
@@ -1695,38 +2198,10 @@ async function setCachedAudienceDelta(
   }
 }
 
-async function setCachedPlaceDetails(
-  placeId: string,
-  category: string,
-  payload: PlaceDetailsCache
-): Promise<void> {
-  const redis = getRedisClient();
-  if (!redis) {
-    return;
-  }
-
-  try {
-    await redis.set(
-      getPlaceDetailsCacheKey(placeId, category),
-      payload,
-      { ex: getCommunityCacheTtlSeconds() }
-    );
-  } catch (error) {
-    logger.warn(
-      {
-        placeId,
-        category,
-        error: error instanceof Error ? error.message : String(error)
-      },
-      "Failed to write place details to cache"
-    );
-  }
-}
-
 async function setCachedPlacePool(
   zipCode: string,
   category: string,
-  places: ScoredPlace[],
+  items: CachedPlacePoolItem[],
   audience?: string | null,
   serviceAreas?: string[] | null,
   city?: string | null,
@@ -1737,23 +2212,10 @@ async function setCachedPlacePool(
     return;
   }
 
-  const poolMax = getCategoryPoolMax(category);
-  const ranked = rankPlaces(dedupePlaces(places));
-  const limited = poolMax > 0 ? ranked.slice(0, poolMax) : ranked;
-  const minimized = limited.map((place) => ({
-    name: place.name,
-    rating: place.rating,
-    reviewCount: place.reviewCount,
-    address: place.address,
-    category: place.category,
-    placeId: place.placeId,
-    distanceKm: place.distanceKm
-  }));
-
   const payload: CachedPlacePool = {
-    places: minimized,
+    items,
     fetchedAt: new Date().toISOString(),
-    queryCount: minimized.length
+    queryCount: items.length
   };
 
   try {
@@ -1775,7 +2237,7 @@ async function setCachedPlacePool(
         zipCode,
         category,
         audience,
-        poolSize: places.length,
+        poolSize: items.length,
         error: error instanceof Error ? error.message : String(error)
       },
       "Failed to write place pool to cache"
@@ -1787,7 +2249,11 @@ export async function getCommunityDataByZip(
   zipCode: string,
   serviceAreas?: string[] | null,
   preferredCity?: string | null,
-  preferredState?: string | null
+  preferredState?: string | null,
+  options?: {
+    skipCategories?: Set<CategoryKey>;
+    writeCache?: boolean;
+  }
 ): Promise<CommunityData | null> {
   if (!zipCode) {
     return null;
@@ -1802,6 +2268,7 @@ export async function getCommunityDataByZip(
     return cached;
   }
 
+  const skipCategories = options?.skipCategories ?? new Set<CategoryKey>();
   const location = await resolveZipLocation(
     zipCode,
     preferredCity,
@@ -1828,48 +2295,168 @@ export async function getCommunityDataByZip(
   const neighborhoodQueries = NEIGHBORHOOD_QUERIES;
   // Base community data uses fallback queries (generic, non-audience-specific)
   // These provide baseline data; audience-specific queries override in getCommunityDataByZipAndAudience
+  const seasonalCategoryPool = Object.keys(CATEGORY_CONFIG)
+    .filter((key) => key !== "neighborhoods") as CategoryKey[];
+  const allowedSeasonalCategories = new Set(
+    pickSeasonalCategories(
+      `${zipCode}:${getUtcMonthKey()}:base`,
+      seasonalCategoryPool,
+      4  // Reduced from 6 to limit seasonal query overhead
+    )
+  );
+  const usedSeasonalHeaders = new Set<string>();
+  logger.info(
+    {
+      zipCode,
+      month: getUtcMonthKey(),
+      seasonalCategories: Array.from(allowedSeasonalCategories)
+    },
+    "Selected seasonal categories for base refresh"
+  );
+
+  const cachedCategoryLists = new Map<CategoryKey, string>();
+  const categoriesToFetch = new Set<CategoryKey>();
+
+  await Promise.all(
+    (Object.keys(CATEGORY_FIELD_MAP) as CategoryKey[])
+      .filter((category) => !skipCategories.has(category))
+      .map(async (category) => {
+        const cachedList = await getCachedCommunityCategoryList(
+          zipCode,
+          category,
+          preferredCity,
+          preferredState
+        );
+        if (cachedList && countListItems(cachedList) > 0) {
+          cachedCategoryLists.set(category, cachedList);
+        } else {
+          categoriesToFetch.add(category);
+        }
+      })
+  );
+
   const categoryQueries = Object.entries(CATEGORY_CONFIG)
     .filter(([key]) => key !== "neighborhoods")
-    .map(([key, config]) => ({
-      key,
-      queries: applySeasonQueryPacks(
+    .filter(([key]) => categoriesToFetch.has(key as CategoryKey))
+    .map(([key, config]) => {
+      const seasonal = buildSeasonalQueries(
         location,
         key as CategoryKey,
-        applyGeoQueryPacks(location, key as CategoryKey, config.fallbackQueries)
-      ),
-      max: config.maxPerQuery
-    }));
+        config.fallbackQueries,
+        undefined,
+        allowedSeasonalCategories,
+        usedSeasonalHeaders
+      );
+      if (seasonal.seasonalQueries.size > 0) {
+        logger.info(
+          {
+            zipCode,
+            category: key,
+            seasonalQueries: Array.from(seasonal.seasonalQueries)
+          },
+          "Base seasonal queries selected"
+        );
+      }
+      return {
+        key,
+        queries: seasonal.queries,
+        seasonalQueries: seasonal.seasonalQueries,
+        max: config.maxPerQuery
+      };
+    });
+
+  // Check neighborhood cache before cost estimation
+  const cachedNeighborhoodLists = new Map<string, string>();
+  const neighborhoodsToFetch: typeof NEIGHBORHOOD_QUERIES = [];
+  await Promise.all(
+    neighborhoodQueries.map(async (category) => {
+      const cachedList = await getCachedCommunityCategoryList(
+        zipCode,
+        category.key,
+        preferredCity,
+        preferredState
+      );
+      if (cachedList && countListItems(cachedList) > 0) {
+        cachedNeighborhoodLists.set(category.key, cachedList);
+      } else {
+        neighborhoodsToFetch.push(category);
+      }
+    })
+  );
+
+  const baseDidRefresh = categoriesToFetch.size > 0 || neighborhoodsToFetch.length > 0;
+  if (baseDidRefresh) {
+    logger.info(
+      {
+        zipCode,
+        categoriesFromCache: Array.from(cachedCategoryLists.keys()),
+        categoriesFetched: Array.from(categoriesToFetch),
+        skipCategories: Array.from(skipCategories)
+      },
+      "Community base categories cache vs fetch"
+    );
+  }
+
+  const neighborhoodSearchCalls =
+    neighborhoodsToFetch.length * getSearchAnchors(location).length;
+  const categorySearchCalls = categoryQueries.reduce((total, category) => {
+    return (
+      total +
+      estimateSearchCallsForQueries(
+        location,
+        category.key as CategoryKey,
+        category.queries,
+        category.seasonalQueries
+      )
+    );
+  }, 0);
+  const baseDetailCalls = (Object.entries(CATEGORY_CONFIG) as Array<
+    [CategoryKey, { displayLimit?: number }]
+  >)
+    .filter(([key]) => key !== "neighborhoods")
+    .filter(([key]) => categoriesToFetch.has(key))
+    .reduce((sum, [key]) => sum + getCategoryDisplayLimit(key), 0);
+
+  const baseTotalCalls = neighborhoodSearchCalls + categorySearchCalls + baseDetailCalls;
+  const baseCostEstimate = Number((baseTotalCalls * 0.02187).toFixed(4));
+
+  if (baseDidRefresh) {
+    logger.info(
+      {
+        zipCode,
+        searchCallsEstimated: neighborhoodSearchCalls + categorySearchCalls,
+        detailsCallsEstimated: baseDetailCalls,
+        totalCallsEstimated: baseTotalCalls,
+        costEstimateUsd: baseCostEstimate,
+        seasonalCategories: Array.from(allowedSeasonalCategories)
+      },
+      "Community base refresh estimated Google calls"
+    );
+  }
 
   // Fetch function for a category - used by pool caching
   const makeFetchFn = (category: {
     key: string;
     queries: string[];
+    seasonalQueries: Set<string>;
     max: number;
   }) => async (): Promise<ScoredPlace[]> => {
-    const scored = await Promise.all(
-      category.queries.map(async (query) => {
-        const overrides = getQueryOverrides(category.key, query);
-        const results = await fetchPlacesWithAnchors(
-          query,
-          location,
-          category.max
-        );
-        return toScoredPlaces(
-          results,
-          category.key,
-          distanceCache,
-          serviceAreaCache,
-          overrides
-        );
-      })
-    );
-    return scored.flat();
+    return fetchScoredPlacesForQueries({
+      queries: category.queries,
+      category: category.key,
+      maxResults: category.max,
+      location,
+      distanceCache,
+      serviceAreaCache,
+      seasonalQueries: category.seasonalQueries,
+      overridesForQuery: (query) => getQueryOverrides(category.key, query)
+    });
   };
 
   // Fetch categories using pool caching for variety
   const categoryResults = await Promise.all(
     categoryQueries.map(async (category) => {
-      const sampled = await getPooledCategoryPlaces(
+      const sampledItems = await getPooledCategoryPlaces(
         zipCode,
         category.key,
         makeFetchFn(category),
@@ -1877,21 +2464,33 @@ export async function getCommunityDataByZip(
         preferredCity,
         preferredState
       );
-      return { key: category.key, places: sampled };
+      const sampledPlaces = await hydratePlacesFromItems(
+        sampledItems,
+        category.key
+      );
+      return { key: category.key, places: sampledPlaces };
     })
   );
 
   // Neighborhoods don't use pool caching (they're location-specific landmarks)
   const neighborhoodResults = await Promise.all(
-    neighborhoodQueries.map(async (category) => {
+    neighborhoodsToFetch.map(async (category) => {
       const places = await fetchPlacesWithAnchors(
         category.query,
         location,
-        category.max
+        category.max,
+        category.key as CategoryKey
       );
       return {
         key: category.key,
-        places: toScoredPlaces(places, category.key, distanceCache, serviceAreaCache)
+        places: toScoredPlaces(
+          places,
+          category.key,
+          distanceCache,
+          serviceAreaCache,
+          undefined,
+          undefined
+        )
       };
     })
   );
@@ -1901,101 +2500,116 @@ export async function getCommunityDataByZip(
     grouped[result.key] = result.places;
   }
 
+  // Track which categories were already hydrated via hydratePlacesFromItems
+  const alreadyHydratedCategories = new Set(categoryResults.map((r) => r.key));
+
   const listConfigs: Array<{
-    key: keyof CommunityData;
-    category: string;
+    category: CategoryKey;
     max: number;
-  }> = [
-    {
-      key: "dining_list",
-      category: "dining",
-      max: getCategoryDisplayLimit("dining")
-    },
-    {
-      key: "coffee_brunch_list",
-      category: "coffee_brunch",
-      max: getCategoryDisplayLimit("coffee_brunch")
-    },
-    {
-      key: "nature_outdoors_list",
-      category: "nature_outdoors",
-      max: getCategoryDisplayLimit("nature_outdoors")
-    },
-    {
-      key: "entertainment_list",
-      category: "entertainment",
-      max: getCategoryDisplayLimit("entertainment")
-    },
-    {
-      key: "attractions_list",
-      category: "attractions",
-      max: getCategoryDisplayLimit("attractions")
-    },
-    {
-      key: "sports_rec_list",
-      category: "sports_rec",
-      max: getCategoryDisplayLimit("sports_rec")
-    },
-    {
-      key: "arts_culture_list",
-      category: "arts_culture",
-      max: getCategoryDisplayLimit("arts_culture")
-    },
-    {
-      key: "nightlife_social_list",
-      category: "nightlife_social",
-      max: getCategoryDisplayLimit("nightlife_social")
-    },
-    {
-      key: "fitness_wellness_list",
-      category: "fitness_wellness",
-      max: getCategoryDisplayLimit("fitness_wellness")
-    },
-    {
-      key: "shopping_list",
-      category: "shopping",
-      max: getCategoryDisplayLimit("shopping")
-    },
-    {
-      key: "education_list",
-      category: "education",
-      max: getCategoryDisplayLimit("education")
-    },
-    {
-      key: "community_events_list",
-      category: "community_events",
-      max: getCategoryDisplayLimit("community_events")
-    }
-  ];
+  }> = (Object.keys(CATEGORY_FIELD_MAP) as CategoryKey[])
+    .filter((category) => categoriesToFetch.has(category))
+    .map((category) => ({
+      category,
+      max: getCategoryDisplayLimit(category)
+    }));
 
   const listResults = await Promise.all(
-    listConfigs.map(async ({ key, category, max }) => ({
-      key,
-      value: await buildCategoryListWithDetails(
+    listConfigs.map(async ({ category, max }) => {
+      const places = grouped[category] ?? [];
+      // Skip buildCategoryListWithDetails for already-hydrated places
+      if (alreadyHydratedCategories.has(category)) {
+        return {
+          category,
+          value: formatPlaceList(places, max, true)
+        };
+      }
+      // Neighborhoods and other non-pooled categories need details fetch
+      return {
         category,
-        grouped[category] ?? [],
-        max
-      )
-    }))
+        value: await buildCategoryListWithDetails(category, places, max)
+      };
+    })
   );
 
-  const listMap = Object.fromEntries(
-    listResults.map(({ key, value }) => [key, value])
-  ) as Partial<CommunityData>;
+  const listMap = new Map<keyof CommunityData, string>();
+  for (const [category, value] of cachedCategoryLists.entries()) {
+    const key = CATEGORY_FIELD_MAP[category];
+    listMap.set(key, value);
+  }
+  for (const { category, value } of listResults) {
+    const key = CATEGORY_FIELD_MAP[category];
+    if (value && !value.includes("(none found)")) {
+      listMap.set(key, value);
+      await setCachedCommunityCategoryList(
+        zipCode,
+        category,
+        value,
+        preferredCity,
+        preferredState
+      );
+    }
+  }
+
+  let seasonalGeoSections =
+    (await getCachedSeasonalSections(
+      zipCode,
+      preferredCity,
+      preferredState
+    )) ?? null;
+  if (!seasonalGeoSections) {
+    seasonalGeoSections = buildSeasonalQuerySections(grouped, 3, 3);
+    if (Object.keys(seasonalGeoSections).length > 0) {
+      await setCachedSeasonalSections(
+        zipCode,
+        seasonalGeoSections,
+        preferredCity,
+        preferredState
+      );
+    }
+  }
 
   // Build neighborhood lists from consolidated queries
   // neighborhoods_general covers general + relocators
   // neighborhoods_family covers family + luxury
   // neighborhoods_senior covers senior-specific
-  const neighborhoodsGeneral = buildNeighborhoodDetailList(
-    grouped.neighborhoods_general ?? []
-  );
-  const neighborhoodsFamily = buildNeighborhoodDetailList(
-    grouped.neighborhoods_family ?? []
-  );
-  const neighborhoodsSenior = buildNeighborhoodDetailList(
-    grouped.neighborhoods_senior ?? []
-  );
+  const neighborhoodsGeneral =
+    cachedNeighborhoodLists.get("neighborhoods_general") ??
+    buildNeighborhoodDetailList(grouped.neighborhoods_general ?? []);
+  const neighborhoodsFamily =
+    cachedNeighborhoodLists.get("neighborhoods_family") ??
+    buildNeighborhoodDetailList(grouped.neighborhoods_family ?? []);
+  const neighborhoodsSenior =
+    cachedNeighborhoodLists.get("neighborhoods_senior") ??
+    buildNeighborhoodDetailList(grouped.neighborhoods_senior ?? []);
+
+  if (neighborhoodsGeneral && !neighborhoodsGeneral.includes("(none found)")) {
+    await setCachedCommunityCategoryList(
+      zipCode,
+      "neighborhoods_general",
+      neighborhoodsGeneral,
+      preferredCity,
+      preferredState
+    );
+  }
+  if (neighborhoodsFamily && !neighborhoodsFamily.includes("(none found)")) {
+    await setCachedCommunityCategoryList(
+      zipCode,
+      "neighborhoods_family",
+      neighborhoodsFamily,
+      preferredCity,
+      preferredState
+    );
+  }
+  if (neighborhoodsSenior && !neighborhoodsSenior.includes("(none found)")) {
+    await setCachedCommunityCategoryList(
+      zipCode,
+      "neighborhoods_senior",
+      neighborhoodsSenior,
+      preferredCity,
+      preferredState
+    );
+  }
+
   // Derive luxury and relocators from consolidated queries
   const neighborhoodsLuxury = neighborhoodsFamily; // Family query includes luxury terms
   const neighborhoodsRelocators = neighborhoodsGeneral; // General query covers relocators
@@ -2009,27 +2623,65 @@ export async function getCommunityDataByZip(
     neighborhoods_luxury_list: neighborhoodsLuxury,
     neighborhoods_senior_list: neighborhoodsSenior,
     neighborhoods_relocators_list: neighborhoodsRelocators,
-    dining_list: listMap.dining_list ?? "- (none found)",
-    coffee_brunch_list: listMap.coffee_brunch_list ?? "- (none found)",
-    nature_outdoors_list: listMap.nature_outdoors_list ?? "- (none found)",
-    shopping_list: listMap.shopping_list ?? "- (none found)",
-    entertainment_list: listMap.entertainment_list ?? "- (none found)",
-    arts_culture_list: listMap.arts_culture_list ?? "- (none found)",
-    attractions_list: listMap.attractions_list ?? "- (none found)",
-    sports_rec_list: listMap.sports_rec_list ?? "- (none found)",
-    nightlife_social_list: listMap.nightlife_social_list ?? "- (none found)",
-    fitness_wellness_list: listMap.fitness_wellness_list ?? "- (none found)",
-    education_list: listMap.education_list ?? "- (none found)",
+    dining_list:
+      skipCategories.has("dining")
+        ? "- (none found)"
+        : listMap.get("dining_list") ?? "- (none found)",
+    coffee_brunch_list:
+      skipCategories.has("coffee_brunch")
+        ? "- (none found)"
+        : listMap.get("coffee_brunch_list") ?? "- (none found)",
+    nature_outdoors_list:
+      skipCategories.has("nature_outdoors")
+        ? "- (none found)"
+        : listMap.get("nature_outdoors_list") ?? "- (none found)",
+    shopping_list:
+      skipCategories.has("shopping")
+        ? "- (none found)"
+        : listMap.get("shopping_list") ?? "- (none found)",
+    entertainment_list:
+      skipCategories.has("entertainment")
+        ? "- (none found)"
+        : listMap.get("entertainment_list") ?? "- (none found)",
+    arts_culture_list:
+      skipCategories.has("arts_culture")
+        ? "- (none found)"
+        : listMap.get("arts_culture_list") ?? "- (none found)",
+    attractions_list:
+      skipCategories.has("attractions")
+        ? "- (none found)"
+        : listMap.get("attractions_list") ?? "- (none found)",
+    sports_rec_list:
+      skipCategories.has("sports_rec")
+        ? "- (none found)"
+        : listMap.get("sports_rec_list") ?? "- (none found)",
+    nightlife_social_list:
+      skipCategories.has("nightlife_social")
+        ? "- (none found)"
+        : listMap.get("nightlife_social_list") ?? "- (none found)",
+    fitness_wellness_list:
+      skipCategories.has("fitness_wellness")
+        ? "- (none found)"
+        : listMap.get("fitness_wellness_list") ?? "- (none found)",
+    education_list:
+      skipCategories.has("education")
+        ? "- (none found)"
+        : listMap.get("education_list") ?? "- (none found)",
     community_events_list:
-      listMap.community_events_list ?? "- (none found)",
+      skipCategories.has("community_events")
+        ? "- (none found)"
+        : listMap.get("community_events_list") ?? "- (none found)",
+    seasonal_geo_sections: seasonalGeoSections ?? {}
   };
 
-  await setCachedCommunityData(
-    zipCode,
-    baseCommunityData,
-    preferredCity,
-    preferredState
-  );
+  if (options?.writeCache ?? true) {
+    await setCachedCommunityData(
+      zipCode,
+      baseCommunityData,
+      preferredCity,
+      preferredState
+    );
+  }
   return baseCommunityData;
 }
 
@@ -2040,19 +2692,14 @@ export async function getCommunityDataByZipAndAudience(
   preferredCity?: string | null,
   preferredState?: string | null
 ): Promise<CommunityData | null> {
-  const base = await getCommunityDataByZip(
-    zipCode,
-    serviceAreas,
-    preferredCity,
-    preferredState
-  );
-  if (!base) {
-    return null;
-  }
-
   const normalized = normalizeAudienceSegment(audienceSegment);
   if (!normalized) {
-    return base;
+    return getCommunityDataByZip(
+      zipCode,
+      serviceAreas,
+      preferredCity,
+      preferredState
+    );
   }
 
   const cachedDelta = await getCachedAudienceDelta(
@@ -2101,6 +2748,21 @@ export async function getCommunityDataByZipAndAudience(
         );
       }
     }
+  }
+
+  const skipCategories = getAudienceSkipCategories(delta);
+  const base = await getCommunityDataByZip(
+    zipCode,
+    serviceAreas,
+    preferredCity,
+    preferredState,
+    {
+      skipCategories,
+      writeCache: skipCategories.size === 0
+    }
+  );
+  if (!base) {
+    return null;
   }
 
   const merged = delta ? applyAudienceDelta(base, delta) : base;

@@ -14,13 +14,7 @@ export type AudienceSegment =
   | "luxury_buyers"
   | "investors_relocators";
 
-export type AudienceAugmentCategory =
-  | "entertainment"
-  | "sports_rec"
-  | "nature_outdoors"
-  | "dining"
-  | "fitness_wellness"
-  | "shopping";
+export type AudienceAugmentCategory = Exclude<CategoryKey, "neighborhoods">;
 
 export type CategoryKey =
   | "neighborhoods"
@@ -42,6 +36,7 @@ export type CategoryConfig = {
   poolMax: number;
   minRating: number;
   minReviews: number;
+  targetQueryCount: number;
   /** Fallback queries - run only when audience queries return < minPrimaryResults */
   fallbackQueries: string[];
   maxPerQuery: number;
@@ -50,8 +45,8 @@ export type CategoryConfig = {
 };
 
 export type AudienceConfig = {
-  augmentQueries: Record<AudienceAugmentCategory, string[]>;
-  augmentLimits: Record<AudienceAugmentCategory, number>;
+  augmentQueries: Partial<Record<AudienceAugmentCategory, string[]>>;
+  augmentLimits: Partial<Record<AudienceAugmentCategory, number>>;
 };
 
 // ============================================================================
@@ -59,16 +54,13 @@ export type AudienceConfig = {
 // ============================================================================
 
 export const COMMUNITY_CACHE_KEY_PREFIX = "community";
-export const DEFAULT_COMMUNITY_TTL_DAYS = 30;
 export const DEFAULT_SEARCH_RADIUS_METERS = 15000;
-export const MAX_PLACE_DISTANCE_KM = 40;
-export const DISTANCE_SCORE_WEIGHT = 0.05;
-export const DISTANCE_SCORE_CAP_KM = 20;
+export const MAX_PLACE_DISTANCE_KM = 20;
+export const DISTANCE_SCORE_WEIGHT = 0.12;
+export const DISTANCE_SCORE_CAP_KM = 15;
 
 export const SEARCH_ANCHOR_OFFSETS = [
-  { lat: 0, lng: 0 },
-  { lat: 0.06, lng: 0.06 },
-  { lat: -0.06, lng: -0.06 }
+  { lat: 0, lng: 0 }
 ];
 
 export const CHAIN_NAME_BLACKLIST = [
@@ -109,7 +101,7 @@ export const CHAIN_FILTER_CATEGORIES: CategoryKey[] = [
 // ============================================================================
 // REGIONAL STATE CLASSIFICATIONS
 // Each state should only appear in ONE primary geo classification to avoid
-// conflicting queries. Exception: states can be in both a region AND warm/cold.
+// conflicting queries.
 // ============================================================================
 
 /** Pacific Northwest - rainforests, mountains, rivers, coffee culture */
@@ -119,10 +111,10 @@ export const PACIFIC_NORTHWEST_STATES = new Set(["WA", "OR"]);
 export const MOUNTAIN_STATES = new Set(["CO", "UT", "ID", "MT", "WY"]);
 
 /** Desert/Southwest - Sonoran, Mojave, red rocks, arid climate */
-export const DESERT_SOUTHWEST_STATES = new Set(["AZ", "NM", "NV"]);
+export const DESERT_SOUTHWEST_STATES = new Set(["AZ", "TX", "NM", "NV"]);
 
 /** Gulf Coast - fishing, bayous, Gulf beaches, Cajun culture */
-export const GULF_COAST_STATES = new Set(["TX", "LA", "MS", "AL"]);
+export const GULF_COAST_STATES = new Set(["LA", "MS", "AL"]);
 
 /** Atlantic South - warm beaches, barrier islands, Southern charm */
 export const ATLANTIC_SOUTH_STATES = new Set(["FL", "GA", "SC", "NC"]);
@@ -144,143 +136,6 @@ export const HAWAII_STATES = new Set(["HI"]);
 
 /** Alaska - wilderness, glaciers, wildlife, frontier */
 export const ALASKA_STATES = new Set(["AK"]);
-
-// Legacy exports for backward compatibility (used in deriveGeoPackKeys)
-export const COASTAL_STATES = new Set([
-  ...GULF_COAST_STATES,
-  ...ATLANTIC_SOUTH_STATES,
-  ...MID_ATLANTIC_STATES,
-  ...NEW_ENGLAND_STATES,
-  ...CALIFORNIA_STATES
-]);
-
-export const SOUTHWEST_STATES = DESERT_SOUTHWEST_STATES;
-
-export const GEO_QUERY_PACKS: Partial<
-  Record<
-    CategoryKey,
-    Record<string, string[]>
-  >
-> = {
-  nature_outdoors: {
-    // Regional packs
-    pacific_northwest: ["rainforest trail", "waterfall hike", "old growth forest", "hot springs"],
-    mountain: ["mountain trail", "alpine lake", "scenic overlook", "wildflower meadow"],
-    desert_southwest: ["desert preserve", "red rock trail", "slot canyon", "saguaro"],
-    gulf_coast: ["bayou trail", "coastal wetlands", "bird sanctuary"],
-    atlantic_south: ["beach", "barrier island", "nature preserve", "coastal trail"],
-    mid_atlantic: ["bay trail", "estuary", "state park"],
-    new_england: ["rocky coast trail", "lighthouse walk", "fall foliage", "covered bridge"],
-    great_lakes: ["lakefront trail", "dunes", "riverwalk"],
-    california: ["coastal trail", "redwood forest", "canyon hike", "wine country"],
-    hawaii: ["volcanic trail", "tropical garden", "waterfall hike", "beach park"],
-    alaska: ["glacier viewpoint", "wildlife refuge", "wilderness trail"],
-    // Climate-based (supplements regional)
-    warm: ["botanical garden", "nature preserve"],
-    cold: ["snowshoe trail", "winter hike"]
-  },
-  sports_rec: {
-    pacific_northwest: ["ski resort", "kayak river", "mountain biking", "climbing gym"],
-    mountain: ["ski resort", "snowboarding", "mountain biking", "fly fishing"],
-    desert_southwest: ["golf course", "rock climbing", "mountain biking", "trail running"],
-    gulf_coast: ["fishing charter", "kayak tour", "golf course"],
-    atlantic_south: ["beach volleyball", "surfing", "golf course", "fishing pier"],
-    mid_atlantic: ["sailing", "kayak rental", "golf course"],
-    new_england: ["sailing", "whale watching", "ski resort", "ice skating"],
-    great_lakes: ["boat rental", "fishing", "beach volleyball", "ice fishing"],
-    california: ["surfing", "mountain biking", "rock climbing", "sailing"],
-    hawaii: ["snorkeling", "surfing", "outrigger canoe", "hiking"],
-    alaska: ["fishing charter", "kayaking", "dog sledding", "wildlife tour"],
-    warm: ["water sports", "outdoor courts"],
-    cold: ["ice rink", "indoor sports complex"]
-  },
-  attractions: {
-    pacific_northwest: ["coffee roaster tour", "brewery", "farmers market", "art museum"],
-    mountain: ["scenic railway", "hot springs resort", "national park visitor center"],
-    desert_southwest: ["desert museum", "native heritage site", "historic pueblo", "observatory"],
-    gulf_coast: ["aquarium", "historic district", "plantation tour", "cajun heritage"],
-    atlantic_south: ["lighthouse", "historic fort", "aquarium", "pier"],
-    mid_atlantic: ["historic site", "maritime museum", "boardwalk"],
-    new_england: ["lighthouse", "historic harbor", "maritime museum", "lobster shack"],
-    great_lakes: ["lakefront attraction", "science museum", "brewery tour"],
-    california: ["winery", "aquarium", "historic mission", "theme park"],
-    hawaii: ["luau", "volcano tour", "cultural center", "botanical garden"],
-    alaska: ["glacier cruise", "wildlife center", "native heritage", "gold rush history"],
-    warm: ["botanical garden", "outdoor attraction"],
-    cold: ["indoor attraction", "history museum"]
-  }
-};
-
-export const SEASON_QUERY_PACKS: Partial<
-  Record<
-    CategoryKey,
-    Record<string, string[]>
-  >
-> = {
-  // Outdoor activities - universally applicable (no region-specific like "ski hill")
-  nature_outdoors: {
-    winter: ["winter trail", "scenic winter hike", "nature preserve"],
-    spring: ["wildflower trail", "botanical garden", "spring bloom"],
-    summer: ["shaded trail", "waterfront park", "lake beach"],
-    fall: ["fall foliage", "scenic trail", "nature walk"]
-  },
-  // Sports - indoor focus in winter, outdoor in warm months
-  sports_rec: {
-    winter: ["indoor sports complex", "fitness center", "climbing gym"],
-    spring: ["outdoor courts", "trail running", "golf course"],
-    summer: ["water sports", "kayak rental", "outdoor recreation"],
-    fall: ["golf course", "outdoor courts", "sports league"]
-  },
-  // Attractions - indoor in winter, outdoor in summer
-  attractions: {
-    winter: ["indoor attraction", "museum", "aquarium"],
-    spring: ["botanical garden", "outdoor attraction", "historic site"],
-    summer: ["outdoor attraction", "festival grounds", "theme park"],
-    fall: ["historic site", "harvest festival", "scenic railway"]
-  },
-  // Community events - seasonal festivals and markets
-  community_events: {
-    winter: ["holiday market", "winter festival", "tree lighting"],
-    spring: ["farmers market", "spring festival", "garden show"],
-    summer: ["summer festival", "outdoor concert", "night market"],
-    fall: ["harvest festival", "fall market", "pumpkin patch"]
-  },
-  // Dining - seasonal dining experiences
-  dining: {
-    winter: ["cozy restaurant", "fireplace dining", "comfort food"],
-    spring: ["patio dining", "brunch spot", "farm to table"],
-    summer: ["rooftop restaurant", "outdoor dining", "waterfront restaurant"],
-    fall: ["harvest menu", "seasonal restaurant", "farm to table"]
-  },
-  // Coffee & brunch - seasonal drinks and vibes
-  coffee_brunch: {
-    winter: ["cozy cafe", "fireplace coffee shop", "hot chocolate"],
-    spring: ["outdoor cafe", "patio brunch", "seasonal latte"],
-    summer: ["iced coffee", "outdoor seating cafe", "cold brew"],
-    fall: ["pumpkin spice", "autumn latte", "cozy coffee shop"]
-  },
-  // Nightlife - seasonal bar/lounge experiences
-  nightlife_social: {
-    winter: ["cozy bar", "fireplace lounge", "whiskey bar"],
-    spring: ["rooftop bar", "patio bar", "beer garden"],
-    summer: ["rooftop bar", "beer garden", "outdoor lounge"],
-    fall: ["craft beer", "bourbon bar", "wine bar"]
-  },
-  // Fitness - indoor/outdoor based on weather
-  fitness_wellness: {
-    winter: ["indoor fitness", "yoga studio", "heated pool"],
-    spring: ["outdoor yoga", "boot camp", "running group"],
-    summer: ["outdoor fitness", "swim club", "morning workout"],
-    fall: ["indoor gym", "yoga studio", "fitness class"]
-  },
-  // Shopping - seasonal markets and holiday shopping
-  shopping: {
-    winter: ["holiday shopping", "gift shop", "boutique"],
-    spring: ["farmers market", "outdoor market", "garden center"],
-    summer: ["outdoor market", "artisan fair", "boutique"],
-    fall: ["harvest market", "fall boutique", "artisan shop"]
-  }
-};
 
 // ============================================================================
 // AUDIENCE SEGMENT ALIASES
@@ -364,6 +219,7 @@ export const CATEGORY_CONFIG: Record<CategoryKey, CategoryConfig> = {
     poolMax: 0,
     minRating: 0,
     minReviews: 0,
+    targetQueryCount: 1,
     fallbackQueries: [], // Neighborhoods use separate NEIGHBORHOOD_QUERIES
     maxPerQuery: 8,
     minPrimaryResults: 0
@@ -373,10 +229,10 @@ export const CATEGORY_CONFIG: Record<CategoryKey, CategoryConfig> = {
     poolMax: 40,
     minRating: 4.5,
     minReviews: 100,
+    targetQueryCount: 2,
     // Generic fallback - only used if audience queries return sparse results
     fallbackQueries: [
-      "best local restaurants",
-      "popular restaurant"
+      "best local restaurants"
     ],
     maxPerQuery: 15,
     minPrimaryResults: 3
@@ -386,9 +242,9 @@ export const CATEGORY_CONFIG: Record<CategoryKey, CategoryConfig> = {
     poolMax: 30,
     minRating: 4.4,
     minReviews: 40,
+    targetQueryCount: 2,
     fallbackQueries: [
-      "coffee shop cafe",
-      "breakfast brunch spot"
+      "coffee shop cafe"
     ],
     maxPerQuery: 12,
     minPrimaryResults: 2
@@ -398,18 +254,19 @@ export const CATEGORY_CONFIG: Record<CategoryKey, CategoryConfig> = {
     poolMax: 20,
     minRating: 4.5,
     minReviews: 20,
+    targetQueryCount: 2,
     fallbackQueries: [
-      "park trail hiking",
-      "nature preserve garden"
+      "park trail hiking"
     ],
     maxPerQuery: 12,
     minPrimaryResults: 2
   },
   entertainment: {
     displayLimit: 4,
-    poolMax: 25,
+    poolMax: 18,
     minRating: 4.0,
     minReviews: 10,
+    targetQueryCount: 1,
     fallbackQueries: [
       "live music theater entertainment venue"
     ],
@@ -418,21 +275,22 @@ export const CATEGORY_CONFIG: Record<CategoryKey, CategoryConfig> = {
   },
   attractions: {
     displayLimit: 4,
-    poolMax: 15,
+    poolMax: 10,
     minRating: 4.0,
     minReviews: 10,
+    targetQueryCount: 1,
     fallbackQueries: [
-      "local attraction historic landmark tourist site",
-      "zoo aquarium museum"
+      "local attraction historic landmark tourist site"
     ],
     maxPerQuery: 10,
     minPrimaryResults: 2
   },
   sports_rec: {
     displayLimit: 4,
-    poolMax: 20,
+    poolMax: 14,
     minRating: 4.0,
     minReviews: 10,
+    targetQueryCount: 1,
     fallbackQueries: [
       "sports recreation center"
     ],
@@ -441,9 +299,10 @@ export const CATEGORY_CONFIG: Record<CategoryKey, CategoryConfig> = {
   },
   arts_culture: {
     displayLimit: 4,
-    poolMax: 20,
+    poolMax: 14,
     minRating: 4.0,
     minReviews: 8,
+    targetQueryCount: 1,
     fallbackQueries: [
       "art gallery museum cultural center"
     ],
@@ -455,6 +314,7 @@ export const CATEGORY_CONFIG: Record<CategoryKey, CategoryConfig> = {
     poolMax: 30,
     minRating: 4.0,
     minReviews: 12,
+    targetQueryCount: 1,
     fallbackQueries: [
       "brewery winery bar lounge"
     ],
@@ -463,9 +323,10 @@ export const CATEGORY_CONFIG: Record<CategoryKey, CategoryConfig> = {
   },
   fitness_wellness: {
     displayLimit: 4,
-    poolMax: 23,
+    poolMax: 16,
     minRating: 4.0,
     minReviews: 10,
+    targetQueryCount: 1,
     fallbackQueries: [
       "gym fitness yoga wellness"
     ],
@@ -474,9 +335,10 @@ export const CATEGORY_CONFIG: Record<CategoryKey, CategoryConfig> = {
   },
   shopping: {
     displayLimit: 4,
-    poolMax: 23,
+    poolMax: 16,
     minRating: 4.0,
     minReviews: 10,
+    targetQueryCount: 1,
     fallbackQueries: [
       "local shop boutique"
     ],
@@ -485,22 +347,23 @@ export const CATEGORY_CONFIG: Record<CategoryKey, CategoryConfig> = {
   },
   education: {
     displayLimit: 3,
-    poolMax: 10,
+    poolMax: 8,
     minRating: 3.8,
     minReviews: 200,
+    targetQueryCount: 1,
     // Education is less audience-dependent, so fallback is primary
     fallbackQueries: [
-      "university campus",
-      "library"
+      "university campus"
     ],
     maxPerQuery: 15,
     minPrimaryResults: 0 // Always use fallback for education
   },
   community_events: {
     displayLimit: 3,
-    poolMax: 15,
+    poolMax: 10,
     minRating: 3.8,
     minReviews: 5,
+    targetQueryCount: 1,
     fallbackQueries: [
       "farmers market festival fair"
     ],
@@ -513,13 +376,19 @@ export const CATEGORY_CONFIG: Record<CategoryKey, CategoryConfig> = {
 // AUDIENCE CONFIGURATION
 // ============================================================================
 
-const DEFAULT_AUGMENT_LIMITS: Record<AudienceAugmentCategory, number> = {
+const DEFAULT_AUGMENT_LIMITS: Partial<Record<AudienceAugmentCategory, number>> = {
   entertainment: 6,
   sports_rec: 6,
   nature_outdoors: 6,
   dining: 8,
   fitness_wellness: 6,
-  shopping: 6
+  shopping: 6,
+  coffee_brunch: 6,
+  nightlife_social: 6,
+  arts_culture: 6,
+  attractions: 6,
+  education: 6,
+  community_events: 6
 };
 
 /**
@@ -538,29 +407,10 @@ export const AUDIENCE_CONFIG: Record<AudienceSegment, AudienceConfig> = {
     augmentQueries: {
       // Trendy, urban-focused dining
       dining: [
-        "trendy restaurant tapas sushi ramen",
-        "craft cocktail bar gastropub",
-        "vegan vegetarian restaurant"
+        "trendy restaurant"
       ],
-      entertainment: [
-        "live music venue comedy club",
-        "rooftop bar nightclub"
-      ],
-      sports_rec: [
-        "climbing gym crossfit",
-        "adult sports league"
-      ],
-      nature_outdoors: [
-        "urban park riverwalk trail",
-        "rooftop garden scenic overlook"
-      ],
-      fitness_wellness: [
-        "boutique fitness spin cycling",
-        "yoga pilates barre studio"
-      ],
-      shopping: [
-        "vintage boutique thrift",
-        "artisan market bookstore"
+      nightlife_social: [
+        "craft cocktail bar gastropub"
       ]
     }
   },
@@ -569,29 +419,10 @@ export const AUDIENCE_CONFIG: Record<AudienceSegment, AudienceConfig> = {
     augmentQueries: {
       // Family-friendly, kid-focused
       dining: [
-        "family restaurant kids menu",
-        "pizza casual dining"
-      ],
-      entertainment: [
-        "family entertainment center arcade",
-        "children theater puppet show"
-      ],
-      sports_rec: [
-        "youth sports soccer baseball",
-        "community pool splash pad"
+        "family restaurant kids menu"
       ],
       nature_outdoors: [
-        "playground park picnic area",
-        "nature center petting zoo",
-        "easy hiking family trail"
-      ],
-      fitness_wellness: [
-        "family gym pool",
-        "kids yoga swim lessons"
-      ],
-      shopping: [
-        "toy store children boutique",
-        "family shopping kids clothes"
+        "playground park picnic area"
       ]
     }
   },
@@ -601,28 +432,10 @@ export const AUDIENCE_CONFIG: Record<AudienceSegment, AudienceConfig> = {
       // Classic, refined, accessible
       dining: [
         "fine dining seafood steakhouse",
-        "bistro brunch classic restaurant"
-      ],
-      entertainment: [
-        "performing arts symphony opera",
-        "historic theater concert hall"
-      ],
-      sports_rec: [
-        "golf course country club",
-        "tennis pickleball courts"
+        "bistro classic restaurant"
       ],
       nature_outdoors: [
-        "botanical garden arboretum",
-        "scenic overlook easy walk",
-        "bird watching nature preserve"
-      ],
-      fitness_wellness: [
-        "wellness spa massage",
-        "senior fitness gentle yoga"
-      ],
-      shopping: [
-        "antique shop gallery",
-        "bookstore artisan craft"
+        "botanical garden arboretum"
       ]
     }
   },
@@ -632,57 +445,21 @@ export const AUDIENCE_CONFIG: Record<AudienceSegment, AudienceConfig> = {
       // Upscale, exclusive, premium
       dining: [
         "fine dining michelin tasting menu",
-        "upscale steakhouse sushi omakase"
-      ],
-      entertainment: [
-        "private theater vip lounge",
-        "exclusive club members only"
-      ],
-      sports_rec: [
-        "private country club golf",
-        "yacht club tennis pro"
+        "upscale steakhouse bistro"
       ],
       nature_outdoors: [
-        "private garden estate grounds",
-        "scenic overlook exclusive"
-      ],
-      fitness_wellness: [
-        "luxury spa resort wellness",
-        "private training personal gym"
-      ],
-      shopping: [
-        "designer boutique luxury brand",
-        "fine jewelry art gallery"
+        "private garden estate grounds"
       ]
     }
   },
   investors_relocators: {
     augmentLimits: DEFAULT_AUGMENT_LIMITS,
     augmentQueries: {
-      // Popular, well-reviewed, community staples
       dining: [
-        "popular restaurant highly rated",
-        "local favorite food hall"
+        "local restaurant"
       ],
-      entertainment: [
-        "event venue concert",
-        "community theater performance"
-      ],
-      sports_rec: [
-        "recreation center sports complex",
-        "stadium arena"
-      ],
-      nature_outdoors: [
-        "state park regional trail",
-        "lake river waterfront"
-      ],
-      fitness_wellness: [
-        "fitness center gym",
-        "community recreation"
-      ],
-      shopping: [
-        "shopping district main street",
-        "local market retail"
+      coffee_brunch: [
+        "coffee shop cafe"
       ]
     }
   }
@@ -710,12 +487,10 @@ export function getAudienceConfig(audience: string): AudienceConfig | undefined 
  * Get augment categories for audience-based fetching.
  */
 export const AUDIENCE_AUGMENT_CATEGORIES: AudienceAugmentCategory[] = [
-  "entertainment",
-  "sports_rec",
-  "nature_outdoors",
   "dining",
-  "fitness_wellness",
-  "shopping"
+  "coffee_brunch",
+  "nightlife_social",
+  "nature_outdoors"
 ];
 
 // ============================================================================
@@ -758,7 +533,7 @@ export function getAudienceAugmentQueries(
   audience: string,
   category: AudienceAugmentCategory
 ): string[] {
-  return AUDIENCE_CONFIG[audience as AudienceSegment]?.augmentQueries[category] ?? [];
+  return AUDIENCE_CONFIG[audience as AudienceSegment]?.augmentQueries?.[category] ?? [];
 }
 
 /**
@@ -766,7 +541,7 @@ export function getAudienceAugmentQueries(
  */
 export function getAllAudienceAugmentQueries(
   audience: string
-): Record<AudienceAugmentCategory, string[]> | undefined {
+): Partial<Record<AudienceAugmentCategory, string[]>> | undefined {
   return AUDIENCE_CONFIG[audience as AudienceSegment]?.augmentQueries;
 }
 
@@ -777,7 +552,11 @@ export function getAudienceAugmentLimit(
   audience: string,
   category: AudienceAugmentCategory
 ): number {
-  return AUDIENCE_CONFIG[audience as AudienceSegment]?.augmentLimits[category] ?? 6;
+  return (
+    AUDIENCE_CONFIG[audience as AudienceSegment]?.augmentLimits?.[category] ??
+    DEFAULT_AUGMENT_LIMITS[category] ??
+    6
+  );
 }
 
 /**
@@ -796,4 +575,11 @@ export function getCategoryFallbackQueries(category: string): string[] {
  */
 export function getCategoryMinPrimaryResults(category: string): number {
   return CATEGORY_CONFIG[category as CategoryKey]?.minPrimaryResults ?? 2;
+}
+
+/**
+ * Get target query count for a category (audience + fallback combined).
+ */
+export function getCategoryTargetQueryCount(category: string): number {
+  return CATEGORY_CONFIG[category as CategoryKey]?.targetQueryCount ?? 1;
 }

@@ -16,31 +16,13 @@ type PlaceDetailsGenerativeSummary = {
 };
 
 export type PlaceDetailsResponse = {
-  reviewSummary?: PlaceDetailsSummary;
-  editorialSummary?: PlaceDetailsSummary;
+  displayName?: { text?: string };
+  formattedAddress?: string;
+  rating?: number;
+  userRatingCount?: number;
+  primaryType?: string;
+  types?: string[];
   generativeSummary?: PlaceDetailsGenerativeSummary;
-  reviews?: Array<{
-    rating?: number;
-    text?: { text?: string } | string;
-  }>;
-  priceLevel?: string;
-  outdoorSeating?: boolean;
-  liveMusic?: boolean;
-  goodForChildren?: boolean;
-  goodForGroups?: boolean;
-  reservable?: boolean;
-  dineIn?: boolean;
-  takeout?: boolean;
-  servesBeer?: boolean;
-  servesWine?: boolean;
-  servesCocktails?: boolean;
-  servesCoffee?: boolean;
-  servesBreakfast?: boolean;
-  servesBrunch?: boolean;
-  servesLunch?: boolean;
-  servesDinner?: boolean;
-  servesDessert?: boolean;
-  servesVegetarianFood?: boolean;
 };
 
 export type PlaceResult = {
@@ -68,36 +50,17 @@ const PLACES_FIELD_MASK = [
   "places.id",
   "places.location",
   "places.rating",
-  "places.userRatingCount",
-  "places.priceLevel",
-  "places.primaryType",
-  "places.types",
-  "places.websiteUri"
+  "places.userRatingCount"
 ].join(",");
 
 const PLACE_DETAILS_FIELD_MASK = [
-  "reviewSummary",
-  "editorialSummary",
-  "generativeSummary",
-  "reviews",
-  "priceLevel",
-  "outdoorSeating",
-  "liveMusic",
-  "goodForChildren",
-  "goodForGroups",
-  "reservable",
-  "dineIn",
-  "takeout",
-  "servesBeer",
-  "servesWine",
-  "servesCocktails",
-  "servesCoffee",
-  "servesBreakfast",
-  "servesBrunch",
-  "servesLunch",
-  "servesDinner",
-  "servesDessert",
-  "servesVegetarianFood"
+  "displayName",
+  "formattedAddress",
+  "rating",
+  "userRatingCount",
+  "primaryType",
+  "types",
+  "generativeSummary"
 ].join(",");
 
 // ============================================================================

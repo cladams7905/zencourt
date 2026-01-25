@@ -43,4 +43,5 @@ export type CommunityData = MarketLocation & {
   shopping_list: string;
   education_list: string;
   community_events_list: string;
+  seasonal_geo_sections?: Record<string, string>;
 };

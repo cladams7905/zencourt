@@ -37,7 +37,8 @@ export type PromptAssemblyInput = {
   market_data?: MarketDataInput | null;
   community_data?: CommunityDataInput | null;
   city_description?: string | null;
-  community_category_keys?: Array<keyof CommunityDataInput> | null;
+  community_category_keys?: string[] | null;
+  community_data_extra_sections?: Record<string, string> | null;
   content_request?: ContentRequestInput | null;
   recent_hooks?: string[] | null;
 };
@@ -148,7 +149,8 @@ function parseCommunityTemplate(template: string): {
 function buildCommunityDataPrompt(
   communityData: CommunityDataInput,
   template: string,
-  selectedKeys?: Array<keyof CommunityDataInput> | null
+  selectedKeys?: string[] | null,
+  extraSections?: Record<string, string> | null
 ): string {
   const values: PromptValues = {};
   for (const [key, value] of Object.entries(communityData)) {
@@ -160,9 +162,10 @@ function buildCommunityDataPrompt(
   }
 
   const { header, sections } = parseCommunityTemplate(template);
-  const allowed = selectedKeys
-    ? new Set<string>(selectedKeys.map(String))
-    : null;
+  const templateKeys = new Set(
+    sections.map((section) => section.key).filter(Boolean) as string[]
+  );
+  const allowed = selectedKeys ? new Set<string>(selectedKeys) : null;
   const parts: string[] = [];
 
   if (header.length > 0) {
@@ -174,6 +177,24 @@ function buildCommunityDataPrompt(
       continue;
     }
     parts.push(interpolateTemplate(section.lines.join("\n"), values));
+  }
+
+  const extraEntries = extraSections
+    ? Object.entries(extraSections).filter(
+        ([, value]) => hasMeaningfulValue(value)
+      )
+    : [];
+  const extraMap = new Map(extraEntries);
+  const extraKeys = selectedKeys
+    ? selectedKeys.filter((key) => !templateKeys.has(key))
+    : extraEntries.map(([key]) => key);
+
+  for (const key of extraKeys) {
+    const value = extraMap.get(key);
+    if (!value) {
+      continue;
+    }
+    parts.push(`${key}:\n${value}`);
   }
 
   return parts.join("\n").trim();
@@ -381,6 +402,44 @@ function buildMarketDataXml(data: MarketDataInput): string {
   ].join("\n");
 }
 
+const MONTH_NAMES = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December"
+];
+
+const MONTH_TOPIC_HINTS = [
+  "winter-related topics, New Year's resolutions, and cold-weather lifestyle",
+  "winter living, Valentine's season, and cozy indoor activities",
+  "early spring energy, St. Patrick's Day, and spring prep",
+  "spring blooms, Easter season, and tax season",
+  "peak spring, Memorial Day, and early summer planning",
+  "summer kick-off and outdoor living",
+  "summer events, Fourth of July, and backyard entertaining",
+  "late-summer living, back-to-school, and end-of-summer prep",
+  "early fall, Labor Day, and fall market momentum",
+  "autumn leaves, Halloween, pumpkin spice, and cozy home themes",
+  "Thanksgiving season, gratitude, and holiday hosting",
+  "holiday season, year-end reflections, Christmas, and winter comfort"
+];
+
+function buildTimeOfYearNote(now = new Date()): string {
+  const monthIndex = now.getMonth();
+  const monthName = MONTH_NAMES[monthIndex] ?? "this month";
+  const topicHint =
+    MONTH_TOPIC_HINTS[monthIndex] ?? "seasonal topics and local events";
+  return `Right now it is ${monthName}, so focus on ${topicHint}.`;
+}
+
 function interpolateTemplate(template: string, values: PromptValues): string {
   return template.replace(/\{([a-zA-Z0-9_]+)\}/g, (match, key) => {
     const value = values[key];
@@ -468,7 +527,8 @@ export async function buildSystemPrompt(input: PromptAssemblyInput) {
     ...input.agent_profile,
     writing_style_description: input.agent_profile.writing_style_description,
     writing_style_notes_block: styleNotesBlock,
-    area_description: input.city_description?.trim() ?? ""
+    area_description: input.city_description?.trim() ?? "",
+    time_of_year: buildTimeOfYearNote()
   };
   const agentProfile = interpolateTemplate(agentTemplate, agentProfileValues);
   const marketData = input.market_data
@@ -478,7 +538,8 @@ export async function buildSystemPrompt(input: PromptAssemblyInput) {
     ? buildCommunityDataPrompt(
         input.community_data,
         communityTemplate,
-        input.community_category_keys
+        input.community_category_keys,
+        input.community_data_extra_sections
       )
     : "";
 
@@ -531,10 +592,27 @@ export function buildUserPrompt(input: PromptAssemblyInput): string {
   const contentType = content_request?.content_type ?? "social_post";
   const focus = content_request?.focus ?? "";
   const notes = content_request?.notes ?? "";
+  const city = input.agent_profile.city;
+
+  const categoryPurposeMap: Record<string, string> = {
+    community:
+      `The purpose of a community social media post is to highlight key features in ${city} and draw viewer attention to why a prospecting buyer should move there.`,
+    seasonal:
+      `The purpose of a seasonal post is to draw attention to timely seasonal or holiday moments in ${city}.`,
+    market_insights:
+      `The purpose of a market insights post is to summarize what is happening in the ${city} real estate market and help buyers or sellers make informed decisions.`,
+    educational:
+      `The purpose of an educational post is to teach the audience a clear, useful concept and build trust with practical guidance.`,
+    lifestyle:
+      `The purpose of a lifestyle post is to build the credibility and personal brand of a realtor with their target audience.`
+  };
+  const categoryPurpose =
+    categoryPurposeMap[category] ??
+    `The purpose of this post is to deliver useful real estate content tailored to ${city}.`;
 
   return `
 <content_request>
-- **Category:** ${category}
+- **Category:** ${category} - ${categoryPurpose}
 - **Audience Segments:** ${audience_segments.join(", ") || "general"}
 - **Platform:** ${platform}
 - **Content Type:** ${contentType}
