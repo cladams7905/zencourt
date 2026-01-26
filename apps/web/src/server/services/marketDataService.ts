@@ -1,6 +1,11 @@
 import type { MarketData, MarketLocation } from "@web/src/types/market";
 import { createChildLogger, logger as baseLogger } from "@web/src/lib/logger";
 import { Redis } from "@upstash/redis";
+import { requestPerplexity } from "./community/perplexity/client";
+import type {
+  PerplexityMessage,
+  PerplexityResponseFormat
+} from "./community/perplexity/types";
 
 const logger = createChildLogger(baseLogger, {
   module: "market-data-service"
@@ -11,8 +16,12 @@ const FRED_API_URL = "https://api.stlouisfed.org/fred/series/observations";
 const RENTCAST_DATA_TYPE = "All";
 const RENTCAST_HISTORY_RANGE = "6";
 const NOT_AVAILABLE = "N/A";
+const MARKET_DATA_PROVIDER =
+  process.env.MARKET_DATA_PROVIDER?.toLowerCase() ?? "perplexity";
 const RENTCAST_CACHE_KEY_PREFIX = "rentcast";
+const PERPLEXITY_CACHE_KEY_PREFIX = "market:perplexity";
 const DEFAULT_RENTCAST_TTL_DAYS = 30;
+const DEFAULT_PERPLEXITY_TTL_DAYS = 30;
 const DEFAULT_FRED_MORTGAGE_SERIES = "MORTGAGE30US";
 const DEFAULT_FRED_INCOME_SERIES = "MEHOINUSA672N";
 
@@ -25,6 +34,31 @@ type RentCastMarketPayload = {
   rentalData?: Record<string, unknown> | null;
   id?: string | null;
   zipCode?: string | null;
+};
+
+type PerplexityMarketPayload = {
+  data_timestamp?: string | null;
+  median_home_price?: string | null;
+  price_change_yoy?: string | null;
+  active_listings?: string | null;
+  months_of_supply?: string | null;
+  avg_dom?: string | null;
+  sale_to_list_ratio?: string | null;
+  median_rent?: string | null;
+  rent_change_yoy?: string | null;
+  rate_30yr?: string | null;
+  estimated_monthly_payment?: string | null;
+  median_household_income?: string | null;
+  affordability_index?: string | null;
+  entry_level_price?: string | null;
+  entry_level_payment?: string | null;
+  market_summary?: string | null;
+};
+
+type MarketCitation = {
+  title?: string;
+  url?: string;
+  source?: string;
 };
 
 const US_ZIP_REGEX = /\b\d{5}(?:-\d{4})?\b/;
@@ -95,6 +129,10 @@ function getRentCastCacheKey(zipCode: string): string {
   return `${RENTCAST_CACHE_KEY_PREFIX}:${zipCode}`;
 }
 
+function getPerplexityCacheKey(zipCode: string): string {
+  return `${PERPLEXITY_CACHE_KEY_PREFIX}:${zipCode}`;
+}
+
 function getRentCastCacheTtlSeconds(): number {
   const override = process.env.RENTCAST_CACHE_TTL_DAYS;
   if (!override) {
@@ -104,6 +142,20 @@ function getRentCastCacheTtlSeconds(): number {
   const parsed = Number.parseInt(override, 10);
   if (!Number.isFinite(parsed) || parsed <= 0) {
     return DEFAULT_RENTCAST_TTL_DAYS * 24 * 60 * 60;
+  }
+
+  return parsed * 24 * 60 * 60;
+}
+
+function getPerplexityCacheTtlSeconds(): number {
+  const override = process.env.MARKET_DATA_CACHE_TTL_DAYS;
+  if (!override) {
+    return DEFAULT_PERPLEXITY_TTL_DAYS * 24 * 60 * 60;
+  }
+
+  const parsed = Number.parseInt(override, 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return DEFAULT_PERPLEXITY_TTL_DAYS * 24 * 60 * 60;
   }
 
   return parsed * 24 * 60 * 60;
@@ -182,6 +234,91 @@ function normalizePayload(
   }
 
   return {};
+}
+
+function getMarketDataProvider(): "perplexity" | "rentcast" {
+  return MARKET_DATA_PROVIDER === "rentcast" ? "rentcast" : "perplexity";
+}
+
+function sanitizeMarketField(value: unknown): string {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed ? trimmed : NOT_AVAILABLE;
+  }
+  if (value === null || value === undefined) {
+    return NOT_AVAILABLE;
+  }
+  return String(value);
+}
+
+const PERPLEXITY_MARKET_SCHEMA: PerplexityResponseFormat = {
+  type: "json_schema",
+  json_schema: {
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      required: [
+        "data_timestamp",
+        "median_home_price",
+        "price_change_yoy",
+        "active_listings",
+        "months_of_supply",
+        "avg_dom",
+        "sale_to_list_ratio",
+        "median_rent",
+        "rent_change_yoy",
+        "rate_30yr",
+        "estimated_monthly_payment",
+        "median_household_income",
+        "affordability_index",
+        "entry_level_price",
+        "entry_level_payment",
+        "market_summary"
+      ],
+      properties: {
+        data_timestamp: { type: ["string", "null"] },
+        median_home_price: { type: ["string", "null"] },
+        price_change_yoy: { type: ["string", "null"] },
+        active_listings: { type: ["string", "null"] },
+        months_of_supply: { type: ["string", "null"] },
+        avg_dom: { type: ["string", "null"] },
+        sale_to_list_ratio: { type: ["string", "null"] },
+        median_rent: { type: ["string", "null"] },
+        rent_change_yoy: { type: ["string", "null"] },
+        rate_30yr: { type: ["string", "null"] },
+        estimated_monthly_payment: { type: ["string", "null"] },
+        median_household_income: { type: ["string", "null"] },
+        affordability_index: { type: ["string", "null"] },
+        entry_level_price: { type: ["string", "null"] },
+        entry_level_payment: { type: ["string", "null"] },
+        market_summary: { type: ["string", "null"] }
+      }
+    }
+  }
+};
+
+function buildPerplexityMarketMessages(
+  location: MarketLocation
+): PerplexityMessage[] {
+  const system = [
+    "You are a real estate market data researcher.",
+    "Return only JSON that matches the provided schema.",
+    "Use the most recent data available and be conservative with estimates.",
+    "If a field is unknown, set it to null. Do not fabricate."
+  ].join(" ");
+
+  const user = [
+    `Location: ${location.city}, ${location.state} ${location.zip_code}.`,
+    "Provide a concise market snapshot with the fields in the schema.",
+    "Use US dollars and percentages where relevant (e.g., $413,000, 2.8%).",
+    "Keep market_summary to 1-2 sentences.",
+    "Avoid overly confident forecasts or guarantees."
+  ].join("\n");
+
+  return [
+    { role: "system", content: system },
+    { role: "user", content: user }
+  ];
 }
 
 function getSaleData(payload: RentCastMarketPayload): Record<string, unknown> {
@@ -337,13 +474,13 @@ async function getFredSeriesLatestValue(seriesId: string): Promise<number | null
   return value;
 }
 
-function buildNarrative(
+function buildSummary(
   location: MarketLocation,
   medianPrice: string,
   priceChange: string,
   inventory: string,
   monthsSupply: string
-): { summary: string; narrative: string } {
+): { summary: string; } {
   const summaryParts: string[] = [];
 
   if (medianPrice !== NOT_AVAILABLE && priceChange !== NOT_AVAILABLE) {
@@ -363,9 +500,113 @@ function buildNarrative(
   }
 
   const summary = summaryParts.join(" ");
-  const narrative = summary;
 
-  return { summary, narrative };
+  return { summary };
+}
+
+async function getPerplexityMarketData(
+  location: MarketLocation
+): Promise<MarketData | null> {
+  const redis = getRedisClient();
+  const cacheKey = getPerplexityCacheKey(location.zip_code);
+  if (redis) {
+    try {
+      const cached = await redis.get<MarketData>(cacheKey);
+      if (cached) {
+        return cached;
+      }
+    } catch (error) {
+      logger.warn({ error }, "Failed to read Perplexity market cache");
+    }
+  }
+
+  const response = await requestPerplexity({
+    messages: buildPerplexityMarketMessages(location),
+    response_format: PERPLEXITY_MARKET_SCHEMA,
+    max_tokens: 900
+  });
+
+  const raw = response?.choices?.[0]?.message?.content;
+  if (!raw) {
+    return null;
+  }
+
+  let payload: PerplexityMarketPayload | null = null;
+  try {
+    payload = JSON.parse(raw) as PerplexityMarketPayload;
+  } catch (error) {
+    logger.warn(
+      { error: error instanceof Error ? error.message : String(error) },
+      "Failed to parse Perplexity market JSON"
+    );
+    return null;
+  }
+
+  const narrativeField = sanitizeMarketField(payload?.market_summary);
+  const medianHomePrice = sanitizeMarketField(payload?.median_home_price);
+  const priceChange = sanitizeMarketField(payload?.price_change_yoy);
+  const inventory = sanitizeMarketField(payload?.active_listings);
+  const monthsSupply = sanitizeMarketField(payload?.months_of_supply);
+
+  const { summary } = buildSummary(
+    location,
+    medianHomePrice,
+    priceChange,
+    inventory,
+    monthsSupply
+  );
+
+  const dataTimestamp =
+    typeof payload?.data_timestamp === "string" &&
+    payload.data_timestamp.trim() !== ""
+      ? payload.data_timestamp.trim()
+      : new Date().toISOString();
+
+  const normalized: MarketData = {
+    city: location.city,
+    state: location.state,
+    zip_code: location.zip_code,
+    data_timestamp: dataTimestamp,
+    citations: (response?.search_results ?? [])
+      .map((result) => ({
+        title: result.title,
+        url: result.url,
+        source: result.source ?? result.date
+      }))
+      .filter((item) => item.title || item.url || item.source),
+    median_home_price: medianHomePrice,
+    price_change_yoy: priceChange,
+    active_listings: inventory,
+    months_of_supply: monthsSupply,
+    avg_dom: sanitizeMarketField(payload?.avg_dom),
+    sale_to_list_ratio: sanitizeMarketField(payload?.sale_to_list_ratio),
+    median_rent: sanitizeMarketField(payload?.median_rent),
+    rent_change_yoy: sanitizeMarketField(payload?.rent_change_yoy),
+    rate_30yr: sanitizeMarketField(payload?.rate_30yr),
+    estimated_monthly_payment: sanitizeMarketField(
+      payload?.estimated_monthly_payment
+    ),
+    median_household_income: sanitizeMarketField(
+      payload?.median_household_income
+    ),
+    affordability_index: sanitizeMarketField(payload?.affordability_index),
+    entry_level_price: sanitizeMarketField(payload?.entry_level_price),
+    entry_level_payment: sanitizeMarketField(payload?.entry_level_payment),
+    market_summary:
+      narrativeField !== NOT_AVAILABLE ? narrativeField : summary
+  };
+
+  if (redis) {
+    try {
+      await redis.set(cacheKey, normalized, {
+        ex: getPerplexityCacheTtlSeconds()
+      });
+    } catch (error) {
+      logger.warn({ error }, "Failed to write Perplexity market cache");
+    }
+  }
+
+  return normalized;
 }
 
 export async function getRentCastMarketData(
@@ -468,7 +709,7 @@ export async function getRentCastMarketData(
   const formattedMortgageRate = formatPercent(mortgageRate);
   const formattedMedianIncome = formatCurrency(medianIncome);
 
-  const { summary, narrative } = buildNarrative(
+  const { summary } = buildSummary(
     location,
     formattedMedianPrice,
     formattedPriceChange,
@@ -481,7 +722,7 @@ export async function getRentCastMarketData(
     state: location.state,
     zip_code: location.zip_code,
     data_timestamp: timestamp,
-    housing_market_summary: summary,
+    citations: undefined,
     median_home_price: formattedMedianPrice,
     price_change_yoy: formattedPriceChange,
     active_listings: formattedActiveListings,
@@ -496,7 +737,7 @@ export async function getRentCastMarketData(
     affordability_index: NOT_AVAILABLE,
     entry_level_price: formattedEntryLevelPrice,
     entry_level_payment: NOT_AVAILABLE,
-    market_conditions_narrative: narrative
+    market_summary: summary
   };
 
   if (redis) {
@@ -510,4 +751,24 @@ export async function getRentCastMarketData(
   }
 
   return normalized;
+}
+
+export async function getMarketData(
+  location: MarketLocation
+): Promise<MarketData | null> {
+  const provider = getMarketDataProvider();
+  if (provider === "rentcast") {
+    return getRentCastMarketData(location);
+  }
+
+  const perplexityData = await getPerplexityMarketData(location);
+  if (perplexityData) {
+    return perplexityData;
+  }
+
+  logger.warn(
+    { city: location.city, state: location.state, zip: location.zip_code },
+    "Perplexity market data unavailable; falling back to RentCast"
+  );
+  return getRentCastMarketData(location);
 }

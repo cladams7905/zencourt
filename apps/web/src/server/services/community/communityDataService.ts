@@ -10,9 +10,20 @@ import {
   fetchPlaces,
   PlaceDetailsResponse,
   type PlaceResult
-} from "./communityPlacesClient";
-import { GEO_SEASON_QUERY_PACK } from "./geographicQueries";
-import { HOLIDAY_QUERY_PACK } from "./holidaySeasonQueries";
+} from "./google/placesClient";
+import { getCommunityDataProvider } from "./perplexity/provider";
+import {
+  fetchPerplexityCityDescription,
+  type CityDescriptionPayload
+} from "./perplexity/cityDescription";
+import {
+  getPerplexityCommunityData,
+  getPerplexityCommunityDataForCategories,
+  getPerplexityMonthlyEventsSection,
+  prefetchPerplexityCategories
+} from "./perplexity/service";
+import { GEO_SEASON_QUERY_PACK } from "./google/geographicQueries";
+import { HOLIDAY_QUERY_PACK } from "./google/holidaySeasonQueries";
 import {
   COMMUNITY_CACHE_KEY_PREFIX,
   DEFAULT_SEARCH_RADIUS_METERS,
@@ -292,17 +303,24 @@ function getCityDescriptionCacheKey(city: string, state: string): string {
   )}`;
 }
 
+type CityDescriptionCachePayload = {
+  description: string;
+  citations?: CityDescriptionPayload["citations"] | null;
+};
+
 async function getCachedCityDescription(
   city: string,
   state: string
-): Promise<string | null> {
+): Promise<CityDescriptionCachePayload | null> {
   const redis = getRedisClient();
   if (!redis) {
     return null;
   }
 
   try {
-    return await redis.get<string>(getCityDescriptionCacheKey(city, state));
+    return await redis.get<CityDescriptionCachePayload>(
+      getCityDescriptionCacheKey(city, state)
+    );
   } catch (error) {
     logger.warn(
       {
@@ -319,7 +337,7 @@ async function getCachedCityDescription(
 async function setCachedCityDescription(
   city: string,
   state: string,
-  payload: string
+  payload: CityDescriptionCachePayload
 ): Promise<void> {
   const redis = getRedisClient();
   if (!redis) {
@@ -356,7 +374,10 @@ function buildCityDescriptionPrompt(city: string, state: string): string {
 async function fetchCityDescription(
   city: string,
   state: string
-): Promise<string | null> {
+): Promise<CityDescriptionCachePayload | null> {
+  if (getCommunityDataProvider() === "perplexity") {
+    return fetchPerplexityCityDescription(city, state);
+  }
   const apiKey = getClaudeApiKey();
   if (!apiKey) {
     return null;
@@ -398,7 +419,8 @@ async function fetchCityDescription(
     return null;
   }
 
-  return text.replace(/\s+/g, " ").trim() || null;
+  const description = text.replace(/\s+/g, " ").trim();
+  return description ? { description } : null;
 }
 
 function parseCsvLine(line: string): string[] {
@@ -828,15 +850,6 @@ const CATEGORY_FIELD_MAP: Record<CategoryKey, keyof CommunityData> = {
   shopping: "shopping_list",
   education: "education_list",
   community_events: "community_events_list"
-};
-
-const NEIGHBORHOOD_FIELD_MAP: Record<
-  (typeof NEIGHBORHOOD_QUERIES)[number]["key"],
-  keyof CommunityData
-> = {
-  neighborhoods_general: "neighborhoods_list",
-  neighborhoods_family: "neighborhoods_family_list",
-  neighborhoods_senior: "neighborhoods_senior_list"
 };
 
 async function fetchPlacesWithAnchors(
@@ -2259,6 +2272,35 @@ export async function getCommunityDataByZip(
     return null;
   }
 
+  if (getCommunityDataProvider() === "perplexity") {
+    const location = await resolveZipLocation(
+      zipCode,
+      preferredCity,
+      preferredState
+    );
+    if (!location) {
+      logger.warn({ zipCode }, "Unable to resolve zip code to a city");
+      return null;
+    }
+    const perplexityData = await getPerplexityCommunityData({
+      zipCode,
+      location: {
+        city: location.city,
+        state: location.state_id,
+        lat: location.lat,
+        lng: location.lng
+      },
+      serviceAreas
+    });
+    if (perplexityData) {
+      return perplexityData;
+    }
+    logger.warn(
+      { zipCode },
+      "Perplexity community data unavailable; falling back to Google"
+    );
+  }
+
   const cached = await getCachedCommunityData(
     zipCode,
     preferredCity,
@@ -2693,6 +2735,35 @@ export async function getCommunityDataByZipAndAudience(
   preferredState?: string | null
 ): Promise<CommunityData | null> {
   const normalized = normalizeAudienceSegment(audienceSegment);
+  if (getCommunityDataProvider() === "perplexity") {
+    const location = await resolveZipLocation(
+      zipCode,
+      preferredCity,
+      preferredState
+    );
+    if (!location) {
+      logger.warn({ zipCode }, "Unable to resolve zip code to a city");
+      return null;
+    }
+    const perplexityData = await getPerplexityCommunityData({
+      zipCode,
+      location: {
+        city: location.city,
+        state: location.state_id,
+        lat: location.lat,
+        lng: location.lng
+      },
+      audience: normalized,
+      serviceAreas
+    });
+    if (perplexityData) {
+      return perplexityData;
+    }
+    logger.warn(
+      { zipCode, audience: normalized },
+      "Perplexity community data unavailable; falling back to Google"
+    );
+  }
   if (!normalized) {
     return getCommunityDataByZip(
       zipCode,
@@ -2772,6 +2843,115 @@ export async function getCommunityDataByZipAndAudience(
   );
 }
 
+export async function getPerplexityCommunityDataByZipAndAudienceForCategories(
+  zipCode: string,
+  categories: CategoryKey[],
+  audienceSegment?: string,
+  serviceAreas?: string[] | null,
+  preferredCity?: string | null,
+  preferredState?: string | null,
+  eventsSection?: { key: string; value: string } | null,
+  options?: {
+    forceRefresh?: boolean;
+    avoidRecommendations?: Partial<Record<CategoryKey, string[]>> | null;
+  }
+): Promise<CommunityData | null> {
+  if (!zipCode) {
+    return null;
+  }
+  const normalizedAudience = normalizeAudienceSegment(audienceSegment);
+  const location = await resolveZipLocation(
+    zipCode,
+    preferredCity,
+    preferredState
+  );
+  if (!location) {
+    logger.warn({ zipCode }, "Unable to resolve zip code to a city");
+    return null;
+  }
+  return getPerplexityCommunityDataForCategories({
+    zipCode,
+    location: {
+      city: location.city,
+      state: location.state_id,
+      lat: location.lat,
+      lng: location.lng
+    },
+    audience: normalizedAudience,
+    serviceAreas,
+    categories,
+    eventsSection,
+    forceRefresh: options?.forceRefresh,
+    avoidRecommendations: options?.avoidRecommendations
+  });
+}
+
+export async function getPerplexityMonthlyEventsSectionByZip(
+  zipCode: string,
+  audienceSegment?: string,
+  preferredCity?: string | null,
+  preferredState?: string | null
+): Promise<{ key: string; value: string } | null> {
+  if (!zipCode) {
+    return null;
+  }
+  const normalizedAudience = normalizeAudienceSegment(audienceSegment);
+  const location = await resolveZipLocation(
+    zipCode,
+    preferredCity,
+    preferredState
+  );
+  if (!location) {
+    logger.warn({ zipCode }, "Unable to resolve zip code to a city");
+    return null;
+  }
+  return getPerplexityMonthlyEventsSection({
+    zipCode,
+    location: {
+      city: location.city,
+      state: location.state_id,
+      lat: location.lat,
+      lng: location.lng
+    },
+    audience: normalizedAudience
+  });
+}
+
+export async function prefetchPerplexityCategoriesByZip(
+  zipCode: string,
+  categories: CategoryKey[],
+  audienceSegment?: string,
+  serviceAreas?: string[] | null,
+  preferredCity?: string | null,
+  preferredState?: string | null
+): Promise<void> {
+  if (!zipCode) {
+    return;
+  }
+  const normalizedAudience = normalizeAudienceSegment(audienceSegment);
+  const location = await resolveZipLocation(
+    zipCode,
+    preferredCity,
+    preferredState
+  );
+  if (!location) {
+    logger.warn({ zipCode }, "Unable to resolve zip code to a city");
+    return;
+  }
+  await prefetchPerplexityCategories({
+    zipCode,
+    location: {
+      city: location.city,
+      state: location.state_id,
+      lat: location.lat,
+      lng: location.lng
+    },
+    audience: normalizedAudience,
+    serviceAreas,
+    categories
+  });
+}
+
 export async function getCityDescription(
   city?: string | null,
   state?: string | null
@@ -2782,15 +2962,16 @@ export async function getCityDescription(
 
   const cached = await getCachedCityDescription(city, state);
   if (cached) {
-    return cached;
+    return cached.description;
   }
 
   const description = await fetchCityDescription(city, state);
   if (description) {
     await setCachedCityDescription(city, state, description);
+    return description.description;
   }
 
-  return description;
+  return null;
 }
 
 export function buildAudienceCommunityData(

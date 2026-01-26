@@ -24,6 +24,7 @@ interface ContentItem {
   caption?: string | null;
   body?: CarouselSlide[] | null;
   isLoading?: boolean;
+  progress?: number;
 }
 
 interface ContentGridProps {
@@ -55,10 +56,38 @@ const ContentGridItem = ({
     item.hook || item.hookSubheader || item.caption || item.body?.length
   );
 
+  const getItemProgress = (): number => {
+    if (typeof item.progress === "number") {
+      return Math.min(1, Math.max(0, item.progress));
+    }
+    const steps = [
+      Boolean(item.hook),
+      Boolean(item.hookSubheader),
+      Boolean(item.caption),
+      Boolean(item.body?.length),
+      Boolean(item.thumbnail)
+    ];
+    const completed = steps.filter(Boolean).length;
+    return steps.length > 0 ? completed / steps.length : 0;
+  };
+
   if (item.isLoading) {
+    const progress = getItemProgress();
+    const progressPercent = Math.round(progress * 100);
     return (
       <div className="break-inside-avoid relative rounded-2xl mb-6 animate-pulse">
         <div className="rounded-lg border border-border bg-secondary p-4">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>Generating</span>
+            <span>{progressPercent}%</span>
+          </div>
+          <div className="mt-2 h-2 w-full rounded-full bg-muted-foreground/20 overflow-hidden">
+            <div
+              className="h-full rounded-full bg-primary/70 transition-all duration-500"
+              style={{ width: `${progressPercent}%` }}
+              aria-label={`Generation progress ${progressPercent}%`}
+            />
+          </div>
           <div className="h-5 w-4/5 rounded bg-muted-foreground/20" />
           <div className="mt-3 h-4 w-2/3 rounded bg-muted-foreground/20" />
           <div className="mt-5 h-4 w-full rounded bg-muted-foreground/20" />

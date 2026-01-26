@@ -2,7 +2,7 @@
 
 Important Note: For each post, focus on exactly one of the community categories listed below instead of covering many categories in a single post. That means that since you should output JSON content for 4 posts, there should be 2 posts covering content of the first category listed below, and 2 posts covering content of the second category. 
 
-Do not make up content about a location. If it is not listed in the description, it should not be stated.
+Do not make up content about a location. If it is not listed in the description, it should not be stated. Also, do not estimate drive time from locations if not explicitly stated.
 
 neighborhoods:
 {neighborhoods_list}

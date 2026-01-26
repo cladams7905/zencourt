@@ -327,10 +327,14 @@ function extractBulletSection(
   return bullets;
 }
 
-function buildAudienceSummary(content: string): string {
+function buildAudienceSummary(
+  content: string,
+  category?: string
+): string {
   const lines = content.split("\n");
   const titleMatch = content.match(/^##\s+(.+)$/m);
   const toneMatch = content.match(/^\*\*Tone:\*\*\s*(.+)$/m);
+  const whoTheyAre = extractSectionText(lines, "**Who they are:**");
   const corePainPoints = extractBulletSection(lines, "**Core pain points:**");
   const keyTopics = extractSectionText(lines, "### Key Topics");
   const dataEmphasis = extractSectionText(lines, "### Data Emphasis");
@@ -338,6 +342,9 @@ function buildAudienceSummary(content: string): string {
   const summaryParts: string[] = [];
   if (titleMatch?.[1]) {
     summaryParts.push(`Audience: ${titleMatch[1].trim()}`);
+  }
+  if (whoTheyAre) {
+    summaryParts.push(`Who they are: ${whoTheyAre}`);
   }
   if (toneMatch?.[1]) {
     summaryParts.push(`Tone: ${cleanSummaryText(toneMatch[1])}`);
@@ -347,10 +354,11 @@ function buildAudienceSummary(content: string): string {
       `Core pain points:\n- ${corePainPoints.join("\n- ")}`
     );
   }
-  if (keyTopics) {
+  const includeTopics = category !== "community";
+  if (includeTopics && keyTopics) {
     summaryParts.push(`Key topics: ${keyTopics}`);
   }
-  if (dataEmphasis) {
+  if (includeTopics && dataEmphasis) {
     summaryParts.push(`Data emphasis: ${dataEmphasis}`);
   }
 
@@ -374,7 +382,7 @@ function hasMeaningfulValue(value: string | null | undefined): value is string {
 function buildMarketDataXml(data: MarketDataInput): string {
   const location = `${data.city}, ${data.state}`;
   const fields: Array<[string, string | null | undefined]> = [
-    ["summary", data.market_conditions_narrative || data.housing_market_summary],
+    ["summary", data.market_summary],
     ["median_home_price", data.median_home_price],
     ["price_change_yoy", data.price_change_yoy],
     ["active_listings", data.active_listings],
@@ -435,9 +443,10 @@ const MONTH_TOPIC_HINTS = [
 function buildTimeOfYearNote(now = new Date()): string {
   const monthIndex = now.getMonth();
   const monthName = MONTH_NAMES[monthIndex] ?? "this month";
+  const year = now.getFullYear();
   const topicHint =
     MONTH_TOPIC_HINTS[monthIndex] ?? "seasonal topics and local events";
-  return `Right now it is ${monthName}, so focus on ${topicHint}.`;
+  return `Right now it is ${monthName} ${year}, so focus on ${topicHint}.`;
 }
 
 function interpolateTemplate(template: string, values: PromptValues): string {
@@ -504,12 +513,18 @@ async function loadHookTemplates(category: string): Promise<{
 }
 
 export async function buildSystemPrompt(input: PromptAssemblyInput) {
-  const baseSystemPrompt = await readPromptFile("base-prompt.md");
+  const basePromptFile =
+    input.category === "community"
+      ? "community-base-prompt.md"
+      : input.category === "market_insights"
+        ? "market-insights-base-prompt.md"
+        : "base-prompt.md";
+  const baseSystemPrompt = await readPromptFile(basePromptFile);
   const audienceDirective = await loadAudienceDirectives(
     input.audience_segments
   );
   const audienceSummary = audienceDirective
-    ? buildAudienceSummary(audienceDirective)
+    ? buildAudienceSummary(audienceDirective, input.category)
     : "";
   const { hookTemplates, subheaderTemplates } = await loadHookTemplates(
     input.category
@@ -523,9 +538,15 @@ export async function buildSystemPrompt(input: PromptAssemblyInput) {
   const styleNotesBlock = styleNotes
     ? `Additional style notes (must follow): ${styleNotes}`
     : "";
+  const normalizedToneLabel = input.agent_profile.writing_style_description?.trim();
+  const toneLabel = input.agent_profile.writing_tone_label?.trim();
+  const writingStyleDescription =
+    normalizedToneLabel && toneLabel && normalizedToneLabel === toneLabel
+      ? ""
+      : input.agent_profile.writing_style_description;
   const agentProfileValues = {
     ...input.agent_profile,
-    writing_style_description: input.agent_profile.writing_style_description,
+    writing_style_description: writingStyleDescription ?? "",
     writing_style_notes_block: styleNotesBlock,
     area_description: input.city_description?.trim() ?? "",
     time_of_year: buildTimeOfYearNote()
@@ -592,27 +613,9 @@ export function buildUserPrompt(input: PromptAssemblyInput): string {
   const contentType = content_request?.content_type ?? "social_post";
   const focus = content_request?.focus ?? "";
   const notes = content_request?.notes ?? "";
-  const city = input.agent_profile.city;
-
-  const categoryPurposeMap: Record<string, string> = {
-    community:
-      `The purpose of a community social media post is to highlight key features in ${city} and draw viewer attention to why a prospecting buyer should move there.`,
-    seasonal:
-      `The purpose of a seasonal post is to draw attention to timely seasonal or holiday moments in ${city}.`,
-    market_insights:
-      `The purpose of a market insights post is to summarize what is happening in the ${city} real estate market and help buyers or sellers make informed decisions.`,
-    educational:
-      `The purpose of an educational post is to teach the audience a clear, useful concept and build trust with practical guidance.`,
-    lifestyle:
-      `The purpose of a lifestyle post is to build the credibility and personal brand of a realtor with their target audience.`
-  };
-  const categoryPurpose =
-    categoryPurposeMap[category] ??
-    `The purpose of this post is to deliver useful real estate content tailored to ${city}.`;
-
   return `
 <content_request>
-- **Category:** ${category} - ${categoryPurpose}
+- **Category:** ${category}
 - **Audience Segments:** ${audience_segments.join(", ") || "general"}
 - **Platform:** ${platform}
 - **Content Type:** ${contentType}

@@ -8,7 +8,7 @@
 // ============================================================================
 
 export type AudienceSegment =
-  | "young_professionals"
+  | "first_time_homebuyers"
   | "growing_families"
   | "active_retirees"
   | "luxury_buyers"
@@ -47,6 +47,38 @@ export type CategoryConfig = {
 export type AudienceConfig = {
   augmentQueries: Partial<Record<AudienceAugmentCategory, string[]>>;
   augmentLimits: Partial<Record<AudienceAugmentCategory, number>>;
+};
+
+export type CommunityDataProvider = "google" | "perplexity";
+
+export type CommunityPlaceCitation = {
+  title?: string;
+  url?: string;
+  source?: string;
+};
+
+export type CommunityPlaceItem = {
+  name: string;
+  location?: string;
+  drive_distance_minutes?: number;
+  dates?: string;
+  description?: string;
+  cost?: string;
+  why_suitable_for_audience?: string;
+  cuisine?: string[];
+  disclaimer?: string;
+  citations?: CommunityPlaceCitation[];
+};
+
+export type CommunityCategoryPayload = {
+  provider: "perplexity";
+  category: CategoryKey;
+  audience?: AudienceSegment;
+  zip_code: string;
+  city?: string;
+  state?: string;
+  fetched_at: string;
+  items: CommunityPlaceItem[];
 };
 
 // ============================================================================
@@ -98,6 +130,13 @@ export const CHAIN_FILTER_CATEGORIES: CategoryKey[] = [
   "sports_rec"
 ];
 
+export const SERVICE_AREA_CACHE_CATEGORIES: CategoryKey[] = [
+  "dining",
+  "coffee_brunch",
+  "nightlife_social"
+];
+const SERVICE_AREA_CACHE_CATEGORY_SET = new Set(SERVICE_AREA_CACHE_CATEGORIES);
+
 // ============================================================================
 // REGIONAL STATE CLASSIFICATIONS
 // Each state should only appear in ONE primary geo classification to avoid
@@ -142,7 +181,8 @@ export const ALASKA_STATES = new Set(["AK"]);
 // ============================================================================
 
 export const AUDIENCE_SEGMENT_ALIASES: Record<string, AudienceSegment> = {
-  first_time_homebuyers: "young_professionals",
+  first_time_homebuyers: "first_time_homebuyers",
+  first_time_buyers: "first_time_homebuyers",
   growing_families: "growing_families",
   downsizers_retirees: "active_retirees",
   luxury_homebuyers: "luxury_buyers",
@@ -154,7 +194,7 @@ export const AUDIENCE_SEGMENT_ALIASES: Record<string, AudienceSegment> = {
 };
 
 export const NORMALIZED_AUDIENCE_SEGMENTS = new Set<AudienceSegment>([
-  "young_professionals",
+  "first_time_homebuyers",
   "growing_families",
   "active_retirees",
   "luxury_buyers",
@@ -225,8 +265,8 @@ export const CATEGORY_CONFIG: Record<CategoryKey, CategoryConfig> = {
     minPrimaryResults: 0
   },
   dining: {
-    displayLimit: 5,
-    poolMax: 40,
+    displayLimit: 8,
+    poolMax: 50,
     minRating: 4.5,
     minReviews: 100,
     targetQueryCount: 2,
@@ -234,7 +274,7 @@ export const CATEGORY_CONFIG: Record<CategoryKey, CategoryConfig> = {
     fallbackQueries: [
       "best local restaurants"
     ],
-    maxPerQuery: 15,
+    maxPerQuery: 20,
     minPrimaryResults: 3
   },
   coffee_brunch: {
@@ -380,7 +420,7 @@ const DEFAULT_AUGMENT_LIMITS: Partial<Record<AudienceAugmentCategory, number>> =
   entertainment: 6,
   sports_rec: 6,
   nature_outdoors: 6,
-  dining: 8,
+  dining: 10,
   fitness_wellness: 6,
   shopping: 6,
   coffee_brunch: 6,
@@ -402,15 +442,17 @@ const DEFAULT_AUGMENT_LIMITS: Partial<Record<AudienceAugmentCategory, number>> =
  * - augmentLimits: Max results per category
  */
 export const AUDIENCE_CONFIG: Record<AudienceSegment, AudienceConfig> = {
-  young_professionals: {
+  first_time_homebuyers: {
     augmentLimits: DEFAULT_AUGMENT_LIMITS,
     augmentQueries: {
       // Trendy, urban-focused dining
       dining: [
-        "trendy restaurant"
+        "affordable local restaurant",
+        "budget-friendly dining"
       ],
       nightlife_social: [
-        "craft cocktail bar gastropub"
+        "affordable brewery pub",
+        "casual bar with live music"
       ]
     }
   },
@@ -492,6 +534,12 @@ export const AUDIENCE_AUGMENT_CATEGORIES: AudienceAugmentCategory[] = [
   "nightlife_social",
   "nature_outdoors"
 ];
+
+export function shouldIncludeServiceAreasInCache(
+  category: CategoryKey
+): boolean {
+  return SERVICE_AREA_CACHE_CATEGORY_SET.has(category);
+}
 
 // ============================================================================
 // BACKWARD-COMPATIBLE ACCESSORS

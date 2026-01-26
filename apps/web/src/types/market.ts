@@ -6,7 +6,11 @@ export type MarketLocation = {
 
 export type MarketData = MarketLocation & {
   data_timestamp: string;
-  housing_market_summary: string;
+  citations?: Array<{
+    title?: string;
+    url?: string;
+    source?: string;
+  }>;
   median_home_price: string;
   price_change_yoy: string;
   active_listings: string;
@@ -21,7 +25,7 @@ export type MarketData = MarketLocation & {
   affordability_index: string;
   entry_level_price: string;
   entry_level_payment: string;
-  market_conditions_narrative: string;
+  market_summary: string;
 };
 
 export type CommunityData = MarketLocation & {

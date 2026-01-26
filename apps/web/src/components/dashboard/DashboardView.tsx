@@ -314,6 +314,71 @@ const DashboardView = ({
     return items;
   }, []);
 
+  const estimatePartialItemProgress = React.useCallback((text: string) => {
+    let arrayStarted = false;
+    let inString = false;
+    let escape = false;
+    let braceDepth = 0;
+    let objectStart = -1;
+
+    for (let i = 0; i < text.length; i += 1) {
+      const char = text[i];
+      if (!arrayStarted) {
+        if (char === "[") {
+          arrayStarted = true;
+        }
+        continue;
+      }
+
+      if (inString) {
+        if (escape) {
+          escape = false;
+          continue;
+        }
+        if (char === "\\") {
+          escape = true;
+          continue;
+        }
+        if (char === '"') {
+          inString = false;
+        }
+        continue;
+      }
+
+      if (char === '"') {
+        inString = true;
+        continue;
+      }
+
+      if (char === "{") {
+        if (braceDepth === 0) {
+          objectStart = i;
+        }
+        braceDepth += 1;
+      } else if (char === "}") {
+        braceDepth -= 1;
+        if (braceDepth === 0) {
+          objectStart = -1;
+        }
+      }
+    }
+
+    if (braceDepth <= 0 || objectStart < 0) {
+      return 0;
+    }
+
+    const partial = text.slice(objectStart);
+    const fieldCount =
+      (/"hook"\s*:/.test(partial) ? 1 : 0) +
+      (/"hook_subheader"\s*:/.test(partial) ? 1 : 0) +
+      (/"caption"\s*:/.test(partial) ? 1 : 0) +
+      (/"body"\s*:/.test(partial) ? 1 : 0);
+
+    const rawProgress = fieldCount / 4;
+    const progress = Math.max(0.1, rawProgress);
+    return Math.min(0.9, progress);
+  }, []);
+
   const generateContent = React.useCallback(
     async (category: string, controller?: AbortController) => {
       if (activeControllerRef.current) {
@@ -430,6 +495,9 @@ const DashboardView = ({
               const parsedItems = extractJsonItemsFromStream(
                 streamBufferRef.current
               );
+              const partialProgress = estimatePartialItemProgress(
+                streamBufferRef.current
+              );
               if (parsedItems.length > parsedItemsRef.current.length) {
                 const newItems = parsedItems.slice(
                   parsedItemsRef.current.length
@@ -463,6 +531,44 @@ const DashboardView = ({
                   };
                 });
               }
+
+              setGeneratedContentItems((prev) => {
+                const currentTypeMap = prev[contentType] ?? {};
+                const updatedCategory = [...(currentTypeMap[category] ?? [])];
+                const baseIndex = batchBaseIndexRef.current[category] ?? 0;
+                for (let i = 0; i < GENERATED_BATCH_SIZE; i += 1) {
+                  const index = baseIndex + i;
+                  const currentItem = updatedCategory[index];
+                  if (!currentItem?.isLoading) {
+                    continue;
+                  }
+                  if (i < parsedItemsRef.current.length) {
+                    updatedCategory[index] = {
+                      ...currentItem,
+                      progress: 1
+                    };
+                    continue;
+                  }
+                  if (i === parsedItemsRef.current.length) {
+                    updatedCategory[index] = {
+                      ...currentItem,
+                      progress: partialProgress
+                    };
+                    continue;
+                  }
+                  updatedCategory[index] = {
+                    ...currentItem,
+                    progress: 0
+                  };
+                }
+                return {
+                  ...prev,
+                  [contentType]: {
+                    ...currentTypeMap,
+                    [category]: updatedCategory
+                  }
+                };
+              });
             }
 
             if (event.type === "error") {

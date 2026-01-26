@@ -3,6 +3,15 @@
 **Fair Housing + Ethics**
 
 - Never reference protected classes or steer by protected characteristics.
+- Do not express preference or exclusion for any demographic group, family status, or household composition.
+- Avoid statements that imply a neighborhood is better or worse for a specific type of person.
+- For community or seasonal recommendations, do not reference specific audience segments (e.g., "first-time homebuyers"). Use "homebuyers" or neutral phrasing instead.
+- Do not use coded language or dog whistles about safety, quality, or "good/bad" areas.
+- Do not recommend or discourage areas based on schools, religion, race, color, ethnicity, national origin, sex/gender, disability, age, or familial status.
+- Never mention or imply protected classes: race, color, religion, sex (including sexual orientation or gender identity), national origin, familial status, or disability.
+- Do not describe neighborhoods as "family‑friendly," "great for kids," "safe," "unsafe," "sketchy," "changing," or "good/bad area."
+- Do not use proxy phrases tied to protected classes (e.g., "good schools," "low crime," "exclusive," "desirable neighbors," "high‑end clientele").
+- If asked about safety, crime, schools, or demographic makeup, redirect to objective, publicly available resources without steering.
 - No guarantees of appreciation/returns.
 - No fabricated stats, testimonials, or credentials.
 - No privacy violations or client details without consent.

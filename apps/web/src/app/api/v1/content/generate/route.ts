@@ -17,13 +17,20 @@ import { createChildLogger, logger as baseLogger } from "@web/src/lib/logger";
 import { db, eq, userAdditional } from "@db/client";
 import { Redis } from "@upstash/redis";
 import {
-  getRentCastMarketData,
+  getMarketData,
   parseMarketLocation
 } from "@web/src/server/services/marketDataService";
 import {
   getCityDescription,
-  getCommunityDataByZipAndAudience
-} from "@web/src/server/services/communityDataService";
+  getCommunityDataByZipAndAudience,
+  getPerplexityCommunityDataByZipAndAudienceForCategories,
+  getPerplexityMonthlyEventsSectionByZip,
+  prefetchPerplexityCategoriesByZip
+} from "@web/src/server/services/community/communityDataService";
+import { getCommunityDataProvider } from "@web/src/server/services/community/perplexity/provider";
+import { shouldIncludeServiceAreasInCache } from "@web/src/server/services/community/communityDataConfig";
+import { getCachedPerplexityCategoryPayload } from "@web/src/server/services/community/perplexity/cache";
+import type { CategoryKey } from "@web/src/server/services/community/communityDataConfig";
 
 const logger = createChildLogger(baseLogger, {
   module: "content-generate-route"
@@ -174,6 +181,25 @@ const COMMUNITY_CATEGORY_KEYS = [
 
 type CommunityCategoryKey = string;
 
+const COMMUNITY_CATEGORY_KEY_TO_CATEGORY: Record<
+  CommunityCategoryKey,
+  CategoryKey
+> = {
+  neighborhoods_list: "neighborhoods",
+  dining_list: "dining",
+  coffee_brunch_list: "coffee_brunch",
+  nature_outdoors_list: "nature_outdoors",
+  entertainment_list: "entertainment",
+  attractions_list: "attractions",
+  sports_rec_list: "sports_rec",
+  arts_culture_list: "arts_culture",
+  nightlife_social_list: "nightlife_social",
+  fitness_wellness_list: "fitness_wellness",
+  shopping_list: "shopping",
+  education_list: "education",
+  community_events_list: "community_events"
+};
+
 function getCommunityCategoryCycleKey(userId: string): string {
   return `community_category_cycle:${userId}`;
 }
@@ -187,26 +213,42 @@ function shuffleArray<T>(values: readonly T[]): T[] {
   return result;
 }
 
+type CommunityCategoryCycleState = {
+  remaining: CommunityCategoryKey[];
+  cyclesCompleted: number;
+};
+
 async function selectCommunityCategories(
   redis: Redis | null,
   userId: string,
   count: number,
   availableKeys: CommunityCategoryKey[]
-): Promise<CommunityCategoryKey[]> {
+): Promise<{ selected: CommunityCategoryKey[]; shouldRefresh: boolean }> {
   if (availableKeys.length === 0) {
-    return [];
+    return { selected: [], shouldRefresh: false };
   }
   if (!redis) {
-    return shuffleArray(availableKeys).slice(0, count);
+    return {
+      selected: shuffleArray(availableKeys).slice(0, count),
+      shouldRefresh: false
+    };
   }
 
   const key = getCommunityCategoryCycleKey(userId);
   let remaining: CommunityCategoryKey[] | null = null;
+  let cyclesCompleted = 0;
 
   try {
-    const cached = await redis.get<CommunityCategoryKey[]>(key);
+    const cached = await redis.get<
+      CommunityCategoryCycleState | CommunityCategoryKey[]
+    >(key);
     if (Array.isArray(cached)) {
       remaining = cached.filter((item) => availableKeys.includes(item));
+    } else if (cached && Array.isArray(cached.remaining)) {
+      remaining = cached.remaining.filter((item) =>
+        availableKeys.includes(item)
+      );
+      cyclesCompleted = cached.cyclesCompleted ?? 0;
     }
   } catch (error) {
     logger.warn(
@@ -216,6 +258,7 @@ async function selectCommunityCategories(
   }
 
   if (!remaining || remaining.length === 0) {
+    cyclesCompleted += 1;
     remaining = shuffleArray(availableKeys);
   }
 
@@ -235,7 +278,13 @@ async function selectCommunityCategories(
   }
 
   try {
-    await redis.set(key, remaining);
+    const shouldRefresh = cyclesCompleted >= 2;
+    const nextState: CommunityCategoryCycleState = {
+      remaining,
+      cyclesCompleted: shouldRefresh ? 0 : cyclesCompleted
+    };
+    await redis.set(key, nextState);
+    return { selected, shouldRefresh };
   } catch (error) {
     logger.warn(
       { userId, error: error instanceof Error ? error.message : String(error) },
@@ -243,7 +292,67 @@ async function selectCommunityCategories(
     );
   }
 
-  return selected;
+  return { selected, shouldRefresh: false };
+}
+
+async function peekNextCommunityCategories(
+  redis: Redis | null,
+  userId: string,
+  count: number
+): Promise<CommunityCategoryKey[]> {
+  if (!redis) {
+    return [];
+  }
+  try {
+    const cached = await redis.get<
+      CommunityCategoryCycleState | CommunityCategoryKey[]
+    >(getCommunityCategoryCycleKey(userId));
+    if (Array.isArray(cached)) {
+      return cached.slice(0, count);
+    }
+    if (cached && Array.isArray(cached.remaining)) {
+      return cached.remaining.slice(0, count);
+    }
+  } catch (error) {
+    logger.warn(
+      { userId, error: error instanceof Error ? error.message : String(error) },
+      "Failed to read community category cycle cache for prefetch"
+    );
+  }
+  return [];
+}
+
+async function buildPerplexityAvoidRecommendations(params: {
+  zipCode: string;
+  city?: string | null;
+  state?: string | null;
+  audience?: string | null;
+  serviceAreas?: string[] | null;
+  categories: CategoryKey[];
+}): Promise<Record<CategoryKey, string[]>> {
+  const avoidMap = new Map<CategoryKey, string[]>();
+  await Promise.all(
+    params.categories.map(async (category) => {
+      const cached = await getCachedPerplexityCategoryPayload({
+        zipCode: params.zipCode,
+        category,
+        audience: params.audience ?? undefined,
+        serviceAreas: shouldIncludeServiceAreasInCache(category)
+          ? params.serviceAreas
+          : null,
+        city: params.city ?? undefined,
+        state: params.state ?? undefined
+      });
+      const names = (cached?.items ?? [])
+        .map((item) => item.name?.trim())
+        .filter((name): name is string => Boolean(name));
+      if (names.length > 0) {
+        avoidMap.set(category, Array.from(new Set(names)));
+      }
+    })
+  );
+
+  return Object.fromEntries(avoidMap) as Record<CategoryKey, string[]>;
 }
 
 type UserAdditionalSnapshot = {
@@ -444,22 +553,86 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      marketData = await getRentCastMarketData(marketLocation);
+      marketData = await getMarketData(marketLocation);
       if (!marketData) {
         throw new ApiError(500, {
           error: "Market data unavailable",
-          message: "RentCast is not configured. Please try again later."
+          message: "Market data is not configured. Please try again later."
         });
       }
     }
     if (body.category === "community" && marketLocation) {
-      communityData = await getCommunityDataByZipAndAudience(
-        marketLocation.zip_code,
-        audienceSegments[0],
-        userAdditionalSnapshot.serviceAreas,
-        marketLocation.city,
-        marketLocation.state
-      );
+      const provider = getCommunityDataProvider();
+      if (provider === "perplexity") {
+        const eventsSection = await getPerplexityMonthlyEventsSectionByZip(
+          marketLocation.zip_code,
+          audienceSegments[0],
+          marketLocation.city,
+          marketLocation.state
+        );
+        const availableKeys = COMMUNITY_CATEGORY_KEYS.concat(
+          eventsSection ? [eventsSection.key] : []
+        );
+        const selection = await selectCommunityCategories(
+          redis,
+          user.id,
+          2,
+          availableKeys
+        );
+        communityCategoryKeys = selection.selected;
+
+        const selectedCategoryKeys = selection.selected
+          .map((key) => COMMUNITY_CATEGORY_KEY_TO_CATEGORY[key])
+          .filter(Boolean) as CategoryKey[];
+        const avoidRecommendations = selection.shouldRefresh
+          ? await buildPerplexityAvoidRecommendations({
+              zipCode: marketLocation.zip_code,
+              city: marketLocation.city,
+              state: marketLocation.state,
+              audience: audienceSegments[0] ?? null,
+              serviceAreas: userAdditionalSnapshot.serviceAreas,
+              categories: selectedCategoryKeys
+            })
+          : null;
+
+        communityData =
+          await getPerplexityCommunityDataByZipAndAudienceForCategories(
+            marketLocation.zip_code,
+            selectedCategoryKeys,
+            audienceSegments[0],
+            userAdditionalSnapshot.serviceAreas,
+            marketLocation.city,
+            marketLocation.state,
+            eventsSection,
+            {
+              forceRefresh: selection.shouldRefresh,
+              avoidRecommendations
+            }
+          );
+
+        const nextKeys = await peekNextCommunityCategories(redis, user.id, 2);
+        const nextCategoryKeys = nextKeys
+          .map((key) => COMMUNITY_CATEGORY_KEY_TO_CATEGORY[key])
+          .filter(Boolean) as CategoryKey[];
+        if (nextCategoryKeys.length > 0) {
+          void prefetchPerplexityCategoriesByZip(
+            marketLocation.zip_code,
+            nextCategoryKeys,
+            audienceSegments[0],
+            userAdditionalSnapshot.serviceAreas,
+            marketLocation.city,
+            marketLocation.state
+          );
+        }
+      } else {
+        communityData = await getCommunityDataByZipAndAudience(
+          marketLocation.zip_code,
+          audienceSegments[0],
+          userAdditionalSnapshot.serviceAreas,
+          marketLocation.city,
+          marketLocation.state
+        );
+      }
     }
 
     if (body.category === "community" && communityData) {
@@ -481,12 +654,15 @@ export async function POST(request: NextRequest) {
         const normalized = value.trim().toLowerCase();
         return normalized !== "" && !normalized.includes("(none found)");
       }).concat(seasonalKeys);
-      const selectedKeys = await selectCommunityCategories(
-        redis,
-        user.id,
-        2,
-        availableKeys
-      );
+      const selectedKeys = communityCategoryKeys ??
+        (
+          await selectCommunityCategories(
+            redis,
+            user.id,
+            2,
+            availableKeys
+          )
+        ).selected;
       communityCategoryKeys = selectedKeys;
     }
 

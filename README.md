@@ -44,6 +44,15 @@ Install environment vars locally:
 npm run env:pull
 ```
 
+#### Community Data Providers
+
+Community category data can be sourced from Google Places (default) or Perplexity.
+Configure via environment variables:
+
+- `COMMUNITY_DATA_PROVIDER` = `google` or `perplexity`
+- `PERPLEXITY_API_KEY` (required when using Perplexity)
+- `PERPLEXITY_MODEL` (optional, defaults to `sonar-pro`)
+
 Run the web app in development mode:
 
 ```bash

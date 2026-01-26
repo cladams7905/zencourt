@@ -23,7 +23,7 @@ These hook templates are specifically designed for promoting active listings, ne
 
 - I made one small change to this listing… and it sold in {number} days
 - SOLD in {number} days: {address/neighborhood}
-- Another happy family in their new home
+- Another happy client in their new home
 - From listed to sold: the {address} story
 - Congratulations to my clients on their new {city} home!
 - This {neighborhood} home had {number} offers

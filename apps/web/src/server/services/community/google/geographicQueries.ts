@@ -1,4 +1,4 @@
-import type { CategoryKey } from "./communityDataConfig";
+import type { CategoryKey } from "../communityDataConfig";
 
 export const GEO_SEASON_QUERY_PACK: Partial<
   Record<
