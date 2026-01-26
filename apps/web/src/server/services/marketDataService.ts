@@ -55,12 +55,6 @@ type PerplexityMarketPayload = {
   market_summary?: string | null;
 };
 
-type MarketCitation = {
-  title?: string;
-  url?: string;
-  source?: string;
-};
-
 const US_ZIP_REGEX = /\b\d{5}(?:-\d{4})?\b/;
 
 export function parseMarketLocation(
@@ -567,13 +561,6 @@ async function getPerplexityMarketData(
     state: location.state,
     zip_code: location.zip_code,
     data_timestamp: dataTimestamp,
-    citations: (response?.search_results ?? [])
-      .map((result) => ({
-        title: result.title,
-        url: result.url,
-        source: result.source ?? result.date
-      }))
-      .filter((item) => item.title || item.url || item.source),
     median_home_price: medianHomePrice,
     price_change_yoy: priceChange,
     active_listings: inventory,
@@ -593,7 +580,14 @@ async function getPerplexityMarketData(
     entry_level_price: sanitizeMarketField(payload?.entry_level_price),
     entry_level_payment: sanitizeMarketField(payload?.entry_level_payment),
     market_summary:
-      narrativeField !== NOT_AVAILABLE ? narrativeField : summary
+      narrativeField !== NOT_AVAILABLE ? narrativeField : summary,
+    citations: (response?.search_results ?? [])
+    .map((result) => ({
+      title: result.title,
+      url: result.url,
+      source: result.source ?? result.date
+    }))
+    .filter((item) => item.title || item.url || item.source)
   };
 
   if (redis) {
@@ -722,7 +716,6 @@ export async function getRentCastMarketData(
     state: location.state,
     zip_code: location.zip_code,
     data_timestamp: timestamp,
-    citations: undefined,
     median_home_price: formattedMedianPrice,
     price_change_yoy: formattedPriceChange,
     active_listings: formattedActiveListings,
@@ -737,7 +730,8 @@ export async function getRentCastMarketData(
     affordability_index: NOT_AVAILABLE,
     entry_level_price: formattedEntryLevelPrice,
     entry_level_payment: NOT_AVAILABLE,
-    market_summary: summary
+    market_summary: summary,
+    citations: undefined
   };
 
   if (redis) {

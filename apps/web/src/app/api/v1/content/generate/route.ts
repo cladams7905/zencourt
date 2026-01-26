@@ -28,7 +28,12 @@ import {
   prefetchPerplexityCategoriesByZip
 } from "@web/src/server/services/community/communityDataService";
 import { getCommunityDataProvider } from "@web/src/server/services/community/perplexity/provider";
-import { shouldIncludeServiceAreasInCache } from "@web/src/server/services/community/communityDataConfig";
+import {
+  AUDIENCE_SEGMENT_ALIASES,
+  NORMALIZED_AUDIENCE_SEGMENTS,
+  shouldIncludeServiceAreasInCache,
+  type AudienceSegment
+} from "@web/src/server/services/community/communityDataConfig";
 import { getCachedPerplexityCategoryPayload } from "@web/src/server/services/community/perplexity/cache";
 import type { CategoryKey } from "@web/src/server/services/community/communityDataConfig";
 
@@ -218,6 +223,16 @@ type CommunityCategoryCycleState = {
   cyclesCompleted: number;
 };
 
+function normalizeAudienceSegment(segment?: string | null): AudienceSegment | undefined {
+  if (!segment) {
+    return undefined;
+  }
+  const normalized = AUDIENCE_SEGMENT_ALIASES[segment] ?? segment;
+  return NORMALIZED_AUDIENCE_SEGMENTS.has(normalized as AudienceSegment)
+    ? (normalized as AudienceSegment)
+    : undefined;
+}
+
 async function selectCommunityCategories(
   redis: Redis | null,
   userId: string,
@@ -331,12 +346,13 @@ async function buildPerplexityAvoidRecommendations(params: {
   categories: CategoryKey[];
 }): Promise<Record<CategoryKey, string[]>> {
   const avoidMap = new Map<CategoryKey, string[]>();
+  const normalizedAudience = normalizeAudienceSegment(params.audience);
   await Promise.all(
     params.categories.map(async (category) => {
       const cached = await getCachedPerplexityCategoryPayload({
         zipCode: params.zipCode,
         category,
-        audience: params.audience ?? undefined,
+        audience: normalizedAudience,
         serviceAreas: shouldIncludeServiceAreasInCache(category)
           ? params.serviceAreas
           : null,
