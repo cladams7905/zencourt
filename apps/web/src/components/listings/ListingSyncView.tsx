@@ -1,6 +1,7 @@
 "use client";
 
-import { DashboardHeader } from "../dashboard/DashboardHeader";
+import { ViewHeader } from "../dashboard/ViewHeader";
+import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import {
   Card,
@@ -14,13 +15,13 @@ import {
 export function ListingSyncView() {
   return (
     <>
-      <DashboardHeader
+      <ViewHeader
         title="Listing Campaigns"
         subtitle="Sync listings to generate social campaigns faster."
       />
 
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-8 py-10">
-        <section className="rounded-lg border border-border/60 bg-secondary/40 p-6">
+        <section className="rounded-lg border border-border/60 bg-secondary p-6">
           <h2 className="text-xl font-header font-medium text-foreground">
             Choose how to add your listings
           </h2>
@@ -33,7 +34,12 @@ export function ListingSyncView() {
         <div className="grid gap-6 md:grid-cols-2">
           <Card className="border-border/60">
             <CardHeader>
-              <CardTitle>Sync from MLS</CardTitle>
+              <div className="flex flex-wrap items-center gap-2">
+                <CardTitle>Sync from MLS</CardTitle>
+                <Badge variant="secondary" className="">
+                  Recommended
+                </Badge>
+              </div>
               <CardDescription>
                 Connect your MLS to import active listings and keep campaigns
                 updated automatically.

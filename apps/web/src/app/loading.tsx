@@ -12,7 +12,7 @@ export default function Loading() {
         <div className="flex h-full w-full blur-md">
           <DashboardSidebarStatic userName="Alex Rivera" paymentPlan="Pro" />
           <main className="flex-1 overflow-hidden bg-white">
-            <DashboardHeader userName="Alex Rivera" />
+            <DashboardHeader title="Welcome back, Alex Rivera" />
             <div className="h-full bg-white" />
           </main>
         </div>

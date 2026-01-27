@@ -58,12 +58,42 @@ interface DashboardSidebarProps {
   userAvatar?: string;
 }
 
+const useSidebarOverflow = () => {
+  const navRef = React.useRef<HTMLElement | null>(null);
+  const [hasOverflow, setHasOverflow] = React.useState(false);
+
+  React.useEffect(() => {
+    const element = navRef.current;
+    if (!element) {
+      return;
+    }
+
+    const updateOverflow = () => {
+      setHasOverflow(element.scrollHeight > element.clientHeight + 1);
+    };
+
+    updateOverflow();
+
+    const resizeObserver = new ResizeObserver(updateOverflow);
+    resizeObserver.observe(element);
+    window.addEventListener("resize", updateOverflow);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", updateOverflow);
+    };
+  }, []);
+
+  return { navRef, hasOverflow };
+};
+
 const DashboardSidebar = ({
   className,
   userName = "User",
   paymentPlan = "Free",
   userAvatar
 }: DashboardSidebarProps) => {
+  const { navRef, hasOverflow } = useSidebarOverflow();
   const user = useUser();
   const router = useRouter();
   const [contentExpanded, setContentExpanded] = React.useState(true);
@@ -115,7 +145,13 @@ const DashboardSidebar = ({
       )}
     >
       {/* Logo Section */}
-      <Link href={"/"} className="pt-5 pb-2 flex items-center just px-6 gap-3">
+      <Link
+        href={"/"}
+        className={cn(
+          "pt-5 flex items-center just px-6 gap-3",
+          hasOverflow ? "pb-6 border-b border-border" : "pb-2"
+        )}
+      >
         <Image
           src={Logo}
           alt="Zencourt Logo"
@@ -129,7 +165,10 @@ const DashboardSidebar = ({
       </Link>
 
       {/* Navigation */}
-      <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
+      <nav
+        ref={navRef}
+        className="flex-1 px-4 space-y-1 overflow-y-auto"
+      >
         {/* Divider */}
         <div className="flex flex-col pt-4 gap-1">
           {/* Main Navigation */}
@@ -483,6 +522,7 @@ const DashboardSidebarStatic = ({
   paymentPlan = "Free",
   userAvatar
 }: DashboardSidebarProps) => {
+  const { navRef, hasOverflow } = useSidebarOverflow();
   const [contentExpanded, setContentExpanded] = React.useState(true);
   const [listingsExpanded, setListingsExpanded] = React.useState(true);
 
@@ -494,7 +534,12 @@ const DashboardSidebarStatic = ({
       )}
     >
       {/* Logo Section */}
-      <div className="pt-5 pb-6 flex items-center just px-6 gap-3 border-b border-border/50">
+      <div
+        className={cn(
+          "pt-5 flex items-center just px-6 gap-3",
+          hasOverflow ? "pb-6 border-b border-border/50" : "pb-2"
+        )}
+      >
         <Image
           src={Logo}
           alt="Zencourt Logo"
@@ -508,7 +553,10 @@ const DashboardSidebarStatic = ({
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
+      <nav
+        ref={navRef}
+        className="flex-1 px-4 space-y-1 overflow-y-auto"
+      >
         <div className="flex flex-col pt-4 gap-1">
           <Button
             variant="ghost"

@@ -32,7 +32,7 @@ import {
   getUserMediaUploadUrls
 } from "@web/src/server/actions/db/userMedia";
 import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES } from "@shared/utils/mediaUpload";
-import { DashboardHeader } from "../dashboard/DashboardHeader";
+import { ViewHeader } from "../dashboard/ViewHeader";
 
 interface MediaViewProps {
   userId: string;
@@ -602,7 +602,7 @@ const MediaView = ({ userId, initialMedia = [] }: MediaViewProps) => {
 
   return (
     <>
-      <DashboardHeader
+      <ViewHeader
         title="Media Library"
         subtitle="Manage your own photos and b-roll assets for social media."
       />

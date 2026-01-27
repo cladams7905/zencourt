@@ -109,7 +109,7 @@ const ScheduleCard = ({
               <a
                 key={post.id}
                 href="#"
-                className="flex items-center gap-3 p-2 rounded-lg hover:bg-secondary/50 transition-colors group"
+                className="flex items-center gap-3 p-2 rounded-lg hover:bg-secondary/60 transition-colors group"
               >
                 {/* Thumbnail */}
                 {post.thumbnail ? (

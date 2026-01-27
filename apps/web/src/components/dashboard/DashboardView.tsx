@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { cn } from "./../ui/utils";
-import { DashboardHeader } from "./DashboardHeader";
+import { ViewHeader } from "./ViewHeader";
 import { ProfileCompletionChecklist } from "./ProfileCompletionChecklist";
 import { ScheduleCard, type ScheduledPost } from "./ScheduleCard";
 import { ContentFilterBar, type ContentType } from "./ContentFilterBar";
@@ -489,11 +489,13 @@ const DashboardView = ({
                   type: "done";
                   items: {
                     hook: string;
-                    body?: {
-                      header: string;
-                      content: string;
-                      broll_query?: string | null;
-                    }[] | null;
+                    body?:
+                      | {
+                          header: string;
+                          content: string;
+                          broll_query?: string | null;
+                        }[]
+                      | null;
                     caption?: string | null;
                     broll_query?: string | null;
                   }[];
@@ -732,118 +734,117 @@ const DashboardView = ({
 
   return (
     <div className={cn("relative", className)}>
-      <DashboardHeader title={`Welcome back, ${headerName}`} />
+      <ViewHeader title={`Welcome back, ${headerName}`} />
 
       <div className="px-8 py-8 max-w-[1600px] mx-auto space-y-10">
-          {/* Profile Completion Checklist */}
-          <ProfileCompletionChecklist
-            profileCompleted={profileCompleted}
-            writingStyleCompleted={writingStyleCompleted}
-            mediaUploaded={mediaUploaded}
+        {/* Profile Completion Checklist */}
+        <ProfileCompletionChecklist
+          profileCompleted={profileCompleted}
+          writingStyleCompleted={writingStyleCompleted}
+          mediaUploaded={mediaUploaded}
+        />
+
+        {/* Upcoming Schedule Section */}
+        <section>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-2xl font-header font-medium text-foreground">
+              Upcoming Schedule
+            </h2>
+            <a
+              href="#"
+              className="text-sm font-medium text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
+            >
+              Full Calendar
+              <ArrowRight className="h-4 w-4" />
+            </a>
+          </div>
+
+          {/* Horizontal Scroll Container */}
+          <div className="flex overflow-x-auto gap-4 pb-4 scrollbar-hide">
+            {mockScheduleDays.map((day, idx) => (
+              <ScheduleCard
+                key={idx}
+                date={day.date}
+                dayLabel={day.dayLabel}
+                posts={day.posts}
+                onAddClick={() => console.log("Add clicked for", day.date)}
+              />
+            ))}
+          </div>
+        </section>
+
+        {/* Recommended Content Section */}
+        <section className="flex flex-col min-h-[500px]">
+          <ContentFilterBar
+            activeType={contentType}
+            onTypeChange={handleTypeChange}
+            activeFilters={activeFilters}
+            onFilterToggle={handleFilterToggle}
+            generationCount={4}
+            generationLimit={50}
+            className="mb-8"
           />
 
-          {/* Upcoming Schedule Section */}
-          <section>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-header font-medium text-foreground">
-                Upcoming Schedule
-              </h2>
-              <a
-                href="#"
-                className="text-sm font-medium text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
-              >
-                Full Calendar
-                <ArrowRight className="h-4 w-4" />
-              </a>
-            </div>
+          {generationError && (
+            <p className="mb-4 text-sm text-red-500">{generationError}</p>
+          )}
 
-            {/* Horizontal Scroll Container */}
-            <div className="flex overflow-x-auto gap-4 pb-4 scrollbar-hide">
-              {mockScheduleDays.map((day, idx) => (
-                <ScheduleCard
-                  key={idx}
-                  date={day.date}
-                  dayLabel={day.dayLabel}
-                  posts={day.posts}
-                  onAddClick={() => console.log("Add clicked for", day.date)}
-                />
-              ))}
-            </div>
-          </section>
-
-          {/* Recommended Content Section */}
-          <section className="flex flex-col min-h-[500px]">
-            <ContentFilterBar
-              activeType={contentType}
-              onTypeChange={handleTypeChange}
-              activeFilters={activeFilters}
-              onFilterToggle={handleFilterToggle}
-              generationCount={4}
-              generationLimit={50}
-              className="mb-8"
+          {existingContentItems.length > 0 && (
+            <ContentGrid
+              items={existingContentItems}
+              onFavoriteToggle={handleFavoriteToggle}
+              onEdit={(id) => console.log("Edit", id)}
+              onDownload={(id) => console.log("Download", id)}
+              onShare={(id) => console.log("Share", id)}
             />
+          )}
 
-            {generationError && (
-              <p className="mb-4 text-sm text-red-500">{generationError}</p>
-            )}
-
-            {existingContentItems.length > 0 && (
-              <ContentGrid
-                items={existingContentItems}
-                onFavoriteToggle={handleFavoriteToggle}
-                onEdit={(id) => console.log("Edit", id)}
-                onDownload={(id) => console.log("Download", id)}
-                onShare={(id) => console.log("Share", id)}
-              />
-            )}
-
-            {activeCategory &&
-              (generatedContentItems[contentType]?.[activeCategory]?.length ??
-                0) > 0 && (
-                <div className="mt-10">
-                  <ContentGrid
-                    items={
-                      generatedContentItems[contentType]?.[activeCategory] ?? []
-                    }
-                    onFavoriteToggle={handleFavoriteToggle}
-                    onEdit={(id) => console.log("Edit", id)}
-                    onDownload={(id) => console.log("Download", id)}
-                    onShare={(id) => console.log("Share", id)}
-                    onDelete={(id) => {
-                      setGeneratedContentItems((prev) => {
-                        const current =
-                          prev[contentType]?.[activeCategory] ?? [];
-                        const next = current.filter((item) => item.id !== id);
-                        return {
-                          ...prev,
-                          [contentType]: {
-                            ...prev[contentType],
-                            [activeCategory]: next
-                          }
-                        };
-                      });
-                    }}
-                  />
-                </div>
-              )}
-            {activeCategory && (
-              <div className="mt-6 flex justify-center">
-                <Button
-                  variant="secondary"
-                  disabled={isGenerating}
-                  onClick={() => {
-                    const controller = new AbortController();
-                    generateContent(activeCategory, controller);
+          {activeCategory &&
+            (generatedContentItems[contentType]?.[activeCategory]?.length ??
+              0) > 0 && (
+              <div className="mt-10">
+                <ContentGrid
+                  items={
+                    generatedContentItems[contentType]?.[activeCategory] ?? []
+                  }
+                  onFavoriteToggle={handleFavoriteToggle}
+                  onEdit={(id) => console.log("Edit", id)}
+                  onDownload={(id) => console.log("Download", id)}
+                  onShare={(id) => console.log("Share", id)}
+                  onDelete={(id) => {
+                    setGeneratedContentItems((prev) => {
+                      const current = prev[contentType]?.[activeCategory] ?? [];
+                      const next = current.filter((item) => item.id !== id);
+                      return {
+                        ...prev,
+                        [contentType]: {
+                          ...prev[contentType],
+                          [activeCategory]: next
+                        }
+                      };
+                    });
                   }}
-                >
-                  Generate more {contentType}
-                </Button>
+                />
               </div>
             )}
-          </section>
+          {activeCategory && (
+            <div className="mt-6 flex justify-center">
+              <Button
+                variant="secondary"
+                disabled={isGenerating}
+                onClick={() => {
+                  const controller = new AbortController();
+                  generateContent(activeCategory, controller);
+                }}
+              >
+                Generate more {contentType}
+              </Button>
+            </div>
+          )}
+        </section>
 
-          {/* Bottom Spacing */}
-          <div className="h-10" />
+        {/* Bottom Spacing */}
+        <div className="h-10" />
       </div>
     </div>
   );

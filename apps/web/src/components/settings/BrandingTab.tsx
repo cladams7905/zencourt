@@ -130,9 +130,7 @@ export function BrandingTab({
   const [agentTitle, setAgentTitle] = React.useState(
     userAdditional.agentTitle || ""
   );
-  const [agentBio, setAgentBio] = React.useState(
-    userAdditional.agentBio || ""
-  );
+  const [agentBio, setAgentBio] = React.useState(userAdditional.agentBio || "");
   const [headshotUrl, setheadshotUrl] = React.useState(initialHeadshotUrl);
   const [personalLogoUrl, setpersonalLogoUrl] = React.useState(
     userAdditional.personalLogoUrl || ""
@@ -319,16 +317,20 @@ export function BrandingTab({
     });
   };
 
-  const normalizeText = React.useCallback((value: string | null | undefined) => {
-    return (value ?? "").trim();
-  }, []);
+  const normalizeText = React.useCallback(
+    (value: string | null | undefined) => {
+      return (value ?? "").trim();
+    },
+    []
+  );
 
   const isAgentInfoDirty = React.useMemo(() => {
     return (
       normalizeText(agentName) !== normalizeText(initialAgentInfo.agentName) ||
       normalizeText(brokerageName) !==
         normalizeText(initialAgentInfo.brokerageName) ||
-      normalizeText(agentTitle) !== normalizeText(initialAgentInfo.agentTitle) ||
+      normalizeText(agentTitle) !==
+        normalizeText(initialAgentInfo.agentTitle) ||
       normalizeText(agentBio) !== normalizeText(initialAgentInfo.agentBio)
     );
   }, [
@@ -715,7 +717,7 @@ export function BrandingTab({
                     "flex w-full min-w-0 items-center justify-center rounded-lg border border-dashed border-border p-4 transition-colors h-50",
                     !isUploadingAvatar &&
                       !isSavingProfile &&
-                      "cursor-pointer hover:bg-secondary",
+                      "cursor-pointer hover:bg-secondary/60",
                     (isUploadingAvatar || isSavingProfile) &&
                       "cursor-not-allowed opacity-70"
                   )}
@@ -790,7 +792,7 @@ export function BrandingTab({
                     "inline-flex w-full min-w-0 items-center justify-center rounded-lg border border-dashed border-border p-4 transition-colors h-50",
                     !isUploadingBrokerLogo &&
                       !isSavingProfile &&
-                      "cursor-pointer hover:bg-secondary",
+                      "cursor-pointer hover:bg-secondary/60",
                     (isUploadingBrokerLogo || isSavingProfile) &&
                       "cursor-not-allowed opacity-70"
                   )}
@@ -1003,7 +1005,7 @@ export function BrandingTab({
               <p className="mt-2 text-xs text-muted-foreground">
                 {toneMeta.description}
               </p>
-              <div className="mt-3 rounded-lg border border-dashed border-border bg-muted px-3 py-2 text-xs text-muted-foreground italic">
+              <div className="mt-3 rounded-lg border border-border bg-muted px-3 py-2 text-xs text-muted-foreground italic">
                 &quot;{toneMeta.example}&quot;
               </div>
             </div>

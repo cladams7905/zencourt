@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import type { DBUserAdditional } from "@shared/types/models";
-import { DashboardHeader } from "../dashboard/DashboardHeader";
+import { ViewHeader } from "../dashboard/ViewHeader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { AccountTab } from "./AccountTab";
 import { BrandingTab } from "./BrandingTab";
@@ -134,141 +134,141 @@ export function SettingsView({
 
   return (
     <>
-      <DashboardHeader
+      <ViewHeader
         title="Settings"
         subtitle="Manage your account and branding details"
       />
 
       <div className="px-8 py-8 max-w-5xl mx-auto">
-          <Tabs
-            value={activeTab}
-            onValueChange={setActiveTab}
-            orientation="vertical"
-            className="flex flex-row gap-8 min-w-0"
-          >
-            {/* Vertical Tab List + Preview */}
-            <div className="sticky top-[124px] flex w-56 flex-col gap-4 self-start">
-              <TabsList className="flex-col h-fit w-full bg-secondary border border-border/60 p-2 gap-2 rounded-lg py-2">
-                <TabsTrigger
-                  value="account"
-                  className="w-full justify-start gap-3 py-2 px-3 rounded-lg transition-colors text-muted-foreground hover:text-foreground data-[state=active]:shadow-sm data-[state=active]:text-foreground data-[state=active]:bg-background"
-                >
-                  <UserCircle className="h-5 w-5" />
-                  Account
-                </TabsTrigger>
-                <TabsTrigger
-                  value="branding"
-                  className="w-full justify-start gap-3 py-2 px-3 rounded-lg transition-colors text-muted-foreground hover:text-foreground data-[state=active]:shadow-sm data-[state=active]:text-foreground data-[state=active]:bg-background"
-                >
-                  <PenTool className="h-5 w-5" />
-                  Branding
-                </TabsTrigger>
-                <TabsTrigger
-                  value="subscription"
-                  className="w-full justify-start gap-3 py-2 px-3 rounded-lg transition-colors text-muted-foreground hover:text-foreground data-[state=active]:shadow-sm data-[state=active]:text-foreground data-[state=active]:bg-background"
-                >
-                  <CreditCard className="h-5 w-5" />
-                  Subscription
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent
-                value="branding"
-                forceMount
-                className="mt-0 data-[state=inactive]:hidden"
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          orientation="vertical"
+          className="flex flex-row gap-8 min-w-0"
+        >
+          {/* Vertical Tab List + Preview */}
+          <div className="sticky top-[124px] flex w-56 flex-col gap-4 self-start">
+            <TabsList className="flex-col h-fit w-full bg-secondary border border-border/60 p-2 gap-2 rounded-lg py-2">
+              <TabsTrigger
+                value="account"
+                className="w-full justify-start gap-3 py-2 px-3 rounded-lg transition-colors text-muted-foreground hover:text-foreground data-[state=active]:shadow-sm data-[state=active]:text-foreground data-[state=active]:bg-background"
               >
-                <Card className="bg-secondary border-border/60">
-                  <Accordion type="single" collapsible>
-                    <AccordionItem value="example">
-                      <AccordionTrigger className="px-4 py-3 hover:no-underline font-body">
-                        <div className="flex flex-col text-left gap-1">
-                          <span className="text-base font-header">
-                            Example Post
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            Preview based on your current preferences.
-                          </span>
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent className="px-4 pb-4">
-                        <div className="space-y-3 text-sm">
-                          <div className="text-xs uppercase tracking-wide text-muted-foreground">
-                            {writingToneLabel} Tone
-                          </div>
-                          <div className="font-semibold text-foreground">
-                            {headline}
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            Discover a home that balances comfort and style,
-                            curated for modern living. Reach out for a private
-                            walkthrough and neighborhood insights.
-                          </p>
-                          {writingStyleNote ? (
-                            <div className="rounded-lg border border-dashed border-border/70 bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-                              {writingStyleNote}
-                            </div>
-                          ) : null}
-                          <div className="text-xs text-muted-foreground">
-                            {signature}
-                          </div>
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  </Accordion>
-                </Card>
-              </TabsContent>
-
-              <p className="text-xs text-muted-foreground pl-2">
-                Have a question about your account? Email{" "}
-                <a
-                  href="mailto:team@zencourt.app"
-                  className="text-foreground underline"
-                >
-                  team@zencourt.app
-                </a>
-                .
-              </p>
-            </div>
-
-            {/* Tab Content */}
-            <div className="flex-1 min-w-0">
-              <TabsContent value="account" className="mt-0 space-y-6">
-                <AccountTab
-                  userId={userId}
-                  userEmail={userEmail}
-                  location={userAdditional.location}
-                  googleMapsApiKey={googleMapsApiKey}
-                  onDirtyChange={setIsLocationDirty}
-                  onRegisterSave={(save) => {
-                    locationSaveRef.current = save;
-                  }}
-                />
-              </TabsContent>
-
-              <TabsContent
+                <UserCircle className="h-5 w-5" />
+                Account
+              </TabsTrigger>
+              <TabsTrigger
                 value="branding"
-                forceMount
-                className="mt-0 space-y-6 data-[state=inactive]:hidden"
+                className="w-full justify-start gap-3 py-2 px-3 rounded-lg transition-colors text-muted-foreground hover:text-foreground data-[state=active]:shadow-sm data-[state=active]:text-foreground data-[state=active]:bg-background"
               >
-                <BrandingTab
-                  userId={userId}
-                  userAdditional={userAdditional}
-                  defaultAgentName={defaultAgentName}
-                  defaultHeadshotUrl={defaultHeadshotUrl}
-                  onDirtyChange={setIsBrandingDirty}
-                  onRegisterSave={(save) => {
-                    brandingSaveRef.current = save;
-                  }}
-                  isActive={activeTab === "branding"}
-                />
-              </TabsContent>
+                <PenTool className="h-5 w-5" />
+                Branding
+              </TabsTrigger>
+              <TabsTrigger
+                value="subscription"
+                className="w-full justify-start gap-3 py-2 px-3 rounded-lg transition-colors text-muted-foreground hover:text-foreground data-[state=active]:shadow-sm data-[state=active]:text-foreground data-[state=active]:bg-background"
+              >
+                <CreditCard className="h-5 w-5" />
+                Subscription
+              </TabsTrigger>
+            </TabsList>
 
-              <TabsContent value="subscription" className="mt-0 space-y-6">
-                <SubscriptionTab paymentPlan={paymentPlan} />
-              </TabsContent>
-            </div>
-          </Tabs>
-        </div>
+            <TabsContent
+              value="branding"
+              forceMount
+              className="mt-0 data-[state=inactive]:hidden"
+            >
+              <Card className="bg-secondary border-border/60">
+                <Accordion type="single" collapsible>
+                  <AccordionItem value="example">
+                    <AccordionTrigger className="px-4 py-3 hover:no-underline font-body">
+                      <div className="flex flex-col text-left gap-1">
+                        <span className="text-base font-header">
+                          Example Post
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          Preview based on your current preferences.
+                        </span>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="px-4 pb-4">
+                      <div className="space-y-3 text-sm">
+                        <div className="text-xs uppercase tracking-wide text-muted-foreground">
+                          {writingToneLabel} Tone
+                        </div>
+                        <div className="font-semibold text-foreground">
+                          {headline}
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          Discover a home that balances comfort and style,
+                          curated for modern living. Reach out for a private
+                          walkthrough and neighborhood insights.
+                        </p>
+                        {writingStyleNote ? (
+                          <div className="rounded-lg border border-dashed border-border/70 bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+                            {writingStyleNote}
+                          </div>
+                        ) : null}
+                        <div className="text-xs text-muted-foreground">
+                          {signature}
+                        </div>
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
+              </Card>
+            </TabsContent>
+
+            <p className="text-xs text-muted-foreground pl-2">
+              Have a question about your account? Email{" "}
+              <a
+                href="mailto:team@zencourt.app"
+                className="text-foreground underline"
+              >
+                team@zencourt.app
+              </a>
+              .
+            </p>
+          </div>
+
+          {/* Tab Content */}
+          <div className="flex-1 min-w-0">
+            <TabsContent value="account" className="mt-0 space-y-6">
+              <AccountTab
+                userId={userId}
+                userEmail={userEmail}
+                location={userAdditional.location}
+                googleMapsApiKey={googleMapsApiKey}
+                onDirtyChange={setIsLocationDirty}
+                onRegisterSave={(save) => {
+                  locationSaveRef.current = save;
+                }}
+              />
+            </TabsContent>
+
+            <TabsContent
+              value="branding"
+              forceMount
+              className="mt-0 space-y-6 data-[state=inactive]:hidden"
+            >
+              <BrandingTab
+                userId={userId}
+                userAdditional={userAdditional}
+                defaultAgentName={defaultAgentName}
+                defaultHeadshotUrl={defaultHeadshotUrl}
+                onDirtyChange={setIsBrandingDirty}
+                onRegisterSave={(save) => {
+                  brandingSaveRef.current = save;
+                }}
+                isActive={activeTab === "branding"}
+              />
+            </TabsContent>
+
+            <TabsContent value="subscription" className="mt-0 space-y-6">
+              <SubscriptionTab paymentPlan={paymentPlan} />
+            </TabsContent>
+          </div>
+        </Tabs>
+      </div>
       <SettingsUnsavedChangesDialog
         isDirty={isBrandingDirty || isLocationDirty}
         onSave={handleSaveAllChanges}
