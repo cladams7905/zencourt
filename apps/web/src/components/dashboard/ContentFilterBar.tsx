@@ -4,6 +4,7 @@ import * as React from "react";
 import { cn } from "../ui/utils";
 import { Button } from "../ui/button";
 import { PillTabs } from "../ui/pill-tabs";
+import { Progress } from "../ui/progress";
 import { ChevronDown, Settings } from "lucide-react";
 
 type ContentType = "videos" | "posts" | "stories";
@@ -54,12 +55,7 @@ const ContentFilterBar = ({
           <span className="text-sm font-medium text-muted-foreground">
             {generationCount}/{generationLimit} weekly generations
           </span>
-          <div className="w-28 h-2 bg-secondary rounded-full overflow-hidden">
-            <div
-              className="h-full bg-foreground rounded-full transition-all"
-              style={{ width: `${generationPercentage}%` }}
-            />
-          </div>
+          <Progress className="w-28" value={generationPercentage} />
         </div>
       </div>
 

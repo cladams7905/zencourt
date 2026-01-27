@@ -749,7 +749,7 @@ const DashboardView = ({
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto relative bg-background">
         {/* Header */}
-        <DashboardHeader userName={headerName} />
+        <DashboardHeader title={`Welcome back, ${headerName}`} />
 
         {/* Content */}
         <div className="px-8 py-8 max-w-[1600px] mx-auto space-y-10">

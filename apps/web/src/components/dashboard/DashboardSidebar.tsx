@@ -374,7 +374,7 @@ const DashboardSidebar = ({
             align="end"
             side="top"
             sideOffset={8}
-            className="w-52 bg-popover/95 backdrop-blur-xl border-border/50 shadow-2xl rounded-lg p-1.5"
+            className="w-52"
           >
             {displayedEmail ? (
               <div className="px-3 pb-1">
@@ -385,7 +385,7 @@ const DashboardSidebar = ({
             ) : null}
             <DropdownMenuItem
               asChild
-              className="rounded-lg px-3 py-2.5 cursor-pointer focus:bg-secondary transition-all duration-150 group"
+              className="transition-all duration-150 group"
             >
               <Link href="/settings#billing">
                 <ArrowBigUpDash className="mr-3 h-6 w-6 text-muted-foreground group-hover:text-foreground transition-colors" />
@@ -394,7 +394,7 @@ const DashboardSidebar = ({
             </DropdownMenuItem>
             <DropdownMenuSeparator className="my-1.5 bg-border/50" />
             <DropdownMenuItem
-              className="rounded-lg px-3 py-2.5 cursor-pointer focus:bg-secondary transition-all duration-150 group"
+              className="transition-all duration-150 group"
               onSelect={() => setIsFeedbackOpen(true)}
             >
               <MessageCircle className="mr-3 h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
@@ -402,7 +402,7 @@ const DashboardSidebar = ({
             </DropdownMenuItem>
             <DropdownMenuItem
               asChild
-              className="rounded-lg px-3 py-2.5 cursor-pointer focus:bg-secondary transition-all duration-150 group"
+              className="transition-all duration-150 group"
             >
               <a href="mailto:team@zencourt.app">
                 <CircleQuestionMark className="mr-3 h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
@@ -411,7 +411,7 @@ const DashboardSidebar = ({
             </DropdownMenuItem>
             <DropdownMenuSeparator className="my-1.5 bg-border/50" />
             <DropdownMenuItem
-              className="rounded-lg px-3 py-2.5 cursor-pointer focus:bg-secondary transition-all duration-150 group"
+              className="transition-all duration-150 group"
               onClick={handleLogout}
             >
               <LogOut className="mr-3 h-4 w-4" />

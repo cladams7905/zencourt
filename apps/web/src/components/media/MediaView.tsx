@@ -24,15 +24,7 @@ import {
   DialogTitle
 } from "../ui/dialog";
 import { DashboardSidebar } from "../dashboard/DashboardSidebar";
-import {
-  Bell,
-  ChevronDown,
-  Film,
-  Image as ImageIcon,
-  Plus,
-  Upload,
-  X
-} from "lucide-react";
+import { ChevronDown, Film, Image as ImageIcon, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import type { DBUserMedia, UserMediaType } from "@shared/types/models";
 import {
@@ -44,6 +36,7 @@ import {
   MAX_IMAGE_BYTES,
   MAX_VIDEO_BYTES
 } from "@shared/utils/mediaUpload";
+import { DashboardHeader } from "../dashboard/DashboardHeader";
 
 interface MediaViewProps {
   userId: string;
@@ -625,32 +618,10 @@ const MediaView = ({
       />
 
       <main className="flex-1 overflow-y-auto bg-background">
-        <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-background/90 px-8 py-5 backdrop-blur-md">
-          <div>
-            <h1 className="text-2xl font-header font-medium text-foreground">
-              Media Library
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Manage your own photos and b-roll assets for social media.
-            </p>
-          </div>
-          
-          <div className="flex items-center gap-4">
-            <Button size="default" className="gap-2 shadow-sm">
-              <Plus className="h-5 w-5" />
-              <span>New</span>
-            </Button>
-
-            <Button
-              size="icon"
-              variant="ghost"
-              className="relative"
-            >
-              <Bell className="h-5 w-5" />
-              <span className="absolute top-2 right-2 h-2 w-2 bg-primary rounded-full border-2 border-background" />
-            </Button>
-          </div>
-        </header>
+        <DashboardHeader
+          title="Media Library"
+          subtitle="Manage your own photos and b-roll assets for social media."
+        />
 
         <div className="mx-auto flex max-w-[1600px] flex-col gap-10 px-8 py-8">
           <div className="rounded-lg bg-secondary border border-border/60 px-4 py-3 max-w-3xl">

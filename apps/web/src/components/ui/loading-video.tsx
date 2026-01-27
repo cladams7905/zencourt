@@ -26,6 +26,7 @@ export function LoadingVideo({
   ...videoProps
 }: LoadingVideoProps) {
   const [isHovered, setIsHovered] = React.useState(false);
+  const [isReady, setIsReady] = React.useState(false);
   const videoRef = React.useRef<HTMLVideoElement>(null);
 
   React.useEffect(() => {
@@ -47,7 +48,7 @@ export function LoadingVideo({
 
   const handleMouseEnter = () => {
     setIsHovered(true);
-    if (videoRef.current) {
+    if (isReady && videoRef.current) {
       void videoRef.current.play();
     }
   };
@@ -58,6 +59,14 @@ export function LoadingVideo({
       videoRef.current.pause();
       videoRef.current.currentTime = 0;
     }
+  };
+
+  const handleLoadedData = (event: React.SyntheticEvent<HTMLVideoElement>) => {
+    setIsReady(true);
+    if (isHovered && videoRef.current) {
+      void videoRef.current.play();
+    }
+    videoProps.onLoadedData?.(event);
   };
 
   return (
@@ -80,6 +89,7 @@ export function LoadingVideo({
         {...videoProps}
         ref={videoRef}
         src={videoSrc}
+        onLoadedData={handleLoadedData}
         className={cn(
           "absolute inset-0 h-full w-full transition-opacity duration-200",
           isHovered ? "opacity-100" : "opacity-0",
