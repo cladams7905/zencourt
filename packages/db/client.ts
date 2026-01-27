@@ -22,4 +22,14 @@ export const db = drizzle({ client: pool, schema });
 export * from "./drizzle/schema";
 
 // Re-export common query helpers to ensure all packages share the same Drizzle instance
-export { and, eq, or, inArray, exists, sql, desc, asc } from "drizzle-orm";
+export {
+  and,
+  eq,
+  or,
+  inArray,
+  exists,
+  sql,
+  desc,
+  like,
+  asc
+} from "drizzle-orm";

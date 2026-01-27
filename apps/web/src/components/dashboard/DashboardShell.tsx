@@ -8,16 +8,19 @@ type DashboardShellContextValue = {
   headerTitle: string;
   headerSubtitle?: string;
   setHeaderContent: (title: string, subtitle?: string) => void;
+  setHeaderVisible: (visible: boolean) => void;
+  headerVisible: boolean;
 };
 
 const DashboardShellContext = React.createContext<DashboardShellContextValue>({
   headerTitle: "",
   headerSubtitle: undefined,
-  setHeaderContent: () => {}
+  setHeaderContent: () => {},
+  setHeaderVisible: () => {},
+  headerVisible: true
 });
 
-export const useDashboardShell = () =>
-  React.useContext(DashboardShellContext);
+export const useDashboardShell = () => React.useContext(DashboardShellContext);
 
 interface DashboardShellProps {
   children: React.ReactNode;
@@ -36,6 +39,7 @@ export function DashboardShell({
   const [headerSubtitle, setHeaderSubtitle] = React.useState<
     string | undefined
   >(undefined);
+  const [headerVisible, setHeaderVisible] = React.useState(true);
 
   const setHeaderContent = React.useCallback(
     (title: string, subtitle?: string) => {
@@ -50,7 +54,9 @@ export function DashboardShell({
       value={{
         headerTitle,
         headerSubtitle,
-        setHeaderContent
+        setHeaderContent,
+        headerVisible,
+        setHeaderVisible
       }}
     >
       <div className="flex h-screen overflow-hidden">
@@ -59,14 +65,13 @@ export function DashboardShell({
           paymentPlan={paymentPlan}
           userAvatar={userAvatar}
         />
-        <main className="flex-1 overflow-y-auto bg-background">
-          {headerTitle ? (
-            <DashboardHeader
-              title={headerTitle}
-              subtitle={headerSubtitle}
-            />
-          ) : null}
-          {children}
+        <main className="flex-1 bg-secondary p-3 pl-0 overflow-x-hidden">
+          <div className="rounded-xl bg-background border border-border h-full overflow-y-auto overflow-x-hidden">
+            {headerTitle && headerVisible ? (
+              <DashboardHeader title={headerTitle} subtitle={headerSubtitle} />
+            ) : null}
+            {children}
+          </div>
         </main>
       </div>
     </DashboardShellContext.Provider>

@@ -1,20 +1,83 @@
 "use server";
 
 import { nanoid } from "nanoid";
-import { eq, and, like, desc } from "drizzle-orm";
-import { db, listings, content } from "@db/client";
-import { DBListing, InsertDBListing } from "@shared/types/models";
+import {
+  db,
+  listings,
+  content,
+  listingImages,
+  eq,
+  and,
+  like,
+  desc
+} from "@db/client";
+import {
+  DBContent,
+  DBListing,
+  DBListingImage,
+  ImageMetadata,
+  InsertDBListing,
+  InsertDBListingImage
+} from "@shared/types/models";
 import { withDbErrorHandling } from "../_utils";
 import {
   DEFAULT_THUMBNAIL_TTL_SECONDS,
   resolveSignedDownloadUrl
 } from "../../utils/storageUrls";
+import { MAX_IMAGE_BYTES } from "@shared/utils/mediaUpload";
+import {
+  getListingFolder,
+  getListingImagePath
+} from "@shared/utils/storagePaths";
+import storageService from "../../services/storageService";
 
-type ContentRecord = typeof content.$inferSelect;
+type ListingImageUploadRequest = {
+  id: string;
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+};
+
+type ListingImageSignedUpload = {
+  id: string;
+  fileName: string;
+  key: string;
+  uploadUrl: string;
+  publicUrl: string;
+};
+
+type ListingImageUploadUrlResult = {
+  uploads: ListingImageSignedUpload[];
+  failed: Array<{ id: string; fileName: string; error: string }>;
+};
+
+type ListingImageRecordInput = {
+  key: string;
+  fileName: string;
+  publicUrl: string;
+  metadata?: ImageMetadata;
+};
+
+async function assertListingOwnership(
+  userId: string,
+  listingId: string
+): Promise<DBListing> {
+  const [listing] = await db
+    .select()
+    .from(listings)
+    .where(and(eq(listings.id, listingId), eq(listings.userId, userId)))
+    .limit(1);
+
+  if (!listing) {
+    throw new Error("Listing not found");
+  }
+
+  return listing as DBListing;
+}
 
 async function withSignedContentThumbnails(
-  contentList: ContentRecord[]
-): Promise<ContentRecord[]> {
+  contentList: DBContent[]
+): Promise<DBContent[]> {
   if (!contentList || contentList.length === 0) {
     return contentList;
   }
@@ -79,6 +142,65 @@ export async function createListing(userId: string): Promise<DBListing> {
   );
 }
 
+export async function createDraftListing(userId: string): Promise<DBListing> {
+  if (!userId || userId.trim() === "") {
+    throw new Error("User ID is required to create a draft listing");
+  }
+
+  return withDbErrorHandling(
+    async () => {
+      const listing = await createListing(userId);
+      const draftNumber = await getNextDraftNumber(userId);
+      const title = `Draft ${draftNumber}`;
+      await updateListing(userId, listing.id, { title });
+
+      const confirmed = await getListingById(userId, listing.id);
+      if (!confirmed) {
+        throw new Error("Draft listing could not be saved.");
+      }
+
+      return {
+        ...confirmed,
+        title
+      };
+    },
+    {
+      actionName: "createDraftListing",
+      context: { userId },
+      errorMessage: "Failed to create draft listing. Please try again."
+    }
+  );
+}
+
+export async function getListingById(
+  userId: string,
+  listingId: string
+): Promise<DBListing | null> {
+  if (!userId || userId.trim() === "") {
+    throw new Error("User ID is required to fetch a listing");
+  }
+  if (!listingId || listingId.trim() === "") {
+    throw new Error("Listing ID is required to fetch a listing");
+  }
+
+  return withDbErrorHandling(
+    async () => {
+      const [listing] = await db
+        .select()
+        .from(listings)
+        .where(and(eq(listings.id, listingId), eq(listings.userId, userId)))
+        .limit(1);
+
+      return (listing as DBListing) ?? null;
+    },
+    {
+      actionName: "getListingById",
+      context: { userId, listingId },
+      errorMessage: "Failed to fetch listing. Please try again."
+    }
+  );
+}
+
 /**
  * Update listing
  * Server action that updates one or more fields of a listing
@@ -132,9 +254,7 @@ export async function updateListing(
  * @returns Promise<DBListing[]> - Array of user's listings
  * @throws Error if user is not authenticated
  */
-export async function getUserListings(
-  userId: string
-): Promise<DBListing[]> {
+export async function getUserListings(userId: string): Promise<DBListing[]> {
   if (!userId || userId.trim() === "") {
     throw new Error("User ID is required to fetch listings");
   }
@@ -154,8 +274,8 @@ export async function getUserListings(
       const listingMap = new Map<
         string,
         {
-          listing: (typeof listings.$inferSelect);
-          contents: ContentRecord[];
+          listing: typeof listings.$inferSelect;
+          contents: DBContent[];
         }
       >();
 
@@ -181,7 +301,7 @@ export async function getUserListings(
 
       const aggregatedListings = Array.from(listingMap.values()).map(
         ({ listing, contents }) => {
-          const primaryContent = contents.reduce<ContentRecord | null>(
+          const primaryContent = contents.reduce<DBContent | null>(
             (latest, current) => {
               if (!latest) return current;
               const latestTime = latest.updatedAt
@@ -227,6 +347,187 @@ export async function getUserListings(
   );
 }
 
+export async function getListingImages(
+  userId: string,
+  listingId: string
+): Promise<DBListingImage[]> {
+  if (!userId || userId.trim() === "") {
+    throw new Error("User ID is required to fetch listing images");
+  }
+  if (!listingId || listingId.trim() === "") {
+    throw new Error("Listing ID is required to fetch listing images");
+  }
+
+  return withDbErrorHandling(
+    async () => {
+      await assertListingOwnership(userId, listingId);
+
+      const images = await db
+        .select()
+        .from(listingImages)
+        .where(eq(listingImages.listingId, listingId))
+        .orderBy(desc(listingImages.sortOrder), desc(listingImages.uploadedAt));
+
+      return Promise.all(
+        images.map(async (image) => ({
+          ...image,
+          url:
+            (await resolveSignedDownloadUrl(
+              image.url,
+              DEFAULT_THUMBNAIL_TTL_SECONDS
+            )) ?? image.url
+        }))
+      );
+    },
+    {
+      actionName: "getListingImages",
+      context: { userId, listingId },
+      errorMessage: "Failed to fetch listing images. Please try again."
+    }
+  );
+}
+
+export async function getListingImageUploadUrls(
+  userId: string,
+  listingId: string,
+  files: ListingImageUploadRequest[]
+): Promise<ListingImageUploadUrlResult> {
+  if (!userId || userId.trim() === "") {
+    throw new Error("User ID is required to upload listing images");
+  }
+  if (!listingId || listingId.trim() === "") {
+    throw new Error("Listing ID is required to upload listing images");
+  }
+  if (!files || files.length === 0) {
+    throw new Error("No files provided for upload");
+  }
+
+  return withDbErrorHandling(
+    async () => {
+      await assertListingOwnership(userId, listingId);
+
+      const existingImages = await db
+        .select({ id: listingImages.id })
+        .from(listingImages)
+        .where(eq(listingImages.listingId, listingId));
+
+      const uploads: ListingImageSignedUpload[] = [];
+      const failed: Array<{ id: string; fileName: string; error: string }> = [];
+      const maxImageMb = Math.round(MAX_IMAGE_BYTES / (1024 * 1024));
+
+      if (existingImages.length + files.length > 20) {
+        throw new Error("Listings can contain up to 20 photos.");
+      }
+
+      for (const file of files) {
+        if (!file.fileType.startsWith("image/")) {
+          failed.push({
+            id: file.id,
+            fileName: file.fileName,
+            error: "Only image files are supported."
+          });
+          continue;
+        }
+
+        if (file.fileSize > MAX_IMAGE_BYTES) {
+          failed.push({
+            id: file.id,
+            fileName: file.fileName,
+            error: `Images must be ${maxImageMb} MB or smaller.`
+          });
+          continue;
+        }
+
+        const key = getListingImagePath(userId, listingId, file.fileName);
+        const signed = await storageService.getSignedUploadUrl(
+          key,
+          file.fileType
+        );
+
+        if (!signed.success) {
+          failed.push({
+            id: file.id,
+            fileName: file.fileName,
+            error: signed.error
+          });
+          continue;
+        }
+
+        uploads.push({
+          id: file.id,
+          fileName: file.fileName,
+          key,
+          uploadUrl: signed.url,
+          publicUrl: storageService.buildPublicUrlForKey(key)
+        });
+      }
+
+      return { uploads, failed };
+    },
+    {
+      actionName: "getListingImageUploadUrls",
+      context: { userId, listingId, fileCount: files.length },
+      errorMessage: "Failed to prepare listing image uploads. Please try again."
+    }
+  );
+}
+
+export async function createListingImageRecords(
+  userId: string,
+  listingId: string,
+  uploads: ListingImageRecordInput[]
+): Promise<DBListingImage[]> {
+  if (!userId || userId.trim() === "") {
+    throw new Error("User ID is required to save listing images");
+  }
+  if (!listingId || listingId.trim() === "") {
+    throw new Error("Listing ID is required to save listing images");
+  }
+  if (!uploads || uploads.length === 0) {
+    return [];
+  }
+
+  return withDbErrorHandling(
+    async () => {
+      await assertListingOwnership(userId, listingId);
+
+      const existing = await db
+        .select({ sortOrder: listingImages.sortOrder })
+        .from(listingImages)
+        .where(eq(listingImages.listingId, listingId));
+
+      const maxSortOrder = existing.reduce(
+        (max, row) => Math.max(max, row.sortOrder ?? 0),
+        0
+      );
+
+      const prefix = `${getListingFolder(listingId, userId)}/images/`;
+      const rows: InsertDBListingImage[] = uploads.map((upload, index) => {
+        if (!upload.key.startsWith(prefix)) {
+          throw new Error("Invalid listing image upload key");
+        }
+
+        return {
+          id: nanoid(),
+          listingId,
+          filename: upload.fileName,
+          url: upload.publicUrl,
+          sortOrder: maxSortOrder + index + 1,
+          metadata: upload.metadata ?? null
+        };
+      });
+
+      const inserted = await db.insert(listingImages).values(rows).returning();
+      return inserted as DBListingImage[];
+    },
+    {
+      actionName: "createListingImageRecords",
+      context: { userId, listingId, uploadCount: uploads.length },
+      errorMessage: "Failed to save listing images. Please try again."
+    }
+  );
+}
+
 /**
  * Get the next draft number for the user
  * Counts existing draft listings and returns the next sequential number
@@ -245,7 +546,9 @@ export async function getNextDraftNumber(userId: string): Promise<number> {
       const draftListings = await db
         .select()
         .from(listings)
-        .where(and(eq(listings.userId, userId), like(listings.title, "Draft %")));
+        .where(
+          and(eq(listings.userId, userId), like(listings.title, "Draft %"))
+        );
 
       // Extract draft numbers and find the highest
       const draftNumbers = draftListings

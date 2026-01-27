@@ -11,9 +11,11 @@ export default function Loading() {
       <div className="absolute inset-0 pointer-events-none">
         <div className="flex h-full w-full blur-md">
           <DashboardSidebarStatic userName="Alex Rivera" paymentPlan="Pro" />
-          <main className="flex-1 overflow-hidden bg-white">
-            <DashboardHeader title="Welcome back, Alex Rivera" />
-            <div className="h-full bg-white" />
+          <main className="flex-1 bg-secondary p-3">
+            <div className="h-full rounded-xl bg-background border border-border overflow-hidden shadow-xs">
+              <DashboardHeader title="Welcome back, Alex Rivera" />
+              <div className="h-full bg-background" />
+            </div>
           </main>
         </div>
       </div>

@@ -31,7 +31,7 @@ const DashboardHeader = ({
   return (
     <header
       className={cn(
-        "sticky top-0 z-30 bg-background/90 backdrop-blur-md px-8 py-5 flex justify-between items-center border-b border-border",
+        "sticky top-0 z-30 bg-background/90 backdrop-blur-md px-8 py-5 flex justify-between items-center border-b border-border rounded-t-xl",
         className
       )}
     >

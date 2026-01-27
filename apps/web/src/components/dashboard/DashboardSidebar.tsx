@@ -139,17 +139,14 @@ const DashboardSidebar = ({
 
   return (
     <aside
-      className={cn(
-        "w-[260px] shrink-0 flex flex-col border-r border-border/50 bg-secondary",
-        className
-      )}
+      className={cn("w-[260px] shrink-0 flex flex-col bg-secondary", className)}
     >
       {/* Logo Section */}
       <Link
         href={"/"}
         className={cn(
           "pt-5 flex items-center just px-6 gap-3",
-          hasOverflow ? "pb-6 border-b border-border" : "pb-2"
+          hasOverflow ? "pb-6 border-b border-border/50" : "pb-2"
         )}
       >
         <Image
@@ -165,10 +162,7 @@ const DashboardSidebar = ({
       </Link>
 
       {/* Navigation */}
-      <nav
-        ref={navRef}
-        className="flex-1 px-4 space-y-1 overflow-y-auto"
-      >
+      <nav ref={navRef} className="flex-1 px-4 space-y-1 overflow-y-auto">
         {/* Divider */}
         <div className="flex flex-col pt-4 gap-1">
           {/* Main Navigation */}
@@ -553,10 +547,7 @@ const DashboardSidebarStatic = ({
       </div>
 
       {/* Navigation */}
-      <nav
-        ref={navRef}
-        className="flex-1 px-4 space-y-1 overflow-y-auto"
-      >
+      <nav ref={navRef} className="flex-1 px-4 space-y-1 overflow-y-auto">
         <div className="flex flex-col pt-4 gap-1">
           <Button
             variant="ghost"

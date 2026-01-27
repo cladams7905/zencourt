@@ -44,7 +44,7 @@ const ContentFilterBar = ({
       {/* Header with generation count */}
       <div className="flex items-end justify-between">
         <div>
-          <h2 className="text-2xl font-header font-medium text-foreground">
+          <h2 className="text-xl font-header font-medium text-foreground">
             Your Recommended Content
           </h2>
           <p className="text-muted-foreground text-sm mt-1">

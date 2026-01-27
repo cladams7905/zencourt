@@ -9,5 +9,5 @@ export default async function ListingSyncPage() {
     redirect("/handler/sign-in");
   }
 
-  return <ListingSyncView />;
+  return <ListingSyncView userId={user.id} />;
 }

@@ -23,7 +23,14 @@ import {
   DialogHeader,
   DialogTitle
 } from "../ui/dialog";
-import { ChevronDown, Film, Image as ImageIcon, Upload, X } from "lucide-react";
+import {
+  ArrowRight,
+  ChevronDown,
+  Film,
+  Image as ImageIcon,
+  Upload,
+  X
+} from "lucide-react";
 import { toast } from "sonner";
 import type { DBUserMedia, UserMediaType } from "@shared/types/models";
 import {
@@ -50,8 +57,8 @@ type PendingUpload = {
 const MEDIA_PAGE_SIZE = 12;
 
 const mediaLibraryHelpLink = {
-  label: "Learn how to create compelling b-roll content",
-  href: "https://example.com/media-library-guide"
+  label: "Learn more",
+  href: "https://zencourt.app/blog/how-to-create-b-roll-footage"
 };
 
 const formatUploadDate = (value: Date | string) => {
@@ -609,23 +616,22 @@ const MediaView = ({ userId, initialMedia = [] }: MediaViewProps) => {
 
       <div className="mx-auto flex max-w-[1600px] flex-col gap-10 px-8 py-8">
         <div className="rounded-lg bg-secondary border border-border/60 px-4 py-3 max-w-3xl">
-          <p className="text-sm font-semibold text-foreground">
+          <h2 className="text-xl font-header font-medium text-foreground">
             How to use the media library
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">
+          </h2>
+          <p className="mt-2 text-sm text-muted-foreground">
             Upload interesting b-roll footage of your daily work that can be
             reused as background content across different social media posts.
           </p>
-          <div className="mt-3 text-sm text-muted-foreground">
-            <a
-              className="font-semibold text-foreground underline underline-offset-4"
-              href={mediaLibraryHelpLink.href}
-              target="_blank"
-              rel="noreferrer"
-            >
-              {mediaLibraryHelpLink.label}
-            </a>
-          </div>
+          <a
+            className="mt-3 text-sm font-medium text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
+            href={mediaLibraryHelpLink.href}
+            target="_blank"
+            rel="noreferrer"
+          >
+            {mediaLibraryHelpLink.label}
+            <ArrowRight className="h-4 w-4" />
+          </a>
         </div>
 
         <section className="space-y-6">
