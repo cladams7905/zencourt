@@ -59,4 +59,4 @@
 - "Turn-key"
 - "Motivated seller"
 - "Chef's kiss"
-- Em dashes are forbidden. Use commas or periods instead. If an em dash appears, the output is invalid and must be rewritten.
+- Em dashes are forbidden. Use commas, periods, or exclamation points instead.

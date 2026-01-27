@@ -2984,10 +2984,10 @@ export function buildAudienceCommunityData(
     case "growing_families":
       neighborhoodsDetail = communityData.neighborhoods_family_list;
       break;
-    case "luxury_buyers":
+    case "luxury_homebuyers":
       neighborhoodsDetail = communityData.neighborhoods_luxury_list;
       break;
-    case "active_retirees":
+    case "downsizers_retirees":
       neighborhoodsDetail = communityData.neighborhoods_senior_list;
       break;
     case "investors_relocators":

@@ -11,6 +11,7 @@ import { ContentGrid, type ContentItem } from "./ContentGrid";
 import { ArrowRight } from "lucide-react";
 import { Button } from "../ui/button";
 import { DBListing } from "@shared/types/models";
+import { toast } from "sonner";
 
 interface DashboardViewProps {
   initialListings?: DBListing[];
@@ -618,6 +619,33 @@ const DashboardView = ({
                   }
                 };
               });
+
+              if (generatedItems.length < GENERATED_BATCH_SIZE) {
+                setGenerationError("sorry, an error occurred. Please retry.");
+                toast.error("Sorry, an error occurred. Please retry.");
+                setGeneratedContentItems((prev) => {
+                  const currentTypeMap = prev[contentType] ?? {};
+                  const current = currentTypeMap[category] ?? [];
+                  if (current.length === 0) {
+                    return prev;
+                  }
+                  const batchStart = batchBaseIndexRef.current[category] ?? 0;
+                  const batchEnd = batchStart + GENERATED_BATCH_SIZE;
+                  const next = current.filter((item, index) => {
+                    if (index < batchStart || index >= batchEnd) {
+                      return true;
+                    }
+                    return !item.isLoading;
+                  });
+                  return {
+                    ...prev,
+                    [contentType]: {
+                      ...currentTypeMap,
+                      [category]: next
+                    }
+                  };
+                });
+              }
             }
           }
         }
@@ -629,7 +657,9 @@ const DashboardView = ({
         if ((error as Error).name === "AbortError") {
           return;
         }
-        setGenerationError((error as Error).message);
+        const errorMessage = "sorry, an error occurred. Please retry.";
+        setGenerationError(errorMessage);
+        toast.error("Sorry, an error occurred. Please retry.");
         setGeneratedContentItems((prev) => {
           const currentTypeMap = prev[contentType] ?? {};
           return {

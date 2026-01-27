@@ -46,6 +46,7 @@ const CLAUDE_MODEL = "claude-haiku-4-5-20251001";
 const RECENT_HOOKS_TTL_SECONDS = 60 * 60 * 24 * 7;
 const RECENT_HOOKS_MAX = 50;
 const DEFAULT_TONE_LEVEL = 3;
+const AUDIENCE_ROTATION_PREFIX = "content:audience-rotation";
 
 const TONE_DESCRIPTIONS: Record<number, string> = {
   1: "Very informal, uses texting lingo, and uses lots of exclamation points",
@@ -163,6 +164,32 @@ function getRedisClient(): Redis | null {
   redisClient = new Redis({ url, token });
   logger.info("Upstash Redis client initialized");
   return redisClient;
+}
+
+async function selectRotatedAudienceSegment(
+  redis: Redis | null,
+  userId: string,
+  category: string,
+  segments: string[]
+): Promise<string[]> {
+  const normalized = segments.filter(Boolean);
+  if (normalized.length <= 1 || !redis) {
+    return normalized.slice(0, 1);
+  }
+
+  const key = `${AUDIENCE_ROTATION_PREFIX}:${userId}:${category}`;
+  try {
+    const last = await redis.get<string>(key);
+    const lastIndex = last ? normalized.indexOf(last) : -1;
+    const next =
+      lastIndex >= 0
+        ? normalized[(lastIndex + 1) % normalized.length]
+        : normalized[0];
+    await redis.set(key, next);
+    return [next];
+  } catch {
+    return normalized.slice(0, 1);
+  }
 }
 
 function getRecentHooksKey(userId: string, category: string): string {
@@ -425,7 +452,9 @@ function parsePrimaryAudienceSegments(
     return [];
   }
 
-  return [String(targetAudiences[0])];
+  return Array.from(
+    new Set(targetAudiences.map((segment) => String(segment)).filter(Boolean))
+  );
 }
 
 function getClaudeApiKey(): string {
@@ -551,11 +580,18 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    const redis = getRedisClient();
     const userAdditionalSnapshot = await getUserAdditionalSnapshot(user.id);
-    const audienceSegments = parsePrimaryAudienceSegments(
+    const allAudienceSegments = parsePrimaryAudienceSegments(
       userAdditionalSnapshot.targetAudiences
     );
-    const redis = getRedisClient();
+    const audienceSegments = await selectRotatedAudienceSegment(
+      redis,
+      user.id,
+      body.category,
+      allAudienceSegments
+    );
+    const activeAudience = audienceSegments[0] ?? null;
     const recentHooksKey = getRecentHooksKey(user.id, body.category);
     const recentHooks = redis
       ? await redis.lrange<string>(recentHooksKey, 0, RECENT_HOOKS_MAX - 1)
@@ -584,15 +620,31 @@ export async function POST(request: NextRequest) {
         });
       }
     }
+    let seasonalExtraSections: Record<string, string> | null = null;
+
+    if (body.category === "seasonal" && marketLocation) {
+      const seasonalSection = await getPerplexityMonthlyEventsSectionByZip(
+        marketLocation.zip_code,
+        activeAudience,
+        marketLocation.city,
+        marketLocation.state
+      );
+      if (seasonalSection?.key && seasonalSection.value) {
+        seasonalExtraSections = {
+          [seasonalSection.key]: seasonalSection.value
+        };
+      }
+    }
+
     if (body.category === "community" && marketLocation) {
       const provider = getCommunityDataProvider();
       if (provider === "perplexity") {
-        const eventsSection = await getPerplexityMonthlyEventsSectionByZip(
-          marketLocation.zip_code,
-          audienceSegments[0],
-          marketLocation.city,
-          marketLocation.state
-        );
+      const eventsSection = await getPerplexityMonthlyEventsSectionByZip(
+        marketLocation.zip_code,
+        activeAudience,
+        marketLocation.city,
+        marketLocation.state
+      );
         const availableKeys = COMMUNITY_CATEGORY_KEYS.concat(
           eventsSection ? [eventsSection.key] : []
         );
@@ -612,7 +664,7 @@ export async function POST(request: NextRequest) {
               zipCode: marketLocation.zip_code,
               city: marketLocation.city,
               state: marketLocation.state,
-              audience: audienceSegments[0] ?? null,
+              audience: activeAudience,
               serviceAreas: userAdditionalSnapshot.serviceAreas,
               categories: selectedCategoryKeys
             })
@@ -622,7 +674,7 @@ export async function POST(request: NextRequest) {
           await getPerplexityCommunityDataByZipAndAudienceForCategories(
             marketLocation.zip_code,
             selectedCategoryKeys,
-            audienceSegments[0],
+            activeAudience,
             userAdditionalSnapshot.serviceAreas,
             marketLocation.city,
             marketLocation.state,
@@ -641,7 +693,7 @@ export async function POST(request: NextRequest) {
           void prefetchPerplexityCategoriesByZip(
             marketLocation.zip_code,
             nextCategoryKeys,
-            audienceSegments[0],
+            activeAudience,
             userAdditionalSnapshot.serviceAreas,
             marketLocation.city,
             marketLocation.state
@@ -650,7 +702,7 @@ export async function POST(request: NextRequest) {
       } else {
         communityData = await getCommunityDataByZipAndAudience(
           marketLocation.zip_code,
-          audienceSegments[0],
+          activeAudience,
           userAdditionalSnapshot.serviceAreas,
           marketLocation.city,
           marketLocation.state
@@ -730,7 +782,9 @@ export async function POST(request: NextRequest) {
       market_data: marketData,
       community_data: communityData,
       community_data_extra_sections:
-        communityData?.seasonal_geo_sections ?? null,
+        body.category === "seasonal"
+          ? seasonalExtraSections
+          : communityData?.seasonal_geo_sections ?? null,
       city_description: cityDescription,
       community_category_keys: communityCategoryKeys
     };

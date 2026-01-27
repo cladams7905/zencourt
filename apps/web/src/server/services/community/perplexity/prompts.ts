@@ -6,8 +6,8 @@ import { getWhySuitableFieldKey } from "./config";
 const AUDIENCE_LABELS: Record<AudienceSegment, string> = {
   first_time_homebuyers: "first-time homebuyers",
   growing_families: "growing families",
-  active_retirees: "active retirees",
-  luxury_buyers: "luxury buyers",
+  downsizers_retirees: "downsizers and retirees",
+  luxury_homebuyers: "luxury homebuyers",
   investors_relocators: "investors and relocators"
 };
 

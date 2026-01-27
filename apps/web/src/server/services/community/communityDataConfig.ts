@@ -10,8 +10,8 @@
 export type AudienceSegment =
   | "first_time_homebuyers"
   | "growing_families"
-  | "active_retirees"
-  | "luxury_buyers"
+  | "downsizers_retirees"
+  | "luxury_homebuyers"
   | "investors_relocators";
 
 export type AudienceAugmentCategory = Exclude<CategoryKey, "neighborhoods">;
@@ -184,8 +184,8 @@ export const AUDIENCE_SEGMENT_ALIASES: Record<string, AudienceSegment> = {
   first_time_homebuyers: "first_time_homebuyers",
   first_time_buyers: "first_time_homebuyers",
   growing_families: "growing_families",
-  downsizers_retirees: "active_retirees",
-  luxury_homebuyers: "luxury_buyers",
+  downsizers_retirees: "downsizers_retirees",
+  luxury_homebuyers: "luxury_homebuyers",
   real_estate_investors: "investors_relocators",
   job_transferees: "investors_relocators",
   vacation_property_buyers: "investors_relocators",
@@ -196,8 +196,8 @@ export const AUDIENCE_SEGMENT_ALIASES: Record<string, AudienceSegment> = {
 export const NORMALIZED_AUDIENCE_SEGMENTS = new Set<AudienceSegment>([
   "first_time_homebuyers",
   "growing_families",
-  "active_retirees",
-  "luxury_buyers",
+  "downsizers_retirees",
+  "luxury_homebuyers",
   "investors_relocators"
 ]);
 
@@ -468,7 +468,7 @@ export const AUDIENCE_CONFIG: Record<AudienceSegment, AudienceConfig> = {
       ]
     }
   },
-  active_retirees: {
+  downsizers_retirees: {
     augmentLimits: DEFAULT_AUGMENT_LIMITS,
     augmentQueries: {
       // Classic, refined, accessible
@@ -481,7 +481,7 @@ export const AUDIENCE_CONFIG: Record<AudienceSegment, AudienceConfig> = {
       ]
     }
   },
-  luxury_buyers: {
+  luxury_homebuyers: {
     augmentLimits: DEFAULT_AUGMENT_LIMITS,
     augmentQueries: {
       // Upscale, exclusive, premium

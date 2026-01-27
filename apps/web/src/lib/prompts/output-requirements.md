@@ -5,8 +5,8 @@ Content output requirements:
 - For carousels, each slide should have a clear header and 1-2 sentences of content.
 - Use a concise CTA when needed.
 - Captions must be readable with line breaks and avoid excessive length.
-- Include a `broll_query` field for each post.
-- If the post is a carousel, each slide in `body` must include its own `broll_query`.
+- Include a `broll_query` field for each post. Keep it broad and simple (2-5 words), not overly specific. Just capture the general background scene that would make sense for this post.
+- If the post is a carousel, each slide in `body` must include its own `broll_query` with the same broad/simple guidance.
 
 Output constraints:
 

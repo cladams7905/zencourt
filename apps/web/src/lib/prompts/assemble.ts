@@ -201,6 +201,18 @@ function buildCommunityDataPrompt(
   return parts.join("\n").trim();
 }
 
+function buildExtraSectionsPrompt(
+  extraSections?: Record<string, string> | null
+): string {
+  const entries = extraSections
+    ? Object.entries(extraSections).filter(([, value]) =>
+        hasMeaningfulValue(value)
+      )
+    : [];
+
+  return entries.map(([key, value]) => `${key}:\n${value}`).join("\n");
+}
+
 function countTemplateWords(template: string): number {
   const normalized = template
     .replace(/[{}]/g, "")
@@ -592,6 +604,13 @@ export async function buildSystemPrompt(input: PromptAssemblyInput) {
     input.category === "community" && communityData
       ? `\n\n<community_data>\n${communityData}\n</community_data>`
       : "";
+  const seasonalExtras = buildExtraSectionsPrompt(
+    input.category === "seasonal" ? input.community_data_extra_sections : null
+  );
+  const seasonalBlock =
+    input.category === "seasonal" && seasonalExtras
+      ? `\n\n<seasonal_data>\n${seasonalExtras}\n</seasonal_data>`
+      : "";
   const recentHooks = input.recent_hooks?.slice(0, 8) ?? [];
   const recentHooksBlock =
     recentHooks.length > 0
@@ -615,7 +634,7 @@ ${formatTemplateList(hookTemplates)}
 </hook_templates>
 </hooks>
 
-${recentHooksBlock}${marketBlock}${communityBlock}
+${recentHooksBlock}${marketBlock}${communityBlock}${seasonalBlock}
 
 ${complianceQuality}
 
