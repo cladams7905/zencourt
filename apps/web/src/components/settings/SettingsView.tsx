@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import type { DBUserAdditional } from "@shared/types/models";
-import { DashboardSidebar } from "../dashboard/DashboardSidebar";
 import { DashboardHeader } from "../dashboard/DashboardHeader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { AccountTab } from "./AccountTab";
@@ -23,7 +22,6 @@ interface SettingsViewProps {
   userAdditional: DBUserAdditional;
   userEmail: string;
   userName: string;
-  userAvatar?: string;
   defaultAgentName?: string;
   defaultHeadshotUrl?: string;
   paymentPlan: string;
@@ -36,7 +34,6 @@ export function SettingsView({
   userAdditional,
   userEmail,
   userName,
-  userAvatar,
   defaultAgentName,
   defaultHeadshotUrl,
   paymentPlan,
@@ -136,23 +133,13 @@ export function SettingsView({
     .join(" · ");
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      {/* Sidebar */}
-      <DashboardSidebar
-        userName={userName}
-        paymentPlan={paymentPlan}
-        userAvatar={userAvatar}
+    <>
+      <DashboardHeader
+        title="Settings"
+        subtitle="Manage your account and branding details"
       />
 
-      {/* Main Content */}
-      <main className="flex-1 overflow-y-auto bg-background">
-        <DashboardHeader
-          title="Settings"
-          subtitle="Manage your account and branding details"
-        />
-
-        {/* Content with Vertical Tabs */}
-        <div className="px-8 py-8 max-w-5xl mx-auto">
+      <div className="px-8 py-8 max-w-5xl mx-auto">
           <Tabs
             value={activeTab}
             onValueChange={setActiveTab}
@@ -282,11 +269,10 @@ export function SettingsView({
             </div>
           </Tabs>
         </div>
-        <SettingsUnsavedChangesDialog
-          isDirty={isBrandingDirty || isLocationDirty}
-          onSave={handleSaveAllChanges}
-        />
-      </main>
-    </div>
+      <SettingsUnsavedChangesDialog
+        isDirty={isBrandingDirty || isLocationDirty}
+        onSave={handleSaveAllChanges}
+      />
+    </>
   );
 }

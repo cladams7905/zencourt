@@ -29,7 +29,7 @@ function PillTabs<T extends string>({
   return (
     <div
       className={cn(
-        "flex w-fit items-center rounded-lg bg-secondary border border-border/60 p-1",
+        "flex w-fit items-center rounded-full bg-secondary border border-border/60 p-1",
         className
       )}
     >
@@ -43,7 +43,7 @@ function PillTabs<T extends string>({
             size={size}
             variant={isActive ? "default" : "ghost"}
             className={cn(
-              "rounded-lg px-4",
+              "rounded-full px-4",
               !isActive && "text-muted-foreground hover:text-foreground",
               buttonClassName
             )}

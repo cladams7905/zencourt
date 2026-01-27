@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { cn } from "./../ui/utils";
-import { DashboardSidebar } from "./DashboardSidebar";
 import { DashboardHeader } from "./DashboardHeader";
 import { ProfileCompletionChecklist } from "./ProfileCompletionChecklist";
 import { ScheduleCard, type ScheduledPost } from "./ScheduleCard";
@@ -17,9 +16,6 @@ interface DashboardViewProps {
   initialListings?: DBListing[];
   headerName?: string;
   location?: string;
-  sidebarName?: string;
-  sidebarPlan?: string;
-  userAvatar?: string;
   profileCompleted?: boolean;
   writingStyleCompleted?: boolean;
   mediaUploaded?: boolean;
@@ -126,9 +122,6 @@ const DashboardView = ({
   className,
   headerName,
   location,
-  sidebarName,
-  sidebarPlan,
-  userAvatar,
   profileCompleted = false,
   writingStyleCompleted = false,
   mediaUploaded = false
@@ -738,21 +731,10 @@ const DashboardView = ({
   const activeCategory = activeFilter ? categoryMap[activeFilter] : null;
 
   return (
-    <div className={cn("flex h-screen overflow-hidden", className)}>
-      {/* Sidebar */}
-      <DashboardSidebar
-        userName={sidebarName}
-        paymentPlan={sidebarPlan}
-        userAvatar={userAvatar}
-      />
+    <div className={cn("relative", className)}>
+      <DashboardHeader title={`Welcome back, ${headerName}`} />
 
-      {/* Main Content */}
-      <main className="flex-1 overflow-y-auto relative bg-background">
-        {/* Header */}
-        <DashboardHeader title={`Welcome back, ${headerName}`} />
-
-        {/* Content */}
-        <div className="px-8 py-8 max-w-[1600px] mx-auto space-y-10">
+      <div className="px-8 py-8 max-w-[1600px] mx-auto space-y-10">
           {/* Profile Completion Checklist */}
           <ProfileCompletionChecklist
             profileCompleted={profileCompleted}
@@ -862,8 +844,7 @@ const DashboardView = ({
 
           {/* Bottom Spacing */}
           <div className="h-10" />
-        </div>
-      </main>
+      </div>
     </div>
   );
 };

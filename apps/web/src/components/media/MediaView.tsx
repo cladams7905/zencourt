@@ -23,7 +23,6 @@ import {
   DialogHeader,
   DialogTitle
 } from "../ui/dialog";
-import { DashboardSidebar } from "../dashboard/DashboardSidebar";
 import { ChevronDown, Film, Image as ImageIcon, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import type { DBUserMedia, UserMediaType } from "@shared/types/models";
@@ -32,18 +31,12 @@ import {
   deleteUserMedia,
   getUserMediaUploadUrls
 } from "@web/src/server/actions/db/userMedia";
-import {
-  MAX_IMAGE_BYTES,
-  MAX_VIDEO_BYTES
-} from "@shared/utils/mediaUpload";
+import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES } from "@shared/utils/mediaUpload";
 import { DashboardHeader } from "../dashboard/DashboardHeader";
 
 interface MediaViewProps {
   userId: string;
   initialMedia?: DBUserMedia[];
-  userName?: string;
-  paymentPlan?: string;
-  userAvatar?: string;
 }
 
 type MediaUsageSort = "none" | "most-used" | "least-used";
@@ -144,13 +137,7 @@ const MediaCard = ({
   );
 };
 
-const MediaView = ({
-  userId,
-  initialMedia = [],
-  userName = "User",
-  paymentPlan = "Free",
-  userAvatar
-}: MediaViewProps) => {
+const MediaView = ({ userId, initialMedia = [] }: MediaViewProps) => {
   const [mediaItems, setMediaItems] =
     React.useState<DBUserMedia[]>(initialMedia);
   const [selectedTypes, setSelectedTypes] = React.useState<UserMediaType[]>([
@@ -298,7 +285,9 @@ const MediaView = ({
 
     setPendingFiles((prev) => {
       const existing = new Set(
-        prev.map((item) => `${item.file.name}-${item.file.size}-${item.file.type}`)
+        prev.map(
+          (item) => `${item.file.name}-${item.file.size}-${item.file.type}`
+        )
       );
       const next = [...prev];
       accepted.forEach((file) => {
@@ -316,7 +305,9 @@ const MediaView = ({
     });
   }, []);
 
-  const handleFileInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileInputChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const files = Array.from(event.target.files ?? []);
     addFiles(files);
     event.target.value = "";
@@ -345,7 +336,7 @@ const MediaView = ({
       new Promise((resolve) => {
         const video = document.createElement("video");
         const url = URL.createObjectURL(file);
-        let timeoutId: number | undefined = undefined
+        let timeoutId: number | undefined = undefined;
 
         const cleanup = () => {
           URL.revokeObjectURL(url);
@@ -544,7 +535,9 @@ const MediaView = ({
         );
       }
 
-      const failedUploads = uploads.filter((upload) => failedIds.has(upload.id));
+      const failedUploads = uploads.filter((upload) =>
+        failedIds.has(upload.id)
+      );
       if (failedUploads.length > 0) {
         toast.error(`${failedUploads.length} file(s) failed to upload.`);
       }
@@ -567,9 +560,7 @@ const MediaView = ({
                 status: "error"
               };
             })
-            .filter(
-              (item): item is PendingUpload => item !== null
-            )
+            .filter((item): item is PendingUpload => item !== null)
         );
       }
     } catch (error) {
@@ -610,328 +601,320 @@ const MediaView = ({
   };
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      <DashboardSidebar
-        userName={userName}
-        paymentPlan={paymentPlan}
-        userAvatar={userAvatar}
+    <>
+      <DashboardHeader
+        title="Media Library"
+        subtitle="Manage your own photos and b-roll assets for social media."
       />
 
-      <main className="flex-1 overflow-y-auto bg-background">
-        <DashboardHeader
-          title="Media Library"
-          subtitle="Manage your own photos and b-roll assets for social media."
-        />
-
-        <div className="mx-auto flex max-w-[1600px] flex-col gap-10 px-8 py-8">
-          <div className="rounded-lg bg-secondary border border-border/60 px-4 py-3 max-w-3xl">
-            <p className="text-sm font-semibold text-foreground">
-              How to use the media library
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Upload interesting b-roll footage of your daily work that can be reused as background content across different social media posts.
-            </p>
-            <div className="mt-3 text-sm text-muted-foreground">
-              <a
-                className="font-semibold text-foreground underline underline-offset-4"
-                href={mediaLibraryHelpLink.href}
-                target="_blank"
-                rel="noreferrer"
-              >
-                {mediaLibraryHelpLink.label}
-              </a>
-            </div>
+      <div className="mx-auto flex max-w-[1600px] flex-col gap-10 px-8 py-8">
+        <div className="rounded-lg bg-secondary border border-border/60 px-4 py-3 max-w-3xl">
+          <p className="text-sm font-semibold text-foreground">
+            How to use the media library
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Upload interesting b-roll footage of your daily work that can be
+            reused as background content across different social media posts.
+          </p>
+          <div className="mt-3 text-sm text-muted-foreground">
+            <a
+              className="font-semibold text-foreground underline underline-offset-4"
+              href={mediaLibraryHelpLink.href}
+              target="_blank"
+              rel="noreferrer"
+            >
+              {mediaLibraryHelpLink.label}
+            </a>
           </div>
-          
-          <section className="space-y-6">
-            <div className="flex w-full flex-wrap items-center gap-3">
-              <Button
-                variant="default"
-                className="gap-2"
-                onClick={() => setIsUploadOpen(true)}
-              >
-                <Upload className="h-4 w-4" />
-                Upload media
-              </Button>
-              <div className="flex w-full items-center justify-end gap-3 sm:ml-auto sm:w-auto">
-                <Badge variant="secondary" className="text-xs px-2 py-1">
-                  {totalImages} images • {totalVideos} videos
-                </Badge>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="gap-2">
-                      Filter
-                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
-                    <DropdownMenuLabel>Type</DropdownMenuLabel>
-                    <DropdownMenuCheckboxItem
-                      checked={selectedTypes.includes("image")}
-                      onCheckedChange={(checked) =>
-                        handleTypeToggle("image", checked === true)
-                      }
-                    >
-                      Images
-                    </DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem
-                      checked={selectedTypes.includes("video")}
-                      onCheckedChange={(checked) =>
-                        handleTypeToggle("video", checked === true)
-                      }
-                    >
-                      Videos
-                    </DropdownMenuCheckboxItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuLabel>Usage</DropdownMenuLabel>
-                    <DropdownMenuRadioGroup
-                      value={usageSort}
-                      onValueChange={(value) =>
-                        setUsageSort(value as MediaUsageSort)
-                      }
-                    >
-                      <DropdownMenuRadioItem value="none">
-                        Any usage
-                      </DropdownMenuRadioItem>
-                      <DropdownMenuRadioItem value="most-used">
-                        Most used
-                      </DropdownMenuRadioItem>
-                      <DropdownMenuRadioItem value="least-used">
-                        Least used
-                      </DropdownMenuRadioItem>
-                    </DropdownMenuRadioGroup>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </div>
-
-          {hasAnyBrandKitMedia ? (
-              hasFilteredBrandKitMedia ? (
-                <div className="columns-1 gap-6 sm:columns-2 xl:columns-3 2xl:columns-4">
-                  {visibleBrandKitItems.map((item) => (
-                    <MediaCard
-                      key={item.id}
-                      item={item}
-                      onDelete={handleRequestDelete}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="rounded-2xl border border-dashed border-border p-6 text-sm text-muted-foreground">
-                  No media matches this filter yet.
-                </div>
-              )
-            ) : (
-              <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border px-6 py-12 text-center">
-                <div className="relative mb-6 h-24 w-56">
-                  <div className="absolute left-6 top-0 h-24 w-40 rotate-[-8deg] z-10 overflow-hidden rounded-xl shadow-sm">
-                    <LoadingImage
-                      src="/media-example.jpg"
-                      alt="Example b-roll 1"
-                      className="h-full w-full object-cover"
-                      width={160} 
-                      height={96}
-                    />
-                  </div>
-                  <div className="absolute left-14 top-2 h-24 w-40 rotate-[4deg] rounded-xl border border-border/60 bg-linear-to-br from-secondary to-secondary/50 shadow-md" />
-                  <div className="absolute left-20 top-1 h-24 w-40 -rotate-2 rounded-xl border border-border bg-linear-to-br from-secondary to-secondary/50 shadow-lg" />
-                </div>
-                <p className="text-sm font-semibold text-foreground">
-                  You haven&apos;t added any media yet
-                </p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Click &quot;Upload media&quot; to get started.
-                </p>
-              </div>
-            )}
-            {hasFilteredBrandKitMedia && hasMoreBrandKit && (
-              <div
-                ref={loadMoreRef}
-                className="flex items-center justify-center py-6 text-xs text-muted-foreground"
-              >
-                Loading more…
-              </div>
-            )}
-
-          </section>
         </div>
 
-        <Dialog
-          open={isUploadOpen}
-          onOpenChange={(open) => {
-            setIsUploadOpen(open);
-            if (!open) {
-              setPendingFiles([]);
-              setIsDragging(false);
-            }
-          }}
-        >
-          <DialogContent className="sm:max-w-[680px]">
-            <DialogHeader>
-              <DialogTitle>Upload media</DialogTitle>
-              <DialogDescription>
-                Add images up to {formatBytes(MAX_IMAGE_BYTES)} and videos up to{" "}
-                {formatBytes(MAX_VIDEO_BYTES)}.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div
-                className={`rounded-xl border border-dashed px-6 py-10 text-center transition-colors ${
-                  isDragging
-                    ? "border-foreground/40 bg-secondary"
-                    : "border-border"
-                }`}
-                onDragOver={(event) => {
-                  event.preventDefault();
-                  setIsDragging(true);
-                }}
-                onDragLeave={() => setIsDragging(false)}
-                onDrop={handleDrop}
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  multiple
-                  accept="image/*,video/*"
-                  className="hidden"
-                  onChange={handleFileInputChange}
-                />
-                <div className="flex flex-col items-center gap-2">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-background border border-border">
-                    <Upload className="h-5 w-5 text-muted-foreground" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">
-                      Drag & drop files here
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      or click to select multiple files
-                    </p>
-                  </div>
-                  <Button size="sm" variant="outline" type="button">
-                    Browse files
+        <section className="space-y-6">
+          <div className="flex w-full flex-wrap items-center gap-3">
+            <Button
+              variant="default"
+              className="gap-2"
+              onClick={() => setIsUploadOpen(true)}
+            >
+              <Upload className="h-4 w-4" />
+              Upload media
+            </Button>
+            <div className="flex w-full items-center justify-end gap-3 sm:ml-auto sm:w-auto">
+              <Badge variant="secondary" className="text-xs px-2 py-1">
+                {totalImages} images • {totalVideos} videos
+              </Badge>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="gap-2">
+                    Filter
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
                   </Button>
-                </div>
-              </div>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>Type</DropdownMenuLabel>
+                  <DropdownMenuCheckboxItem
+                    checked={selectedTypes.includes("image")}
+                    onCheckedChange={(checked) =>
+                      handleTypeToggle("image", checked === true)
+                    }
+                  >
+                    Images
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={selectedTypes.includes("video")}
+                    onCheckedChange={(checked) =>
+                      handleTypeToggle("video", checked === true)
+                    }
+                  >
+                    Videos
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel>Usage</DropdownMenuLabel>
+                  <DropdownMenuRadioGroup
+                    value={usageSort}
+                    onValueChange={(value) =>
+                      setUsageSort(value as MediaUsageSort)
+                    }
+                  >
+                    <DropdownMenuRadioItem value="none">
+                      Any usage
+                    </DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="most-used">
+                      Most used
+                    </DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="least-used">
+                      Least used
+                    </DropdownMenuRadioItem>
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
 
-              {pendingFiles.length > 0 && (
-                <div className="rounded-lg border border-border/60 bg-background p-3">
-                  <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                    {pendingFiles.length} file
-                    {pendingFiles.length === 1 ? "" : "s"} selected
-                  </div>
-                  <div className="mt-2 max-h-48 space-y-2 overflow-y-auto">
-                    {pendingFiles.map((item) => (
-                      <div
-                        key={item.id}
-                        className="flex items-center justify-between gap-3 text-sm"
-                      >
-                        <div className="min-w-0">
-                          <p className="truncate font-medium text-foreground">
-                            {item.file.name}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatBytes(item.file.size)} •{" "}
-                            {item.file.type.startsWith("image/")
-                              ? "Image"
-                              : "Video"}
+          {hasAnyBrandKitMedia ? (
+            hasFilteredBrandKitMedia ? (
+              <div className="columns-1 gap-6 sm:columns-2 xl:columns-3 2xl:columns-4">
+                {visibleBrandKitItems.map((item) => (
+                  <MediaCard
+                    key={item.id}
+                    item={item}
+                    onDelete={handleRequestDelete}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-dashed border-border p-6 text-sm text-muted-foreground">
+                No media matches this filter yet.
+              </div>
+            )
+          ) : (
+            <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border px-6 py-12 text-center">
+              <div className="relative mb-6 h-24 w-56">
+                <div className="absolute left-6 top-0 h-24 w-40 rotate-[-8deg] z-10 overflow-hidden rounded-xl shadow-sm">
+                  <LoadingImage
+                    src="/media-example.jpg"
+                    alt="Example b-roll 1"
+                    className="h-full w-full object-cover"
+                    width={160}
+                    height={96}
+                  />
+                </div>
+                <div className="absolute left-14 top-2 h-24 w-40 rotate-[4deg] rounded-xl border border-border/60 bg-linear-to-br from-secondary to-secondary/50 shadow-md" />
+                <div className="absolute left-20 top-1 h-24 w-40 -rotate-2 rounded-xl border border-border bg-linear-to-br from-secondary to-secondary/50 shadow-lg" />
+              </div>
+              <p className="text-sm font-semibold text-foreground">
+                You haven&apos;t added any media yet
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Click &quot;Upload media&quot; to get started.
+              </p>
+            </div>
+          )}
+          {hasFilteredBrandKitMedia && hasMoreBrandKit && (
+            <div
+              ref={loadMoreRef}
+              className="flex items-center justify-center py-6 text-xs text-muted-foreground"
+            >
+              Loading more…
+            </div>
+          )}
+        </section>
+      </div>
+
+      <Dialog
+        open={isUploadOpen}
+        onOpenChange={(open) => {
+          setIsUploadOpen(open);
+          if (!open) {
+            setPendingFiles([]);
+            setIsDragging(false);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-[680px]">
+          <DialogHeader>
+            <DialogTitle>Upload media</DialogTitle>
+            <DialogDescription>
+              Add images up to {formatBytes(MAX_IMAGE_BYTES)} and videos up to{" "}
+              {formatBytes(MAX_VIDEO_BYTES)}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div
+              className={`rounded-xl border border-dashed px-6 py-10 text-center transition-colors ${
+                isDragging
+                  ? "border-foreground/40 bg-secondary"
+                  : "border-border"
+              }`}
+              onDragOver={(event) => {
+                event.preventDefault();
+                setIsDragging(true);
+              }}
+              onDragLeave={() => setIsDragging(false)}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept="image/*,video/*"
+                className="hidden"
+                onChange={handleFileInputChange}
+              />
+              <div className="flex flex-col items-center gap-2">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-background border border-border">
+                  <Upload className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">
+                    Drag & drop files here
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    or click to select multiple files
+                  </p>
+                </div>
+                <Button size="sm" variant="outline" type="button">
+                  Browse files
+                </Button>
+              </div>
+            </div>
+
+            {pendingFiles.length > 0 && (
+              <div className="rounded-lg border border-border/60 bg-background p-3">
+                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  {pendingFiles.length} file
+                  {pendingFiles.length === 1 ? "" : "s"} selected
+                </div>
+                <div className="mt-2 max-h-48 space-y-2 overflow-y-auto">
+                  {pendingFiles.map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex items-center justify-between gap-3 text-sm"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate font-medium text-foreground">
+                          {item.file.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatBytes(item.file.size)} •{" "}
+                          {item.file.type.startsWith("image/")
+                            ? "Image"
+                            : "Video"}
+                        </p>
+                      </div>
+                      {item.status === "uploading" ||
+                      (isUploading && item.status !== "error") ? (
+                        <div className="w-24">
+                          <div className="h-2 w-full rounded-full bg-muted">
+                            <div
+                              className="h-2 rounded-full bg-primary transition-all"
+                              style={{ width: `${item.progress}%` }}
+                            />
+                          </div>
+                          <p className="mt-1 text-[11px] text-muted-foreground">
+                            {item.status === "done"
+                              ? "Uploaded"
+                              : `${item.progress}%`}
                           </p>
                         </div>
-                        {item.status === "uploading" ||
-                        (isUploading && item.status !== "error") ? (
-                          <div className="w-24">
-                            <div className="h-2 w-full rounded-full bg-muted">
-                              <div
-                                className="h-2 rounded-full bg-primary transition-all"
-                                style={{ width: `${item.progress}%` }}
-                              />
-                            </div>
-                            <p className="mt-1 text-[11px] text-muted-foreground">
-                              {item.status === "done"
-                                ? "Uploaded"
-                                : `${item.progress}%`}
-                            </p>
-                          </div>
-                        ) : (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            type="button"
-                            onClick={() =>
-                              setPendingFiles((prev) =>
-                                prev.filter((pending) => pending.id !== item.id)
-                              )
-                            }
-                          >
-                            Remove
-                          </Button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          type="button"
+                          onClick={() =>
+                            setPendingFiles((prev) =>
+                              prev.filter((pending) => pending.id !== item.id)
+                            )
+                          }
+                        >
+                          Remove
+                        </Button>
+                      )}
+                    </div>
+                  ))}
                 </div>
-              )}
-            </div>
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => setIsUploadOpen(false)}
-                disabled={isUploading}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                onClick={handleUpload}
-                disabled={isUploading || pendingFiles.length === 0}
-              >
-                {isUploading ? "Uploading..." : "Upload media"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setIsUploadOpen(false)}
+              disabled={isUploading}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleUpload}
+              disabled={isUploading || pendingFiles.length === 0}
+            >
+              {isUploading ? "Uploading..." : "Upload media"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-        <Dialog
-          open={isDeleteOpen}
-          onOpenChange={(open) => {
-            setIsDeleteOpen(open);
-            if (!open) {
-              setMediaToDelete(null);
-            }
-          }}
-        >
-          <DialogContent className="sm:max-w-[420px]">
-            <DialogHeader>
-              <DialogTitle>Delete media?</DialogTitle>
-              <DialogDescription>
-                This will permanently delete the media file and remove it from
-                your library.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => setIsDeleteOpen(false)}
-                disabled={isDeleting}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                variant="destructive"
-                onClick={handleConfirmDelete}
-                disabled={!mediaToDelete || isDeleting}
-              >
-                {isDeleting ? "Deleting..." : "Delete"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </main>
-    </div>
+      <Dialog
+        open={isDeleteOpen}
+        onOpenChange={(open) => {
+          setIsDeleteOpen(open);
+          if (!open) {
+            setMediaToDelete(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-[420px]">
+          <DialogHeader>
+            <DialogTitle>Delete media?</DialogTitle>
+            <DialogDescription>
+              This will permanently delete the media file and remove it from
+              your library.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setIsDeleteOpen(false)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleConfirmDelete}
+              disabled={!mediaToDelete || isDeleting}
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
 

@@ -63,7 +63,10 @@ export function AccountTab({
   const [locationHasErrors, setLocationHasErrors] = React.useState(false);
 
   const suggestedCounty = locationValue?.county ?? "";
-  const suggestedServiceAreas = React.useMemo(() => locationValue?.serviceAreas ?? [], [locationValue?.serviceAreas]);
+  const suggestedServiceAreas = React.useMemo(
+    () => locationValue?.serviceAreas ?? [],
+    [locationValue?.serviceAreas]
+  );
   const suggestedServiceAreasText = suggestedServiceAreas.join(", ");
 
   React.useEffect(() => {
@@ -198,7 +201,7 @@ export function AccountTab({
           <div className="space-y-3">
             <Label>Authentication Type</Label>
             <div className="flex items-center">
-              <Badge variant="outline" className="py-2 px-3 gap-2 text-sm">
+              <Badge variant="outline" className="py-1 px-2 gap-2 text-sm">
                 {isGoogleUser && (
                   <LoadingImage
                     src="/logo-google.png"
@@ -311,7 +314,6 @@ export function AccountTab({
           </div>
         </CardContent>
       </Card>
-
     </div>
   );
 }

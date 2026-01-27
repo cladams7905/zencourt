@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger
 } from "../ui/dropdown-menu";
 import { Plus, Bell } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 interface DashboardHeaderProps {
   className?: string;
@@ -25,6 +26,8 @@ const DashboardHeader = ({
   subtitle,
   hasNotifications = true
 }: DashboardHeaderProps) => {
+  const router = useRouter();
+
   return (
     <header
       className={cn(
@@ -46,7 +49,7 @@ const DashboardHeader = ({
           <DropdownMenuTrigger asChild>
             <Button size="default" className="gap-2">
               <Plus className="h-5 w-5" />
-              <span>New</span>
+              <span>Create</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-72 p-2">
@@ -55,23 +58,26 @@ const DashboardHeader = ({
                 Content
               </span>
               <span className="text-xs text-muted-foreground">
-                Create your own social media content.
+                Build your own social media post.
               </span>
             </DropdownMenuItem>
             <DropdownMenuSeparator className="my-1.5 bg-border/50" />
-            <DropdownMenuItem className="flex flex-col items-start gap-1 py-2">
+            <DropdownMenuItem
+              className="flex flex-col items-start gap-1 py-2"
+              onSelect={() => router.push("/listings/sync")}
+            >
               <span className="text-sm font-medium text-foreground">
-                Listing
+                Listing Campaign
               </span>
               <span className="text-xs text-muted-foreground">
-                Generate social media campaigns from your active property
+                Generate a social media campaign from your active property
                 listings.
               </span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <Button size="icon" variant="ghost" className="relative">
+        <Button size="icon" variant="ghost" className="relative rounded-full">
           <Bell className="h-5 w-5" />
           {hasNotifications && (
             <span className="absolute top-2 right-2 h-2 w-2 bg-primary rounded-full border-2 border-background" />

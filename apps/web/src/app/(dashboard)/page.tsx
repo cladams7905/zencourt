@@ -1,12 +1,12 @@
-import { getUserListings } from "../server/actions/db/listings";
-import { DashboardView } from "../components/dashboard/DashboardView";
+import { getUserListings } from "@web/src/server/actions/db/listings";
+import { DashboardView } from "@web/src/components/dashboard/DashboardView";
 import { DBListing } from "@shared/types/models";
-import { getUser } from "../server/actions/db/users";
-import { getOrCreateUserAdditional, getUserProfileCompletion } from "../server/actions/db/userAdditional";
-import { LandingPage } from "../components/landing/LandingPage";
+import { getUser } from "@web/src/server/actions/db/users";
+import { getOrCreateUserAdditional, getUserProfileCompletion } from "@web/src/server/actions/db/userAdditional";
+import { LandingPage } from "@web/src/components/landing/LandingPage";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { getLocationLabel, getPaymentPlanLabel, getUserDisplayNames } from "../lib/userDisplay";
+import { getLocationLabel, getUserDisplayNames } from "@web/src/lib/userDisplay";
 
 export const dynamic = "force-dynamic";
 
@@ -35,9 +35,8 @@ export default async function Home() {
       redirect("/welcome");
     }
 
-    const { headerName, sidebarName } = getUserDisplayNames(user);
+    const { headerName } = getUserDisplayNames(user);
     const locationLabel = getLocationLabel(userAdditional.location);
-    const paymentPlanLabel = getPaymentPlanLabel(userAdditional.paymentPlan);
 
     const listings: DBListing[] = await getUserListings(user.id);
     const profileCompletion = await getUserProfileCompletion(user.id);
@@ -47,9 +46,6 @@ export default async function Home() {
         initialListings={listings}
         headerName={headerName}
         location={locationLabel}
-        sidebarName={sidebarName}
-        sidebarPlan={paymentPlanLabel}
-        userAvatar={user.profileImageUrl ?? undefined}
         profileCompleted={profileCompletion.profileCompleted}
         writingStyleCompleted={profileCompletion.writingStyleCompleted}
         mediaUploaded={profileCompletion.mediaUploaded}

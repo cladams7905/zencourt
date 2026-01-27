@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { SettingsView } from "../../components/settings/SettingsView";
+import { SettingsView } from "@web/src/components/settings/SettingsView";
 import { getUser } from "@web/src/server/actions/db/users";
 import {
   getOrCreateUserAdditional,
@@ -41,7 +41,6 @@ export default async function SettingsPage() {
       userAdditional={userAdditional}
       userEmail={email}
       userName={userName}
-      userAvatar={user.profileImageUrl ?? undefined}
       defaultAgentName={defaultAgentName}
       defaultHeadshotUrl={defaultHeadshotUrl}
       paymentPlan={paymentPlanLabel}

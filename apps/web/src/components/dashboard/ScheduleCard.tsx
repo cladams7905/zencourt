@@ -96,7 +96,7 @@ const ScheduleCard = ({
             size="icon"
             variant="default"
             onClick={onAddClick}
-            className="absolute -top-1 -right-1 h-7 w-7"
+            className="absolute -top-1 -right-1 h-7 w-7 rounded-full"
           >
             <Plus className="h-4 w-4 text-primary-foreground" />
           </Button>

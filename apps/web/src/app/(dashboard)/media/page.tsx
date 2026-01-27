@@ -1,10 +1,8 @@
 import { redirect } from "next/navigation";
-import { MediaView } from "../../components/media/MediaView";
+import { MediaView } from "@web/src/components/media/MediaView";
 import { getUser } from "@web/src/server/actions/db/users";
 import { getUserMedia } from "@web/src/server/actions/db/userMedia";
-import { getOrCreateUserAdditional } from "@web/src/server/actions/db/userAdditional";
 import { getSignedDownloadUrlSafe } from "@web/src/server/utils/storageUrls";
-import { getPaymentPlanLabel, getUserDisplayNames } from "@web/src/lib/userDisplay";
 
 export default async function MediaPage() {
   const user = await getUser();
@@ -13,7 +11,6 @@ export default async function MediaPage() {
     redirect("/handler/sign-in");
   }
 
-  const userAdditional = await getOrCreateUserAdditional(user.id);
   const userMedia = await getUserMedia(user.id);
   const signedUserMediaUrls = await Promise.all(
     userMedia.map((media) =>
@@ -28,16 +25,10 @@ export default async function MediaPage() {
     url: signedUserMediaUrls[index]?.[0] ?? media.url,
     thumbnailUrl: signedUserMediaUrls[index]?.[1] ?? media.thumbnailUrl
   }));
-  const { sidebarName } = getUserDisplayNames(user);
-  const paymentPlanLabel = getPaymentPlanLabel(userAdditional.paymentPlan);
-
   return (
     <MediaView
       userId={user.id}
       initialMedia={signedUserMedia}
-      userName={sidebarName}
-      paymentPlan={paymentPlanLabel}
-      userAvatar={user.profileImageUrl ?? undefined}
     />
   );
 }

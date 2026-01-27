@@ -86,7 +86,7 @@ const ContentFilterBar = ({
                   size="sm"
                   variant={isActive ? "default" : "outline"}
                   className={cn(
-                    " text-xs font-medium whitespace-nowrap transition-all",
+                    " text-xs rounded-full font-medium whitespace-nowrap transition-all",
                     isActive
                       ? "bg-primary text-primary-foreground border-primary"
                       : "bg-background border-border hover:border-foreground/20",
@@ -100,7 +100,7 @@ const ContentFilterBar = ({
               );
             })}
           </div>
-          <Button size="icon" variant="ghost" className="shrink-0">
+          <Button size="icon" variant="ghost" className="shrink-0 rounded-full">
             <Settings className="h-4 w-4" />
           </Button>
         </div>
