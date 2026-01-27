@@ -48,6 +48,7 @@ type BrandingProfileState = {
   brokerageName: string;
   headshotUrl: string;
   personalLogoUrl: string;
+  agentBio: string;
 };
 
 const TONE_SCALE = [
@@ -88,6 +89,9 @@ const TONE_SCALE = [
   }
 ];
 
+const AGENT_BIO_MAX_CHARS = 250;
+const AUDIENCE_DESCRIPTION_MAX_CHARS = 250;
+const WRITING_STYLE_MAX_CHARS = 250;
 const coerceToneValue = (preset: number | string | null): number => {
   if (preset === null || preset === undefined || preset === "") {
     return 3;
@@ -126,6 +130,9 @@ export function BrandingTab({
   const [agentTitle, setAgentTitle] = React.useState(
     userAdditional.agentTitle || ""
   );
+  const [agentBio, setAgentBio] = React.useState(
+    userAdditional.agentBio || ""
+  );
   const [headshotUrl, setheadshotUrl] = React.useState(initialHeadshotUrl);
   const [personalLogoUrl, setpersonalLogoUrl] = React.useState(
     userAdditional.personalLogoUrl || ""
@@ -139,7 +146,8 @@ export function BrandingTab({
     agentName: initialAgentName,
     brokerageName: userAdditional.brokerageName || "",
     headshotUrl: initialHeadshotUrl,
-    personalLogoUrl: userAdditional.personalLogoUrl || ""
+    personalLogoUrl: userAdditional.personalLogoUrl || "",
+    agentBio: userAdditional.agentBio || ""
   });
   const avatarPreviewRef = React.useRef<string | null>(null);
   const brokerLogoPreviewRef = React.useRef<string | null>(null);
@@ -170,8 +178,14 @@ export function BrandingTab({
   const [initialAgentInfo, setInitialAgentInfo] = React.useState(() => ({
     agentName: initialAgentName,
     brokerageName: userAdditional.brokerageName || "",
-    agentTitle: userAdditional.agentTitle || ""
+    agentTitle: userAdditional.agentTitle || "",
+    agentBio: userAdditional.agentBio || ""
   }));
+  const [audienceDescription, setAudienceDescription] = React.useState(
+    userAdditional.audienceDescription || ""
+  );
+  const [initialAudienceDescription, setInitialAudienceDescription] =
+    React.useState(userAdditional.audienceDescription || "");
   const [hasMarkedWritingStyle, setHasMarkedWritingStyle] = React.useState(
     Boolean(userAdditional.writingStyleCompletedAt)
   );
@@ -305,13 +319,26 @@ export function BrandingTab({
     });
   };
 
+  const normalizeText = React.useCallback((value: string | null | undefined) => {
+    return (value ?? "").trim();
+  }, []);
+
   const isAgentInfoDirty = React.useMemo(() => {
     return (
-      (agentName || "") !== (initialAgentInfo.agentName || "") ||
-      (brokerageName || "") !== (initialAgentInfo.brokerageName || "") ||
-      (agentTitle || "") !== (initialAgentInfo.agentTitle || "")
+      normalizeText(agentName) !== normalizeText(initialAgentInfo.agentName) ||
+      normalizeText(brokerageName) !==
+        normalizeText(initialAgentInfo.brokerageName) ||
+      normalizeText(agentTitle) !== normalizeText(initialAgentInfo.agentTitle) ||
+      normalizeText(agentBio) !== normalizeText(initialAgentInfo.agentBio)
     );
-  }, [agentName, brokerageName, agentTitle, initialAgentInfo]);
+  }, [
+    agentName,
+    brokerageName,
+    agentTitle,
+    agentBio,
+    initialAgentInfo,
+    normalizeText
+  ]);
 
   const isTargetAudiencesDirty = React.useMemo(() => {
     const initial = [...initialTargetAudiences].sort();
@@ -319,8 +346,20 @@ export function BrandingTab({
     if (initial.length !== current.length) {
       return true;
     }
-    return initial.some((value, index) => value !== current[index]);
-  }, [initialTargetAudiences, targetAudiences]);
+    if (initial.some((value, index) => value !== current[index])) {
+      return true;
+    }
+    return (
+      normalizeText(audienceDescription) !==
+      normalizeText(initialAudienceDescription)
+    );
+  }, [
+    initialTargetAudiences,
+    targetAudiences,
+    audienceDescription,
+    initialAudienceDescription,
+    normalizeText
+  ]);
 
   const isWritingStyleDirty = React.useMemo(() => {
     const initial = initialWritingStyle;
@@ -411,7 +450,8 @@ export function BrandingTab({
     brokerageName:
       overrides.brokerageName ?? savedProfileRef.current.brokerageName,
     headshotUrl: overrides.headshotUrl ?? headshotUrl,
-    personalLogoUrl: overrides.personalLogoUrl ?? personalLogoUrl
+    personalLogoUrl: overrides.personalLogoUrl ?? personalLogoUrl,
+    agentBio: overrides.agentBio ?? savedProfileRef.current.agentBio
   });
 
   const persistProfileUpdate = async (
@@ -427,6 +467,7 @@ export function BrandingTab({
         agentName: nextProfile.agentName,
         brokerageName: nextProfile.brokerageName,
         agentTitle: agentTitle || null,
+        agentBio: agentBio || null,
         headshotUrl: nextProfile.headshotUrl || null,
         personalLogoUrl: nextProfile.personalLogoUrl || null
       });
@@ -443,19 +484,29 @@ export function BrandingTab({
   const handleSaveAgentInfo = React.useCallback(async () => {
     setIsSavingProfile(true);
     try {
-      await updateUserProfile(userId, {
+      const record = await updateUserProfile(userId, {
         agentName,
         brokerageName,
         agentTitle: agentTitle || null,
+        agentBio: agentBio || null,
         headshotUrl: savedProfileRef.current.headshotUrl || null,
         personalLogoUrl: savedProfileRef.current.personalLogoUrl || null
       });
+      if (record?.agentBio !== undefined) {
+        setAgentBio(record.agentBio || "");
+      }
       savedProfileRef.current = {
         ...savedProfileRef.current,
         agentName,
-        brokerageName
+        brokerageName,
+        agentBio
       };
-      setInitialAgentInfo({ agentName, brokerageName, agentTitle });
+      setInitialAgentInfo({
+        agentName,
+        brokerageName,
+        agentTitle,
+        agentBio: record?.agentBio ?? agentBio
+      });
       toast.success("Agent information updated successfully!");
       router.refresh();
     } catch (error) {
@@ -463,7 +514,7 @@ export function BrandingTab({
     } finally {
       setIsSavingProfile(false);
     }
-  }, [agentName, agentTitle, brokerageName, router, userId]);
+  }, [agentName, agentTitle, agentBio, brokerageName, router, userId]);
 
   const handleImageUpload = async (
     file: File,
@@ -555,8 +606,23 @@ export function BrandingTab({
   const handleSaveTargetAudiences = React.useCallback(async () => {
     setIsLoadingAudiences(true);
     try {
-      await updateTargetAudiences(userId, targetAudiences);
+      const trimmedAudienceDescription = audienceDescription.trim();
+      const record = await updateTargetAudiences(
+        userId,
+        targetAudiences,
+        trimmedAudienceDescription || null
+      );
+      if (record?.audienceDescription !== undefined) {
+        setAudienceDescription(record.audienceDescription || "");
+      } else {
+        setAudienceDescription(trimmedAudienceDescription);
+      }
       setInitialTargetAudiences([...targetAudiences]);
+      if (record?.audienceDescription !== undefined) {
+        setInitialAudienceDescription(record.audienceDescription || "");
+      } else {
+        setInitialAudienceDescription(trimmedAudienceDescription);
+      }
       toast.success("Target audiences updated successfully!");
       router.refresh();
     } catch (error) {
@@ -566,7 +632,7 @@ export function BrandingTab({
     } finally {
       setIsLoadingAudiences(false);
     }
-  }, [router, targetAudiences, userId]);
+  }, [audienceDescription, router, targetAudiences, userId]);
 
   const handleSaveAllChanges = React.useCallback(async () => {
     if (isAgentInfoDirty) {
@@ -789,6 +855,21 @@ export function BrandingTab({
               </div>
             </div>
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="agentBio">Agent Bio (Optional)</Label>
+            <Textarea
+              id="agentBio"
+              value={agentBio}
+              onChange={(e) => setAgentBio(e.target.value)}
+              placeholder="Share a short bio to help personalize your content."
+              rows={4}
+              maxLength={AGENT_BIO_MAX_CHARS}
+              className="resize-none"
+            />
+            <div className="text-xs text-muted-foreground text-right">
+              {agentBio.length}/{AGENT_BIO_MAX_CHARS}
+            </div>
+          </div>
           {isAgentInfoDirty && (
             <div className="flex justify-end pt-2">
               <Button onClick={handleSaveAgentInfo} disabled={isSavingProfile}>
@@ -852,6 +933,24 @@ export function BrandingTab({
           <p className="text-sm text-muted-foreground">
             Selected {targetAudiences.length} of 2 maximum
           </p>
+
+          <div className="space-y-2">
+            <Label htmlFor="audienceDescription">
+              Audience Description (Optional)
+            </Label>
+            <Textarea
+              id="audienceDescription"
+              value={audienceDescription}
+              onChange={(e) => setAudienceDescription(e.target.value)}
+              placeholder="Additional notes about your target audience demographic."
+              rows={3}
+              maxLength={AUDIENCE_DESCRIPTION_MAX_CHARS}
+              className="resize-none"
+            />
+            <div className="text-xs text-muted-foreground text-right">
+              {audienceDescription.length}/{AUDIENCE_DESCRIPTION_MAX_CHARS}
+            </div>
+          </div>
 
           {isTargetAudiencesDirty && (
             <div className="flex justify-end pt-2">
@@ -921,8 +1020,12 @@ export function BrandingTab({
               onChange={(e) => setWritingStyleCustom(e.target.value)}
               placeholder="e.g., I often use phrases like 'y'all' and 'howdy'."
               rows={3}
+              maxLength={WRITING_STYLE_MAX_CHARS}
               className="resize-none"
             />
+            <div className="text-xs text-muted-foreground text-right">
+              {writingStyleCustom.length}/{WRITING_STYLE_MAX_CHARS}
+            </div>
           </div>
 
           {isWritingStyleDirty && (

@@ -9,6 +9,7 @@ export type AgentProfileInput = {
   agent_name: string;
   brokerage_name: string;
   agent_title?: string | null;
+  agent_bio?: string | null;
   city: string;
   state: string;
   zip_code: string;
@@ -34,6 +35,7 @@ export type PromptAssemblyInput = {
   audience_segments: string[];
   category: string;
   agent_profile: AgentProfileInput;
+  audience_description?: string | null;
   market_data?: MarketDataInput | null;
   community_data?: CommunityDataInput | null;
   city_description?: string | null;
@@ -79,7 +81,6 @@ const CATEGORY_HOOK_FILES: Record<string, string> = {
 const HOOK_WORD_MIN = 3;
 const HOOK_WORD_MAX = 10;
 const HOOK_SAMPLE_COUNT = 10;
-const SUBHEADER_SAMPLE_COUNT = 6;
 
 async function readPromptFile(relativePath: string): Promise<string> {
   if (promptCache.has(relativePath)) {
@@ -329,7 +330,8 @@ function extractBulletSection(
 
 function buildAudienceSummary(
   content: string,
-  category?: string
+  category?: string,
+  audienceDescription?: string | null
 ): string {
   const lines = content.split("\n");
   const titleMatch = content.match(/^##\s+(.+)$/m);
@@ -354,12 +356,18 @@ function buildAudienceSummary(
       `Core pain points:\n- ${corePainPoints.join("\n- ")}`
     );
   }
-  const includeTopics = category !== "community";
+  const includeTopics =
+    category !== "community" &&
+    category !== "lifestyle" &&
+    category !== "seasonal";
   if (includeTopics && keyTopics) {
     summaryParts.push(`Key topics: ${keyTopics}`);
   }
   if (includeTopics && dataEmphasis) {
     summaryParts.push(`Data emphasis: ${dataEmphasis}`);
+  }
+  if (audienceDescription && audienceDescription.trim()) {
+    summaryParts.push(`Audience description: ${audienceDescription.trim()}`);
   }
 
   return summaryParts.length > 0
@@ -479,7 +487,6 @@ async function loadAudienceDirectives(segments: string[]): Promise<string> {
 
 async function loadHookTemplates(category: string): Promise<{
   hookTemplates: string[];
-  subheaderTemplates: string[];
 }> {
   const globalHooksContent = await readPromptFile("hooks/global-hooks.md");
   const categoryFile = CATEGORY_HOOK_FILES[category];
@@ -490,45 +497,55 @@ async function loadHookTemplates(category: string): Promise<{
   const combinedTemplates = uniqueTemplates(
     extractTemplateLines(`${globalHooksContent}\n${categoryHooksContent}`)
   );
+  const seasonalExclusionPattern =
+    category === "seasonal"
+      ? /\b(market|buy|sell|listing|mortgage|rate|price)\b/i
+      : null;
+  const filteredTemplates = seasonalExclusionPattern
+    ? combinedTemplates.filter(
+        (template) => !seasonalExclusionPattern.test(template)
+      )
+    : combinedTemplates;
 
   const hookCandidates: string[] = [];
-  const subheaderCandidates: string[] = [];
 
-  for (const template of combinedTemplates) {
+  for (const template of filteredTemplates) {
     const wordCount = countTemplateWords(template);
     if (wordCount >= HOOK_WORD_MIN && wordCount <= HOOK_WORD_MAX) {
       hookCandidates.push(template);
-      continue;
     }
-    subheaderCandidates.push(template);
   }
 
   return {
-    hookTemplates: sampleTemplates(hookCandidates, HOOK_SAMPLE_COUNT),
-    subheaderTemplates: sampleTemplates(
-      subheaderCandidates,
-      SUBHEADER_SAMPLE_COUNT
-    )
+    hookTemplates: sampleTemplates(hookCandidates, HOOK_SAMPLE_COUNT)
   };
 }
 
 export async function buildSystemPrompt(input: PromptAssemblyInput) {
   const basePromptFile =
     input.category === "community"
-      ? "community-base-prompt.md"
+      ? "basePrompts/community-base-prompt.md"
       : input.category === "market_insights"
-        ? "market-insights-base-prompt.md"
-        : "base-prompt.md";
+        ? "basePrompts/market-insights-base-prompt.md"
+        : input.category === "educational"
+          ? "basePrompts/educational-base-prompt.md"
+          : input.category === "lifestyle"
+            ? "basePrompts/lifestyle-base-prompt.md"
+            : input.category === "seasonal"
+              ? "basePrompts/seasonal-base-prompt.md"
+            : "basePrompts/base-prompt.md";
   const baseSystemPrompt = await readPromptFile(basePromptFile);
   const audienceDirective = await loadAudienceDirectives(
     input.audience_segments
   );
   const audienceSummary = audienceDirective
-    ? buildAudienceSummary(audienceDirective, input.category)
+    ? buildAudienceSummary(
+        audienceDirective,
+        input.category,
+        input.audience_description
+      )
     : "";
-  const { hookTemplates, subheaderTemplates } = await loadHookTemplates(
-    input.category
-  );
+  const { hookTemplates } = await loadHookTemplates(input.category);
   const agentTemplate = await readPromptFile("agent-profile.md");
   const communityTemplate = await readPromptFile("community-data.md");
   const complianceQuality = await readPromptFile("compliance-quality.md");
@@ -538,6 +555,8 @@ export async function buildSystemPrompt(input: PromptAssemblyInput) {
   const styleNotesBlock = styleNotes
     ? `Additional style notes (must follow): ${styleNotes}`
     : "";
+  const agentBio = input.agent_profile.agent_bio?.trim();
+  const agentBioBlock = agentBio ? `\n## Bio\n${agentBio}` : "";
   const normalizedToneLabel = input.agent_profile.writing_style_description?.trim();
   const toneLabel = input.agent_profile.writing_tone_label?.trim();
   const writingStyleDescription =
@@ -548,6 +567,7 @@ export async function buildSystemPrompt(input: PromptAssemblyInput) {
     ...input.agent_profile,
     writing_style_description: writingStyleDescription ?? "",
     writing_style_notes_block: styleNotesBlock,
+    agent_bio_block: agentBioBlock,
     area_description: input.city_description?.trim() ?? "",
     time_of_year: buildTimeOfYearNote()
   };
@@ -590,13 +610,9 @@ ${audienceSummary}
 <hooks>
 Use these hook templates as the required source for hook phrasing. Pick one per item and adapt it with specifics.
 Hooks must be 3-10 words and come from the hook templates list.
-Subheaders can be longer and should draw from the subheader templates list.
 <hook_templates>
 ${formatTemplateList(hookTemplates)}
 </hook_templates>
-<subheader_templates>
-${formatTemplateList(subheaderTemplates)}
-</subheader_templates>
 </hooks>
 
 ${recentHooksBlock}${marketBlock}${communityBlock}

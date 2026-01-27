@@ -114,6 +114,12 @@ const DEFAULT_GENERATED_STATE: Record<
 };
 
 const GENERATED_BATCH_SIZE = 4;
+const createItemId = (prefix: string) => {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return `${prefix}-${crypto.randomUUID()}`;
+  }
+  return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+};
 
 const DashboardView = ({
   className,
@@ -145,9 +151,9 @@ const DashboardView = ({
   const parsedItemsRef = React.useRef<
     {
       hook: string;
-      hook_subheader?: string | null;
       body?: { header: string; content: string }[] | null;
       caption?: string | null;
+      broll_query?: string | null;
     }[]
   >([]);
   const batchBaseIndexRef = React.useRef<Record<string, number>>({});
@@ -172,10 +178,15 @@ const DashboardView = ({
         return;
       }
       if (parsed.data) {
-        const normalized = {
-          ...DEFAULT_GENERATED_STATE,
-          ...parsed.data
+        const normalized: Record<ContentType, Record<string, ContentItem[]>> = {
+          ...DEFAULT_GENERATED_STATE
         };
+        (Object.keys(parsed.data) as ContentType[]).forEach((type) => {
+          normalized[type] = {};
+          Object.entries(parsed.data[type] ?? {}).forEach(([key, items]) => {
+            normalized[type][key] = items.filter((item) => !item.isLoading);
+          });
+        });
         setGeneratedContentItems(normalized);
       }
     } catch {
@@ -238,7 +249,7 @@ const DashboardView = ({
   const buildLoadingItems = React.useCallback(
     (offset: number) =>
       Array.from({ length: GENERATED_BATCH_SIZE }, (_, index) => ({
-        id: `loading-${offset + index}`,
+        id: createItemId("loading"),
         aspectRatio: "square" as const,
         isFavorite: false,
         isLoading: true
@@ -249,9 +260,9 @@ const DashboardView = ({
   const extractJsonItemsFromStream = React.useCallback((text: string) => {
     const items: {
       hook: string;
-      hook_subheader?: string | null;
-      body?: { header: string; content: string }[] | null;
+      body?: { header: string; content: string; broll_query?: string }[] | null;
       caption?: string | null;
+      broll_query?: string | null;
     }[] = [];
 
     let arrayStarted = false;
@@ -370,9 +381,9 @@ const DashboardView = ({
     const partial = text.slice(objectStart);
     const fieldCount =
       (/"hook"\s*:/.test(partial) ? 1 : 0) +
-      (/"hook_subheader"\s*:/.test(partial) ? 1 : 0) +
       (/"caption"\s*:/.test(partial) ? 1 : 0) +
-      (/"body"\s*:/.test(partial) ? 1 : 0);
+      (/"body"\s*:/.test(partial) ? 1 : 0) +
+      (/"broll_query"\s*:/.test(partial) ? 1 : 0);
 
     const rawProgress = fieldCount / 4;
     const progress = Math.max(0.1, rawProgress);
@@ -388,19 +399,20 @@ const DashboardView = ({
       activeControllerRef.current = localController;
       setIsGenerating(true);
       setGenerationError(null);
+      const batchBaseIndex =
+        generatedContentItemsRef.current[contentType]?.[category]?.length ?? 0;
+      batchBaseIndexRef.current = {
+        ...batchBaseIndexRef.current,
+        [category]: batchBaseIndex
+      };
       setGeneratedContentItems((prev) => {
         const currentTypeMap = prev[contentType] ?? {};
         const currentItems = currentTypeMap[category] ?? [];
-        const baseIndex = currentItems.length;
-        batchBaseIndexRef.current = {
-          ...batchBaseIndexRef.current,
-          [category]: baseIndex
-        };
         return {
           ...prev,
           [contentType]: {
             ...currentTypeMap,
-            [category]: [...currentItems, ...buildLoadingItems(baseIndex)]
+            [category]: [...currentItems, ...buildLoadingItems(batchBaseIndex)]
           }
         };
       });
@@ -483,9 +495,13 @@ const DashboardView = ({
                   type: "done";
                   items: {
                     hook: string;
-                    hook_subheader?: string | null;
-                    body?: { header: string; content: string }[] | null;
+                    body?: {
+                      header: string;
+                      content: string;
+                      broll_query?: string | null;
+                    }[] | null;
                     caption?: string | null;
+                    broll_query?: string | null;
                   }[];
                 }
               | { type: "error"; message: string };
@@ -513,13 +529,13 @@ const DashboardView = ({
                   newItems.forEach((item, idx) => {
                     const index = startIndex + idx;
                     updatedCategory[index] = {
-                      id: `generated-${category}-${index}`,
+                      id: createItemId("generated"),
                       aspectRatio: "square" as const,
                       isFavorite: false,
                       hook: item.hook,
-                      hookSubheader: item.hook_subheader ?? null,
                       caption: item.caption ?? null,
-                      body: item.body ?? null
+                      body: item.body ?? null,
+                      brollQuery: item.broll_query ?? null
                     };
                   });
                   return {
@@ -578,15 +594,13 @@ const DashboardView = ({
             if (event.type === "done") {
               didReceiveDone = true;
               const generatedItems = event.items.map((item, index) => ({
-                id: `generated-${contentType}-${category}-${
-                  (batchBaseIndexRef.current[category] ?? 0) + index
-                }`,
+                id: createItemId("generated"),
                 aspectRatio: "square" as const,
                 isFavorite: false,
                 hook: item.hook,
-                hookSubheader: item.hook_subheader ?? null,
                 caption: item.caption ?? null,
-                body: item.body ?? null
+                body: item.body ?? null,
+                brollQuery: item.broll_query ?? null
               }));
 
               setGeneratedContentItems((prev) => {
@@ -624,14 +638,17 @@ const DashboardView = ({
               ...currentTypeMap,
               [category]: (() => {
                 const current = currentTypeMap[category] ?? [];
-                if (current.length < GENERATED_BATCH_SIZE) {
+                if (current.length === 0) {
                   return current;
                 }
-                const tail = current.slice(-GENERATED_BATCH_SIZE);
-                const allLoading = tail.every((item) => item.isLoading);
-                return allLoading
-                  ? current.slice(0, current.length - GENERATED_BATCH_SIZE)
-                  : current;
+                const batchStart = batchBaseIndexRef.current[category] ?? 0;
+                const batchEnd = batchStart + GENERATED_BATCH_SIZE;
+                return current.filter((item, index) => {
+                  if (index < batchStart || index >= batchEnd) {
+                    return true;
+                  }
+                  return !item.isLoading;
+                });
               })()
             }
           };

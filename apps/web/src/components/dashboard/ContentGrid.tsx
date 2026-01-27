@@ -11,6 +11,7 @@ type AspectRatio = "square" | "vertical" | "horizontal";
 type CarouselSlide = {
   header: string;
   content: string;
+  broll_query?: string | null;
 };
 
 interface ContentItem {
@@ -20,9 +21,9 @@ interface ContentItem {
   isFavorite?: boolean;
   alt?: string;
   hook?: string;
-  hookSubheader?: string | null;
   caption?: string | null;
   body?: CarouselSlide[] | null;
+  brollQuery?: string | null;
   isLoading?: boolean;
   progress?: number;
 }
@@ -53,7 +54,7 @@ const ContentGridItem = ({
   onDelete?: (id: string) => void;
 }) => {
   const hasTextContent = Boolean(
-    item.hook || item.hookSubheader || item.caption || item.body?.length
+    item.hook || item.caption || item.body?.length || item.brollQuery
   );
 
   const getItemProgress = (): number => {
@@ -62,9 +63,9 @@ const ContentGridItem = ({
     }
     const steps = [
       Boolean(item.hook),
-      Boolean(item.hookSubheader),
       Boolean(item.caption),
       Boolean(item.body?.length),
+      Boolean(item.brollQuery),
       Boolean(item.thumbnail)
     ];
     const completed = steps.filter(Boolean).length;
@@ -221,9 +222,9 @@ const ContentGridItem = ({
           {item.hook && (
             <p className="text-sm font-semibold text-foreground">{item.hook}</p>
           )}
-          {item.hookSubheader && (
+          {item.brollQuery && (
             <p className="mt-1 text-xs text-muted-foreground">
-              {item.hookSubheader}
+              B-roll: {item.brollQuery}
             </p>
           )}
           {item.caption && (
@@ -241,6 +242,11 @@ const ContentGridItem = ({
                   <p className="text-xs text-muted-foreground">
                     {slide.content}
                   </p>
+                  {slide.broll_query && (
+                    <p className="mt-1 text-[11px] text-muted-foreground">
+                      B-roll: {slide.broll_query}
+                    </p>
+                  )}
                 </div>
               ))}
             </div>

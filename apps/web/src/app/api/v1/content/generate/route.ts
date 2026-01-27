@@ -61,7 +61,7 @@ const CONTENT_ITEM_SCHEMA = {
   type: "object",
   properties: {
     hook: { type: "string" },
-    hook_subheader: { anyOf: [{ type: "string" }, { type: "null" }] },
+    broll_query: { type: "string" },
     body: {
       anyOf: [
         { type: "null" },
@@ -71,9 +71,10 @@ const CONTENT_ITEM_SCHEMA = {
             type: "object",
             properties: {
               header: { type: "string" },
-              content: { type: "string" }
+              content: { type: "string" },
+              broll_query: { type: "string" }
             },
-            required: ["header", "content"],
+            required: ["header", "content", "broll_query"],
             additionalProperties: false
           }
         }
@@ -82,7 +83,7 @@ const CONTENT_ITEM_SCHEMA = {
     cta: { anyOf: [{ type: "string" }, { type: "null" }] },
     caption: { type: "string" }
   },
-  required: ["hook", "hook_subheader", "body", "cta", "caption"],
+  required: ["hook", "broll_query", "body", "cta", "caption"],
   additionalProperties: false
 };
 
@@ -378,6 +379,8 @@ type UserAdditionalSnapshot = {
   writingStyleCustom: string | null;
   agentName: string;
   brokerageName: string;
+  agentBio: string | null;
+  audienceDescription: string | null;
   county: string | null;
   serviceAreas: string[] | null;
 };
@@ -393,6 +396,8 @@ async function getUserAdditionalSnapshot(
       writingStyleCustom: userAdditional.writingStyleCustom,
       agentName: userAdditional.agentName,
       brokerageName: userAdditional.brokerageName,
+      agentBio: userAdditional.agentBio,
+      audienceDescription: userAdditional.audienceDescription,
       county: userAdditional.county,
       serviceAreas: userAdditional.serviceAreas
     })
@@ -406,6 +411,8 @@ async function getUserAdditionalSnapshot(
     writingStyleCustom: record?.writingStyleCustom ?? null,
     agentName: record?.agentName ?? "",
     brokerageName: record?.brokerageName ?? "",
+    agentBio: record?.agentBio ?? null,
+    audienceDescription: record?.audienceDescription ?? null,
     county: record?.county ?? null,
     serviceAreas: record?.serviceAreas ?? null
   };
@@ -701,6 +708,7 @@ export async function POST(request: NextRequest) {
       brokerage_name:
         userAdditionalSnapshot.brokerageName ||
         body.agent_profile.brokerage_name,
+      agent_bio: userAdditionalSnapshot.agentBio ?? null,
       zip_code: body.agent_profile.zip_code,
       county: userAdditionalSnapshot.county ?? "",
       service_areas: userAdditionalSnapshot.serviceAreas?.join(", ") ?? "",
@@ -717,6 +725,7 @@ export async function POST(request: NextRequest) {
       ...body,
       agent_profile: enhancedAgentProfile,
       audience_segments: audienceSegments,
+      audience_description: userAdditionalSnapshot.audienceDescription ?? null,
       recent_hooks: recentHooks,
       market_data: marketData,
       community_data: communityData,

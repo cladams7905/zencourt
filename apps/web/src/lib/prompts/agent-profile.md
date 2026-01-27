@@ -4,6 +4,7 @@
 - **Name:** {agent_name}
 - **Brokerage:** {brokerage_name}
 - **Title:** {agent_title}
+{agent_bio_block}
 
 ## Location
 - **Primary Market:** {city}, {state}
@@ -15,8 +16,8 @@
 
 ## Writing Style
 - **Tone Level (1-5):** {writing_tone_level}
-- **Tone Interpretation:** {writing_tone_label}
-Requirements: Follow the tone level and writing style exactly in hooks, subheaders, body, caption, and CTA.
+- **Tone Interpretation:** {writing_tone_label}. Never use em dashes. Add new lines between every sentence in the caption body.
+Requirements: Follow the tone level and writing style exactly in hooks, body, caption, and CTA.
 {writing_style_description}
 {writing_style_notes_block}
 

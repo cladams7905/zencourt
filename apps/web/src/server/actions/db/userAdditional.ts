@@ -97,7 +97,8 @@ export async function completeWelcomeSurvey(
 
 export async function updateTargetAudiences(
   userId: string,
-  targetAudiences: NonNullable<InsertDBUserAdditional["targetAudiences"]>
+  targetAudiences: NonNullable<InsertDBUserAdditional["targetAudiences"]>,
+  audienceDescription?: InsertDBUserAdditional["audienceDescription"]
 ): Promise<DBUserAdditional> {
   if (!userId || userId.trim() === "") {
     throw new Error("User ID is required to update target audiences");
@@ -105,20 +106,15 @@ export async function updateTargetAudiences(
 
   return withDbErrorHandling(
     async () => {
+      await db.insert(userAdditional).values({ userId }).onConflictDoNothing();
       const [record] = await db
-        .insert(userAdditional)
-        .values({
-          userId,
+        .update(userAdditional)
+        .set({
           targetAudiences,
+          audienceDescription: audienceDescription ?? null,
           updatedAt: new Date()
         })
-        .onConflictDoUpdate({
-          target: userAdditional.userId,
-          set: {
-            targetAudiences,
-            updatedAt: new Date()
-          }
-        })
+        .where(eq(userAdditional.userId, userId))
         .returning();
 
       if (!record) {
@@ -142,6 +138,7 @@ export async function updateUserProfile(
     | "agentName"
     | "brokerageName"
     | "agentTitle"
+    | "agentBio"
     | "headshotUrl"
     | "personalLogoUrl"
   >
