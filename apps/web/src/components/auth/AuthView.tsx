@@ -12,7 +12,7 @@ export function AuthView({ children }: AuthViewProps) {
   return (
     <div className="min-h-screen flex">
       {/* Left Panel - Visual Brand Side */}
-      <div className="hidden lg:flex lg:w-1/2 relative bg-linear-to-br from-accent via-white to-accent/20 overflow-hidden">
+      <div className="hidden lg:flex lg:w-1/2 relative bg-linear-to-br from-background via-background to-accent overflow-hidden">
         {/* Decorative Background Elements */}
         <div className="absolute top-1/4 -left-24 w-96 h-96 bg-accent/30 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 -right-24 w-96 h-96 bg-accent/40 rounded-full blur-3xl" />
@@ -22,7 +22,7 @@ export function AuthView({ children }: AuthViewProps) {
           {/* Logo */}
           <div className="flex items-center gap-3">
             <Image
-              src="/zencourt-logo.png"
+              src="/zencourt-logo.svg"
               alt="Zencourt"
               width={32}
               height={32}
@@ -82,7 +82,7 @@ export function AuthView({ children }: AuthViewProps) {
           {/* Mobile Logo */}
           <div className="lg:hidden flex items-center gap-3 mb-12">
             <Image
-              src="/zencourt-logo.png"
+              src="/zencourt-logo.svg"
               alt="Zencourt"
               width={28}
               height={28}

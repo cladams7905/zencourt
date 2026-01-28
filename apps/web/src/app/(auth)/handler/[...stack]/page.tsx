@@ -1,5 +1,5 @@
 import { StackHandler } from "@stackframe/stack";
-import { AuthView } from "@web/src/components/AuthView";
+import { AuthView } from "@web/src/components/auth/AuthView";
 
 export default function Handler() {
   return (

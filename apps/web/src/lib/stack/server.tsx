@@ -6,6 +6,11 @@ import { stackClientApp } from "./client";
 export const stackServerApp = new StackServerApp({
   inheritsFrom: stackClientApp,
   urls: {
-    passwordReset: "/reset-password"
+    afterSignUp: "/check-inbox",
+    afterSignIn: "/welcome",
+    home: "/welcome",
+    afterSignOut: "/handler/sign-in",
+    passwordReset: "/reset-password",
+    emailVerification: "/verify-email"
   }
 });

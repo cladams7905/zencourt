@@ -3,7 +3,14 @@ import { NextRequest, NextResponse } from "next/server";
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const allowedPathPrefixes = ["/handler", "/api/v1/webhooks", "/_next"];
-  const allowedExactPaths = ["/", "/_not-found", "/terms", "/privacy"];
+  const allowedExactPaths = [
+    "/",
+    "/_not-found",
+    "/terms",
+    "/privacy",
+    "/check-inbox",
+    "/verify-email"
+  ];
 
   const hasStackSession =
     Boolean(request.cookies.get("stack-access")?.value) ||
@@ -18,12 +25,7 @@ export async function proxy(request: NextRequest) {
   }
 
   if (!hasStackSession) {
-    const redirectUrl = new URL("/handler/sign-in", request.url);
-    redirectUrl.searchParams.set(
-      "callbackUrl",
-      `${request.nextUrl.pathname}${request.nextUrl.search}`
-    );
-    return NextResponse.redirect(redirectUrl);
+    return NextResponse.redirect(new URL("/handler/sign-in", request.url));
   }
 
   return NextResponse.next();

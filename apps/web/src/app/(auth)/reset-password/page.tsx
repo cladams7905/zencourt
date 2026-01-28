@@ -1,6 +1,6 @@
 import * as React from "react";
 import { PasswordReset } from "@stackframe/stack";
-import { AuthView } from "@web/src/components/AuthView";
+import { AuthView } from "@web/src/components/auth/AuthView";
 
 interface ResetPasswordPageProps {
   searchParams: Promise<{
