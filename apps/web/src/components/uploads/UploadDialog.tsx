@@ -11,8 +11,8 @@ import {
   DialogHeader,
   DialogTitle
 } from "../ui/dialog";
-import { GoogleDriveUploadButton } from "../ui/google-drive-upload-button";
 import { Upload } from "lucide-react";
+import { GoogleDriveUploadButton } from "./GoogleDriveUploadButton";
 
 type PendingUpload = {
   id: string;
@@ -114,10 +114,12 @@ function UploadDialog<TRecord>({
   }, []);
 
   const resetDialogState = React.useCallback(() => {
-    revokePendingPreviews(pendingFiles);
-    setPendingFiles([]);
+    setPendingFiles((prev) => {
+      revokePendingPreviews(prev);
+      return [];
+    });
     setIsDragging(false);
-  }, [pendingFiles, revokePendingPreviews]);
+  }, [revokePendingPreviews]);
 
   React.useEffect(() => {
     if (!open) {
@@ -495,11 +497,11 @@ function UploadDialog<TRecord>({
           </div>
 
           {pendingFiles.length > 0 && (
-              <div className="rounded-lg border border-border/60 bg-background p-3">
-                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                  {pendingFiles.length} {selectedLabel}
-                  {pendingFiles.length === 1 ? "" : "s"} selected
-                </div>
+            <div className="rounded-lg border border-border/60 bg-background p-3">
+              <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                {pendingFiles.length} {selectedLabel}
+                {pendingFiles.length === 1 ? "" : "s"} selected
+              </div>
               <div className="mt-2 max-h-48 space-y-2 overflow-y-auto">
                 {pendingFiles.map((item) => (
                   <div

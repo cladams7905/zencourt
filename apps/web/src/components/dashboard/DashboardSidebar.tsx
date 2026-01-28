@@ -64,35 +64,6 @@ interface DashboardSidebarProps {
   listings?: ListingSidebarItem[];
 }
 
-const useSidebarOverflow = () => {
-  const navRef = React.useRef<HTMLElement | null>(null);
-  const [hasOverflow, setHasOverflow] = React.useState(false);
-
-  React.useEffect(() => {
-    const element = navRef.current;
-    if (!element) {
-      return;
-    }
-
-    const updateOverflow = () => {
-      setHasOverflow(element.scrollHeight > element.clientHeight + 1);
-    };
-
-    updateOverflow();
-
-    const resizeObserver = new ResizeObserver(updateOverflow);
-    resizeObserver.observe(element);
-    window.addEventListener("resize", updateOverflow);
-
-    return () => {
-      resizeObserver.disconnect();
-      window.removeEventListener("resize", updateOverflow);
-    };
-  }, []);
-
-  return { navRef, hasOverflow };
-};
-
 const DashboardSidebar = ({
   className,
   userName = "User",
@@ -100,7 +71,6 @@ const DashboardSidebar = ({
   userAvatar,
   listings = []
 }: DashboardSidebarProps) => {
-  const { navRef, hasOverflow } = useSidebarOverflow();
   const user = useUser();
   const router = useRouter();
   const [contentExpanded, setContentExpanded] = React.useState(true);
@@ -181,10 +151,7 @@ const DashboardSidebar = ({
       {/* Logo Section */}
       <Link
         href={"/"}
-        className={cn(
-          "pt-5 flex items-center just px-6 gap-3",
-          hasOverflow ? "pb-6 border-b border-border/50" : "pb-2"
-        )}
+        className={cn("pt-5 flex items-center just px-6 gap-3 pb-2")}
       >
         <Image
           src={Logo}
@@ -197,9 +164,13 @@ const DashboardSidebar = ({
           zencourt
         </span>
       </Link>
+      {/* Divider */}
+      <div className="px-4 pt-4">
+        <div className="h-px bg-border w-full" />
+      </div>
 
       {/* Navigation */}
-      <nav ref={navRef} className="flex-1 px-4 space-y-1 overflow-y-auto">
+      <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
         {/* Divider */}
         <div className="flex flex-col pt-4 gap-1">
           {/* Main Navigation */}
@@ -447,7 +418,11 @@ const DashboardSidebar = ({
       </nav>
 
       {/* User Profile */}
-      <div className="p-6 border-t border-border/50">
+      <div className="p-4 pt-0">
+        {/* Divider */}
+        <div className="pb-4">
+          <div className="h-px bg-border w-full" />
+        </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className="w-full flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-foreground/5 cursor-pointer transition-all duration-200 group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
@@ -593,7 +568,6 @@ const DashboardSidebarStatic = ({
   paymentPlan = "Free",
   userAvatar
 }: DashboardSidebarProps) => {
-  const { navRef, hasOverflow } = useSidebarOverflow();
   const [contentExpanded, setContentExpanded] = React.useState(true);
   const [listingsExpanded, setListingsExpanded] = React.useState(true);
 
@@ -605,12 +579,7 @@ const DashboardSidebarStatic = ({
       )}
     >
       {/* Logo Section */}
-      <div
-        className={cn(
-          "pt-5 flex items-center just px-6 gap-3",
-          hasOverflow ? "pb-6 border-b border-border/50" : "pb-2"
-        )}
-      >
+      <div className={cn("pt-5 flex items-center just px-6 gap-3 pb-2")}>
         <Image
           src={Logo}
           alt="Zencourt Logo"
@@ -624,7 +593,7 @@ const DashboardSidebarStatic = ({
       </div>
 
       {/* Navigation */}
-      <nav ref={navRef} className="flex-1 px-4 space-y-1 overflow-y-auto">
+      <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
         <div className="flex flex-col pt-4 gap-1">
           <Button
             variant="ghost"
@@ -814,7 +783,11 @@ const DashboardSidebarStatic = ({
       </nav>
 
       {/* User Profile */}
-      <div className="p-6 border-t border-border">
+      <div className="p-4 pt-0">
+        {/* Divider */}
+        <div className="pb-4">
+          <div className="h-px bg-border w-full" />
+        </div>
         <div className="w-full flex items-center gap-3 px-2 py-2 rounded-lg bg-foreground/5 border border-border">
           {userAvatar ? (
             <Image

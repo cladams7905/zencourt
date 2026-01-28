@@ -211,8 +211,8 @@ export async function categorizeListingImages(
       status: "uploaded",
       sortOrder: image.sortOrder ?? null,
       metadata: image.metadata ?? null,
-      error: null,
-      uploadUrl: null
+      error: undefined,
+      uploadUrl: undefined
     })
   );
 

@@ -1,4 +1,4 @@
-import { DashboardShell } from "@web/src/components/dashboard/DashboardShell";
+import { DashboardSidebar } from "@web/src/components/dashboard/DashboardSidebar";
 import { getUser } from "@web/src/server/actions/db/users";
 import { getOrCreateUserAdditional } from "@web/src/server/actions/db/userAdditional";
 import { getPaymentPlanLabel, getUserDisplayNames } from "@web/src/lib/userDisplay";
@@ -25,13 +25,18 @@ export default async function DashboardLayout({
   const paymentPlanLabel = getPaymentPlanLabel(userAdditional.paymentPlan);
 
   return (
-    <DashboardShell
-      userName={sidebarName}
-      paymentPlan={paymentPlanLabel}
-      userAvatar={user.profileImageUrl ?? undefined}
-      listings={listings}
-    >
-      {children}
-    </DashboardShell>
+    <div className="flex h-screen overflow-hidden">
+      <DashboardSidebar
+        userName={sidebarName}
+        paymentPlan={paymentPlanLabel}
+        userAvatar={user.profileImageUrl ?? undefined}
+        listings={listings}
+      />
+      <main className="flex-1 bg-secondary p-3 pl-0 overflow-x-hidden">
+        <div className="rounded-xl bg-background border border-border h-full overflow-y-auto overflow-x-hidden">
+          {children}
+        </div>
+      </main>
+    </div>
   );
 }

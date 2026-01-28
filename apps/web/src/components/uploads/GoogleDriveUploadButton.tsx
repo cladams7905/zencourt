@@ -2,8 +2,8 @@
 
 import * as React from "react";
 import { toast } from "sonner";
-import { Button } from "./button";
-import { LoadingImage } from "./loading-image";
+import { LoadingImage } from "../ui/loading-image";
+import { Button } from "../ui/button";
 
 type GoogleDriveUploadButtonProps = Omit<
   React.ComponentProps<typeof Button>,
