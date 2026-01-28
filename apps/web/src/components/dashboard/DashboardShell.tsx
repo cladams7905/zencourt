@@ -4,6 +4,12 @@ import * as React from "react";
 import { DashboardSidebar } from "./DashboardSidebar";
 import { DashboardHeader } from "./DashboardHeader";
 
+type ListingSidebarItem = {
+  id: string;
+  title: string | null;
+  listingStage: string | null;
+};
+
 type DashboardShellContextValue = {
   headerTitle: string;
   headerSubtitle?: string;
@@ -27,13 +33,15 @@ interface DashboardShellProps {
   userName?: string;
   paymentPlan?: string;
   userAvatar?: string;
+  listings?: ListingSidebarItem[];
 }
 
 export function DashboardShell({
   children,
   userName,
   paymentPlan,
-  userAvatar
+  userAvatar,
+  listings
 }: DashboardShellProps) {
   const [headerTitle, setHeaderTitle] = React.useState("");
   const [headerSubtitle, setHeaderSubtitle] = React.useState<
@@ -64,6 +72,7 @@ export function DashboardShell({
           userName={userName}
           paymentPlan={paymentPlan}
           userAvatar={userAvatar}
+          listings={listings}
         />
         <main className="flex-1 bg-secondary p-3 pl-0 overflow-x-hidden">
           <div className="rounded-xl bg-background border border-border h-full overflow-y-auto overflow-x-hidden">

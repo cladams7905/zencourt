@@ -30,7 +30,7 @@ import {
   ArrowBigUpDash
 } from "lucide-react";
 import Image from "next/image";
-import Logo from "../../../public/zencourt-logo.png";
+import Logo from "../../../public/zencourt-logo.svg";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -50,12 +50,18 @@ import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
 import { toast } from "sonner";
 import Link from "next/link";
+type ListingSidebarItem = {
+  id: string;
+  title: string | null;
+  listingStage: string | null;
+};
 
 interface DashboardSidebarProps {
   className?: string;
   userName?: string;
   paymentPlan?: string;
   userAvatar?: string;
+  listings?: ListingSidebarItem[];
 }
 
 const useSidebarOverflow = () => {
@@ -91,7 +97,8 @@ const DashboardSidebar = ({
   className,
   userName = "User",
   paymentPlan = "Free",
-  userAvatar
+  userAvatar,
+  listings = []
 }: DashboardSidebarProps) => {
   const { navRef, hasOverflow } = useSidebarOverflow();
   const user = useUser();
@@ -102,6 +109,36 @@ const DashboardSidebar = ({
   const [feedbackType, setFeedbackType] = React.useState("");
   const [feedbackMessage, setFeedbackMessage] = React.useState("");
   const displayedEmail = user?.primaryEmail ?? "";
+
+  const { draftListings, activeListings } = React.useMemo(() => {
+    const normalizeTitle = (title?: string | null) =>
+      title?.trim() || "Untitled listing";
+    const isDraft = (listing: ListingSidebarItem) => {
+      const title = listing.title?.toLowerCase() ?? "";
+      return title.startsWith("draft") || listing.listingStage === "upload";
+    };
+
+    const drafts: ListingSidebarItem[] = [];
+    const active: ListingSidebarItem[] = [];
+
+    listings.forEach((listing) => {
+      const normalizedListing = {
+        ...listing,
+        title: normalizeTitle(listing.title)
+      };
+
+      if (isDraft(normalizedListing)) {
+        drafts.push(normalizedListing);
+      } else {
+        active.push(normalizedListing);
+      }
+    });
+
+    return {
+      draftListings: drafts,
+      activeListings: active
+    };
+  }, [listings]);
 
   const handleLogout = async () => {
     await user?.signOut();
@@ -308,30 +345,70 @@ const DashboardSidebar = ({
           </div>
 
           {listingsExpanded && (
-            <div className="space-y-0.5 pl-2">
-              <Button
-                variant="ghost"
-                className="w-full justify-start gap-3 hover:bg-foreground/5"
-              >
-                <div className="w-1.5 h-1.5 rotate-45 bg-foreground shrink-0" />
-                <span className="text-sm truncate">1240 Serenity Lane</span>
-              </Button>
+            <div className="space-y-3 pl-2">
+              {draftListings.length > 0 ? (
+                <div className="space-y-1">
+                  <span className="px-2 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                    Drafts
+                  </span>
+                  <div className="space-y-0.5">
+                    {draftListings.map((listing) => (
+                      <Button
+                        key={listing.id}
+                        variant="ghost"
+                        className="w-full justify-between hover:bg-foreground/5"
+                        asChild
+                      >
+                        <Link href={`/listings/${listing.id}`}>
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-1.5 h-1.5 rotate-45 bg-muted-foreground/70 shrink-0" />
+                            <span className="text-sm truncate">
+                              {listing.title}
+                            </span>
+                          </div>
+                          <Badge
+                            variant="muted"
+                            className="text-[10px] px-1.5 py-0 h-4"
+                          >
+                            Draft
+                          </Badge>
+                        </Link>
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
 
-              <Button
-                variant="ghost"
-                className="w-full justify-start gap-3 hover:bg-foreground/5"
-              >
-                <div className="w-1.5 h-1.5 rotate-45 bg-foreground shrink-0" />
-                <span className="text-sm truncate">880 Fairview Blvd</span>
-              </Button>
+              {activeListings.length > 0 ? (
+                <div className="space-y-1">
+                  <span className="px-2 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                    Listings
+                  </span>
+                  <div className="space-y-0.5">
+                    {activeListings.map((listing) => (
+                      <Button
+                        key={listing.id}
+                        variant="ghost"
+                        className="w-full justify-start gap-3 hover:bg-foreground/5"
+                        asChild
+                      >
+                        <Link href={`/listings/${listing.id}`}>
+                          <div className="w-1.5 h-1.5 rotate-45 bg-foreground shrink-0" />
+                          <span className="text-sm truncate">
+                            {listing.title}
+                          </span>
+                        </Link>
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
 
-              <Button
-                variant="ghost"
-                className="w-full justify-start gap-3 hover:bg-foreground/5"
-              >
-                <div className="w-1.5 h-1.5 rotate-45 bg-foreground shrink-0" />
-                <span className="text-sm truncate">Woodland Estate</span>
-              </Button>
+              {draftListings.length === 0 && activeListings.length === 0 ? (
+                <div className="px-2 text-xs text-muted-foreground">
+                  No listings yet.
+                </div>
+              ) : null}
             </div>
           )}
         </div>

@@ -12,7 +12,7 @@ export function Navigation() {
           {/* Logo */}
           <div className="flex items-center gap-3">
             <Image
-              src="/zencourt-logo.png"
+              src="/zencourt-logo.svg"
               alt="Zencourt Logo"
               width={24}
               height={24}
@@ -52,7 +52,7 @@ export function Navigation() {
                 Log in
               </Button>
             </Link>
-            <Link href="/handler/sign-in">
+            <Link href="/handler/sign-up">
               <Button
                 size="sm"
                 className="px-5 py-2.5 bg-primary text-primary-foreground shadow-lg hover:bg-primary/90"

@@ -23,10 +23,7 @@ import { LocationDetailsPanel } from "../location/LocationDetailsPanel";
 import { ArrowRight, ArrowLeft } from "lucide-react";
 import type { ReferralSource, TargetAudience } from "@db/client";
 import { audienceCategories } from "../settings/audienceCategories";
-import {
-  logger as baseLogger,
-  createChildLogger
-} from "@web/src/lib/logger";
+import { logger as baseLogger, createChildLogger } from "@web/src/lib/logger";
 import { toast } from "sonner";
 import { normalizeCountyName } from "@web/src/lib/locationHelpers";
 
@@ -105,7 +102,6 @@ export const SurveyPage = ({
       setCurrentStep(api.selectedScrollSnap());
     });
   }, [api]);
-
 
   // Step validation
   const stepValidation = React.useMemo(
@@ -190,7 +186,7 @@ export const SurveyPage = ({
       });
     } catch (error) {
       logger.error(error, "Survey submission error");
-      toast.error("Survey submission error: " + error)
+      toast.error("Survey submission error: " + error);
     } finally {
       setIsSubmitting(false);
     }
@@ -205,7 +201,7 @@ export const SurveyPage = ({
           {/* Mobile Logo */}
           <div className="lg:hidden flex items-center gap-3 mb-8">
             <Image
-              src="/zencourt-logo.png"
+              src="/zencourt-logo.svg"
               alt="Zencourt"
               width={28}
               height={28}
@@ -244,7 +240,7 @@ export const SurveyPage = ({
                       {/* Animated decorative element */}
                       <div className="relative">
                         <Image
-                          src="/zencourt-logo.png"
+                          src="/zencourt-logo.svg"
                           alt="Zencourt Logo"
                           width={48}
                           height={48}
@@ -412,7 +408,9 @@ export const SurveyPage = ({
                           onToggleEdit={() => {
                             if (isEditingLocationDetails) {
                               setCountyOverride(suggestedCounty);
-                              setServiceAreasOverride(suggestedServiceAreasText);
+                              setServiceAreasOverride(
+                                suggestedServiceAreasText
+                              );
                             }
                             setIsEditingLocationDetails(
                               !isEditingLocationDetails

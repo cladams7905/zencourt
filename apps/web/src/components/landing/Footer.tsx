@@ -32,7 +32,7 @@ export function Footer() {
           <div className="col-span-2 md:col-span-1">
             <div className="flex items-center gap-2 mb-6">
               <Image
-                src="/zencourt-logo.png"
+                src="/zencourt-logo.svg"
                 alt="Zencourt Logo"
                 width={24}
                 height={24}

@@ -19,7 +19,7 @@ export function Hero() {
           photos.
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full">
-          <Link href="/handler/sign-in" className="w-full sm:w-auto">
+          <Link href="/handler/sign-up" className="w-full sm:w-auto">
             <Button
               size="lg"
               className="w-full sm:w-auto px-10 py-6 text-lg font-medium shadow-xl hover:shadow-2xl transition-all group"

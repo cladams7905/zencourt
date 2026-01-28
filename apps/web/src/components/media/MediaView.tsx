@@ -23,6 +23,7 @@ import {
   DialogHeader,
   DialogTitle
 } from "../ui/dialog";
+import { UploadDialog } from "../uploads/UploadDialog";
 import {
   ArrowRight,
   ChevronDown,
@@ -47,13 +48,6 @@ interface MediaViewProps {
 }
 
 type MediaUsageSort = "none" | "most-used" | "least-used";
-type PendingUpload = {
-  id: string;
-  file: File;
-  progress: number;
-  status: "ready" | "uploading" | "done" | "error";
-};
-
 const MEDIA_PAGE_SIZE = 12;
 
 const mediaLibraryHelpLink = {
@@ -153,16 +147,12 @@ const MediaView = ({ userId, initialMedia = [] }: MediaViewProps) => {
   ]);
   const [usageSort, setUsageSort] = React.useState<MediaUsageSort>("none");
   const [isUploadOpen, setIsUploadOpen] = React.useState(false);
-  const [pendingFiles, setPendingFiles] = React.useState<PendingUpload[]>([]);
-  const [isDragging, setIsDragging] = React.useState(false);
-  const [isUploading, setIsUploading] = React.useState(false);
   const [visibleCount, setVisibleCount] = React.useState(MEDIA_PAGE_SIZE);
   const [isDeleteOpen, setIsDeleteOpen] = React.useState(false);
   const [mediaToDelete, setMediaToDelete] = React.useState<DBUserMedia | null>(
     null
   );
   const [isDeleting, setIsDeleting] = React.useState(false);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
   const loadMoreRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
@@ -249,334 +239,42 @@ const MediaView = ({ userId, initialMedia = [] }: MediaViewProps) => {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
-  const addFiles = React.useCallback((files: File[]) => {
-    if (files.length === 0) {
-      return;
-    }
-
-    const accepted: File[] = [];
-
-    files.forEach((file) => {
-      if (file.type.startsWith("image/")) {
-        if (file.size > MAX_IMAGE_BYTES) {
-          toast.error(
-            `"${file.name}" exceeds the ${formatBytes(
-              MAX_IMAGE_BYTES
-            )} image limit.`
-          );
-          return;
-        }
-        accepted.push(file);
-        return;
-      }
-
-      if (file.type.startsWith("video/")) {
-        if (file.size > MAX_VIDEO_BYTES) {
-          toast.error(
-            `"${file.name}" exceeds the ${formatBytes(
-              MAX_VIDEO_BYTES
-            )} video limit.`
-          );
-          return;
-        }
-        accepted.push(file);
-        return;
-      }
-
-      toast.error(`"${file.name}" is not a supported file type.`);
-    });
-
-    if (accepted.length === 0) {
-      return;
-    }
-
-    setPendingFiles((prev) => {
-      const existing = new Set(
-        prev.map(
-          (item) => `${item.file.name}-${item.file.size}-${item.file.type}`
-        )
-      );
-      const next = [...prev];
-      accepted.forEach((file) => {
-        const key = `${file.name}-${file.size}-${file.type}`;
-        if (!existing.has(key)) {
-          const id =
-            typeof crypto !== "undefined" && "randomUUID" in crypto
-              ? crypto.randomUUID()
-              : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-          next.push({ id, file, progress: 0, status: "ready" });
-          existing.add(key);
-        }
-      });
-      return next;
-    });
-  }, []);
-
-  const handleFileInputChange = (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const files = Array.from(event.target.files ?? []);
-    addFiles(files);
-    event.target.value = "";
-  };
-
-  const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    setIsDragging(false);
-    addFiles(Array.from(event.dataTransfer.files));
-  };
-
-  const updatePendingFile = (
-    id: string,
-    updates: Partial<{
-      progress: number;
-      status: "ready" | "uploading" | "done" | "error";
-    }>
-  ) => {
-    setPendingFiles((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, ...updates } : item))
-    );
-  };
-
-  const createVideoThumbnailBlob = React.useCallback(
-    (file: File): Promise<Blob | null> =>
-      new Promise((resolve) => {
-        const video = document.createElement("video");
-        const url = URL.createObjectURL(file);
-        let timeoutId: number | undefined = undefined;
-
-        const cleanup = () => {
-          URL.revokeObjectURL(url);
-          video.remove();
-          if (timeoutId) {
-            window.clearTimeout(timeoutId);
-          }
-        };
-
-        const handleError = () => {
-          cleanup();
-          resolve(null);
-        };
-
-        video.preload = "metadata";
-        video.muted = true;
-        video.playsInline = true;
-        video.src = url;
-
-        video.onloadedmetadata = () => {
-          const seekTime = Math.min(0.1, video.duration || 0.1);
-          video.currentTime = seekTime;
-        };
-
-        video.onseeked = () => {
-          const canvas = document.createElement("canvas");
-          const maxWidth = 480;
-          const scale = Math.min(1, maxWidth / video.videoWidth);
-          const width = Math.max(1, Math.round(video.videoWidth * scale));
-          const height = Math.max(1, Math.round(video.videoHeight * scale));
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext("2d");
-          if (!ctx) {
-            handleError();
-            return;
-          }
-          ctx.drawImage(video, 0, 0, width, height);
-          canvas.toBlob(
-            (blob) => {
-              cleanup();
-              resolve(blob);
-            },
-            "image/jpeg",
-            0.7
-          );
-        };
-
-        video.onerror = handleError;
-        timeoutId = window.setTimeout(handleError, 4000);
-      }),
-    []
-  );
-
-  const uploadFileWithProgress = async (
-    uploadUrl: string,
-    file: File,
-    id: string
-  ): Promise<boolean> => {
-    updatePendingFile(id, { status: "uploading", progress: 0 });
-    return new Promise((resolve) => {
-      const xhr = new XMLHttpRequest();
-      xhr.open("PUT", uploadUrl);
-      xhr.setRequestHeader("Content-Type", file.type);
-      xhr.upload.onprogress = (event) => {
-        if (!event.lengthComputable) {
-          return;
-        }
-        const percent = Math.round((event.loaded / event.total) * 100);
-        updatePendingFile(id, { progress: percent });
-      };
-      xhr.onload = () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          updatePendingFile(id, { progress: 100, status: "done" });
-          resolve(true);
-        } else {
-          updatePendingFile(id, { status: "error" });
-          resolve(false);
-        }
-      };
-      xhr.onerror = () => {
-        updatePendingFile(id, { status: "error" });
-        resolve(false);
-      };
-      xhr.send(file);
-    });
-  };
-
-  const handleUpload = async () => {
-    if (pendingFiles.length === 0 || isUploading) {
-      return;
-    }
-
-    setIsUploading(true);
-    try {
-      const fileMap = new Map<string, File>();
-      const uploadRequests = pendingFiles.map((item) => {
-        fileMap.set(item.id, item.file);
+  const fileValidator = (file: File) => {
+    if (file.type.startsWith("image/")) {
+      if (file.size > MAX_IMAGE_BYTES) {
         return {
-          id: item.id,
-          fileName: item.file.name,
-          fileType: item.file.type,
-          fileSize: item.file.size
+          accepted: false,
+          error: `"${file.name}" exceeds the ${formatBytes(
+            MAX_IMAGE_BYTES
+          )} image limit.`
         };
-      });
-
-      const { uploads, failed } = await getUserMediaUploadUrls(
-        userId,
-        uploadRequests
-      );
-      const failedIds = new Set(failed.map((item) => item.id));
-
-      if (failed.length > 0) {
-        toast.error(`${failed.length} file(s) failed validation.`);
       }
-
-      type UploadResult = {
-        key: string;
-        type: UserMediaType;
-        thumbnailKey?: string;
-        thumbnailFailed: boolean;
-      };
-
-      const uploadResults = await Promise.all(
-        uploads.map(async (upload) => {
-          const file = fileMap.get(upload.id);
-          if (!file) {
-            failedIds.add(upload.id);
-            updatePendingFile(upload.id, { status: "error" });
-            return null;
-          }
-
-          const success = await uploadFileWithProgress(
-            upload.uploadUrl,
-            file,
-            upload.id
-          );
-          if (!success) {
-            failedIds.add(upload.id);
-            return null;
-          }
-
-          let thumbnailKey: string | undefined;
-          let thumbnailFailed = false;
-          if (upload.thumbnailUploadUrl && upload.thumbnailKey) {
-            const thumbnailBlob = await createVideoThumbnailBlob(file);
-            if (thumbnailBlob) {
-              const thumbnailResponse = await fetch(upload.thumbnailUploadUrl, {
-                method: "PUT",
-                body: thumbnailBlob,
-                headers: {
-                  "Content-Type": "image/jpeg"
-                }
-              });
-              if (thumbnailResponse.ok) {
-                thumbnailKey = upload.thumbnailKey;
-              } else {
-                thumbnailFailed = true;
-              }
-            } else {
-              thumbnailFailed = true;
-            }
-          }
-
-          return {
-            key: upload.key,
-            type: upload.type,
-            thumbnailKey,
-            thumbnailFailed
-          } as UploadResult;
-        })
-      );
-
-      const successfulUploads = uploadResults.filter(
-        (result): result is UploadResult => result !== null
-      );
-
-      if (successfulUploads.length > 0) {
-        const created = await createUserMediaRecords(
-          userId,
-          successfulUploads.map((result) => ({
-            key: result.key,
-            type: result.type,
-            thumbnailKey: result.thumbnailKey
-          }))
-        );
-        setMediaItems((prev) => [...created, ...prev]);
-      }
-
-      const thumbnailFailures = successfulUploads.filter(
-        (result) => result.thumbnailFailed
-      ).length;
-      if (thumbnailFailures > 0) {
-        toast.error(
-          `${thumbnailFailures} video thumbnail(s) could not be generated.`
-        );
-      }
-
-      const failedUploads = uploads.filter((upload) =>
-        failedIds.has(upload.id)
-      );
-      if (failedUploads.length > 0) {
-        toast.error(`${failedUploads.length} file(s) failed to upload.`);
-      }
-
-      if (failedIds.size === 0) {
-        setPendingFiles([]);
-        setIsUploadOpen(false);
-      } else {
-        setPendingFiles(
-          failedUploads
-            .map((upload): PendingUpload | null => {
-              const file = fileMap.get(upload.id);
-              if (!file) {
-                return null;
-              }
-              return {
-                id: upload.id,
-                file,
-                progress: 0,
-                status: "error"
-              };
-            })
-            .filter((item): item is PendingUpload => item !== null)
-        );
-      }
-    } catch (error) {
-      toast.error(
-        (error as Error).message || "Failed to upload media. Please try again."
-      );
-    } finally {
-      setIsUploading(false);
+      return { accepted: true };
     }
+
+    if (file.type.startsWith("video/")) {
+      if (file.size > MAX_VIDEO_BYTES) {
+        return {
+          accepted: false,
+          error: `"${file.name}" exceeds the ${formatBytes(
+            MAX_VIDEO_BYTES
+          )} video limit.`
+        };
+      }
+      return { accepted: true };
+    }
+
+    return {
+      accepted: false,
+      error: `"${file.name}" is not a supported file type.`
+    };
+  };
+
+  const handleCreateRecords = async (
+    records: Array<{ key: string; type: UserMediaType; thumbnailKey?: string }>
+  ) => {
+    const created = await createUserMediaRecords(userId, records);
+    setMediaItems((prev) => [...created, ...prev]);
   };
 
   const handleRequestDelete = React.useCallback((item: DBUserMedia) => {
@@ -746,142 +444,42 @@ const MediaView = ({ userId, initialMedia = [] }: MediaViewProps) => {
         </section>
       </div>
 
-      <Dialog
+      <UploadDialog
         open={isUploadOpen}
-        onOpenChange={(open) => {
-          setIsUploadOpen(open);
-          if (!open) {
-            setPendingFiles([]);
-            setIsDragging(false);
+        onOpenChange={setIsUploadOpen}
+        title="Upload media"
+        description={`Add images up to ${formatBytes(
+          MAX_IMAGE_BYTES
+        )} and videos up to ${formatBytes(MAX_VIDEO_BYTES)}.`}
+        accept="image/*,video/*"
+        dropTitle="Drag & drop files here"
+        dropSubtitle="or click to select multiple files"
+        primaryActionLabel="Upload media"
+        errorMessage="Failed to upload media. Please try again."
+        fileValidator={fileValidator}
+        getUploadUrls={(requests) =>
+          getUserMediaUploadUrls(userId, requests)
+        }
+        buildRecordInput={({ upload, thumbnailKey }) => {
+          if (!upload.type) {
+            throw new Error("Missing media type.");
           }
+          return {
+            key: upload.key,
+            type: upload.type as UserMediaType,
+            thumbnailKey
+          };
         }}
-      >
-        <DialogContent className="sm:max-w-[680px]">
-          <DialogHeader>
-            <DialogTitle>Upload media</DialogTitle>
-            <DialogDescription>
-              Add images up to {formatBytes(MAX_IMAGE_BYTES)} and videos up to{" "}
-              {formatBytes(MAX_VIDEO_BYTES)}.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div
-              className={`rounded-xl border border-dashed px-6 py-10 text-center transition-colors ${
-                isDragging
-                  ? "border-foreground/40 bg-secondary"
-                  : "border-border"
-              }`}
-              onDragOver={(event) => {
-                event.preventDefault();
-                setIsDragging(true);
-              }}
-              onDragLeave={() => setIsDragging(false)}
-              onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                accept="image/*,video/*"
-                className="hidden"
-                onChange={handleFileInputChange}
-              />
-              <div className="flex flex-col items-center gap-2">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-background border border-border">
-                  <Upload className="h-5 w-5 text-muted-foreground" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-foreground">
-                    Drag & drop files here
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    or click to select multiple files
-                  </p>
-                </div>
-                <Button size="sm" variant="outline" type="button">
-                  Browse files
-                </Button>
-              </div>
-            </div>
-
-            {pendingFiles.length > 0 && (
-              <div className="rounded-lg border border-border/60 bg-background p-3">
-                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                  {pendingFiles.length} file
-                  {pendingFiles.length === 1 ? "" : "s"} selected
-                </div>
-                <div className="mt-2 max-h-48 space-y-2 overflow-y-auto">
-                  {pendingFiles.map((item) => (
-                    <div
-                      key={item.id}
-                      className="flex items-center justify-between gap-3 text-sm"
-                    >
-                      <div className="min-w-0">
-                        <p className="truncate font-medium text-foreground">
-                          {item.file.name}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {formatBytes(item.file.size)} •{" "}
-                          {item.file.type.startsWith("image/")
-                            ? "Image"
-                            : "Video"}
-                        </p>
-                      </div>
-                      {item.status === "uploading" ||
-                      (isUploading && item.status !== "error") ? (
-                        <div className="w-24">
-                          <div className="h-2 w-full rounded-full bg-muted">
-                            <div
-                              className="h-2 rounded-full bg-primary transition-all"
-                              style={{ width: `${item.progress}%` }}
-                            />
-                          </div>
-                          <p className="mt-1 text-[11px] text-muted-foreground">
-                            {item.status === "done"
-                              ? "Uploaded"
-                              : `${item.progress}%`}
-                          </p>
-                        </div>
-                      ) : (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          type="button"
-                          onClick={() =>
-                            setPendingFiles((prev) =>
-                              prev.filter((pending) => pending.id !== item.id)
-                            )
-                          }
-                        >
-                          Remove
-                        </Button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => setIsUploadOpen(false)}
-              disabled={isUploading}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              onClick={handleUpload}
-              disabled={isUploading || pendingFiles.length === 0}
-            >
-              {isUploading ? "Uploading..." : "Upload media"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        onCreateRecords={handleCreateRecords}
+        fileMetaLabel={(file) =>
+          `${formatBytes(file.size)} • ${
+            file.type.startsWith("image/") ? "Image" : "Video"
+          }`
+        }
+        thumbnailFailureMessage={(count) =>
+          `${count} video thumbnail(s) could not be generated.`
+        }
+      />
 
       <Dialog
         open={isDeleteOpen}

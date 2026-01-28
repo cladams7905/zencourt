@@ -6,6 +6,7 @@ import { getOrCreateUserAdditional, getUserProfileCompletion } from "@web/src/se
 import { LandingPage } from "@web/src/components/landing/LandingPage";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { getLocationLabel, getUserDisplayNames } from "@web/src/lib/userDisplay";
 
 export const dynamic = "force-dynamic";
@@ -28,31 +29,46 @@ export const metadata: Metadata = {
 export default async function Home() {
   const user = await getUser();
 
-  // If user is authenticated and has completed welcome survey, show dashboard
-  if (user) {
-    const userAdditional = await getOrCreateUserAdditional(user.id);
-    if (!userAdditional.surveyCompletedAt) {
-      redirect("/welcome");
+  // If no user but has session cookies, user is unverified (restricted)
+  if (!user) {
+    const cookieStore = await cookies();
+    const hasSession =
+      cookieStore.get("stack-access")?.value ||
+      cookieStore.get("stack-refresh")?.value;
+
+    if (hasSession) {
+      // User has session but getUser() returned null = unverified (restricted) user
+      redirect("/check-inbox");
     }
 
-    const { headerName } = getUserDisplayNames(user);
-    const locationLabel = getLocationLabel(userAdditional.location);
-
-    const listings: DBListing[] = await getUserListings(user.id);
-    const profileCompletion = await getUserProfileCompletion(user.id);
-
-    return (
-      <DashboardView
-        initialListings={listings}
-        headerName={headerName}
-        location={locationLabel}
-        profileCompleted={profileCompletion.profileCompleted}
-        writingStyleCompleted={profileCompletion.writingStyleCompleted}
-        mediaUploaded={profileCompletion.mediaUploaded}
-      />
-    );
+    // No session - show landing page
+    return <LandingPage />;
   }
 
-  // Otherwise show landing page
-  return <LandingPage />;
+  // If user's email is not verified, redirect to check-inbox
+  if (!user.primaryEmailVerified) {
+    redirect("/check-inbox");
+  }
+
+  const userAdditional = await getOrCreateUserAdditional(user.id);
+  if (!userAdditional.surveyCompletedAt) {
+    redirect("/welcome");
+  }
+
+  const { headerName } = getUserDisplayNames(user);
+  const locationLabel = getLocationLabel(userAdditional.location);
+
+  const listings: DBListing[] = await getUserListings(user.id);
+  const profileCompletion = await getUserProfileCompletion(user.id);
+
+  return (
+    <DashboardView
+      initialListings={listings}
+      headerName={headerName}
+      location={locationLabel}
+      profileCompleted={profileCompletion.profileCompleted}
+      writingStyleCompleted={profileCompletion.writingStyleCompleted}
+      mediaUploaded={profileCompletion.mediaUploaded}
+    />
+  );
 }
