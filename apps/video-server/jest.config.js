@@ -18,6 +18,7 @@ module.exports = {
     '^@/(.*)$': '<rootDir>/src/$1',
     '^@db/(.*)$': '<rootDir>/../../packages/db/$1',
     '^@shared/(.*)$': '<rootDir>/../../packages/shared/$1',
+    '^nanoid$': '<rootDir>/__mocks__/nanoid.ts',
   },
   watchman: false,
   coverageThreshold: {

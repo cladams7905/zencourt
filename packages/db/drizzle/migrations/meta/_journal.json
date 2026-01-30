@@ -176,6 +176,20 @@
       "when": 1769475545403,
       "tag": "0024_minor_stingray",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1769748461659,
+      "tag": "0025_fat_squirrel_girl",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1769749443770,
+      "tag": "0026_ambiguous_stephen_strange",
+      "breakpoints": true
     }
   ]
 }

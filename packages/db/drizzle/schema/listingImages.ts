@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
+  boolean,
   index,
-  integer,
   jsonb,
   pgTable,
   real,
@@ -26,9 +26,10 @@ export const listingImages = pgTable(
     url: text("url").notNull(),
     category: varchar("category", { length: 50 }),
     confidence: real("confidence"),
+    primaryScore: real("primary_score"),
     features: jsonb("features").$type<string[]>(),
     sceneDescription: text("scene_description"),
-    sortOrder: integer("sort_order"),
+    isPrimary: boolean("is_primary").default(false),
     metadata: jsonb("metadata").$type<ImageMetadata>(),
     uploadedAt: timestamp("uploaded_at").defaultNow().notNull()
   },

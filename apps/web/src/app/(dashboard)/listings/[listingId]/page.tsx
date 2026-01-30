@@ -34,7 +34,8 @@ export default async function ListingDetailPage({
     id: image.id,
     url: image.url,
     filename: image.filename,
-    category: image.category ?? null
+    category: image.category ?? null,
+    isPrimary: image.isPrimary ?? false
   }));
 
   return (

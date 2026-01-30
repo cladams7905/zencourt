@@ -116,10 +116,11 @@ export function toSerializable(image: ProcessedImage): SerializableImageData {
     filename: image.filename,
     category: image.category,
     confidence: image.confidence,
+    primaryScore: image.primaryScore,
     features: image.features,
     sceneDescription: image.sceneDescription,
     status: image.status,
-    sortOrder: image.sortOrder,
+    isPrimary: image.isPrimary,
     metadata: image.metadata,
     error: image.error,
     uploadUrl: image.uploadUrl
@@ -140,9 +141,10 @@ export function toInsertDBImage(
     url: image.url!,
     category: image.category ?? null,
     confidence: image.confidence ?? null,
+    primaryScore: image.primaryScore ?? null,
     features: image.features ?? null,
     sceneDescription: image.sceneDescription ?? null,
-    sortOrder: image.sortOrder ?? null,
+    isPrimary: image.isPrimary ?? false,
     metadata: image.metadata ?? null
   };
 }

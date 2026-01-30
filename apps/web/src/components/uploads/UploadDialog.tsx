@@ -13,6 +13,7 @@ import {
 } from "../ui/dialog";
 import { Upload } from "lucide-react";
 import { GoogleDriveUploadButton } from "./GoogleDriveUploadButton";
+import { LoadingImage } from "../ui/loading-image";
 
 type PendingUpload = {
   id: string;
@@ -55,6 +56,8 @@ type UploadDialogProps<TRecord> = {
   primaryActionLabel: string;
   selectedLabel?: string;
   errorMessage?: string;
+  tipsTitle?: string;
+  tipsItems?: string[];
   fileValidator: (file: File) => { accepted: boolean; error?: string };
   getUploadUrls: (
     requests: UploadRequest[]
@@ -64,7 +67,7 @@ type UploadDialogProps<TRecord> = {
     file: File;
     thumbnailKey?: string;
     thumbnailFailed: boolean;
-  }) => TRecord;
+  }) => TRecord | Promise<TRecord>;
   onCreateRecords: (records: TRecord[]) => Promise<void>;
   onSuccess?: () => void;
   fileMetaLabel?: (file: File) => string;
@@ -92,6 +95,8 @@ function UploadDialog<TRecord>({
   primaryActionLabel,
   selectedLabel = "file",
   errorMessage = "Failed to upload files. Please try again.",
+  tipsTitle,
+  tipsItems,
   fileValidator,
   getUploadUrls,
   buildRecordInput,
@@ -372,7 +377,7 @@ function UploadDialog<TRecord>({
           }
 
           return {
-            record: buildRecordInput({
+            record: await buildRecordInput({
               upload,
               file,
               thumbnailKey,
@@ -490,11 +495,24 @@ function UploadDialog<TRecord>({
                 <GoogleDriveUploadButton
                   size="sm"
                   variant="outline"
-                  className="gap-2"
+                  className="gap-1"
                 />
               </div>
             </div>
           </div>
+
+          {tipsItems && tipsItems.length > 0 && (
+            <div className="rounded-lg border border-border/60 bg-secondary px-4 py-3">
+              <p className="text-sm font-medium text-foreground">
+                {tipsTitle ?? "Tips"}
+              </p>
+              <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-muted-foreground">
+                {tipsItems.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {pendingFiles.length > 0 && (
             <div className="rounded-lg border border-border/60 bg-background p-3">
@@ -518,10 +536,12 @@ function UploadDialog<TRecord>({
                             playsInline
                           />
                         ) : (
-                          <img
+                          <LoadingImage
                             src={item.previewUrl}
                             alt={item.file.name}
                             className="h-full w-full object-cover"
+                            height={40}
+                            width={40}
                           />
                         )}
                       </div>

@@ -8,6 +8,8 @@ import {
   listingImages,
   eq,
   and,
+  inArray,
+  ne,
   like,
   desc
 } from "@db/client";
@@ -30,6 +32,7 @@ import {
   getListingImagePath
 } from "@shared/utils/storagePaths";
 import storageService from "../../services/storageService";
+import { isManagedStorageUrl } from "../../utils/storageUrls";
 
 type ListingImageUploadRequest = {
   id: string;
@@ -56,6 +59,12 @@ type ListingImageRecordInput = {
   fileName: string;
   publicUrl: string;
   metadata?: ImageMetadata;
+};
+
+type ListingImageUpdate = {
+  id: string;
+  category: string | null;
+  isPrimary?: boolean | null;
 };
 
 async function assertListingOwnership(
@@ -366,7 +375,7 @@ export async function getListingImages(
         .select()
         .from(listingImages)
         .where(eq(listingImages.listingId, listingId))
-        .orderBy(desc(listingImages.sortOrder), desc(listingImages.uploadedAt));
+        .orderBy(desc(listingImages.uploadedAt));
 
       return Promise.all(
         images.map(async (image) => ({
@@ -472,6 +481,94 @@ export async function getListingImageUploadUrls(
   );
 }
 
+export async function updateListingImageAssignments(
+  userId: string,
+  listingId: string,
+  updates: ListingImageUpdate[],
+  deletions: string[]
+): Promise<{ updated: number; deleted: number }> {
+  if (!userId || userId.trim() === "") {
+    throw new Error("User ID is required to update listing images");
+  }
+  if (!listingId || listingId.trim() === "") {
+    throw new Error("Listing ID is required to update listing images");
+  }
+
+  return withDbErrorHandling(
+    async () => {
+      await assertListingOwnership(userId, listingId);
+
+      if (deletions.length > 0) {
+        const rowsToDelete = await db
+          .select({ id: listingImages.id, url: listingImages.url })
+          .from(listingImages)
+          .where(
+            and(
+              eq(listingImages.listingId, listingId),
+              inArray(listingImages.id, deletions)
+            )
+          );
+
+        for (const row of rowsToDelete) {
+          if (row.url && isManagedStorageUrl(row.url)) {
+            const deleteResult = await storageService.deleteFile(row.url);
+            if (!deleteResult.success) {
+              throw new Error(deleteResult.error);
+            }
+          }
+        }
+
+        await db
+          .delete(listingImages)
+          .where(
+            and(
+              eq(listingImages.listingId, listingId),
+              inArray(listingImages.id, deletions)
+            )
+          );
+      }
+
+      for (const update of updates) {
+        const nextIsPrimary =
+          update.category === null ? false : update.isPrimary;
+        if (nextIsPrimary && update.category) {
+          await db
+            .update(listingImages)
+            .set({ isPrimary: false })
+            .where(
+              and(
+                eq(listingImages.listingId, listingId),
+                eq(listingImages.category, update.category),
+                ne(listingImages.id, update.id)
+              )
+            );
+        }
+        await db
+          .update(listingImages)
+          .set({
+            category: update.category,
+            ...(update.isPrimary !== undefined
+              ? { isPrimary: nextIsPrimary ?? false }
+              : {})
+          })
+          .where(
+            and(
+              eq(listingImages.listingId, listingId),
+              eq(listingImages.id, update.id)
+            )
+          );
+      }
+
+      return { updated: updates.length, deleted: deletions.length };
+    },
+    {
+      actionName: "updateListingImageAssignments",
+      context: { userId, listingId },
+      errorMessage: "Failed to update listing images. Please try again."
+    }
+  );
+}
+
 export async function createListingImageRecords(
   userId: string,
   listingId: string,
@@ -491,16 +588,6 @@ export async function createListingImageRecords(
     async () => {
       await assertListingOwnership(userId, listingId);
 
-      const existing = await db
-        .select({ sortOrder: listingImages.sortOrder })
-        .from(listingImages)
-        .where(eq(listingImages.listingId, listingId));
-
-      const maxSortOrder = existing.reduce(
-        (max, row) => Math.max(max, row.sortOrder ?? 0),
-        0
-      );
-
       const prefix = `${getListingFolder(listingId, userId)}/images/`;
       const rows: InsertDBListingImage[] = uploads.map((upload, index) => {
         if (!upload.key.startsWith(prefix)) {
@@ -512,7 +599,7 @@ export async function createListingImageRecords(
           listingId,
           filename: upload.fileName,
           url: upload.publicUrl,
-          sortOrder: maxSortOrder + index + 1,
+          isPrimary: false,
           metadata: upload.metadata ?? null
         };
       });

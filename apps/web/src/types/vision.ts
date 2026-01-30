@@ -17,6 +17,7 @@ export type RoomCategory =
 export interface RoomClassification {
   category: RoomCategory;
   confidence: number;
+  primaryScore?: number;
   reasoning?: string;
   features?: string[];
 }
@@ -151,11 +152,11 @@ export const ROOM_CATEGORIES: Record<RoomCategory, RoomCategoryMetadata> = {
   },
   office: {
     id: "office",
-    label: "Office/Study",
+    label: "Office",
     icon: "Briefcase",
     order: 8,
     color: "#14b8a6", // teal-500
-    allowNumbering: false,
+    allowNumbering: true,
     group: "private"
   },
   "laundry-room": {
@@ -173,7 +174,7 @@ export const ROOM_CATEGORIES: Record<RoomCategory, RoomCategoryMetadata> = {
     icon: "Car",
     order: 10,
     color: "#6366f1", // indigo-500
-    allowNumbering: false,
+    allowNumbering: true,
     group: "utility"
   },
   basement: {

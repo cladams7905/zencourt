@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { Loader2 } from "lucide-react";
-import { DashboardSidebarStatic } from "@web/src/components/dashboard/DashboardSidebar";
+import { ViewSidebarStatic } from "@web/src/components/dashboard/ViewSidebar";
 import { ViewHeader } from "@web/src/components/dashboard/ViewHeader";
 
 export default function DashboardLoading() {
@@ -10,7 +10,7 @@ export default function DashboardLoading() {
     <div className="fixed inset-0 z-50 overflow-hidden bg-background text-foreground">
       <div className="absolute inset-0 pointer-events-none">
         <div className="flex h-full w-full blur-md">
-          <DashboardSidebarStatic userName="Alex Rivera" paymentPlan="Pro" />
+          <ViewSidebarStatic userName="Alex Rivera" paymentPlan="Pro" />
           <main className="flex-1 bg-secondary p-3">
             <div className="h-full rounded-xl bg-background border border-border overflow-hidden shadow-xs">
               <ViewHeader title="Welcome back, Alex Rivera" />

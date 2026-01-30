@@ -5,6 +5,7 @@
 
 import OpenAI from "openai";
 import {
+  ROOM_CATEGORIES,
   type BatchClassificationResult,
   type BatchProgressCallback,
   type RoomCategory,
@@ -16,6 +17,30 @@ import { createChildLogger, logger as baseLogger } from "../../lib/logger";
 const visionLogger = createChildLogger(baseLogger, {
   module: "vision-service"
 });
+
+const CATEGORY_PROMPT_LINES = Object.values(ROOM_CATEGORIES)
+  .sort((a, b) => a.order - b.order)
+  .map((category) => `- ${category.id}: ${category.label}`)
+  .join("\n");
+
+const CLASSIFICATION_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    category: {
+      type: "string",
+      enum: Object.keys(ROOM_CATEGORIES)
+    },
+    confidence: { type: "number", minimum: 0, maximum: 1 },
+    primary_score: { type: "number", minimum: 0, maximum: 1 },
+    reasoning: { type: "string" },
+    features: {
+      type: "array",
+      items: { type: "string" }
+    }
+  },
+  required: ["category", "confidence", "primary_score", "reasoning", "features"]
+} as const;
 
 type RetryOptions = {
   timeout: number;
@@ -52,29 +77,29 @@ export class VisionService {
 
 IMPORTANT CLASSIFICATION RULES:
 1. Choose the MOST SPECIFIC category that fits the image
-2. Only use "other" if the image truly doesn't fit any category
+2. If the image does NOT fit any category, is uncertain/undetermined, or you cannot analyze it, use "other"
 3. Consider the primary purpose of the space shown
 4. Look for distinctive features (appliances, furniture, fixtures)
+5. Never guess a room type from low-quality, irrelevant, or non-room images—use "other" instead
+6. If your reasoning would include an apology, refusal, or "cannot analyze", the category MUST be "other"
+7. Provide a "primary_score" from 0 to 1 estimating how strong a PRIMARY/hero image this would be for its room category.
+
+PRIMARY_SCORE RUBRIC (0-1):
+- Lighting: well-lit, natural light preferred, minimal shadows/overexposure
+- Perspective: wide, level, shows layout and depth
+- Coverage: clearly represents the room's key features
+- Clarity: sharp, not blurry, minimal obstructions/clutter
+- Composition: centered/balanced framing suitable as a thumbnail
 
 AVAILABLE CATEGORIES:
-- exterior-front: Front view of house/building exterior, curb appeal shots
-- exterior-backyard: Backyard, patio, deck, pool, or rear exterior views
-- living-room: Living room, family room, den, or great room
-- kitchen: Kitchen or kitchenette with cooking appliances
-- dining-room: Formal or casual dining room, breakfast nook
-- bedroom: Any bedroom (master, guest, children's room)
-- bathroom: Bathroom, powder room, or ensuite
-- garage: Garage, carport, or parking area
-- office: Home office, study, library, or workspace
-- laundry-room: Laundry room, utility room, or mudroom
-- basement: Basement, cellar, or below-grade space
-- other: Hallways, closets, storage, or unclear spaces
+${CATEGORY_PROMPT_LINES}
 
 RESPONSE FORMAT:
 You must respond with ONLY a valid JSON object, no additional text. Use this exact structure:
 {
   "category": "<one of the categories above>",
   "confidence": <number between 0 and 1>,
+  "primary_score": <number between 0 and 1>,
   "reasoning": "<brief 1-2 sentence explanation>",
   "features": ["<feature1>", "<feature2>", "<feature3>"]
 }
@@ -83,6 +108,7 @@ EXAMPLES:
 {
   "category": "kitchen",
   "confidence": 0.95,
+  "primary_score": 0.88,
   "reasoning": "Clear view of modern kitchen with stainless steel appliances, granite countertops, and island.",
   "features": ["refrigerator", "stove", "granite countertops", "pendant lights", "kitchen island"]
 }
@@ -90,6 +116,7 @@ EXAMPLES:
 {
   "category": "bedroom",
   "confidence": 0.88,
+  "primary_score": 0.62,
   "reasoning": "Room with bed as the central feature, nightstands, and closet visible.",
   "features": ["queen bed", "nightstands", "ceiling fan", "carpet flooring"]
 }
@@ -116,20 +143,9 @@ For a living room:
 
 Now analyze the provided image and provide a SHORT, CONCISE scene description (1-2 sentences max):`;
 
-  private static readonly VALID_CATEGORIES: RoomCategory[] = [
-    "exterior-front",
-    "exterior-backyard",
-    "living-room",
-    "kitchen",
-    "dining-room",
-    "bedroom",
-    "bathroom",
-    "garage",
-    "office",
-    "laundry-room",
-    "basement",
-    "other"
-  ];
+  private static readonly VALID_CATEGORIES = Object.keys(
+    ROOM_CATEGORIES
+  ) as RoomCategory[];
 
   private getClient(): OpenAI {
     if (this.client) {
@@ -275,7 +291,7 @@ Now analyze the provided image and provide a SHORT, CONCISE scene description (1
     const response = await this.executeWithRetry(
       () =>
         this.getClient().chat.completions.create({
-          model: "gpt-4o",
+          model: "gpt-4o-2024-08-06",
           messages: [
             {
               role: "user",
@@ -291,6 +307,16 @@ Now analyze the provided image and provide a SHORT, CONCISE scene description (1
               ]
             }
           ],
+          response_format: {
+            type: "json_schema",
+            json_schema: {
+              name: "room_classification",
+              description:
+                "Room classification with confidence and primary image score.",
+              strict: true,
+              schema: CLASSIFICATION_SCHEMA
+            }
+          },
           max_tokens: 500,
           temperature: 0.3
         }),
@@ -560,9 +586,17 @@ Now analyze the provided image and provide a SHORT, CONCISE scene description (1
 
       const parsed = JSON.parse(jsonContent);
 
+      const primaryScore =
+        typeof parsed.primary_score === "number"
+          ? parsed.primary_score
+          : typeof parsed.primaryScore === "number"
+            ? parsed.primaryScore
+            : undefined;
+
       return {
         category: parsed.category as RoomCategory,
         confidence: parseFloat(parsed.confidence),
+        primaryScore,
         reasoning: parsed.reasoning,
         features: parsed.features || []
       };
@@ -593,6 +627,19 @@ Now analyze the provided image and provide a SHORT, CONCISE scene description (1
     ) {
       throw new AIVisionError(
         `Invalid confidence value: ${classification.confidence}`,
+        "INVALID_RESPONSE",
+        classification
+      );
+    }
+
+    if (
+      classification.primaryScore !== undefined &&
+      (typeof classification.primaryScore !== "number" ||
+        classification.primaryScore < 0 ||
+        classification.primaryScore > 1)
+    ) {
+      throw new AIVisionError(
+        `Invalid primary_score value: ${classification.primaryScore}`,
         "INVALID_RESPONSE",
         classification
       );

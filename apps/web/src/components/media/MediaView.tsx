@@ -52,7 +52,7 @@ const MEDIA_PAGE_SIZE = 12;
 
 const mediaLibraryHelpLink = {
   label: "Learn more",
-  href: "https://zencourt.app/blog/how-to-create-b-roll-footage"
+  href: "https://zencourt.ai/blog/how-to-create-b-roll-footage"
 };
 
 const formatUploadDate = (value: Date | string) => {
@@ -457,9 +457,7 @@ const MediaView = ({ userId, initialMedia = [] }: MediaViewProps) => {
         primaryActionLabel="Upload media"
         errorMessage="Failed to upload media. Please try again."
         fileValidator={fileValidator}
-        getUploadUrls={(requests) =>
-          getUserMediaUploadUrls(userId, requests)
-        }
+        getUploadUrls={(requests) => getUserMediaUploadUrls(userId, requests)}
         buildRecordInput={({ upload, thumbnailKey }) => {
           if (!upload.type) {
             throw new Error("Missing media type.");

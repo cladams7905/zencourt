@@ -98,9 +98,14 @@ function groupImagesByCategory(
 
   grouped.forEach((imagesForCategory) => {
     imagesForCategory.sort((a, b) => {
-      const orderA = a.sortOrder ?? 0;
-      const orderB = b.sortOrder ?? 0;
-      return orderA - orderB;
+      const primaryA = a.isPrimary ? 1 : 0;
+      const primaryB = b.isPrimary ? 1 : 0;
+      if (primaryA !== primaryB) {
+        return primaryB - primaryA;
+      }
+      const timeA = a.uploadedAt ? new Date(a.uploadedAt).getTime() : 0;
+      const timeB = b.uploadedAt ? new Date(b.uploadedAt).getTime() : 0;
+      return timeA - timeB;
     });
   });
 
@@ -128,6 +133,13 @@ function selectRoomAssetsForRoom(
   const maxImages = 4;
 
   if (metadata?.allowNumbering) {
+    const primaryImage = availableImages.find((image) => image.isPrimary);
+    if (primaryImage?.url) {
+      return {
+        imageUrls: [primaryImage.url],
+        roomDescription: primaryImage.sceneDescription ?? null
+      };
+    }
     const index =
       typeof room.roomNumber === "number" && room.roomNumber > 0
         ? room.roomNumber - 1
@@ -152,9 +164,9 @@ function selectRoomAssetsForRoom(
     .slice(0, maxImages)
     .map((image) => image.url!) as string[];
 
-  const descriptionSource = availableImages.find((image) =>
-    Boolean(image.sceneDescription)
-  );
+  const descriptionSource =
+    availableImages.find((image) => image.isPrimary && image.sceneDescription) ??
+    availableImages.find((image) => Boolean(image.sceneDescription));
 
   return {
     imageUrls,
@@ -252,7 +264,7 @@ export async function POST(
       .select()
       .from(listingImages)
       .where(eq(listingImages.listingId, listing.id))
-      .orderBy(asc(listingImages.sortOrder), asc(listingImages.uploadedAt))) as DBListingImage[];
+      .orderBy(asc(listingImages.uploadedAt))) as DBListingImage[];
 
     if (listingImageRows.length === 0) {
       logger.error(

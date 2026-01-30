@@ -109,12 +109,13 @@ export class imageProcessorService {
           filename: image.filename,
           category: image.category,
           confidence: image.confidence,
+          primaryScore: image.primaryScore ?? null,
           features: Array.isArray(image.features)
             ? [...image.features]
             : image.features,
           sceneDescription: image.sceneDescription,
           status: image.status,
-          sortOrder: image.sortOrder,
+          isPrimary: image.isPrimary,
           metadata: image.metadata,
           error: image.error,
           uploadUrl: image.uploadUrl
@@ -235,8 +236,13 @@ export class imageProcessorService {
         }
 
         if (batchResult.success && batchResult.classification) {
-          image.category = batchResult.classification.category;
+          const isOther = batchResult.classification.category === "other";
+          image.category =
+            isOther ? null : batchResult.classification.category;
           image.confidence = batchResult.classification.confidence;
+          image.primaryScore = isOther
+            ? null
+            : batchResult.classification.primaryScore ?? null;
           image.features = batchResult.classification.features;
           image.status = "analyzed";
         } else {

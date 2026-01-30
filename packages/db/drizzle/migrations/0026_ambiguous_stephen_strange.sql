@@ -1,0 +1,1 @@
+ALTER TABLE "listing_images" ADD COLUMN "primary_score" real;

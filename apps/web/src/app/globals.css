@@ -12,21 +12,21 @@
   --popover-foreground: #000000;
   --primary: #000000;
   --primary-foreground: #fdfcf9;
-  --secondary: #f8f6f3;
+  --secondary: #f4f2ef;
   --secondary-foreground: #000000;
-  --muted: #f8f6f3;
+  --muted: #f4f2ef;
   --muted-foreground: #666666;
   --accent: #eee4da;
   --accent-foreground: #000000;
   --destructive: #a93226;
   --destructive-foreground: #fdfcf9;
-  --border: rgba(0, 0, 0, 0.08);
-  --input: rgba(0, 0, 0, 0.08);
+  --border: #d9d9d0;
+  --input: #d9d9d0;
   --input-background: #fdfcf9;
   --switch-background: #fdfcf9;
   --font-weight-medium: 500;
   --font-weight-normal: 400;
-  --ring: rgba(0, 0, 0, 0.08);
+  --ring: #d9d9d0;
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
@@ -39,7 +39,7 @@
   --sidebar-primary-foreground: #fdfcf9;
   --sidebar-secondary: #e8ddd3;
   --sidebar-secondary-foreground: #000000;
-  --sidebar-border: rgba(0, 0, 0, 0.08);
+  --sidebar-border: #d9d9d0;
   --sidebar-ring: rgba(0, 0, 0, 0.2);
 }
 
@@ -140,6 +140,30 @@
     font-family: var(--font-header), serif;
   }
 
+  /* Custom scrollbar - transparent track, subtle thumb */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 9999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--muted-foreground);
+  }
+
   /* Text selection highlight - black background, white text */
   ::selection {
     background-color: #000000;
@@ -164,9 +188,9 @@
   select:-webkit-autofill:hover,
   select:-webkit-autofill:focus,
   select:-webkit-autofill:active {
-    -webkit-box-shadow: 0 0 0 1000px #f8f6f3 inset !important;
+    -webkit-box-shadow: 0 0 0 1000px #f4f2ef inset !important;
     -webkit-text-fill-color: #000000 !important;
-    box-shadow: 0 0 0 1000px #f8f6f3 inset !important;
+    box-shadow: 0 0 0 1000px #f4f2ef inset !important;
     caret-color: #000000 !important;
   }
 }
@@ -483,7 +507,7 @@ html {
   height: 36px !important;
   width: 100% !important;
   border-radius: 8px !important;
-  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  border: 1px solid #d9d9d0 !important;
   background-color: #fdfcf9 !important;
   padding: 4px 12px !important;
   font-family: "Mulish", Arial, sans-serif !important;
@@ -504,8 +528,8 @@ html {
 
 .stack-scope input.stack-scope:focus,
 .stack-scope input:focus {
-  border-color: rgba(0, 0, 0, 0.08) !important;
-  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.08) !important;
+  border-color: #d9d9d0 !important;
+  box-shadow: 0 0 0 3px #d9d9d0 !important;
 }
 
 .stack-scope input.stack-scope::placeholder,
@@ -525,7 +549,7 @@ button[class*="stack-oauth-button"].bg-primary {
   border-radius: 8px !important;
   background-color: #fdfcf9 !important;
   color: #000000 !important;
-  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  border: 1px solid #d9d9d0 !important;
   font-family: "Mulish", Arial, sans-serif !important;
   font-size: 14px !important;
   font-weight: 500 !important;
@@ -536,7 +560,7 @@ button[class*="stack-oauth-button"].bg-primary {
 .stack-scope button[class*="stack-oauth-button"].bg-primary:hover,
 button[class*="stack-oauth-button"]:hover,
 button[class*="stack-oauth-button"].bg-primary:hover {
-  background-color: #f8f6f3 !important;
+  background-color: #f4f2ef !important;
 }
 
 /* Stack Auth "last used" badge - override blue to accent color */
@@ -600,7 +624,7 @@ button[class*="stack-oauth-button"].bg-primary:hover {
 /* Stack Auth divider lines - use muted border color */
 .stack-scope div[data-orientation="horizontal"].bg-border,
 .stack-scope .bg-border[role="none"] {
-  background-color: rgba(0, 0, 0, 0.08) !important;
+  background-color: #d9d9d0 !important;
 }
 
 /* Stack Auth Google icon - replace SVG with custom PNG */

@@ -341,7 +341,7 @@ describe('VideoCompositionService', () => {
       expect(fs.rm).toHaveBeenCalled();
     });
 
-    it('should include project name in metadata when provided', async () => {
+    it('should include listing name in metadata when provided', async () => {
       const roomVideoUrls = ['https://bucket.s3.us-east-1.amazonaws.com/video1.mp4'];
 
       await service.combineRoomVideos(
@@ -350,13 +350,13 @@ describe('VideoCompositionService', () => {
         'user123',
         'project456',
         'video789',
-        'My Awesome Project'
+        'My Awesome Listing'
       );
 
       const videoCall = mockStorageService.uploadFile.mock.calls.find((call: any) =>
         call[0].key.includes('final.mp4')
       );
-      expect(videoCall[0].metadata.projectName).toBe('My Awesome Project');
+      expect(videoCall[0].metadata.listingName).toBe('My Awesome Listing');
     });
   });
 

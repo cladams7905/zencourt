@@ -20,6 +20,8 @@ import {
   getListingImageUploadUrls
 } from "@web/src/server/actions/db/listings";
 import { useRouter } from "next/navigation";
+import { getImageMetadataFromFile } from "@web/src/lib/imageMetadata";
+import type { ImageMetadata } from "@shared/types/models";
 
 interface ListingSyncViewProps {
   userId: string;
@@ -36,7 +38,10 @@ export function ListingSyncView({ userId }: ListingSyncViewProps) {
   const router = useRouter();
   const [isUploadOpen, setIsUploadOpen] = React.useState(false);
   const [listingId, setListingId] = React.useState<string | null>(null);
+  const [lastUploadCount, setLastUploadCount] = React.useState(0);
   const listingIdRef = React.useRef<string | null>(null);
+  const lastUploadCountRef = React.useRef(0);
+  const batchStartedAtRef = React.useRef<number | null>(null);
 
   React.useEffect(() => {
     listingIdRef.current = listingId;
@@ -58,12 +63,20 @@ export function ListingSyncView({ userId }: ListingSyncViewProps) {
 
   const handleCreateRecords = React.useCallback(
     async (
-      records: Array<{ key: string; fileName: string; publicUrl: string }>
+      records: Array<{
+        key: string;
+        fileName: string;
+        publicUrl: string;
+        metadata?: ImageMetadata;
+      }>
     ) => {
       const activeListingId = listingIdRef.current;
       if (!activeListingId) {
         throw new Error("Listing is missing for upload.");
       }
+      setLastUploadCount(records.length);
+      lastUploadCountRef.current = records.length;
+      batchStartedAtRef.current = Date.now();
       await createListingImageRecords(userId, activeListingId, records);
     },
     [userId]
@@ -149,6 +162,12 @@ export function ListingSyncView({ userId }: ListingSyncViewProps) {
         primaryActionLabel="Upload photos"
         selectedLabel="photo"
         errorMessage="Failed to upload photos. Please try again."
+        tipsTitle="What photos should I upload?"
+        tipsItems={[
+          "No more than 20 listing photos may be uploaded per listing.",
+          "Select at least 2 listing photos per room for best output quality.",
+          "Include a wide variety well-framed shots of key rooms and exterior."
+        ]}
         fileMetaLabel={(file) => formatBytes(file.size)}
         fileValidator={(file) => {
           if (file.type.startsWith("image/")) {
@@ -160,21 +179,28 @@ export function ListingSyncView({ userId }: ListingSyncViewProps) {
           const activeListingId = await ensureListingId();
           return getListingImageUploadUrls(userId, activeListingId, requests);
         }}
-        buildRecordInput={({ upload }) => {
+        buildRecordInput={async ({ upload, file }) => {
           if (!upload.fileName || !upload.publicUrl) {
             throw new Error("Listing upload is missing metadata.");
           }
+          const metadata = await getImageMetadataFromFile(file);
           return {
             key: upload.key,
             fileName: upload.fileName,
-            publicUrl: upload.publicUrl
+            publicUrl: upload.publicUrl,
+            metadata
           };
         }}
         onCreateRecords={handleCreateRecords}
         onSuccess={() => {
           const activeListingId = listingIdRef.current;
           if (activeListingId) {
-            router.push(`/listings/${activeListingId}`);
+            const batchStartedAt = batchStartedAtRef.current ?? Date.now();
+            const batchParam =
+              lastUploadCountRef.current > 0
+                ? `?batch=${lastUploadCountRef.current}&batchStartedAt=${batchStartedAt}`
+                : `?batchStartedAt=${batchStartedAt}`;
+            router.push(`/listings/${activeListingId}/processing${batchParam}`);
           }
         }}
       />

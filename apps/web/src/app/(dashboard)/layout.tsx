@@ -1,7 +1,10 @@
-import { DashboardSidebar } from "@web/src/components/dashboard/DashboardSidebar";
+import { ViewSidebar } from "@web/src/components/dashboard/ViewSidebar";
 import { getUser } from "@web/src/server/actions/db/users";
 import { getOrCreateUserAdditional } from "@web/src/server/actions/db/userAdditional";
-import { getPaymentPlanLabel, getUserDisplayNames } from "@web/src/lib/userDisplay";
+import {
+  getPaymentPlanLabel,
+  getUserDisplayNames
+} from "@web/src/lib/userDisplay";
 import { getUserListings } from "@web/src/server/actions/db/listings";
 
 export default async function DashboardLayout({
@@ -26,7 +29,7 @@ export default async function DashboardLayout({
 
   return (
     <div className="flex h-screen overflow-hidden">
-      <DashboardSidebar
+      <ViewSidebar
         userName={sidebarName}
         paymentPlan={paymentPlanLabel}
         userAvatar={user.profileImageUrl ?? undefined}

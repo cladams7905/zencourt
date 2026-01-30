@@ -25,6 +25,7 @@ export * from "./drizzle/schema";
 export {
   and,
   eq,
+  ne,
   or,
   inArray,
   exists,

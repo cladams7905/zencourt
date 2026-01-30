@@ -56,7 +56,7 @@ type ListingSidebarItem = {
   listingStage: string | null;
 };
 
-interface DashboardSidebarProps {
+interface ViewSidebarProps {
   className?: string;
   userName?: string;
   paymentPlan?: string;
@@ -64,13 +64,13 @@ interface DashboardSidebarProps {
   listings?: ListingSidebarItem[];
 }
 
-const DashboardSidebar = ({
+const ViewSidebar = ({
   className,
   userName = "User",
   paymentPlan = "Free",
   userAvatar,
   listings = []
-}: DashboardSidebarProps) => {
+}: ViewSidebarProps) => {
   const user = useUser();
   const router = useRouter();
   const [contentExpanded, setContentExpanded] = React.useState(true);
@@ -137,7 +137,7 @@ const DashboardSidebar = ({
       feedbackMessage.trim() || "No additional feedback."
     ].join("\n");
 
-    window.location.href = `mailto:team@zencourt.app?subject=${encodeURIComponent(
+    window.location.href = `mailto:team@zencourt.ai?subject=${encodeURIComponent(
       subject
     )}&body=${encodeURIComponent(body)}`;
     toast.success("Feedback ready to send.");
@@ -456,7 +456,7 @@ const DashboardSidebar = ({
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent
-            align="end"
+            align="center"
             side="top"
             sideOffset={8}
             className="w-52"
@@ -489,7 +489,7 @@ const DashboardSidebar = ({
               asChild
               className="transition-all duration-150 group"
             >
-              <a href="mailto:team@zencourt.app">
+              <a href="mailto:team@zencourt.ai">
                 <CircleQuestionMark className="mr-3 h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
                 <span className="text-sm font-medium">Get help</span>
               </a>
@@ -562,12 +562,12 @@ const DashboardSidebar = ({
   );
 };
 
-const DashboardSidebarStatic = ({
+const ViewSidebarStatic = ({
   className,
   userName = "User",
   paymentPlan = "Free",
   userAvatar
-}: DashboardSidebarProps) => {
+}: ViewSidebarProps) => {
   const [contentExpanded, setContentExpanded] = React.useState(true);
   const [listingsExpanded, setListingsExpanded] = React.useState(true);
 
@@ -822,4 +822,4 @@ const DashboardSidebarStatic = ({
   );
 };
 
-export { DashboardSidebar, DashboardSidebarStatic };
+export { ViewSidebar, ViewSidebarStatic };
