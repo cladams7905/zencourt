@@ -33,22 +33,32 @@ export function ListingProcessingView({
   const [batchTotal, setBatchTotal] = React.useState(
     typeof batchCount === "number" && batchCount > 0 ? batchCount : 0
   );
-  const hasStartedRef = React.useRef(false);
-
-  React.useEffect(() => {
-    if (hasStartedRef.current) {
-      return;
-    }
-
-    hasStartedRef.current = true;
-    setIsProcessing(true);
-
-    categorizeListingImages(userId, listingId).catch(() => null);
-  }, [listingId, userId]);
+  const hasTriggeredCategorizeRef = React.useRef(false);
 
   const refreshStatus = React.useCallback(async () => {
     try {
       const updated = await getListingImages(userId, listingId);
+      if (!hasTriggeredCategorizeRef.current && updated.length > 0) {
+        hasTriggeredCategorizeRef.current = true;
+        setIsProcessing(true);
+        categorizeListingImages(userId, listingId).catch(() => null);
+      }
+      const isProcessed = (image: { category: string | null }) => {
+        const candidate = image as {
+          category: string | null;
+          confidence?: number | null;
+          primaryScore?: number | null;
+          features?: string[] | null;
+          sceneDescription?: string | null;
+        };
+        return Boolean(
+          candidate.category ||
+          candidate.confidence !== null ||
+          candidate.primaryScore !== null ||
+          (candidate.features && candidate.features.length > 0) ||
+          candidate.sceneDescription
+        );
+      };
       const batchFiltered = batchStartedAt
         ? updated.filter((image) => {
             const uploadedAt =
@@ -58,16 +68,19 @@ export function ListingProcessingView({
             return uploadedAt >= batchStartedAt;
           })
         : updated;
-      const categorizedCount = batchFiltered.filter(
-        (image) => image.category
-      ).length;
-      const uncategorizedCount = batchFiltered.length - categorizedCount;
+      if (batchFiltered.length === 0) {
+        return;
+      }
+      const processedCount = batchFiltered.filter(isProcessed).length;
+      const uncategorizedCount = batchFiltered.length - processedCount;
       setBatchTotal(batchFiltered.length);
       setRemainingUncategorized(uncategorizedCount);
       setTotalToProcess((prev) =>
         prev === null ? batchFiltered.length : prev
       );
-      const needsCategorization = updated.some((image) => !image.category);
+      const needsCategorization = batchFiltered.some(
+        (image) => !isProcessed(image)
+      );
       if (!needsCategorization) {
         setIsProcessing(false);
         router.replace(`/listings/${listingId}`);
@@ -130,7 +143,7 @@ export function ListingProcessingView({
               </span>
             </div>
             <p className="mt-4 text-xs text-muted-foreground">
-              This usually takes a few moments. Feel free to keep this tab open.
+              This usually takes a few moments. Please keep this tab open.
             </p>
           </div>
         </div>

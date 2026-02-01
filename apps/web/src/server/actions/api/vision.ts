@@ -13,94 +13,30 @@ import { SceneDescription } from "@web/src/types/vision";
 import type { SerializableImageData } from "@web/src/types/images";
 import { createChildLogger, logger as baseLogger } from "../../../lib/logger";
 import { db, listingImages, and, eq, inArray } from "@db/client";
-import { getListingById } from "../db/listings";
+import {
+  assignPrimaryListingImageForCategory,
+  getListingById
+} from "../db/listings";
 
 const logger = createChildLogger(baseLogger, { module: "vision-actions" });
 
-const assignPrimaryImagesByScore = async (listingId: string) => {
-  const scoredImages = await db
-    .select({
-      id: listingImages.id,
-      category: listingImages.category,
-      primaryScore: listingImages.primaryScore,
-      uploadedAt: listingImages.uploadedAt
-    })
-    .from(listingImages)
-    .where(eq(listingImages.listingId, listingId));
-
-  const bestByCategory = new Map<
-    string,
-    { id: string; score: number; uploadedAt: Date }
-  >();
-
-  scoredImages.forEach((image) => {
-    if (!image.category || typeof image.primaryScore !== "number") {
-      return;
-    }
-    const current = bestByCategory.get(image.category);
-    if (!current) {
-      bestByCategory.set(image.category, {
-        id: image.id,
-        score: image.primaryScore,
-        uploadedAt: image.uploadedAt
-      });
-      return;
-    }
-
-    if (image.primaryScore > current.score) {
-      bestByCategory.set(image.category, {
-        id: image.id,
-        score: image.primaryScore,
-        uploadedAt: image.uploadedAt
-      });
-      return;
-    }
-
-    if (image.primaryScore === current.score) {
-      if (image.uploadedAt < current.uploadedAt) {
-        bestByCategory.set(image.category, {
-          id: image.id,
-          score: image.primaryScore,
-          uploadedAt: image.uploadedAt
-        });
-        return;
-      }
-
-      if (
-        image.uploadedAt.getTime() === current.uploadedAt.getTime() &&
-        image.id < current.id
-      ) {
-        bestByCategory.set(image.category, {
-          id: image.id,
-          score: image.primaryScore,
-          uploadedAt: image.uploadedAt
-        });
-      }
-    }
-  });
-
-  for (const [category, best] of bestByCategory.entries()) {
-    await db
-      .update(listingImages)
-      .set({ isPrimary: false })
-      .where(
-        and(
-          eq(listingImages.listingId, listingId),
-          eq(listingImages.category, category)
-        )
-      );
-
-    await db
-      .update(listingImages)
-      .set({ isPrimary: true })
-      .where(
-        and(
-          eq(listingImages.listingId, listingId),
-          eq(listingImages.category, category),
-          eq(listingImages.id, best.id)
-        )
-      );
+const assignPrimaryImagesByCategory = async (
+  userId: string,
+  listingId: string,
+  categories: string[]
+) => {
+  const uniqueCategories = Array.from(
+    new Set(categories.filter((category) => category.trim() !== ""))
+  );
+  if (uniqueCategories.length === 0) {
+    return;
   }
+
+  await Promise.all(
+    uniqueCategories.map((category) =>
+      assignPrimaryListingImageForCategory(userId, listingId, category)
+    )
+  );
 };
 
 /**
@@ -335,7 +271,13 @@ export async function categorizeListingImages(
   );
 
   await Promise.all(result.images.map((image) => updateListingImage(image)));
-  await assignPrimaryImagesByScore(listingId);
+  await assignPrimaryImagesByCategory(
+    userId,
+    listingId,
+    result.images
+      .map((image) => image.category ?? "")
+      .filter((category) => category !== "")
+  );
 
   return result.stats;
 }
@@ -453,7 +395,13 @@ export async function categorizeListingImagesByIds(
   );
 
   await Promise.all(result.images.map((image) => updateListingImage(image)));
-  await assignPrimaryImagesByScore(listingId);
+  await assignPrimaryImagesByCategory(
+    userId,
+    listingId,
+    result.images
+      .map((image) => image.category ?? "")
+      .filter((category) => category !== "")
+  );
 
   return result.stats;
 }

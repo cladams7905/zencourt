@@ -8,7 +8,8 @@ import {
   S3Client,
   PutObjectCommand,
   DeleteObjectCommand,
-  GetObjectCommand
+  GetObjectCommand,
+  ListObjectVersionsCommand
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import {
@@ -217,12 +218,60 @@ export class StorageService {
     try {
       const key = this.normalizeKeyFromUrl(url);
 
-      await this.client.send(
-        new DeleteObjectCommand({
-          Bucket: STORAGE_CONFIG.bucket,
-          Key: key
-        })
-      );
+      let keyMarker: string | undefined;
+      let versionIdMarker: string | undefined;
+      const versionDeletes: Array<{ key: string; versionId: string }> = [];
+
+      do {
+        const response = await this.client.send(
+          new ListObjectVersionsCommand({
+            Bucket: STORAGE_CONFIG.bucket,
+            Prefix: key,
+            KeyMarker: keyMarker,
+            VersionIdMarker: versionIdMarker
+          })
+        );
+
+        (response.Versions ?? [])
+          .filter((version) => version.Key === key && version.VersionId)
+          .forEach((version) => {
+            versionDeletes.push({
+              key,
+              versionId: version.VersionId!
+            });
+          });
+
+        (response.DeleteMarkers ?? [])
+          .filter((marker) => marker.Key === key && marker.VersionId)
+          .forEach((marker) => {
+            versionDeletes.push({
+              key,
+              versionId: marker.VersionId!
+            });
+          });
+
+        keyMarker = response.NextKeyMarker;
+        versionIdMarker = response.NextVersionIdMarker;
+      } while (keyMarker);
+
+      if (versionDeletes.length === 0) {
+        await this.client.send(
+          new DeleteObjectCommand({
+            Bucket: STORAGE_CONFIG.bucket,
+            Key: key
+          })
+        );
+      } else {
+        for (const version of versionDeletes) {
+          await this.client.send(
+            new DeleteObjectCommand({
+              Bucket: STORAGE_CONFIG.bucket,
+              Key: version.key,
+              VersionId: version.versionId
+            })
+          );
+        }
+      }
 
       logger.info({ key }, "Deleted file");
       return { success: true };

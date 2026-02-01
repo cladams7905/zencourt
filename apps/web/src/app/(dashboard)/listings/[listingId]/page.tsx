@@ -15,6 +15,7 @@ export default async function ListingDetailPage({
 }: ListingDetailPageProps) {
   const { listingId } = await params;
   const user = await getUser();
+  const googleMapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
 
   if (!user) {
     redirect("/handler/sign-in");
@@ -35,15 +36,18 @@ export default async function ListingDetailPage({
     url: image.url,
     filename: image.filename,
     category: image.category ?? null,
-    isPrimary: image.isPrimary ?? false
+    isPrimary: image.isPrimary ?? false,
+    primaryScore: image.primaryScore ?? null
   }));
 
   return (
     <ListingDetailView
       title={listing.title?.trim() || "Listing"}
+      initialAddress={listing.address ?? ""}
       listingId={listingId}
       userId={user.id}
       initialImages={imageItems}
+      googleMapsApiKey={googleMapsApiKey}
     />
   );
 }

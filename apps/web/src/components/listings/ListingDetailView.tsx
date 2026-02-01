@@ -11,6 +11,7 @@ import {
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
+import { AddressAutocomplete } from "../location/AddressAutocomplete";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,6 +21,7 @@ import {
 } from "../ui/dropdown-menu";
 import {
   AlertTriangle,
+  Loader2,
   MoreHorizontal,
   Move,
   Pencil,
@@ -34,7 +36,10 @@ import { MAX_IMAGE_BYTES } from "@shared/utils/mediaUpload";
 import { toast } from "sonner";
 import {
   createListingImageRecords,
+  deleteListingImageUploads,
   getListingImageUploadUrls,
+  assignPrimaryListingImageForCategory,
+  updateListing,
   updateListingImageAssignments
 } from "@web/src/server/actions/db/listings";
 import { ROOM_CATEGORIES, type RoomCategory } from "@web/src/types/vision";
@@ -51,13 +56,16 @@ type ListingImageItem = {
   filename: string;
   category: string | null;
   isPrimary?: boolean | null;
+  primaryScore?: number | null;
 };
 
 interface ListingDetailViewProps {
   title: string;
+  initialAddress: string;
   listingId: string;
   userId: string;
   initialImages: ListingImageItem[];
+  googleMapsApiKey: string;
 }
 
 const timelineSteps = [
@@ -80,6 +88,16 @@ const MULTI_ROOM_CATEGORIES = new Set(
     .map((category) => category.id)
 );
 
+const getScrollParent = (el: HTMLElement): HTMLElement => {
+  let parent = el.parentElement;
+  while (parent) {
+    const { overflowY } = getComputedStyle(parent);
+    if (overflowY === "auto" || overflowY === "scroll") return parent;
+    parent = parent.parentElement;
+  }
+  return document.documentElement;
+};
+
 const getCategoryBase = (category: string) => category.replace(/-\d+$/, "");
 
 const formatCategoryLabel = (
@@ -87,7 +105,7 @@ const formatCategoryLabel = (
   baseCounts: Record<string, number>
 ) => {
   if (category === "needs-categorization") {
-    return "Needs categorization";
+    return "Uncategorized";
   }
   const baseCategory = getCategoryBase(category);
   const metadata = ROOM_CATEGORIES[baseCategory as RoomCategory];
@@ -136,16 +154,19 @@ const getNextCategoryValue = (base: string, existing: string[]) => {
 
 export function ListingDetailView({
   title,
+  initialAddress,
   listingId,
   userId,
-  initialImages
+  initialImages,
+  googleMapsApiKey
 }: ListingDetailViewProps) {
   const router = useRouter();
+  const [draftTitle, setDraftTitle] = React.useState(title);
   const [images, setImages] = React.useState<ListingImageItem[]>(initialImages);
   const [dragOverCategory, setDragOverCategory] = React.useState<string | null>(
     null
   );
-  const [addressValue, setAddressValue] = React.useState("");
+  const [addressValue, setAddressValue] = React.useState(initialAddress);
   const [priceValue, setPriceValue] = React.useState("");
   const [isUploadOpen, setIsUploadOpen] = React.useState(false);
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = React.useState(false);
@@ -164,18 +185,27 @@ export function ListingDetailView({
     null
   );
   const [customCategories, setCustomCategories] = React.useState<string[]>([]);
-  const initialImagesRef = React.useRef(initialImages);
+  const [savingCount, setSavingCount] = React.useState(0);
+  const [isDraggingImage, setIsDraggingImage] = React.useState(false);
+  const lastDragClientYRef = React.useRef<number | null>(null);
+  const headerRef = React.useRef<HTMLElement | null>(null);
+  const draftTitleRef = React.useRef(title);
 
-  const categorizedImages = images.reduce<Record<string, ListingImageItem[]>>(
-    (acc, image) => {
-      const key = image.category ?? "needs-categorization";
-      if (!acc[key]) {
-        acc[key] = [];
-      }
-      acc[key].push(image);
-      return acc;
-    },
-    {}
+  React.useEffect(() => {
+    draftTitleRef.current = draftTitle;
+  }, [draftTitle]);
+
+  const categorizedImages = React.useMemo(
+    () =>
+      images.reduce<Record<string, ListingImageItem[]>>((acc, image) => {
+        const key = image.category ?? "needs-categorization";
+        if (!acc[key]) {
+          acc[key] = [];
+        }
+        acc[key].push(image);
+        return acc;
+      }, {}),
+    [images]
   );
 
   const categoryOrder = React.useMemo(() => {
@@ -190,6 +220,9 @@ export function ListingDetailView({
     });
     return sorted;
   }, [categorizedImages, customCategories]);
+  const [openCategories, setOpenCategories] = React.useState<string[]>(
+    () => categoryOrder
+  );
   const baseCategoryCounts = React.useMemo(() => {
     const counts: Record<string, number> = {};
     categoryOrder.forEach((category) => {
@@ -201,12 +234,75 @@ export function ListingDetailView({
     });
     return counts;
   }, [categoryOrder]);
+
+  React.useEffect(() => {
+    setOpenCategories((prev) => {
+      const next = new Set(prev);
+      categoryOrder.forEach((category) => next.add(category));
+      return Array.from(next);
+    });
+  }, [categoryOrder]);
+
+  React.useEffect(() => {
+    if (!isDraggingImage) {
+      return;
+    }
+    const scrollContainer = headerRef.current
+      ? getScrollParent(headerRef.current)
+      : null;
+    let rafId: number | null = null;
+    const handleDragOver = (event: DragEvent) => {
+      lastDragClientYRef.current = event.clientY;
+    };
+    const tick = () => {
+      const clientY = lastDragClientYRef.current;
+      if (clientY !== null && scrollContainer) {
+        const threshold = 200;
+        const topThreshold = 250;
+        const viewportHeight = window.innerHeight;
+        const headerBottom =
+          headerRef.current?.getBoundingClientRect().bottom ?? 0;
+        let scrollDelta = 0;
+        if (clientY < headerBottom + topThreshold) {
+          const intensity =
+            (headerBottom + topThreshold - clientY) / topThreshold;
+          scrollDelta = -Math.ceil(3 + intensity * 12);
+        } else if (clientY > viewportHeight - threshold) {
+          const intensity =
+            (clientY - (viewportHeight - threshold)) / threshold;
+          scrollDelta = Math.ceil(3 + intensity * 10);
+        }
+        if (scrollDelta !== 0) {
+          scrollContainer.scrollBy({ top: scrollDelta, behavior: "auto" });
+        }
+      }
+      rafId = window.requestAnimationFrame(tick);
+    };
+    window.addEventListener("dragover", handleDragOver);
+    const handleDragEnd = () => {
+      setIsDraggingImage(false);
+      setDragOverCategory(null);
+    };
+    window.addEventListener("dragend", handleDragEnd);
+    window.addEventListener("drop", handleDragEnd);
+    rafId = window.requestAnimationFrame(tick);
+    return () => {
+      if (rafId !== null) {
+        window.cancelAnimationFrame(rafId);
+      }
+      window.removeEventListener("dragover", handleDragOver);
+      window.removeEventListener("dragend", handleDragEnd);
+      window.removeEventListener("drop", handleDragEnd);
+      lastDragClientYRef.current = null;
+    };
+  }, [isDraggingImage]);
   const hasUncategorized = images.some((image) => !image.category);
   const hasEmptyCategory = categoryOrder.some(
     (category) => (categorizedImages[category]?.length ?? 0) === 0
   );
   const needsAddress = addressValue.trim() === "";
   const canContinue = !hasUncategorized && !hasEmptyCategory && !needsAddress;
+  const isSavingDraft = savingCount > 0;
   const existingFileNames = React.useMemo(() => {
     return new Set(images.map((image) => image.filename.toLowerCase()));
   }, [images]);
@@ -219,6 +315,98 @@ export function ListingDetailView({
           : formatCategoryLabel(category, baseCategoryCounts)
     }));
   }, [baseCategoryCounts, categoryOrder]);
+
+  const runDraftSave = React.useCallback(async <T,>(fn: () => Promise<T>) => {
+    setSavingCount((prev) => prev + 1);
+    try {
+      return await fn();
+    } finally {
+      setSavingCount((prev) => Math.max(0, prev - 1));
+    }
+  }, []);
+
+  const persistImageAssignments = React.useCallback(
+    async (
+      updates: Array<{
+        id: string;
+        category: string | null;
+        isPrimary?: boolean;
+      }>,
+      deletions: string[],
+      rollback?: () => void
+    ) => {
+      try {
+        await runDraftSave(() =>
+          updateListingImageAssignments(userId, listingId, updates, deletions)
+        );
+        return true;
+      } catch (error) {
+        rollback?.();
+        toast.error(
+          (error as Error).message || "Failed to update listing images."
+        );
+        return false;
+      }
+    },
+    [listingId, runDraftSave, userId]
+  );
+
+  const persistListingTitle = React.useCallback(
+    async (nextTitle: string) => {
+      const previous = draftTitleRef.current;
+      setDraftTitle(nextTitle);
+      try {
+        await runDraftSave(() =>
+          updateListing(userId, listingId, { title: nextTitle })
+        );
+        return true;
+      } catch (error) {
+        setDraftTitle(previous);
+        toast.error(
+          (error as Error).message || "Failed to update listing name."
+        );
+        return false;
+      }
+    },
+    [listingId, runDraftSave, userId]
+  );
+
+  const ensurePrimaryForCategory = React.useCallback(
+    async (category: string | null, candidateImages: ListingImageItem[]) => {
+      if (!category) {
+        return;
+      }
+      const categoryImages = candidateImages.filter(
+        (image) => image.category === category
+      );
+      if (categoryImages.length === 0) {
+        return;
+      }
+      const hasPrimary = categoryImages.some((image) => image.isPrimary);
+      if (hasPrimary) {
+        return;
+      }
+      try {
+        const { primaryImageId } = await runDraftSave(() =>
+          assignPrimaryListingImageForCategory(userId, listingId, category)
+        );
+        if (primaryImageId) {
+          setImages((prev) =>
+            prev.map((image) =>
+              image.category === category
+                ? { ...image, isPrimary: image.id === primaryImageId }
+                : image
+            )
+          );
+        }
+      } catch (error) {
+        toast.error(
+          (error as Error).message || "Failed to update primary image."
+        );
+      }
+    },
+    [listingId, runDraftSave, userId]
+  );
   const activeMoveImage = React.useMemo(
     () => images.find((image) => image.id === moveImageId) ?? null,
     [images, moveImageId]
@@ -280,7 +468,7 @@ export function ListingDetailView({
     setIsCategoryDialogOpen(false);
   };
 
-  const handleEditCategory = (value: string) => {
+  const handleEditCategory = async (value: string) => {
     if (!categoryDialogCategory) {
       return;
     }
@@ -297,15 +485,17 @@ export function ListingDetailView({
       setIsCategoryDialogOpen(false);
       return;
     }
-    setImages((prev) =>
-      prev.map((image) =>
-        image.category === originalCategory
-          ? { ...image, category: updatedCategory }
-          : image
-      )
+    const previousImages = images;
+    const previousCategories = customCategories;
+    const nextImages = images.map((image) =>
+      image.category === originalCategory
+        ? { ...image, category: updatedCategory }
+        : image
     );
-    setCustomCategories((prev) => {
-      const updated = prev.filter((category) => category !== originalCategory);
+    const nextCategories = (() => {
+      const updated = customCategories.filter(
+        (category) => category !== originalCategory
+      );
       if (
         ROOM_CATEGORIES[updatedCategory as RoomCategory] ||
         updated.includes(updatedCategory)
@@ -313,139 +503,180 @@ export function ListingDetailView({
         return updated;
       }
       return [...updated, updatedCategory];
+    })();
+    setImages(nextImages);
+    setCustomCategories(nextCategories);
+    const updates = previousImages
+      .filter((image) => image.category === originalCategory)
+      .map((image) => ({
+        id: image.id,
+        category: updatedCategory,
+        isPrimary: image.isPrimary ?? false
+      }));
+    const success = await persistImageAssignments(updates, [], () => {
+      setImages(previousImages);
+      setCustomCategories(previousCategories);
     });
+    if (!success) {
+      return;
+    }
+    await ensurePrimaryForCategory(updatedCategory, nextImages);
     setIsCategoryDialogOpen(false);
   };
 
-  const handleDeleteCategory = () => {
+  const handleDeleteCategory = async () => {
     if (!deleteCategory) {
       return;
     }
     const categoryToDelete = deleteCategory;
-    setImages((prev) =>
-      prev.map((image) =>
-        image.category === categoryToDelete
-          ? { ...image, category: null, isPrimary: false }
-          : image
-      )
+    const previousImages = images;
+    const previousCategories = customCategories;
+    const nextImages = images.map((image) =>
+      image.category === categoryToDelete
+        ? { ...image, category: null, isPrimary: false }
+        : image
     );
-    setCustomCategories((prev) =>
-      prev.filter((category) => category !== categoryToDelete)
+    const updates = previousImages
+      .filter((image) => image.category === categoryToDelete)
+      .map((image) => ({
+        id: image.id,
+        category: null,
+        isPrimary: false
+      }));
+    setImages(nextImages);
+    setCustomCategories(
+      customCategories.filter((category) => category !== categoryToDelete)
     );
+    const success = await persistImageAssignments(updates, [], () => {
+      setImages(previousImages);
+      setCustomCategories(previousCategories);
+    });
+    if (!success) {
+      return;
+    }
     setDeleteCategory(null);
   };
 
-  const handleMoveImage = (targetCategory: string) => {
+  const handleMoveImage = async (targetCategory: string) => {
     if (!moveImageId) {
       return;
     }
     const resolvedCategory =
       targetCategory === "needs-categorization" ? null : targetCategory;
-    setImages((prev) =>
-      prev.map((image) =>
-        image.id === moveImageId
-          ? {
-              ...image,
-              category: resolvedCategory,
-              isPrimary:
-                image.category === resolvedCategory ? image.isPrimary : false
-            }
-          : image
-      )
+    const previousImages = images;
+    const previousImage = images.find((image) => image.id === moveImageId);
+    if (previousImage?.category === resolvedCategory) {
+      setMoveImageId(null);
+      return;
+    }
+    const nextImages = images.map((image) =>
+      image.id === moveImageId
+        ? {
+            ...image,
+            category: resolvedCategory,
+            isPrimary:
+              image.category === resolvedCategory ? image.isPrimary : false
+          }
+        : image
     );
+    const updatedImage = nextImages.find((image) => image.id === moveImageId);
+    if (!updatedImage) {
+      return;
+    }
+    setImages(nextImages);
+    const success = await persistImageAssignments(
+      [
+        {
+          id: updatedImage.id,
+          category: updatedImage.category ?? null,
+          isPrimary: updatedImage.isPrimary ?? false
+        }
+      ],
+      [],
+      () => setImages(previousImages)
+    );
+    if (!success) {
+      return;
+    }
+    if (previousImage?.category !== updatedImage.category) {
+      await ensurePrimaryForCategory(
+        previousImage?.category ?? null,
+        nextImages
+      );
+    }
+    await ensurePrimaryForCategory(updatedImage.category ?? null, nextImages);
     setMoveImageId(null);
   };
 
-  const handleSetPrimaryImage = (imageId: string) => {
+  const handleSetPrimaryImage = async (imageId: string) => {
     const selected = images.find((image) => image.id === imageId);
     if (!selected || !selected.category) {
-      toast.error("Assign a category before setting a primary image.");
+      toast.error("Assign a category before setting a primary photo.");
       return;
     }
-    setImages((prev) =>
-      prev.map((image) => {
-        if (image.category !== selected.category) {
-          return image;
+    const previousImages = images;
+    const nextImages = images.map((image) => {
+      if (image.category !== selected.category) {
+        return image;
+      }
+      return {
+        ...image,
+        isPrimary: image.id === imageId
+      };
+    });
+    setImages(nextImages);
+    await persistImageAssignments(
+      [
+        {
+          id: selected.id,
+          category: selected.category,
+          isPrimary: true
         }
-        return {
-          ...image,
-          isPrimary: image.id === imageId
-        };
-      })
+      ],
+      [],
+      () => setImages(previousImages)
     );
   };
 
-  const handleDeleteImage = () => {
+  const handleDeleteImage = async () => {
     if (!deleteImageId) {
       return;
     }
     const imageId = deleteImageId;
-    setImages((prev) => prev.filter((image) => image.id !== imageId));
+    const previousImages = images;
+    const deletedImage = images.find((image) => image.id === imageId) ?? null;
+    const remainingImages = images.filter((image) => image.id !== imageId);
+    setImages(remainingImages);
+    const success = await persistImageAssignments([], [imageId], () =>
+      setImages(previousImages)
+    );
+    if (!success) {
+      return;
+    }
+    if (deletedImage?.category) {
+      await ensurePrimaryForCategory(deletedImage.category, remainingImages);
+    }
     setDeleteImageId(null);
   };
 
-  const handleContinue = async () => {
-    const initialMap = new Map(
-      initialImagesRef.current.map((image) => [
-        image.id,
-        image.category ?? null
-      ])
-    );
-    const initialPrimaryMap = new Map(
-      initialImagesRef.current.map((image) => [
-        image.id,
-        image.isPrimary ?? false
-      ])
-    );
-    const currentIds = new Set(images.map((image) => image.id));
-    const deletions = Array.from(initialMap.keys()).filter(
-      (id) => !currentIds.has(id)
-    );
-    const updates = images
-      .filter((image) => initialMap.has(image.id))
-      .filter((image) => {
-        const originalCategory = initialMap.get(image.id) ?? null;
-        const originalPrimary = initialPrimaryMap.get(image.id) ?? false;
-        return (
-          (image.category ?? null) !== originalCategory ||
-          (image.isPrimary ?? false) !== originalPrimary
-        );
-      })
-      .map((image) => ({
-        id: image.id,
-        category: image.category ?? null,
-        isPrimary: image.isPrimary ?? false
-      }));
-
-    if (updates.length === 0 && deletions.length === 0) {
-      toast.message("No changes to save.");
-      return;
-    }
-
-    try {
-      await updateListingImageAssignments(
-        userId,
-        listingId,
-        updates,
-        deletions
-      );
-      initialImagesRef.current = images;
-      toast.success("Listing updates saved.");
-    } catch (error) {
-      toast.error(
-        (error as Error).message || "Failed to save listing updates."
-      );
-    }
+  const handleContinue = () => {
+    toast.message("Draft updates save automatically.");
   };
 
   const handleDragStart =
     (imageId: string) => (event: React.DragEvent<HTMLDivElement>) => {
       event.dataTransfer.setData("text/plain", imageId);
       event.dataTransfer.effectAllowed = "move";
+      setIsDraggingImage(true);
     };
 
+  const handleDragEnd = () => {
+    setIsDraggingImage(false);
+    setDragOverCategory(null);
+  };
+
   const handleDrop =
-    (category: string) => (event: React.DragEvent<HTMLDivElement>) => {
+    (category: string) => async (event: React.DragEvent<HTMLDivElement>) => {
       event.preventDefault();
       const imageId = event.dataTransfer.getData("text/plain");
       if (!imageId) {
@@ -453,28 +684,68 @@ export function ListingDetailView({
       }
       const nextCategory =
         category === "needs-categorization" ? null : category;
-      setImages((prev) =>
-        prev.map((image) =>
-          image.id === imageId
-            ? {
-                ...image,
-                category: nextCategory,
-                isPrimary:
-                  image.category === nextCategory ? image.isPrimary : false
-              }
-            : image
-        )
+      const previousImages = images;
+      const previousImage = images.find((image) => image.id === imageId);
+      if (previousImage?.category === nextCategory) {
+        setDragOverCategory(null);
+        return;
+      }
+      const nextImages = images.map((image) =>
+        image.id === imageId
+          ? {
+              ...image,
+              category: nextCategory,
+              isPrimary:
+                image.category === nextCategory ? image.isPrimary : false
+            }
+          : image
       );
+      const updatedImage = nextImages.find((image) => image.id === imageId);
+      if (!updatedImage) {
+        return;
+      }
+      setImages(nextImages);
+      await persistImageAssignments(
+        [
+          {
+            id: updatedImage.id,
+            category: updatedImage.category ?? null,
+            isPrimary: updatedImage.isPrimary ?? false
+          }
+        ],
+        [],
+        () => setImages(previousImages)
+      );
+      if (previousImage?.category !== updatedImage.category) {
+        await ensurePrimaryForCategory(
+          previousImage?.category ?? null,
+          nextImages
+        );
+      }
+      await ensurePrimaryForCategory(updatedImage.category ?? null, nextImages);
       setDragOverCategory(null);
     };
 
   return (
     <>
       <ListingViewHeader
-        title={title}
-        action={<Button variant="outline">Save as draft</Button>}
+        ref={headerRef}
+        title={draftTitle}
+        action={
+          isSavingDraft ? (
+            <div className="flex items-center gap-2 rounded-full border border-border/60 bg-secondary/80 px-3 py-1.5 text-xs font-medium text-foreground">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              Saving draft
+            </div>
+          ) : null
+        }
       />
-      <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-8 py-10">
+      <div
+        className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-8 py-10"
+        onDragOver={(event) => {
+          lastDragClientYRef.current = event.clientY;
+        }}
+      >
         <div className="mx-auto w-full max-w-[360px]">
           <div className="relative flex items-center justify-between mb-6">
             <div className="absolute left-0 top-[5px] h-px w-full bg-border -z-10" />
@@ -559,7 +830,8 @@ export function ListingDetailView({
             ) : (
               <Accordion
                 type="multiple"
-                defaultValue={categoryOrder}
+                value={openCategories}
+                onValueChange={setOpenCategories}
                 className="mt-6 space-y-4"
               >
                 {categoryOrder.map((category) => (
@@ -568,7 +840,7 @@ export function ListingDetailView({
                     value={category}
                     className={`rounded-xl border px-4 ${
                       category === "needs-categorization"
-                        ? "border-destructive/40 bg-destructive/10 text-destructive"
+                        ? "border-destructive/20 bg-destructive/10 text-destructive"
                         : "border-border/60 bg-card"
                     }`}
                   >
@@ -578,6 +850,15 @@ export function ListingDetailView({
                           ? "text-destructive"
                           : ""
                       }`}
+                      onDragOver={(event) => {
+                        event.preventDefault();
+                        setOpenCategories((prev) =>
+                          prev.includes(category) ? prev : [...prev, category]
+                        );
+                        if (dragOverCategory !== category) {
+                          setDragOverCategory(category);
+                        }
+                      }}
                     >
                       <div className="flex w-full items-center justify-between gap-4">
                         <div
@@ -608,13 +889,21 @@ export function ListingDetailView({
                           {category !== "needs-categorization" ? (
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <button
-                                  type="button"
+                                <div
+                                  role="button"
+                                  tabIndex={0}
                                   className="flex items-center justify-center rounded-full p-1 text-muted-foreground transition hover:bg-secondary hover:text-foreground"
                                   aria-label="Category settings"
+                                  onClick={(event) => event.stopPropagation()}
+                                  onKeyDown={(event) => {
+                                    if (event.key === "Enter") {
+                                      event.preventDefault();
+                                    }
+                                    event.stopPropagation();
+                                  }}
                                 >
                                   <MoreHorizontal className="h-4 w-4" />
-                                </button>
+                                </div>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" sideOffset={8}>
                                 <DropdownMenuItem
@@ -660,9 +949,19 @@ export function ListingDetailView({
                         }`}
                         onDragOver={(event) => {
                           event.preventDefault();
-                          setDragOverCategory(category);
+                          if (dragOverCategory !== category) {
+                            setDragOverCategory(category);
+                          }
                         }}
-                        onDragLeave={() => setDragOverCategory(null)}
+                        onDragLeave={(event) => {
+                          if (
+                            !event.currentTarget.contains(
+                              event.relatedTarget as Node | null
+                            )
+                          ) {
+                            setDragOverCategory(null);
+                          }
+                        }}
                         onDrop={handleDrop(category)}
                       >
                         {categorizedImages[category]?.length ? (
@@ -674,92 +973,107 @@ export function ListingDetailView({
                                 return primaryB - primaryA;
                               })
                               .map((image) => (
-                              <div
-                                key={image.id}
-                                className="group relative aspect-square overflow-hidden rounded-xl border border-border/60 bg-secondary/40 cursor-grab"
-                                draggable
-                                onDragStart={handleDragStart(image.id)}
-                              >
-                                {image.isPrimary ? (
-                                  <div className="absolute top-2 left-2 z-10 rounded-full bg-foreground/90 px-2 py-0.5 text-[10px] font-medium text-background">
-                                    Primary
-                                  </div>
-                                ) : null}
                                 <div
-                                  className={`absolute top-2 right-2 z-10 transition-opacity ${
-                                    openImageMenuId === image.id
-                                      ? "opacity-100"
-                                      : "opacity-0 group-hover:opacity-100"
-                                  }`}
+                                  key={image.id}
+                                  className="group relative aspect-square overflow-hidden rounded-xl border border-border/60 bg-secondary/40 cursor-grab"
+                                  draggable
+                                  onDragStart={handleDragStart(image.id)}
+                                  onDragEnd={handleDragEnd}
                                 >
-                                  <DropdownMenu
-                                    open={openImageMenuId === image.id}
-                                    onOpenChange={(open) =>
-                                      setOpenImageMenuId(open ? image.id : null)
-                                    }
+                                  {image.isPrimary ? (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <div className="absolute top-2 left-2 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-primary/40 backdrop-blur-lg text-primary-foreground backdrop-blur-lg">
+                                          <Star className="h-4 w-4" />
+                                          <span className="sr-only">
+                                            Primary
+                                          </span>
+                                        </div>
+                                      </TooltipTrigger>
+                                      <TooltipContent sideOffset={6}>
+                                        Primary image — used as the featured{" "}
+                                        <br />
+                                        photo for this category by default.
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  ) : null}
+                                  <div
+                                    className={`absolute top-2 right-2 z-10 transition-opacity ${
+                                      openImageMenuId === image.id
+                                        ? "opacity-100"
+                                        : "opacity-0 group-hover:opacity-100"
+                                    }`}
                                   >
-                                    <DropdownMenuTrigger asChild>
-                                      <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-7 w-7 rounded-full bg-background/70 backdrop-blur-sm hover:bg-background"
-                                        aria-label="Photo options"
-                                      >
-                                        <MoreHorizontal className="h-4 w-4" />
-                                      </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent
-                                      align="end"
-                                      sideOffset={8}
+                                    <DropdownMenu
+                                      open={openImageMenuId === image.id}
+                                      onOpenChange={(open) =>
+                                        setOpenImageMenuId(
+                                          open ? image.id : null
+                                        )
+                                      }
                                     >
-                                      <DropdownMenuItem
-                                        disabled={
-                                          !image.category ||
-                                          image.isPrimary ||
-                                          undefined
-                                        }
-                                        onSelect={(event) => {
-                                          event.preventDefault();
-                                          handleSetPrimaryImage(image.id);
-                                        }}
+                                      <DropdownMenuTrigger asChild>
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-7 w-7 rounded-full bg-background/70 backdrop-blur-sm hover:bg-background"
+                                          aria-label="Photo options"
+                                        >
+                                          <MoreHorizontal className="h-4 w-4" />
+                                        </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent
+                                        align="end"
+                                        sideOffset={8}
                                       >
-                                        <Star size={12} />
-                                        {image.isPrimary
-                                          ? "Primary image"
-                                          : "Set as primary"}
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem
-                                        onSelect={(event) => {
-                                          event.preventDefault();
-                                          setMoveImageId(image.id);
-                                        }}
-                                      >
-                                        <Move size={12} />
-                                        Move to category
-                                      </DropdownMenuItem>
-                                      <DropdownMenuSeparator className="my-1.5 bg-border/50" />
-                                      <DropdownMenuItem
-                                        variant="destructive"
-                                        onSelect={(event) => {
-                                          event.preventDefault();
-                                          setDeleteImageId(image.id);
-                                        }}
-                                      >
-                                        <Trash2 size={12} />
-                                        Delete photo
-                                      </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                  </DropdownMenu>
+                                        <DropdownMenuItem
+                                          disabled={
+                                            !image.category ||
+                                            image.isPrimary ||
+                                            undefined
+                                          }
+                                          onSelect={(event) => {
+                                            event.preventDefault();
+                                            handleSetPrimaryImage(image.id);
+                                          }}
+                                        >
+                                          <Star size={12} />
+                                          {image.isPrimary
+                                            ? "Primary photo"
+                                            : "Set as primary"}
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                          onSelect={(event) => {
+                                            event.preventDefault();
+                                            setMoveImageId(image.id);
+                                          }}
+                                        >
+                                          <Move size={12} />
+                                          Move to category
+                                        </DropdownMenuItem>
+                                        <DropdownMenuSeparator className="my-1.5 bg-border/50" />
+                                        <DropdownMenuItem
+                                          variant="destructive"
+                                          onSelect={(event) => {
+                                            event.preventDefault();
+                                            setDeleteImageId(image.id);
+                                          }}
+                                        >
+                                          <Trash2 size={12} />
+                                          Delete photo
+                                        </DropdownMenuItem>
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
+                                  </div>
+                                  <LoadingImage
+                                    src={image.url}
+                                    alt={image.filename}
+                                    className="h-full w-full object-cover"
+                                    fill
+                                  />
                                 </div>
-                                <LoadingImage
-                                  src={image.url}
-                                  alt={image.filename}
-                                  className="h-full w-full object-cover"
-                                  fill
-                                />
-                              </div>
-                            ))}
+                              ))}
                           </div>
                         ) : (
                           <div className="flex items-center justify-center py-6 text-xs text-muted-foreground">
@@ -788,15 +1102,38 @@ export function ListingDetailView({
                     <label className="text-sm text-foreground">
                       Listing address
                     </label>
-                    <Input
+                    <AddressAutocomplete
                       placeholder="123 Market Street, Seattle WA"
                       value={addressValue}
-                      onChange={(event) => setAddressValue(event.target.value)}
+                      onChange={setAddressValue}
+                      onSelectAddress={(selection) => {
+                        const nextTitle =
+                          selection.formattedAddress?.split(",")[0]?.trim() ||
+                          "";
+                        if (nextTitle) {
+                          void persistListingTitle(nextTitle);
+                        }
+                        if (selection.formattedAddress) {
+                          const nextAddress = selection.formattedAddress.trim();
+                          setAddressValue(nextAddress);
+                          void runDraftSave(() =>
+                            updateListing(userId, listingId, {
+                              address: nextAddress
+                            })
+                          ).catch((error) => {
+                            toast.error(
+                              (error as Error).message ||
+                                "Failed to update listing address."
+                            );
+                          });
+                        }
+                      }}
+                      apiKey={googleMapsApiKey}
                     />
                   </div>
                   <div className="space-y-1">
                     <label className="text-sm text-foreground">
-                      Listing price
+                      Listing price (optional)
                     </label>
                     <Input
                       placeholder="$850,000"
@@ -806,41 +1143,42 @@ export function ListingDetailView({
                   </div>
                 </div>
                 <div className="my-4 h-px w-full bg-border/60" />
-                <div className="mt-3 rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-3 text-xs text-destructive">
-                  <p className="text-[11px] font-semibold uppercase tracking-wide">
-                    Required fixes
-                  </p>
-                  <ul className="mt-2 space-y-2 text-destructive">
-                    {hasUncategorized ? (
-                      <li className="flex items-start gap-2">
-                        <AlertTriangle className="mt-0.5 h-3.5 w-3.5" />
-                        <span>No images in the uncategorized section.</span>
-                      </li>
-                    ) : null}
-                    {hasEmptyCategory ? (
-                      <li className="flex items-start gap-2">
-                        <AlertTriangle className="mt-0.5 h-3.5 w-3.5" />
-                        <span>No empty room categories.</span>
-                      </li>
-                    ) : null}
-                    {needsAddress ? (
-                      <li className="flex items-start gap-2">
-                        <AlertTriangle className="mt-0.5 h-3.5 w-3.5" />
-                        <span>Listing address is filled in.</span>
-                      </li>
-                    ) : null}
-                    {!hasUncategorized && !hasEmptyCategory && !needsAddress ? (
-                      <li className="text-muted-foreground">All set.</li>
-                    ) : null}
-                  </ul>
+                <div className="gap-4 space-y-4">
+                  {hasUncategorized || hasEmptyCategory || needsAddress ? (
+                    <div className="mt-3 rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-3 text-xs text-destructive">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide">
+                        Required fixes
+                      </p>
+                      <ul className="mt-2 space-y-2 text-destructive">
+                        {hasUncategorized ? (
+                          <li className="flex items-start gap-2">
+                            <AlertTriangle className="mt-0.5 h-3.5 w-3.5" />
+                            <span>One or more images are uncategorized.</span>
+                          </li>
+                        ) : null}
+                        {hasEmptyCategory ? (
+                          <li className="flex items-start gap-2">
+                            <AlertTriangle className="mt-0.5 h-3.5 w-3.5" />
+                            <span>One or more room categories are empty.</span>
+                          </li>
+                        ) : null}
+                        {needsAddress ? (
+                          <li className="flex items-start gap-2">
+                            <AlertTriangle className="mt-0.5 h-3.5 w-3.5" />
+                            <span>Listing address is not filled in.</span>
+                          </li>
+                        ) : null}
+                      </ul>
+                    </div>
+                  ) : null}
+                  <Button
+                    className="w-full"
+                    disabled={!canContinue}
+                    onClick={handleContinue}
+                  >
+                    Continue
+                  </Button>
                 </div>
-                <Button
-                  className="mt-4 w-full"
-                  disabled={!canContinue}
-                  onClick={handleContinue}
-                >
-                  Continue
-                </Button>
               </div>
             </div>
           </aside>
@@ -863,6 +1201,7 @@ export function ListingDetailView({
           "Select at least 2 listing photos per room for best output quality.",
           "Include a wide variety well-framed shots of key rooms and exterior."
         ]}
+        maxFiles={20}
         fileMetaLabel={(file) => formatBytes(file.size)}
         fileValidator={(file) => {
           if (!file.type.startsWith("image/")) {
@@ -902,22 +1241,58 @@ export function ListingDetailView({
         }}
         onCreateRecords={async (records) => {
           const batchStartedAt = Date.now();
-          const created = await createListingImageRecords(
-            userId,
-            listingId,
-            records
-          );
-          const createdItems = created.map((image) => ({
-            id: image.id,
-            url: image.url,
-            filename: image.filename,
-            category: image.category ?? null,
-            isPrimary: image.isPrimary ?? false
-          }));
-          setImages((prev) => [...createdItems, ...prev]);
-          router.push(
-            `/listings/${listingId}/processing?batch=${created.length}&batchStartedAt=${batchStartedAt}`
-          );
+          try {
+            const created = await runDraftSave(() =>
+              createListingImageRecords(userId, listingId, records)
+            );
+            const createdItems = created.map((image) => ({
+              id: image.id,
+              url: image.url,
+              filename: image.filename,
+              category: image.category ?? null,
+              isPrimary: image.isPrimary ?? false,
+              primaryScore: image.primaryScore ?? null
+            }));
+            try {
+              router.push(
+                `/listings/${listingId}/processing?batch=${created.length}&batchStartedAt=${batchStartedAt}`
+              );
+            } catch (error) {
+              setImages((prev) => [...createdItems, ...prev]);
+              toast.error(
+                (error as Error).message ||
+                  "Failed to navigate to processing."
+              );
+            }
+          } catch (error) {
+            try {
+              await runDraftSave(() =>
+                deleteListingImageUploads(
+                  userId,
+                  listingId,
+                  records.map((record) => record.publicUrl)
+                )
+              );
+            } catch (cleanupError) {
+              toast.error(
+                (cleanupError as Error).message ||
+                  "Failed to clean up listing uploads."
+              );
+            }
+            toast.error(
+              (error as Error).message || "Failed to save listing images."
+            );
+          }
+        }}
+        onUploadsComplete={({ count, batchStartedAt }) => {
+          if (!listingId?.trim()) {
+            return;
+          }
+          const batchParam =
+            count > 0
+              ? `?batch=${count}&batchStartedAt=${batchStartedAt}`
+              : `?batchStartedAt=${batchStartedAt}`;
+          router.push(`/listings/${listingId}/processing${batchParam}`);
         }}
       />
       <ListingCategoryDialog

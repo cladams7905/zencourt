@@ -413,15 +413,7 @@ const MediaView = ({ userId, initialMedia = [] }: MediaViewProps) => {
           ) : (
             <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border px-6 py-12 text-center">
               <div className="relative mb-6 h-24 w-56">
-                <div className="absolute left-6 top-0 h-24 w-40 rotate-[-8deg] z-10 overflow-hidden rounded-xl shadow-sm">
-                  <LoadingImage
-                    src="/media-example.jpg"
-                    alt="Example b-roll 1"
-                    className="h-full w-full object-cover"
-                    width={160}
-                    height={96}
-                  />
-                </div>
+                <div className="absolute left-6 top-0 h-24 w-40 rotate-[-8deg] z-10 rounded-xl border border-border/60 bg-linear-to-br from-secondary to-secondary/50 shadow-md"></div>
                 <div className="absolute left-14 top-2 h-24 w-40 rotate-[4deg] rounded-xl border border-border/60 bg-linear-to-br from-secondary to-secondary/50 shadow-md" />
                 <div className="absolute left-20 top-1 h-24 w-40 -rotate-2 rounded-xl border border-border bg-linear-to-br from-secondary to-secondary/50 shadow-lg" />
               </div>

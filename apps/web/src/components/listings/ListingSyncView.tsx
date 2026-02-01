@@ -76,7 +76,9 @@ export function ListingSyncView({ userId }: ListingSyncViewProps) {
       }
       setLastUploadCount(records.length);
       lastUploadCountRef.current = records.length;
-      batchStartedAtRef.current = Date.now();
+      if (batchStartedAtRef.current === null) {
+        batchStartedAtRef.current = Date.now();
+      }
       await createListingImageRecords(userId, activeListingId, records);
     },
     [userId]
@@ -192,13 +194,15 @@ export function ListingSyncView({ userId }: ListingSyncViewProps) {
           };
         }}
         onCreateRecords={handleCreateRecords}
-        onSuccess={() => {
+        onUploadsComplete={({ count, batchStartedAt }) => {
           const activeListingId = listingIdRef.current;
           if (activeListingId) {
-            const batchStartedAt = batchStartedAtRef.current ?? Date.now();
+            setLastUploadCount(count);
+            lastUploadCountRef.current = count;
+            batchStartedAtRef.current = batchStartedAt;
             const batchParam =
-              lastUploadCountRef.current > 0
-                ? `?batch=${lastUploadCountRef.current}&batchStartedAt=${batchStartedAt}`
+              count > 0
+                ? `?batch=${count}&batchStartedAt=${batchStartedAt}`
                 : `?batchStartedAt=${batchStartedAt}`;
             router.push(`/listings/${activeListingId}/processing${batchParam}`);
           }

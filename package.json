@@ -42,6 +42,14 @@
   },
   "overrides": {
     "lucide-react": "0.545.0",
+    "esbuild": "^0.25.12",
+    "fast-xml-parser": "^5.3.4",
+    "@aws-sdk/xml-builder": {
+      "fast-xml-parser": "^5.3.4"
+    },
+    "@esbuild-kit/core-utils": {
+      "esbuild": "^0.25.12"
+    },
     "@stackframe/stack": {
       "lucide-react": "0.545.0",
       "@stackframe/stack-ui": {

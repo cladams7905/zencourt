@@ -55,7 +55,7 @@ export function ViewHeader({
           <DropdownMenuContent align="end" className="w-72 p-2">
             <DropdownMenuItem className="flex flex-col items-start gap-1 py-2">
               <span className="text-sm font-medium text-foreground">
-                Content
+                New Content
               </span>
               <span className="text-xs text-muted-foreground">
                 Build your own social media post.
@@ -67,7 +67,7 @@ export function ViewHeader({
               onSelect={() => router.push("/listings/sync")}
             >
               <span className="text-sm font-medium text-foreground">
-                Listing Campaign
+                New Listing Campaign
               </span>
               <span className="text-xs text-muted-foreground">
                 Generate a social media campaign from your active property

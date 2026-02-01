@@ -8,11 +8,13 @@
     "build:local": "dotenv -e ../../.env.local -- next build",
     "env:pull": "vercel env pull ../../.env.local",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "jest",
+    "test:watch": "jest --watch"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.927.0",
-    "@aws-sdk/s3-request-presigner": "^3.927.0",
+    "@aws-sdk/client-s3": "^3.980.0",
+    "@aws-sdk/s3-request-presigner": "^3.980.0",
     "@fal-ai/client": "^1.7.2",
     "@fal-ai/server-proxy": "^1.1.1",
     "@neondatabase/serverless": "^1.0.2",
@@ -44,9 +46,9 @@
     "@radix-ui/react-toggle": "^1.1.10",
     "@radix-ui/react-toggle-group": "^1.1.11",
     "@radix-ui/react-tooltip": "^1.2.8",
-    "@stackframe/stack": "^2.8.54",
+    "@stackframe/stack": "^2.8.63",
     "@stackframe/stack-sc": "^2.8.55",
-    "@stackframe/stack-shared": "^2.8.55",
+    "@stackframe/stack-shared": "^2.8.63",
     "@supabase/postgrest-js": "^2.75.0",
     "@tanstack/react-query": "^5.90.5",
     "@upstash/redis": "^1.36.1",
@@ -76,11 +78,18 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.8.0",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/jest": "^29.5.14",
     "@types/node": "^20",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "eslint": "^9",
     "eslint-config-next": "15.5.5",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

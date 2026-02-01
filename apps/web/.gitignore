@@ -1,5 +1,6 @@
 .vercel
 .next
+.swc
 .cursor
 node_modules/
 src/lib/prompts/logs/

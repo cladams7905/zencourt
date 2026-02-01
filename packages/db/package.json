@@ -11,11 +11,16 @@
     "db:studio": "dotenv -e ../../.env.local -- drizzle-kit studio --config=drizzle/drizzle.config.ts"
   },
   "dependencies": {
-    "@neondatabase/serverless": "^1.0.2"
+    "@neondatabase/serverless": "^1.0.2",
+    "@stackframe/stack": "^2.8.63",
+    "@stackframe/stack-shared": "^2.8.63"
   },
   "devDependencies": {
     "drizzle-kit": "^0.31.8",
     "drizzle-orm": "^0.45.0",
     "typescript": "^5"
+  },
+  "overrides": {
+    "esbuild": "^0.25.12"
   }
 }

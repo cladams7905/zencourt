@@ -569,6 +569,128 @@ export async function updateListingImageAssignments(
   );
 }
 
+export async function assignPrimaryListingImageForCategory(
+  userId: string,
+  listingId: string,
+  category: string
+): Promise<{ primaryImageId: string | null }> {
+  if (!userId || userId.trim() === "") {
+    throw new Error("User ID is required to update listing images");
+  }
+  if (!listingId || listingId.trim() === "") {
+    throw new Error("Listing ID is required to update listing images");
+  }
+  if (!category || category.trim() === "") {
+    return { primaryImageId: null };
+  }
+
+  return withDbErrorHandling(
+    async () => {
+      await assertListingOwnership(userId, listingId);
+
+      const rows = await db
+        .select({
+          id: listingImages.id,
+          primaryScore: listingImages.primaryScore,
+          uploadedAt: listingImages.uploadedAt,
+          isPrimary: listingImages.isPrimary
+        })
+        .from(listingImages)
+        .where(
+          and(
+            eq(listingImages.listingId, listingId),
+            eq(listingImages.category, category)
+          )
+        );
+
+      let best: { id: string; score: number; uploadedAt: Date } | null = null;
+      let currentPrimary: { id: string; score: number; uploadedAt: Date } | null =
+        null;
+      for (const row of rows) {
+        const score =
+          typeof row.primaryScore === "number" ? row.primaryScore : -Infinity;
+        if (row.isPrimary && !currentPrimary) {
+          currentPrimary = { id: row.id, score, uploadedAt: row.uploadedAt };
+        }
+        if (!best) {
+          best = { id: row.id, score, uploadedAt: row.uploadedAt };
+          continue;
+        }
+        if (score > best.score) {
+          best = { id: row.id, score, uploadedAt: row.uploadedAt };
+          continue;
+        }
+        if (score === best.score) {
+          if (row.uploadedAt < best.uploadedAt) {
+            best = { id: row.id, score, uploadedAt: row.uploadedAt };
+            continue;
+          }
+          if (
+            row.uploadedAt.getTime() === best.uploadedAt.getTime() &&
+            row.id < best.id
+          ) {
+            best = { id: row.id, score, uploadedAt: row.uploadedAt };
+          }
+        }
+      }
+
+      if (!best && rows.length > 0) {
+        const fallback = rows
+          .slice()
+          .sort((a, b) => a.uploadedAt.getTime() - b.uploadedAt.getTime())[0];
+        best = {
+          id: fallback.id,
+          score:
+            typeof fallback.primaryScore === "number"
+              ? fallback.primaryScore
+              : -Infinity,
+          uploadedAt: fallback.uploadedAt
+        };
+      }
+
+      if (currentPrimary && best) {
+        if (best.score <= currentPrimary.score) {
+          return { primaryImageId: currentPrimary.id };
+        }
+      }
+
+      if (currentPrimary && best && currentPrimary.id === best.id) {
+        return { primaryImageId: currentPrimary.id };
+      }
+
+      await db
+        .update(listingImages)
+        .set({ isPrimary: false })
+        .where(
+          and(
+            eq(listingImages.listingId, listingId),
+            eq(listingImages.category, category)
+          )
+        );
+
+      if (best) {
+        await db
+          .update(listingImages)
+          .set({ isPrimary: true })
+          .where(
+            and(
+              eq(listingImages.listingId, listingId),
+              eq(listingImages.category, category),
+              eq(listingImages.id, best.id)
+            )
+          );
+      }
+
+      return { primaryImageId: best?.id ?? null };
+    },
+    {
+      actionName: "assignPrimaryListingImageForCategory",
+      context: { userId, listingId, category },
+      errorMessage: "Failed to update primary image. Please try again."
+    }
+  );
+}
+
 export async function createListingImageRecords(
   userId: string,
   listingId: string,
@@ -611,6 +733,42 @@ export async function createListingImageRecords(
       actionName: "createListingImageRecords",
       context: { userId, listingId, uploadCount: uploads.length },
       errorMessage: "Failed to save listing images. Please try again."
+    }
+  );
+}
+
+export async function deleteListingImageUploads(
+  userId: string,
+  listingId: string,
+  urls: string[]
+): Promise<void> {
+  if (!userId || userId.trim() === "") {
+    throw new Error("User ID is required to delete listing uploads");
+  }
+  if (!listingId || listingId.trim() === "") {
+    throw new Error("Listing ID is required to delete listing uploads");
+  }
+  if (!urls || urls.length === 0) {
+    return;
+  }
+
+  await withDbErrorHandling(
+    async () => {
+      await assertListingOwnership(userId, listingId);
+      for (const url of urls) {
+        if (!url) {
+          continue;
+        }
+        const deleteResult = await storageService.deleteFile(url);
+        if (!deleteResult.success) {
+          throw new Error(deleteResult.error);
+        }
+      }
+    },
+    {
+      actionName: "deleteListingImageUploads",
+      context: { userId, listingId, count: urls.length },
+      errorMessage: "Failed to clean up listing uploads. Please try again."
     }
   );
 }

@@ -9,6 +9,7 @@ export const listings = pgTable(
     id: text("id").primaryKey(),
     userId: text("user_id").notNull(),
     title: text("title"),
+    address: text("address"),
     listingStage: listingStageEnum("listing_stage")
       .notNull()
       .default("upload"),

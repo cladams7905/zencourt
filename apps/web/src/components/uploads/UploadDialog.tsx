@@ -70,8 +70,10 @@ type UploadDialogProps<TRecord> = {
   }) => TRecord | Promise<TRecord>;
   onCreateRecords: (records: TRecord[]) => Promise<void>;
   onSuccess?: () => void;
+  onUploadsComplete?: (summary: { count: number; batchStartedAt: number }) => void;
   fileMetaLabel?: (file: File) => string;
   thumbnailFailureMessage?: (count: number) => string;
+  maxFiles?: number;
 };
 
 const formatBytes = (bytes: number) => {
@@ -102,8 +104,10 @@ function UploadDialog<TRecord>({
   buildRecordInput,
   onCreateRecords,
   onSuccess,
+  onUploadsComplete,
   fileMetaLabel,
-  thumbnailFailureMessage
+  thumbnailFailureMessage,
+  maxFiles
 }: UploadDialogProps<TRecord>) {
   const [pendingFiles, setPendingFiles] = React.useState<PendingUpload[]>([]);
   const [isDragging, setIsDragging] = React.useState(false);
@@ -156,13 +160,19 @@ function UploadDialog<TRecord>({
       }
 
       setPendingFiles((prev) => {
+        const remainingSlots =
+          typeof maxFiles === "number" ? Math.max(0, maxFiles - prev.length) : Infinity;
+        if (remainingSlots <= 0) {
+          toast.error(`You can only upload up to ${maxFiles} ${selectedLabel}s.`);
+          return prev;
+        }
         const existing = new Set(
           prev.map(
             (item) => `${item.file.name}-${item.file.size}-${item.file.type}`
           )
         );
         const next = [...prev];
-        accepted.forEach((file) => {
+        accepted.slice(0, remainingSlots).forEach((file) => {
           const key = `${file.name}-${file.size}-${file.type}`;
           if (!existing.has(key)) {
             const id =
@@ -179,10 +189,13 @@ function UploadDialog<TRecord>({
             existing.add(key);
           }
         });
+        if (accepted.length > remainingSlots) {
+          toast.error(`Only ${remainingSlots} more ${selectedLabel}(s) allowed.`);
+        }
         return next;
       });
     },
-    [fileValidator]
+    [fileValidator, maxFiles, selectedLabel]
   );
 
   const handleFileInputChange = (
@@ -281,6 +294,7 @@ function UploadDialog<TRecord>({
       const xhr = new XMLHttpRequest();
       xhr.open("PUT", uploadUrl);
       xhr.setRequestHeader("Content-Type", file.type);
+      xhr.timeout = 60000;
       xhr.upload.onprogress = (event) => {
         if (!event.lengthComputable) {
           return;
@@ -297,6 +311,10 @@ function UploadDialog<TRecord>({
           resolve(false);
         }
       };
+      xhr.ontimeout = () => {
+        updatePendingFile(id, { status: "error" });
+        resolve(false);
+      };
       xhr.onerror = () => {
         updatePendingFile(id, { status: "error" });
         resolve(false);
@@ -306,14 +324,15 @@ function UploadDialog<TRecord>({
   };
 
   const handleUpload = async () => {
-    if (pendingFiles.length === 0 || isUploading) {
+    const targets = pendingFiles.filter((item) => item.status !== "done");
+    if (targets.length === 0 || isUploading) {
       return;
     }
 
     setIsUploading(true);
     try {
       const fileMap = new Map<string, File>();
-      const uploadRequests = pendingFiles.map((item) => {
+      const uploadRequests = targets.map((item) => {
         fileMap.set(item.id, item.file);
         return {
           id: item.id,
@@ -325,9 +344,20 @@ function UploadDialog<TRecord>({
 
       const { uploads, failed } = await getUploadUrls(uploadRequests);
       const failedIds = new Set(failed.map((item) => item.id));
+      const requestedIds = new Set(uploadRequests.map((item) => item.id));
+      const returnedIds = new Set(uploads.map((upload) => upload.id));
+      const missingIds = Array.from(requestedIds).filter(
+        (id) => !returnedIds.has(id) && !failedIds.has(id)
+      );
+      missingIds.forEach((id) => failedIds.add(id));
 
       if (failed.length > 0) {
+        failed.forEach((item) => updatePendingFile(item.id, { status: "error" }));
         toast.error(`${failed.length} file(s) failed validation.`);
+      }
+      if (missingIds.length > 0) {
+        missingIds.forEach((id) => updatePendingFile(id, { status: "error" }));
+        toast.error(`${missingIds.length} file(s) failed to start uploading.`);
       }
 
       type UploadResult = {
@@ -376,21 +406,38 @@ function UploadDialog<TRecord>({
             }
           }
 
-          return {
-            record: await buildRecordInput({
-              upload,
-              file,
-              thumbnailKey,
+          try {
+            return {
+              record: await buildRecordInput({
+                upload,
+                file,
+                thumbnailKey,
+                thumbnailFailed
+              }),
               thumbnailFailed
-            }),
-            thumbnailFailed
-          } as UploadResult;
+            } as UploadResult;
+          } catch (error) {
+            failedIds.add(upload.id);
+            updatePendingFile(upload.id, { status: "error" });
+            toast.error(
+              (error as Error).message || "Failed to prepare upload record."
+            );
+            return null;
+          }
         })
       );
 
       const successfulUploads = uploadResults.filter(
         (result): result is UploadResult => result !== null
       );
+
+      if (failedIds.size === 0 && successfulUploads.length > 0) {
+        const batchStartedAt = Date.now();
+        onUploadsComplete?.({
+          count: successfulUploads.length,
+          batchStartedAt
+        });
+      }
 
       if (successfulUploads.length > 0) {
         await onCreateRecords(successfulUploads.map((result) => result.record));
@@ -403,12 +450,17 @@ function UploadDialog<TRecord>({
         toast.error(thumbnailFailureMessage(thumbnailFailures));
       }
 
-      const failedUploads = uploads.filter((upload) =>
-        failedIds.has(upload.id)
-      );
+      const failedUploads = uploads.filter((upload) => failedIds.has(upload.id));
       if (failedUploads.length > 0) {
         toast.error(`${failedUploads.length} file(s) failed to upload.`);
       }
+
+      const successfulItems = pendingFiles.filter(
+        (item) =>
+          !failedIds.has(item.id) &&
+          targets.some((target) => target.id === item.id)
+      );
+      revokePendingPreviews(successfulItems);
 
       if (failedIds.size === 0) {
         resetDialogState();
@@ -416,21 +468,15 @@ function UploadDialog<TRecord>({
         onSuccess?.();
       } else {
         setPendingFiles(
-          failedUploads
-            .map((upload): PendingUpload | null => {
-              const file = fileMap.get(upload.id);
-              if (!file) {
-                return null;
-              }
-              return {
-                id: upload.id,
-                file,
-                previewUrl: URL.createObjectURL(file),
-                progress: 0,
-                status: "error"
-              };
-            })
-            .filter((item): item is PendingUpload => item !== null)
+          targets
+            .filter((item) => failedIds.has(item.id))
+            .map((item): PendingUpload => ({
+              id: item.id,
+              file: item.file,
+              previewUrl: URL.createObjectURL(item.file),
+              progress: 0,
+              status: "error"
+            }))
         );
       }
     } catch (error) {
@@ -438,6 +484,20 @@ function UploadDialog<TRecord>({
     } finally {
       setIsUploading(false);
     }
+  };
+
+  const hasFailedUploads = pendingFiles.some((item) => item.status === "error");
+  const handleRetryFailed = () => {
+    setPendingFiles((prev) =>
+      prev.map((item) =>
+        item.status === "error"
+          ? { ...item, status: "ready", progress: 0 }
+          : item
+      )
+    );
+    window.setTimeout(() => {
+      void handleUpload();
+    }, 0);
   };
 
   return (
@@ -466,7 +526,15 @@ function UploadDialog<TRecord>({
               event.preventDefault();
               setIsDragging(true);
             }}
-            onDragLeave={() => setIsDragging(false)}
+            onDragLeave={(event) => {
+              if (
+                !event.currentTarget.contains(
+                  event.relatedTarget as Node | null
+                )
+              ) {
+                setIsDragging(false);
+              }
+            }}
             onDrop={handleDrop}
             onClick={() => fileInputRef.current?.click()}
           >
@@ -592,6 +660,16 @@ function UploadDialog<TRecord>({
           )}
         </div>
         <DialogFooter>
+          {hasFailedUploads ? (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleRetryFailed}
+              disabled={isUploading}
+            >
+              Retry failed
+            </Button>
+          ) : null}
           <Button
             type="button"
             variant="ghost"
