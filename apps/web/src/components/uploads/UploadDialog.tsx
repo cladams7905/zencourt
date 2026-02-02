@@ -19,6 +19,7 @@ type PendingUpload = {
   id: string;
   file: File;
   previewUrl: string;
+  previewType: "image" | "video";
   progress: number;
   status: "ready" | "uploading" | "done" | "error";
 };
@@ -74,6 +75,9 @@ type UploadDialogProps<TRecord> = {
   fileMetaLabel?: (file: File) => string;
   thumbnailFailureMessage?: (count: number) => string;
   maxFiles?: number;
+  maxImageBytes?: number;
+  compressDriveImages?: boolean;
+  compressOversizeImages?: boolean;
 };
 
 const formatBytes = (bytes: number) => {
@@ -107,11 +111,18 @@ function UploadDialog<TRecord>({
   onUploadsComplete,
   fileMetaLabel,
   thumbnailFailureMessage,
-  maxFiles
+  maxFiles,
+  maxImageBytes,
+  compressDriveImages,
+  compressOversizeImages
 }: UploadDialogProps<TRecord>) {
   const [pendingFiles, setPendingFiles] = React.useState<PendingUpload[]>([]);
   const [isDragging, setIsDragging] = React.useState(false);
   const [isUploading, setIsUploading] = React.useState(false);
+  const [isDrivePickerActive, setIsDrivePickerActive] = React.useState(false);
+  const [isCompressing, setIsCompressing] = React.useState(false);
+  const [isDriveLoading, setIsDriveLoading] = React.useState(false);
+  const [driveLoadingCount, setDriveLoadingCount] = React.useState(0);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const revokePendingPreviews = React.useCallback((items: PendingUpload[]) => {
@@ -136,93 +147,82 @@ function UploadDialog<TRecord>({
     }
   }, [open, resetDialogState]);
 
-  const addFiles = React.useCallback(
-    (files: File[]) => {
-      if (files.length === 0) {
-        return;
-      }
+  React.useEffect(() => {
+    if (!isDrivePickerActive) return;
+    const saved = document.body.style.pointerEvents;
+    document.body.style.pointerEvents = "";
+    return () => {
+      document.body.style.pointerEvents = saved;
+    };
+  }, [isDrivePickerActive]);
 
-      const accepted: File[] = [];
+  const compressImageToTarget = React.useCallback(
+    async (file: File, targetBytes: number): Promise<File | null> => {
+      const url = URL.createObjectURL(file);
+      try {
+        const image = new Image();
+        image.decoding = "async";
+        image.src = url;
+        await image.decode();
 
-      files.forEach((file) => {
-        const result = fileValidator(file);
-        if (!result.accepted) {
-          if (result.error) {
-            toast.error(result.error);
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          return null;
+        }
+
+        let scale = 1;
+        if (file.size > targetBytes) {
+          scale = Math.min(1, Math.sqrt(targetBytes / file.size) * 0.95);
+        }
+
+        let width = Math.max(1, Math.floor(image.width * scale));
+        let height = Math.max(1, Math.floor(image.height * scale));
+
+        const encode = async (quality: number) =>
+          new Promise<Blob | null>((resolve) => {
+            canvas.toBlob(resolve, "image/jpeg", quality);
+          });
+
+        let blob: Blob | null = null;
+        let quality = 0.92;
+        let attempts = 0;
+
+        while (attempts < 6) {
+          canvas.width = width;
+          canvas.height = height;
+          ctx.clearRect(0, 0, width, height);
+          ctx.drawImage(image, 0, 0, width, height);
+          blob = await encode(quality);
+
+          if (blob && blob.size <= targetBytes) {
+            break;
           }
-          return;
-        }
-        accepted.push(file);
-      });
 
-      if (accepted.length === 0) {
-        return;
-      }
-
-      setPendingFiles((prev) => {
-        const remainingSlots =
-          typeof maxFiles === "number" ? Math.max(0, maxFiles - prev.length) : Infinity;
-        if (remainingSlots <= 0) {
-          toast.error(`You can only upload up to ${maxFiles} ${selectedLabel}s.`);
-          return prev;
-        }
-        const existing = new Set(
-          prev.map(
-            (item) => `${item.file.name}-${item.file.size}-${item.file.type}`
-          )
-        );
-        const next = [...prev];
-        accepted.slice(0, remainingSlots).forEach((file) => {
-          const key = `${file.name}-${file.size}-${file.type}`;
-          if (!existing.has(key)) {
-            const id =
-              typeof crypto !== "undefined" && "randomUUID" in crypto
-                ? crypto.randomUUID()
-                : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-            next.push({
-              id,
-              file,
-              previewUrl: URL.createObjectURL(file),
-              progress: 0,
-              status: "ready"
-            });
-            existing.add(key);
+          if (quality > 0.5) {
+            quality = Math.max(0.5, quality - 0.15);
+          } else {
+            width = Math.max(1, Math.floor(width * 0.85));
+            height = Math.max(1, Math.floor(height * 0.85));
           }
-        });
-        if (accepted.length > remainingSlots) {
-          toast.error(`Only ${remainingSlots} more ${selectedLabel}(s) allowed.`);
+
+          attempts += 1;
         }
-        return next;
-      });
+
+        if (!blob) {
+          return null;
+        }
+
+        const nextName = file.name.replace(/\.[^.]+$/, "") + ".jpg";
+        return new File([blob], nextName, { type: "image/jpeg" });
+      } catch {
+        return null;
+      } finally {
+        URL.revokeObjectURL(url);
+      }
     },
-    [fileValidator, maxFiles, selectedLabel]
+    []
   );
-
-  const handleFileInputChange = (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const files = Array.from(event.target.files ?? []);
-    addFiles(files);
-    event.target.value = "";
-  };
-
-  const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    setIsDragging(false);
-    addFiles(Array.from(event.dataTransfer.files));
-  };
-
-  const updatePendingFile = (
-    id: string,
-    updates: Partial<{
-      progress: number;
-      status: "ready" | "uploading" | "done" | "error";
-    }>
-  ) => {
-    setPendingFiles((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, ...updates } : item))
-    );
-  };
 
   const createVideoThumbnailBlob = React.useCallback(
     (file: File): Promise<Blob | null> =>
@@ -283,6 +283,147 @@ function UploadDialog<TRecord>({
       }),
     []
   );
+
+  const addFiles = React.useCallback(
+    async (files: File[]) => {
+      if (files.length === 0) {
+        return;
+      }
+
+      setIsCompressing(true);
+      const accepted: File[] = [];
+
+      try {
+        for (const originalFile of files) {
+          let file = originalFile;
+          if (
+            compressOversizeImages &&
+            maxImageBytes &&
+            file.type.startsWith("image/") &&
+            file.size > maxImageBytes
+          ) {
+            const compressed = await compressImageToTarget(file, maxImageBytes);
+            if (compressed) {
+              file = compressed;
+            } else {
+              toast.error(`Unable to compress "${file.name}".`);
+            }
+          }
+
+          const result = fileValidator(file);
+          if (!result.accepted) {
+            if (result.error) {
+              toast.error(result.error);
+            }
+            continue;
+          }
+
+          accepted.push(file);
+        }
+      } finally {
+        setIsCompressing(false);
+      }
+
+      if (accepted.length === 0) {
+        return;
+      }
+
+      const nextItems = await Promise.all(
+        accepted.map(async (file) => {
+          let previewUrl = URL.createObjectURL(file);
+          let previewType: "image" | "video" = file.type.startsWith("video/")
+            ? "video"
+            : "image";
+
+          if (file.type.startsWith("video/")) {
+            const previewBlob = await createVideoThumbnailBlob(file);
+            if (previewBlob) {
+              URL.revokeObjectURL(previewUrl);
+              previewUrl = URL.createObjectURL(previewBlob);
+              previewType = "image";
+            }
+          }
+
+          const id =
+            typeof crypto !== "undefined" && "randomUUID" in crypto
+              ? crypto.randomUUID()
+              : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+          return {
+            id,
+            file,
+            previewUrl,
+            previewType,
+            progress: 0,
+            status: "ready" as const
+          };
+        })
+      );
+
+      setPendingFiles((prev) => {
+        const remainingSlots =
+          typeof maxFiles === "number" ? Math.max(0, maxFiles - prev.length) : Infinity;
+        if (remainingSlots <= 0) {
+          toast.error(`You can only upload up to ${maxFiles} ${selectedLabel}s.`);
+          return prev;
+        }
+        const existing = new Set(
+          prev.map(
+            (item) => `${item.file.name}-${item.file.size}-${item.file.type}`
+          )
+        );
+        const next = [...prev];
+        nextItems.slice(0, remainingSlots).forEach((item) => {
+          const key = `${item.file.name}-${item.file.size}-${item.file.type}`;
+          if (!existing.has(key)) {
+            next.push(item);
+            existing.add(key);
+          } else if (item.previewUrl.startsWith("blob:")) {
+            URL.revokeObjectURL(item.previewUrl);
+          }
+        });
+        if (accepted.length > remainingSlots) {
+          toast.error(`Only ${remainingSlots} more ${selectedLabel}(s) allowed.`);
+        }
+        return next;
+      });
+    },
+    [
+      compressImageToTarget,
+      createVideoThumbnailBlob,
+      compressOversizeImages,
+      fileValidator,
+      maxFiles,
+      maxImageBytes,
+      selectedLabel
+    ]
+  );
+
+  const handleFileInputChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const files = Array.from(event.target.files ?? []);
+    void addFiles(files);
+    event.target.value = "";
+  };
+
+  const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setIsDragging(false);
+    void addFiles(Array.from(event.dataTransfer.files));
+  };
+
+  const updatePendingFile = (
+    id: string,
+    updates: Partial<{
+      progress: number;
+      status: "ready" | "uploading" | "done" | "error";
+    }>
+  ) => {
+    setPendingFiles((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, ...updates } : item))
+    );
+  };
 
   const uploadFileWithProgress = async (
     uploadUrl: string,
@@ -471,8 +612,7 @@ function UploadDialog<TRecord>({
           targets
             .filter((item) => failedIds.has(item.id))
             .map((item): PendingUpload => ({
-              id: item.id,
-              file: item.file,
+              ...item,
               previewUrl: URL.createObjectURL(item.file),
               progress: 0,
               status: "error"
@@ -503,6 +643,7 @@ function UploadDialog<TRecord>({
   return (
     <Dialog
       open={open}
+      modal
       onOpenChange={(nextOpen) => {
         onOpenChange(nextOpen);
         if (!nextOpen) {
@@ -510,7 +651,21 @@ function UploadDialog<TRecord>({
         }
       }}
     >
-      <DialogContent className="sm:max-w-[680px]">
+      <DialogContent
+        className="sm:max-w-[680px]"
+        style={isDrivePickerActive ? { pointerEvents: "none" } : undefined}
+        overlayClassName={isDrivePickerActive ? "pointer-events-none" : undefined}
+        onInteractOutside={(event) => {
+          if (isDrivePickerActive) {
+            event.preventDefault();
+          }
+        }}
+        onEscapeKeyDown={(event) => {
+          if (isDrivePickerActive) {
+            event.preventDefault();
+          }
+        }}
+      >
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           {description ? (
@@ -564,6 +719,13 @@ function UploadDialog<TRecord>({
                   size="sm"
                   variant="outline"
                   className="gap-1"
+                  onFilesSelected={addFiles}
+                  accept={accept}
+                  onPickerOpenChange={setIsDrivePickerActive}
+                  maxImageBytes={maxImageBytes}
+                  compressImages={compressDriveImages}
+                  onLoadingChange={setIsDriveLoading}
+                  onLoadingCountChange={setDriveLoadingCount}
                 />
               </div>
             </div>
@@ -582,13 +744,37 @@ function UploadDialog<TRecord>({
             </div>
           )}
 
-          {pendingFiles.length > 0 && (
+          {(pendingFiles.length > 0 ||
+            isCompressing ||
+            (isDriveLoading && driveLoadingCount > 0)) && (
             <div className="rounded-lg border border-border/60 bg-background p-3">
               <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                 {pendingFiles.length} {selectedLabel}
                 {pendingFiles.length === 1 ? "" : "s"} selected
               </div>
               <div className="mt-2 max-h-48 space-y-2 overflow-y-auto">
+                {isCompressing || isDriveLoading
+                  ? Array.from(
+                      {
+                        length: Math.max(
+                          1,
+                          isDriveLoading ? driveLoadingCount : 1
+                        )
+                      },
+                      (_, index) => (
+                        <div
+                          key={`skeleton-${index}`}
+                          className="flex items-center gap-3 text-sm"
+                        >
+                          <div className="h-10 w-10 rounded-md border border-border/60 bg-muted animate-pulse" />
+                          <div className="flex-1 space-y-2">
+                            <div className="h-3 w-3/5 rounded bg-muted animate-pulse" />
+                            <div className="h-2 w-2/5 rounded bg-muted animate-pulse" />
+                          </div>
+                        </div>
+                      )
+                    )
+                  : null}
                 {pendingFiles.map((item) => (
                   <div
                     key={item.id}
@@ -596,12 +782,13 @@ function UploadDialog<TRecord>({
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="h-10 w-10 rounded-md border border-border/60 overflow-hidden bg-secondary/40 shrink-0">
-                        {item.file.type.startsWith("video/") ? (
+                        {item.previewType === "video" ? (
                           <video
                             src={item.previewUrl}
                             className="h-full w-full object-cover"
                             muted
                             playsInline
+                            preload="metadata"
                           />
                         ) : (
                           <LoadingImage

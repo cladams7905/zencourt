@@ -42,6 +42,7 @@ export const AddressAutocomplete = ({
   const [isLoading, setIsLoading] = React.useState(false);
   const [isScriptLoaded, setIsScriptLoaded] = React.useState(false);
   const [showSuggestions, setShowSuggestions] = React.useState(false);
+  const [shouldFetch, setShouldFetch] = React.useState(false);
   const autocompleteService =
     React.useRef<google.maps.places.AutocompleteService | null>(null);
   const placesService = React.useRef<google.maps.places.PlacesService | null>(
@@ -114,13 +115,13 @@ export const AddressAutocomplete = ({
 
   React.useEffect(() => {
     const timer = window.setTimeout(() => {
-      if (inputValue) {
+      if (inputValue && shouldFetch && showSuggestions) {
         fetchSuggestions(inputValue);
       }
     }, 300);
 
     return () => window.clearTimeout(timer);
-  }, [inputValue, fetchSuggestions]);
+  }, [fetchSuggestions, inputValue, shouldFetch, showSuggestions]);
 
   const handleSelectPlace = (
     prediction: google.maps.places.AutocompletePrediction
@@ -131,6 +132,7 @@ export const AddressAutocomplete = ({
       onChange(fallback);
       setSuggestions([]);
       setShowSuggestions(false);
+      setShouldFetch(false);
       return;
     }
 
@@ -161,6 +163,7 @@ export const AddressAutocomplete = ({
         }
         setSuggestions([]);
         setShowSuggestions(false);
+        setShouldFetch(false);
         setIsLoading(false);
       }
     );
@@ -171,6 +174,7 @@ export const AddressAutocomplete = ({
     onChange("");
     setSuggestions([]);
     setShowSuggestions(false);
+    setShouldFetch(false);
   };
 
   return (
@@ -184,6 +188,7 @@ export const AddressAutocomplete = ({
             setInputValue(nextValue);
             onChange(nextValue);
             setShowSuggestions(true);
+            setShouldFetch(true);
           }}
           onFocus={() => {
             if (inputValue) {

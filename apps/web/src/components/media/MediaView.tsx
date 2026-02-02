@@ -448,6 +448,9 @@ const MediaView = ({ userId, initialMedia = [] }: MediaViewProps) => {
         dropSubtitle="or click to select multiple files"
         primaryActionLabel="Upload media"
         errorMessage="Failed to upload media. Please try again."
+        maxImageBytes={MAX_IMAGE_BYTES}
+        compressDriveImages
+        compressOversizeImages
         fileValidator={fileValidator}
         getUploadUrls={(requests) => getUserMediaUploadUrls(userId, requests)}
         buildRecordInput={({ upload, thumbnailKey }) => {

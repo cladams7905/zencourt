@@ -170,6 +170,9 @@ export function ListingSyncView({ userId }: ListingSyncViewProps) {
           "Select at least 2 listing photos per room for best output quality.",
           "Include a wide variety well-framed shots of key rooms and exterior."
         ]}
+        maxImageBytes={MAX_IMAGE_BYTES}
+        compressDriveImages
+        compressOversizeImages
         fileMetaLabel={(file) => formatBytes(file.size)}
         fileValidator={(file) => {
           if (file.type.startsWith("image/")) {

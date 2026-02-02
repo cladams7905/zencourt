@@ -817,7 +817,7 @@ export function ListingDetailView({
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent sideOffset={6}>
-                      Add a custom room category
+                      Add a room category
                     </TooltipContent>
                   </Tooltip>
                 </div>
@@ -983,7 +983,7 @@ export function ListingDetailView({
                                   {image.isPrimary ? (
                                     <Tooltip>
                                       <TooltipTrigger asChild>
-                                        <div className="absolute top-2 left-2 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-primary/40 backdrop-blur-lg text-primary-foreground backdrop-blur-lg">
+                                        <div className="absolute top-2 left-2 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-primary/40 text-primary-foreground backdrop-blur-lg">
                                           <Star className="h-4 w-4" />
                                           <span className="sr-only">
                                             Primary
@@ -1202,6 +1202,9 @@ export function ListingDetailView({
           "Include a wide variety well-framed shots of key rooms and exterior."
         ]}
         maxFiles={20}
+        maxImageBytes={MAX_IMAGE_BYTES}
+        compressDriveImages
+        compressOversizeImages
         fileMetaLabel={(file) => formatBytes(file.size)}
         fileValidator={(file) => {
           if (!file.type.startsWith("image/")) {
@@ -1260,8 +1263,7 @@ export function ListingDetailView({
             } catch (error) {
               setImages((prev) => [...createdItems, ...prev]);
               toast.error(
-                (error as Error).message ||
-                  "Failed to navigate to processing."
+                (error as Error).message || "Failed to navigate to processing."
               );
             }
           } catch (error) {
