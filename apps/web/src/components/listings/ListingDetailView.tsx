@@ -659,8 +659,22 @@ export function ListingDetailView({
     setDeleteImageId(null);
   };
 
-  const handleContinue = () => {
-    toast.message("Draft updates save automatically.");
+  const handleContinue = async () => {
+    const nextAddress = addressValue.trim();
+    if (nextAddress) {
+      try {
+        await runDraftSave(() =>
+          updateListing(userId, listingId, { address: nextAddress })
+        );
+      } catch (error) {
+        toast.error(
+          (error as Error).message || "Failed to save listing address."
+        );
+        return;
+      }
+    }
+
+    router.push(`/listings/${listingId}/review/processing`);
   };
 
   const handleDragStart =

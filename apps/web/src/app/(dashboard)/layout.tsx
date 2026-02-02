@@ -36,7 +36,7 @@ export default async function DashboardLayout({
         listings={listings}
       />
       <main className="flex-1 bg-secondary p-3 pl-0 overflow-x-hidden">
-        <div className="rounded-xl bg-background border border-border h-full overflow-y-auto overflow-x-hidden">
+        <div className="rounded-lg bg-background border border-border h-full overflow-y-auto overflow-x-hidden">
           {children}
         </div>
       </main>

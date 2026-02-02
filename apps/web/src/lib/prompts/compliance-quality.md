@@ -59,4 +59,5 @@
 - "Turn-key"
 - "Motivated seller"
 - "Chef's kiss"
+- "{Idea} isn't about {something else}--it's about {something else}"
 - Em dashes are forbidden. Use commas, periods, or exclamation points instead.

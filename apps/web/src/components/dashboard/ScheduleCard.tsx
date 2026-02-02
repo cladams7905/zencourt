@@ -61,12 +61,7 @@ const ScheduleCard = ({
   }, [posts]);
 
   return (
-    <Card
-      className={cn(
-        "shrink-0 w-[280px] hover:shadow-lg transition-all duration-300",
-        className
-      )}
-    >
+    <Card className={cn("shrink-0 w-[280px]", className)}>
       <CardContent className="p-4 space-y-4">
         {/* Header */}
         <div className="relative">

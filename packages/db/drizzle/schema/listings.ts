@@ -1,7 +1,8 @@
 import { authenticatedRole, authUid, crudPolicy } from "drizzle-orm/neon";
-import { index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { index, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
 import { listingStageEnum } from "./enums";
+import type { ListingPropertyDetails } from "@shared/types/models";
 
 export const listings = pgTable(
   "listings",
@@ -10,6 +11,10 @@ export const listings = pgTable(
     userId: text("user_id").notNull(),
     title: text("title"),
     address: text("address"),
+    propertyDetails: jsonb("property_details").$type<ListingPropertyDetails>(),
+    propertyDetailsSource: text("property_details_source"),
+    propertyDetailsFetchedAt: timestamp("property_details_fetched_at"),
+    propertyDetailsRevision: text("property_details_revision"),
     listingStage: listingStageEnum("listing_stage")
       .notNull()
       .default("upload"),
