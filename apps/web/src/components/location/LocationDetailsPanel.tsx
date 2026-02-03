@@ -39,9 +39,8 @@ export const LocationDetailsPanel = ({
   const [knownCitySet, setKnownCitySet] = React.useState<Set<string> | null>(
     null
   );
-  const [knownCountySet, setKnownCountySet] = React.useState<Set<string> | null>(
-    null
-  );
+  const [knownCountySet, setKnownCountySet] =
+    React.useState<Set<string> | null>(null);
   const parsedServiceAreas = React.useMemo(
     () =>
       serviceAreasValue
@@ -88,7 +87,10 @@ export const LocationDetailsPanel = ({
       return;
     }
     let isActive = true;
-    Promise.all([getCityNameSetForState(state), getCountyNameSetForState(state)])
+    Promise.all([
+      getCityNameSetForState(state),
+      getCountyNameSetForState(state)
+    ])
       .then(([citySet, countySet]) => {
         if (isActive) {
           setKnownCitySet(citySet);
@@ -112,7 +114,7 @@ export const LocationDetailsPanel = ({
   }, [hasErrors, onValidationChange]);
 
   return (
-    <div className="rounded-lg border border-border/60 bg-secondary p-3 text-sm">
+    <div className="rounded-lg border border-border bg-secondary p-3 text-sm">
       <div className="flex items-center justify-between">
         <span className="font-medium">Suggested details</span>
         <Button

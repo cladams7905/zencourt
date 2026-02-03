@@ -49,6 +49,7 @@ import { ListingCategoryDeleteDialog } from "./ListingCategoryDeleteDialog";
 import { ListingImageMoveDialog } from "./ListingImageMoveDialog";
 import { ListingImageDeleteDialog } from "./ListingImageDeleteDialog";
 import { getImageMetadataFromFile } from "@web/src/lib/imageMetadata";
+import { ListingTimeline } from "./ListingTimeline";
 
 type ListingImageItem = {
   id: string;
@@ -66,12 +67,13 @@ interface ListingDetailViewProps {
   userId: string;
   initialImages: ListingImageItem[];
   googleMapsApiKey: string;
+  hasPropertyDetails: boolean;
 }
 
 const timelineSteps = [
-  { label: "Upload", active: true },
-  { label: "Review", active: false },
-  { label: "Create", active: false }
+  { label: "Categorize", active: true, completed: false },
+  { label: "Review", active: false, completed: false },
+  { label: "Create", active: false, completed: false }
 ];
 
 const formatBytes = (bytes: number) => {
@@ -158,7 +160,8 @@ export function ListingDetailView({
   listingId,
   userId,
   initialImages,
-  googleMapsApiKey
+  googleMapsApiKey,
+  hasPropertyDetails
 }: ListingDetailViewProps) {
   const router = useRouter();
   const [draftTitle, setDraftTitle] = React.useState(title);
@@ -674,6 +677,11 @@ export function ListingDetailView({
       }
     }
 
+    if (hasPropertyDetails) {
+      router.push(`/listings/${listingId}/review`);
+      return;
+    }
+
     router.push(`/listings/${listingId}/review/processing`);
   };
 
@@ -745,11 +753,12 @@ export function ListingDetailView({
       <ListingViewHeader
         ref={headerRef}
         title={draftTitle}
+        timeline={<ListingTimeline steps={timelineSteps} className="mb-0" />}
         action={
           isSavingDraft ? (
-            <div className="flex items-center gap-2 rounded-full border border-border/60 bg-secondary/80 px-3 py-1.5 text-xs font-medium text-foreground">
+            <div className="flex items-center gap-2 rounded-full border border-border bg-secondary/80 px-3 py-1.5 text-xs font-medium text-foreground">
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              Saving draft
+              Saving...
             </div>
           ) : null
         }
@@ -760,41 +769,12 @@ export function ListingDetailView({
           lastDragClientYRef.current = event.clientY;
         }}
       >
-        <div className="mx-auto w-full max-w-[360px]">
-          <div className="relative flex items-center justify-between mb-6">
-            <div className="absolute left-0 top-[5px] h-px w-full bg-border -z-10" />
-            {timelineSteps.map((step) => (
-              <div
-                key={step.label}
-                className="flex flex-col items-center gap-1.5"
-              >
-                <div
-                  className={`h-2.5 w-2.5 rotate-45 ring-4 ring-background shadow-sm ${
-                    step.active
-                      ? "bg-foreground"
-                      : "bg-background border border-border"
-                  }`}
-                />
-                <span
-                  className={`mt-1.5 text-[11px] uppercase tracking-widest ${
-                    step.active
-                      ? "font-semibold text-foreground"
-                      : "font-medium text-muted-foreground"
-                  }`}
-                >
-                  {step.label}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
         <div className="flex flex-col gap-8 lg:flex-row">
           <section className="flex-1">
             <div className="flex w-full gap-8">
               <div className="flex flex- w-full items-center gap-3">
                 <h2 className="text-xl font-header text-foreground">
-                  Listing photos
+                  Categorize Listing photos
                 </h2>
                 <div className="ml-auto flex items-center gap-2 flex-nowrap">
                   <span className="text-xs text-muted-foreground mr-[9px] font-medium">
@@ -838,7 +818,7 @@ export function ListingDetailView({
               </div>
             </div>
             {images.length === 0 ? (
-              <div className="mt-6 rounded-lg border border-border/60 bg-secondary p-6 text-sm text-muted-foreground">
+              <div className="mt-6 rounded-lg border border-border bg-secondary p-6 text-sm text-muted-foreground">
                 No images uploaded yet.
               </div>
             ) : (
@@ -852,10 +832,10 @@ export function ListingDetailView({
                   <AccordionItem
                     key={category}
                     value={category}
-                    className={`rounded-xl border px-4 ${
+                    className={`border px-4 ${
                       category === "needs-categorization"
                         ? "border-destructive/20 bg-destructive/10 text-destructive"
-                        : "border-border/60 bg-card"
+                        : "border-border bg-card"
                     }`}
                   >
                     <AccordionTrigger
@@ -952,14 +932,14 @@ export function ListingDetailView({
                     </AccordionTrigger>
                     <AccordionContent>
                       <div
-                        className={`rounded-xl border border-dashed px-3 py-3 transition-colors ${
+                        className={`rounded-lg border border-dashed px-3 py-3 transition-colors ${
                           category === "needs-categorization"
                             ? dragOverCategory === category
                               ? "border-destructive/60 bg-destructive/10"
                               : "border-destructive/30"
                             : dragOverCategory === category
                               ? "border-foreground/40 bg-secondary"
-                              : "border-border/60"
+                              : "border-border"
                         }`}
                         onDragOver={(event) => {
                           event.preventDefault();
@@ -989,7 +969,7 @@ export function ListingDetailView({
                               .map((image) => (
                                 <div
                                   key={image.id}
-                                  className="group relative aspect-square overflow-hidden rounded-xl border border-border/60 bg-secondary/40 cursor-grab"
+                                  className="group relative aspect-square overflow-hidden rounded-lg border border-border bg-secondary/40 cursor-grab"
                                   draggable
                                   onDragStart={handleDragStart(image.id)}
                                   onDragEnd={handleDragEnd}
@@ -1104,7 +1084,7 @@ export function ListingDetailView({
 
           <aside className="w-full lg:w-72 mt-14">
             <div className="sticky top-[124px] space-y-4">
-              <div className="rounded-xl border border-border/60 bg-secondary px-4 py-4">
+              <div className="rounded-lg border border-border bg-secondary px-4 py-4">
                 <div className="flex items-center justify-between">
                   <h2 className="text-lg text-foreground">Listing details</h2>
                 </div>

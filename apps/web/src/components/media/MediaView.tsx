@@ -75,8 +75,8 @@ const MediaCard = ({
   const TypeIcon = typeIcon;
   const aspectRatio = item.type === "video" ? "9 / 16" : "4 / 3";
   return (
-    <div className="group break-inside-avoid mb-6 rounded-xl border border-border/60 bg-card shadow-sm">
-      <div className="relative overflow-hidden rounded-xl">
+    <div className="group break-inside-avoid mb-6 border border-border rounded-lg bg-card shadow-sm">
+      <div className="relative overflow-hidden rounded-lg">
         <div className="relative w-full" style={{ aspectRatio }}>
           {item.type === "video" ? (
             <LoadingVideo
@@ -313,7 +313,7 @@ const MediaView = ({ userId, initialMedia = [] }: MediaViewProps) => {
       />
 
       <div className="mx-auto flex max-w-[1600px] flex-col gap-10 px-8 py-8">
-        <div className="rounded-lg bg-secondary border border-border/60 px-4 py-3 max-w-3xl">
+        <div className="rounded-lg bg-secondary border border-border px-4 py-3 max-w-3xl">
           <h2 className="text-xl font-header font-medium text-foreground">
             How to use the media library
           </h2>
@@ -413,9 +413,9 @@ const MediaView = ({ userId, initialMedia = [] }: MediaViewProps) => {
           ) : (
             <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border px-6 py-12 text-center">
               <div className="relative mb-6 h-24 w-56">
-                <div className="absolute left-6 top-0 h-24 w-40 rotate-[-8deg] z-10 rounded-xl border border-border/60 bg-linear-to-br from-secondary to-secondary/50 shadow-md"></div>
-                <div className="absolute left-14 top-2 h-24 w-40 rotate-[4deg] rounded-xl border border-border/60 bg-linear-to-br from-secondary to-secondary/50 shadow-md" />
-                <div className="absolute left-20 top-1 h-24 w-40 -rotate-2 rounded-xl border border-border bg-linear-to-br from-secondary to-secondary/50 shadow-lg" />
+                <div className="absolute left-6 top-0 h-24 w-40 rotate-[-8deg] z-10 rounded-lg border border-border bg-linear-to-br from-secondary to-secondary/50 shadow-md"></div>
+                <div className="absolute left-14 top-2 h-24 w-40 rotate-[4deg] rounded-lg border border-border bg-linear-to-br from-secondary to-secondary/50 shadow-md" />
+                <div className="absolute left-20 top-1 h-24 w-40 -rotate-2 rounded-lg border border-border bg-linear-to-br from-secondary to-secondary/50 shadow-lg" />
               </div>
               <p className="text-sm font-semibold text-foreground">
                 You haven&apos;t added any media yet

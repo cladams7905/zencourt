@@ -148,24 +148,24 @@ export function SettingsView({
         >
           {/* Vertical Tab List + Preview */}
           <div className="sticky top-[124px] flex w-56 flex-col gap-4 self-start">
-            <TabsList className="flex-col h-fit w-full bg-secondary border border-border/60 p-2 gap-2 rounded-lg py-2">
+            <TabsList className="flex-col h-fit w-full bg-secondary border border-border p-2 gap-2 py-2">
               <TabsTrigger
                 value="account"
-                className="w-full justify-start gap-3 py-2 px-3 rounded-lg transition-colors text-muted-foreground hover:text-foreground data-[state=active]:shadow-sm data-[state=active]:text-foreground data-[state=active]:bg-background"
+                className="w-full justify-start gap-3 py-2 px-3 rounded-lg transition-all text-muted-foreground hover:text-foreground data-[state=active]:shadow-sm data-[state=active]:text-foreground data-[state=active]:bg-background data-[state=active]:border-border"
               >
                 <UserCircle className="h-5 w-5" />
                 Account
               </TabsTrigger>
               <TabsTrigger
                 value="branding"
-                className="w-full justify-start gap-3 py-2 px-3 rounded-lg transition-colors text-muted-foreground hover:text-foreground data-[state=active]:shadow-sm data-[state=active]:text-foreground data-[state=active]:bg-background"
+                className="w-full justify-start gap-3 py-2 px-3 rounded-lg transition-all text-muted-foreground hover:text-foreground data-[state=active]:shadow-sm data-[state=active]:text-foreground data-[state=active]:bg-background data-[state=active]:border-border"
               >
                 <PenTool className="h-5 w-5" />
                 Branding
               </TabsTrigger>
               <TabsTrigger
                 value="subscription"
-                className="w-full justify-start gap-3 py-2 px-3 rounded-lg transition-colors text-muted-foreground hover:text-foreground data-[state=active]:shadow-sm data-[state=active]:text-foreground data-[state=active]:bg-background"
+                className="w-full justify-start gap-3 py-2 px-3 rounded-lg transition-all text-muted-foreground hover:text-foreground data-[state=active]:shadow-sm data-[state=active]:text-foreground data-[state=active]:bg-background data-[state=active]:border-border"
               >
                 <CreditCard className="h-5 w-5" />
                 Subscription
@@ -175,11 +175,14 @@ export function SettingsView({
             <TabsContent
               value="branding"
               forceMount
-              className="mt-0 data-[state=inactive]:hidden"
+              className="mt-0 data-[state=inactive]:hidden border-b-0"
             >
-              <Card className="bg-secondary border-border/60">
-                <Accordion type="single" collapsible>
-                  <AccordionItem value="example">
+              <Card className="bg-secondary border-border shadow-none!">
+                <Accordion type="single" className="border-b-0" collapsible>
+                  <AccordionItem
+                    value="example"
+                    className="border-b-0 hover:shadow-none!"
+                  >
                     <AccordionTrigger className="px-4 py-3 hover:no-underline font-body">
                       <div className="flex flex-col text-left gap-1">
                         <span className="text-base font-header">
@@ -190,7 +193,7 @@ export function SettingsView({
                         </span>
                       </div>
                     </AccordionTrigger>
-                    <AccordionContent className="px-4 pb-4">
+                    <AccordionContent className="px-4 pb-4 hover:shadow-none">
                       <div className="space-y-3 text-sm">
                         <div className="text-xs uppercase tracking-wide text-muted-foreground">
                           {writingToneLabel} Tone

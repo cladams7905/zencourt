@@ -7,7 +7,7 @@ import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
-import { Loader2, X } from "lucide-react";
+import { AlertTriangle, Check, Loader2, SearchCheck, X } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -15,6 +15,14 @@ import {
   SelectTrigger,
   SelectValue
 } from "../ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
+} from "../ui/dialog";
 import {
   Table,
   TableBody,
@@ -26,10 +34,11 @@ import {
 import { saveListingPropertyDetails } from "@web/src/server/actions/api/listingProperty";
 import type {
   ListingPropertyDetails,
-  ListingPropertySource,
   ListingSaleHistory,
   ListingValuationExample
 } from "@shared/types/models";
+import { ListingTimeline } from "./ListingTimeline";
+import Link from "next/link";
 
 type ListingReviewViewProps = {
   listingId: string;
@@ -37,15 +46,13 @@ type ListingReviewViewProps = {
   title: string;
   address: string | null;
   propertyDetails: ListingPropertyDetails | null;
-  fetchedAt?: Date | null;
-  source?: string | null;
   targetAudiences?: string[] | null;
 };
 
 const timelineSteps = [
-  { label: "Upload", active: false },
-  { label: "Review", active: true },
-  { label: "Create", active: false }
+  { label: "Categorize", active: false, completed: true },
+  { label: "Review", active: true, completed: false },
+  { label: "Create", active: false, completed: false }
 ];
 
 const toNullableString = (value: string) => {
@@ -60,9 +67,6 @@ const toNullableNumber = (value: string) => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
-const formatDateTime = (value?: Date | null) =>
-  value ? new Date(value).toLocaleString() : "Not available";
-
 const PROPERTY_TYPE_OPTIONS = [
   "Single Family Residence",
   "Condo",
@@ -75,16 +79,66 @@ const PROPERTY_TYPE_OPTIONS = [
 
 const ARCHITECTURE_OPTIONS = [
   "Ranch",
-  "2-story",
-  "3-story",
   "Split-level",
   "Colonial",
   "Craftsman",
   "Traditional",
   "Modern",
   "Contemporary",
-  "Farmhouse",
-  "Other"
+  "Farmhouse"
+];
+
+const STATE_OPTIONS = [
+  { value: "AL", label: "Alabama" },
+  { value: "AK", label: "Alaska" },
+  { value: "AZ", label: "Arizona" },
+  { value: "AR", label: "Arkansas" },
+  { value: "CA", label: "California" },
+  { value: "CO", label: "Colorado" },
+  { value: "CT", label: "Connecticut" },
+  { value: "DE", label: "Delaware" },
+  { value: "FL", label: "Florida" },
+  { value: "GA", label: "Georgia" },
+  { value: "HI", label: "Hawaii" },
+  { value: "ID", label: "Idaho" },
+  { value: "IL", label: "Illinois" },
+  { value: "IN", label: "Indiana" },
+  { value: "IA", label: "Iowa" },
+  { value: "KS", label: "Kansas" },
+  { value: "KY", label: "Kentucky" },
+  { value: "LA", label: "Louisiana" },
+  { value: "ME", label: "Maine" },
+  { value: "MD", label: "Maryland" },
+  { value: "MA", label: "Massachusetts" },
+  { value: "MI", label: "Michigan" },
+  { value: "MN", label: "Minnesota" },
+  { value: "MS", label: "Mississippi" },
+  { value: "MO", label: "Missouri" },
+  { value: "MT", label: "Montana" },
+  { value: "NE", label: "Nebraska" },
+  { value: "NV", label: "Nevada" },
+  { value: "NH", label: "New Hampshire" },
+  { value: "NJ", label: "New Jersey" },
+  { value: "NM", label: "New Mexico" },
+  { value: "NY", label: "New York" },
+  { value: "NC", label: "North Carolina" },
+  { value: "ND", label: "North Dakota" },
+  { value: "OH", label: "Ohio" },
+  { value: "OK", label: "Oklahoma" },
+  { value: "OR", label: "Oregon" },
+  { value: "PA", label: "Pennsylvania" },
+  { value: "RI", label: "Rhode Island" },
+  { value: "SC", label: "South Carolina" },
+  { value: "SD", label: "South Dakota" },
+  { value: "TN", label: "Tennessee" },
+  { value: "TX", label: "Texas" },
+  { value: "UT", label: "Utah" },
+  { value: "VT", label: "Vermont" },
+  { value: "VA", label: "Virginia" },
+  { value: "WA", label: "Washington" },
+  { value: "WV", label: "West Virginia" },
+  { value: "WI", label: "Wisconsin" },
+  { value: "WY", label: "Wyoming" }
 ];
 
 type TagInputProps = {
@@ -92,10 +146,20 @@ type TagInputProps = {
   onChange: (next: string[]) => void;
   placeholder?: string;
   onSave?: () => void;
+  addLabel?: string;
+  singleValue?: boolean;
 };
 
-const TagInput = ({ value, onChange, placeholder, onSave }: TagInputProps) => {
+const TagInput = ({
+  value,
+  onChange,
+  placeholder,
+  onSave,
+  addLabel = "Add feature",
+  singleValue = false
+}: TagInputProps) => {
   const [inputValue, setInputValue] = React.useState("");
+  const [isEditing, setIsEditing] = React.useState(false);
 
   const addTag = React.useCallback(
     (raw: string) => {
@@ -106,13 +170,16 @@ const TagInput = ({ value, onChange, placeholder, onSave }: TagInputProps) => {
       );
       if (exists) {
         setInputValue("");
+        setIsEditing(false);
         return;
       }
-      onChange([...value, trimmed]);
+      const next = singleValue ? [trimmed] : [...value, trimmed];
+      onChange(next);
       setInputValue("");
+      setIsEditing(false);
       onSave?.();
     },
-    [onChange, onSave, value]
+    [onChange, onSave, singleValue, value]
   );
 
   const removeTag = (tag: string) => {
@@ -125,7 +192,7 @@ const TagInput = ({ value, onChange, placeholder, onSave }: TagInputProps) => {
       {value.map((tag) => (
         <span
           key={tag}
-          className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-secondary px-2 py-1 text-xs text-foreground"
+          className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary px-2 py-1 text-xs text-foreground"
         >
           {tag}
           <button
@@ -138,69 +205,55 @@ const TagInput = ({ value, onChange, placeholder, onSave }: TagInputProps) => {
           </button>
         </span>
       ))}
-      <Input
-        value={inputValue}
-        onChange={(event) => setInputValue(event.target.value)}
-        onKeyDown={(event) => {
-          if (event.key === "Enter" || event.key === ",") {
-            event.preventDefault();
-            addTag(inputValue);
-          }
-        }}
-        onBlur={() => addTag(inputValue)}
-        placeholder={placeholder}
-        className="h-9 w-48"
-      />
-    </div>
-  );
-};
-
-type TagToggleOption = {
-  label: string;
-  value: string;
-};
-
-type TagToggleGroupProps = {
-  selected: string[];
-  options: TagToggleOption[];
-  onChange: (next: string[]) => void;
-  onSave?: () => void;
-};
-
-const TagToggleGroup = ({
-  selected,
-  options,
-  onChange,
-  onSave
-}: TagToggleGroupProps) => {
-  const toggle = (value: string) => {
-    const exists = selected.includes(value);
-    const next = exists
-      ? selected.filter((item) => item !== value)
-      : [...selected, value];
-    onChange(next);
-    onSave?.();
-  };
-
-  return (
-    <div className="flex flex-wrap gap-2">
-      {options.map((option) => {
-        const isActive = selected.includes(option.value);
-        return (
-          <button
-            key={option.value}
-            type="button"
-            onClick={() => toggle(option.value)}
-            className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs transition ${
-              isActive
-                ? "border-foreground bg-foreground text-background"
-                : "border-border/60 bg-secondary text-foreground hover:border-foreground/60"
-            }`}
+      {isEditing ? (
+        <div className="flex items-center gap-2">
+          <Input
+            value={inputValue}
+            onChange={(event) => setInputValue(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === ",") {
+                event.preventDefault();
+                addTag(inputValue);
+              }
+              if (event.key === "Escape") {
+                setIsEditing(false);
+                setInputValue("");
+              }
+            }}
+            onBlur={() => addTag(inputValue)}
+            placeholder={placeholder}
+            className="h-7 w-40"
+            autoFocus
+          />
+          <Button
+            variant="outline"
+            onClick={() => addTag(inputValue)}
+            className="rounded-full h-7 w-7"
+            aria-label="Confirm"
           >
-            {option.label}
-          </button>
-        );
-      })}
+            <Check />
+          </Button>
+          <Button
+            variant="outline"
+            className="rounded-full h-7 w-7"
+            onClick={() => {
+              setIsEditing(false);
+              setInputValue("");
+            }}
+            aria-label="Cancel"
+          >
+            <X />
+          </Button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          className="inline-flex items-center gap-2 rounded-full border border-dashed border-border bg-transparent px-3 py-1 text-xs text-muted-foreground hover:text-foreground"
+          onClick={() => setIsEditing(true)}
+        >
+          {addLabel}
+        </button>
+      )}
     </div>
   );
 };
@@ -211,8 +264,6 @@ export function ListingReviewView({
   title,
   address,
   propertyDetails,
-  fetchedAt,
-  source,
   targetAudiences
 }: ListingReviewViewProps) {
   const [details, setDetails] = React.useState<ListingPropertyDetails>(() => ({
@@ -221,8 +272,6 @@ export function ListingReviewView({
   }));
   const [isSaving, setIsSaving] = React.useState(false);
   const [pendingSave, setPendingSave] = React.useState(false);
-  const [isDirty, setIsDirty] = React.useState(false);
-  const [lastSavedAt, setLastSavedAt] = React.useState<Date | null>(null);
   const detailsRef = React.useRef(details);
   const dirtyRef = React.useRef(false);
   const [propertyTypeMode, setPropertyTypeMode] = React.useState<
@@ -258,7 +307,6 @@ export function ListingReviewView({
         return next;
       });
       dirtyRef.current = true;
-      setIsDirty(true);
     },
     []
   );
@@ -303,24 +351,12 @@ export function ListingReviewView({
     [updateSection]
   );
 
-  const setSources = React.useCallback(
-    (next: ListingPropertySource[]) => {
-      updateDetails((prev) => ({
-        ...prev,
-        sources: next.length > 0 ? next : null
-      }));
-    },
-    [updateDetails]
-  );
-
   const handleSave = React.useCallback(
     async (options?: { silent?: boolean }) => {
       setIsSaving(true);
       try {
         await saveListingPropertyDetails(userId, listingId, detailsRef.current);
-        setLastSavedAt(new Date());
         dirtyRef.current = false;
-        setIsDirty(false);
         if (!options?.silent) {
           toast.success("Property details saved.");
         }
@@ -354,7 +390,7 @@ export function ListingReviewView({
   }, [handleSave, isSaving, pendingSave]);
 
   const normalizeBathrooms = React.useCallback(() => {
-    const current = detailsRef.current.bathrooms_full;
+    const current = detailsRef.current.bathrooms;
     if (current === null || current === undefined) {
       triggerAutoSave();
       return;
@@ -363,7 +399,7 @@ export function ListingReviewView({
     if (rounded !== current) {
       updateDetails((prev) => ({
         ...prev,
-        bathrooms_full: rounded
+        bathrooms: rounded
       }));
       toast.message("Bathrooms rounded to the nearest 0.5.");
       triggerAutoSave();
@@ -375,18 +411,13 @@ export function ListingReviewView({
   const exterior = details.exterior_features ?? {};
   const interior = details.interior_features ?? {};
   const kitchen = interior.kitchen ?? {};
-  const bedroomLayout = interior.bedroom_layout ?? {};
-  const primaryBedroom = interior.primary_bedroom ?? {};
-  const basement = details.basement ?? {};
-  const garage = details.garage ?? {};
-  const hoa = details.hoa ?? {};
+  const primarySuite = interior.primary_suite ?? {};
   const valuation = details.valuation_estimates ?? {};
   const locationContext = details.location_context ?? {};
 
   const saleHistory = details.sale_history ?? [];
   const valuationExamples = valuation.third_party_examples ?? [];
   const sources = details.sources ?? [];
-
   const audienceSet = React.useMemo(
     () => new Set((targetAudiences ?? []).map((entry) => entry.toLowerCase())),
     [targetAudiences]
@@ -395,13 +426,6 @@ export function ListingReviewView({
     audienceSet.has("real_estate_investors") ||
     audienceSet.has("luxury_homebuyers") ||
     audienceSet.has("downsizers_retirees");
-  const showFamilyFields =
-    audienceSet.has("growing_families") ||
-    audienceSet.has("first_time_homebuyers");
-  const showLuxuryFields =
-    audienceSet.has("luxury_homebuyers") ||
-    audienceSet.has("downsizers_retirees");
-  const showBasementFields = showFamilyFields || showInvestorFields;
 
   const propertyTypeOptions = React.useMemo(
     () => [...PROPERTY_TYPE_OPTIONS, "Custom"],
@@ -413,51 +437,126 @@ export function ListingReviewView({
     []
   );
 
+  const requiredFixes = React.useMemo(() => {
+    const fixes: string[] = [];
+    if (!details.address?.trim()) {
+      fixes.push("Address is missing.");
+    }
+    if (!details.property_type?.trim()) {
+      fixes.push("Property type is missing.");
+    }
+    if (!details.architecture?.trim()) {
+      fixes.push("Architecture is missing.");
+    }
+    if (!Number.isFinite(details.year_built ?? NaN)) {
+      fixes.push("Year built is missing.");
+    }
+    if (!Number.isFinite(details.living_area_sq_ft ?? NaN)) {
+      fixes.push("Living area is missing.");
+    }
+    if (!Number.isFinite(details.bedrooms ?? NaN)) {
+      fixes.push("Bedrooms count is missing.");
+    }
+    if (!Number.isFinite(details.bathrooms ?? NaN)) {
+      fixes.push("Bathrooms count is missing.");
+    }
+    if (!Number.isFinite(details.lot_size_acres ?? NaN)) {
+      fixes.push("Lot size is missing.");
+    }
+    if (!Number.isFinite(details.stories ?? NaN)) {
+      fixes.push("Stories count is missing.");
+    }
+    return fixes;
+  }, [
+    details.address,
+    details.architecture,
+    details.bathrooms,
+    details.bedrooms,
+    details.living_area_sq_ft,
+    details.lot_size_acres,
+    details.property_type,
+    details.stories,
+    details.year_built
+  ]);
+
+  const canContinue = requiredFixes.length === 0;
+
   return (
     <>
       <ListingViewHeader
         title={title}
+        timeline={<ListingTimeline steps={timelineSteps} className="mb-0" />}
         action={
           isSaving ? (
-            <div className="flex items-center gap-2 rounded-full border border-border/60 bg-secondary/80 px-3 py-1.5 text-xs font-medium text-foreground">
+            <div className="flex items-center gap-2 rounded-full border border-border bg-secondary/80 px-3 py-1.5 text-xs font-medium text-foreground">
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              Saving draft
+              Saving...
             </div>
           ) : null
         }
       />
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-8 py-10">
-        <div className="mx-auto w-full max-w-[360px]">
-          <div className="relative flex items-center justify-between mb-6">
-            <div className="absolute left-0 top-[5px] h-px w-full bg-border -z-10" />
-            {timelineSteps.map((step) => (
-              <div
-                key={step.label}
-                className="flex flex-col items-center gap-1.5"
-              >
-                <div
-                  className={`h-2.5 w-2.5 rotate-45 ring-4 ring-background shadow-sm ${
-                    step.active
-                      ? "bg-foreground"
-                      : "bg-background border border-border"
-                  }`}
-                />
-                <span
-                  className={`mt-1.5 text-[11px] uppercase tracking-widest ${
-                    step.active
-                      ? "font-semibold text-foreground"
-                      : "font-medium text-muted-foreground"
-                  }`}
-                >
-                  {step.label}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-8 py-10">
         <div className="flex flex-col gap-8 lg:flex-row">
           <section className="flex-1 space-y-6">
+            <div className="flex w-full items-center gap-3">
+              <h2 className="text-xl font-header text-foreground">
+                Review Property Details
+              </h2>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="ml-auto">
+                    Sources
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[560px]">
+                  <DialogHeader>
+                    <DialogTitle>Property data sources</DialogTitle>
+                    <DialogDescription>
+                      Links to the pages used to populate this listing.
+                    </DialogDescription>
+                  </DialogHeader>
+                  {sources.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      No sources captured yet.
+                    </p>
+                  ) : (
+                    <div className="space-y-3">
+                      {sources.map((entry, index) => (
+                        <div
+                          key={`source-link-${index}`}
+                          className="rounded-md border border-border bg-secondary/40 px-3 py-2"
+                        >
+                          <div className="text-sm font-medium text-foreground">
+                            {entry.citation ? (
+                              <a
+                                href={entry.citation}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-sm font-medium text-foreground underline decoration-border/70 underline-offset-4 hover:text-muted-foreground"
+                              >
+                                {entry.site ?? `Source ${index + 1}`}
+                              </a>
+                            ) : (
+                              <span>{entry.site ?? `Source ${index + 1}`}</span>
+                            )}
+                          </div>
+                          {entry.notes ? (
+                            <p className="text-xs text-muted-foreground">
+                              {entry.notes}
+                            </p>
+                          ) : null}
+                          {!entry.citation ? (
+                            <p className="mt-2 text-xs text-muted-foreground">
+                              No URL provided.
+                            </p>
+                          ) : null}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </DialogContent>
+              </Dialog>
+            </div>
             <Card>
               <CardHeader>
                 <CardTitle>Property basics</CardTitle>
@@ -465,16 +564,7 @@ export function ListingReviewView({
               <CardContent className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2 sm:col-span-2">
                   <Label>Address</Label>
-                  <Input
-                    value={details.address ?? ""}
-                    onChange={(event) =>
-                      updateDetails((prev) => ({
-                        ...prev,
-                        address: toNullableString(event.target.value)
-                      }))
-                    }
-                    onBlur={triggerAutoSave}
-                  />
+                  <Input value={details.address ?? ""} disabled />
                 </div>
                 <div className="space-y-2">
                   <Label>Property type</Label>
@@ -632,11 +722,11 @@ export function ListingReviewView({
                   <Label>Bathrooms</Label>
                   <Input
                     type="number"
-                    value={details.bathrooms_full ?? ""}
+                    value={details.bathrooms ?? ""}
                     onChange={(event) =>
                       updateDetails((prev) => ({
                         ...prev,
-                        bathrooms_full: toNullableNumber(event.target.value)
+                        bathrooms: toNullableNumber(event.target.value)
                       }))
                     }
                     onBlur={normalizeBathrooms}
@@ -652,6 +742,20 @@ export function ListingReviewView({
                       updateDetails((prev) => ({
                         ...prev,
                         lot_size_acres: toNullableNumber(event.target.value)
+                      }))
+                    }
+                    onBlur={triggerAutoSave}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Stories</Label>
+                  <Input
+                    type="number"
+                    value={details.stories ?? ""}
+                    onChange={(event) =>
+                      updateDetails((prev) => ({
+                        ...prev,
+                        stories: toNullableNumber(event.target.value)
                       }))
                     }
                     onBlur={triggerAutoSave}
@@ -676,44 +780,23 @@ export function ListingReviewView({
                       }))
                     }
                     onSave={triggerAutoSave}
-                    placeholder="Add a material"
+                    placeholder="e.g., Brick"
+                    addLabel="Add material"
                   />
                 </div>
                 <div className="space-y-2">
                   <Label>Exterior highlights</Label>
-                  <TagToggleGroup
-                    selected={
-                      [
-                        exterior.front_porch ? "front_porch" : null,
-                        exterior.rear_deck ? "rear_deck" : null
-                      ].filter(Boolean) as string[]
-                    }
-                    options={[
-                      { label: "Front porch", value: "front_porch" },
-                      { label: "Rear deck", value: "rear_deck" }
-                    ]}
-                    onChange={(selected) =>
-                      updateSection("exterior_features", (prev) => ({
-                        ...prev,
-                        front_porch: selected.includes("front_porch"),
-                        rear_deck: selected.includes("rear_deck")
-                      }))
-                    }
-                    onSave={triggerAutoSave}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Other exterior notes</Label>
                   <TagInput
-                    value={exterior.other_features ?? []}
+                    value={exterior.highlights ?? []}
                     onChange={(next) =>
                       updateSection("exterior_features", (prev) => ({
                         ...prev,
-                        other_features: next.length > 0 ? next : null
+                        highlights: next.length > 0 ? next : null
                       }))
                     }
                     onSave={triggerAutoSave}
-                    placeholder="Add a feature"
+                    placeholder="e.g., Covered patio"
+                    addLabel="Add highlight"
                   />
                 </div>
               </CardContent>
@@ -723,321 +806,82 @@ export function ListingReviewView({
               <CardHeader>
                 <CardTitle>Interior features</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label>Main level flooring</Label>
-                    <Input
-                      value={interior.flooring_main_level ?? ""}
-                      onChange={(event) =>
-                        updateSection("interior_features", (prev) => ({
-                          ...prev,
-                          flooring_main_level: toNullableString(
-                            event.target.value
-                          )
-                        }))
-                      }
-                      onBlur={triggerAutoSave}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Interior highlights</Label>
-                    <TagToggleGroup
-                      selected={interior.fireplace ? ["fireplace"] : []}
-                      options={[{ label: "Fireplace", value: "fireplace" }]}
-                      onChange={(selected) =>
-                        updateSection("interior_features", (prev) => ({
-                          ...prev,
-                          fireplace: selected.includes("fireplace")
-                        }))
-                      }
-                      onSave={triggerAutoSave}
-                    />
-                  </div>
-                </div>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label>Kitchen countertops</Label>
-                    <Input
-                      value={kitchen.countertops ?? ""}
-                      onChange={(event) =>
-                        updateSection("interior_features", (prev) => ({
-                          ...prev,
-                          kitchen: {
-                            ...(prev.kitchen ?? {}),
-                            countertops: toNullableString(event.target.value)
-                          }
-                        }))
-                      }
-                      onBlur={triggerAutoSave}
-                    />
-                  </div>
-                  <div className="space-y-2 sm:col-span-2">
-                    <Label>Kitchen features</Label>
-                    <TagToggleGroup
-                      selected={
-                        [
-                          kitchen.pantry ? "pantry" : null,
-                          kitchen.open_to_family_room
-                            ? "open_to_family_room"
-                            : null,
-                          kitchen.breakfast_area ? "breakfast_area" : null
-                        ].filter(Boolean) as string[]
-                      }
-                      options={[
-                        { label: "Pantry", value: "pantry" },
-                        {
-                          label: "Open to family room",
-                          value: "open_to_family_room"
-                        },
-                        { label: "Breakfast area", value: "breakfast_area" }
-                      ]}
-                      onChange={(selected) =>
-                        updateSection("interior_features", (prev) => ({
-                          ...prev,
-                          kitchen: {
-                            ...(prev.kitchen ?? {}),
-                            pantry: selected.includes("pantry"),
-                            open_to_family_room: selected.includes(
-                              "open_to_family_room"
-                            ),
-                            breakfast_area: selected.includes("breakfast_area")
-                          }
-                        }))
-                      }
-                      onSave={triggerAutoSave}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Rooms on main level</Label>
+              <CardContent className="space-y-6">
+                <div className="space-y-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Living Spaces
+                  </p>
                   <TagInput
-                    value={interior.rooms_main_level ?? []}
+                    value={details.living_spaces ?? []}
+                    onChange={(next) =>
+                      updateDetails((prev) => ({
+                        ...prev,
+                        living_spaces: next.length > 0 ? next : null
+                      }))
+                    }
+                    onSave={triggerAutoSave}
+                    placeholder="e.g., Formal dining"
+                    addLabel="Add living space"
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Kitchen
+                  </p>
+                  <TagInput
+                    value={kitchen.features ?? []}
                     onChange={(next) =>
                       updateSection("interior_features", (prev) => ({
                         ...prev,
-                        rooms_main_level: next.length > 0 ? next : null
+                        kitchen: {
+                          ...(prev.kitchen ?? {}),
+                          features: next.length > 0 ? next : null
+                        }
                       }))
                     }
                     onSave={triggerAutoSave}
-                    placeholder="Add a room"
+                    placeholder="e.g., Granite countertops"
+                    addLabel="Add kitchen feature"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label>Laundry room</Label>
-                  <Input
-                    value={interior.laundry_room ?? ""}
-                    onChange={(event) =>
+
+                <div className="space-y-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Additional Spaces
+                  </p>
+                  <TagInput
+                    value={details.additional_spaces ?? []}
+                    onChange={(next) =>
+                      updateDetails((prev) => ({
+                        ...prev,
+                        additional_spaces: next.length > 0 ? next : null
+                      }))
+                    }
+                    onSave={triggerAutoSave}
+                    placeholder="e.g., Office/flex"
+                    addLabel="Add space"
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Primary Suite
+                  </p>
+                  <TagInput
+                    value={primarySuite.features ?? []}
+                    onChange={(next) =>
                       updateSection("interior_features", (prev) => ({
                         ...prev,
-                        laundry_room: toNullableString(event.target.value)
-                      }))
-                    }
-                    onBlur={triggerAutoSave}
-                  />
-                </div>
-                {showFamilyFields ? (
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label>Upper level bedrooms</Label>
-                      <Input
-                        type="number"
-                        value={bedroomLayout.upper_level_bedrooms ?? ""}
-                        onChange={(event) =>
-                          updateSection("interior_features", (prev) => ({
-                            ...prev,
-                            bedroom_layout: {
-                              ...(prev.bedroom_layout ?? {}),
-                              upper_level_bedrooms: toNullableNumber(
-                                event.target.value
-                              )
-                            }
-                          }))
+                        primary_suite: {
+                          ...(prev.primary_suite ?? {}),
+                          features: next.length > 0 ? next : null
                         }
-                        onBlur={triggerAutoSave}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Bedroom layout features</Label>
-                      <TagToggleGroup
-                        selected={
-                          bedroomLayout.fourth_bedroom_or_bonus
-                            ? ["fourth_bedroom_or_bonus"]
-                            : []
-                        }
-                        options={[
-                          {
-                            label: "Fourth bedroom/bonus",
-                            value: "fourth_bedroom_or_bonus"
-                          }
-                        ]}
-                        onChange={(selected) =>
-                          updateSection("interior_features", (prev) => ({
-                            ...prev,
-                            bedroom_layout: {
-                              ...(prev.bedroom_layout ?? {}),
-                              fourth_bedroom_or_bonus: selected.includes(
-                                "fourth_bedroom_or_bonus"
-                              )
-                            }
-                          }))
-                        }
-                        onSave={triggerAutoSave}
-                      />
-                    </div>
-                  </div>
-                ) : null}
-                {showFamilyFields || showLuxuryFields ? (
-                  <>
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label>Primary bedroom level</Label>
-                        <Input
-                          value={primaryBedroom.level ?? ""}
-                          onChange={(event) =>
-                            updateSection("interior_features", (prev) => ({
-                              ...prev,
-                              primary_bedroom: {
-                                ...(prev.primary_bedroom ?? {}),
-                                level: toNullableString(event.target.value)
-                              }
-                            }))
-                          }
-                          onBlur={triggerAutoSave}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Primary bedroom size</Label>
-                        <Input
-                          value={primaryBedroom.approx_size ?? ""}
-                          onChange={(event) =>
-                            updateSection("interior_features", (prev) => ({
-                              ...prev,
-                              primary_bedroom: {
-                                ...(prev.primary_bedroom ?? {}),
-                                approx_size: toNullableString(
-                                  event.target.value
-                                )
-                              }
-                            }))
-                          }
-                          onBlur={triggerAutoSave}
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Primary bedroom features</Label>
-                      <TagInput
-                        value={primaryBedroom.features ?? []}
-                        onChange={(next) =>
-                          updateSection("interior_features", (prev) => ({
-                            ...prev,
-                            primary_bedroom: {
-                              ...(prev.primary_bedroom ?? {}),
-                              features: next.length > 0 ? next : null
-                            }
-                          }))
-                        }
-                        onSave={triggerAutoSave}
-                        placeholder="Add a feature"
-                      />
-                    </div>
-                  </>
-                ) : null}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Basement, garage, HOA</CardTitle>
-              </CardHeader>
-              <CardContent className="grid gap-4 sm:grid-cols-2">
-                {showBasementFields ? (
-                  <>
-                    <div className="space-y-2">
-                      <Label>Basement type</Label>
-                      <Input
-                        value={basement.type ?? ""}
-                        onChange={(event) =>
-                          updateSection("basement", (prev) => ({
-                            ...prev,
-                            type: toNullableString(event.target.value)
-                          }))
-                        }
-                        onBlur={triggerAutoSave}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Basement features</Label>
-                      <TagToggleGroup
-                        selected={basement.finished ? ["finished"] : []}
-                        options={[
-                          { label: "Finished basement", value: "finished" }
-                        ]}
-                        onChange={(selected) =>
-                          updateSection("basement", (prev) => ({
-                            ...prev,
-                            finished: selected.includes("finished")
-                          }))
-                        }
-                        onSave={triggerAutoSave}
-                      />
-                    </div>
-                  </>
-                ) : null}
-                <div className="space-y-2">
-                  <Label>Garage capacity</Label>
-                  <Input
-                    type="number"
-                    value={garage.car_capacity ?? ""}
-                    onChange={(event) =>
-                      updateSection("garage", (prev) => ({
-                        ...prev,
-                        car_capacity: toNullableNumber(event.target.value)
-                      }))
-                    }
-                    onBlur={triggerAutoSave}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Garage location</Label>
-                  <Input
-                    value={garage.location ?? ""}
-                    onChange={(event) =>
-                      updateSection("garage", (prev) => ({
-                        ...prev,
-                        location: toNullableString(event.target.value)
-                      }))
-                    }
-                    onBlur={triggerAutoSave}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>HOA</Label>
-                  <TagToggleGroup
-                    selected={hoa.has_hoa ? ["has_hoa"] : []}
-                    options={[{ label: "Has HOA", value: "has_hoa" }]}
-                    onChange={(selected) =>
-                      updateSection("hoa", (prev) => ({
-                        ...prev,
-                        has_hoa: selected.includes("has_hoa")
                       }))
                     }
                     onSave={triggerAutoSave}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>HOA monthly fee (USD)</Label>
-                  <Input
-                    type="number"
-                    value={hoa.monthly_fee_usd ?? ""}
-                    onChange={(event) =>
-                      updateSection("hoa", (prev) => ({
-                        ...prev,
-                        monthly_fee_usd: toNullableNumber(event.target.value)
-                      }))
-                    }
-                    onBlur={triggerAutoSave}
+                    placeholder="e.g., Walk-in closet"
+                    addLabel="Add feature"
                   />
                 </div>
               </CardContent>
@@ -1116,7 +960,6 @@ export function ListingReviewView({
                                 onChange={(event) => {
                                   const next = [...saleHistory];
                                   next[index] = {
-                                    ...next[index],
                                     sale_price_usd: toNullableNumber(
                                       event.target.value
                                     )
@@ -1352,152 +1195,70 @@ export function ListingReviewView({
                 </div>
                 <div className="space-y-2">
                   <Label>State</Label>
-                  <Input
+                  <Select
                     value={locationContext.state ?? ""}
-                    onChange={(event) =>
+                    onValueChange={(value) => {
                       updateSection("location_context", (prev) => ({
                         ...prev,
-                        state: toNullableString(event.target.value)
-                      }))
-                    }
-                    onBlur={triggerAutoSave}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Sources</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label>Source notes</Label>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setSources([...sources, {}])}
+                        state: value || null
+                      }));
+                      triggerAutoSave();
+                    }}
                   >
-                    Add source
-                  </Button>
-                </div>
-                {sources.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">
-                    No sources captured yet.
-                  </p>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Site</TableHead>
-                        <TableHead>Notes</TableHead>
-                        <TableHead>Citation</TableHead>
-                        <TableHead />
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {sources.map((entry, index) => (
-                        <TableRow key={`source-${index}`}>
-                          <TableCell>
-                            <Input
-                              value={entry.site ?? ""}
-                              onChange={(event) => {
-                                const next = [...sources];
-                                next[index] = {
-                                  ...next[index],
-                                  site: toNullableString(event.target.value)
-                                };
-                                setSources(next);
-                              }}
-                              onBlur={triggerAutoSave}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              value={entry.notes ?? ""}
-                              onChange={(event) => {
-                                const next = [...sources];
-                                next[index] = {
-                                  ...next[index],
-                                  notes: toNullableString(event.target.value)
-                                };
-                                setSources(next);
-                              }}
-                              onBlur={triggerAutoSave}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              value={entry.citation ?? ""}
-                              onChange={(event) => {
-                                const next = [...sources];
-                                next[index] = {
-                                  ...next[index],
-                                  citation: toNullableString(event.target.value)
-                                };
-                                setSources(next);
-                              }}
-                              onBlur={triggerAutoSave}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                const next = sources.filter(
-                                  (_, idx) => idx !== index
-                                );
-                                setSources(next);
-                              }}
-                            >
-                              Remove
-                            </Button>
-                          </TableCell>
-                        </TableRow>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a state" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-96">
+                      {STATE_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label} ({option.value})
+                        </SelectItem>
                       ))}
-                    </TableBody>
-                  </Table>
-                )}
+                    </SelectContent>
+                  </Select>
+                </div>
               </CardContent>
             </Card>
           </section>
 
-          <aside className="w-full lg:w-72 mt-2">
+          <aside className="w-full lg:w-72 mt-14">
             <div className="sticky top-[124px] space-y-4">
-              <div className="rounded-xl border border-border/60 bg-secondary px-4 py-4 space-y-3">
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                    Data source
-                  </p>
-                  <p className="text-sm text-foreground">
-                    {source ?? "Manual"}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                    Last fetched
-                  </p>
-                  <p className="text-sm text-foreground">
-                    {formatDateTime(fetchedAt ?? null)}
+              <div className="rounded-lg border border-border bg-secondary px-4 py-4 space-y-3">
+                <div className="flex gap-3 items-center rounded-lg p-2">
+                  <SearchCheck className="h-8 w-8 text-foreground" />
+                  <p className="text-xs text-foreground">
+                    Please review all property details for accuracy before
+                    continuing.
                   </p>
                 </div>
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                    Last saved
-                  </p>
-                  <p className="text-sm text-foreground">
-                    {formatDateTime(lastSavedAt)}
-                  </p>
-                </div>
+                {requiredFixes.length > 0 ? (
+                  <div className="rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-3 text-xs text-destructive">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide">
+                      Required fixes
+                    </p>
+                    <ul className="mt-2 space-y-2 text-destructive">
+                      {requiredFixes.map((fix) => (
+                        <li key={fix} className="flex items-start gap-2">
+                          <AlertTriangle className="mt-0.5 h-3.5 w-3.5" />
+                          <span>{fix}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
                 <Button
                   className="w-full"
                   onClick={() => handleSave()}
-                  disabled={!isDirty || isSaving}
+                  disabled={!canContinue || isSaving}
                 >
-                  Save changes
+                  Continue
+                </Button>
+                <Button
+                  asChild
+                  variant="ghost"
+                  className="w-full hover:bg-foreground/5"
+                >
+                  <Link href={`/listings/${listingId}`}>Go back</Link>
                 </Button>
               </div>
             </div>

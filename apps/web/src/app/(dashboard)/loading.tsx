@@ -2,18 +2,33 @@
 
 import Image from "next/image";
 import { Loader2 } from "lucide-react";
-import { ViewSidebarStatic } from "@web/src/components/dashboard/ViewSidebar";
-import { ViewHeader } from "@web/src/components/dashboard/ViewHeader";
 
 export default function DashboardLoading() {
   return (
     <div className="fixed inset-0 z-50 overflow-hidden bg-background text-foreground">
       <div className="absolute inset-0 pointer-events-none">
-        <div className="flex h-full w-full blur-md">
-          <ViewSidebarStatic userName="Alex Rivera" paymentPlan="Pro" />
+        <div className="flex h-full w-full blur-sm">
+          <aside className="w-[260px] shrink-0 border-r border-border bg-secondary">
+            <div className="pt-5 px-6 pb-4">
+              <div className="h-6 w-32 rounded-md bg-border/60" />
+            </div>
+            <div className="px-4 space-y-3">
+              <div className="h-4 w-40 rounded-md bg-border/60" />
+              <div className="h-4 w-32 rounded-md bg-border/60" />
+              <div className="h-px w-full bg-border/50 my-4" />
+              <div className="space-y-2">
+                <div className="h-3 w-28 rounded-md bg-border/60" />
+                <div className="h-3 w-24 rounded-md bg-border/60" />
+                <div className="h-3 w-20 rounded-md bg-border/60" />
+              </div>
+            </div>
+          </aside>
           <main className="flex-1 bg-secondary p-3">
-            <div className="h-full rounded-xl bg-background border border-border overflow-hidden shadow-xs">
-              <ViewHeader title="Welcome back, Alex Rivera" />
+            <div className="h-full rounded-lg bg-background border border-border overflow-hidden shadow-xs">
+              <div className="border-b border-border px-8 py-5">
+                <div className="h-3 w-28 rounded-md bg-border/60" />
+                <div className="mt-3 h-6 w-56 rounded-md bg-border/60" />
+              </div>
               <div className="h-full bg-background" />
             </div>
           </main>

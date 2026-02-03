@@ -46,7 +46,9 @@ function DialogOverlay({
   );
 }
 
-type DialogContentProps = React.ComponentProps<typeof DialogPrimitive.Content> & {
+type DialogContentProps = React.ComponentProps<
+  typeof DialogPrimitive.Content
+> & {
   overlayClassName?: string;
 };
 

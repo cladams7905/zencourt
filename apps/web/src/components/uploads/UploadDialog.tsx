@@ -71,7 +71,10 @@ type UploadDialogProps<TRecord> = {
   }) => TRecord | Promise<TRecord>;
   onCreateRecords: (records: TRecord[]) => Promise<void>;
   onSuccess?: () => void;
-  onUploadsComplete?: (summary: { count: number; batchStartedAt: number }) => void;
+  onUploadsComplete?: (summary: {
+    count: number;
+    batchStartedAt: number;
+  }) => void;
   fileMetaLabel?: (file: File) => string;
   thumbnailFailureMessage?: (count: number) => string;
   maxFiles?: number;
@@ -362,9 +365,13 @@ function UploadDialog<TRecord>({
 
       setPendingFiles((prev) => {
         const remainingSlots =
-          typeof maxFiles === "number" ? Math.max(0, maxFiles - prev.length) : Infinity;
+          typeof maxFiles === "number"
+            ? Math.max(0, maxFiles - prev.length)
+            : Infinity;
         if (remainingSlots <= 0) {
-          toast.error(`You can only upload up to ${maxFiles} ${selectedLabel}s.`);
+          toast.error(
+            `You can only upload up to ${maxFiles} ${selectedLabel}s.`
+          );
           return prev;
         }
         const existing = new Set(
@@ -383,7 +390,9 @@ function UploadDialog<TRecord>({
           }
         });
         if (accepted.length > remainingSlots) {
-          toast.error(`Only ${remainingSlots} more ${selectedLabel}(s) allowed.`);
+          toast.error(
+            `Only ${remainingSlots} more ${selectedLabel}(s) allowed.`
+          );
         }
         return next;
       });
@@ -493,7 +502,9 @@ function UploadDialog<TRecord>({
       missingIds.forEach((id) => failedIds.add(id));
 
       if (failed.length > 0) {
-        failed.forEach((item) => updatePendingFile(item.id, { status: "error" }));
+        failed.forEach((item) =>
+          updatePendingFile(item.id, { status: "error" })
+        );
         toast.error(`${failed.length} file(s) failed validation.`);
       }
       if (missingIds.length > 0) {
@@ -591,7 +602,9 @@ function UploadDialog<TRecord>({
         toast.error(thumbnailFailureMessage(thumbnailFailures));
       }
 
-      const failedUploads = uploads.filter((upload) => failedIds.has(upload.id));
+      const failedUploads = uploads.filter((upload) =>
+        failedIds.has(upload.id)
+      );
       if (failedUploads.length > 0) {
         toast.error(`${failedUploads.length} file(s) failed to upload.`);
       }
@@ -611,12 +624,14 @@ function UploadDialog<TRecord>({
         setPendingFiles(
           targets
             .filter((item) => failedIds.has(item.id))
-            .map((item): PendingUpload => ({
-              ...item,
-              previewUrl: URL.createObjectURL(item.file),
-              progress: 0,
-              status: "error"
-            }))
+            .map(
+              (item): PendingUpload => ({
+                ...item,
+                previewUrl: URL.createObjectURL(item.file),
+                progress: 0,
+                status: "error"
+              })
+            )
         );
       }
     } catch (error) {
@@ -654,7 +669,9 @@ function UploadDialog<TRecord>({
       <DialogContent
         className="sm:max-w-[680px]"
         style={isDrivePickerActive ? { pointerEvents: "none" } : undefined}
-        overlayClassName={isDrivePickerActive ? "pointer-events-none" : undefined}
+        overlayClassName={
+          isDrivePickerActive ? "pointer-events-none" : undefined
+        }
         onInteractOutside={(event) => {
           if (isDrivePickerActive) {
             event.preventDefault();
@@ -674,7 +691,7 @@ function UploadDialog<TRecord>({
         </DialogHeader>
         <div className="space-y-4">
           <div
-            className={`rounded-xl border border-dashed px-6 py-10 text-center transition-colors ${
+            className={`rounded-lg border border-dashed px-6 py-10 text-center transition-colors ${
               isDragging ? "border-foreground/40 bg-secondary" : "border-border"
             }`}
             onDragOver={(event) => {
@@ -732,7 +749,7 @@ function UploadDialog<TRecord>({
           </div>
 
           {tipsItems && tipsItems.length > 0 && (
-            <div className="rounded-lg border border-border/60 bg-secondary px-4 py-3">
+            <div className="rounded-lg border border-border bg-secondary px-4 py-3">
               <p className="text-sm font-medium text-foreground">
                 {tipsTitle ?? "Tips"}
               </p>
@@ -747,7 +764,7 @@ function UploadDialog<TRecord>({
           {(pendingFiles.length > 0 ||
             isCompressing ||
             (isDriveLoading && driveLoadingCount > 0)) && (
-            <div className="rounded-lg border border-border/60 bg-background p-3">
+            <div className="rounded-lg border border-border bg-background p-3">
               <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                 {pendingFiles.length} {selectedLabel}
                 {pendingFiles.length === 1 ? "" : "s"} selected
@@ -766,7 +783,7 @@ function UploadDialog<TRecord>({
                           key={`skeleton-${index}`}
                           className="flex items-center gap-3 text-sm"
                         >
-                          <div className="h-10 w-10 rounded-md border border-border/60 bg-muted animate-pulse" />
+                          <div className="h-10 w-10 rounded-md border border-border bg-muted animate-pulse" />
                           <div className="flex-1 space-y-2">
                             <div className="h-3 w-3/5 rounded bg-muted animate-pulse" />
                             <div className="h-2 w-2/5 rounded bg-muted animate-pulse" />
@@ -781,7 +798,7 @@ function UploadDialog<TRecord>({
                     className="flex items-center justify-between gap-3 text-sm"
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="h-10 w-10 rounded-md border border-border/60 overflow-hidden bg-secondary/40 shrink-0">
+                      <div className="h-10 w-10 rounded-md border border-border overflow-hidden bg-secondary/40 shrink-0">
                         {item.previewType === "video" ? (
                           <video
                             src={item.previewUrl}

@@ -23,9 +23,9 @@ export function ListingPropertyProcessingView({
   address
 }: ListingPropertyProcessingViewProps) {
   const router = useRouter();
-  const [status, setStatus] = React.useState<
-    "loading" | "success" | "error"
-  >("loading");
+  const [status, setStatus] = React.useState<"loading" | "success" | "error">(
+    "loading"
+  );
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
   const fetchDetails = React.useCallback(async () => {
@@ -86,7 +86,7 @@ export function ListingPropertyProcessingView({
             </p>
           </div>
 
-          <div className="rounded-2xl border border-border/60 bg-secondary p-6 text-left space-y-4">
+          <div className="rounded-2xl border border-border bg-secondary p-6 text-left space-y-4">
             <div className="flex items-center gap-3 text-sm text-foreground">
               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-foreground text-background text-xs">
                 ✓

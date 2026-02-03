@@ -92,7 +92,7 @@ export function ListingSyncView({ userId }: ListingSyncViewProps) {
       />
 
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-8 py-10">
-        <section className="rounded-lg border border-border/60 bg-secondary p-6">
+        <section className="rounded-lg border border-border bg-secondary p-6">
           <h2 className="text-xl font-header font-medium text-foreground">
             Choose how to add your listings
           </h2>
@@ -103,7 +103,7 @@ export function ListingSyncView({ userId }: ListingSyncViewProps) {
         </section>
 
         <div className="grid gap-6 md:grid-cols-2">
-          <Card className="border-border/60">
+          <Card className="border-border">
             <CardHeader>
               <div className="flex flex-wrap items-center gap-2">
                 <CardTitle>Sync from MLS</CardTitle>
@@ -127,7 +127,7 @@ export function ListingSyncView({ userId }: ListingSyncViewProps) {
             </CardFooter>
           </Card>
 
-          <Card className="border-border/60">
+          <Card className="border-border">
             <CardHeader>
               <CardTitle>Manual upload</CardTitle>
               <CardDescription>

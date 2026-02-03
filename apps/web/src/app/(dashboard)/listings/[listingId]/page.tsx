@@ -48,6 +48,7 @@ export default async function ListingDetailPage({
       userId={user.id}
       initialImages={imageItems}
       googleMapsApiKey={googleMapsApiKey}
+      hasPropertyDetails={Boolean(listing.propertyDetails)}
     />
   );
 }

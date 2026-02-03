@@ -26,7 +26,7 @@
   --switch-background: #fdfcf9;
   --font-weight-medium: 500;
   --font-weight-normal: 400;
-  --ring: #d9d9d0;
+  --ring: #666666;
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
@@ -143,7 +143,7 @@
   /* Custom scrollbar - transparent track, subtle thumb */
   * {
     scrollbar-width: thin;
-    scrollbar-color: var(--border) transparent;
+    scrollbar-color: var(--muted-foreground) transparent;
   }
 
   ::-webkit-scrollbar {
@@ -166,13 +166,13 @@
 
   /* Text selection highlight - black background, white text */
   ::selection {
-    background-color: #000000;
-    color: #ffffff;
+    background-color: var(--primary);
+    color: var(--primary-foreground);
   }
 
   ::-moz-selection {
-    background-color: #000000;
-    color: #ffffff;
+    background-color: var(--primary);
+    color: var(--primary-foreground);
   }
 
   /* Browser autofill styles - use muted color */
@@ -188,10 +188,10 @@
   select:-webkit-autofill:hover,
   select:-webkit-autofill:focus,
   select:-webkit-autofill:active {
-    -webkit-box-shadow: 0 0 0 1000px #f4f2ef inset !important;
-    -webkit-text-fill-color: #000000 !important;
-    box-shadow: 0 0 0 1000px #f4f2ef inset !important;
-    caret-color: #000000 !important;
+    -webkit-box-shadow: 0 0 0 1000px var(--input-background) inset !important;
+    -webkit-text-fill-color: var(--foreground) !important;
+    box-shadow: 0 0 0 1000px var(--input-background) inset !important;
+    caret-color: var(--foreground) !important;
   }
 }
 
@@ -507,12 +507,12 @@ html {
   height: 36px !important;
   width: 100% !important;
   border-radius: 8px !important;
-  border: 1px solid #d9d9d0 !important;
-  background-color: #fdfcf9 !important;
+  border: 1px solid var(--border) !important;
+  background-color: var(--input-background) !important;
   padding: 4px 12px !important;
-  font-family: "Mulish", Arial, sans-serif !important;
+  font-family: var(--font-body), sans-serif !important;
   font-size: 16px !important;
-  color: #000000 !important;
+  color: var(--foreground) !important;
   outline: none !important;
   transition:
     color 0.15s,
@@ -528,13 +528,17 @@ html {
 
 .stack-scope input.stack-scope:focus,
 .stack-scope input:focus {
-  border-color: #d9d9d0 !important;
-  box-shadow: 0 0 0 3px #d9d9d0 !important;
+  border-color: var(--border) !important;
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--border) 60%, transparent) !important;
 }
 
 .stack-scope input.stack-scope::placeholder,
 .stack-scope input::placeholder {
-  color: rgba(102, 102, 102, 0.5) !important;
+  color: color-mix(
+    in srgb,
+    var(--muted-foreground) 50%,
+    transparent
+  ) !important;
 }
 
 /* Stack Auth OAuth buttons - match button.tsx outline variant */
@@ -547,12 +551,12 @@ button[class*="stack-oauth-button"].bg-primary {
   height: 36px !important;
   padding: 8px 16px !important;
   border-radius: 8px !important;
-  background-color: #fdfcf9 !important;
-  color: #000000 !important;
-  border: 1px solid #d9d9d0 !important;
-  font-family: "Mulish", Arial, sans-serif !important;
+  background-color: var(--background) !important;
+  color: var(--foreground) !important;
+  border: 1px solid var(--border) !important;
+  font-family: var(--font-body), sans-serif !important;
   font-size: 14px !important;
-  font-weight: 500 !important;
+  font-weight: var(--font-weight-medium) !important;
   transition: background-color 0.15s !important;
 }
 
@@ -560,14 +564,14 @@ button[class*="stack-oauth-button"].bg-primary {
 .stack-scope button[class*="stack-oauth-button"].bg-primary:hover,
 button[class*="stack-oauth-button"]:hover,
 button[class*="stack-oauth-button"].bg-primary:hover {
-  background-color: #f4f2ef !important;
+  background-color: var(--secondary) !important;
 }
 
 /* Stack Auth "last used" badge - override blue to accent color */
 .stack-scope .bg-blue-500,
 .stack-scope span.bg-blue-500 {
-  background-color: #eee4da !important;
-  color: #000000 !important;
+  background-color: var(--accent) !important;
+  color: var(--accent-foreground) !important;
 }
 
 /* Stack Auth primary/submit buttons - match button.tsx default variant */
@@ -576,55 +580,59 @@ button[class*="stack-oauth-button"].bg-primary:hover {
   height: 36px !important;
   padding: 8px 16px !important;
   border-radius: 8px !important;
-  background-color: #000000 !important;
-  color: #fdfcf9 !important;
-  font-family: "Mulish", Arial, sans-serif !important;
+  background-color: var(--primary) !important;
+  color: var(--primary-foreground) !important;
+  font-family: var(--font-body), sans-serif !important;
   font-size: 14px !important;
-  font-weight: 500 !important;
+  font-weight: var(--font-weight-medium) !important;
   transition: background-color 0.15s !important;
 }
 
 .stack-scope button.bg-primary:hover,
 .stack-scope button[type="submit"]:hover {
-  background-color: #1a1a1a !important;
+  background-color: color-mix(
+    in oklab,
+    var(--primary) 85%,
+    var(--foreground)
+  ) !important;
 }
 
 /* Stack Auth labels */
 .stack-scope label.stack-scope,
 .stack-scope label {
-  font-family: "Mulish", Arial, sans-serif !important;
-  font-weight: 500 !important;
-  color: #000000 !important;
+  font-family: var(--font-body), sans-serif !important;
+  font-weight: var(--font-weight-medium) !important;
+  color: var(--foreground) !important;
 }
 
 /* Stack Auth headings */
 .stack-scope h2.stack-scope {
-  font-family: "Playfair Display", Georgia, serif !important;
-  color: #000000 !important;
+  font-family: var(--font-header), serif !important;
+  color: var(--foreground) !important;
 }
 
 /* Stack Auth paragraph text */
 .stack-scope p.stack-scope {
-  font-family: "Mulish", Arial, sans-serif !important;
-  color: #666666 !important;
+  font-family: var(--font-body), sans-serif !important;
+  color: var(--muted-foreground) !important;
 }
 
 /* Stack Auth links */
 .stack-scope a {
-  font-family: "Mulish", Arial, sans-serif !important;
-  color: #000000 !important;
+  font-family: var(--font-body), sans-serif !important;
+  color: var(--foreground) !important;
 }
 
 /* Stack Auth divider text */
 .stack-scope .text-zinc-500 {
-  font-family: "Mulish", Arial, sans-serif !important;
-  color: #666666 !important;
+  font-family: var(--font-body), sans-serif !important;
+  color: var(--muted-foreground) !important;
 }
 
 /* Stack Auth divider lines - use muted border color */
 .stack-scope div[data-orientation="horizontal"].bg-border,
 .stack-scope .bg-border[role="none"] {
-  background-color: #d9d9d0 !important;
+  background-color: var(--border) !important;
 }
 
 /* Stack Auth Google icon - replace SVG with custom PNG */

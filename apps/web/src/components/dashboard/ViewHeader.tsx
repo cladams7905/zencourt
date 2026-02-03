@@ -31,7 +31,7 @@ export function ViewHeader({
   return (
     <header
       className={cn(
-        "sticky top-0 z-30 bg-background/90 backdrop-blur-md px-8 py-5 flex justify-between items-center border-b border-border rounded-t-xl",
+        "sticky top-0 z-30 bg-background/90 shadow-xs backdrop-blur-md px-8 py-5 flex justify-between items-center border-b border-border rounded-t-xl",
         className
       )}
     >

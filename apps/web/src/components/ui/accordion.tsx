@@ -20,7 +20,7 @@ function AccordionItem({
     <AccordionPrimitive.Item
       data-slot="accordion-item"
       className={cn(
-        "border-b hover:shadow-lg transition-all duration-300",
+        "rounded-lg hover:shadow-lg transition-all duration-300",
         className
       )}
       {...props}

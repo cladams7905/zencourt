@@ -149,10 +149,7 @@ const ViewSidebar = ({
       className={cn("w-[260px] shrink-0 flex flex-col bg-secondary", className)}
     >
       {/* Logo Section */}
-      <Link
-        href={"/"}
-        className={cn("pt-5 flex items-center just px-6 gap-3 pb-2")}
-      >
+      <Link href={"/"} className={cn("pt-5 flex items-center px-6 gap-3 pb-2")}>
         <Image
           src={Logo}
           alt="Zencourt Logo"
@@ -332,7 +329,7 @@ const ViewSidebar = ({
                       >
                         <Link href={`/listings/${listing.id}`}>
                           <div className="flex items-center gap-3 min-w-0">
-                            <div className="w-1.5 h-1.5 rotate-45 bg-muted-foreground/70 shrink-0" />
+                            <div className="w-1.5 h-1.5 rotate-45 rounded-xs bg-muted-foreground/70 shrink-0" />
                             <span className="text-sm truncate">
                               {listing.title}
                             </span>
@@ -364,7 +361,7 @@ const ViewSidebar = ({
                         asChild
                       >
                         <Link href={`/listings/${listing.id}`}>
-                          <div className="w-1.5 h-1.5 rotate-45 bg-foreground shrink-0" />
+                          <div className="w-1.5 h-1.5 rotate-45 rounded-xs bg-foreground shrink-0" />
                           <span className="text-sm truncate">
                             {listing.title}
                           </span>
@@ -734,7 +731,7 @@ const ViewSidebarStatic = ({
                 variant="ghost"
                 className="w-full justify-start gap-3 hover:bg-foreground/5"
               >
-                <div className="w-1.5 h-1.5 rotate-45 bg-foreground shrink-0" />
+                <div className="w-1.5 h-1.5 rotate-45 rounded-xs bg-foreground shrink-0" />
                 <span className="text-sm truncate">1240 Serenity Lane</span>
               </Button>
 
@@ -742,7 +739,7 @@ const ViewSidebarStatic = ({
                 variant="ghost"
                 className="w-full justify-start gap-3 hover:bg-foreground/5"
               >
-                <div className="w-1.5 h-1.5 rotate-45 bg-foreground shrink-0" />
+                <div className="w-1.5 h-1.5 rotate-45 rounded-xs bg-foreground shrink-0" />
                 <span className="text-sm truncate">880 Fairview Blvd</span>
               </Button>
 
@@ -750,7 +747,7 @@ const ViewSidebarStatic = ({
                 variant="ghost"
                 className="w-full justify-start gap-3 hover:bg-foreground/5"
               >
-                <div className="w-1.5 h-1.5 rotate-45 bg-foreground shrink-0" />
+                <div className="w-1.5 h-1.5 rotate-45 rounded-xs bg-foreground shrink-0" />
                 <span className="text-sm truncate">Woodland Estate</span>
               </Button>
             </div>

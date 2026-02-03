@@ -153,9 +153,7 @@ export const LocationAutocomplete = ({
       }
 
       const primary =
-        candidates
-          .slice()
-          .sort((a, b) => a.distance - b.distance)[0]?.record ??
+        candidates.slice().sort((a, b) => a.distance - b.distance)[0]?.record ??
         candidates.sort((a, b) => b.record.population - a.record.population)[0]
           ?.record;
 
@@ -280,7 +278,7 @@ export const LocationAutocomplete = ({
       setSuggestions(result?.predictions || []);
     } catch (error) {
       logger.error(error, "Error fetching suggestions");
-      toast.error("Error fetching suggestions: " + error)
+      toast.error("Error fetching suggestions: " + error);
       setSuggestions([]);
     } finally {
       setIsLoading(false);
@@ -300,7 +298,9 @@ export const LocationAutocomplete = ({
 
   // Handle place selection
   const resolveGeoFallback = React.useCallback(
-    (location: google.maps.LatLng): Promise<{
+    (
+      location: google.maps.LatLng
+    ): Promise<{
       county: string;
       serviceAreas: string[];
     }> => {

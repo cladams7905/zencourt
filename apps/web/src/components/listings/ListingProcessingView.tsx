@@ -123,7 +123,7 @@ export function ListingProcessingView({
               quickly.
             </p>
           </div>
-          <div className="rounded-2xl border border-border/60 bg-secondary p-6 text-left">
+          <div className="rounded-2xl border border-border bg-secondary p-6 text-left">
             <div className="flex items-center gap-3 text-sm text-foreground">
               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-foreground text-background text-xs">
                 ✓

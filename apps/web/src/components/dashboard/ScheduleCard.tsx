@@ -112,7 +112,7 @@ const ScheduleCard = ({
                     <div className="h-full w-full bg-linear-to-br from-secondary/20 to-secondary/5" />
                   </div>
                 ) : (
-                  <div className="relative h-14 w-14 rounded-lg bg-muted border border-border/60 overflow-hidden flex items-center justify-center shrink-0">
+                  <div className="relative h-14 w-14 rounded-lg bg-muted border border-border overflow-hidden flex items-center justify-center shrink-0">
                     <FileEdit className="h-5 w-5 text-muted-foreground" />
                   </div>
                 )}

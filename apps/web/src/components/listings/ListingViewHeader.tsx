@@ -18,6 +18,7 @@ type ListingViewHeaderProps = {
   subtitle?: string;
   className?: string;
   action?: React.ReactNode;
+  timeline?: React.ReactNode;
   sticky?: boolean;
   showCreate?: boolean;
   showNotifications?: boolean;
@@ -30,6 +31,7 @@ export function ListingViewHeader({
   subtitle,
   className,
   action,
+  timeline,
   sticky = true,
   showCreate = true,
   showNotifications = true,
@@ -37,29 +39,38 @@ export function ListingViewHeader({
   ref
 }: ListingViewHeaderProps) {
   const router = useRouter();
+  const hasTimeline = Boolean(timeline);
 
   return (
     <header
       ref={ref}
       className={cn(
-        "top-0 z-30 bg-background/90 backdrop-blur-md px-8 py-5 flex justify-between items-center border-b border-border rounded-t-xl",
+        "top-0 z-30 bg-background/90 shadow-xs backdrop-blur-md px-8 py-5 border-b border-border rounded-t-xl",
         sticky ? "sticky" : "static",
         className
       )}
     >
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Listing name
-        </p>
-        <h1 className="text-2xl font-header font-medium text-foreground">
-          {title}
-        </h1>
-        {subtitle ? (
-          <p className="text-sm text-muted-foreground">{subtitle}</p>
-        ) : null}
-      </div>
-      {action || showCreate || showNotifications ? (
-        <div className="flex items-center gap-4">
+      <div
+        className={cn(
+          "grid items-center gap-6",
+          hasTimeline
+            ? "grid-cols-[minmax(0,1fr)_minmax(360px,520px)_minmax(0,1fr)]"
+            : "grid-cols-[minmax(0,1fr)_auto]"
+        )}
+      >
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Listing name
+          </p>
+          <h1 className="text-2xl font-header font-medium text-foreground">
+            {title}
+          </h1>
+          {subtitle ? (
+            <p className="text-sm text-muted-foreground">{subtitle}</p>
+          ) : null}
+        </div>
+        {timeline ? timeline : null}
+        <div className="flex items-center justify-end gap-4">
           {action ? action : null}
           {showCreate ? (
             <DropdownMenu>
@@ -107,7 +118,7 @@ export function ListingViewHeader({
             </Button>
           ) : null}
         </div>
-      ) : null}
+      </div>
     </header>
   );
 }

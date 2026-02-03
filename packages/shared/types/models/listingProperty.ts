@@ -24,48 +24,24 @@ export type ListingPropertyDetails = {
   year_built?: number | null;
   living_area_sq_ft?: number | null;
   bedrooms?: number | null;
-  bathrooms_full?: number | null;
+  bathrooms?: number | null;
   lot_size_acres?: number | null;
+  stories?: number | null;
   architecture?: string | null;
   exterior_features?: {
     materials?: string[] | null;
-    front_porch?: boolean | null;
-    rear_deck?: boolean | null;
-    other_features?: string[] | null;
+    highlights?: string[] | null;
   } | null;
   interior_features?: {
-    flooring_main_level?: string | null;
-    fireplace?: boolean | null;
     kitchen?: {
-      countertops?: string | null;
-      pantry?: boolean | null;
-      open_to_family_room?: boolean | null;
-      breakfast_area?: boolean | null;
+      features?: string[] | null;
     } | null;
-    rooms_main_level?: string[] | null;
-    laundry_room?: string | null;
-    bedroom_layout?: {
-      upper_level_bedrooms?: number | null;
-      fourth_bedroom_or_bonus?: boolean | null;
-    } | null;
-    primary_bedroom?: {
-      level?: string | null;
-      approx_size?: string | null;
+    primary_suite?: {
       features?: string[] | null;
     } | null;
   } | null;
-  basement?: {
-    type?: string | null;
-    finished?: boolean | null;
-  } | null;
-  garage?: {
-    car_capacity?: number | null;
-    location?: string | null;
-  } | null;
-  hoa?: {
-    has_hoa?: boolean | null;
-    monthly_fee_usd?: number | null;
-  } | null;
+  living_spaces?: string[] | null;
+  additional_spaces?: string[] | null;
   sale_history?: ListingSaleHistory[] | null;
   valuation_estimates?: {
     range_low_usd?: number | null;

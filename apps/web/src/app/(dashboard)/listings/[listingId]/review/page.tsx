@@ -35,8 +35,6 @@ export default async function ListingReviewPage({
       title={listing.title?.trim() || "Listing"}
       address={listing.address ?? null}
       propertyDetails={listing.propertyDetails ?? null}
-      fetchedAt={listing.propertyDetailsFetchedAt ?? null}
-      source={listing.propertyDetailsSource ?? null}
       targetAudiences={userAdditional.targetAudiences ?? []}
     />
   );

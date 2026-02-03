@@ -21,14 +21,14 @@ const PERPLEXITY_PROPERTY_SCHEMA: PerplexityResponseFormat = {
         "year_built",
         "living_area_sq_ft",
         "bedrooms",
-        "bathrooms_full",
+        "bathrooms",
         "lot_size_acres",
+        "stories",
         "architecture",
         "exterior_features",
         "interior_features",
-        "basement",
-        "garage",
-        "hoa",
+        "living_spaces",
+        "additional_spaces",
         "sale_history",
         "valuation_estimates",
         "location_context",
@@ -36,61 +36,66 @@ const PERPLEXITY_PROPERTY_SCHEMA: PerplexityResponseFormat = {
       ],
       properties: {
         address: { type: ["string", "null"] },
-        property_type: { type: ["string", "null"] },
+        property_type: {
+          type: ["string", "null"],
+          enum: [
+            "Single Family Residence",
+            "Condo",
+            "Townhouse",
+            "Multi-Family",
+            "Manufactured",
+            "Land",
+            "Other",
+            null
+          ]
+        },
         year_built: { type: ["number", "null"] },
         living_area_sq_ft: { type: ["number", "null"] },
         bedrooms: { type: ["number", "null"] },
-        bathrooms_full: { type: ["number", "null"] },
+        bathrooms: { type: ["number", "null"] },
         lot_size_acres: { type: ["number", "null"] },
-        architecture: { type: ["string", "null"] },
+        stories: { type: ["number", "null"] },
+        architecture: {
+          type: ["string", "null"],
+          enum: [
+            "Ranch",
+            "Split-level",
+            "Colonial",
+            "Craftsman",
+            "Traditional",
+            "Modern",
+            "Contemporary",
+            "Farmhouse",
+            "Other",
+            null
+          ]
+        },
         exterior_features: {
           type: ["object", "null"],
           additionalProperties: false,
           properties: {
             materials: { type: ["array", "null"], items: { type: "string" } },
-            front_porch: { type: ["boolean", "null"] },
-            rear_deck: { type: ["boolean", "null"] },
-            other_features: {
-              type: ["array", "null"],
-              items: { type: "string" }
-            }
+            highlights: { type: ["array", "null"], items: { type: "string" } }
           }
         },
         interior_features: {
           type: ["object", "null"],
           additionalProperties: false,
           properties: {
-            flooring_main_level: { type: ["string", "null"] },
-            fireplace: { type: ["boolean", "null"] },
             kitchen: {
               type: ["object", "null"],
               additionalProperties: false,
               properties: {
-                countertops: { type: ["string", "null"] },
-                pantry: { type: ["boolean", "null"] },
-                open_to_family_room: { type: ["boolean", "null"] },
-                breakfast_area: { type: ["boolean", "null"] }
+                features: {
+                  type: ["array", "null"],
+                  items: { type: "string" }
+                }
               }
             },
-            rooms_main_level: {
-              type: ["array", "null"],
-              items: { type: "string" }
-            },
-            laundry_room: { type: ["string", "null"] },
-            bedroom_layout: {
+            primary_suite: {
               type: ["object", "null"],
               additionalProperties: false,
               properties: {
-                upper_level_bedrooms: { type: ["number", "null"] },
-                fourth_bedroom_or_bonus: { type: ["boolean", "null"] }
-              }
-            },
-            primary_bedroom: {
-              type: ["object", "null"],
-              additionalProperties: false,
-              properties: {
-                level: { type: ["string", "null"] },
-                approx_size: { type: ["string", "null"] },
                 features: {
                   type: ["array", "null"],
                   items: { type: "string" }
@@ -99,29 +104,10 @@ const PERPLEXITY_PROPERTY_SCHEMA: PerplexityResponseFormat = {
             }
           }
         },
-        basement: {
-          type: ["object", "null"],
-          additionalProperties: false,
-          properties: {
-            type: { type: ["string", "null"] },
-            finished: { type: ["boolean", "null"] }
-          }
-        },
-        garage: {
-          type: ["object", "null"],
-          additionalProperties: false,
-          properties: {
-            car_capacity: { type: ["number", "null"] },
-            location: { type: ["string", "null"] }
-          }
-        },
-        hoa: {
-          type: ["object", "null"],
-          additionalProperties: false,
-          properties: {
-            has_hoa: { type: ["boolean", "null"] },
-            monthly_fee_usd: { type: ["number", "null"] }
-          }
+        living_spaces: { type: ["array", "null"], items: { type: "string" } },
+        additional_spaces: {
+          type: ["array", "null"],
+          items: { type: "string" }
         },
         sale_history: {
           type: ["array", "null"],
@@ -164,7 +150,62 @@ const PERPLEXITY_PROPERTY_SCHEMA: PerplexityResponseFormat = {
             subdivision: { type: ["string", "null"] },
             street_type: { type: ["string", "null"] },
             county: { type: ["string", "null"] },
-            state: { type: ["string", "null"] }
+            state: {
+              type: ["string", "null"],
+              enum: [
+                "AL",
+                "AK",
+                "AZ",
+                "AR",
+                "CA",
+                "CO",
+                "CT",
+                "DE",
+                "FL",
+                "GA",
+                "HI",
+                "ID",
+                "IL",
+                "IN",
+                "IA",
+                "KS",
+                "KY",
+                "LA",
+                "ME",
+                "MD",
+                "MA",
+                "MI",
+                "MN",
+                "MS",
+                "MO",
+                "MT",
+                "NE",
+                "NV",
+                "NH",
+                "NJ",
+                "NM",
+                "NY",
+                "NC",
+                "ND",
+                "OH",
+                "OK",
+                "OR",
+                "PA",
+                "RI",
+                "SC",
+                "SD",
+                "TN",
+                "TX",
+                "UT",
+                "VT",
+                "VA",
+                "WA",
+                "WV",
+                "WI",
+                "WY",
+                null
+              ]
+            }
           }
         },
         sources: {
@@ -175,7 +216,7 @@ const PERPLEXITY_PROPERTY_SCHEMA: PerplexityResponseFormat = {
             properties: {
               site: { type: ["string", "null"] },
               notes: { type: ["string", "null"] },
-              citation: { type: ["string", "null"] }
+              citation: { type: ["string", "null"], format: "uri" }
             }
           }
         }
@@ -277,8 +318,7 @@ function normalizeListingPropertyDetails(
   }
 
   const address =
-    normalizeString(raw.address) ??
-    normalizeString(fallbackAddress ?? null);
+    normalizeString(raw.address) ?? normalizeString(fallbackAddress ?? null);
   const propertyDetails: ListingPropertyDetails = {};
 
   if (address !== undefined) {
@@ -305,14 +345,19 @@ function normalizeListingPropertyDetails(
     propertyDetails.bedrooms = bedrooms;
   }
 
-  const bathroomsFull = normalizeNumber(raw.bathrooms_full);
-  if (bathroomsFull !== undefined) {
-    propertyDetails.bathrooms_full = bathroomsFull;
+  const bathrooms = normalizeNumber(raw.bathrooms);
+  if (bathrooms !== undefined) {
+    propertyDetails.bathrooms = bathrooms;
   }
 
   const lotSize = normalizeNumber(raw.lot_size_acres);
   if (lotSize !== undefined) {
     propertyDetails.lot_size_acres = lotSize;
+  }
+
+  const stories = normalizeNumber(raw.stories);
+  if (stories !== undefined) {
+    propertyDetails.stories = stories;
   }
 
   const architecture = normalizeString(raw.architecture);
@@ -325,11 +370,7 @@ function normalizeListingPropertyDetails(
   } else if (isRecord(raw.exterior_features)) {
     const exterior = {
       materials: normalizeStringArray(raw.exterior_features.materials),
-      front_porch: normalizeBoolean(raw.exterior_features.front_porch),
-      rear_deck: normalizeBoolean(raw.exterior_features.rear_deck),
-      other_features: normalizeStringArray(
-        raw.exterior_features.other_features
-      )
+      highlights: normalizeStringArray(raw.exterior_features.highlights)
     };
     if (hasDefinedValues(exterior)) {
       propertyDetails.exterior_features = exterior;
@@ -345,54 +386,23 @@ function normalizeListingPropertyDetails(
         ? null
         : isRecord(kitchenValue)
           ? {
-              countertops: normalizeString(kitchenValue.countertops),
-              pantry: normalizeBoolean(kitchenValue.pantry),
-              open_to_family_room: normalizeBoolean(
-                kitchenValue.open_to_family_room
-              ),
-              breakfast_area: normalizeBoolean(kitchenValue.breakfast_area)
+              features: normalizeStringArray(kitchenValue.features)
             }
           : undefined;
 
-    const bedroomLayoutValue = raw.interior_features.bedroom_layout;
-    const bedroomLayout =
-      bedroomLayoutValue === null
+    const primarySuiteValue = raw.interior_features.primary_suite;
+    const primarySuite =
+      primarySuiteValue === null
         ? null
-        : isRecord(bedroomLayoutValue)
+        : isRecord(primarySuiteValue)
           ? {
-              upper_level_bedrooms: normalizeNumber(
-                bedroomLayoutValue.upper_level_bedrooms
-              ),
-              fourth_bedroom_or_bonus: normalizeBoolean(
-                bedroomLayoutValue.fourth_bedroom_or_bonus
-              )
-            }
-          : undefined;
-
-    const primaryBedroomValue = raw.interior_features.primary_bedroom;
-    const primaryBedroom =
-      primaryBedroomValue === null
-        ? null
-        : isRecord(primaryBedroomValue)
-          ? {
-              level: normalizeString(primaryBedroomValue.level),
-              approx_size: normalizeString(primaryBedroomValue.approx_size),
-              features: normalizeStringArray(primaryBedroomValue.features)
+              features: normalizeStringArray(primarySuiteValue.features)
             }
           : undefined;
 
     const interior = {
-      flooring_main_level: normalizeString(
-        raw.interior_features.flooring_main_level
-      ),
-      fireplace: normalizeBoolean(raw.interior_features.fireplace),
       kitchen,
-      rooms_main_level: normalizeStringArray(
-        raw.interior_features.rooms_main_level
-      ),
-      laundry_room: normalizeString(raw.interior_features.laundry_room),
-      bedroom_layout: bedroomLayout,
-      primary_bedroom: primaryBedroom
+      primary_suite: primarySuite
     };
 
     if (hasDefinedValues(interior)) {
@@ -400,40 +410,14 @@ function normalizeListingPropertyDetails(
     }
   }
 
-  if (raw.basement === null) {
-    propertyDetails.basement = null;
-  } else if (isRecord(raw.basement)) {
-    const basement = {
-      type: normalizeString(raw.basement.type),
-      finished: normalizeBoolean(raw.basement.finished)
-    };
-    if (hasDefinedValues(basement)) {
-      propertyDetails.basement = basement;
-    }
+  const livingSpaces = normalizeStringArray(raw.living_spaces);
+  if (livingSpaces !== undefined) {
+    propertyDetails.living_spaces = livingSpaces;
   }
 
-  if (raw.garage === null) {
-    propertyDetails.garage = null;
-  } else if (isRecord(raw.garage)) {
-    const garage = {
-      car_capacity: normalizeNumber(raw.garage.car_capacity),
-      location: normalizeString(raw.garage.location)
-    };
-    if (hasDefinedValues(garage)) {
-      propertyDetails.garage = garage;
-    }
-  }
-
-  if (raw.hoa === null) {
-    propertyDetails.hoa = null;
-  } else if (isRecord(raw.hoa)) {
-    const hoa = {
-      has_hoa: normalizeBoolean(raw.hoa.has_hoa),
-      monthly_fee_usd: normalizeNumber(raw.hoa.monthly_fee_usd)
-    };
-    if (hasDefinedValues(hoa)) {
-      propertyDetails.hoa = hoa;
-    }
+  const additionalSpaces = normalizeStringArray(raw.additional_spaces);
+  if (additionalSpaces !== undefined) {
+    propertyDetails.additional_spaces = additionalSpaces;
   }
 
   const saleHistoryRaw = raw.sale_history;
@@ -548,16 +532,25 @@ export async function fetchPropertyDetailsFromPerplexity(
     "Return only JSON that matches the provided schema.",
     "Use public IDX, tax assessor, and listing records when available.",
     "Focus on details helpful for marketing short-form videos, posts, and captions.",
+    "For each subsection, select at most 2-3 of the most interesting, unique features; avoid generic or expected details.",
     "Do not include tax/assessment breakdowns, APN/MLS identifiers, or listing status fields.",
-    "If a field is unknown, set it to null. Do not fabricate."
+    "If a field is unknown, set it to null or an empty array. Do not fabricate."
   ].join(" ");
 
   const user = [
     `Property address: ${address}.`,
     "Provide property details in the schema.",
+    "Exterior features: focus on unique yard, roof, patio(s), and outdoor amenities.",
+    "Exterior materials should be listed; unique exterior highlights should go in exterior highlights.",
+    "Interior features: only fill Kitchen, Primary Suite, Living Spaces, Additional Spaces; leave other interior sections blank.",
     "Use US units (sq ft, acres, USD).",
+    "Bathrooms: provide total bathrooms including partial/half baths as a single number (e.g., 2.5).",
+    "Architecture must be one of the allowed enum values in the schema.",
+    "Location state must be a two-letter abbreviation from the schema enum.",
     "Exclude tax assessments, APN/MLS identifiers, and listing status info.",
-    "Include sources in the sources array where possible."
+    "Include sources in the sources array where possible.",
+    "Each sources.citation must be a valid URL to the exact page where the data was found.",
+    "If you cannot find information for an attribute, leave it blank (null or empty array)."
   ].join("\n");
 
   const response = await requestPerplexity({

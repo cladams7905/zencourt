@@ -213,7 +213,7 @@ const ContentGridItem = ({
                 e.preventDefault();
                 onDelete(item.id);
               }}
-              className="absolute top-3 right-3 h-7 w-7 rounded-full border border-border/60 bg-background/70 text-destructive opacity-0 transition-opacity group-hover:opacity-100"
+              className="absolute top-3 right-3 h-7 w-7 rounded-full border border-border bg-background/70 text-destructive opacity-0 transition-opacity group-hover:opacity-100"
               aria-label="Dismiss content"
             >
               <Trash2 className="h-4 w-4" />
