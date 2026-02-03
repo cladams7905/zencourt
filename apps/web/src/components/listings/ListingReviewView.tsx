@@ -67,6 +67,15 @@ const toNullableNumber = (value: string) => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
+const formatListingPrice = (value: string) => {
+  const digitsOnly = value.replace(/[^\d]/g, "");
+  if (!digitsOnly) return "";
+  const formatted = new Intl.NumberFormat("en-US", {
+    maximumFractionDigits: 0
+  }).format(Number(digitsOnly));
+  return `$${formatted}`;
+};
+
 const PROPERTY_TYPE_OPTIONS = [
   "Single Family Residence",
   "Condo",
@@ -86,6 +95,25 @@ const ARCHITECTURE_OPTIONS = [
   "Modern",
   "Contemporary",
   "Farmhouse"
+];
+
+const STREET_TYPE_OPTIONS = [
+  "Cul-de-sac",
+  "Through street",
+  "Dead-end street",
+  "Private road",
+  "Main road",
+  "Side street",
+  "One-way street"
+];
+
+const LOT_TYPE_OPTIONS = [
+  "Corner lot",
+  "Interior lot",
+  "Waterfront",
+  "Golf course",
+  "Greenbelt/Park",
+  "Wooded/Treeline"
 ];
 
 const STATE_OPTIONS = [
@@ -270,10 +298,43 @@ export function ListingReviewView({
     ...(propertyDetails ?? {}),
     address: propertyDetails?.address ?? address ?? ""
   }));
+  const [priceValue, setPriceValue] = React.useState(() => {
+    const raw = propertyDetails?.listing_price;
+    return raw !== undefined && raw !== null
+      ? formatListingPrice(String(raw))
+      : "";
+  });
   const [isSaving, setIsSaving] = React.useState(false);
   const [pendingSave, setPendingSave] = React.useState(false);
   const detailsRef = React.useRef(details);
   const dirtyRef = React.useRef(false);
+
+  React.useEffect(() => {
+    const raw = details.listing_price;
+    setPriceValue(
+      raw !== undefined && raw !== null ? formatListingPrice(String(raw)) : ""
+    );
+  }, [details.listing_price]);
+  React.useEffect(() => {
+    const currentStreet = (details.location_context?.street_type ?? "").trim();
+    if (currentStreet && !STREET_TYPE_OPTIONS.includes(currentStreet)) {
+      setStreetTypeMode("custom");
+      setStreetTypeCustom(currentStreet);
+    } else {
+      setStreetTypeMode("preset");
+      setStreetTypeCustom(currentStreet);
+    }
+  }, [details.location_context?.street_type]);
+  React.useEffect(() => {
+    const currentLot = (details.location_context?.lot_type ?? "").trim();
+    if (currentLot && !LOT_TYPE_OPTIONS.includes(currentLot)) {
+      setLotTypeMode("custom");
+      setLotTypeCustom(currentLot);
+    } else {
+      setLotTypeMode("preset");
+      setLotTypeCustom(currentLot);
+    }
+  }, [details.location_context?.lot_type]);
   const [propertyTypeMode, setPropertyTypeMode] = React.useState<
     "preset" | "custom"
   >(() => {
@@ -297,6 +358,34 @@ export function ListingReviewView({
   );
   const [architectureCustom, setArchitectureCustom] = React.useState(
     () => details.architecture ?? ""
+  );
+  const [streetTypeMode, setStreetTypeMode] = React.useState<
+    "preset" | "custom"
+  >(() => {
+    const current = (
+      propertyDetails?.location_context?.street_type ?? ""
+    ).trim();
+    if (current && !STREET_TYPE_OPTIONS.includes(current)) {
+      return "custom";
+    }
+    return "preset";
+  });
+  const [streetTypeCustom, setStreetTypeCustom] = React.useState(
+    () => propertyDetails?.location_context?.street_type ?? ""
+  );
+  const [lotTypeMode, setLotTypeMode] = React.useState<"preset" | "custom">(
+    () => {
+      const current = (
+        propertyDetails?.location_context?.lot_type ?? ""
+      ).trim();
+      if (current && !LOT_TYPE_OPTIONS.includes(current)) {
+        return "custom";
+      }
+      return "preset";
+    }
+  );
+  const [lotTypeCustom, setLotTypeCustom] = React.useState(
+    () => propertyDetails?.location_context?.lot_type ?? ""
   );
 
   const updateDetails = React.useCallback(
@@ -436,20 +525,19 @@ export function ListingReviewView({
     () => [...ARCHITECTURE_OPTIONS, "Custom"],
     []
   );
+  const streetTypeOptions = React.useMemo(
+    () => [...STREET_TYPE_OPTIONS, "Custom"],
+    []
+  );
+  const lotTypeOptions = React.useMemo(
+    () => [...LOT_TYPE_OPTIONS, "Custom"],
+    []
+  );
 
   const requiredFixes = React.useMemo(() => {
     const fixes: string[] = [];
-    if (!details.address?.trim()) {
-      fixes.push("Address is missing.");
-    }
     if (!details.property_type?.trim()) {
       fixes.push("Property type is missing.");
-    }
-    if (!details.architecture?.trim()) {
-      fixes.push("Architecture is missing.");
-    }
-    if (!Number.isFinite(details.year_built ?? NaN)) {
-      fixes.push("Year built is missing.");
     }
     if (!Number.isFinite(details.living_area_sq_ft ?? NaN)) {
       fixes.push("Living area is missing.");
@@ -460,23 +548,16 @@ export function ListingReviewView({
     if (!Number.isFinite(details.bathrooms ?? NaN)) {
       fixes.push("Bathrooms count is missing.");
     }
-    if (!Number.isFinite(details.lot_size_acres ?? NaN)) {
-      fixes.push("Lot size is missing.");
-    }
     if (!Number.isFinite(details.stories ?? NaN)) {
       fixes.push("Stories count is missing.");
     }
     return fixes;
   }, [
-    details.address,
-    details.architecture,
     details.bathrooms,
     details.bedrooms,
     details.living_area_sq_ft,
-    details.lot_size_acres,
     details.property_type,
-    details.stories,
-    details.year_built
+    details.stories
   ]);
 
   const canContinue = requiredFixes.length === 0;
@@ -559,12 +640,37 @@ export function ListingReviewView({
             </div>
             <Card>
               <CardHeader>
-                <CardTitle>Property basics</CardTitle>
+                <div className="flex items-center justify-between gap-3">
+                  <CardTitle>Property basics</CardTitle>
+                </div>
               </CardHeader>
               <CardContent className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2 sm:col-span-2">
+                <div className="space-y-2">
                   <Label>Address</Label>
                   <Input value={details.address ?? ""} disabled />
+                </div>
+                <div className="space-y-2">
+                  <Label>Listing price</Label>
+                  <Input
+                    placeholder="$850,000"
+                    value={priceValue}
+                    onChange={(event) => setPriceValue(event.target.value)}
+                    onBlur={() => {
+                      const nextPrice = formatListingPrice(priceValue);
+                      setPriceValue(nextPrice);
+                      const numericValue = toNullableNumber(
+                        nextPrice.replace(/[^\d]/g, "")
+                      );
+                      const nextDetails = {
+                        ...detailsRef.current,
+                        listing_price: numericValue
+                      };
+                      detailsRef.current = nextDetails;
+                      setDetails(nextDetails);
+                      dirtyRef.current = true;
+                      void handleSave({ silent: true });
+                    }}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label>Property type</Label>
@@ -1168,17 +1274,114 @@ export function ListingReviewView({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Street type</Label>
-                  <Input
-                    value={locationContext.street_type ?? ""}
-                    onChange={(event) =>
-                      updateSection("location_context", (prev) => ({
-                        ...prev,
-                        street_type: toNullableString(event.target.value)
-                      }))
+                  <Label>Lot type</Label>
+                  <Select
+                    value={
+                      lotTypeMode === "custom"
+                        ? "Custom"
+                        : (locationContext.lot_type ?? "")
                     }
-                    onBlur={triggerAutoSave}
-                  />
+                    onValueChange={(value) => {
+                      if (value === "Custom") {
+                        setLotTypeMode("custom");
+                        const next = lotTypeCustom.trim().slice(0, 20);
+                        updateSection("location_context", (prev) => ({
+                          ...prev,
+                          lot_type: next || null
+                        }));
+                      } else {
+                        setLotTypeMode("preset");
+                        setLotTypeCustom(value);
+                        updateSection("location_context", (prev) => ({
+                          ...prev,
+                          lot_type: value || null
+                        }));
+                      }
+                      triggerAutoSave();
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a lot type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {lotTypeOptions.map((option) => (
+                        <SelectItem key={option} value={option}>
+                          {option}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {lotTypeMode === "custom" ? (
+                    <Input
+                      value={lotTypeCustom}
+                      onChange={(event) => {
+                        const next = event.target.value.slice(0, 20);
+                        setLotTypeCustom(next);
+                        updateSection("location_context", (prev) => ({
+                          ...prev,
+                          lot_type: next.trim() || null
+                        }));
+                      }}
+                      onBlur={triggerAutoSave}
+                      maxLength={20}
+                      placeholder="Custom (20 char max)"
+                    />
+                  ) : null}
+                </div>
+                <div className="space-y-2">
+                  <Label>Street type</Label>
+                  <Select
+                    value={
+                      streetTypeMode === "custom"
+                        ? "Custom"
+                        : (locationContext.street_type ?? "")
+                    }
+                    onValueChange={(value) => {
+                      if (value === "Custom") {
+                        setStreetTypeMode("custom");
+                        const next = streetTypeCustom.trim().slice(0, 20);
+                        updateSection("location_context", (prev) => ({
+                          ...prev,
+                          street_type: next || null
+                        }));
+                      } else {
+                        setStreetTypeMode("preset");
+                        setStreetTypeCustom(value);
+                        updateSection("location_context", (prev) => ({
+                          ...prev,
+                          street_type: value || null
+                        }));
+                      }
+                      triggerAutoSave();
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a street type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {streetTypeOptions.map((option) => (
+                        <SelectItem key={option} value={option}>
+                          {option}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {streetTypeMode === "custom" ? (
+                    <Input
+                      value={streetTypeCustom}
+                      onChange={(event) => {
+                        const next = event.target.value.slice(0, 20);
+                        setStreetTypeCustom(next);
+                        updateSection("location_context", (prev) => ({
+                          ...prev,
+                          street_type: next.trim() || null
+                        }));
+                      }}
+                      onBlur={triggerAutoSave}
+                      maxLength={20}
+                      placeholder="Custom (20 char max)"
+                    />
+                  ) : null}
                 </div>
                 <div className="space-y-2">
                   <Label>County</Label>
@@ -1246,6 +1449,7 @@ export function ListingReviewView({
                     </ul>
                   </div>
                 ) : null}
+                <div className="my-4 h-px w-full bg-border/60" />
                 <Button
                   className="w-full"
                   onClick={() => handleSave()}

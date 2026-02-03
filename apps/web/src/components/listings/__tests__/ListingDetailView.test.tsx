@@ -78,7 +78,8 @@ const baseProps = {
   listingId: "listing-123",
   userId: "user-123",
   initialImages: [],
-  googleMapsApiKey: "test-key"
+  googleMapsApiKey: "test-key",
+  hasPropertyDetails: false
 };
 
 describe("ListingDetailView", () => {

@@ -25,6 +25,7 @@ export type ListingPropertyDetails = {
   living_area_sq_ft?: number | null;
   bedrooms?: number | null;
   bathrooms?: number | null;
+  listing_price?: number | null;
   lot_size_acres?: number | null;
   stories?: number | null;
   architecture?: string | null;
@@ -51,6 +52,7 @@ export type ListingPropertyDetails = {
   location_context?: {
     subdivision?: string | null;
     street_type?: string | null;
+    lot_type?: string | null;
     county?: string | null;
     state?: string | null;
   } | null;

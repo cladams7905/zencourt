@@ -8,7 +8,6 @@ import {
   AccordionItem,
   AccordionTrigger
 } from "../ui/accordion";
-import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { AddressAutocomplete } from "../location/AddressAutocomplete";
@@ -170,7 +169,6 @@ export function ListingDetailView({
     null
   );
   const [addressValue, setAddressValue] = React.useState(initialAddress);
-  const [priceValue, setPriceValue] = React.useState("");
   const [isUploadOpen, setIsUploadOpen] = React.useState(false);
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = React.useState(false);
   const [categoryDialogMode, setCategoryDialogMode] = React.useState<
@@ -190,9 +188,12 @@ export function ListingDetailView({
   const [customCategories, setCustomCategories] = React.useState<string[]>([]);
   const [savingCount, setSavingCount] = React.useState(0);
   const [isDraggingImage, setIsDraggingImage] = React.useState(false);
+  const [hasPropertyDetailsState, setHasPropertyDetailsState] =
+    React.useState(hasPropertyDetails);
   const lastDragClientYRef = React.useRef<number | null>(null);
   const headerRef = React.useRef<HTMLElement | null>(null);
   const draftTitleRef = React.useRef(title);
+  const lastSavedAddressRef = React.useRef(initialAddress.trim());
 
   React.useEffect(() => {
     draftTitleRef.current = draftTitle;
@@ -665,10 +666,23 @@ export function ListingDetailView({
   const handleContinue = async () => {
     const nextAddress = addressValue.trim();
     if (nextAddress) {
+      const previousAddress = lastSavedAddressRef.current;
+      const shouldClearDetails =
+        nextAddress !== previousAddress && nextAddress.length > 0;
       try {
         await runDraftSave(() =>
-          updateListing(userId, listingId, { address: nextAddress })
+          updateListing(userId, listingId, {
+            address: nextAddress,
+            propertyDetails: shouldClearDetails ? null : undefined,
+            propertyDetailsSource: shouldClearDetails ? null : undefined,
+            propertyDetailsFetchedAt: shouldClearDetails ? null : undefined,
+            propertyDetailsRevision: shouldClearDetails ? null : undefined
+          })
         );
+        lastSavedAddressRef.current = nextAddress;
+        if (shouldClearDetails) {
+          setHasPropertyDetailsState(false);
+        }
       } catch (error) {
         toast.error(
           (error as Error).message || "Failed to save listing address."
@@ -677,7 +691,7 @@ export function ListingDetailView({
       }
     }
 
-    if (hasPropertyDetails) {
+    if (hasPropertyDetailsState) {
       router.push(`/listings/${listingId}/review`);
       return;
     }
@@ -1089,7 +1103,8 @@ export function ListingDetailView({
                   <h2 className="text-lg text-foreground">Listing details</h2>
                 </div>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Add essentials now so we can tailor the campaign.
+                  Add the listing address now so we can begin tailoring the
+                  campaign.
                 </p>
                 <div className="mt-4 space-y-3">
                   <div className="space-y-1">
@@ -1109,34 +1124,46 @@ export function ListingDetailView({
                         }
                         if (selection.formattedAddress) {
                           const nextAddress = selection.formattedAddress.trim();
+                          const previousAddress = lastSavedAddressRef.current;
+                          const shouldClearDetails =
+                            nextAddress !== previousAddress &&
+                            nextAddress.length > 0;
                           setAddressValue(nextAddress);
                           void runDraftSave(() =>
                             updateListing(userId, listingId, {
-                              address: nextAddress
+                              address: nextAddress,
+                              propertyDetails: shouldClearDetails
+                                ? null
+                                : undefined,
+                              propertyDetailsSource: shouldClearDetails
+                                ? null
+                                : undefined,
+                              propertyDetailsFetchedAt: shouldClearDetails
+                                ? null
+                                : undefined,
+                              propertyDetailsRevision: shouldClearDetails
+                                ? null
+                                : undefined
                             })
-                          ).catch((error) => {
-                            toast.error(
-                              (error as Error).message ||
-                                "Failed to update listing address."
-                            );
-                          });
+                          )
+                            .then(() => {
+                              lastSavedAddressRef.current = nextAddress;
+                              if (shouldClearDetails) {
+                                setHasPropertyDetailsState(false);
+                              }
+                            })
+                            .catch((error) => {
+                              toast.error(
+                                (error as Error).message ||
+                                  "Failed to update listing address."
+                              );
+                            });
                         }
                       }}
                       apiKey={googleMapsApiKey}
                     />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-sm text-foreground">
-                      Listing price (optional)
-                    </label>
-                    <Input
-                      placeholder="$850,000"
-                      value={priceValue}
-                      onChange={(event) => setPriceValue(event.target.value)}
-                    />
-                  </div>
                 </div>
-                <div className="my-4 h-px w-full bg-border/60" />
                 <div className="gap-4 space-y-4">
                   {hasUncategorized || hasEmptyCategory || needsAddress ? (
                     <div className="mt-3 rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-3 text-xs text-destructive">
@@ -1165,14 +1192,15 @@ export function ListingDetailView({
                       </ul>
                     </div>
                   ) : null}
-                  <Button
-                    className="w-full"
-                    disabled={!canContinue}
-                    onClick={handleContinue}
-                  >
-                    Continue
-                  </Button>
                 </div>
+                <div className="h-px my-4 w-full bg-border/60" />
+                <Button
+                  className="w-full"
+                  disabled={!canContinue}
+                  onClick={handleContinue}
+                >
+                  Continue
+                </Button>
               </div>
             </div>
           </aside>
