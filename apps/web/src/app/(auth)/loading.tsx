@@ -14,16 +14,16 @@ export default function AuthLoading() {
       </div>
 
       <div className="relative z-10 flex min-h-screen flex-col items-center justify-center px-6 text-center">
-        <div className="relative flex h-20 w-20 items-center justify-center">
-          <Loader2 className="absolute h-20 w-20 animate-spin text-primary" />
+        <div className="relative flex flex-col gap-6 items-center justify-center">
           <Image
             src="/zencourt-logo.svg"
             alt="Zencourt"
-            width={24}
-            height={24}
-            className="h-6 w-6 object-contain"
+            width={48}
+            height={48}
+            className="object-contain"
             priority
           />
+          <Loader2 size={32} className="animate-spin" />
         </div>
       </div>
     </div>

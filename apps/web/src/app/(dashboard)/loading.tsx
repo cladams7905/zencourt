@@ -2,28 +2,15 @@
 
 import Image from "next/image";
 import { Loader2 } from "lucide-react";
+import { SidebarSkeleton } from "@web/src/components/dashboard/SidebarSkeleton";
 
 export default function DashboardLoading() {
   return (
     <div className="fixed inset-0 z-50 overflow-hidden bg-background text-foreground">
       <div className="absolute inset-0 pointer-events-none">
         <div className="flex h-full w-full blur-sm">
-          <aside className="w-[260px] shrink-0 border-r border-border bg-secondary">
-            <div className="pt-5 px-6 pb-4">
-              <div className="h-6 w-32 rounded-md bg-border/60" />
-            </div>
-            <div className="px-4 space-y-3">
-              <div className="h-4 w-40 rounded-md bg-border/60" />
-              <div className="h-4 w-32 rounded-md bg-border/60" />
-              <div className="h-px w-full bg-border/50 my-4" />
-              <div className="space-y-2">
-                <div className="h-3 w-28 rounded-md bg-border/60" />
-                <div className="h-3 w-24 rounded-md bg-border/60" />
-                <div className="h-3 w-20 rounded-md bg-border/60" />
-              </div>
-            </div>
-          </aside>
-          <main className="flex-1 bg-secondary p-3">
+          <SidebarSkeleton />
+          <main className="flex-1 bg-secondary p-3 pl-0">
             <div className="h-full rounded-lg bg-background border border-border overflow-hidden shadow-xs">
               <div className="border-b border-border px-8 py-5">
                 <div className="h-3 w-28 rounded-md bg-border/60" />
@@ -36,16 +23,16 @@ export default function DashboardLoading() {
       </div>
 
       <div className="relative z-10 flex h-full flex-col items-center justify-center px-6 text-center">
-        <div className="relative flex h-20 w-20 items-center justify-center">
-          <Loader2 className="absolute h-20 w-20 animate-spin text-primary" />
+        <div className="relative flex flex-col gap-6 items-center justify-center">
           <Image
             src="/zencourt-logo.svg"
             alt="Zencourt"
-            width={24}
-            height={24}
-            className="h-6 w-6 object-contain"
+            width={48}
+            height={48}
+            className="object-contain"
             priority
           />
+          <Loader2 size={32} className="animate-spin" />
         </div>
       </div>
     </div>
