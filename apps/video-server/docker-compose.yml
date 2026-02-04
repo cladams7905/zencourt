@@ -36,9 +36,3 @@ services:
     #   - ./src:/app/src:ro
     #   - ./dist:/app/dist
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
-      interval: 120s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
