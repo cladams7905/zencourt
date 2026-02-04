@@ -85,6 +85,50 @@ export function getRoomVideoFolder(
 }
 
 /**
+ * Get the folder path for a specific video job
+ * Format: user_{userId}/listings/listing_{listingId}/videos/video_{videoId}/jobs/job_{jobId}
+ */
+export function getVideoJobFolder(
+  userId: string,
+  listingId: string,
+  videoId: string,
+  jobId: string
+): string {
+  if (!userId || !listingId || !videoId || !jobId) {
+    throw new Error(
+      "User ID, Listing ID, Video ID, and Job ID are required for job storage"
+    );
+  }
+  return `${getRoomVideoFolder(userId, listingId, videoId)}/jobs/job_${jobId}`;
+}
+
+/**
+ * Get the storage key for a video job output
+ * Format: user_{userId}/listings/listing_{listingId}/videos/video_{videoId}/jobs/job_{jobId}/video.mp4
+ */
+export function getVideoJobVideoPath(
+  userId: string,
+  listingId: string,
+  videoId: string,
+  jobId: string
+): string {
+  return `${getVideoJobFolder(userId, listingId, videoId, jobId)}/video.mp4`;
+}
+
+/**
+ * Get the storage key for a video job thumbnail
+ * Format: user_{userId}/listings/listing_{listingId}/videos/video_{videoId}/jobs/job_{jobId}/thumbnail.jpg
+ */
+export function getVideoJobThumbnailPath(
+  userId: string,
+  listingId: string,
+  videoId: string,
+  jobId: string
+): string {
+  return `${getVideoJobFolder(userId, listingId, videoId, jobId)}/thumbnail.jpg`;
+}
+
+/**
  * Get the full storage key/path for a room video
  * Format: user_{userId}/listings/listing_{listingId}/videos/video_{videoId}/room_{roomName}_{timestamp}.mp4
  */

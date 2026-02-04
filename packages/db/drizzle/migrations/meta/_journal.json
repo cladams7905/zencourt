@@ -211,6 +211,13 @@
       "when": 1770156414682,
       "tag": "0029_smiling_otto_octavius",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1770236767190,
+      "tag": "0030_mature_solo",
+      "breakpoints": true
     }
   ]
 }

@@ -4,6 +4,7 @@ export * from "./content";
 export * from "./listingImages";
 export * from "./videoContent";
 export * from "./videoContentJobs";
+export * from "./videoRenderJobs";
 export * from "./imageContent";
 export * from "./userAdditional";
 export * from "./userMedia";

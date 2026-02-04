@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import logger from "@/config/logger";
 import { videoGenerationService } from "@/services/videoGenerationService";
+import { verifyFalWebhookSignature } from "@/utils/falWebhookVerification";
 import type { FalWebhookPayload } from "@shared/types/api";
 
 const router = Router();
@@ -23,6 +24,51 @@ router.post("/fal", async (req: Request, res: Response) => {
     : rawRequestId;
 
   try {
+    const rawBody = (req as Request & { rawBody?: Buffer }).rawBody;
+    const requestIdHeader = req.header("x-fal-webhook-request-id");
+    const userIdHeader = req.header("x-fal-webhook-user-id");
+    const timestampHeader = req.header("x-fal-webhook-timestamp");
+    const signatureHeader = req.header("x-fal-webhook-signature");
+
+    if (
+      !rawBody ||
+      !requestIdHeader ||
+      !userIdHeader ||
+      !timestampHeader ||
+      !signatureHeader
+    ) {
+      logger.warn(
+        {
+          hasRawBody: Boolean(rawBody),
+          hasRequestId: Boolean(requestIdHeader),
+          hasUserId: Boolean(userIdHeader),
+          hasTimestamp: Boolean(timestampHeader),
+          hasSignature: Boolean(signatureHeader)
+        },
+        "[WebhookRoute] Missing Fal webhook signature headers"
+      );
+      // 400 Bad Request for missing required headers (structural validation)
+      res.status(400).json({ success: false });
+      return;
+    }
+
+    const verified = await verifyFalWebhookSignature({
+      rawBody,
+      requestId: requestIdHeader,
+      userId: userIdHeader,
+      timestamp: timestampHeader,
+      signature: signatureHeader
+    });
+
+    if (!verified) {
+      logger.warn(
+        { requestId: requestIdHeader, jobId },
+        "[WebhookRoute] Fal webhook signature verification failed"
+      );
+      res.status(401).json({ success: false });
+      return;
+    }
+
     const payload = req.body as FalWebhookPayload;
 
     logger.info(

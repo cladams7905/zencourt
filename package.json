@@ -24,7 +24,12 @@
     "docker:rebuild": "npm run docker:rebuild --workspace=@zencourt/video-server",
     "docker:up": "npm run docker:up --workspace=@zencourt/video-server",
     "docker:down": "npm run docker:down --workspace=@zencourt/video-server",
-    "docker:logs": "npm run docker:logs --workspace=@zencourt/video-server"
+    "docker:logs": "npm run docker:logs --workspace=@zencourt/video-server",
+    "test:video": "npm run test --workspace=@zencourt/video-server",
+    "test:video:watch": "npm run test:watch --workspace=@zencourt/video-server",
+    "test:video:coverage": "npm run test:coverage --workspace=@zencourt/video-server",
+    "type-check:web": "npm run type-check --workspace=@zencourt/web",
+    "type-check:video": "npm run type-check --workspace=@zencourt/video-server"
   },
   "dependencies": {
     "@react-google-maps/api": "^2.20.8",

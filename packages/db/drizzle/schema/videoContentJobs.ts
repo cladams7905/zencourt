@@ -37,7 +37,7 @@ export const videoContentJobs = pgTable(
     thumbnailUrl: text("thumbnail_url"),
     generationModel: text("generation_model")
       .notNull()
-      .default("kling1.6")
+      .default("runway-gen4-turbo")
       .$type<GENERATION_MODELS>(),
     generationSettings: jsonb(
       "generation_settings"

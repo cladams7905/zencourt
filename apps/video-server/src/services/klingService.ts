@@ -63,19 +63,6 @@ class KlingService {
       throw error;
     }
   }
-
-  async downloadVideoFile(videoUrl: string): Promise<Buffer> {
-    const response = await fetch(videoUrl);
-
-    if (!response.ok) {
-      throw new Error(
-        `Failed to download video from fal.ai (${response.status})`
-      );
-    }
-
-    const arrayBuffer = await response.arrayBuffer();
-    return Buffer.from(arrayBuffer);
-  }
 }
 
 export const klingService = new KlingService();

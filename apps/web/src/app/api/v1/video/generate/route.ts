@@ -377,15 +377,16 @@ export async function POST(
           status: "pending",
           videoUrl: null,
           thumbnailUrl: null,
-          generationModel: "kling1.6",
+          generationModel: "runway-gen4-turbo",
           generationSettings: {
-            model: "kling1.6",
+            model: "runway-gen4-turbo",
             orientation,
             aiDirections: body.aiDirections || "",
             imageUrls: publicImageUrls,
             prompt,
             category,
             sortOrder: index,
+            durationSeconds: 5,
             roomId: room.id,
             roomName: room.name,
             roomNumber: room.roomNumber

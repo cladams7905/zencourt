@@ -33,6 +33,8 @@ declare global {
       JOB_TIMEOUT_MS: number;
       TEMP_DIR: string;
       STORAGE_HEALTH_CACHE_MS: number;
+      RENDER_CONCURRENCY?: number;
+      GENERATION_CONCURRENCY?: number;
 
       // API Authentication
       VIDEO_SERVER_API_KEY: string;
@@ -40,6 +42,11 @@ declare global {
       // fal.ai
       FAL_KEY: string;
       FAL_WEBHOOK_URL: string;
+
+      // Runway
+      RUNWAY_API_KEY: string;
+      RUNWAY_API_URL?: string;
+      RUNWAY_API_VERSION?: string;
     }
   }
 }
@@ -56,13 +63,22 @@ export default function Initialize() {
     "VERCEL_API_URL",
     "VERCEL_WEBHOOK_SECRET",
     "DATABASE_URL",
-    "FAL_KEY"
+    "FAL_KEY",
+    "RUNWAY_API_KEY"
   ];
 
+  const missingVars: string[] = [];
   for (const varName of requiredVars) {
     if (!process.env[varName] || process.env[varName]?.length === 0) {
-      console.error(`Missing environment variable value for ${varName}`);
+      missingVars.push(varName);
     }
+  }
+
+  if (missingVars.length > 0) {
+    console.error(
+      `Missing required environment variables: ${missingVars.join(", ")}`
+    );
+    process.exit(1);
   }
 
   if (process.env.VIDEO_SERVER_URL) {

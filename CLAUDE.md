@@ -4,21 +4,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Zencourt is an npm workspaces monorepo for a video generation platform serving real estate marketing. The architecture separates frontend (Vercel-deployed Next.js) from backend video processing (Hetzner-deployed Express + FFmpeg).
+Zencourt is an npm workspaces monorepo for a social media generation platform serving real estate marketing. The architecture separates frontend (Vercel-deployed Next.js) from backend video processing (Hetzner-deployed Express + Remotion rendering).
 
 **Structure:**
 
 ```
 apps/web/              # Next.js 15 frontend with Stack Auth + server actions
-apps/video-server/     # Express backend with FFmpeg video processing
+apps/video-server/     # Express backend with Runway/Kling orchestration + Remotion rendering
 packages/db/           # Drizzle ORM + Neon PostgreSQL schema + client
 packages/shared/       # Shared types, enums, utilities
 ```
 
 **Tech Stack:**
 
-- Frontend: Next.js 15, React 19, Tailwind CSS 4, Radix UI, TanStack Query, fal.ai
-- Backend: Express, FFmpeg (fluent-ffmpeg), Pino logging, AWS SDK (S3-compatible)
+- Frontend: Next.js 16, React 19, Tailwind CSS 4, Radix UI, TanStack Query, fal.ai
+- Backend: Express, Remotion (server-side rendering), Runway SDK, fal.ai (Kling fallback), Pino logging, AWS SDK (S3-compatible)
 - Database: Drizzle ORM, Neon PostgreSQL with Row-Level Security
 - Auth: Stack Auth (@stackframe/stack)
 
@@ -31,7 +31,7 @@ npm run env:pull              # Pull environment variables from Vercel
 
 # Daily development
 npm run dev                   # Start Next.js web app (port 3000)
-npm run dev:video             # Start video server (port 3001)
+npm run dev:video             # Start video server (port 3001 via scripts/start-dev-server.sh)
 
 # Database operations
 npm run db:push               # Quick schema sync for development
@@ -45,7 +45,7 @@ npm run test:watch --workspace=@zencourt/video-server
 npm run test:coverage --workspace=@zencourt/video-server
 
 # Building
-npm run build:web             # Build Next.js app
+npm run build:local           # Build Next.js app with local .env
 npm run build:video           # Compile TypeScript for video server
 npm run build                 # Build all workspaces
 
@@ -67,9 +67,20 @@ npm run type-check --workspace=@zencourt/video-server
 **Structure:**
 
 - `app/` - Next.js App Router with API routes at `api/v1/`
-- `app/api/v1/video/` - Video generation endpoints
-- `app/api/v1/webhooks/` - Webhook handlers from video-server
-- `components/ui/` - 50+ Radix UI components
+  - `app/(dashboard)/` - Authenticated dashboard routes (listings, content, settings)
+  - `app/(auth)/` - Auth screens (Stack Auth handlers)
+  - `app/api/v1/content/` - Content generation endpoints (prompts + AI)
+  - `app/api/v1/video/` - Video generation endpoints + config helpers
+  - `app/api/v1/webhooks/` - Webhook handlers from video-server
+- `components/` - Product UI by domain
+  - `components/listings/` - Listing workflow views (sync, categorize, review, generate)
+  - `components/dashboard/` - Content dashboard and grids
+  - `components/uploads/` - Upload dialogs + external connectors
+  - `components/ui/` - Radix UI component primitives
+- `lib/prompts/` - Prompt templates, hooks, and assembly logic
+- `server/actions/` - Server actions for DB and API wrappers
+- `server/services/` - Market/community/property data, vision, and AI helpers
+- `server/utils/` - Webhook verification + storage URL helpers
 - `middleware.ts` - Stack Auth session validation
 
 **Authentication Flow:**
@@ -78,42 +89,49 @@ npm run type-check --workspace=@zencourt/video-server
 - Bypasses: `/handler/*` (auth pages), `/api/v1/webhooks/*`, Next.js internals
 - Redirects unauthenticated users to `/handler/sign-in`
 
+**Critical Web App Folders:**
+
+- `app/api/v1/content/generate/` - Content generation flow (prompt assembly + AI response parsing)
+- `lib/prompts/` - Base prompts, hooks, compliance, and assembly helpers
+- `server/services/community/` - Perplexity-powered community data + caching
+- `server/services/marketDataService.ts` - Market insights lookup
+- `server/services/listingPropertyService.ts` - Listing metadata + Perplexity enrichment
+- `components/listings/` - Core listing workflow UI and steps
+
 ### Video Server (apps/video-server)
 
 **Structure:**
 
-- `routes/` - Express routes (video, webhooks, health, storage)
+- `routes/` - Express routes (video, webhooks, renders, health, storage)
 - `services/` - Business logic layer
   - `db/` - Repository pattern (`videoRepository`, `videoJobRepository`)
-  - `ffmpegService` - Video processing with FFmpeg
-  - `klingService` - fal.ai Kling AI video generation
+  - `runwayService` - Runway Gen-4 Turbo image-to-video (default provider)
+  - `klingService` - fal.ai Kling AI video generation (fallback provider)
   - `storageService` - S3-compatible storage (Backblaze B2)
   - `videoGenerationService` - Orchestration of video pipeline
-  - `videoCompositionService` - Combining videos
+  - `remotionRenderService` - Server-side Remotion rendering
+  - `remotionRenderQueue` - In-memory render queue + progress
   - `webhookService` - Downstream webhook delivery
 - `middleware/` - Auth validation and error handling
 - `config/` - Environment, logging, storage configuration
 
 **Video Processing Pipeline:**
 
-1. User uploads property images → stored as `collection_images` tied to a project collection.
-2. Web workflow creates/updates a video `asset` record (stage, type, thumbnail) for the project.
-3. Web app requests generation via `/video/generate`, creating a parent `video_assets` row plus `video_asset_jobs` (one per room).
-4. Video-server dispatches each job to fal.ai (Kling) and tracks progress via `video_asset_jobs`.
-5. fal.ai webhooks -> video-server: job assets downloaded, normalized, uploaded, job rows updated.
-6. Once all jobs complete, video-server composes the final asset video, writes back to `video_assets`, and notifies the web app.
-7. Web app updates UI/project workflow stage via `assets` table.
+1. Web app requests generation via `/video/generate`, creating a parent `video_content` row plus `video_content_jobs` (one per room).
+2. Video-server dispatches each job to Runway (Gen-4 Turbo) and falls back to Kling (Fal) on failure.
+3. Runway completion is awaited in-process; Kling completion arrives via Fal webhook → both paths upload per-job MP4 + thumbnail to B2 and update `video_content_jobs`.
+4. When all jobs complete, video-server enqueues a Remotion render job (server-side) using `remotionRenderQueue`.
+5. Remotion render outputs final MP4 + thumbnail → stored in B2 → `video_content` updated → final webhook to web app.
 
 ### Database (packages/db)
 
 **Schema Highlights (`drizzle/schema.ts` via `@db/client`):**
 
-- `projects` – Owns collections/assets; RLS scoped to owner.
-- `collections` – 1:1 with project; keeps metadata for uploaded media.
-- `collection_images` – Uploaded property imagery + AI classifications.
-- `assets` – Generated deliverables per project (currently `type = "video"` with generation stage + thumbnail).
-- `video_assets` – Finalized video output for a specific asset (one row per generation run).
-- `video_asset_jobs` – Individual Kling job entries tied to `video_assets`.
+- `listings` – Primary entity for listing workflows.
+- `content` – Generic content rows (video/post/story) tied to listing.
+- `video_content` – Parent video run state and final URLs.
+- `video_content_jobs` – Per-room generation jobs (Runway/Kling outputs).
+- `video_render_jobs` – Remotion render queue state and progress.
 
 > **Important:** Always import Drizzle helpers (`eq`, `and`, `inArray`, etc.) from `@db/client` rather than `drizzle-orm` directly so every workspace shares the same Drizzle instance/schema.
 
@@ -160,7 +178,7 @@ Also use shared helpers for storage URL parsing/building (`extractStorageKeyFrom
 
 ### 3. Video Job Architecture
 
-Each video generation is split into multiple `video_asset_jobs` (one per room). This enables:
+Each video generation is split into multiple `video_content_jobs` (one per room). This enables:
 
 - Parallel processing of individual videos
 - Individual retry logic per job
@@ -168,9 +186,11 @@ Each video generation is split into multiple `video_asset_jobs` (one per room). 
 
 Fields include: `errorType`, `errorRetryable`, `errorMessage` for debugging.
 
+Final composition jobs are tracked in `video_render_jobs` with status/progress.
+
 ### 4. Webhook Chain
 
-**fal.ai → video-server → web app**
+**Runway/Kling → video-server → web app**
 
 Video-server acts as middleware to add:
 
@@ -191,22 +211,21 @@ Video-server Dockerfile builds from **monorepo root** (`context: ../..`) to acce
 - Copies entire monorepo structure
 - Installs dependencies for all workspaces
 - Compiles TypeScript in container
-- Includes FFmpeg binaries in Alpine image
+- Includes Remotion rendering dependencies in the image
 
 ### 7. Next.js Monorepo Configuration
 
 Non-standard config in `next.config.ts`:
 
 - Transpiles workspace packages (`@zencourt/db`, `@zencourt/shared`)
-- Externalizes FFmpeg and Pino to prevent bundling issues
-- Custom webpack config for FFmpeg binaries
+- Externalizes Pino to prevent bundling issues
 - Output file tracing includes monorepo root
 
-### 8. FFmpeg Handling
+### 8. Remotion Rendering
 
-- **Docker:** Alpine image includes system FFmpeg binaries
-- **Local dev:** Uses `ffmpeg-static` npm package
-- Services abstract this via `ffmpegService`
+- Server-side renders run in `apps/video-server` via `@remotion/renderer`
+- Renders are queued in-memory with a semaphore (default 3 concurrent)
+- Render progress is persisted to `video_render_jobs`
 
 ## Key Files for Understanding the System
 
@@ -215,7 +234,7 @@ Non-standard config in `next.config.ts`:
 3. `packages/shared/types/models/db.asset.ts` - Asset + stage enums shared with frontend.
 4. `packages/shared/types/models/db.video.ts` - Video + job type definitions.
 5. `apps/video-server/src/services/videoGenerationService.ts` - Core orchestration logic.
-6. `apps/video-server/src/services/db/*.ts` - Repositories that mutate DB state.
+6. `apps/video-server/src/services/remotionRenderQueue.ts` - Render queue and progress tracking.
 7. `apps/web/src/server/actions/db/*.ts` - Server actions wrapping DB access.
 8. `apps/web/src/proxy.ts` - Stack Auth validation logic.
 9. `tsconfig.base.json` - Monorepo path mappings
@@ -237,4 +256,4 @@ Video-server has Jest configuration with:
 - **Test patterns:** `**/__tests__/**/*.ts`, `**/*.{spec,test}.ts`
 - **Module mapping:** Supports workspace aliases
 
-Web app currently has no test suite configured.
+Web app also has a Jest configuration, but coverage is currently minimal.

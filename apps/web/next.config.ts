@@ -28,9 +28,7 @@ const nextConfig: NextConfig = {
   transpilePackages: ["@zencourt/db", "@zencourt/shared"],
   // Set the root for file tracing to include monorepo packages
   outputFileTracingRoot: path.join(__dirname, "../../"),
-  // Don't externalize ffmpeg/ffprobe - let webpack bundle them properly
   serverExternalPackages: [
-    "fluent-ffmpeg",
     // Prevent Next from bundling Pino and its worker-based transport so the worker file stays on disk
     "pino",
     "pino-pretty",
@@ -40,25 +38,7 @@ const nextConfig: NextConfig = {
   turbopack: {},
   webpack: (config, { isServer }) => {
     if (isServer) {
-      // Exclude ffmpeg/ffprobe binaries from being processed by webpack
       config.externals = config.externals || [];
-      config.externals.push({
-        "fluent-ffmpeg": "commonjs fluent-ffmpeg",
-        "ffmpeg-static": "commonjs ffmpeg-static",
-        "ffprobe-static": "commonjs ffprobe-static"
-      });
-
-      // Ignore binary files in ffmpeg/ffprobe packages
-      config.module = config.module || {};
-      config.module.rules = config.module.rules || [];
-      config.module.rules.push({
-        test: /node_modules\/ffmpeg-static\/.*$/,
-        type: "asset/resource"
-      });
-      config.module.rules.push({
-        test: /node_modules\/ffprobe-static\/.*$/,
-        type: "asset/resource"
-      });
     }
     return config;
   },

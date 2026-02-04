@@ -7,17 +7,25 @@ import videoRoutes from "./routes/video";
 import healthRoutes from "./routes/health";
 import storageRoutes from "./routes/storage";
 import webhookRoutes from "./routes/webhooks";
+import renderRoutes from "./routes/renders";
 import { errorHandler } from "./middleware/errorHandler";
 
 /**
  * Main Express server for video processing
- * Handles FFmpeg operations for Zencourt video generation
+ * Handles AI generation orchestration and storage for Zencourt video generation
  */
 InitializeEnv();
 const app: Express = express();
 
 // Middleware
-app.use(express.json({ limit: "10mb" }));
+app.use(
+  express.json({
+    limit: "10mb",
+    verify: (req, _res, buf) => {
+      (req as Request & { rawBody?: Buffer }).rawBody = buf;
+    }
+  })
+);
 app.use(express.urlencoded({ extended: true }));
 
 // Request logging with Pino
@@ -59,6 +67,9 @@ app.use("/storage", storageRoutes);
 
 // Webhook routes (fal.ai callbacks)
 app.use("/webhooks", webhookRoutes);
+
+// Remotion render routes
+app.use("/renders", renderRoutes);
 
 // Health check endpoint
 app.use("/health", healthRoutes);

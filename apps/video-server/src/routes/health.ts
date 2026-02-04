@@ -4,13 +4,10 @@
  */
 
 import { Router, Request, Response } from "express";
-import { exec } from "child_process";
-import { promisify } from "util";
 import logger from "@/config/logger";
 import { storageService } from "@/services/storageService";
 import { HealthCheckResponse } from "@shared/types/api";
 
-const execAsync = promisify(exec);
 const router = Router();
 
 type StorageHealthCache = {
@@ -21,30 +18,14 @@ type StorageHealthCache = {
 let storageHealthCache: StorageHealthCache | null = null;
 
 /**
- * Check if FFmpeg is available and working
- */
-async function checkFFmpeg(): Promise<boolean> {
-  try {
-    const { stdout } = await execAsync("ffmpeg -version");
-    return stdout.includes("ffmpeg version");
-  } catch (error) {
-    logger.warn(
-      {
-        error: error instanceof Error ? error.message : String(error)
-      },
-      "FFmpeg health check failed"
-    );
-    return false;
-  }
-}
-
-/**
  * Check if storage is accessible
  */
 async function checkStorage(): Promise<boolean> {
+  const cacheMs = Number(process.env.STORAGE_HEALTH_CACHE_MS) || 0;
   if (
+    cacheMs > 0 &&
     storageHealthCache &&
-    Date.now() - storageHealthCache.timestamp < process.env.STORAGE_HEALTH_CACHE_MS
+    Date.now() - storageHealthCache.timestamp < cacheMs
   ) {
     logger.debug(
       {
@@ -84,21 +65,16 @@ async function checkStorage(): Promise<boolean> {
  */
 router.get("/", async (_req: Request, res: Response) => {
   try {
-    // Run all health checks in parallel
-    const [ffmpegHealthy, storageHealthy] = await Promise.all([
-      checkFFmpeg(),
-      checkStorage()
-    ]);
+    const storageHealthy = await checkStorage();
 
     // Determine overall health status
-    const allHealthy = ffmpegHealthy && storageHealthy;
+    const allHealthy = storageHealthy;
     const status = allHealthy ? "healthy" : "unhealthy";
 
     const response: HealthCheckResponse = {
       status,
       timestamp: new Date().toISOString(),
       checks: {
-        ffmpeg: ffmpegHealthy,
         storage: storageHealthy
       }
     };
@@ -129,7 +105,6 @@ router.get("/", async (_req: Request, res: Response) => {
       status: "unhealthy",
       timestamp: new Date().toISOString(),
       checks: {
-        ffmpeg: false,
         storage: false
       }
     };
