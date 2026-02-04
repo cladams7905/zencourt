@@ -8,16 +8,16 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle
-} from "../ui/dialog";
+} from "../../ui/dialog";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue
-} from "../ui/select";
-import { Input } from "../ui/input";
-import { Button } from "../ui/button";
+} from "../../ui/select";
+import { Input } from "../../ui/input";
+import { Button } from "../../ui/button";
 import { ROOM_CATEGORIES, type RoomCategory } from "@web/src/types/vision";
 
 const MAX_CUSTOM_CATEGORY_LENGTH = 20;
@@ -63,8 +63,7 @@ export function ListingCategoryDialog({
   const resolvedCategory =
     selectedCategory === "custom" ? customCategory.trim() : selectedCategory;
 
-  const title =
-    mode === "edit" ? "Rename category" : "Add a room category";
+  const title = mode === "edit" ? "Rename category" : "Add a room category";
   const description =
     mode === "edit"
       ? "Update the room category name for this section."
@@ -83,7 +82,10 @@ export function ListingCategoryDialog({
             <label className="text-xs font-medium text-muted-foreground">
               Category
             </label>
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+            <Select
+              value={selectedCategory}
+              onValueChange={setSelectedCategory}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Select a category" />
               </SelectTrigger>
@@ -119,7 +121,11 @@ export function ListingCategoryDialog({
           )}
         </div>
         <DialogFooter>
-          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => onOpenChange(false)}
+          >
             Cancel
           </Button>
           <Button

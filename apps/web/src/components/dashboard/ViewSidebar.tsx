@@ -50,10 +50,17 @@ import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
 import { toast } from "sonner";
 import Link from "next/link";
+import {
+  addListingSidebarListener,
+  type ListingSidebarUpdate
+} from "@web/src/lib/listingSidebarEvents";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
+
 type ListingSidebarItem = {
   id: string;
   title: string | null;
   listingStage: string | null;
+  lastOpenedAt?: Date | string | null;
 };
 
 interface ViewSidebarProps {
@@ -79,36 +86,171 @@ const ViewSidebar = ({
   const [feedbackType, setFeedbackType] = React.useState("");
   const [feedbackMessage, setFeedbackMessage] = React.useState("");
   const displayedEmail = user?.primaryEmail ?? "";
+  const [visibleListings, setVisibleListings] =
+    React.useState<ListingSidebarItem[]>(listings);
+  const [, startListingsTransition] = React.useTransition();
+  const [pendingListingIds, setPendingListingIds] = React.useState(
+    () => new Set<string>()
+  );
+  const pendingListingTimeouts = React.useRef(new Map<string, number>());
 
-  const { draftListings, activeListings } = React.useMemo(() => {
+  const markListingPending = React.useCallback((listingId: string) => {
+    const timeout = pendingListingTimeouts.current.get(listingId);
+    if (timeout) {
+      window.clearTimeout(timeout);
+    }
+    setPendingListingIds((prev) => {
+      if (prev.has(listingId)) {
+        return prev;
+      }
+      const next = new Set(prev);
+      next.add(listingId);
+      return next;
+    });
+    const nextTimeout = window.setTimeout(() => {
+      pendingListingTimeouts.current.delete(listingId);
+      setPendingListingIds((prev) => {
+        if (!prev.has(listingId)) {
+          return prev;
+        }
+        const next = new Set(prev);
+        next.delete(listingId);
+        return next;
+      });
+    }, 1200);
+    pendingListingTimeouts.current.set(listingId, nextTimeout);
+  }, []);
+
+  React.useEffect(
+    () => () => {
+      pendingListingTimeouts.current.forEach((timeout) =>
+        window.clearTimeout(timeout)
+      );
+      pendingListingTimeouts.current.clear();
+    },
+    []
+  );
+
+  React.useEffect(() => {
+    startListingsTransition(() => setVisibleListings(listings));
+  }, [listings]);
+
+  React.useEffect(
+    () =>
+      addListingSidebarListener((update: ListingSidebarUpdate) => {
+        markListingPending(update.id);
+        startListingsTransition(() =>
+          setVisibleListings((prev) => {
+            const index = prev.findIndex((item) => item.id === update.id);
+            if (index === -1) {
+              return [
+                {
+                  id: update.id,
+                  title: update.title ?? null,
+                  listingStage: update.listingStage ?? "categorize",
+                  lastOpenedAt: update.lastOpenedAt ?? new Date().toISOString()
+                },
+                ...prev
+              ];
+            }
+            const next = [...prev];
+            const existing = next[index];
+            next[index] = {
+              ...existing,
+              title: update.title !== undefined ? update.title : existing.title,
+              listingStage:
+                update.listingStage !== undefined
+                  ? update.listingStage
+                  : existing.listingStage,
+              lastOpenedAt:
+                update.lastOpenedAt !== undefined
+                  ? update.lastOpenedAt
+                  : existing.lastOpenedAt
+            };
+            return next;
+          })
+        );
+      }),
+    [markListingPending]
+  );
+
+  const listingItems = React.useMemo(() => {
     const normalizeTitle = (title?: string | null) =>
       title?.trim() || "Untitled listing";
-    const isDraft = (listing: ListingSidebarItem) => {
-      const title = listing.title?.toLowerCase() ?? "";
-      return title.startsWith("draft") || listing.listingStage === "upload";
+    const parseTime = (value?: string | Date | null) => {
+      if (!value) return 0;
+      if (value instanceof Date) return value.getTime();
+      const parsed = new Date(value).getTime();
+      return Number.isFinite(parsed) ? parsed : 0;
     };
 
-    const drafts: ListingSidebarItem[] = [];
-    const active: ListingSidebarItem[] = [];
-
-    listings.forEach((listing) => {
-      const normalizedListing = {
+    return [...visibleListings]
+      .map((listing) => ({
         ...listing,
         title: normalizeTitle(listing.title)
-      };
+      }))
+      .sort((a, b) => parseTime(b.lastOpenedAt) - parseTime(a.lastOpenedAt));
+  }, [visibleListings]);
 
-      if (isDraft(normalizedListing)) {
-        drafts.push(normalizedListing);
-      } else {
-        active.push(normalizedListing);
-      }
-    });
+  const ListingRowSkeleton = ({ id }: { id: string }) => (
+    <div
+      key={`listing-skeleton-${id}`}
+      className="flex items-center justify-between gap-2 rounded-md px-2 py-2"
+    >
+      <div className="flex items-center gap-3 min-w-0">
+        <div className="h-1.5 w-1.5 rotate-45 rounded-xs bg-muted-foreground/20 animate-pulse" />
+        <div className="h-4 w-[150px] rounded-full bg-muted-foreground/10 animate-pulse" />
+      </div>
+      <div className="h-5 w-5 rounded-full bg-muted-foreground/10 animate-pulse" />
+    </div>
+  );
 
-    return {
-      draftListings: drafts,
-      activeListings: active
-    };
-  }, [listings]);
+  const ListingsSection = () => (
+    <div className="space-y-0.5 pl-2">
+      {listingItems.length > 0 ? (
+        listingItems.map((listing) =>
+          pendingListingIds.has(listing.id) ? (
+            <ListingRowSkeleton key={listing.id} id={listing.id} />
+          ) : (
+            <Button
+              key={listing.id}
+              variant="ghost"
+              className="w-full justify-between hover:bg-foreground/5"
+              asChild
+            >
+              <Link href={resolveListingPath(listing)}>
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-1.5 h-1.5 rotate-45 rounded-xs bg-muted-foreground/70 shrink-0" />
+                  <span className="text-sm truncate">{listing.title}</span>
+                </div>
+                <Badge variant="muted" className="rounded-full py-1 px-1">
+                  <FileEdit className="text-muted-foreground w-[14px]! h-[14px]!" />
+                </Badge>
+              </Link>
+            </Button>
+          )
+        )
+      ) : (
+        <div className="px-2 text-xs text-muted-foreground">
+          No listings yet.
+        </div>
+      )}
+    </div>
+  );
+
+  const resolveListingPath = (listing: ListingSidebarItem) => {
+    switch (listing.listingStage) {
+      case "review":
+        return `/listings/${listing.id}/review`;
+      case "generate":
+        return `/listings/${listing.id}/generate`;
+      case "create":
+        return `/listings/${listing.id}/create`;
+      case "categorize":
+      default:
+        return `/listings/${listing.id}/categorize`;
+    }
+  };
 
   const handleLogout = async () => {
     await user?.signOut();
@@ -197,23 +339,28 @@ const ViewSidebar = ({
         </div>
 
         {/* Content Section */}
-        <div className="space-y-1">
+        <div className="space-y-1 -mt-1">
           <div
             onClick={() => setContentExpanded(!contentExpanded)}
             className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
           >
             <span>Content</span>
             <div className="flex items-center gap-2">
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-5 w-5 hover:bg-foreground/5"
-                onClick={(e) => {
-                  e.stopPropagation();
-                }}
-              >
-                <Plus className="h-3 w-3" />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-6 w-6 hover:bg-foreground/5"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                    }}
+                  >
+                    <Plus className="h-3 w-3" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent sideOffset={6}>New Content</TooltipContent>
+              </Tooltip>
               <ChevronDown
                 className={cn(
                   "h-4 w-4 transition-transform",
@@ -233,7 +380,10 @@ const ViewSidebar = ({
                   <FileEdit className="h-4 w-4" />
                   <span className="text-sm">Drafts</span>
                 </div>
-                <Badge variant="muted" className="text-xs px-1.5 py-0 h-5">
+                <Badge
+                  variant="muted"
+                  className="text-xs px-1.5 font-bold py-0 h-5"
+                >
                   3
                 </Badge>
               </Button>
@@ -246,7 +396,10 @@ const ViewSidebar = ({
                   <Heart className="h-4 w-4" />
                   <span className="text-sm">Favorites</span>
                 </div>
-                <Badge variant="muted" className="text-xs px-1.5 py-0 h-5">
+                <Badge
+                  variant="muted"
+                  className="text-xs px-1.5 font-bold py-0 h-5"
+                >
                   12
                 </Badge>
               </Button>
@@ -259,7 +412,10 @@ const ViewSidebar = ({
                   <Clock className="h-4 w-4" />
                   <span className="text-sm">Scheduled</span>
                 </div>
-                <Badge variant="muted" className="text-xs px-1.5 py-0 h-5">
+                <Badge
+                  variant="muted"
+                  className="text-xs px-1.5 font-bold py-0 h-5"
+                >
                   5
                 </Badge>
               </Button>
@@ -272,7 +428,10 @@ const ViewSidebar = ({
                   <Archive className="h-4 w-4" />
                   <span className="text-sm">Archive</span>
                 </div>
-                <Badge variant="muted" className="text-xs px-1.5 py-0 h-5">
+                <Badge
+                  variant="muted"
+                  className="text-xs px-1.5 font-bold py-0 h-5"
+                >
                   48
                 </Badge>
               </Button>
@@ -286,23 +445,31 @@ const ViewSidebar = ({
         </div>
 
         {/* Listings Section */}
-        <div className="space-y-1">
+        <div className="space-y-1 -mt-1">
           <div
             onClick={() => setListingsExpanded(!listingsExpanded)}
             className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
           >
             <span>Listings</span>
             <div className="flex items-center gap-2">
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-5 w-5 hover:bg-foreground/5"
-                onClick={(e) => {
-                  e.stopPropagation();
-                }}
-              >
-                <Plus className="h-3 w-3" />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-6 w-6 hover:bg-foreground/5"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      router.push("/listings/sync");
+                    }}
+                  >
+                    <Plus className="h-3 w-3" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent sideOffset={6}>
+                  New Listing Campaign
+                </TooltipContent>
+              </Tooltip>
               <ChevronDown
                 className={cn(
                   "h-4 w-4 transition-transform",
@@ -312,73 +479,7 @@ const ViewSidebar = ({
             </div>
           </div>
 
-          {listingsExpanded && (
-            <div className="space-y-3 pl-2">
-              {draftListings.length > 0 ? (
-                <div className="space-y-1">
-                  <span className="px-2 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                    Drafts
-                  </span>
-                  <div className="space-y-0.5">
-                    {draftListings.map((listing) => (
-                      <Button
-                        key={listing.id}
-                        variant="ghost"
-                        className="w-full justify-between hover:bg-foreground/5"
-                        asChild
-                      >
-                        <Link href={`/listings/${listing.id}`}>
-                          <div className="flex items-center gap-3 min-w-0">
-                            <div className="w-1.5 h-1.5 rotate-45 rounded-xs bg-muted-foreground/70 shrink-0" />
-                            <span className="text-sm truncate">
-                              {listing.title}
-                            </span>
-                          </div>
-                          <Badge
-                            variant="muted"
-                            className="text-[10px] px-1.5 py-0 h-4"
-                          >
-                            Draft
-                          </Badge>
-                        </Link>
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-
-              {activeListings.length > 0 ? (
-                <div className="space-y-1">
-                  <span className="px-2 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                    Listings
-                  </span>
-                  <div className="space-y-0.5">
-                    {activeListings.map((listing) => (
-                      <Button
-                        key={listing.id}
-                        variant="ghost"
-                        className="w-full justify-start gap-3 hover:bg-foreground/5"
-                        asChild
-                      >
-                        <Link href={`/listings/${listing.id}`}>
-                          <div className="w-1.5 h-1.5 rotate-45 rounded-xs bg-foreground shrink-0" />
-                          <span className="text-sm truncate">
-                            {listing.title}
-                          </span>
-                        </Link>
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-
-              {draftListings.length === 0 && activeListings.length === 0 ? (
-                <div className="px-2 text-xs text-muted-foreground">
-                  No listings yet.
-                </div>
-              ) : null}
-            </div>
-          )}
+          {listingsExpanded && <ListingsSection />}
         </div>
 
         {/* Divider */}

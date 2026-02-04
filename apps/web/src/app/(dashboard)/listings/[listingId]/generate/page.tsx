@@ -1,15 +1,15 @@
 import { redirect } from "next/navigation";
 import { getUser } from "@web/src/server/actions/db/users";
-import { getListingById } from "@web/src/server/actions/db/listings";
-import { ListingProcessingView } from "@web/src/components/listings/ListingProcessingView";
+import { getListingById, updateListing } from "@web/src/server/actions/db/listings";
+import { ListingGenerateView } from "@web/src/components/listings/ListingGenerateView";
 
-interface ListingPropertyProcessingPageProps {
+interface ListingGeneratePageProps {
   params: Promise<{ listingId: string }>;
 }
 
-export default async function ListingPropertyProcessingPage({
+export default async function ListingGeneratePage({
   params
-}: ListingPropertyProcessingPageProps) {
+}: ListingGeneratePageProps) {
   const { listingId } = await params;
   const user = await getUser();
 
@@ -26,13 +26,12 @@ export default async function ListingPropertyProcessingPage({
     redirect("/listings/sync");
   }
 
+  await updateListing(user.id, listingId, { lastOpenedAt: new Date() });
+
   return (
-    <ListingProcessingView
-      mode="review"
+    <ListingGenerateView
       listingId={listingId}
-      userId={user.id}
       title={listing.title?.trim() || "Listing"}
-      address={listing.address ?? ""}
     />
   );
 }

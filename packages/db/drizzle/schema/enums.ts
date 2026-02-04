@@ -7,12 +7,10 @@ export const contentTypeEnum = pgEnum("content_type", [
 ]);
 
 export const listingStageEnum = pgEnum("listing_stage", [
-  "upload",
   "categorize",
-  "plan",
   "review",
   "generate",
-  "complete"
+  "create"
 ]);
 
 export const contentStatusEnum = pgEnum("content_status", [

@@ -2,7 +2,7 @@
 import * as React from "react";
 import { act } from "react";
 import { render } from "@testing-library/react";
-import { ListingDetailView } from "../ListingDetailView";
+import { ListingCategorizeView } from "../categorize/ListingCategorizeView";
 
 const mockPush = jest.fn();
 const mockToastError = jest.fn();
@@ -82,7 +82,7 @@ const baseProps = {
   hasPropertyDetails: false
 };
 
-describe("ListingDetailView", () => {
+describe("ListingCategorizeView", () => {
   beforeEach(() => {
     mockPush.mockReset();
     mockToastError.mockReset();
@@ -92,7 +92,7 @@ describe("ListingDetailView", () => {
   });
 
   it("navigates to processing when uploads complete", () => {
-    render(<ListingDetailView {...baseProps} />);
+    render(<ListingCategorizeView {...baseProps} />);
 
     expect(latestUploadProps).not.toBeNull();
 
@@ -102,12 +102,12 @@ describe("ListingDetailView", () => {
     });
 
     expect(mockPush).toHaveBeenCalledWith(
-      "/listings/listing-123/processing?batch=2&batchStartedAt=1234"
+      "/listings/listing-123/categorize/processing?batch=2&batchStartedAt=1234"
     );
   });
 
   it("creates listing image records on upload success", async () => {
-    render(<ListingDetailView {...baseProps} />);
+    render(<ListingCategorizeView {...baseProps} />);
 
     const records = [
       { key: "a", fileName: "a.jpg", publicUrl: "https://cdn/a" }
@@ -137,7 +137,7 @@ describe("ListingDetailView", () => {
   });
 
   it("cleans up uploads when record creation fails", async () => {
-    render(<ListingDetailView {...baseProps} />);
+    render(<ListingCategorizeView {...baseProps} />);
 
     const records = [
       { key: "a", fileName: "a.jpg", publicUrl: "https://cdn/a" },

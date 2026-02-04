@@ -22,6 +22,7 @@ import {
 import { useRouter } from "next/navigation";
 import { getImageMetadataFromFile } from "@web/src/lib/imageMetadata";
 import type { ImageMetadata } from "@shared/types/models";
+import { emitListingSidebarUpdate } from "@web/src/lib/listingSidebarEvents";
 
 interface ListingSyncViewProps {
   userId: string;
@@ -58,6 +59,12 @@ export function ListingSyncView({ userId }: ListingSyncViewProps) {
     }
     listingIdRef.current = listing.id;
     setListingId(listing.id);
+    emitListingSidebarUpdate({
+      id: listing.id,
+      title: listing.title ?? null,
+      listingStage: listing.listingStage ?? "categorize",
+      lastOpenedAt: new Date().toISOString()
+    });
     return listing.id;
   }, [userId]);
 
@@ -207,7 +214,9 @@ export function ListingSyncView({ userId }: ListingSyncViewProps) {
               count > 0
                 ? `?batch=${count}&batchStartedAt=${batchStartedAt}`
                 : `?batchStartedAt=${batchStartedAt}`;
-            router.push(`/listings/${activeListingId}/processing${batchParam}`);
+            router.push(
+              `/listings/${activeListingId}/categorize/processing${batchParam}`
+            );
           }
         }}
       />

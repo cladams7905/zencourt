@@ -11,7 +11,8 @@ import {
   inArray,
   ne,
   like,
-  desc
+  desc,
+  sql
 } from "@db/client";
 import {
   DBContent,
@@ -278,7 +279,9 @@ export async function getUserListings(userId: string): Promise<DBListing[]> {
         .from(listings)
         .leftJoin(content, eq(content.listingId, listings.id))
         .where(eq(listings.userId, userId))
-        .orderBy(desc(listings.createdAt));
+        .orderBy(
+          desc(sql`coalesce(${listings.lastOpenedAt}, ${listings.createdAt})`)
+        );
 
       const listingMap = new Map<
         string,

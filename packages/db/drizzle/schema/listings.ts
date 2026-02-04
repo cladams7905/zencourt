@@ -11,13 +11,14 @@ export const listings = pgTable(
     userId: text("user_id").notNull(),
     title: text("title"),
     address: text("address"),
+    lastOpenedAt: timestamp("last_opened_at"),
     propertyDetails: jsonb("property_details").$type<ListingPropertyDetails>(),
     propertyDetailsSource: text("property_details_source"),
     propertyDetailsFetchedAt: timestamp("property_details_fetched_at"),
     propertyDetailsRevision: text("property_details_revision"),
     listingStage: listingStageEnum("listing_stage")
       .notNull()
-      .default("upload"),
+      .default("categorize"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull()
   },

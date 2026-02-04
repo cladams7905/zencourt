@@ -131,12 +131,10 @@ export function isStageBefore(
   compareStage: ListingStage
 ): boolean {
   const stages: ListingStage[] = [
-    "upload",
     "categorize",
-    "plan",
     "review",
     "generate",
-    "complete"
+    "create"
   ];
   return stages.indexOf(stage) < stages.indexOf(compareStage);
 }
@@ -149,12 +147,10 @@ export function isStageAfter(
   compareStage: ListingStage
 ): boolean {
   const stages: ListingStage[] = [
-    "upload",
     "categorize",
-    "plan",
     "review",
     "generate",
-    "complete"
+    "create"
   ];
   return stages.indexOf(stage) > stages.indexOf(compareStage);
 }
@@ -166,12 +162,10 @@ export function getCompletedStages(
   currentStage: ListingStage
 ): ListingStage[] {
   const stages: ListingStage[] = [
-    "upload",
     "categorize",
-    "plan",
     "review",
     "generate",
-    "complete"
+    "create"
   ];
   const currentIndex = stages.indexOf(currentStage);
   return stages.slice(0, currentIndex);
@@ -184,12 +178,10 @@ export function getNextStage(
   currentStage: ListingStage
 ): ListingStage | null {
   const stages: ListingStage[] = [
-    "upload",
     "categorize",
-    "plan",
     "review",
     "generate",
-    "complete"
+    "create"
   ];
   const currentIndex = stages.indexOf(currentStage);
   return currentIndex < stages.length - 1 ? stages[currentIndex + 1] : null;
@@ -202,12 +194,10 @@ export function getPreviousStage(
   currentStage: ListingStage
 ): ListingStage | null {
   const stages: ListingStage[] = [
-    "upload",
     "categorize",
-    "plan",
     "review",
     "generate",
-    "complete"
+    "create"
   ];
   const currentIndex = stages.indexOf(currentStage);
   return currentIndex > 0 ? stages[currentIndex - 1] : null;

@@ -4,21 +4,32 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { ListingViewHeader } from "./ListingViewHeader";
 import { categorizeListingImages } from "@web/src/server/actions/api/vision";
-import { getListingImages } from "@web/src/server/actions/db/listings";
-import { Loader2 } from "lucide-react";
+import { fetchListingPropertyDetails } from "@web/src/server/actions/api/listingProperty";
+import {
+  getListingImages,
+  updateListing
+} from "@web/src/server/actions/db/listings";
+import { AlertTriangle, Loader2 } from "lucide-react";
+import { Button } from "../ui/button";
+import { toast } from "sonner";
+import { emitListingSidebarUpdate } from "@web/src/lib/listingSidebarEvents";
 
 type ListingProcessingViewProps = {
+  mode: "categorize" | "review";
   listingId: string;
   userId: string;
   title: string;
+  address?: string | null;
   batchCount?: number | null;
   batchStartedAt?: number | null;
 };
 
 export function ListingProcessingView({
+  mode,
   listingId,
   userId,
   title,
+  address,
   batchCount,
   batchStartedAt
 }: ListingProcessingViewProps) {
@@ -34,8 +45,68 @@ export function ListingProcessingView({
     typeof batchCount === "number" && batchCount > 0 ? batchCount : 0
   );
   const hasTriggeredCategorizeRef = React.useRef(false);
+  const [status, setStatus] = React.useState<"loading" | "success" | "error">(
+    "loading"
+  );
+  const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+  const [displayedProgress, setDisplayedProgress] = React.useState(0);
+
+  const resolvedTotal = totalToProcess ?? batchTotal;
+  const processedCount = Math.max(
+    0,
+    resolvedTotal - Math.min(resolvedTotal, remainingUncategorized)
+  );
+  const progressPercent =
+    mode === "categorize" && resolvedTotal > 0
+      ? Math.round((processedCount / resolvedTotal) * 100)
+      : 0;
+  const copy = React.useMemo(() => {
+    if (mode === "review") {
+      return {
+        title:
+          status === "error"
+            ? "Property lookup failed"
+            : "Fetching property details",
+        subtitle:
+          status === "error"
+            ? "We could not fetch IDX details. You can retry or fill in details manually."
+            : "We’re pulling public IDX records for review.",
+        addressLine: address || "Address on file",
+        helperText:
+          "This usually takes a few moments. Please keep this tab open."
+      };
+    }
+    return {
+      title: "Processing listing photos",
+      subtitle:
+        "We’re categorizing your photos so you can review each room quickly.",
+      addressLine: null,
+      helperText: "This usually takes a few moments. Please keep this tab open."
+    };
+  }, [address, mode, status]);
+
+  const fetchDetails = React.useCallback(async () => {
+    if (mode !== "review") {
+      return;
+    }
+    setStatus("loading");
+    setErrorMessage(null);
+    try {
+      await fetchListingPropertyDetails(userId, listingId, address ?? null);
+      setStatus("success");
+      router.replace(`/listings/${listingId}/review`);
+    } catch (error) {
+      setStatus("error");
+      setErrorMessage(
+        error instanceof Error ? error.message : "Failed to fetch details."
+      );
+    }
+  }, [address, listingId, mode, router, userId]);
 
   const refreshStatus = React.useCallback(async () => {
+    if (mode !== "categorize") {
+      return;
+    }
     try {
       const updated = await getListingImages(userId, listingId);
       if (!hasTriggeredCategorizeRef.current && updated.length > 0) {
@@ -83,14 +154,22 @@ export function ListingProcessingView({
       );
       if (!needsCategorization) {
         setIsProcessing(false);
-        router.replace(`/listings/${listingId}`);
+        emitListingSidebarUpdate({
+          id: listingId,
+          lastOpenedAt: new Date().toISOString()
+        });
+        router.replace(`/listings/${listingId}/categorize`);
       }
     } catch {
       // Ignore polling errors to avoid disrupting the UI.
     }
-  }, [listingId, router, batchStartedAt, userId]);
+  }, [listingId, router, batchStartedAt, userId, mode]);
 
   React.useEffect(() => {
+    if (mode === "review") {
+      void fetchDetails();
+      return;
+    }
     if (!isProcessing) {
       return;
     }
@@ -98,54 +177,91 @@ export function ListingProcessingView({
     void refreshStatus();
     const interval = setInterval(refreshStatus, 1000);
     return () => clearInterval(interval);
-  }, [isProcessing, refreshStatus]);
+  }, [isProcessing, refreshStatus, mode, fetchDetails]);
 
-  const resolvedTotal = totalToProcess ?? batchTotal;
-  const processedCount = Math.max(
-    0,
-    resolvedTotal - Math.min(resolvedTotal, remainingUncategorized)
-  );
+  React.useEffect(() => {
+    if (mode !== "categorize") {
+      return;
+    }
+    setDisplayedProgress(0);
+  }, [mode, listingId]);
+
+  React.useEffect(() => {
+    if (mode !== "categorize") {
+      return;
+    }
+    setDisplayedProgress((prev) => Math.max(prev, progressPercent));
+  }, [mode, progressPercent]);
+
+  React.useEffect(() => {
+    if (mode !== "categorize" || !isProcessing) {
+      return;
+    }
+    const interval = setInterval(() => {
+      setDisplayedProgress((prev) => {
+        const target = Math.max(progressPercent, prev);
+        const cap = target >= 100 ? 100 : Math.max(target, 95);
+        if (prev >= cap) {
+          return prev;
+        }
+        return Math.min(prev + 1, cap);
+      });
+    }, 500);
+    return () => clearInterval(interval);
+  }, [isProcessing, mode, progressPercent]);
+
+  const handleSkip = async () => {
+    try {
+      await updateListing(userId, listingId, { listingStage: "review" });
+      router.replace(`/listings/${listingId}/review`);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to skip fetch."
+      );
+    }
+  };
 
   return (
     <>
       <ListingViewHeader title={title} />
-      <div className="mx-auto flex w-full max-w-5xl flex-col gap-10 px-8 py-10">
-        <div className="mx-auto w-full max-w-[520px] space-y-6 text-center">
-          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full border border-border bg-secondary/60">
-            <Loader2 size={32} className="text-foreground animate-spin" />
+      <div className="mx-auto flex min-h-[calc(100vh-140px)] w-full max-w-5xl items-center justify-center px-8 py-10">
+        <div className="w-full max-w-[520px] space-y-6 text-center bg-background shadow-xs hover:shadow-md transition-all border border-border p-6 rounded-xl">
+          <div className="mx-auto mt-2 flex items-center justify-center">
+            {mode === "review" && status === "error" ? (
+              <AlertTriangle size={32} className="text-destructive" />
+            ) : (
+              <Loader2 size={40} className="text-foreground animate-spin" />
+            )}
           </div>
           <div className="space-y-2">
             <h2 className="text-2xl font-header text-foreground">
-              Processing listing photos
+              {copy.title}
+              {mode === "categorize" ? ` (${displayedProgress}%)` : ""}
             </h2>
-            <p className="text-sm text-muted-foreground">
-              We&apos;re categorizing your photos so you can review each room
-              quickly.
-            </p>
-          </div>
-          <div className="rounded-2xl border border-border bg-secondary p-6 text-left">
-            <div className="flex items-center gap-3 text-sm text-foreground">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-foreground text-background text-xs">
-                ✓
-              </span>
-              <span className="flex-1">Upload complete</span>
-              <span className="text-xs text-muted-foreground">
-                {resolvedTotal}/{resolvedTotal}
-              </span>
+            <div className="my-3 gap-3">
+              <p className="text-sm text-muted-foreground">{copy.subtitle}</p>
+              {copy.addressLine ? (
+                <p className="text-xs mt-1 text-muted-foreground">
+                  {copy.addressLine}
+                </p>
+              ) : null}
             </div>
-            <div className="mt-4 flex items-center gap-3 text-sm text-foreground">
-              <div className="flex h-6 w-6 items-center justify-center rounded-full border border-border">
-                <Loader2 size={14} className="text-foreground animate-spin" />
-              </div>
-              <span className="flex-1">Categorizing rooms with AI</span>
-              <span className="text-xs text-muted-foreground">
-                {processedCount}/{resolvedTotal}
-              </span>
-            </div>
-            <p className="mt-4 text-xs text-muted-foreground">
-              This usually takes a few moments. Please keep this tab open.
-            </p>
           </div>
+          <div className="h-px bg-border w-full" />
+          <p className="text-xs text-muted-foreground">{copy.helperText}</p>
+          {mode === "review" && status === "error" && errorMessage ? (
+            <div className="rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-3 text-xs text-destructive">
+              {errorMessage}
+            </div>
+          ) : null}
+          {mode === "review" && status === "error" ? (
+            <div className="flex flex-col gap-2">
+              <Button onClick={fetchDetails}>Retry fetch</Button>
+              <Button variant="outline" onClick={handleSkip}>
+                Review manually
+              </Button>
+            </div>
+          ) : null}
         </div>
       </div>
     </>

@@ -22,7 +22,8 @@ export default async function DashboardLayout({
   const listings = (await getUserListings(user.id)).map((listing) => ({
     id: listing.id,
     title: listing.title ?? null,
-    listingStage: listing.listingStage ?? null
+    listingStage: listing.listingStage ?? null,
+    lastOpenedAt: listing.lastOpenedAt ?? null
   }));
   const { sidebarName } = getUserDisplayNames(user);
   const paymentPlanLabel = getPaymentPlanLabel(userAdditional.paymentPlan);

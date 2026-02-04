@@ -2,7 +2,7 @@ import * as React from "react";
 import { act } from "react";
 import { render } from "@testing-library/react";
 import { screen, waitFor } from "@testing-library/dom";
-import { ListingProcessingView } from "../ListingProcessingView";
+import { ListingProcessingView } from "../../ListingProcessingView";
 
 const mockReplace = jest.fn();
 const mockedCategorizeListingImages = jest.fn(() => Promise.resolve());
@@ -20,15 +20,23 @@ const categorizeMock = mockedCategorizeListingImages as (
 jest.mock("@web/src/server/actions/api/vision", () => ({
   categorizeListingImages: (...args: unknown[]) => categorizeMock(...args)
 }));
+jest.mock("@web/src/server/actions/api/listingProperty", () => ({
+  fetchListingPropertyDetails: jest.fn()
+}));
 
 const getListingImagesMock = mockedGetListingImages as (
   ...a: unknown[]
 ) => unknown;
 jest.mock("@web/src/server/actions/db/listings", () => ({
-  getListingImages: (...args: unknown[]) => getListingImagesMock(...args)
+  getListingImages: (...args: unknown[]) => getListingImagesMock(...args),
+  updateListing: jest.fn()
+}));
+jest.mock("sonner", () => ({
+  toast: { error: jest.fn() }
 }));
 
 const baseProps = {
+  mode: "categorize" as const,
   listingId: "listing-1",
   userId: "user-1",
   title: "Listing Title"
@@ -101,7 +109,7 @@ describe("ListingProcessingView", () => {
     });
 
     await waitFor(() => {
-      expect(mockReplace).toHaveBeenCalledWith("/listings/listing-1");
+      expect(mockReplace).toHaveBeenCalledWith("/listings/listing-1/categorize");
     });
 
     unmount();

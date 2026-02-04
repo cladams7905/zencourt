@@ -37,6 +37,7 @@ export default async function ListingProcessingPage({
 
   return (
     <ListingProcessingView
+      mode="categorize"
       listingId={listingId}
       userId={user.id}
       title={listing.title?.trim() || "Listing"}

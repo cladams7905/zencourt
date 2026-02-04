@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getUser } from "@web/src/server/actions/db/users";
-import { getListingById } from "@web/src/server/actions/db/listings";
+import { getListingById, updateListing } from "@web/src/server/actions/db/listings";
 import { getOrCreateUserAdditional } from "@web/src/server/actions/db/userAdditional";
 import { ListingReviewView } from "@web/src/components/listings/ListingReviewView";
 
@@ -27,6 +27,8 @@ export default async function ListingReviewPage({
     redirect("/listings/sync");
   }
   const userAdditional = await getOrCreateUserAdditional(user.id);
+
+  await updateListing(user.id, listingId, { lastOpenedAt: new Date() });
 
   return (
     <ListingReviewView

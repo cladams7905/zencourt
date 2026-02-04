@@ -2,17 +2,18 @@ import { redirect } from "next/navigation";
 import { getUser } from "@web/src/server/actions/db/users";
 import {
   getListingById,
-  getListingImages
+  getListingImages,
+  updateListing
 } from "@web/src/server/actions/db/listings";
-import { ListingDetailView } from "@web/src/components/listings/ListingDetailView";
+import { ListingCategorizeView } from "@web/src/components/listings/categorize/ListingCategorizeView";
 
-interface ListingDetailPageProps {
+interface ListingCategorizePageProps {
   params: Promise<{ listingId: string }>;
 }
 
-export default async function ListingDetailPage({
+export default async function ListingCategorizePage({
   params
-}: ListingDetailPageProps) {
+}: ListingCategorizePageProps) {
   const { listingId } = await params;
   const user = await getUser();
   const googleMapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
@@ -30,6 +31,8 @@ export default async function ListingDetailPage({
     redirect("/listings/sync");
   }
 
+  await updateListing(user.id, listingId, { lastOpenedAt: new Date() });
+
   const images = await getListingImages(user.id, listingId);
   const imageItems = images.map((image) => ({
     id: image.id,
@@ -41,7 +44,7 @@ export default async function ListingDetailPage({
   }));
 
   return (
-    <ListingDetailView
+    <ListingCategorizeView
       title={listing.title?.trim() || "Listing"}
       initialAddress={listing.address ?? ""}
       listingId={listingId}

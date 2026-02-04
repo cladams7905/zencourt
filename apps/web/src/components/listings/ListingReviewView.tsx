@@ -32,6 +32,7 @@ import {
   TableRow
 } from "../ui/table";
 import { saveListingPropertyDetails } from "@web/src/server/actions/api/listingProperty";
+import { updateListing } from "@web/src/server/actions/db/listings";
 import type {
   ListingPropertyDetails,
   ListingSaleHistory,
@@ -39,6 +40,8 @@ import type {
 } from "@shared/types/models";
 import { ListingTimeline } from "./ListingTimeline";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { emitListingSidebarUpdate } from "@web/src/lib/listingSidebarEvents";
 
 type ListingReviewViewProps = {
   listingId: string;
@@ -294,6 +297,7 @@ export function ListingReviewView({
   propertyDetails,
   targetAudiences
 }: ListingReviewViewProps) {
+  const router = useRouter();
   const [details, setDetails] = React.useState<ListingPropertyDetails>(() => ({
     ...(propertyDetails ?? {}),
     address: propertyDetails?.address ?? address ?? ""
@@ -304,6 +308,7 @@ export function ListingReviewView({
       ? formatListingPrice(String(raw))
       : "";
   });
+  const [isContinueOpen, setIsContinueOpen] = React.useState(false);
   const [isSaving, setIsSaving] = React.useState(false);
   const [pendingSave, setPendingSave] = React.useState(false);
   const detailsRef = React.useRef(details);
@@ -460,6 +465,32 @@ export function ListingReviewView({
     },
     [listingId, userId]
   );
+
+  const handleConfirmContinue = React.useCallback(async () => {
+    try {
+      await handleSave({ silent: true });
+      await updateListing(userId, listingId, { listingStage: "generate" });
+      emitListingSidebarUpdate({
+        id: listingId,
+        listingStage: "generate",
+        lastOpenedAt: new Date().toISOString()
+      });
+      router.push(`/listings/${listingId}/generate`);
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to continue to generation."
+      );
+    }
+  }, [handleSave, listingId, router, userId]);
+
+  React.useEffect(() => {
+    emitListingSidebarUpdate({
+      id: listingId,
+      lastOpenedAt: new Date().toISOString()
+    });
+  }, [listingId]);
 
   const triggerAutoSave = React.useCallback(() => {
     if (!dirtyRef.current) {
@@ -874,7 +905,7 @@ export function ListingReviewView({
               <CardHeader>
                 <CardTitle>Exterior features</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-6">
                 <div className="space-y-2">
                   <Label>Materials</Label>
                   <TagInput
@@ -913,10 +944,8 @@ export function ListingReviewView({
                 <CardTitle>Interior features</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="space-y-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Living Spaces
-                  </p>
+                <div className="space-y-2">
+                  <Label>Living Spaces</Label>
                   <TagInput
                     value={details.living_spaces ?? []}
                     onChange={(next) =>
@@ -931,10 +960,8 @@ export function ListingReviewView({
                   />
                 </div>
 
-                <div className="space-y-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Kitchen
-                  </p>
+                <div className="space-y-2">
+                  <Label>Kitchen</Label>
                   <TagInput
                     value={kitchen.features ?? []}
                     onChange={(next) =>
@@ -952,10 +979,8 @@ export function ListingReviewView({
                   />
                 </div>
 
-                <div className="space-y-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Additional Spaces
-                  </p>
+                <div className="space-y-2">
+                  <Label>Additional Spaces</Label>
                   <TagInput
                     value={details.additional_spaces ?? []}
                     onChange={(next) =>
@@ -970,10 +995,8 @@ export function ListingReviewView({
                   />
                 </div>
 
-                <div className="space-y-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Primary Suite
-                  </p>
+                <div className="space-y-2">
+                  <Label>Primary Suite</Label>
                   <TagInput
                     value={primarySuite.features ?? []}
                     onChange={(next) =>
@@ -1450,19 +1473,76 @@ export function ListingReviewView({
                   </div>
                 ) : null}
                 <div className="my-4 h-px w-full bg-border/60" />
-                <Button
-                  className="w-full"
-                  onClick={() => handleSave()}
-                  disabled={!canContinue || isSaving}
-                >
-                  Continue
-                </Button>
+                <Dialog open={isContinueOpen} onOpenChange={setIsContinueOpen}>
+                  <DialogTrigger asChild>
+                    <Button
+                      className="w-full"
+                      disabled={!canContinue || isSaving}
+                    >
+                      Continue
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[560px]">
+                    <DialogHeader>
+                      <DialogTitle>
+                        Confirm details before we proceed
+                      </DialogTitle>
+                      <DialogDescription>
+                        We’ll generate video content from your categorized
+                        listing photos and the property details you’ve reviewed.
+                        After this step, changes won’t be available.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-8 text-sm text-muted-foreground">
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium text-foreground">
+                          Next steps
+                        </p>
+                        <ul className="space-y-1">
+                          <li>
+                            • We’ll turn your categorized photos into short-form
+                            video content.
+                          </li>
+                          <li>
+                            • Property details will be used to generate
+                            captions, hooks, and overlays.
+                          </li>
+                          <li>
+                            • You’ll review and publish content once generation
+                            completes.
+                          </li>
+                        </ul>
+                      </div>
+                      <div className="rounded-lg border border-border my-2 bg-secondary px-3 py-3 text-sm text-foreground">
+                        Please confirm that your photo categorization and
+                        property details are accurate. You won’t be able to edit
+                        them after this step.
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                      <Button
+                        variant="outline"
+                        onClick={() => setIsContinueOpen(false)}
+                      >
+                        Review again
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          setIsContinueOpen(false);
+                          void handleConfirmContinue();
+                        }}
+                      >
+                        Confirm &amp; Continue
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
                 <Button
                   asChild
                   variant="ghost"
                   className="w-full hover:bg-foreground/5"
                 >
-                  <Link href={`/listings/${listingId}`}>Go back</Link>
+                  <Link href={`/listings/${listingId}/categorize`}>Go back</Link>
                 </Button>
               </div>
             </div>

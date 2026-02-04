@@ -1,23 +1,23 @@
 "use client";
 
 import * as React from "react";
-import { ListingViewHeader } from "./ListingViewHeader";
+import { ListingViewHeader } from "../ListingViewHeader";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger
-} from "../ui/accordion";
-import { Button } from "../ui/button";
-import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
-import { AddressAutocomplete } from "../location/AddressAutocomplete";
+} from "../../ui/accordion";
+import { Button } from "../../ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../../ui/tooltip";
+import { AddressAutocomplete } from "../../location/AddressAutocomplete";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator
-} from "../ui/dropdown-menu";
+} from "../../ui/dropdown-menu";
 import {
   AlertTriangle,
   Loader2,
@@ -29,8 +29,8 @@ import {
   Trash2,
   Upload
 } from "lucide-react";
-import { LoadingImage } from "../ui/loading-image";
-import { UploadDialog } from "../uploads/UploadDialog";
+import { LoadingImage } from "../../ui/loading-image";
+import { UploadDialog } from "../../uploads/UploadDialog";
 import { MAX_IMAGE_BYTES } from "@shared/utils/mediaUpload";
 import { toast } from "sonner";
 import {
@@ -48,7 +48,8 @@ import { ListingCategoryDeleteDialog } from "./ListingCategoryDeleteDialog";
 import { ListingImageMoveDialog } from "./ListingImageMoveDialog";
 import { ListingImageDeleteDialog } from "./ListingImageDeleteDialog";
 import { getImageMetadataFromFile } from "@web/src/lib/imageMetadata";
-import { ListingTimeline } from "./ListingTimeline";
+import { ListingTimeline } from "../ListingTimeline";
+import { emitListingSidebarUpdate } from "@web/src/lib/listingSidebarEvents";
 
 type ListingImageItem = {
   id: string;
@@ -59,7 +60,7 @@ type ListingImageItem = {
   primaryScore?: number | null;
 };
 
-interface ListingDetailViewProps {
+interface ListingCategorizeViewProps {
   title: string;
   initialAddress: string;
   listingId: string;
@@ -153,7 +154,7 @@ const getNextCategoryValue = (base: string, existing: string[]) => {
   return `${normalizedBase}-${maxIndex + 1}`;
 };
 
-export function ListingDetailView({
+export function ListingCategorizeView({
   title,
   initialAddress,
   listingId,
@@ -161,7 +162,7 @@ export function ListingDetailView({
   initialImages,
   googleMapsApiKey,
   hasPropertyDetails
-}: ListingDetailViewProps) {
+}: ListingCategorizeViewProps) {
   const router = useRouter();
   const [draftTitle, setDraftTitle] = React.useState(title);
   const [images, setImages] = React.useState<ListingImageItem[]>(initialImages);
@@ -198,6 +199,13 @@ export function ListingDetailView({
   React.useEffect(() => {
     draftTitleRef.current = draftTitle;
   }, [draftTitle]);
+
+  React.useEffect(() => {
+    emitListingSidebarUpdate({
+      id: listingId,
+      lastOpenedAt: new Date().toISOString()
+    });
+  }, [listingId]);
 
   const categorizedImages = React.useMemo(
     () =>
@@ -363,6 +371,11 @@ export function ListingDetailView({
         await runDraftSave(() =>
           updateListing(userId, listingId, { title: nextTitle })
         );
+        emitListingSidebarUpdate({
+          id: listingId,
+          title: nextTitle,
+          lastOpenedAt: new Date().toISOString()
+        });
         return true;
       } catch (error) {
         setDraftTitle(previous);
@@ -1077,7 +1090,7 @@ export function ListingDetailView({
                                   <LoadingImage
                                     src={image.url}
                                     alt={image.filename}
-                                    className="h-full w-full object-cover"
+                                    className="h-full w-full object-cover transition-transform duration-200 ease-out group-hover:scale-[1.03]"
                                     fill
                                   />
                                 </div>
@@ -1280,7 +1293,7 @@ export function ListingDetailView({
             }));
             try {
               router.push(
-                `/listings/${listingId}/processing?batch=${created.length}&batchStartedAt=${batchStartedAt}`
+                `/listings/${listingId}/categorize/processing?batch=${created.length}&batchStartedAt=${batchStartedAt}`
               );
             } catch (error) {
               setImages((prev) => [...createdItems, ...prev]);
@@ -1316,7 +1329,9 @@ export function ListingDetailView({
             count > 0
               ? `?batch=${count}&batchStartedAt=${batchStartedAt}`
               : `?batchStartedAt=${batchStartedAt}`;
-          router.push(`/listings/${listingId}/processing${batchParam}`);
+          router.push(
+            `/listings/${listingId}/categorize/processing${batchParam}`
+          );
         }}
       />
       <ListingCategoryDialog
