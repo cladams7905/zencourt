@@ -1,8 +1,11 @@
 import { redirect } from "next/navigation";
 import { getUser } from "@web/src/server/actions/db/users";
-import { getListingById, updateListing } from "@web/src/server/actions/db/listings";
+import {
+  getListingById,
+  updateListing
+} from "@web/src/server/actions/db/listings";
 import { getOrCreateUserAdditional } from "@web/src/server/actions/db/userAdditional";
-import { ListingReviewView } from "@web/src/components/listings/ListingReviewView";
+import { ListingReviewView } from "@web/src/components/listings/review/ListingReviewView";
 
 interface ListingReviewPageProps {
   params: Promise<{ listingId: string }>;

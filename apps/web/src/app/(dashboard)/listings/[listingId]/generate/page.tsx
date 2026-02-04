@@ -1,7 +1,10 @@
 import { redirect } from "next/navigation";
 import { getUser } from "@web/src/server/actions/db/users";
-import { getListingById, updateListing } from "@web/src/server/actions/db/listings";
-import { ListingGenerateView } from "@web/src/components/listings/ListingGenerateView";
+import {
+  getListingById,
+  updateListing
+} from "@web/src/server/actions/db/listings";
+import { ListingGenerateView } from "@web/src/components/listings/generate/ListingGenerateView";
 
 interface ListingGeneratePageProps {
   params: Promise<{ listingId: string }>;

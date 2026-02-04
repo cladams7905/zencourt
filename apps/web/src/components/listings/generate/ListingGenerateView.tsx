@@ -1,6 +1,6 @@
 "use client";
 
-import { ListingViewHeader } from "./ListingViewHeader";
+import { ListingViewHeader } from "../ListingViewHeader";
 import React from "react";
 import { emitListingSidebarUpdate } from "@web/src/lib/listingSidebarEvents";
 

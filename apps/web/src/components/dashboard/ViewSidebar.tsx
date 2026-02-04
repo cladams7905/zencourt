@@ -192,6 +192,14 @@ const ViewSidebar = ({
       .sort((a, b) => parseTime(b.lastOpenedAt) - parseTime(a.lastOpenedAt));
   }, [visibleListings]);
 
+  const displayedListingItems = listingItems.slice(0, 3);
+  const hasMoreListings = listingItems.length > 3;
+
+  const formatStageLabel = (stage?: string | null) => {
+    if (!stage) return "Draft";
+    return stage.charAt(0).toUpperCase() + stage.slice(1);
+  };
+
   const ListingRowSkeleton = ({ id }: { id: string }) => (
     <div
       key={`listing-skeleton-${id}`}
@@ -207,8 +215,8 @@ const ViewSidebar = ({
 
   const ListingsSection = () => (
     <div className="space-y-0.5 pl-2">
-      {listingItems.length > 0 ? (
-        listingItems.map((listing) =>
+      {displayedListingItems.length > 0 ? (
+        displayedListingItems.map((listing) =>
           pendingListingIds.has(listing.id) ? (
             <ListingRowSkeleton key={listing.id} id={listing.id} />
           ) : (
@@ -223,9 +231,16 @@ const ViewSidebar = ({
                   <div className="w-1.5 h-1.5 rotate-45 rounded-xs bg-muted-foreground/70 shrink-0" />
                   <span className="text-sm truncate">{listing.title}</span>
                 </div>
-                <Badge variant="muted" className="rounded-full py-1 px-1">
-                  <FileEdit className="text-muted-foreground w-[14px]! h-[14px]!" />
-                </Badge>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge variant="muted" className="rounded-full py-1 px-1">
+                      <FileEdit className="text-muted-foreground w-[14px]! h-[14px]!" />
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent sideOffset={6}>
+                    Draft ({formatStageLabel(listing.listingStage)})
+                  </TooltipContent>
+                </Tooltip>
               </Link>
             </Button>
           )
@@ -235,6 +250,15 @@ const ViewSidebar = ({
           No listings yet.
         </div>
       )}
+      {hasMoreListings ? (
+        <Button
+          variant="ghost"
+          className="w-full justify-start text-xs text-muted-foreground hover:text-foreground"
+          asChild
+        >
+          <Link href="/listings">Show all</Link>
+        </Button>
+      ) : null}
     </div>
   );
 

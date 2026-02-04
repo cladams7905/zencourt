@@ -2,11 +2,11 @@
 
 import * as React from "react";
 import { toast } from "sonner";
-import { ListingViewHeader } from "./ListingViewHeader";
-import { Button } from "../ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
-import { Input } from "../ui/input";
-import { Label } from "../ui/label";
+import { ListingViewHeader } from "../ListingViewHeader";
+import { Button } from "../../ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "../../ui/card";
+import { Input } from "../../ui/input";
+import { Label } from "../../ui/label";
 import { AlertTriangle, Check, Loader2, SearchCheck, X } from "lucide-react";
 import {
   Select,
@@ -14,7 +14,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue
-} from "../ui/select";
+} from "../../ui/select";
 import {
   Dialog,
   DialogContent,
@@ -22,7 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger
-} from "../ui/dialog";
+} from "../../ui/dialog";
 import {
   Table,
   TableBody,
@@ -30,7 +30,7 @@ import {
   TableHead,
   TableHeader,
   TableRow
-} from "../ui/table";
+} from "../../ui/table";
 import { saveListingPropertyDetails } from "@web/src/server/actions/api/listingProperty";
 import { updateListing } from "@web/src/server/actions/db/listings";
 import type {
@@ -38,7 +38,7 @@ import type {
   ListingSaleHistory,
   ListingValuationExample
 } from "@shared/types/models";
-import { ListingTimeline } from "./ListingTimeline";
+import { ListingTimeline } from "../ListingTimeline";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { emitListingSidebarUpdate } from "@web/src/lib/listingSidebarEvents";
@@ -1542,7 +1542,9 @@ export function ListingReviewView({
                   variant="ghost"
                   className="w-full hover:bg-foreground/5"
                 >
-                  <Link href={`/listings/${listingId}/categorize`}>Go back</Link>
+                  <Link href={`/listings/${listingId}/categorize`}>
+                    Go back
+                  </Link>
                 </Button>
               </div>
             </div>

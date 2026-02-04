@@ -359,6 +359,149 @@ export async function getUserListings(userId: string): Promise<DBListing[]> {
   );
 }
 
+type ListingSummary = {
+  id: string;
+  title: string | null;
+  listingStage: string | null;
+  lastOpenedAt: Date | string | null;
+  createdAt: Date | string | null;
+  imageCount: number;
+};
+
+export type ListingSummaryPreview = ListingSummary & {
+  previewImages: string[];
+};
+
+export async function getUserListingSummaries(
+  userId: string
+): Promise<ListingSummary[]> {
+  if (!userId || userId.trim() === "") {
+    throw new Error("User ID is required to fetch listings");
+  }
+
+  return withDbErrorHandling(
+    async () => {
+      const rows = await db
+        .select({
+          id: listings.id,
+          title: listings.title,
+          listingStage: listings.listingStage,
+          lastOpenedAt: listings.lastOpenedAt,
+          createdAt: listings.createdAt,
+          imageCount: sql<number>`count(${listingImages.id})`.mapWith(Number)
+        })
+        .from(listings)
+        .leftJoin(listingImages, eq(listingImages.listingId, listings.id))
+        .where(eq(listings.userId, userId))
+        .groupBy(listings.id)
+        .orderBy(
+          desc(sql`coalesce(${listings.lastOpenedAt}, ${listings.createdAt})`)
+        );
+
+      return rows.map((row) => ({
+        ...row,
+        imageCount: Number.isFinite(row.imageCount) ? row.imageCount : 0
+      }));
+    },
+    {
+      actionName: "getUserListingSummaries",
+      errorMessage: "Failed to fetch listings. Please try again."
+    }
+  );
+}
+
+export async function getUserListingSummariesPage(
+  userId: string,
+  {
+    limit = 10,
+    offset = 0
+  }: {
+    limit?: number;
+    offset?: number;
+  } = {}
+): Promise<{ items: ListingSummaryPreview[]; hasMore: boolean }> {
+  if (!userId || userId.trim() === "") {
+    throw new Error("User ID is required to fetch listings");
+  }
+
+  return withDbErrorHandling(
+    async () => {
+      const normalizedLimit = Math.max(1, Math.min(limit, 50));
+      const normalizedOffset = Math.max(0, offset);
+
+      const rows = await db
+        .select({
+          id: listings.id,
+          title: listings.title,
+          listingStage: listings.listingStage,
+          lastOpenedAt: listings.lastOpenedAt,
+          createdAt: listings.createdAt,
+          imageCount: sql<number>`count(${listingImages.id})`.mapWith(Number)
+        })
+        .from(listings)
+        .leftJoin(listingImages, eq(listingImages.listingId, listings.id))
+        .where(eq(listings.userId, userId))
+        .groupBy(listings.id)
+        .orderBy(
+          desc(sql`coalesce(${listings.lastOpenedAt}, ${listings.createdAt})`)
+        )
+        .limit(normalizedLimit + 1)
+        .offset(normalizedOffset);
+
+      const hasMore = rows.length > normalizedLimit;
+      const pageRows = rows.slice(0, normalizedLimit);
+      const listingIds = pageRows.map((row) => row.id);
+      const previewImagesMap = new Map<string, string[]>();
+
+      if (listingIds.length > 0) {
+        const images = await db
+          .select({
+            listingId: listingImages.listingId,
+            url: listingImages.url,
+            isPrimary: listingImages.isPrimary,
+            uploadedAt: listingImages.uploadedAt
+          })
+          .from(listingImages)
+          .where(inArray(listingImages.listingId, listingIds))
+          .orderBy(desc(listingImages.isPrimary), desc(listingImages.uploadedAt));
+
+        for (const image of images) {
+          const list = previewImagesMap.get(image.listingId) ?? [];
+          if (list.length >= 3) {
+            continue;
+          }
+          list.push(image.url);
+          previewImagesMap.set(image.listingId, list);
+        }
+      }
+
+      const signedPreviewImagesMap = new Map<string, string[]>();
+      for (const [listingId, urls] of previewImagesMap.entries()) {
+        const signedUrls = await Promise.all(
+          urls.map((url) => resolveSignedDownloadUrl(url))
+        );
+        signedPreviewImagesMap.set(
+          listingId,
+          signedUrls.filter((url): url is string => Boolean(url))
+        );
+      }
+
+      return {
+        items: pageRows.map((row) => ({
+          ...row,
+          imageCount: Number.isFinite(row.imageCount) ? row.imageCount : 0,
+          previewImages: signedPreviewImagesMap.get(row.id) ?? []
+        })),
+        hasMore
+      };
+    },
+    {
+      actionName: "getUserListingSummariesPage",
+      errorMessage: "Failed to fetch listings. Please try again."
+    }
+  );
+}
+
 export async function getListingImages(
   userId: string,
   listingId: string

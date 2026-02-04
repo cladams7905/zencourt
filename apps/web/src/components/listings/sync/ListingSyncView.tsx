@@ -1,9 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { ViewHeader } from "../dashboard/ViewHeader";
-import { Badge } from "../ui/badge";
-import { Button } from "../ui/button";
+import { ViewHeader } from "../../dashboard/ViewHeader";
+import { Badge } from "../../ui/badge";
+import { Button } from "../../ui/button";
 import {
   Card,
   CardContent,
@@ -11,8 +11,8 @@ import {
   CardFooter,
   CardHeader,
   CardTitle
-} from "../ui/card";
-import { UploadDialog } from "../uploads/UploadDialog";
+} from "../../ui/card";
+import { UploadDialog } from "../../uploads/UploadDialog";
 import { MAX_IMAGE_BYTES } from "@shared/utils/mediaUpload";
 import {
   createDraftListing,
