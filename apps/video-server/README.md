@@ -89,8 +89,10 @@ video-server/
 ## Key Services
 
 ### Video Generation Service (`videoGenerationService.ts`)
+
 Orchestrates the entire video generation workflow:
-- Receives job requests from the web app
+
+- Receives job requests from the Next.js web app
 - Dispatches to Runway ML (primary) or Kling/fal.ai (fallback)
 - Handles webhook callbacks from AI services
 - Downloads and normalizes generated videos
@@ -100,25 +102,33 @@ Orchestrates the entire video generation workflow:
 **Clip-first workflow note:** the parent `video_gen_batch` record is treated as a run/batch only. Final asset URLs live on the `content` row when a user saves a draft/favorite. Individual clip URLs and thumbnails are stored on `video_gen_jobs`.
 
 ### Runway Service (`runwayService.ts`)
+
 Integrates with Runway ML's gen4_turbo model:
+
 - Image-to-video generation
 - Supports various aspect ratios: `1280:720`, `720:1280`, `1104:832`, `832:1104`, `960:960`, `1584:672`
 - Built-in task polling via SDK's `waitForTaskOutput()`
 
 ### Remotion Render Service (`remotionRenderService.ts`)
+
 Handles video composition using Remotion:
+
 - Combines individual room videos into final listing video
 - Supports vertical (720x1280) and landscape (1280x720) orientations
 - Generates thumbnails from video frames
 - Progress tracking and cancellation support
 
 ### Database Helpers (`utils/dbHelpers.ts`)
+
 Centralized database operations:
+
 - Render job CRUD: `createRenderJobRecord`, `markRenderJobProcessing`, `updateRenderJobProgress`, `markRenderJobCompleted`, `markRenderJobFailed`
 - Cancel operations: `cancelVideosByListing`, `cancelVideosByIds`, `cancelJobsByListingId`
 
 ### TTL Cache (`utils/cache.ts`)
+
 Memory-safe caching with automatic expiration:
+
 - Configurable max size and TTL
 - Automatic pruning of expired entries
 - Used for video context caching during generation
@@ -243,39 +253,39 @@ npm run test:coverage # Coverage report
 
 ### Health & Status
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `GET /` | GET | Server information and status |
-| `GET /health` | GET | Health check for orchestration |
+| Endpoint      | Method | Description                    |
+| ------------- | ------ | ------------------------------ |
+| `GET /`       | GET    | Server information and status  |
+| `GET /health` | GET    | Health check for orchestration |
 
 ### Video Generation
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `POST /video/generate` | POST | Start video generation for jobs |
-| `POST /video/cancel` | POST | Cancel in-flight video generation |
+| Endpoint               | Method | Description                       |
+| ---------------------- | ------ | --------------------------------- |
+| `POST /video/generate` | POST   | Start video generation for jobs   |
+| `POST /video/cancel`   | POST   | Cancel in-flight video generation |
 
 ### Render Jobs
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `POST /renders` | POST | Queue a Remotion render job |
-| `GET /renders/:jobId` | GET | Get render job status |
-| `DELETE /renders/:jobId` | DELETE | Cancel a render job |
+| Endpoint                 | Method | Description                 |
+| ------------------------ | ------ | --------------------------- |
+| `POST /renders`          | POST   | Queue a Remotion render job |
+| `GET /renders/:jobId`    | GET    | Get render job status       |
+| `DELETE /renders/:jobId` | DELETE | Cancel a render job         |
 
 ### Webhooks
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `POST /webhooks/fal` | POST | fal.ai completion webhook |
+| Endpoint             | Method | Description               |
+| -------------------- | ------ | ------------------------- |
+| `POST /webhooks/fal` | POST   | fal.ai completion webhook |
 
 ### Storage
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `POST /storage/upload` | POST | Upload file to B2 |
-| `DELETE /storage/delete` | DELETE | Delete file from B2 |
-| `POST /storage/signed-url` | POST | Generate pre-signed URL |
+| Endpoint                   | Method | Description             |
+| -------------------------- | ------ | ----------------------- |
+| `POST /storage/upload`     | POST   | Upload file to B2       |
+| `DELETE /storage/delete`   | DELETE | Delete file from B2     |
+| `POST /storage/signed-url` | POST   | Generate pre-signed URL |
 
 ## Video Generation Flow
 
