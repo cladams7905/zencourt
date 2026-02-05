@@ -5,6 +5,7 @@ export interface VideoJobUpdateEvent {
   jobId: string;
   status: VideoStatus;
   videoUrl?: string | null;
+  thumbnailUrl?: string | null;
   errorMessage?: string | null;
   roomId?: string | null;
   roomName?: string | null;

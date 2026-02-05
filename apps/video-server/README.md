@@ -94,8 +94,10 @@ Orchestrates the entire video generation workflow:
 - Dispatches to Runway ML (primary) or Kling/fal.ai (fallback)
 - Handles webhook callbacks from AI services
 - Downloads and normalizes generated videos
-- Triggers Remotion composition when all jobs complete
+- Triggers Remotion composition when all jobs complete **only if** `ENABLE_FINAL_COMPOSITION=true`
 - Sends completion webhooks to the web app
+
+**Clip-first workflow note:** when `ENABLE_FINAL_COMPOSITION` is not enabled, the parent `video_content` record is treated as a run/batch only. The server does **not** write `videoUrl` or `thumbnailUrl` on `video_content` until a user saves a draft/favorite (or composition is enabled). Individual clip URLs and thumbnails are stored on `video_content_jobs`.
 
 ### Runway Service (`runwayService.ts`)
 Integrates with Runway ML's gen4_turbo model:
@@ -149,6 +151,7 @@ See `.env.example` for all required and optional environment variables.
 - `RUNWAY_API_URL` - Override Runway API base URL (default: `https://api.dev.runwayml.com`)
 - `RUNWAY_API_VERSION` - Override Runway API version (default: `2024-11-06`)
 - `STORAGE_HEALTH_CACHE_MS` - Cache duration for storage health checks (default: 300000 = 5 min)
+- `ENABLE_FINAL_COMPOSITION` - Set `true` to compose a final video with Remotion and persist `video_content.videoUrl` + `thumbnailUrl` when all clips complete. Leave unset/false for clip-only mode.
 
 ### Backblaze B2 Configuration
 

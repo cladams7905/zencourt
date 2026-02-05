@@ -13,9 +13,10 @@ import { AlertTriangle, Loader2 } from "lucide-react";
 import { Button } from "../ui/button";
 import { toast } from "sonner";
 import { emitListingSidebarUpdate } from "@web/src/lib/listingSidebarEvents";
+import type { VideoJobUpdateEvent } from "@web/src/types/video-status";
 
 type ListingProcessingViewProps = {
-  mode: "categorize" | "review";
+  mode: "categorize" | "review" | "generate";
   listingId: string;
   userId: string;
   title: string;
@@ -44,7 +45,11 @@ export function ListingProcessingView({
   const [batchTotal, setBatchTotal] = React.useState(
     typeof batchCount === "number" && batchCount > 0 ? batchCount : 0
   );
+  const [generationJobs, setGenerationJobs] = React.useState<
+    VideoJobUpdateEvent[]
+  >([]);
   const hasTriggeredCategorizeRef = React.useRef(false);
+  const hasNavigatedRef = React.useRef(false);
   const [status, setStatus] = React.useState<"loading" | "success" | "error">(
     "loading"
   );
@@ -56,10 +61,40 @@ export function ListingProcessingView({
     0,
     resolvedTotal - Math.min(resolvedTotal, remainingUncategorized)
   );
+
+  const generationSummary = React.useMemo(() => {
+    if (mode !== "generate") {
+      return {
+        total: 0,
+        completed: 0,
+        failed: 0,
+        progressPercent: 0,
+        isComplete: false
+      };
+    }
+    const total = generationJobs.length;
+    const completed = generationJobs.filter((job) =>
+      ["completed", "failed", "canceled"].includes(job.status)
+    ).length;
+    const failed = generationJobs.filter((job) => job.status === "failed")
+      .length;
+    const progressPercent =
+      total > 0 ? Math.round((completed / total) * 100) : 0;
+    return {
+      total,
+      completed,
+      failed,
+      progressPercent,
+      isComplete: total > 0 && completed >= total
+    };
+  }, [generationJobs, mode]);
+
   const progressPercent =
     mode === "categorize" && resolvedTotal > 0
       ? Math.round((processedCount / resolvedTotal) * 100)
-      : 0;
+      : mode === "generate"
+        ? generationSummary.progressPercent
+        : 0;
   const copy = React.useMemo(() => {
     if (mode === "review") {
       return {
@@ -74,6 +109,16 @@ export function ListingProcessingView({
         addressLine: address || "Address on file",
         helperText:
           "This usually takes a few moments. Please keep this tab open."
+      };
+    }
+    if (mode === "generate") {
+      return {
+        title: "Generating clips",
+        subtitle:
+          "We’re turning your listing photos into short b-roll clips for your reels.",
+        addressLine: null,
+        helperText:
+          "Keep this tab open. We’ll automatically take you to your clip board when ready."
       };
     }
     return {
@@ -102,6 +147,28 @@ export function ListingProcessingView({
       );
     }
   }, [address, listingId, mode, router, userId]);
+
+  const refreshGenerationStatus = React.useCallback(async () => {
+    if (mode !== "generate") {
+      return;
+    }
+    try {
+      const response = await fetch(`/api/v1/video/status/${listingId}`);
+      if (!response.ok) {
+        return;
+      }
+      const payload = (await response.json()) as {
+        success: boolean;
+        data?: { jobs?: VideoJobUpdateEvent[] };
+      };
+      if (!payload?.success || !payload.data?.jobs) {
+        return;
+      }
+      setGenerationJobs(payload.data.jobs);
+    } catch {
+      // Ignore polling errors to avoid disrupting the UI.
+    }
+  }, [listingId, mode]);
 
   const refreshStatus = React.useCallback(async () => {
     if (mode !== "categorize") {
@@ -180,21 +247,67 @@ export function ListingProcessingView({
   }, [isProcessing, refreshStatus, mode, fetchDetails]);
 
   React.useEffect(() => {
-    if (mode !== "categorize") {
+    if (mode === "generate") {
+      void refreshGenerationStatus();
+      const interval = setInterval(refreshGenerationStatus, 2000);
+      return () => clearInterval(interval);
+    }
+    return;
+  }, [mode, refreshGenerationStatus]);
+
+  React.useEffect(() => {
+    if (mode !== "generate") {
+      return;
+    }
+    if (!generationSummary.total || !generationSummary.isComplete) {
+      return;
+    }
+    if (hasNavigatedRef.current) {
+      return;
+    }
+    hasNavigatedRef.current = true;
+    const finalize = async () => {
+      try {
+        await updateListing(userId, listingId, { listingStage: "create" });
+      } catch {
+        // Ignore transition failures; navigation will still proceed.
+      }
+      emitListingSidebarUpdate({
+        id: listingId,
+        listingStage: "create",
+        lastOpenedAt: new Date().toISOString()
+      });
+      router.replace(`/listings/${listingId}/create`);
+    };
+    void finalize();
+  }, [
+    generationSummary.isComplete,
+    generationSummary.total,
+    listingId,
+    mode,
+    router,
+    userId
+  ]);
+
+  React.useEffect(() => {
+    if (mode !== "categorize" && mode !== "generate") {
       return;
     }
     setDisplayedProgress(0);
   }, [mode, listingId]);
 
   React.useEffect(() => {
-    if (mode !== "categorize") {
+    if (mode !== "categorize" && mode !== "generate") {
       return;
     }
     setDisplayedProgress((prev) => Math.max(prev, progressPercent));
   }, [mode, progressPercent]);
 
   React.useEffect(() => {
-    if (mode !== "categorize" || !isProcessing) {
+    if (mode !== "categorize" && mode !== "generate") {
+      return;
+    }
+    if (mode === "categorize" && !isProcessing) {
       return;
     }
     const interval = setInterval(() => {
@@ -209,6 +322,17 @@ export function ListingProcessingView({
     }, 500);
     return () => clearInterval(interval);
   }, [isProcessing, mode, progressPercent]);
+
+  React.useEffect(() => {
+    if (mode !== "generate") {
+      return;
+    }
+    emitListingSidebarUpdate({
+      id: listingId,
+      listingStage: "generate",
+      lastOpenedAt: new Date().toISOString()
+    });
+  }, [listingId, mode]);
 
   const handleSkip = async () => {
     try {
@@ -236,7 +360,9 @@ export function ListingProcessingView({
           <div className="space-y-2">
             <h2 className="text-2xl font-header text-foreground">
               {copy.title}
-              {mode === "categorize" ? ` (${displayedProgress}%)` : ""}
+              {mode === "categorize" || mode === "generate"
+                ? ` (${displayedProgress}%)`
+                : ""}
             </h2>
             <div className="my-3 gap-3">
               <p className="text-sm text-muted-foreground">{copy.subtitle}</p>

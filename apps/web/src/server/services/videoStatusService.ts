@@ -37,6 +37,7 @@ export async function getListingVideoStatus(
         id: videoContentJobs.id,
         status: videoContentJobs.status,
         videoUrl: videoContentJobs.videoUrl,
+        thumbnailUrl: videoContentJobs.thumbnailUrl,
         errorMessage: videoContentJobs.errorMessage,
         generationSettings: videoContentJobs.generationSettings
       })
@@ -46,15 +47,22 @@ export async function getListingVideoStatus(
 
     jobs = await Promise.all(
       jobRows.map(async (job) => {
-        const signedVideoUrl = await getSignedDownloadUrlSafe(
-          job.videoUrl,
-          VIDEO_STATUS_URL_TTL_SECONDS
-        );
+        const [signedVideoUrl, signedThumbnailUrl] = await Promise.all([
+          getSignedDownloadUrlSafe(
+            job.videoUrl,
+            VIDEO_STATUS_URL_TTL_SECONDS
+          ),
+          getSignedDownloadUrlSafe(
+            job.thumbnailUrl,
+            VIDEO_STATUS_URL_TTL_SECONDS
+          )
+        ]);
         return {
           listingId,
           jobId: job.id,
           status: job.status,
           videoUrl: signedVideoUrl ?? job.videoUrl,
+          thumbnailUrl: signedThumbnailUrl ?? job.thumbnailUrl,
           errorMessage: job.errorMessage,
           roomId: job.generationSettings?.roomId,
           roomName: job.generationSettings?.roomName,

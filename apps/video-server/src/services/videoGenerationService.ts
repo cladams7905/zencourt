@@ -72,6 +72,10 @@ class VideoGenerationService {
     ttlMs: 30 * 60 * 1000 // 30 minutes
   });
 
+  private shouldComposeFinalVideo(): boolean {
+    return process.env.ENABLE_FINAL_COMPOSITION === "true";
+  }
+
   private async getVideoContext(videoId: string): Promise<VideoContext> {
     const cached = this.videoContextCache.get(videoId);
     if (cached) {
@@ -614,18 +618,33 @@ class VideoGenerationService {
     );
 
     if (completionStatus.allCompleted) {
-      this.composeAndFinalizeVideo(
-        job.videoContentId,
-        completionStatus.completedJobs
-      ).catch((error) => {
-        logger.error(
-          {
-            videoId: job.videoContentId,
-            error: error instanceof Error ? error.message : String(error)
-          },
-          "[VideoGenerationService] Composition failed"
-        );
-      });
+      if (this.shouldComposeFinalVideo()) {
+        this.composeAndFinalizeVideo(
+          job.videoContentId,
+          completionStatus.completedJobs
+        ).catch((error) => {
+          logger.error(
+            {
+              videoId: job.videoContentId,
+              error: error instanceof Error ? error.message : String(error)
+            },
+            "[VideoGenerationService] Composition failed"
+          );
+        });
+      } else {
+        const failedCount = completionStatus.failedJobs;
+        await db
+          .update(videos)
+          .set({
+            status: "completed",
+            errorMessage:
+              failedCount > 0
+                ? `${failedCount} clip${failedCount === 1 ? "" : "s"} failed`
+                : null,
+            updatedAt: new Date()
+          })
+          .where(eq(videos.id, job.videoContentId));
+      }
     }
   }
 
@@ -999,6 +1018,7 @@ class VideoGenerationService {
   private async evaluateJobCompletion(videoId: string): Promise<{
     allCompleted: boolean;
     completedJobs: (typeof videoJobs.$inferSelect)[];
+    failedJobs: number;
   }> {
     const jobs = await db
       .select()
@@ -1006,10 +1026,11 @@ class VideoGenerationService {
       .where(eq(videoJobs.videoContentId, videoId));
 
     if (jobs.length === 0) {
-      return { allCompleted: false, completedJobs: [] };
+      return { allCompleted: false, completedJobs: [], failedJobs: 0 };
     }
 
     const completedJobs = filterAndSortCompletedJobs(jobs);
+    const failedJobs = jobs.filter((job) => job.status === "failed").length;
 
     const allDone = jobs.every(
       (job) => job.status === "completed" || job.status === "failed"
@@ -1047,14 +1068,14 @@ class VideoGenerationService {
         );
       }
 
-      return { allCompleted: false, completedJobs: [] };
+      return { allCompleted: false, completedJobs: [], failedJobs };
     }
 
     if (!allDone || completedJobs.length === 0) {
-      return { allCompleted: false, completedJobs };
+      return { allCompleted: false, completedJobs, failedJobs };
     }
 
-    return { allCompleted: true, completedJobs };
+    return { allCompleted: true, completedJobs, failedJobs };
   }
 
   /**

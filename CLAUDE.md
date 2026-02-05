@@ -100,28 +100,7 @@ npm run type-check --workspace=@zencourt/video-server
 
 ### Video Server (apps/video-server)
 
-**Structure:**
-
-- `routes/` - Express routes (video, webhooks, renders, health, storage)
-- `services/` - Business logic layer
-  - `db/` - Repository pattern (`videoRepository`, `videoJobRepository`)
-  - `runwayService` - Runway Gen-4 Turbo image-to-video (default provider)
-  - `klingService` - fal.ai Kling AI video generation (fallback provider)
-  - `storageService` - S3-compatible storage (Backblaze B2)
-  - `videoGenerationService` - Orchestration of video pipeline
-  - `remotionRenderService` - Server-side Remotion rendering
-  - `remotionRenderQueue` - In-memory render queue + progress
-  - `webhookService` - Downstream webhook delivery
-- `middleware/` - Auth validation and error handling
-- `config/` - Environment, logging, storage configuration
-
-**Video Processing Pipeline:**
-
-1. Web app requests generation via `/video/generate`, creating a parent `video_content` row plus `video_content_jobs` (one per room).
-2. Video-server dispatches each job to Runway (Gen-4 Turbo) and falls back to Kling (Fal) on failure.
-3. Runway completion is awaited in-process; Kling completion arrives via Fal webhook → both paths upload per-job MP4 + thumbnail to B2 and update `video_content_jobs`.
-4. When all jobs complete, video-server enqueues a Remotion render job (server-side) using `remotionRenderQueue`.
-5. Remotion render outputs final MP4 + thumbnail → stored in B2 → `video_content` updated → final webhook to web app.
+Details for the video server are maintained in `apps/video-server/README.md`. Refer to that file when you need routing, pipeline, or environment specifics. Keep this CLAUDE file focused on web app usage unless a task is explicitly about the video server.
 
 ### Database (packages/db)
 
@@ -178,25 +157,7 @@ Also use shared helpers for storage URL parsing/building (`extractStorageKeyFrom
 
 ### 3. Video Job Architecture
 
-Each video generation is split into multiple `video_content_jobs` (one per room). This enables:
-
-- Parallel processing of individual videos
-- Individual retry logic per job
-- Granular error tracking
-
-Fields include: `errorType`, `errorRetryable`, `errorMessage` for debugging.
-
-Final composition jobs are tracked in `video_render_jobs` with status/progress.
-
-### 4. Webhook Chain
-
-**Runway/Kling → video-server → web app**
-
-Video-server acts as middleware to add:
-
-- Retry logic for failed requests
-- Error categorization and handling
-- Webhook delivery to web app
+Video job details live in `apps/video-server/README.md`. Keep this file focused on web app usage unless the task is video-server specific.
 
 ### 5. Database Access Consistency
 
@@ -206,12 +167,7 @@ Video-server acts as middleware to add:
 
 ### 6. Docker Build Context
 
-Video-server Dockerfile builds from **monorepo root** (`context: ../..`) to access shared packages. The build:
-
-- Copies entire monorepo structure
-- Installs dependencies for all workspaces
-- Compiles TypeScript in container
-- Includes Remotion rendering dependencies in the image
+See `apps/video-server/README.md` for video-server deployment and Docker details.
 
 ### 7. Next.js Monorepo Configuration
 
@@ -221,11 +177,9 @@ Non-standard config in `next.config.ts`:
 - Externalizes Pino to prevent bundling issues
 - Output file tracing includes monorepo root
 
-### 8. Remotion Rendering
+### 8. Video Server Details
 
-- Server-side renders run in `apps/video-server` via `@remotion/renderer`
-- Renders are queued in-memory with a semaphore (default 3 concurrent)
-- Render progress is persisted to `video_render_jobs`
+Refer to `apps/video-server/README.md` for video-server specific rendering and queueing behavior.
 
 ## Key Files for Understanding the System
 
@@ -234,11 +188,9 @@ Non-standard config in `next.config.ts`:
 3. `packages/shared/types/models/db.asset.ts` - Asset + stage enums shared with frontend.
 4. `packages/shared/types/models/db.video.ts` - Video + job type definitions.
 5. `apps/video-server/src/services/videoGenerationService.ts` - Core orchestration logic.
-6. `apps/video-server/src/services/remotionRenderQueue.ts` - Render queue and progress tracking.
-7. `apps/web/src/server/actions/db/*.ts` - Server actions wrapping DB access.
-8. `apps/web/src/proxy.ts` - Stack Auth validation logic.
-9. `tsconfig.base.json` - Monorepo path mappings
-10. `.github/workflows/deploy-video-server.yml` - Hetzner deployment pipeline
+6. `apps/web/src/server/actions/db/*.ts` - Server actions wrapping DB access.
+7. `apps/web/src/proxy.ts` - Stack Auth validation logic.
+8. `tsconfig.base.json` - Monorepo path mappings
 
 ## Deployment
 

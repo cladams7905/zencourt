@@ -4,7 +4,7 @@ import {
   getListingById,
   updateListing
 } from "@web/src/server/actions/db/listings";
-import { ListingGenerateView } from "@web/src/components/listings/generate/ListingGenerateView";
+import { ListingProcessingView } from "@web/src/components/listings/ListingProcessingView";
 
 interface ListingGeneratePageProps {
   params: Promise<{ listingId: string }>;
@@ -32,8 +32,10 @@ export default async function ListingGeneratePage({
   await updateListing(user.id, listingId, { lastOpenedAt: new Date() });
 
   return (
-    <ListingGenerateView
+    <ListingProcessingView
+      mode="generate"
       listingId={listingId}
+      userId={user.id}
       title={listing.title?.trim() || "Listing"}
     />
   );

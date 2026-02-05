@@ -17,6 +17,7 @@ type CarouselSlide = {
 interface ContentItem {
   id: string;
   thumbnail?: string;
+  videoUrl?: string | null;
   aspectRatio?: AspectRatio;
   isFavorite?: boolean;
   alt?: string;
@@ -53,6 +54,8 @@ const ContentGridItem = ({
   onShare?: (id: string) => void;
   onDelete?: (id: string) => void;
 }) => {
+  const [isHovered, setIsHovered] = React.useState(false);
+  const videoRef = React.useRef<HTMLVideoElement | null>(null);
   const hasTextContent = Boolean(
     item.hook || item.caption || item.body?.length || item.brollQuery
   );
@@ -112,6 +115,27 @@ const ContentGridItem = ({
             "relative group rounded-lg overflow-hidden cursor-pointer",
             item.aspectRatio === "vertical" && "aspect-9/16"
           )}
+          onMouseEnter={() => {
+            if (!item.videoUrl) {
+              return;
+            }
+            setIsHovered(true);
+            const video = videoRef.current;
+            if (video) {
+              video.play().catch(() => null);
+            }
+          }}
+          onMouseLeave={() => {
+            if (!item.videoUrl) {
+              return;
+            }
+            setIsHovered(false);
+            const video = videoRef.current;
+            if (video) {
+              video.pause();
+              video.currentTime = 0;
+            }
+          }}
         >
           {/* Content Image */}
           <Image
@@ -122,6 +146,22 @@ const ContentGridItem = ({
               item.aspectRatio === "vertical" ? "h-full" : "h-auto"
             )}
           />
+
+          {item.videoUrl && (
+            <video
+              ref={videoRef}
+              className={cn(
+                "pointer-events-none absolute inset-0 h-full w-full object-cover transition-opacity duration-300",
+                isHovered ? "opacity-100" : "opacity-0"
+              )}
+              muted
+              playsInline
+              loop
+              preload="metadata"
+              poster={item.thumbnail}
+              src={item.videoUrl}
+            />
+          )}
 
           {/* Hover Overlay */}
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300" />
