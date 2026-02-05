@@ -1,4 +1,4 @@
-import { db, content, videoContentJobs, videoContent } from "@db/client";
+import { db, videoGenJobs, videoGenBatch } from "@db/client";
 import { asc, desc, eq } from "drizzle-orm";
 import type {
   FinalVideoUpdateEvent,
@@ -14,17 +14,14 @@ export async function getListingVideoStatus(
 ): Promise<InitialVideoStatusPayload> {
   const latestVideoResult = await db
     .select({
-      id: videoContent.id,
-      status: videoContent.status,
-      videoUrl: videoContent.videoUrl,
-      thumbnailUrl: videoContent.thumbnailUrl,
-      errorMessage: videoContent.errorMessage,
-      metadata: videoContent.metadata
+      id: videoGenBatch.id,
+      status: videoGenBatch.status,
+      errorMessage: videoGenBatch.errorMessage,
+      metadata: videoGenBatch.metadata
     })
-    .from(videoContent)
-    .innerJoin(content, eq(videoContent.contentId, content.id))
-    .where(eq(content.listingId, listingId))
-    .orderBy(desc(videoContent.createdAt))
+    .from(videoGenBatch)
+    .where(eq(videoGenBatch.listingId, listingId))
+    .orderBy(desc(videoGenBatch.createdAt))
     .limit(1);
 
   const latestVideo = latestVideoResult[0];
@@ -34,16 +31,16 @@ export async function getListingVideoStatus(
   if (latestVideo) {
     const jobRows = await db
       .select({
-        id: videoContentJobs.id,
-        status: videoContentJobs.status,
-        videoUrl: videoContentJobs.videoUrl,
-        thumbnailUrl: videoContentJobs.thumbnailUrl,
-        errorMessage: videoContentJobs.errorMessage,
-        generationSettings: videoContentJobs.generationSettings
+        id: videoGenJobs.id,
+        status: videoGenJobs.status,
+        videoUrl: videoGenJobs.videoUrl,
+        thumbnailUrl: videoGenJobs.thumbnailUrl,
+        errorMessage: videoGenJobs.errorMessage,
+        generationSettings: videoGenJobs.generationSettings
       })
-      .from(videoContentJobs)
-      .where(eq(videoContentJobs.videoContentId, latestVideo.id))
-      .orderBy(asc(videoContentJobs.createdAt));
+      .from(videoGenJobs)
+      .where(eq(videoGenJobs.videoGenBatchId, latestVideo.id))
+      .orderBy(asc(videoGenJobs.createdAt));
 
     jobs = await Promise.all(
       jobRows.map(async (job) => {
@@ -74,41 +71,12 @@ export async function getListingVideoStatus(
 
   let finalVideo: FinalVideoUpdateEvent | undefined;
 
-  if (latestVideo?.status === "completed" && latestVideo.videoUrl) {
-    const [signedVideoUrl, signedThumbnailUrl] = await Promise.all([
-      getSignedDownloadUrlSafe(
-        latestVideo.videoUrl,
-        VIDEO_STATUS_URL_TTL_SECONDS
-      ),
-      getSignedDownloadUrlSafe(
-        latestVideo.thumbnailUrl,
-        VIDEO_STATUS_URL_TTL_SECONDS
-      )
-    ]);
-    finalVideo = {
-      listingId,
-      status: "completed",
-      finalVideoUrl: signedVideoUrl ?? latestVideo.videoUrl,
-      thumbnailUrl: signedThumbnailUrl ?? latestVideo.thumbnailUrl ?? undefined,
-      duration: latestVideo.metadata?.duration ?? null,
-      errorMessage: latestVideo.errorMessage ?? null
-    };
-  } else if (latestVideo?.status === "failed") {
-    const [signedVideoUrl, signedThumbnailUrl] = await Promise.all([
-      getSignedDownloadUrlSafe(
-        latestVideo.videoUrl,
-        VIDEO_STATUS_URL_TTL_SECONDS
-      ),
-      getSignedDownloadUrlSafe(
-        latestVideo.thumbnailUrl,
-        VIDEO_STATUS_URL_TTL_SECONDS
-      )
-    ]);
+  if (latestVideo?.status === "failed") {
     finalVideo = {
       listingId,
       status: "failed",
-      finalVideoUrl: signedVideoUrl ?? latestVideo.videoUrl ?? undefined,
-      thumbnailUrl: signedThumbnailUrl ?? latestVideo.thumbnailUrl ?? undefined,
+      finalVideoUrl: undefined,
+      thumbnailUrl: undefined,
       duration: latestVideo.metadata?.duration ?? null,
       errorMessage: latestVideo.errorMessage ?? null
     };

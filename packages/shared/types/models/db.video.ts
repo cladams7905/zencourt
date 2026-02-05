@@ -5,19 +5,16 @@
  */
 
 import {
-  videoContent,
-  videoContentJobs,
-  videoRenderJobs,
+  videoGenBatch,
+  videoGenJobs,
   videoStatusEnum
 } from "@db/client";
 
-export type DBVideoContent = typeof videoContent.$inferSelect;
-export type InsertDBVideoContent = typeof videoContent.$inferInsert;
+export type DBVideoGenBatch = typeof videoGenBatch.$inferSelect;
+export type InsertDBVideoGenBatch = typeof videoGenBatch.$inferInsert;
 
-export type DBVideoContentJob = typeof videoContentJobs.$inferSelect;
-export type InsertDBVideoContentJob = typeof videoContentJobs.$inferInsert;
-export type DBVideoRenderJob = typeof videoRenderJobs.$inferSelect;
-export type InsertDBVideoRenderJob = typeof videoRenderJobs.$inferInsert;
+export type DBVideoGenJob = typeof videoGenJobs.$inferSelect;
+export type InsertDBVideoGenJob = typeof videoGenJobs.$inferInsert;
 
 export type VideoStatus = (typeof videoStatusEnum.enumValues)[number];
 

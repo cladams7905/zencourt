@@ -6,8 +6,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { nanoid } from "nanoid";
-import { eq, asc, desc, and, DrizzleQueryError } from "drizzle-orm";
-import { db, listings, listingImages, content } from "@db/client";
+import { eq, asc, DrizzleQueryError } from "drizzle-orm";
+import { db, listingImages } from "@db/client";
 import {
   ApiError,
   requireAuthenticatedUser,
@@ -23,11 +23,11 @@ import {
 import {
   DBListingImage,
   JobGenerationSettings,
-  InsertDBVideoContent,
-  InsertDBVideoContentJob
+  InsertDBVideoGenBatch,
+  InsertDBVideoGenJob
 } from "@shared/types/models";
-import { createVideoContent } from "@web/src/server/actions/db/videoContent";
-import { createVideoContentJob } from "@web/src/server/actions/db/videoContentJobs";
+import { createVideoGenBatch } from "@web/src/server/actions/db/videoGenBatch";
+import { createVideoGenJob } from "@web/src/server/actions/db/videoGenJobs";
 import { getSignedDownloadUrls } from "@web/src/server/utils/storageUrls";
 
 const logger = createChildLogger(baseLogger, {
@@ -61,7 +61,7 @@ function buildPrompt(
   const descriptionPart = roomDescription?.trim()
     ? ` ${roomDescription.trim()}`
     : "";
-  const basePrompt = `Smooth camera pan through ${roomName}. Camera should move very slowly through the space.${descriptionPart}`;
+  const basePrompt = `Smooth camera pan through ${roomName}. Camera should move slowly horizontally through the space.${descriptionPart}`;
 
   if (!aiDirections?.trim()) {
     logger.debug({ basePrompt }, `Constructed prompt for ${roomName}`);
@@ -165,8 +165,9 @@ function selectRoomAssetsForRoom(
     .map((image) => image.url!) as string[];
 
   const descriptionSource =
-    availableImages.find((image) => image.isPrimary && image.sceneDescription) ??
-    availableImages.find((image) => Boolean(image.sceneDescription));
+    availableImages.find(
+      (image) => image.isPrimary && image.sceneDescription
+    ) ?? availableImages.find((image) => Boolean(image.sceneDescription));
 
   return {
     imageUrls,
@@ -289,45 +290,17 @@ export async function POST(
       "Preparing new video generation"
     );
 
-    // Ensure a parent content record exists for this listing
-    const existingContent = await db
-      .select()
-      .from(content)
-      .where(
-        and(
-          eq(content.listingId, listing.id),
-          eq(content.contentType, "video")
-        )
-      )
-      .orderBy(desc(content.updatedAt))
-      .limit(1);
-
-    const [primaryContent] = existingContent.length
-      ? existingContent
-      : await db
-          .insert(content)
-          .values({
-            id: nanoid(),
-            listingId: listing.id,
-            userId: user.id,
-            contentType: "video",
-            status: "draft"
-          })
-          .returning();
-
-    // Step 1: Create single parent video record with status="pending"
+    // Step 1: Create single parent video generation batch with status="pending"
     const parentVideoId = nanoid();
-    const parentVideo: InsertDBVideoContent = {
+    const parentVideo: InsertDBVideoGenBatch = {
       id: parentVideoId,
-      contentId: primaryContent.id,
+      listingId: listing.id,
       status: "pending",
-      videoUrl: null,
-      thumbnailUrl: null,
       metadata: null,
       errorMessage: null
     };
 
-    await createVideoContent(parentVideo);
+    await createVideoGenBatch(parentVideo);
 
     logger.info(
       {
@@ -337,8 +310,8 @@ export async function POST(
       "Created parent video record"
     );
 
-    // Step 2: Create video_content_jobs records directly from rooms
-    const videoJobRecords: InsertDBVideoContentJob[] = await Promise.all(
+    // Step 2: Create video_gen_jobs records directly from rooms
+    const videoJobRecords: InsertDBVideoGenJob[] = await Promise.all(
       body.rooms.map(async (room, index) => {
         const category = getCategoryForRoom(room);
         const roomWithCategory = { ...room, category };
@@ -372,7 +345,7 @@ export async function POST(
 
         return {
           id: jobId,
-          videoContentId: parentVideoId,
+          videoGenBatchId: parentVideoId,
           requestId: null,
           status: "pending",
           videoUrl: null,
@@ -394,22 +367,14 @@ export async function POST(
           metadata: {
             orientation
           },
-          errorMessage: null,
-          errorType: null,
-          errorRetryable: null,
-          processingStartedAt: null,
-          processingCompletedAt: null,
-          deliveryAttempedAt: null,
-          deliveryAttemptCount: 0,
-          deliveryLastError: null,
-          archivedAt: null
+          errorMessage: null
         };
       })
     );
 
     // Create all video jobs
     for (const jobRecord of videoJobRecords) {
-      await createVideoContentJob(jobRecord);
+      await createVideoGenJob(jobRecord);
     }
 
     const jobIds = videoJobRecords.map((r) => r.id);

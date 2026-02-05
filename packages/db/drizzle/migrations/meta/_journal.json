@@ -218,6 +218,27 @@
       "when": 1770236767190,
       "tag": "0030_mature_solo",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1770256469641,
+      "tag": "0031_crazy_bishop",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1770257254832,
+      "tag": "0032_living_sage",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1770258622172,
+      "tag": "0033_silly_silver_samurai",
+      "breakpoints": true
     }
   ]
 }

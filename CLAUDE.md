@@ -107,12 +107,13 @@ Details for the video server are maintained in `apps/video-server/README.md`. Re
 **Schema Highlights (`drizzle/schema.ts` via `@db/client`):**
 
 - `listings` – Primary entity for listing workflows.
-- `content` – Generic content rows (video/post/story) tied to listing.
-- `video_content` – Parent video run state and final URLs.
-- `video_content_jobs` – Per-room generation jobs (Runway/Kling outputs).
-- `video_render_jobs` – Remotion render queue state and progress.
+- `content` – Record storing social media content assets with metadata.
+- `video_gen_batch` – Parent video generation batch/run state.
+- `video_gen_jobs` – Per-room generation jobs (Runway/Kling outputs).
 
 > **Important:** Always import Drizzle helpers (`eq`, `and`, `inArray`, etc.) from `@db/client` rather than `drizzle-orm` directly so every workspace shares the same Drizzle instance/schema.
+
+> **Migration Policy:** Schema migrations must be generated and applied by the user using "npm run db:generate" (do not manually create migration files).
 
 **Row-Level Security:**
 All tables enforce user isolation via RLS policies. Stack Auth provides authentication, RLS provides defense-in-depth at the database level.

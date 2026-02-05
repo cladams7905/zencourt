@@ -35,7 +35,6 @@ declare global {
       STORAGE_HEALTH_CACHE_MS: number;
       RENDER_CONCURRENCY?: number;
       GENERATION_CONCURRENCY?: number;
-      ENABLE_FINAL_COMPOSITION?: string;
 
       // API Authentication
       VIDEO_SERVER_API_KEY: string;

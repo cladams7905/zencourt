@@ -7,9 +7,8 @@ import {
 } from "@/services/remotionRenderQueue";
 import {
   db,
-  videoContentJobs as videoJobs,
-  videoContent as videos,
-  content,
+  videoGenJobs as videoJobs,
+  videoGenBatch as videos,
   listings,
   eq
 } from "@db/client";
@@ -17,13 +16,6 @@ import {
   filterAndSortCompletedJobs,
   buildRenderJobData
 } from "@/utils/compositionHelpers";
-import {
-  createRenderJobRecord,
-  markRenderJobProcessing,
-  updateRenderJobProgress,
-  markRenderJobCompleted,
-  markRenderJobFailed
-} from "@/utils/dbHelpers";
 
 const router = Router();
 
@@ -42,12 +34,11 @@ router.post(
     const [videoContext] = await db
       .select({
         videoId: videos.id,
-        listingId: content.listingId,
+        listingId: videos.listingId,
         userId: listings.userId
       })
       .from(videos)
-      .innerJoin(content, eq(videos.contentId, content.id))
-      .innerJoin(listings, eq(content.listingId, listings.id))
+      .innerJoin(listings, eq(videos.listingId, listings.id))
       .where(eq(videos.id, videoId))
       .limit(1);
 
@@ -68,7 +59,7 @@ router.post(
     const jobs = await db
       .select()
       .from(videoJobs)
-      .where(eq(videoJobs.videoContentId, videoId));
+      .where(eq(videoJobs.videoGenBatchId, videoId));
 
     const completedJobs = filterAndSortCompletedJobs(jobs);
 
@@ -79,18 +70,13 @@ router.post(
       return;
     }
 
-    const renderJobId = await createRenderJobRecord(videoId);
     const renderData = buildRenderJobData(context, completedJobs);
 
     const jobId = remotionRenderQueue.createJob(
       renderData,
       {
-        onStart: async (_data: RenderJobData) => {
-          await markRenderJobProcessing(renderJobId);
-        },
-        onProgress: async (progress: number, _data: RenderJobData) => {
-          await updateRenderJobProgress(renderJobId, progress);
-        },
+        onStart: async (_data: RenderJobData) => {},
+        onProgress: async (_progress: number, _data: RenderJobData) => {},
         onComplete: async (
           _result: {
             videoBuffer: Buffer;
@@ -100,17 +86,14 @@ router.post(
           },
           _data: RenderJobData
         ) => {
-          await markRenderJobCompleted(renderJobId);
           return {};
         },
-        onError: async (error: Error, _data: RenderJobData) => {
-          await markRenderJobFailed(renderJobId, error.message);
-        }
+        onError: async (_error: Error, _data: RenderJobData) => {}
       },
-      renderJobId
+      undefined
     );
 
-    res.status(200).json({ success: true, jobId, renderJobId });
+    res.status(200).json({ success: true, jobId });
   })
 );
 

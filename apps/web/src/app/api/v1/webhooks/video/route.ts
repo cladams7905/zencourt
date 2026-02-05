@@ -8,15 +8,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import {
-  updateVideoContentJob,
-  getVideoContentJobById
-} from "@web/src/server/actions/db/videoContentJobs";
+  updateVideoGenJob,
+  getVideoGenJobById
+} from "@web/src/server/actions/db/videoGenJobs";
 import {
   createChildLogger,
   logger as baseLogger
 } from "../../../../../lib/logger";
 import type { VideoJobWebhookPayload } from "@shared/types/api";
-import type { DBVideoContentJob } from "@shared/types/models";
+import type { DBVideoGenJob } from "@shared/types/models";
 import {
   parseVerifiedWebhook,
   WebhookVerificationError
@@ -67,10 +67,10 @@ export async function POST(request: NextRequest) {
       "Video job webhook received"
     );
 
-    let updatedJob: DBVideoContentJob | null = null;
+    let updatedJob: DBVideoGenJob | null = null;
 
     try {
-      updatedJob = await updateVideoContentJob(payload.jobId, {
+      updatedJob = await updateVideoGenJob(payload.jobId, {
         status: payload.status,
         videoUrl,
         thumbnailUrl,
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
         },
         "Failed to persist video job update, using fallback data"
       );
-      updatedJob = await getVideoContentJobById(payload.jobId);
+      updatedJob = await getVideoGenJobById(payload.jobId);
     }
 
     logger.info(

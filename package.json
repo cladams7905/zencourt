@@ -18,7 +18,7 @@
     "env:pull": "cd apps/web && vercel env pull ../../.env.local",
     "db:generate": "npm run db:generate --workspace=@zencourt/db",
     "db:migrate": "npm run db:migrate --workspace=@zencourt/db",
-    "db:migrate:prod": "dotenv -e .env.prod -- npm run db:migrate --workspace=@zencourt/db",
+    "db:migrate:prod": "dotenv -e .env.prod -- sh -c 'cd packages/db && dotenv -e ../../.env.prod -- drizzle-kit migrate --config=drizzle/drizzle.config.ts'",
     "db:push": "npm run db:push --workspace=@zencourt/db",
     "db:studio": "npm run db:studio --workspace=@zencourt/db",
     "docker:rebuild": "npm run docker:rebuild --workspace=@zencourt/video-server",
