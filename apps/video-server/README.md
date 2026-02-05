@@ -99,7 +99,7 @@ Orchestrates the entire video generation workflow:
 - Triggers Remotion composition when all jobs complete **only if** `ENABLE_FINAL_COMPOSITION=true`
 - Sends completion webhooks to the web app
 
-**Clip-first workflow note:** the parent `video_gen_batch` record is treated as a run/batch only. Final asset URLs live on the `content` row when a user saves a draft/favorite. Individual clip URLs and thumbnails are stored on `video_gen_jobs`.
+**Video batch workflow note:** the parent `video_gen_batch` record is treated as a run/batch only. Final asset URLs live on the `content` row when a user saves a draft/favorite. Individual clip URLs and thumbnails are stored on `video_gen_jobs`.
 
 ### Runway Service (`runwayService.ts`)
 
