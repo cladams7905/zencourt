@@ -14,6 +14,14 @@ import { Button } from "../ui/button";
 import { toast } from "sonner";
 import { emitListingSidebarUpdate } from "@web/src/lib/listingSidebarEvents";
 import type { VideoJobUpdateEvent } from "@web/src/types/video-status";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from "../ui/dialog";
 
 type ListingProcessingViewProps = {
   mode: "categorize" | "review" | "generate";
@@ -55,6 +63,12 @@ export function ListingProcessingView({
   );
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [displayedProgress, setDisplayedProgress] = React.useState(0);
+  const [isCancelOpen, setIsCancelOpen] = React.useState(false);
+  const [isCanceling, setIsCanceling] = React.useState(false);
+  const [canPollGeneration, setCanPollGeneration] = React.useState(
+    mode !== "generate"
+  );
+  const hasInitializedGenerationRef = React.useRef(false);
 
   const resolvedTotal = totalToProcess ?? batchTotal;
   const processedCount = Math.max(
@@ -170,6 +184,81 @@ export function ListingProcessingView({
     }
   }, [listingId, mode]);
 
+  const initializeGeneration = React.useCallback(async () => {
+    if (mode !== "generate" || hasInitializedGenerationRef.current) {
+      return;
+    }
+    hasInitializedGenerationRef.current = true;
+    try {
+      const statusResponse = await fetch(`/api/v1/video/status/${listingId}`);
+      if (statusResponse.ok) {
+        const statusPayload = (await statusResponse.json()) as {
+          success: boolean;
+          data?: { jobs?: VideoJobUpdateEvent[] };
+        };
+        const jobs = statusPayload.data?.jobs ?? [];
+        const hasFailedJob = jobs.some((job) => job.status === "failed");
+        const allCompleted =
+          jobs.length > 0 &&
+          jobs.every((job) => ["completed", "canceled"].includes(job.status));
+
+        if (hasFailedJob) {
+          await updateListing(userId, listingId, { listingStage: "review" });
+          emitListingSidebarUpdate({
+            id: listingId,
+            listingStage: "review",
+            lastOpenedAt: new Date().toISOString()
+          });
+          router.replace(`/listings/${listingId}/review`);
+          return;
+        }
+
+        if (allCompleted) {
+          await updateListing(userId, listingId, { listingStage: "create" });
+          emitListingSidebarUpdate({
+            id: listingId,
+            listingStage: "create",
+            lastOpenedAt: new Date().toISOString()
+          });
+          router.replace(`/listings/${listingId}/create`);
+          return;
+        }
+
+        if (jobs.length > 0) {
+          setGenerationJobs(jobs);
+          return;
+        }
+      }
+
+      const response = await fetch(`/api/v1/video/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ listingId })
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(
+          payload?.message || payload?.error || "Failed to start generation."
+        );
+      }
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to start generation."
+      );
+      try {
+        await updateListing(userId, listingId, { listingStage: "review" });
+        emitListingSidebarUpdate({
+          id: listingId,
+          listingStage: "review",
+          lastOpenedAt: new Date().toISOString()
+        });
+      } catch {
+        // Ignore stage update failures.
+      }
+      router.replace(`/listings/${listingId}/review`);
+    }
+  }, [listingId, mode, router, userId]);
+
   const refreshStatus = React.useCallback(async () => {
     if (mode !== "categorize") {
       return;
@@ -181,22 +270,18 @@ export function ListingProcessingView({
         setIsProcessing(true);
         categorizeListingImages(userId, listingId).catch(() => null);
       }
-      const isProcessed = (image: { category: string | null }) => {
-        const candidate = image as {
-          category: string | null;
-          confidence?: number | null;
-          primaryScore?: number | null;
-          features?: string[] | null;
-          sceneDescription?: string | null;
+        const isProcessed = (image: { category: string | null }) => {
+          const candidate = image as {
+            category: string | null;
+            confidence?: number | null;
+            primaryScore?: number | null;
+          };
+          return Boolean(
+            candidate.category ||
+            candidate.confidence !== null ||
+            candidate.primaryScore !== null
+          );
         };
-        return Boolean(
-          candidate.category ||
-          candidate.confidence !== null ||
-          candidate.primaryScore !== null ||
-          (candidate.features && candidate.features.length > 0) ||
-          candidate.sceneDescription
-        );
-      };
       const batchFiltered = batchStartedAt
         ? updated.filter((image) => {
             const uploadedAt =
@@ -248,12 +333,23 @@ export function ListingProcessingView({
 
   React.useEffect(() => {
     if (mode === "generate") {
+      void initializeGeneration();
+      const timeout = setTimeout(() => {
+        setCanPollGeneration(true);
+      }, 60000);
+      return () => clearTimeout(timeout);
+    }
+    setCanPollGeneration(true);
+  }, [initializeGeneration, mode]);
+
+  React.useEffect(() => {
+    if (mode === "generate" && canPollGeneration) {
       void refreshGenerationStatus();
       const interval = setInterval(refreshGenerationStatus, 2000);
       return () => clearInterval(interval);
     }
     return;
-  }, [mode, refreshGenerationStatus]);
+  }, [canPollGeneration, mode, refreshGenerationStatus]);
 
   React.useEffect(() => {
     if (mode !== "generate") {
@@ -310,6 +406,7 @@ export function ListingProcessingView({
     if (mode === "categorize" && !isProcessing) {
       return;
     }
+    const intervalMs = mode === "generate" ? 1000 : 500;
     const interval = setInterval(() => {
       setDisplayedProgress((prev) => {
         const target = Math.max(progressPercent, prev);
@@ -319,7 +416,7 @@ export function ListingProcessingView({
         }
         return Math.min(prev + 1, cap);
       });
-    }, 500);
+    }, intervalMs);
     return () => clearInterval(interval);
   }, [isProcessing, mode, progressPercent]);
 
@@ -342,6 +439,41 @@ export function ListingProcessingView({
       toast.error(
         error instanceof Error ? error.message : "Failed to skip fetch."
       );
+    }
+  };
+
+  const handleCancelGeneration = async () => {
+    if (mode !== "generate") {
+      return;
+    }
+    setIsCanceling(true);
+    try {
+      const response = await fetch(`/api/v1/video/cancel/${listingId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: "Canceled by user" })
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(
+          payload?.message || payload?.error || "Failed to cancel generation."
+        );
+      }
+      await updateListing(userId, listingId, { listingStage: "review" });
+      emitListingSidebarUpdate({
+        id: listingId,
+        listingStage: "review",
+        lastOpenedAt: new Date().toISOString()
+      });
+      toast.success("Video generation canceled.");
+      router.replace(`/listings/${listingId}/review`);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to cancel generation."
+      );
+    } finally {
+      setIsCanceling(false);
+      setIsCancelOpen(false);
     }
   };
 
@@ -388,8 +520,44 @@ export function ListingProcessingView({
               </Button>
             </div>
           ) : null}
+          {mode === "generate" ? (
+            <div className="flex justify-center">
+              <Button variant="outline" onClick={() => setIsCancelOpen(true)}>
+                Cancel generation
+              </Button>
+            </div>
+          ) : null}
         </div>
       </div>
+      <Dialog open={isCancelOpen} onOpenChange={setIsCancelOpen}>
+        <DialogContent className="sm:max-w-[420px]">
+          <DialogHeader>
+            <DialogTitle>Cancel video generation?</DialogTitle>
+            <DialogDescription>
+              This will stop all in-flight video jobs for this listing. You can
+              restart generation later.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setIsCancelOpen(false)}
+              disabled={isCanceling}
+            >
+              Keep running
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleCancelGeneration}
+              disabled={isCanceling}
+            >
+              {isCanceling ? "Canceling..." : "Cancel generation"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

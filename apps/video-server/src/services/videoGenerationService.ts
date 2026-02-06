@@ -267,6 +267,16 @@ class VideoGenerationService {
     const runwayRatio = orientation === "vertical" ? "720:1280" : "1280:720";
 
     try {
+      logger.info(
+        {
+          jobId: job.id,
+          videoId: job.videoGenBatchId,
+          imageCount: imageUrls.length,
+          durationSeconds,
+          ratio: runwayRatio
+        },
+        "[VideoGenerationService] Dispatching job to Runway"
+      );
       const task = await runwayService.submitImageToVideo({
         promptImage: imageUrls[0],
         promptText: prompt,
@@ -356,7 +366,7 @@ class VideoGenerationService {
     );
 
     // Kling expects duration as "5" | "10"
-    const klingDuration = (durationSeconds === 10 ? "10" : "5") as "5" | "10";
+    const klingDuration = (durationSeconds >= 8 ? "10" : "5") as "5" | "10";
 
     const requestId = await klingService.submitRoomVideo({
       prompt,

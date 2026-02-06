@@ -1,8 +1,6 @@
 import { sql } from "drizzle-orm";
-import { index, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { authenticatedRole, crudPolicy } from "drizzle-orm/neon";
-
-import type { VideoMetadata } from "@shared/types/models";
 
 import { listings } from "./listings";
 import { videoStatusEnum } from "./enums";
@@ -15,7 +13,6 @@ export const videoGenBatch = pgTable(
       .notNull()
       .references(() => listings.id, { onDelete: "cascade" }),
     status: videoStatusEnum("status").notNull().default("pending"),
-    metadata: jsonb("metadata").$type<VideoMetadata>(),
     errorMessage: text("error_message"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull()

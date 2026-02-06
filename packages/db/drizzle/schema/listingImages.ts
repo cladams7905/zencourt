@@ -27,8 +27,6 @@ export const listingImages = pgTable(
     category: varchar("category", { length: 50 }),
     confidence: real("confidence"),
     primaryScore: real("primary_score"),
-    features: jsonb("features").$type<string[]>(),
-    sceneDescription: text("scene_description"),
     isPrimary: boolean("is_primary").default(false),
     metadata: jsonb("metadata").$type<ImageMetadata>(),
     uploadedAt: timestamp("uploaded_at").defaultNow().notNull()

@@ -5,11 +5,9 @@
  * These must run server-side to access API keys securely
  */
 
-import visionService from "../../services/visionService";
 import imageProcessorService, {
   type ProcessingResult
 } from "../../services/imageProcessor";
-import { SceneDescription } from "@web/src/types/vision";
 import type { SerializableImageData } from "@web/src/types/images";
 import { createChildLogger, logger as baseLogger } from "../../../lib/logger";
 import { db, listingImages, and, eq, inArray } from "@db/client";
@@ -40,95 +38,8 @@ const assignPrimaryImagesByCategory = async (
 };
 
 /**
- * Generate scene description for an image (server action)
- *
- * @param imageUrl - Public URL of the image
- * @param roomType - Type of room (bedroom, kitchen, etc)
- * @param options - Optional configuration for timeout and retries
- * @returns Scene description object
- */
-export async function generateSceneDescription(
-  imageUrl: string,
-  roomType: string,
-  options?: {
-    timeout?: number;
-    maxRetries?: number;
-  }
-): Promise<SceneDescription> {
-  try {
-    logger.info({ imageUrl, roomType }, "Generating scene description");
-    const result = await visionService.generateSceneDescription(
-      imageUrl,
-      roomType,
-      options || {
-        timeout: 30000,
-        maxRetries: 2
-      }
-    );
-
-    logger.info({ imageUrl, roomType, result }, "Scene description generated");
-
-    return result;
-  } catch (error) {
-    logger.error(
-      {
-        imageUrl,
-        roomType,
-        error:
-          error instanceof Error
-            ? { name: error.name, message: error.message }
-            : error
-      },
-      "Scene description failed"
-    );
-    throw new Error(
-      `Failed to generate scene description: ${
-        error instanceof Error ? error.message : "Unknown error"
-      }`
-    );
-  }
-}
-
-/**
- * Generate scene descriptions for multiple images in batch
- *
- * @param images - Array of {imageUrl, roomType} objects
- * @returns Array of scene descriptions (same order as input)
- */
-export async function generateSceneDescriptionsBatch(
-  images: Array<{ imageUrl: string; roomType: string }>
-): Promise<Array<SceneDescription | null>> {
-  logger.info({ total: images.length }, "Generating batch scene descriptions");
-  const results = await Promise.allSettled(
-    images.map(({ imageUrl, roomType }) =>
-      visionService.generateSceneDescription(imageUrl, roomType, {
-        timeout: 30000,
-        maxRetries: 2
-      })
-    )
-  );
-
-  return results.map((result) => {
-    if (result.status === "fulfilled") {
-      return result.value;
-    } else {
-      logger.error(
-        {
-          error:
-            result.reason instanceof Error
-              ? { name: result.reason.name, message: result.reason.message }
-              : result.reason
-        },
-        "Scene description in batch failed"
-      );
-      return null;
-    }
-  });
-}
-
-/**
  * Analyze images workflow (server action)
- * Orchestrates classification → scene descriptions → categorization
+ * Orchestrates classification → categorization
  *
  * @param images - Array of SerializableImageData objects with url set
  * @param options - Configuration for concurrency
@@ -229,8 +140,6 @@ export async function categorizeListingImages(
       category: image.category ?? null,
       confidence: image.confidence ?? null,
       primaryScore: image.primaryScore ?? null,
-      features: image.features ?? null,
-      sceneDescription: image.sceneDescription ?? null,
       status: "uploaded",
       isPrimary: image.isPrimary ?? false,
       metadata: image.metadata ?? null,
@@ -245,9 +154,7 @@ export async function categorizeListingImages(
       .set({
         category: image.category ?? null,
         confidence: image.confidence ?? null,
-        primaryScore: image.primaryScore ?? null,
-        features: image.features ?? null,
-        sceneDescription: image.sceneDescription ?? null
+        primaryScore: image.primaryScore ?? null
       })
       .where(
         and(
@@ -353,8 +260,6 @@ export async function categorizeListingImagesByIds(
       category: image.category ?? null,
       confidence: image.confidence ?? null,
       primaryScore: image.primaryScore ?? null,
-      features: image.features ?? null,
-      sceneDescription: image.sceneDescription ?? null,
       status: "uploaded",
       isPrimary: image.isPrimary ?? false,
       metadata: image.metadata ?? null,
@@ -369,9 +274,7 @@ export async function categorizeListingImagesByIds(
       .set({
         category: image.category ?? null,
         confidence: image.confidence ?? null,
-        primaryScore: image.primaryScore ?? null,
-        features: image.features ?? null,
-        sceneDescription: image.sceneDescription ?? null
+        primaryScore: image.primaryScore ?? null
       })
       .where(
         and(

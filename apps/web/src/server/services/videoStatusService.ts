@@ -1,7 +1,6 @@
 import { db, videoGenJobs, videoGenBatch } from "@db/client";
 import { asc, desc, eq } from "drizzle-orm";
 import type {
-  FinalVideoUpdateEvent,
   InitialVideoStatusPayload,
   VideoJobUpdateEvent
 } from "@web/src/types/video-status";
@@ -16,8 +15,7 @@ export async function getListingVideoStatus(
     .select({
       id: videoGenBatch.id,
       status: videoGenBatch.status,
-      errorMessage: videoGenBatch.errorMessage,
-      metadata: videoGenBatch.metadata
+      errorMessage: videoGenBatch.errorMessage
     })
     .from(videoGenBatch)
     .where(eq(videoGenBatch.listingId, listingId))
@@ -69,21 +67,7 @@ export async function getListingVideoStatus(
     );
   }
 
-  let finalVideo: FinalVideoUpdateEvent | undefined;
-
-  if (latestVideo?.status === "failed") {
-    finalVideo = {
-      listingId,
-      status: "failed",
-      finalVideoUrl: undefined,
-      thumbnailUrl: undefined,
-      duration: latestVideo.metadata?.duration ?? null,
-      errorMessage: latestVideo.errorMessage ?? null
-    };
-  }
-
   return {
-    jobs,
-    finalVideo
+    jobs
   };
 }

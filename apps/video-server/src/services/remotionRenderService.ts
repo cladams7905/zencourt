@@ -1,5 +1,5 @@
 import { existsSync } from "fs";
-import { readFile, rm } from "fs/promises";
+import { mkdir, readFile, rm } from "fs/promises";
 import path from "path";
 import { tmpdir } from "os";
 import { bundle } from "@remotion/bundler";
@@ -41,11 +41,29 @@ function resolveEntryPoint(): string {
 class RemotionRenderService {
   private bundleLocation: string | null = null;
   private browserReady = false;
+  private cacheReady = false;
+
+  private async ensureRemotionCacheDir(): Promise<void> {
+    if (this.cacheReady) {
+      return;
+    }
+
+    const cacheDir =
+      process.env.REMOTION_CACHE_DIR ||
+      process.env.TEMP_DIR ||
+      path.join(process.cwd(), "tmp/video-processing");
+
+    await mkdir(cacheDir, { recursive: true });
+    process.env.REMOTION_CACHE_DIR = cacheDir;
+    this.cacheReady = true;
+  }
 
   private async getBundleLocation(): Promise<string> {
     if (this.bundleLocation) {
       return this.bundleLocation;
     }
+
+    await this.ensureRemotionCacheDir();
 
     if (!this.browserReady) {
       await ensureBrowser();

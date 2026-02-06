@@ -31,7 +31,12 @@ import {
 } from "lucide-react";
 import { LoadingImage } from "../../ui/loading-image";
 import { UploadDialog } from "../../uploads/UploadDialog";
-import { MAX_IMAGE_BYTES } from "@shared/utils/mediaUpload";
+import {
+  IMAGE_UPLOAD_LIMIT,
+  MAX_CATEGORIES,
+  MAX_IMAGE_BYTES,
+  MAX_IMAGES_PER_ROOM
+} from "@shared/utils/mediaUpload";
 import { toast } from "sonner";
 import {
   createListingImageRecords,
@@ -312,21 +317,43 @@ export function ListingCategorizeView({
   const hasEmptyCategory = categoryOrder.some(
     (category) => (categorizedImages[category]?.length ?? 0) === 0
   );
+  const activeCategoryCount = categoryOrder.filter(
+    (category) => category !== "needs-categorization"
+  ).length;
+  const hasTooManyCategories = activeCategoryCount > MAX_CATEGORIES;
+  const hasOverLimit = categoryOrder.some((category) => {
+    if (category === "needs-categorization") {
+      return false;
+    }
+    return (categorizedImages[category]?.length ?? 0) > MAX_IMAGES_PER_ROOM;
+  });
   const needsAddress = addressValue.trim() === "";
-  const canContinue = !hasUncategorized && !hasEmptyCategory && !needsAddress;
+  const canContinue =
+    !hasUncategorized &&
+    !hasEmptyCategory &&
+    !needsAddress &&
+    !hasOverLimit &&
+    !hasTooManyCategories;
   const isSavingDraft = savingCount > 0;
   const existingFileNames = React.useMemo(() => {
     return new Set(images.map((image) => image.filename.toLowerCase()));
   }, [images]);
   const moveCategoryOptions = React.useMemo(() => {
-    return categoryOrder.map((category) => ({
-      value: category,
-      label:
-        category === "needs-categorization"
-          ? "Uncategorized"
-          : formatCategoryLabel(category, baseCategoryCounts)
-    }));
-  }, [baseCategoryCounts, categoryOrder]);
+    return categoryOrder.map((category) => {
+      const count = categorizedImages[category]?.length ?? 0;
+      const isLimited = category !== "needs-categorization";
+      const isFull = isLimited && count >= MAX_IMAGES_PER_ROOM;
+      return {
+        value: category,
+        label:
+          category === "needs-categorization"
+            ? "Uncategorized"
+            : `${formatCategoryLabel(category, baseCategoryCounts)}${
+                isFull ? " (full)" : ""
+              }`
+      };
+    });
+  }, [baseCategoryCounts, categorizedImages, categoryOrder]);
 
   const runDraftSave = React.useCallback(async <T,>(fn: () => Promise<T>) => {
     setSavingCount((prev) => prev + 1);
@@ -363,6 +390,89 @@ export function ListingCategorizeView({
     [listingId, runDraftSave, userId]
   );
 
+  React.useEffect(() => {
+    const overflowIds = new Set<string>();
+    const categoriesToToast: string[] = [];
+    let didExceedCategoryLimit = false;
+
+    const activeCategories = categoryOrder.filter(
+      (category) => category !== "needs-categorization"
+    );
+    if (activeCategories.length > MAX_CATEGORIES) {
+      const allowedCategories = new Set(
+        activeCategories.slice(0, MAX_CATEGORIES)
+      );
+      activeCategories.forEach((category) => {
+        if (allowedCategories.has(category)) {
+          return;
+        }
+        const categoryImages = images.filter(
+          (image) => image.category === category
+        );
+        categoryImages.forEach((image) => overflowIds.add(image.id));
+      });
+      didExceedCategoryLimit = true;
+    }
+
+    categoryOrder.forEach((category) => {
+      if (category === "needs-categorization") {
+        return;
+      }
+      const categoryImages = images.filter(
+        (image) => image.category === category
+      );
+      if (categoryImages.length <= MAX_IMAGES_PER_ROOM) {
+        return;
+      }
+      const sorted = [...categoryImages].sort((a, b) => {
+        const scoreA = a.primaryScore ?? -1;
+        const scoreB = b.primaryScore ?? -1;
+        return scoreB - scoreA;
+      });
+      const keepIds = new Set(
+        sorted.slice(0, MAX_IMAGES_PER_ROOM).map((image) => image.id)
+      );
+      categoryImages.forEach((image) => {
+        if (!keepIds.has(image.id)) {
+          overflowIds.add(image.id);
+        }
+      });
+      categoriesToToast.push(category);
+    });
+
+    if (overflowIds.size === 0) {
+      return;
+    }
+
+    const previousImages = images;
+    const updates = Array.from(overflowIds).map((id) => ({
+      id,
+      category: null,
+      isPrimary: false
+    }));
+    const nextImages = images.map((image) =>
+      overflowIds.has(image.id)
+        ? { ...image, category: null, isPrimary: false }
+        : image
+    );
+
+    setImages(nextImages);
+    void persistImageAssignments(updates, [], () => setImages(previousImages));
+    if (didExceedCategoryLimit) {
+      toast.error(
+        `This listing exceeds the maximum of ${MAX_CATEGORIES} categories. Extra images were moved to Uncategorized.`
+      );
+    }
+    categoriesToToast.forEach((category) => {
+      toast.error(
+        `Too many images in ${formatCategoryLabel(
+          category,
+          baseCategoryCounts
+        )}. Please recategorize or remove them.`
+      );
+    });
+  }, [baseCategoryCounts, categoryOrder, images, persistImageAssignments]);
+
   const persistListingTitle = React.useCallback(
     async (nextTitle: string) => {
       const previous = draftTitleRef.current;
@@ -386,6 +496,16 @@ export function ListingCategorizeView({
       }
     },
     [listingId, runDraftSave, userId]
+  );
+
+  const isCategoryAtLimit = React.useCallback(
+    (category: string | null) => {
+      if (!category || category === "needs-categorization") {
+        return false;
+      }
+      return (categorizedImages[category]?.length ?? 0) >= MAX_IMAGES_PER_ROOM;
+    },
+    [categorizedImages]
   );
 
   const ensurePrimaryForCategory = React.useCallback(
@@ -586,6 +706,16 @@ export function ListingCategorizeView({
       setMoveImageId(null);
       return;
     }
+    if (
+      resolvedCategory &&
+      previousImage?.category !== resolvedCategory &&
+      isCategoryAtLimit(resolvedCategory)
+    ) {
+      toast.error(
+        `This room already has ${MAX_IMAGES_PER_ROOM} photos. Remove one before adding another.`
+      );
+      return;
+    }
     const nextImages = images.map((image) =>
       image.id === moveImageId
         ? {
@@ -739,6 +869,17 @@ export function ListingCategorizeView({
         setDragOverCategory(null);
         return;
       }
+      if (
+        nextCategory &&
+        previousImage?.category !== nextCategory &&
+        isCategoryAtLimit(nextCategory)
+      ) {
+        toast.error(
+          `This room already has ${MAX_IMAGES_PER_ROOM} photos. Remove one before adding another.`
+        );
+        setDragOverCategory(null);
+        return;
+      }
       const nextImages = images.map((image) =>
         image.id === imageId
           ? {
@@ -805,7 +946,7 @@ export function ListingCategorizeView({
                 </h2>
                 <div className="ml-auto flex items-center gap-2 flex-nowrap">
                   <span className="text-xs text-muted-foreground mr-[9px] font-medium">
-                    {images.length}/20 photos
+                    {images.length}/{IMAGE_UPLOAD_LIMIT} photos
                   </span>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -903,7 +1044,9 @@ export function ListingCategorizeView({
                                     : "text-muted-foreground"
                                 }`}
                               >
-                                {count} photo{count === 1 ? "" : "s"}
+                                {category === "needs-categorization"
+                                  ? `${count} photo${count === 1 ? "" : "s"}`
+                                  : `${count}/${MAX_IMAGES_PER_ROOM} photos`}
                               </span>
                             );
                           })()}
@@ -1012,9 +1155,9 @@ export function ListingCategorizeView({
                                         </div>
                                       </TooltipTrigger>
                                       <TooltipContent sideOffset={6}>
-                                        Primary image — used as the featured{" "}
+                                        Primary image — used as the starting{" "}
                                         <br />
-                                        photo for this category by default.
+                                        frame for video generation.
                                       </TooltipContent>
                                     </Tooltip>
                                   ) : null}
@@ -1178,7 +1321,11 @@ export function ListingCategorizeView({
                   </div>
                 </div>
                 <div className="gap-4 space-y-4">
-                  {hasUncategorized || hasEmptyCategory || needsAddress ? (
+                  {hasUncategorized ||
+                  hasEmptyCategory ||
+                  needsAddress ||
+                  hasOverLimit ||
+                  hasTooManyCategories ? (
                     <div className="mt-3 rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-3 text-xs text-destructive">
                       <p className="text-[11px] font-semibold uppercase tracking-wide">
                         Required fixes
@@ -1194,6 +1341,23 @@ export function ListingCategorizeView({
                           <li className="flex items-start gap-2">
                             <AlertTriangle className="mt-0.5 h-3.5 w-3.5" />
                             <span>One or more room categories are empty.</span>
+                          </li>
+                        ) : null}
+                        {hasTooManyCategories ? (
+                          <li className="flex items-start gap-2">
+                            <AlertTriangle className="mt-0.5 h-3.5 w-3.5" />
+                            <span>
+                              Limit categories to {MAX_CATEGORIES} per listing.
+                            </span>
+                          </li>
+                        ) : null}
+                        {hasOverLimit ? (
+                          <li className="flex items-start gap-2">
+                            <AlertTriangle className="mt-0.5 h-3.5 w-3.5" />
+                            <span>
+                              One or more room categories have more than{" "}
+                              {MAX_IMAGES_PER_ROOM} photos.
+                            </span>
                           </li>
                         ) : null}
                         {needsAddress ? (
@@ -1232,11 +1396,11 @@ export function ListingCategorizeView({
         errorMessage="Failed to upload photos. Please try again."
         tipsTitle="What photos should I upload?"
         tipsItems={[
-          "No more than 20 listing photos may be uploaded per listing.",
-          "Select at least 2 listing photos per room for best output quality.",
+          `No more than ${IMAGE_UPLOAD_LIMIT} listing photos may be uploaded per listing.`,
+          `Limit each room category to ${MAX_IMAGES_PER_ROOM} photos for video generation.`,
           "Include a wide variety well-framed shots of key rooms and exterior."
         ]}
-        maxFiles={20}
+        maxFiles={IMAGE_UPLOAD_LIMIT}
         maxImageBytes={MAX_IMAGE_BYTES}
         compressDriveImages
         compressOversizeImages

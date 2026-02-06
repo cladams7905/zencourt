@@ -1,0 +1,1 @@
+ALTER TABLE "video_gen_batch" DROP COLUMN "metadata";

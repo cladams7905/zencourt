@@ -29,6 +29,19 @@ export default async function ListingReviewPage({
   if (!listing) {
     redirect("/listings/sync");
   }
+
+  if (listing.listingStage !== "review") {
+    switch (listing.listingStage) {
+      case "create":
+        redirect(`/listings/${listingId}/create`);
+      case "generate":
+        redirect(`/listings/${listingId}/generate`);
+      case "categorize":
+      default:
+        redirect(`/listings/${listingId}/categorize`);
+    }
+  }
+
   const userAdditional = await getOrCreateUserAdditional(user.id);
 
   await updateListing(user.id, listingId, { lastOpenedAt: new Date() });

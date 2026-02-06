@@ -29,6 +29,19 @@ export default async function ListingGeneratePage({
     redirect("/listings/sync");
   }
 
+  if (listing.listingStage !== "generate") {
+    switch (listing.listingStage) {
+      case "create":
+        redirect(`/listings/${listingId}/create`);
+      case "review":
+        redirect(`/listings/${listingId}/review`);
+      case "categorize":
+        redirect(`/listings/${listingId}/categorize`);
+      default:
+        redirect("/listings/sync");
+    }
+  }
+
   await updateListing(user.id, listingId, { lastOpenedAt: new Date() });
 
   return (

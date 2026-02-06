@@ -31,6 +31,19 @@ export default async function ListingCategorizePage({
     redirect("/listings/sync");
   }
 
+  if (listing.listingStage !== "categorize") {
+    switch (listing.listingStage) {
+      case "create":
+        redirect(`/listings/${listingId}/create`);
+      case "generate":
+        redirect(`/listings/${listingId}/generate`);
+      case "review":
+        redirect(`/listings/${listingId}/review`);
+      default:
+        redirect(`/listings/${listingId}/categorize`);
+    }
+  }
+
   await updateListing(user.id, listingId, { lastOpenedAt: new Date() });
 
   const images = await getListingImages(user.id, listingId);

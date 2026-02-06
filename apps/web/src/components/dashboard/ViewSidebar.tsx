@@ -17,7 +17,6 @@ import {
   LayoutDashboard,
   Calendar,
   FileEdit,
-  Film,
   Heart,
   Clock,
   Archive,
@@ -27,7 +26,8 @@ import {
   LogOut,
   CircleQuestionMark,
   MessageCircle,
-  ArrowBigUpDash
+  ArrowBigUpDash,
+  Film
 } from "lucide-react";
 import Image from "next/image";
 import Logo from "../../../public/zencourt-logo.svg";
@@ -228,19 +228,28 @@ const ViewSidebar = ({
             >
               <Link href={resolveListingPath(listing)}>
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-1.5 h-1.5 rotate-45 rounded-xs bg-muted-foreground/70 shrink-0" />
+                  <div
+                    className={cn(
+                      "w-1.5 h-1.5 rotate-45 rounded-xs shrink-0",
+                      listing.listingStage === "create"
+                        ? "bg-primary"
+                        : "bg-muted-foreground/70"
+                    )}
+                  />
                   <span className="text-sm truncate">{listing.title}</span>
                 </div>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Badge variant="muted" className="rounded-full py-1 px-1">
-                      <FileEdit className="text-muted-foreground w-[14px]! h-[14px]!" />
-                    </Badge>
-                  </TooltipTrigger>
-                  <TooltipContent sideOffset={6}>
-                    Draft ({formatStageLabel(listing.listingStage)})
-                  </TooltipContent>
-                </Tooltip>
+                {listing.listingStage !== "create" ? (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge variant="muted" className="rounded-full py-1 px-1">
+                        <FileEdit className="text-muted-foreground w-[14px]! h-[14px]!" />
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent sideOffset={6}>
+                      Draft ({formatStageLabel(listing.listingStage)})
+                    </TooltipContent>
+                  </Tooltip>
+                ) : null}
               </Link>
             </Button>
           )

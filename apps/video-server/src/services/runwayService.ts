@@ -64,6 +64,15 @@ class RunwayService {
     const client = this.getClient();
 
     try {
+      logger.info(
+        {
+          ratio,
+          duration,
+          seed,
+          promptLength: promptText?.length ?? 0
+        },
+        "[RunwayService] Submitting image-to-video request"
+      );
       const taskPromise = client.imageToVideo.create({
         model: MODEL_ID,
         promptText,

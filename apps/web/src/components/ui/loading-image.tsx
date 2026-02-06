@@ -11,7 +11,7 @@ type LoadingImageProps = React.ComponentProps<typeof Image> & {
 export function LoadingImage({
   className,
   blurClassName = "blur-sm",
-  onLoadingComplete,
+  onLoad,
   src,
   alt = "",
   ...props
@@ -29,9 +29,9 @@ export function LoadingImage({
       alt={alt}
       className={cn(className, !isLoaded && blurClassName)}
       onError={() => setIsLoaded(true)}
-      onLoadingComplete={(image) => {
+      onLoad={(image) => {
         setIsLoaded(true);
-        onLoadingComplete?.(image);
+        onLoad?.(image);
       }}
     />
   );

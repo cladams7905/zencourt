@@ -1,6 +1,6 @@
 /**
- * AI Vision Service for Room Classification and Scene Description
- * Uses OpenAI's Vision API to classify rooms and generate scene descriptions.
+ * AI Vision Service for Room Classification
+ * Uses OpenAI's Vision API to classify rooms.
  */
 
 import OpenAI from "openai";
@@ -9,8 +9,7 @@ import {
   type BatchClassificationResult,
   type BatchProgressCallback,
   type RoomCategory,
-  type RoomClassification,
-  type SceneDescription
+  type RoomClassification
 } from "@web/src/types/vision";
 import { createChildLogger, logger as baseLogger } from "../../lib/logger";
 
@@ -32,14 +31,9 @@ const CLASSIFICATION_SCHEMA = {
       enum: Object.keys(ROOM_CATEGORIES)
     },
     confidence: { type: "number", minimum: 0, maximum: 1 },
-    primary_score: { type: "number", minimum: 0, maximum: 1 },
-    reasoning: { type: "string" },
-    features: {
-      type: "array",
-      items: { type: "string" }
-    }
+    primary_score: { type: "number", minimum: 0, maximum: 1 }
   },
-  required: ["category", "confidence", "primary_score", "reasoning", "features"]
+  required: ["category", "confidence", "primary_score"]
 } as const;
 
 type RetryOptions = {
@@ -81,7 +75,7 @@ IMPORTANT CLASSIFICATION RULES:
 3. Consider the primary purpose of the space shown
 4. Look for distinctive features (appliances, furniture, fixtures)
 5. Never guess a room type from low-quality, irrelevant, or non-room images—use "other" instead
-6. If your reasoning would include an apology, refusal, or "cannot analyze", the category MUST be "other"
+6. If your response would include an apology, refusal, or "cannot analyze", the category MUST be "other"
 7. Provide a "primary_score" from 0 to 1 estimating how strong a PRIMARY/hero image this would be for its room category.
 
 PRIMARY_SCORE RUBRIC (0-1):
@@ -99,49 +93,23 @@ You must respond with ONLY a valid JSON object, no additional text. Use this exa
 {
   "category": "<one of the categories above>",
   "confidence": <number between 0 and 1>,
-  "primary_score": <number between 0 and 1>,
-  "reasoning": "<brief 1-2 sentence explanation>",
-  "features": ["<feature1>", "<feature2>", "<feature3>"]
+  "primary_score": <number between 0 and 1>
 }
 
 EXAMPLES:
 {
   "category": "kitchen",
   "confidence": 0.95,
-  "primary_score": 0.88,
-  "reasoning": "Clear view of modern kitchen with stainless steel appliances, granite countertops, and island.",
-  "features": ["refrigerator", "stove", "granite countertops", "pendant lights", "kitchen island"]
+  "primary_score": 0.88
 }
 
 {
   "category": "bedroom",
   "confidence": 0.88,
-  "primary_score": 0.62,
-  "reasoning": "Room with bed as the central feature, nightstands, and closet visible.",
-  "features": ["queen bed", "nightstands", "ceiling fan", "carpet flooring"]
+  "primary_score": 0.62
 }
 
 Now analyze the provided image and respond with the classification JSON:`;
-
-  private static readonly SCENE_DESCRIPTION_PROMPT = `You are an expert at analyzing interior and exterior spaces for video generation. Analyze this image and provide a SHORT, CONCISE description that will be used to generate a video walkthrough.
-
-CRITICAL REQUIREMENTS:
-- Write ONLY 1-2 SHORT sentences (maximum 30-40 words total)
-- Be specific but extremely concise
-- Focus on the most visually distinctive elements
-- Mention key features: layout, materials, colors, lighting
-- Avoid unnecessary details or marketing language
-- Keep it brief and direct
-
-EXAMPLES:
-
-For a kitchen:
-"Modern white kitchen with gray quartz countertops and a large center island. Stainless appliances and subway tile backsplash with natural light from a window above the sink."
-
-For a living room:
-"Spacious living room with vaulted ceilings, dark hardwood floors, and floor-to-ceiling windows. Modern linear fireplace with gray stone surround and charcoal sectional sofa."
-
-Now analyze the provided image and provide a SHORT, CONCISE scene description (1-2 sentences max):`;
 
   private static readonly VALID_CATEGORIES = Object.keys(
     ROOM_CATEGORIES
@@ -356,74 +324,6 @@ Now analyze the provided image and provide a SHORT, CONCISE scene description (1
     return classification;
   }
 
-  public async generateSceneDescription(
-    imageUrl: string,
-    roomType: string,
-    options: { timeout?: number; maxRetries?: number } = {}
-  ): Promise<SceneDescription> {
-    const { timeout = 30000, maxRetries = 2 } = options;
-    this.logger.info(
-      { imageUrl, roomType, timeout, maxRetries },
-      "Generating scene description"
-    );
-
-    const response = await this.executeWithRetry(
-      () =>
-        this.getClient().chat.completions.create({
-          model: "gpt-4o",
-          messages: [
-            {
-              role: "user",
-              content: [
-                { type: "text", text: VisionService.SCENE_DESCRIPTION_PROMPT },
-                {
-                  type: "image_url",
-                  image_url: {
-                    url: imageUrl,
-                    detail: "high"
-                  }
-                }
-              ]
-            }
-          ],
-          max_tokens: 150,
-          temperature: 0.7
-        }),
-      {
-        timeout,
-        maxRetries,
-        timeoutMessage: `Scene description request timed out after ${timeout}ms`,
-        failureContext: "generate scene description"
-      }
-    );
-
-    const content = response.choices[0]?.message?.content;
-
-    if (!content) {
-      this.logger.error(
-        { imageUrl, roomType },
-        "Vision API returned empty content during scene description"
-      );
-      throw new AIVisionError(
-        "No content in API response",
-        "INVALID_RESPONSE",
-        response
-      );
-    }
-
-    const trimmed = content.trim();
-    this.logger.info(
-      { imageUrl, roomType, length: trimmed.length },
-      "Scene description generated"
-    );
-
-    return {
-      description: trimmed,
-      roomType,
-      keyFeatures: VisionService.extractKeyFeatures(content)
-    };
-  }
-
   public async classifyRoomBatch(
     imageUrls: string[],
     options: {
@@ -596,9 +496,7 @@ Now analyze the provided image and provide a SHORT, CONCISE scene description (1
       return {
         category: parsed.category as RoomCategory,
         confidence: parseFloat(parsed.confidence),
-        primaryScore,
-        reasoning: parsed.reasoning,
-        features: parsed.features || []
+        primaryScore
       };
     } catch (error) {
       throw new AIVisionError(
@@ -644,38 +542,6 @@ Now analyze the provided image and provide a SHORT, CONCISE scene description (1
         classification
       );
     }
-  }
-
-  private static extractKeyFeatures(description: string): string[] {
-    const features: string[] = [];
-    const patterns = [
-      /(\w+\s+)?(?:cabinets?|cabinetry)/gi,
-      /(\w+\s+)?countertops?/gi,
-      /(\w+\s+)?flooring/gi,
-      /(\w+\s+)?windows?/gi,
-      /(\w+\s+)?lights?|lighting/gi,
-      /(\w+\s+)?ceilings?/gi,
-      /(\w+\s+)?fireplace/gi,
-      /(\w+\s+)?backsplash/gi,
-      /(\w+\s+)?island/gi,
-      /(\w+\s+)?appliances?/gi,
-      /(\w+\s+)?beams?/gi,
-      /(\w+\s+)?shelving|shelves/gi
-    ];
-
-    patterns.forEach((pattern) => {
-      const matches = description.match(pattern);
-      if (matches) {
-        matches.forEach((match) => {
-          const cleaned = match.trim().toLowerCase();
-          if (!features.includes(cleaned)) {
-            features.push(cleaned);
-          }
-        });
-      }
-    });
-
-    return features.slice(0, 10);
   }
 
   private async processBatch<T, R>(

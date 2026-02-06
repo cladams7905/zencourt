@@ -18,14 +18,6 @@ export interface RoomClassification {
   category: RoomCategory;
   confidence: number;
   primaryScore?: number;
-  reasoning?: string;
-  features?: string[];
-}
-
-export interface SceneDescription {
-  description: string;
-  roomType: string;
-  keyFeatures: string[];
 }
 
 export interface BatchClassificationResult {

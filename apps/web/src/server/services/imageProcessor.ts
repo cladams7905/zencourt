@@ -3,7 +3,6 @@
  *
  * Coordinates the AI analysis workflow for property images:
  * - Analyze via AI vision
- * - Enrich with scene descriptions
  * - Categorize results
  * - Generate statistics
  */
@@ -57,7 +56,7 @@ export class imageProcessorService {
   private readonly logger = processorLogger;
 
   /**
-   * Analyze images workflow: Classification → Scene Descriptions → Categorization
+   * Analyze images workflow: Classification → Categorization
    * Expects images to already be uploaded with url set
    * Accepts serializable image data (no File objects or blob URLs)
    */
@@ -110,10 +109,6 @@ export class imageProcessorService {
           category: image.category,
           confidence: image.confidence,
           primaryScore: image.primaryScore ?? null,
-          features: Array.isArray(image.features)
-            ? [...image.features]
-            : image.features,
-          sceneDescription: image.sceneDescription,
           status: image.status,
           isPrimary: image.isPrimary,
           metadata: image.metadata,
@@ -243,7 +238,6 @@ export class imageProcessorService {
           image.primaryScore = isOther
             ? null
             : batchResult.classification.primaryScore ?? null;
-          image.features = batchResult.classification.features;
           image.status = "analyzed";
         } else {
           image.status = "error";
@@ -254,13 +248,12 @@ export class imageProcessorService {
       }
     });
 
-    await this.generateSceneDescriptions(uploadedImages);
     return uploadedImages;
   }
 
   private async getSignedImageUrl(
     image: SerializableImageData,
-    purpose: "classification" | "scene-description",
+    purpose: "classification",
     expiresInSeconds = 600
   ): Promise<string | null> {
     if (!image.url) {
@@ -341,82 +334,6 @@ export class imageProcessorService {
     };
   }
 
-  private async generateSceneDescriptions(images: SerializableImageData[]) {
-    const classifiedImages = images.filter((img) => img.category);
-    this.logger.info(
-      { total: classifiedImages.length },
-      "Generating scene descriptions for analyzed images"
-    );
-
-    for (const image of classifiedImages) {
-      try {
-        const roomType = image.category!.replace(/-/g, " ");
-        this.logger.debug(
-          { imageId: image.id, roomType },
-          "Requesting scene description"
-        );
-
-        const signedUrl = await this.getSignedImageUrl(
-          image,
-          "scene-description"
-        );
-
-        if (!signedUrl) {
-          this.logger.warn(
-            { imageId: image.id },
-            "Skipping scene description due to inaccessible image"
-          );
-          continue;
-        }
-
-        const sceneDesc = await visionService.generateSceneDescription(
-          signedUrl,
-          roomType,
-          { timeout: 30000, maxRetries: 2 }
-        );
-
-        if (!sceneDesc?.description) {
-          this.logger.warn(
-            { imageId: image.id },
-            "Scene description missing description text"
-          );
-          continue;
-        }
-
-        image.sceneDescription = sceneDesc.description;
-
-        this.logger.info(
-          {
-            imageId: image.id,
-            descriptionLength: sceneDesc.description.length
-          },
-          "Scene description generated"
-        );
-      } catch (error) {
-        this.logger.error(
-          {
-            imageId: image.id,
-            error:
-              error instanceof Error
-                ? { name: error.name, message: error.message }
-                : error
-          },
-          "Failed to generate scene description"
-        );
-      }
-    }
-
-    this.logger.debug(
-      {
-        summary: images.map((img) => ({
-          id: img.id,
-          hasSceneDesc: Boolean(img.sceneDescription),
-          descLength: img.sceneDescription?.length || 0
-        }))
-      },
-      "Scene description summary"
-    );
-  }
 }
 
 const imageProcessorServiceInstance = new imageProcessorService();

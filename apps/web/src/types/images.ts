@@ -17,11 +17,11 @@ import { DBListingImage, InsertDBListingImage } from "@shared/types/models";
    └→ toSerializable() → SerializableImageData
    └→ Server Action analyzes images
    └→ Returns with AI data populated
-      { category: "bedroom", confidence: 0.95, features: [...] }
+      { category: "bedroom", confidence: 0.95 }
 
 4. SAVE TO DATABASE
    └→ toInsertDBImage() → InsertDBImage
-      { id, listingId, filename, url, category, confidence, features, ... }
+      { id, listingId, filename, url, category, confidence, ... }
    └→ Database insert
    └→ Returns DBImage with uploadedAt
 
@@ -117,8 +117,6 @@ export function toSerializable(image: ProcessedImage): SerializableImageData {
     category: image.category,
     confidence: image.confidence,
     primaryScore: image.primaryScore,
-    features: image.features,
-    sceneDescription: image.sceneDescription,
     status: image.status,
     isPrimary: image.isPrimary,
     metadata: image.metadata,
@@ -142,8 +140,6 @@ export function toInsertDBImage(
     category: image.category ?? null,
     confidence: image.confidence ?? null,
     primaryScore: image.primaryScore ?? null,
-    features: image.features ?? null,
-    sceneDescription: image.sceneDescription ?? null,
     isPrimary: image.isPrimary ?? false,
     metadata: image.metadata ?? null
   };

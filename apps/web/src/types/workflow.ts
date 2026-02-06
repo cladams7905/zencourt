@@ -82,15 +82,6 @@ export interface WorkflowState {
   generationProgress: GenerationProgress | null;
 }
 
-/**
- * Final composed video details shown in the workflow
- */
-export interface FinalVideoData {
-  videoUrl: string;
-  thumbnailUrl?: string | null;
-  duration?: number | null;
-}
-
 // ============================================================================
 // Extended Project Type
 // ============================================================================

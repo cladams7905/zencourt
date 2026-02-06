@@ -3,8 +3,9 @@
 import * as React from "react";
 import { cn } from "../ui/utils";
 import { Button } from "../ui/button";
-import { Heart, Edit, Download, Share2, Trash2 } from "lucide-react";
+import { Heart, Edit, Download, Share2, Trash2, Film } from "lucide-react";
 import Image from "next/image";
+import { LoadingVideo } from "../ui/loading-video";
 
 type AspectRatio = "square" | "vertical" | "horizontal";
 
@@ -13,6 +14,10 @@ type CarouselSlide = {
   content: string;
   broll_query?: string | null;
 };
+
+const FALLBACK_THUMBNAIL = `data:image/svg+xml,${encodeURIComponent(
+  "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 1200'><rect width='800' height='1200' fill='#111827'/><rect x='120' y='300' width='560' height='600' rx='24' fill='#1f2937'/><text x='400' y='640' font-family='Arial, sans-serif' font-size='28' fill='#9ca3af' text-anchor='middle'>Thumbnail unavailable</text></svg>"
+)}`;
 
 interface ContentItem {
   id: string;
@@ -54,8 +59,6 @@ const ContentGridItem = ({
   onShare?: (id: string) => void;
   onDelete?: (id: string) => void;
 }) => {
-  const [isHovered, setIsHovered] = React.useState(false);
-  const videoRef = React.useRef<HTMLVideoElement | null>(null);
   const hasTextContent = Boolean(
     item.hook || item.caption || item.body?.length || item.brollQuery
   );
@@ -103,70 +106,88 @@ const ContentGridItem = ({
     );
   }
 
-  if (!item.thumbnail && !hasTextContent) {
+  if (!item.thumbnail && !item.videoUrl && !hasTextContent) {
     return null;
   }
 
+  const getAspectRatio = (): string | undefined => {
+    switch (item.aspectRatio) {
+      case "vertical":
+        return "9 / 16";
+      case "square":
+        return "1 / 1";
+      case "horizontal":
+        return "4 / 3";
+      default:
+        return undefined;
+    }
+  };
+
+  const aspectRatioStyle = getAspectRatio();
+
   return (
     <div className="break-inside-avoid relative rounded-2xl mb-6">
-      {item.thumbnail && (
+      {(item.thumbnail || item.videoUrl) && (
         <div
           className={cn(
-            "relative group rounded-lg overflow-hidden cursor-pointer",
+            "relative group rounded-xl shadow-xs border border-border/40 overflow-hidden cursor-pointer",
             item.aspectRatio === "vertical" && "aspect-9/16"
           )}
-          onMouseEnter={() => {
-            if (!item.videoUrl) {
-              return;
-            }
-            setIsHovered(true);
-            const video = videoRef.current;
-            if (video) {
-              video.play().catch(() => null);
-            }
-          }}
-          onMouseLeave={() => {
-            if (!item.videoUrl) {
-              return;
-            }
-            setIsHovered(false);
-            const video = videoRef.current;
-            if (video) {
-              video.pause();
-              video.currentTime = 0;
-            }
-          }}
         >
-          {/* Content Image */}
-          <Image
-            src={item.thumbnail}
-            alt={item.alt || "Content item"}
-            className={cn(
-              "w-full object-cover transition-transform duration-700 group-hover:scale-105",
-              item.aspectRatio === "vertical" ? "h-full" : "h-auto"
-            )}
-          />
+          <div
+            className="relative w-full"
+            style={aspectRatioStyle ? { aspectRatio: aspectRatioStyle } : undefined}
+          >
+            {item.thumbnail ? (
+              item.videoUrl ? (
+                <LoadingVideo
+                  videoSrc={item.videoUrl}
+                  thumbnailSrc={item.thumbnail}
+                  thumbnailAlt={item.alt || "Content item"}
+                  className="h-full w-full"
+                  imageClassName={cn(
+                    "object-cover transition-transform duration-700 group-hover:scale-105",
+                    item.aspectRatio === "vertical" ? "h-full" : "h-auto"
+                  )}
+                  videoClassName="object-cover"
+                  muted
+                  loop
+                  playsInline
+                  preload="metadata"
+                />
+              ) : (
+                <Image
+                  src={item.thumbnail}
+                  alt={item.alt || "Content item"}
+                  fill
+                  sizes="(min-width: 1536px) 22vw, (min-width: 1280px) 26vw, (min-width: 1024px) 32vw, (min-width: 768px) 48vw, 100vw"
+                  className={cn(
+                    "object-cover transition-transform duration-700 group-hover:scale-105",
+                    item.aspectRatio === "vertical" ? "h-full" : "h-auto"
+                  )}
+                />
+              )
+            ) : item.videoUrl ? (
+              <LoadingVideo
+                videoSrc={item.videoUrl}
+                thumbnailSrc={FALLBACK_THUMBNAIL}
+                thumbnailAlt={item.alt || "Thumbnail unavailable"}
+                className="h-full w-full"
+                imageClassName={cn(
+                  "object-cover transition-transform duration-700 group-hover:scale-105",
+                  item.aspectRatio === "vertical" ? "h-full" : "h-auto"
+                )}
+                videoClassName="object-cover"
+                muted
+                loop
+                playsInline
+                preload="metadata"
+              />
+            ) : null}
+          </div>
 
-          {item.videoUrl && (
-            <video
-              ref={videoRef}
-              className={cn(
-                "pointer-events-none absolute inset-0 h-full w-full object-cover transition-opacity duration-300",
-                isHovered ? "opacity-100" : "opacity-0"
-              )}
-              muted
-              playsInline
-              loop
-              preload="metadata"
-              poster={item.thumbnail}
-              src={item.videoUrl}
-            />
-          )}
+          <div className="pointer-events-none absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300" />
 
-          {/* Hover Overlay */}
-          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300" />
-
-          {/* Favorite Button */}
           <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
             {onDelete && (
               <Button
@@ -202,7 +223,6 @@ const ContentGridItem = ({
             </Button>
           </div>
 
-          {/* Action Buttons */}
           <div className="absolute bottom-4 left-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
             <div className="flex gap-2 p-1.5 rounded-lg bg-black/20 backdrop-blur-sm">
               <Button

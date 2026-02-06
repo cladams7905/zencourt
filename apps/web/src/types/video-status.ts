@@ -12,16 +12,6 @@ export interface VideoJobUpdateEvent {
   sortOrder?: number | null;
 }
 
-export interface FinalVideoUpdateEvent {
-  listingId: string;
-  status: "completed" | "failed";
-  finalVideoUrl?: string | null;
-  thumbnailUrl?: string | null;
-  duration?: number | null;
-  errorMessage?: string | null;
-}
-
 export interface InitialVideoStatusPayload {
   jobs: VideoJobUpdateEvent[];
-  finalVideo?: FinalVideoUpdateEvent;
 }

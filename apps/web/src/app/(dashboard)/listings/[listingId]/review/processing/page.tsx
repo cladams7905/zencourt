@@ -26,6 +26,18 @@ export default async function ListingPropertyProcessingPage({
     redirect("/listings/sync");
   }
 
+  if (listing.listingStage !== "review") {
+    switch (listing.listingStage) {
+      case "create":
+        redirect(`/listings/${listingId}/create`);
+      case "generate":
+        redirect(`/listings/${listingId}/generate`);
+      case "categorize":
+      default:
+        redirect(`/listings/${listingId}/categorize`);
+    }
+  }
+
   return (
     <ListingProcessingView
       mode="review"

@@ -53,29 +53,40 @@ function getCategoryForRoom(room: { id: string; category?: string }): string {
   return trimmed;
 }
 
-function buildPrompt(
-  roomName: string,
-  roomDescription?: string | null,
-  aiDirections?: string
-): string {
-  const descriptionPart = roomDescription?.trim()
-    ? ` ${roomDescription.trim()}`
-    : "";
-  const basePrompt = `Smooth camera pan through ${roomName}. Camera should move slowly horizontally through the space.${descriptionPart}`;
+function buildPrompt(args: {
+  roomName: string;
+  category: string;
+  previousTemplateKey?: string | null;
+}): { prompt: string; templateKey: string } {
+  const { roomName, category, previousTemplateKey } = args;
 
-  if (!aiDirections?.trim()) {
-    logger.debug({ basePrompt }, `Constructed prompt for ${roomName}`);
-    return basePrompt;
-  } else {
-    const additionalCreativeDirection = !!aiDirections
-      ? `Additional creative direction: ${aiDirections.trim()}`
-      : "";
-    const finalPrompt = basePrompt + additionalCreativeDirection;
+  const baseCategory = category.replace(/-\d+$/, "");
+  const metadata = ROOM_CATEGORIES[baseCategory as RoomCategory];
+  const isExterior = metadata?.group === "exterior";
 
-    logger.debug({ finalPrompt }, `Constructed prompt for ${roomName}`);
+  const promptInfo = pickPromptTemplate({
+    category: baseCategory,
+    isExterior,
+    previousTemplateKey
+  });
 
-    return finalPrompt;
-  }
+  const displayRoomName =
+    baseCategory === "exterior-front"
+      ? "front of the house"
+      : baseCategory === "exterior-backyard"
+        ? "back of the house"
+        : roomName;
+
+  const prompt = promptInfo.template
+    .replace(/\{roomName\}/g, displayRoomName)
+    .trim();
+
+  logger.debug(
+    { prompt, templateKey: promptInfo.key },
+    `Constructed prompt for ${roomName}`
+  );
+
+  return { prompt, templateKey: promptInfo.key };
 }
 
 function groupImagesByCategory(
@@ -112,9 +123,181 @@ function groupImagesByCategory(
   return grouped;
 }
 
+type DerivedRoom = VideoGenerateRequest["rooms"][number];
+
+function buildRoomsFromImages(
+  groupedImages: Map<string, DBListingImage[]>
+): DerivedRoom[] {
+  const categories = Array.from(groupedImages.keys());
+  if (categories.length === 0) {
+    return [];
+  }
+
+  const baseOrder = Object.values(ROOM_CATEGORIES)
+    .sort((a, b) => a.order - b.order)
+    .map((category) => category.id);
+
+  const used = new Set<string>();
+  const ordered: string[] = [];
+
+  baseOrder.forEach((base) => {
+    const matches = categories
+      .filter((category) => category === base || category.startsWith(`${base}-`))
+      .sort((a, b) => {
+        const getSuffix = (value: string) => {
+          const match = value.match(/-(\d+)$/);
+          return match ? Number(match[1]) : 0;
+        };
+        return getSuffix(a) - getSuffix(b);
+      });
+    matches.forEach((match) => {
+      ordered.push(match);
+      used.add(match);
+    });
+  });
+
+  const remaining = categories
+    .filter((category) => !used.has(category))
+    .sort((a, b) => a.localeCompare(b));
+
+  const orderedCategories = [...ordered, ...remaining];
+
+  return orderedCategories.map((category) => {
+    const base = category.replace(/-\d+$/, "");
+    const metadata = ROOM_CATEGORIES[base as RoomCategory];
+    const label =
+      metadata?.label ??
+      base.replace(/-/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+    const numberMatch = category.match(/-(\d+)$/);
+    const roomNumber = numberMatch ? Number(numberMatch[1]) : undefined;
+    const name =
+      metadata?.allowNumbering && roomNumber ? `${label} ${roomNumber}` : label;
+
+    return {
+      id: category,
+      name,
+      category,
+      roomNumber,
+      imageCount: groupedImages.get(category)?.length ?? 0
+    };
+  });
+}
+
 interface RoomAssetSelection {
   imageUrls: string[];
-  roomDescription?: string | null;
+}
+
+type PromptTemplate = {
+  key: string;
+  template: string;
+};
+
+const INTERIOR_TEMPLATES: PromptTemplate[] = [
+  {
+    key: "interior-pan",
+    template: "Smooth slow horizontal pan through the {roomName}."
+  },
+  {
+    key: "interior-push-in",
+    template: "Slow push-in shot revealing the {roomName}."
+  },
+  {
+    key: "interior-reveal",
+    template: "Slow gentle reveal around corner into the {roomName}."
+  },
+  {
+    key: "interior-tracking",
+    template: "Slow steady tracking shot along the {roomName}."
+  }
+];
+
+const EXTERIOR_TEMPLATES: PromptTemplate[] = [
+  {
+    key: "exterior-approach",
+    template: "Slow approach toward the {roomName}."
+  },
+  {
+    key: "exterior-sweep",
+    template: "Slow sweeping pan across the {roomName}."
+  },
+  {
+    key: "exterior-orbit",
+    template: "Slow orbital movement around the {roomName}."
+  },
+  {
+    key: "exterior-crane",
+    template: "Slow slight crane up revealing the {roomName}."
+  }
+];
+
+const CATEGORY_TEMPLATES: Partial<Record<RoomCategory, PromptTemplate[]>> = {
+  bathroom: [
+    {
+      key: "bathroom-reveal",
+      template: "Slow reveal around doorway into {roomName}."
+    }
+  ],
+  bedroom: [
+    {
+      key: "bedroom-push",
+      template: "Slow gentle push-in toward the focal point in {roomName}."
+    }
+  ],
+  "exterior-backyard": [
+    {
+      key: "backyard-sweep",
+      template: "Slow sweeping pan across {roomName}."
+    },
+    {
+      key: "backyard-crane",
+      template: "Slow slight crane up revealing {roomName}."
+    }
+  ],
+  "exterior-front": [
+    {
+      key: "front-approach",
+      template: "Slow approach toward {roomName}."
+    },
+    {
+      key: "front-orbit",
+      template: "Slow orbital movement around {roomName}."
+    }
+  ]
+};
+
+const WOW_CATEGORIES = new Set<RoomCategory>([
+  "exterior-front",
+  "exterior-backyard",
+  "living-room",
+  "kitchen"
+]);
+
+function getDurationSecondsForCategory(category: string): number {
+  const baseCategory = category.replace(/-\d+$/, "") as RoomCategory;
+  return WOW_CATEGORIES.has(baseCategory) ? 8 : 6;
+}
+
+function pickPromptTemplate(args: {
+  category: string;
+  isExterior: boolean;
+  previousTemplateKey?: string | null;
+}): PromptTemplate {
+  const { category, isExterior, previousTemplateKey } = args;
+  const baseTemplates = isExterior ? EXTERIOR_TEMPLATES : INTERIOR_TEMPLATES;
+  const overrides = CATEGORY_TEMPLATES[category as RoomCategory] ?? undefined;
+  const pool = overrides ? [...overrides, ...baseTemplates] : baseTemplates;
+
+  if (pool.length === 1) {
+    return pool[0];
+  }
+
+  const filtered = previousTemplateKey
+    ? pool.filter((item) => item.key !== previousTemplateKey)
+    : pool;
+
+  const pickFrom = filtered.length > 0 ? filtered : pool;
+  const index = Math.floor(Math.random() * pickFrom.length);
+  return pickFrom[index];
 }
 
 function selectRoomAssetsForRoom(
@@ -130,14 +313,13 @@ function selectRoomAssetsForRoom(
   }
 
   const metadata = ROOM_CATEGORIES[room.category as RoomCategory];
-  const maxImages = 4;
+  const maxImages = 3;
 
   if (metadata?.allowNumbering) {
     const primaryImage = availableImages.find((image) => image.isPrimary);
     if (primaryImage?.url) {
       return {
-        imageUrls: [primaryImage.url],
-        roomDescription: primaryImage.sceneDescription ?? null
+        imageUrls: [primaryImage.url]
       };
     }
     const index =
@@ -154,8 +336,7 @@ function selectRoomAssetsForRoom(
     }
 
     return {
-      imageUrls: [image.url],
-      roomDescription: image.sceneDescription
+      imageUrls: [image.url]
     };
   }
 
@@ -164,14 +345,8 @@ function selectRoomAssetsForRoom(
     .slice(0, maxImages)
     .map((image) => image.url!) as string[];
 
-  const descriptionSource =
-    availableImages.find(
-      (image) => image.isPrimary && image.sceneDescription
-    ) ?? availableImages.find((image) => Boolean(image.sceneDescription));
-
   return {
-    imageUrls,
-    roomDescription: descriptionSource?.sceneDescription ?? null
+    imageUrls
   };
 }
 
@@ -246,18 +421,6 @@ export async function POST(
       "Video generation request authorized"
     );
 
-    // Validate rooms
-    if (!body.rooms || body.rooms.length === 0) {
-      logger.warn(
-        { listingId: body.listingId },
-        "Video generation request missing rooms"
-      );
-      throw new ApiError(400, {
-        error: "Invalid request",
-        message: "At least one room is required to generate videos"
-      });
-    }
-
     const orientation = body.orientation || "landscape";
     const duration = body.duration || DEFAULT_DURATION;
 
@@ -279,11 +442,26 @@ export async function POST(
     }
 
     const groupedImages = groupImagesByCategory(listingImageRows);
+    const rooms =
+      body.rooms && body.rooms.length > 0
+        ? body.rooms
+        : buildRoomsFromImages(groupedImages);
+
+    if (rooms.length === 0) {
+      logger.warn(
+        { listingId: body.listingId },
+        "Video generation request missing rooms"
+      );
+      throw new ApiError(400, {
+        error: "Invalid request",
+        message: "At least one room is required to generate videos"
+      });
+    }
 
     logger.info(
       {
         listingId: body.listingId,
-        roomCount: body.rooms.length,
+        roomCount: rooms.length,
         orientation,
         duration
       },
@@ -296,7 +474,6 @@ export async function POST(
       id: parentVideoId,
       listingId: listing.id,
       status: "pending",
-      metadata: null,
       errorMessage: null
     };
 
@@ -311,66 +488,70 @@ export async function POST(
     );
 
     // Step 2: Create video_gen_jobs records directly from rooms
-    const videoJobRecords: InsertDBVideoGenJob[] = await Promise.all(
-      body.rooms.map(async (room, index) => {
-        const category = getCategoryForRoom(room);
-        const roomWithCategory = { ...room, category };
-        const { imageUrls, roomDescription } = selectRoomAssetsForRoom(
-          roomWithCategory,
-          groupedImages
-        );
-        let publicImageUrls: string[];
-        try {
-          publicImageUrls = await getSignedDownloadUrls(imageUrls);
-        } catch (error) {
-          logger.error(
-            {
-              listingId: body.listingId,
-              roomId: room.id,
-              err: error instanceof Error ? error.message : String(error)
-            },
-            "Failed to ensure public image URLs"
-          );
-          throw new ApiError(500, {
-            error: "storage_error",
-            message: "Failed to generate signed image URLs for video generation"
-          });
-        }
-        const prompt = buildPrompt(
-          room.name,
-          roomDescription,
-          body.aiDirections
-        );
-        const jobId = nanoid();
+    const videoJobRecords: InsertDBVideoGenJob[] = [];
+    let previousTemplateKey: string | null = null;
 
-        return {
-          id: jobId,
-          videoGenBatchId: parentVideoId,
-          requestId: null,
-          status: "pending",
-          videoUrl: null,
-          thumbnailUrl: null,
-          generationModel: "runway-gen4-turbo",
-          generationSettings: {
-            model: "runway-gen4-turbo",
-            orientation,
-            aiDirections: body.aiDirections || "",
-            imageUrls: publicImageUrls,
-            prompt,
-            category,
-            sortOrder: index,
-            durationSeconds: 5,
+    for (let index = 0; index < rooms.length; index += 1) {
+      const room = rooms[index];
+      const category = getCategoryForRoom(room);
+      const roomWithCategory = { ...room, category };
+      const { imageUrls } = selectRoomAssetsForRoom(
+        roomWithCategory,
+        groupedImages
+      );
+      let publicImageUrls: string[];
+      try {
+        publicImageUrls = await getSignedDownloadUrls(imageUrls);
+      } catch (error) {
+        logger.error(
+          {
+            listingId: body.listingId,
             roomId: room.id,
-            roomName: room.name,
-            roomNumber: room.roomNumber
-          } as JobGenerationSettings,
-          metadata: {
-            orientation
+            err: error instanceof Error ? error.message : String(error)
           },
-          errorMessage: null
-        };
-      })
-    );
+          "Failed to ensure public image URLs"
+        );
+        throw new ApiError(500, {
+          error: "storage_error",
+          message: "Failed to generate signed image URLs for video generation"
+        });
+      }
+      const promptResult = buildPrompt({
+        roomName: room.name,
+        category,
+        previousTemplateKey
+      });
+      previousTemplateKey = promptResult.templateKey;
+      const durationSeconds = getDurationSecondsForCategory(category);
+      const jobId = nanoid();
+
+      videoJobRecords.push({
+        id: jobId,
+        videoGenBatchId: parentVideoId,
+        requestId: null,
+        status: "pending",
+        videoUrl: null,
+        thumbnailUrl: null,
+        generationModel: "runway-gen4-turbo",
+        generationSettings: {
+          model: "runway-gen4-turbo",
+          orientation,
+          aiDirections: body.aiDirections || "",
+          imageUrls: publicImageUrls,
+          prompt: promptResult.prompt,
+          category,
+          sortOrder: index,
+          durationSeconds,
+          roomId: room.id,
+          roomName: room.name,
+          roomNumber: room.roomNumber
+        } as JobGenerationSettings,
+        metadata: {
+          orientation
+        },
+        errorMessage: null
+      });
+    }
 
     // Create all video jobs
     for (const jobRecord of videoJobRecords) {

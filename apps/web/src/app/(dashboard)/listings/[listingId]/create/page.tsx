@@ -31,6 +31,18 @@ export default async function ListingCreatePage({
     redirect("/listings/sync");
   }
 
+  if (listing.listingStage !== "create") {
+    switch (listing.listingStage) {
+      case "generate":
+        redirect(`/listings/${listingId}/generate`);
+      case "review":
+        redirect(`/listings/${listingId}/review`);
+      case "categorize":
+      default:
+        redirect(`/listings/${listingId}/categorize`);
+    }
+  }
+
   await updateListing(user.id, listingId, {
     lastOpenedAt: new Date(),
     listingStage: "create"

@@ -13,7 +13,11 @@ import {
   CardTitle
 } from "../../ui/card";
 import { UploadDialog } from "../../uploads/UploadDialog";
-import { MAX_IMAGE_BYTES } from "@shared/utils/mediaUpload";
+import {
+  IMAGE_UPLOAD_LIMIT,
+  MAX_IMAGE_BYTES,
+  MAX_IMAGES_PER_ROOM
+} from "@shared/utils/mediaUpload";
 import {
   createDraftListing,
   createListingImageRecords,
@@ -173,10 +177,11 @@ export function ListingSyncView({ userId }: ListingSyncViewProps) {
         errorMessage="Failed to upload photos. Please try again."
         tipsTitle="What photos should I upload?"
         tipsItems={[
-          "No more than 20 listing photos may be uploaded per listing.",
-          "Select at least 2 listing photos per room for best output quality.",
+          `No more than ${IMAGE_UPLOAD_LIMIT} listing photos may be uploaded per listing.`,
+          `Limit each room category to ${MAX_IMAGES_PER_ROOM} photos for video generation.`,
           "Include a wide variety well-framed shots of key rooms and exterior."
         ]}
+        maxFiles={IMAGE_UPLOAD_LIMIT}
         maxImageBytes={MAX_IMAGE_BYTES}
         compressDriveImages
         compressOversizeImages

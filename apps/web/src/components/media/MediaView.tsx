@@ -104,7 +104,7 @@ const MediaCard = ({
         <div className="absolute inset-0 pointer-events-none bg-linear-to-t from-black/60 via-black/10 to-transparent" />
 
         <div className="absolute top-3 left-3 flex items-center gap-2">
-          <Badge className="bg-black/40 text-white border border-white/20">
+          <Badge className="bg-black/20 text-white backdrop-blur-sm">
             <TypeIcon className="h-3 w-3" />
             <span className="text-[10px] uppercase tracking-wide">
               {item.type}
@@ -396,7 +396,7 @@ const MediaView = ({ userId, initialMedia = [] }: MediaViewProps) => {
 
           {hasAnyBrandKitMedia ? (
             hasFilteredBrandKitMedia ? (
-              <div className="columns-1 gap-6 sm:columns-2 xl:columns-3 2xl:columns-4">
+              <div className="columns-1 gap-6 sm:columns-2 xl:columns-4 2xl:columns-4">
                 {visibleBrandKitItems.map((item) => (
                   <MediaCard
                     key={item.id}
