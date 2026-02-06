@@ -96,7 +96,6 @@ Orchestrates the entire video generation workflow:
 - Dispatches to Runway ML (primary) or Kling/fal.ai (fallback)
 - Handles webhook callbacks from AI services
 - Downloads and normalizes generated videos
-- Triggers Remotion composition when all jobs complete **only if** `ENABLE_FINAL_COMPOSITION=true`
 - Sends completion webhooks to the web app
 
 **Video batch workflow note:** the parent `video_gen_batch` record is treated as a run/batch only. Final asset URLs live on the `content` row when a user saves a draft/favorite. Individual clip URLs and thumbnails are stored on `video_gen_jobs`.
