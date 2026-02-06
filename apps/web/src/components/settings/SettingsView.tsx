@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import type { DBUserAdditional } from "@shared/types/models";
-import { ViewHeader } from "../dashboard/ViewHeader";
+import { ViewHeader } from "../view/ViewHeader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { AccountTab } from "./AccountTab";
 import { BrandingTab } from "./BrandingTab";

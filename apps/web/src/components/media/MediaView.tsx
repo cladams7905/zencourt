@@ -40,7 +40,7 @@ import {
   getUserMediaUploadUrls
 } from "@web/src/server/actions/db/userMedia";
 import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES } from "@shared/utils/mediaUpload";
-import { ViewHeader } from "../dashboard/ViewHeader";
+import { ViewHeader } from "../view/ViewHeader";
 
 interface MediaViewProps {
   userId: string;

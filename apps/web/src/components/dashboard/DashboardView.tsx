@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { cn } from "./../ui/utils";
-import { ViewHeader } from "./ViewHeader";
+import { ViewHeader } from "../view/ViewHeader";
 import { ProfileCompletionChecklist } from "./ProfileCompletionChecklist";
 import { ScheduleCard, type ScheduledPost } from "./ScheduleCard";
 import { ContentFilterBar, type ContentType } from "./ContentFilterBar";

@@ -35,7 +35,7 @@ export function ViewSidebarToggle() {
           />
         </button>
       </TooltipTrigger>
-      <TooltipContent>
+      <TooltipContent side="right">
         {isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
       </TooltipContent>
     </Tooltip>

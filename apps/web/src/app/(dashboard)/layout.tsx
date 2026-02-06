@@ -1,9 +1,9 @@
 import { Suspense } from "react";
-import { SidebarWrapper } from "@web/src/components/dashboard/SidebarWrapper";
-import { SidebarSkeleton } from "@web/src/components/dashboard/SidebarSkeleton";
-import { ViewSidebarProvider } from "@web/src/components/dashboard/ViewSidebarContext";
-import { MobileSidebarTrigger } from "@web/src/components/dashboard/MobileSidebarTrigger";
-import { MobileCreateFAB } from "@web/src/components/dashboard/MobileCreateFAB";
+import { SidebarWrapper } from "@web/src/components/view/SidebarWrapper";
+import { SidebarSkeleton } from "@web/src/components/view/SidebarSkeleton";
+import { ViewSidebarProvider } from "@web/src/components/view/ViewSidebarContext";
+import { MobileSidebarTrigger } from "@web/src/components/view/MobileSidebarTrigger";
+import { MobileCreateFAB } from "@web/src/components/view/MobileCreateFAB";
 
 export default function DashboardLayout({
   children

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ViewHeader } from "../../dashboard/ViewHeader";
+import { ViewHeader } from "../../view/ViewHeader";
 import { Badge } from "../../ui/badge";
 import { Button } from "../../ui/button";
 import {

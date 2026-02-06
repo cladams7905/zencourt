@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { Loader2 } from "lucide-react";
-import { SidebarSkeleton } from "@web/src/components/dashboard/SidebarSkeleton";
+import { SidebarSkeleton } from "@web/src/components/view/SidebarSkeleton";
 
 export default function DashboardLoading() {
   return (

@@ -12,7 +12,7 @@ import {
 import { Badge } from "../ui/badge";
 import { useRouter } from "next/navigation";
 import { LoadingImage } from "../ui/loading-image";
-import { ViewHeader } from "../dashboard/ViewHeader";
+import { ViewHeader } from "../view/ViewHeader";
 import { FileEdit } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 
