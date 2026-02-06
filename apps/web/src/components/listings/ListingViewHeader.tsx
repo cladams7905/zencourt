@@ -45,16 +45,16 @@ export function ListingViewHeader({
     <header
       ref={ref}
       className={cn(
-        "top-0 z-30 bg-background/90 shadow-xs backdrop-blur-md px-8 py-5 border-b border-border rounded-t-xl",
+        "top-0 z-30 bg-background/90 shadow-xs backdrop-blur-md px-4 md:px-8 py-4 md:py-5 border-b border-border md:rounded-t-xl",
         sticky ? "sticky" : "static",
         className
       )}
     >
       <div
         className={cn(
-          "grid items-center gap-6",
+          "grid items-center gap-4 md:gap-6",
           hasTimeline
-            ? "grid-cols-[minmax(0,1fr)_minmax(360px,520px)_minmax(0,1fr)]"
+            ? "grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(360px,520px)_minmax(0,1fr)]"
             : "grid-cols-[minmax(0,1fr)_auto]"
         )}
       >
@@ -75,7 +75,7 @@ export function ListingViewHeader({
           {showCreate ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button size="default" className="gap-2">
+                <Button size="default" className="gap-2 hidden md:flex">
                   <Plus className="h-5 w-5" />
                   <span>Create</span>
                 </Button>
@@ -109,7 +109,7 @@ export function ListingViewHeader({
             <Button
               size="icon"
               variant="ghost"
-              className="relative rounded-full"
+              className="relative rounded-full hidden md:flex"
             >
               <Bell className="h-5 w-5" />
               {hasNotifications && (

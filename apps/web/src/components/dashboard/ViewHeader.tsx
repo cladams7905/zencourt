@@ -31,7 +31,7 @@ export function ViewHeader({
   return (
     <header
       className={cn(
-        "sticky top-0 z-30 bg-background/90 shadow-xs backdrop-blur-md px-8 py-5 flex justify-between items-center border-b border-border rounded-t-xl",
+        "sticky top-0 z-30 bg-background/90 shadow-xs backdrop-blur-md px-4 md:px-8 py-4 md:py-5 flex justify-between items-center border-b border-border md:rounded-t-xl",
         className
       )}
     >
@@ -44,7 +44,7 @@ export function ViewHeader({
         ) : null}
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="hidden md:flex items-center gap-4">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button size="default" className="gap-2">

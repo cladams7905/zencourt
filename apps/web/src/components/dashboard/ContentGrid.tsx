@@ -3,7 +3,7 @@
 import * as React from "react";
 import { cn } from "../ui/utils";
 import { Button } from "../ui/button";
-import { Heart, Edit, Download, Share2, Trash2, Film } from "lucide-react";
+import { Heart, Edit, Download, Share2, Trash2 } from "lucide-react";
 import Image from "next/image";
 import { LoadingVideo } from "../ui/loading-video";
 
@@ -136,7 +136,9 @@ const ContentGridItem = ({
         >
           <div
             className="relative w-full"
-            style={aspectRatioStyle ? { aspectRatio: aspectRatioStyle } : undefined}
+            style={
+              aspectRatioStyle ? { aspectRatio: aspectRatioStyle } : undefined
+            }
           >
             {item.thumbnail ? (
               item.videoUrl ? (

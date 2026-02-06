@@ -27,7 +27,8 @@ import {
   CircleQuestionMark,
   MessageCircle,
   ArrowBigUpDash,
-  Film
+  Film,
+  LayoutList
 } from "lucide-react";
 import Image from "next/image";
 import Logo from "../../../public/zencourt-logo.svg";
@@ -55,6 +56,15 @@ import {
   type ListingSidebarUpdate
 } from "@web/src/lib/listingSidebarEvents";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription
+} from "../ui/sheet";
+import { useViewSidebar } from "./ViewSidebarContext";
+import { ViewSidebarToggle } from "./ViewSidebarToggle";
 
 type ListingSidebarItem = {
   id: string;
@@ -71,13 +81,19 @@ interface ViewSidebarProps {
   listings?: ListingSidebarItem[];
 }
 
-const ViewSidebar = ({
-  className,
+interface SidebarContentProps extends ViewSidebarProps {
+  onMobileClose?: () => void;
+  isCollapsed?: boolean;
+}
+
+const SidebarContent = ({
   userName = "User",
   paymentPlan = "Free",
   userAvatar,
-  listings = []
-}: ViewSidebarProps) => {
+  listings = [],
+  onMobileClose,
+  isCollapsed = false
+}: SidebarContentProps) => {
   const user = useUser();
   const router = useRouter();
   const [contentExpanded, setContentExpanded] = React.useState(true);
@@ -93,6 +109,7 @@ const ViewSidebar = ({
     () => new Set<string>()
   );
   const pendingListingTimeouts = React.useRef(new Map<string, number>());
+  const { isMobile } = useViewSidebar();
 
   const markListingPending = React.useCallback((listingId: string) => {
     const timeout = pendingListingTimeouts.current.get(listingId);
@@ -203,22 +220,74 @@ const ViewSidebar = ({
   const ListingRowSkeleton = ({ id }: { id: string }) => (
     <div
       key={`listing-skeleton-${id}`}
-      className="flex items-center justify-between gap-2 rounded-md px-2 py-2"
+      className={cn(
+        "flex items-center gap-2 rounded-md px-2 py-2",
+        isCollapsed ? "justify-center" : "justify-between"
+      )}
     >
       <div className="flex items-center gap-3 min-w-0">
         <div className="h-1.5 w-1.5 rotate-45 rounded-xs bg-muted-foreground/20 animate-pulse" />
-        <div className="h-4 w-[150px] rounded-full bg-muted-foreground/10 animate-pulse" />
+        {!isCollapsed && (
+          <div className="h-4 w-[150px] rounded-full bg-muted-foreground/10 animate-pulse" />
+        )}
       </div>
-      <div className="h-5 w-5 rounded-full bg-muted-foreground/10 animate-pulse" />
+      {!isCollapsed && (
+        <div className="h-5 w-5 rounded-full bg-muted-foreground/10 animate-pulse" />
+      )}
     </div>
   );
 
+  const resolveListingPath = (listing: ListingSidebarItem) => {
+    switch (listing.listingStage) {
+      case "review":
+        return `/listings/${listing.id}/review`;
+      case "generate":
+        return `/listings/${listing.id}/generate`;
+      case "create":
+        return `/listings/${listing.id}/create`;
+      case "categorize":
+      default:
+        return `/listings/${listing.id}/categorize`;
+    }
+  };
+
+  const handleLinkClick = () => {
+    onMobileClose?.();
+  };
+
   const ListingsSection = () => (
-    <div className="space-y-0.5 pl-2">
+    <div className={cn("space-y-0.5", !isCollapsed && "pl-2")}>
       {displayedListingItems.length > 0 ? (
         displayedListingItems.map((listing) =>
           pendingListingIds.has(listing.id) ? (
             <ListingRowSkeleton key={listing.id} id={listing.id} />
+          ) : isCollapsed ? (
+            <Tooltip key={listing.id}>
+              <TooltipTrigger asChild>
+                <Link
+                  href={resolveListingPath(listing)}
+                  onClick={handleLinkClick}
+                  className={cn(
+                    "flex items-center justify-center w-full h-9 rounded-md",
+                    "hover:bg-foreground/5 transition-colors"
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "w-2 h-2 rotate-45 rounded-xs shrink-0",
+                      listing.listingStage === "create"
+                        ? "bg-primary"
+                        : "bg-muted-foreground/70"
+                    )}
+                  />
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent side="right" sideOffset={8}>
+                {listing.title}{" "}
+                {listing.listingStage !== "create" &&
+                  `(${listing.listingStage})`}
+              </TooltipContent>
+            </Tooltip>
           ) : (
             <Button
               key={listing.id}
@@ -226,7 +295,10 @@ const ViewSidebar = ({
               className="w-full justify-between hover:bg-foreground/5"
               asChild
             >
-              <Link href={resolveListingPath(listing)}>
+              <Link
+                href={resolveListingPath(listing)}
+                onClick={handleLinkClick}
+              >
                 <div className="flex items-center gap-3 min-w-0">
                   <div
                     className={cn(
@@ -254,36 +326,24 @@ const ViewSidebar = ({
             </Button>
           )
         )
-      ) : (
+      ) : !isCollapsed ? (
         <div className="px-2 text-xs text-muted-foreground">
           No listings yet.
         </div>
-      )}
-      {hasMoreListings ? (
+      ) : null}
+      {hasMoreListings && !isCollapsed ? (
         <Button
           variant="ghost"
           className="w-full justify-start text-xs text-muted-foreground hover:text-foreground"
           asChild
         >
-          <Link href="/listings">Show all</Link>
+          <Link href="/listings" onClick={handleLinkClick}>
+            Show all
+          </Link>
         </Button>
       ) : null}
     </div>
   );
-
-  const resolveListingPath = (listing: ListingSidebarItem) => {
-    switch (listing.listingStage) {
-      case "review":
-        return `/listings/${listing.id}/review`;
-      case "generate":
-        return `/listings/${listing.id}/generate`;
-      case "create":
-        return `/listings/${listing.id}/create`;
-      case "categorize":
-      default:
-        return `/listings/${listing.id}/categorize`;
-    }
-  };
 
   const handleLogout = async () => {
     await user?.signOut();
@@ -319,12 +379,342 @@ const ViewSidebar = ({
     handleFeedbackOpenChange(false);
   };
 
+  // Collapsed sidebar - icon only view
+  if (isCollapsed) {
+    return (
+      <div className="flex flex-col h-full w-16">
+        {/* Logo Section - icon only */}
+        <Link
+          href={"/"}
+          onClick={handleLinkClick}
+          className="pt-5 pb-2 flex items-center justify-center"
+        >
+          <Image
+            src={Logo}
+            alt="Zencourt Logo"
+            width={24}
+            height={24}
+            className="object-contain"
+          />
+        </Link>
+
+        {/* Divider */}
+        <div className="px-2 pt-4">
+          <div className="h-px bg-border w-full" />
+        </div>
+
+        {/* Navigation - icons only */}
+        <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link href={"/"} onClick={handleLinkClick}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="w-full h-10 hover:bg-foreground/5"
+                >
+                  <LayoutDashboard className="h-5 w-5" />
+                </Button>
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="right" sideOffset={8}>
+              Dashboard
+            </TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link href={"/"} onClick={handleLinkClick}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="w-full h-10 hover:bg-foreground/5"
+                >
+                  <Calendar className="h-5 w-5" />
+                </Button>
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="right" sideOffset={8}>
+              Calendar
+            </TooltipContent>
+          </Tooltip>
+
+          {/* Divider */}
+          <div className="py-2">
+            <div className="h-px bg-border w-full" />
+          </div>
+
+          {/* Content icons */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="w-full h-10 hover:bg-foreground/5"
+              >
+                <FileEdit className="h-5 w-5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right" sideOffset={8}>
+              Drafts
+            </TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="w-full h-10 hover:bg-foreground/5"
+              >
+                <Heart className="h-5 w-5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right" sideOffset={8}>
+              Favorites
+            </TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="w-full h-10 hover:bg-foreground/5"
+              >
+                <Clock className="h-5 w-5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right" sideOffset={8}>
+              Scheduled
+            </TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="w-full h-10 hover:bg-foreground/5"
+              >
+                <Archive className="h-5 w-5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right" sideOffset={8}>
+              Archive
+            </TooltipContent>
+          </Tooltip>
+
+          {/* Divider */}
+          <div className="py-2">
+            <div className="h-px bg-border w-full" />
+          </div>
+
+          {/* Listings icons */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link href="/listings" onClick={handleLinkClick}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="w-full h-10 hover:bg-foreground/5"
+                >
+                  <LayoutList className="h-5 w-5" />
+                </Button>
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="right" sideOffset={8}>
+              All Listings
+            </TooltipContent>
+          </Tooltip>
+
+          <ListingsSection />
+
+          {/* Divider */}
+          <div className="py-2">
+            <div className="h-px bg-border w-full" />
+          </div>
+
+          {/* Manage icons */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link href="/media" onClick={handleLinkClick}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="w-full h-10 hover:bg-foreground/5"
+                >
+                  <Film className="h-5 w-5" />
+                </Button>
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="right" sideOffset={8}>
+              My media
+            </TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link href="/settings#account" onClick={handleLinkClick}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="w-full h-10 hover:bg-foreground/5"
+                >
+                  <Settings className="h-5 w-5" />
+                </Button>
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="right" sideOffset={8}>
+              Settings
+            </TooltipContent>
+          </Tooltip>
+        </nav>
+
+        {/* User Profile - avatar only */}
+        <div className="p-2 pt-0">
+          <div className="pb-2">
+            <div className="h-px bg-border w-full" />
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="w-full flex items-center justify-center py-2 rounded-lg hover:bg-foreground/5 cursor-pointer transition-all duration-200 group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                {userAvatar ? (
+                  <Image
+                    src={userAvatar}
+                    alt={userName}
+                    width={32}
+                    height={32}
+                    className="h-8 w-8 rounded-full object-cover border border-border group-hover:border-foreground/20 transition-colors"
+                  />
+                ) : (
+                  <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center border border-border group-hover:border-foreground/20 transition-colors">
+                    <span className="text-xs font-semibold text-primary-foreground">
+                      {userName
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")}
+                    </span>
+                  </div>
+                )}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="center"
+              side="right"
+              sideOffset={8}
+              className="w-52"
+            >
+              {displayedEmail ? (
+                <div className="px-3 pb-1">
+                  <span className="text-xs text-muted-foreground truncate">
+                    {displayedEmail}
+                  </span>
+                </div>
+              ) : null}
+              <DropdownMenuItem
+                asChild
+                className="transition-all duration-150 group"
+              >
+                <Link href="/settings#billing" onClick={handleLinkClick}>
+                  <ArrowBigUpDash className="mr-3 h-6 w-6 text-muted-foreground group-hover:text-foreground transition-colors" />
+                  <span className="text-sm font-medium">Upgrade plan</span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator className="my-1.5 bg-border/50" />
+              <DropdownMenuItem
+                className="transition-all duration-150 group"
+                onSelect={() => setIsFeedbackOpen(true)}
+              >
+                <MessageCircle className="mr-3 h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+                <span className="text-sm font-medium">Feedback</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                asChild
+                className="transition-all duration-150 group"
+              >
+                <a href="mailto:team@zencourt.ai">
+                  <CircleQuestionMark className="mr-3 h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+                  <span className="text-sm font-medium">Get help</span>
+                </a>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator className="my-1.5 bg-border/50" />
+              <DropdownMenuItem
+                className="transition-all duration-150 group"
+                onClick={handleLogout}
+              >
+                <LogOut className="mr-3 h-4 w-4" />
+                <span className="text-sm font-medium">Logout</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Dialog open={isFeedbackOpen} onOpenChange={handleFeedbackOpenChange}>
+            <DialogContent className="sm:max-w-[480px]">
+              <DialogHeader>
+                <DialogTitle>Share feedback</DialogTitle>
+                <DialogDescription>
+                  Tell us what we should improve or build next.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="feedback-type">Type</Label>
+                  <Select value={feedbackType} onValueChange={setFeedbackType}>
+                    <SelectTrigger id="feedback-type">
+                      <SelectValue placeholder="Select a suggestion type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Bug">Bug</SelectItem>
+                      <SelectItem value="Feature request">
+                        Feature request
+                      </SelectItem>
+                      <SelectItem value="Billing">Billing</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="feedback-message">Suggestion</Label>
+                  <Textarea
+                    id="feedback-message"
+                    placeholder="What should we do better?"
+                    value={feedbackMessage}
+                    onChange={(event) => setFeedbackMessage(event.target.value)}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => handleFeedbackOpenChange(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleFeedbackSend}
+                  disabled={!feedbackType}
+                >
+                  Send feedback
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
+    );
+  }
+
+  // Expanded sidebar - full view
   return (
-    <aside
-      className={cn("w-[260px] shrink-0 flex flex-col bg-secondary", className)}
-    >
+    <div className="flex flex-col h-full">
       {/* Logo Section */}
-      <Link href={"/"} className={cn("pt-5 flex items-center px-6 gap-3 pb-2")}>
+      <Link
+        href={"/"}
+        onClick={handleLinkClick}
+        className={cn("pt-5 flex items-center px-6 gap-3 pb-2")}
+      >
         <Image
           src={Logo}
           alt="Zencourt Logo"
@@ -346,7 +736,7 @@ const ViewSidebar = ({
         {/* Divider */}
         <div className="flex flex-col pt-4 gap-1">
           {/* Main Navigation */}
-          <Link href={"/"}>
+          <Link href={"/"} onClick={handleLinkClick}>
             <Button
               variant="ghost"
               className="w-full justify-start gap-3 hover:bg-foreground/5"
@@ -356,7 +746,7 @@ const ViewSidebar = ({
             </Button>
           </Link>
 
-          <Link href={"/"}>
+          <Link href={"/"} onClick={handleLinkClick}>
             <Button
               variant="ghost"
               className="w-full justify-start gap-3 hover:bg-foreground/5"
@@ -493,6 +883,7 @@ const ViewSidebar = ({
                     className="h-6 w-6 hover:bg-foreground/5"
                     onClick={(e) => {
                       e.stopPropagation();
+                      onMobileClose?.();
                       router.push("/listings/sync");
                     }}
                   >
@@ -526,7 +917,7 @@ const ViewSidebar = ({
             <span>Manage</span>
           </div>
           <div className="flex flex-col gap-1 mb-4">
-            <Link href="/media">
+            <Link href="/media" onClick={handleLinkClick}>
               <Button
                 variant="ghost"
                 className="w-full justify-start gap-3 hover:bg-foreground/5"
@@ -535,7 +926,7 @@ const ViewSidebar = ({
                 <span className="text-sm font-medium">My media</span>
               </Button>
             </Link>
-            <Link href="/settings#account">
+            <Link href="/settings#account" onClick={handleLinkClick}>
               <Button
                 variant="ghost"
                 className="w-full justify-start gap-3 hover:bg-foreground/5"
@@ -590,7 +981,7 @@ const ViewSidebar = ({
             align="center"
             side="top"
             sideOffset={8}
-            className="w-52"
+            className={isMobile ? "w-64" : "w-52"}
           >
             {displayedEmail ? (
               <div className="px-3 pb-1">
@@ -603,7 +994,7 @@ const ViewSidebar = ({
               asChild
               className="transition-all duration-150 group"
             >
-              <Link href="/settings#billing">
+              <Link href="/settings#billing" onClick={handleLinkClick}>
                 <ArrowBigUpDash className="mr-3 h-6 w-6 text-muted-foreground group-hover:text-foreground transition-colors" />
                 <span className="text-sm font-medium">Upgrade plan</span>
               </Link>
@@ -689,6 +1080,62 @@ const ViewSidebar = ({
           </DialogContent>
         </Dialog>
       </div>
+    </div>
+  );
+};
+
+const ViewSidebar = ({
+  className,
+  userName = "User",
+  paymentPlan = "Free",
+  userAvatar,
+  listings = []
+}: ViewSidebarProps) => {
+  const { isMobile, isCollapsed, openMobile, setOpenMobile } = useViewSidebar();
+
+  // Mobile: render as Sheet drawer
+  if (isMobile) {
+    return (
+      <Sheet open={openMobile} onOpenChange={setOpenMobile}>
+        <SheetContent
+          side="left"
+          className="p-0 bg-secondary [&>button]:hidden w-[300px]"
+        >
+          <SheetHeader className="sr-only">
+            <SheetTitle>Navigation</SheetTitle>
+            <SheetDescription>Main navigation menu</SheetDescription>
+          </SheetHeader>
+          <SidebarContent
+            userName={userName}
+            paymentPlan={paymentPlan}
+            userAvatar={userAvatar}
+            listings={listings}
+            onMobileClose={() => setOpenMobile(false)}
+            isCollapsed={false}
+          />
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
+  // Desktop: render as collapsible sidebar
+  return (
+    <aside
+      className={cn(
+        "relative shrink-0 flex flex-col bg-secondary overflow-hidden",
+        "transition-[width] duration-200 ease-linear",
+        isCollapsed ? "w-16" : "w-[260px]",
+        className
+      )}
+    >
+      <SidebarContent
+        userName={userName}
+        paymentPlan={paymentPlan}
+        userAvatar={userAvatar}
+        listings={listings}
+        isCollapsed={isCollapsed}
+      />
+      <ViewSidebarToggle />
     </aside>
   );
 };
