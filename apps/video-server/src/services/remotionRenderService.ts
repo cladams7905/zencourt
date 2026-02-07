@@ -66,7 +66,9 @@ class RemotionRenderService {
     await this.ensureRemotionCacheDir();
 
     if (!this.browserReady) {
-      await ensureBrowser();
+      await ensureBrowser({
+        browserExecutable: process.env.CHROME_PATH ?? null
+      });
       this.browserReady = true;
     }
 

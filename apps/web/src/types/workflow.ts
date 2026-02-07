@@ -5,6 +5,7 @@
  */
 
 import { DBListing, VideoStatus, ListingStage } from "@shared/types/models";
+import type { GENERATION_MODELS, VideoOrientation } from "@shared/types/models";
 import type { ProcessedImage } from "./images";
 import { CategorizedGroup } from "./vision";
 
@@ -55,6 +56,11 @@ export interface RoomGenerationStatus {
   status: VideoStatus;
   videoUrl?: string | null;
   errorMessage?: string | null;
+  category?: string | null;
+  durationSeconds?: number | null;
+  orientation?: VideoOrientation | null;
+  generationModel?: GENERATION_MODELS | null;
+  isPriorityCategory?: boolean;
   sortOrder?: number | null;
 }
 

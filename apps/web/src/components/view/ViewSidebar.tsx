@@ -284,8 +284,9 @@ const SidebarContent = ({
               </TooltipTrigger>
               <TooltipContent side="right" sideOffset={8}>
                 {listing.title}{" "}
-                {listing.listingStage !== "create" &&
-                  `(${listing.listingStage})`}
+                {listing.listingStage &&
+                  listing.listingStage !== "create" &&
+                  `(${listing.listingStage.charAt(0).toUpperCase()}${listing.listingStage.slice(1)})`}
               </TooltipContent>
             </Tooltip>
           ) : (

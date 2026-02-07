@@ -254,7 +254,8 @@ class VideoGenerationService {
       throw new Error(`Job ${job.id} missing generationSettings`);
     }
 
-    const { imageUrls, prompt, orientation } = settings;
+    const { imageUrls, prompt } = settings;
+    const orientation = settings.orientation ?? "vertical";
     if (!imageUrls || imageUrls.length === 0) {
       throw new Error(`Job ${job.id} missing imageUrls in generationSettings`);
     }
@@ -351,7 +352,8 @@ class VideoGenerationService {
       throw new Error(`Job ${job.id} missing generationSettings`);
     }
 
-    const { imageUrls, prompt, orientation } = settings;
+    const { imageUrls, prompt } = settings;
+    const orientation = settings.orientation ?? "vertical";
     const durationSeconds = this.getJobDurationSeconds(job);
     const aspectRatio = orientation === "vertical" ? "9:16" : "16:9";
 

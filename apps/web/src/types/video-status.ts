@@ -1,4 +1,8 @@
-import type { VideoStatus } from "@shared/types/models";
+import type {
+  GENERATION_MODELS,
+  VideoOrientation,
+  VideoStatus
+} from "@shared/types/models";
 
 export interface VideoJobUpdateEvent {
   listingId: string;
@@ -9,6 +13,11 @@ export interface VideoJobUpdateEvent {
   errorMessage?: string | null;
   roomId?: string | null;
   roomName?: string | null;
+  category?: string | null;
+  durationSeconds?: number | null;
+  orientation?: VideoOrientation | null;
+  generationModel?: GENERATION_MODELS | null;
+  isPriorityCategory?: boolean;
   sortOrder?: number | null;
 }
 

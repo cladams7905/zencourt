@@ -7,6 +7,7 @@ import {
 import { getListingVideoStatus } from "@web/src/server/services/videoStatusService";
 import { ListingCreateView } from "@web/src/components/listings/create/ListingCreateView";
 import type { ContentItem } from "@web/src/components/dashboard/ContentGrid";
+import { buildPreviewTimelineVariants } from "@web/src/lib/video/previewTimeline";
 
 interface ListingCreatePageProps {
   params: Promise<{ listingId: string }>;
@@ -56,15 +57,34 @@ export default async function ListingCreatePage({
       id: job.jobId,
       thumbnail: job.thumbnailUrl ?? undefined,
       videoUrl: job.videoUrl ?? undefined,
+      category: job.category ?? undefined,
+      durationSeconds: job.durationSeconds ?? undefined,
+      generationModel: job.generationModel ?? undefined,
+      orientation: job.orientation ?? undefined,
+      isPriorityCategory: job.isPriorityCategory ?? false,
       aspectRatio: "vertical",
       alt: job.roomName ? `${job.roomName} clip` : "Generated clip"
     }));
+
+  const previewTimelinePlans = buildPreviewTimelineVariants(
+    status.jobs
+      .filter((job) => Boolean(job.videoUrl))
+      .map((job) => ({
+        id: job.jobId,
+        category: job.category ?? null,
+        durationSeconds: job.durationSeconds ?? null,
+        isPriorityCategory: job.isPriorityCategory ?? false,
+        sortOrder: job.sortOrder ?? null
+      })),
+    listingId
+  );
 
   return (
     <ListingCreateView
       listingId={listingId}
       title={listing.title?.trim() || "Listing"}
       items={items}
+      previewTimelinePlans={previewTimelinePlans}
     />
   );
 }

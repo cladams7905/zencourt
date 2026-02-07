@@ -28,6 +28,7 @@ services:
       MAX_CONCURRENT_JOBS: 1
       JOB_TIMEOUT_MS: 600000
       TEMP_DIR: /tmp/video-processing
+      REMOTION_CACHE_DIR: /tmp/remotion
 
       # fal.ai Configuration
       FAL_WEBHOOK_URL: ${FAL_WEBHOOK_URL:-http://host.docker.internal:3001/webhooks/fal}
@@ -35,4 +36,10 @@ services:
     #   # Mount source code for hot reload in development
     #   - ./src:/app/src:ro
     #   - ./dist:/app/dist
+    command:
+      - sh
+      - -c
+      - >-
+        mkdir -p /tmp/remotion /tmp/video-processing
+        && node apps/video-server/dist/apps/video-server/src/server.js
     restart: unless-stopped

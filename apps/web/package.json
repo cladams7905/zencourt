@@ -51,6 +51,7 @@
     "@stackframe/stack-shared": "^2.8.63",
     "@supabase/postgrest-js": "^2.75.0",
     "@tanstack/react-query": "^5.90.5",
+    "@remotion/player": "^4.0.0",
     "@upstash/redis": "^1.36.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -71,6 +72,7 @@
     "react-hook-form": "^7.66.0",
     "react-resizable-panels": "^3.0.6",
     "recharts": "^3.2.1",
+    "remotion": "^4.0.0",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.3.1",
     "vaul": "^1.1.2"

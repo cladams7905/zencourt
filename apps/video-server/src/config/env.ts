@@ -47,6 +47,9 @@ declare global {
       RUNWAY_API_KEY: string;
       RUNWAY_API_URL?: string;
       RUNWAY_API_VERSION?: string;
+
+      // Remotion
+      CHROME_PATH?: string;
     }
   }
 }

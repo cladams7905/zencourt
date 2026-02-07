@@ -8,6 +8,7 @@ import Image from "next/image";
 import { LoadingVideo } from "../ui/loading-video";
 
 type AspectRatio = "square" | "vertical" | "horizontal";
+type GenerationModel = "runway-gen4-turbo" | "kling1.6";
 
 type CarouselSlide = {
   header: string;
@@ -30,6 +31,11 @@ interface ContentItem {
   caption?: string | null;
   body?: CarouselSlide[] | null;
   brollQuery?: string | null;
+  category?: string | null;
+  durationSeconds?: number | null;
+  generationModel?: GenerationModel | null;
+  orientation?: "vertical" | "landscape" | null;
+  isPriorityCategory?: boolean;
   isLoading?: boolean;
   progress?: number;
 }

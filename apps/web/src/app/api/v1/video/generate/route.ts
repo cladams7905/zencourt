@@ -14,6 +14,7 @@ import {
   requireListingAccess
 } from "../../_utils";
 import { VideoGenerateRequest, VideoGenerateResponse } from "@shared/types/api";
+import { getDurationSecondsForCategory } from "@shared/types/video";
 import { getVideoServerConfig } from "../_config";
 import { ROOM_CATEGORIES, RoomCategory } from "@web/src/types/vision";
 import {
@@ -265,18 +266,6 @@ const CATEGORY_TEMPLATES: Partial<Record<RoomCategory, PromptTemplate[]>> = {
   ]
 };
 
-const WOW_CATEGORIES = new Set<RoomCategory>([
-  "exterior-front",
-  "exterior-backyard",
-  "living-room",
-  "kitchen"
-]);
-
-function getDurationSecondsForCategory(category: string): number {
-  const baseCategory = category.replace(/-\d+$/, "") as RoomCategory;
-  return WOW_CATEGORIES.has(baseCategory) ? 8 : 6;
-}
-
 function pickPromptTemplate(args: {
   category: string;
   isExterior: boolean;
@@ -421,7 +410,7 @@ export async function POST(
       "Video generation request authorized"
     );
 
-    const orientation = body.orientation || "landscape";
+    const orientation = body.orientation || "vertical";
     const duration = body.duration || DEFAULT_DURATION;
 
     const listingImageRows: DBListingImage[] = (await db

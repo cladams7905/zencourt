@@ -4,6 +4,7 @@ import type {
   InitialVideoStatusPayload,
   VideoJobUpdateEvent
 } from "@web/src/types/video-status";
+import { isPriorityCategory } from "@shared/types/video";
 import { getSignedDownloadUrlSafe } from "../utils/storageUrls";
 
 const VIDEO_STATUS_URL_TTL_SECONDS = 6 * 60 * 60; // 6 hours
@@ -33,6 +34,8 @@ export async function getListingVideoStatus(
         status: videoGenJobs.status,
         videoUrl: videoGenJobs.videoUrl,
         thumbnailUrl: videoGenJobs.thumbnailUrl,
+        generationModel: videoGenJobs.generationModel,
+        metadata: videoGenJobs.metadata,
         errorMessage: videoGenJobs.errorMessage,
         generationSettings: videoGenJobs.generationSettings
       })
@@ -58,9 +61,16 @@ export async function getListingVideoStatus(
           status: job.status,
           videoUrl: signedVideoUrl ?? job.videoUrl,
           thumbnailUrl: signedThumbnailUrl ?? job.thumbnailUrl,
+          generationModel: job.generationModel,
+          orientation: job.metadata?.orientation ?? null,
           errorMessage: job.errorMessage,
           roomId: job.generationSettings?.roomId,
           roomName: job.generationSettings?.roomName,
+          category: job.generationSettings?.category ?? null,
+          durationSeconds: job.generationSettings?.durationSeconds ?? null,
+          isPriorityCategory: job.generationSettings?.category
+            ? isPriorityCategory(job.generationSettings.category)
+            : false,
           sortOrder: job.generationSettings?.sortOrder ?? null
         };
       })

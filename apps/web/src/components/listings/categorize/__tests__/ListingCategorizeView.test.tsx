@@ -2,7 +2,7 @@
 import * as React from "react";
 import { act } from "react";
 import { render } from "@testing-library/react";
-import { ListingCategorizeView } from "../categorize/ListingCategorizeView";
+import { ListingCategorizeView } from "../ListingCategorizeView";
 
 const mockPush = jest.fn();
 const mockToastError = jest.fn();

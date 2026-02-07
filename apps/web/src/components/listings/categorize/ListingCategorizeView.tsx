@@ -834,6 +834,22 @@ export function ListingCategorizeView({
       }
     }
 
+    try {
+      await updateListing(userId, listingId, { listingStage: "review" });
+      emitListingSidebarUpdate({
+        id: listingId,
+        listingStage: "review",
+        lastOpenedAt: new Date().toISOString()
+      });
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to continue to review."
+      );
+      return;
+    }
+
     if (hasPropertyDetailsState) {
       router.push(`/listings/${listingId}/review`);
       return;

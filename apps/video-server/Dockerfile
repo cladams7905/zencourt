@@ -3,7 +3,7 @@
 # =============================================================================
 # Build stage – install deps & compile TypeScript (monorepo-aware)
 # =============================================================================
-FROM node:22-alpine AS builder
+FROM node:22-bookworm-slim AS builder
 
 WORKDIR /src
 COPY package.json package-lock.json tsconfig.base.json ./
@@ -16,13 +16,17 @@ RUN rm -rf apps/video-server/dist apps/video-server/tsconfig.tsbuildinfo && npm 
 # =============================================================================
 # Runtime stage – slim prod image with FFmpeg binaries
 # =============================================================================
-FROM node:22-alpine AS runner
+FROM node:22-bookworm-slim AS runner
 
-RUN apk add --no-cache ffmpeg curl
+RUN rm -rf /var/lib/apt/lists/* \
+  && apt-get update -o Acquire::Retries=5 -o Acquire::http::No-Cache=true \
+  && apt-get install -y --no-install-recommends ffmpeg curl chromium \
+  && rm -rf /var/lib/apt/lists/*
 
 ENV NODE_ENV=production \
   PORT=3001 \
-  NODE_OPTIONS=--require=tsconfig-paths/register
+  NODE_OPTIONS=--require=tsconfig-paths/register \
+  CHROME_PATH=/usr/bin/chromium
 
 WORKDIR /src
 

@@ -4,17 +4,21 @@ import * as React from "react";
 import { ListingViewHeader } from "../ListingViewHeader";
 import { ContentGrid, type ContentItem } from "../../dashboard/ContentGrid";
 import { emitListingSidebarUpdate } from "@web/src/lib/listingSidebarEvents";
+import type { PreviewTimelinePlan } from "@web/src/lib/video/previewTimeline";
+import { ListingTimelinePreviewGrid } from "./ListingTimelinePreviewGrid";
 
 type ListingCreateViewProps = {
   listingId: string;
   title: string;
   items: ContentItem[];
+  previewTimelinePlans?: PreviewTimelinePlan[];
 };
 
 export function ListingCreateView({
   listingId,
   title,
-  items
+  items,
+  previewTimelinePlans = []
 }: ListingCreateViewProps) {
   React.useEffect(() => {
     emitListingSidebarUpdate({
@@ -28,6 +32,9 @@ export function ListingCreateView({
     <>
       <ListingViewHeader title={title} />
       <div className="mx-auto w-full max-w-6xl px-6 py-8">
+        {previewTimelinePlans.length > 0 ? (
+          <ListingTimelinePreviewGrid plans={previewTimelinePlans} items={items} />
+        ) : null}
         <div className="mb-6 space-y-2">
           <h2 className="text-2xl font-header text-foreground">
             Generated clips
