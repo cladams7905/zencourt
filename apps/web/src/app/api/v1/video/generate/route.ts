@@ -78,9 +78,11 @@ function buildPrompt(args: {
         ? "back of the house"
         : roomName;
 
-  const prompt = promptInfo.template
+  const motionPrompt = promptInfo.template
     .replace(/\{roomName\}/g, displayRoomName)
     .trim();
+
+  const prompt = `${motionPrompt} Preserve exact details as shown in the image. No morphing or distortion.`;
 
   logger.debug(
     { prompt, templateKey: promptInfo.key },
@@ -143,7 +145,9 @@ function buildRoomsFromImages(
 
   baseOrder.forEach((base) => {
     const matches = categories
-      .filter((category) => category === base || category.startsWith(`${base}-`))
+      .filter(
+        (category) => category === base || category.startsWith(`${base}-`)
+      )
       .sort((a, b) => {
         const getSuffix = (value: string) => {
           const match = value.match(/-(\d+)$/);
@@ -196,38 +200,38 @@ type PromptTemplate = {
 const INTERIOR_TEMPLATES: PromptTemplate[] = [
   {
     key: "interior-pan",
-    template: "Smooth slow horizontal pan through the {roomName}."
+    template: "Smooth horizontal pan through the {roomName}."
   },
   {
     key: "interior-push-in",
-    template: "Slow push-in shot revealing the {roomName}."
+    template: "Steady push-in shot revealing the {roomName}."
   },
   {
     key: "interior-reveal",
-    template: "Slow gentle reveal around corner into the {roomName}."
+    template: "Gentle reveal around corner into the {roomName}."
   },
   {
     key: "interior-tracking",
-    template: "Slow steady tracking shot along the {roomName}."
+    template: "Steady tracking shot along the {roomName}."
   }
 ];
 
 const EXTERIOR_TEMPLATES: PromptTemplate[] = [
   {
     key: "exterior-approach",
-    template: "Slow approach toward the {roomName}."
+    template: "Steady approach toward the {roomName}."
   },
   {
     key: "exterior-sweep",
-    template: "Slow sweeping pan across the {roomName}."
+    template: "Sweeping pan across the {roomName}."
   },
   {
     key: "exterior-orbit",
-    template: "Slow orbital movement around the {roomName}."
+    template: "Steady orbital movement around the {roomName}."
   },
   {
     key: "exterior-crane",
-    template: "Slow slight crane up revealing the {roomName}."
+    template: "Slight crane up revealing the {roomName}."
   }
 ];
 
@@ -235,33 +239,33 @@ const CATEGORY_TEMPLATES: Partial<Record<RoomCategory, PromptTemplate[]>> = {
   bathroom: [
     {
       key: "bathroom-reveal",
-      template: "Slow reveal around doorway into {roomName}."
+      template: "Gentle reveal around doorway into {roomName}."
     }
   ],
   bedroom: [
     {
       key: "bedroom-push",
-      template: "Slow gentle push-in toward the focal point in {roomName}."
+      template: "Gentle push-in toward the focal point in {roomName}."
     }
   ],
   "exterior-backyard": [
     {
       key: "backyard-sweep",
-      template: "Slow sweeping pan across {roomName}."
+      template: "Sweeping pan across {roomName}."
     },
     {
       key: "backyard-crane",
-      template: "Slow slight crane up revealing {roomName}."
+      template: "Slight crane up revealing {roomName}."
     }
   ],
   "exterior-front": [
     {
       key: "front-approach",
-      template: "Slow approach toward {roomName}."
+      template: "Steady approach toward {roomName}."
     },
     {
       key: "front-orbit",
-      template: "Slow orbital movement around {roomName}."
+      template: "Steady orbital movement around {roomName}."
     }
   ]
 };

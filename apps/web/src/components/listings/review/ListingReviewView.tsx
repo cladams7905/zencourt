@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { ListingViewHeader } from "../ListingViewHeader";
 import { Button } from "../../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../ui/card";
+import { Checkbox } from "../../ui/checkbox";
 import { Input } from "../../ui/input";
 import { Label } from "../../ui/label";
 import { AlertTriangle, Check, Loader2, SearchCheck, X } from "lucide-react";
@@ -39,7 +40,6 @@ import type {
   ListingValuationExample
 } from "@shared/types/models";
 import { ListingTimeline } from "../ListingTimeline";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { emitListingSidebarUpdate } from "@web/src/lib/listingSidebarEvents";
 
@@ -309,6 +309,8 @@ export function ListingReviewView({
       : "";
   });
   const [isContinueOpen, setIsContinueOpen] = React.useState(false);
+  const [isProceedConfirmed, setIsProceedConfirmed] = React.useState(false);
+  const [isGoingBack, setIsGoingBack] = React.useState(false);
   const [isSaving, setIsSaving] = React.useState(false);
   const [pendingSave, setPendingSave] = React.useState(false);
   const detailsRef = React.useRef(details);
@@ -484,6 +486,26 @@ export function ListingReviewView({
       );
     }
   }, [handleSave, listingId, router, userId]);
+
+  const handleGoBack = React.useCallback(async () => {
+    setIsGoingBack(true);
+    try {
+      await updateListing(userId, listingId, { listingStage: "categorize" });
+      emitListingSidebarUpdate({
+        id: listingId,
+        listingStage: "categorize",
+        lastOpenedAt: new Date().toISOString()
+      });
+      router.push(`/listings/${listingId}/categorize`);
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to return to categorize stage."
+      );
+      setIsGoingBack(false);
+    }
+  }, [listingId, router, userId]);
 
   React.useEffect(() => {
     emitListingSidebarUpdate({
@@ -1473,7 +1495,15 @@ export function ListingReviewView({
                   </div>
                 ) : null}
                 <div className="my-4 h-px w-full bg-border/60" />
-                <Dialog open={isContinueOpen} onOpenChange={setIsContinueOpen}>
+                <Dialog
+                  open={isContinueOpen}
+                  onOpenChange={(open) => {
+                    setIsContinueOpen(open);
+                    if (!open) {
+                      setIsProceedConfirmed(false);
+                    }
+                  }}
+                >
                   <DialogTrigger asChild>
                     <Button
                       className="w-full"
@@ -1514,9 +1544,22 @@ export function ListingReviewView({
                         </ul>
                       </div>
                       <div className="rounded-lg border border-border my-2 bg-secondary px-3 py-3 text-sm text-foreground">
-                        Please confirm that your photo categorization and
-                        property details are accurate. You won’t be able to edit
-                        them after this step.
+                        <div className="flex items-center gap-3">
+                          <Checkbox
+                            id="confirm-ready-to-proceed"
+                            checked={isProceedConfirmed}
+                            onCheckedChange={(checked) =>
+                              setIsProceedConfirmed(Boolean(checked))
+                            }
+                          />
+                          <Label
+                            htmlFor="confirm-ready-to-proceed"
+                            className="text-sm font-normal leading-relaxed cursor-pointer"
+                          >
+                            I confirm that my listing photos and property
+                            details are accurate.
+                          </Label>
+                        </div>
                       </div>
                     </div>
                     <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
@@ -1527,6 +1570,7 @@ export function ListingReviewView({
                         Review again
                       </Button>
                       <Button
+                        disabled={!isProceedConfirmed}
                         onClick={() => {
                           setIsContinueOpen(false);
                           void handleConfirmContinue();
@@ -1538,13 +1582,12 @@ export function ListingReviewView({
                   </DialogContent>
                 </Dialog>
                 <Button
-                  asChild
                   variant="ghost"
                   className="w-full hover:bg-foreground/5"
+                  onClick={() => void handleGoBack()}
+                  disabled={isGoingBack}
                 >
-                  <Link href={`/listings/${listingId}/categorize`}>
-                    Go back
-                  </Link>
+                  {isGoingBack ? "Going back..." : "Go back"}
                 </Button>
               </div>
             </div>

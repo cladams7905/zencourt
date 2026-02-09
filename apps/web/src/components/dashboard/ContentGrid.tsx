@@ -6,6 +6,7 @@ import { Button } from "../ui/button";
 import { Heart, Edit, Download, Share2, Trash2 } from "lucide-react";
 import Image from "next/image";
 import { LoadingVideo } from "../ui/loading-video";
+import type { ListingContentSubcategory } from "@shared/types/models";
 
 type AspectRatio = "square" | "vertical" | "horizontal";
 type GenerationModel = "runway-gen4-turbo" | "kling1.6";
@@ -38,6 +39,7 @@ interface ContentItem {
   isPriorityCategory?: boolean;
   isLoading?: boolean;
   progress?: number;
+  listingSubcategory?: ListingContentSubcategory | null;
 }
 
 interface ContentGridProps {

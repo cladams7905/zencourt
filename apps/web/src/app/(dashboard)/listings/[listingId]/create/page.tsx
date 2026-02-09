@@ -4,10 +4,12 @@ import {
   getListingById,
   updateListing
 } from "@web/src/server/actions/db/listings";
+import { getContentByListingId } from "@web/src/server/actions/db/content";
 import { getListingVideoStatus } from "@web/src/server/services/videoStatusService";
 import { ListingCreateView } from "@web/src/components/listings/create/ListingCreateView";
 import type { ContentItem } from "@web/src/components/dashboard/ContentGrid";
 import { buildPreviewTimelineVariants } from "@web/src/lib/video/previewTimeline";
+import type { ListingContentSubcategory } from "@shared/types/models";
 
 interface ListingCreatePageProps {
   params: Promise<{ listingId: string }>;
@@ -50,7 +52,7 @@ export default async function ListingCreatePage({
   });
 
   const status = await getListingVideoStatus(listingId);
-  const items: ContentItem[] = status.jobs
+  const videoItems: ContentItem[] = status.jobs
     .filter((job) => job.videoUrl || job.thumbnailUrl)
     .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
     .map((job) => ({
@@ -65,6 +67,44 @@ export default async function ListingCreatePage({
       aspectRatio: "vertical",
       alt: job.roomName ? `${job.roomName} clip` : "Generated clip"
     }));
+  const listingContent = await getContentByListingId(user.id, listingId);
+  const listingPostItems: ContentItem[] = listingContent
+    .filter((entry) => entry.contentType === "post")
+    .sort((a, b) => {
+      const sortA =
+        typeof (a.metadata as Record<string, unknown> | null)?.sortOrder ===
+        "number"
+          ? ((a.metadata as Record<string, unknown>).sortOrder as number)
+          : 0;
+      const sortB =
+        typeof (b.metadata as Record<string, unknown> | null)?.sortOrder ===
+        "number"
+          ? ((b.metadata as Record<string, unknown>).sortOrder as number)
+          : 0;
+      return sortA - sortB;
+    })
+    .map((entry) => {
+      const metadata = (entry.metadata ?? {}) as Record<string, unknown>;
+      return {
+        id: entry.id,
+        aspectRatio: "square",
+        isFavorite: entry.isFavorite ?? false,
+        hook: typeof metadata.hook === "string" ? metadata.hook : undefined,
+        caption:
+          typeof metadata.caption === "string" ? metadata.caption : null,
+        body: Array.isArray(metadata.body)
+          ? (metadata.body as ContentItem["body"])
+          : null,
+        brollQuery:
+          typeof metadata.broll_query === "string"
+            ? metadata.broll_query
+            : null,
+        listingSubcategory:
+          typeof metadata.listingSubcategory === "string"
+            ? (metadata.listingSubcategory as ListingContentSubcategory)
+            : null
+      } satisfies ContentItem;
+    });
 
   const previewTimelinePlans = buildPreviewTimelineVariants(
     status.jobs
@@ -83,7 +123,8 @@ export default async function ListingCreatePage({
     <ListingCreateView
       listingId={listingId}
       title={listing.title?.trim() || "Listing"}
-      items={items}
+      videoItems={videoItems}
+      listingPostItems={listingPostItems}
       previewTimelinePlans={previewTimelinePlans}
     />
   );

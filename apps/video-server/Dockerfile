@@ -3,7 +3,7 @@
 # =============================================================================
 # Build stage – install deps & compile TypeScript (monorepo-aware)
 # =============================================================================
-FROM node:22-bookworm-slim AS builder
+FROM node:25-slim AS builder
 
 WORKDIR /src
 COPY package.json package-lock.json tsconfig.base.json ./
@@ -16,23 +16,31 @@ RUN rm -rf apps/video-server/dist apps/video-server/tsconfig.tsbuildinfo && npm 
 # =============================================================================
 # Runtime stage – slim prod image with FFmpeg binaries
 # =============================================================================
-FROM node:22-bookworm-slim AS runner
+FROM node:25-slim AS runner
 
-RUN rm -rf /var/lib/apt/lists/* \
-  && apt-get update -o Acquire::Retries=5 -o Acquire::http::No-Cache=true \
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends ca-certificates \
+  && sed -i 's|http://|https://|g' /etc/apt/sources.list.d/debian.sources \
+  && apt-get update \
+  && apt-get upgrade -y \
   && apt-get install -y --no-install-recommends ffmpeg curl chromium \
   && rm -rf /var/lib/apt/lists/*
 
 ENV NODE_ENV=production \
   PORT=3001 \
-  NODE_OPTIONS=--require=tsconfig-paths/register \
-  CHROME_PATH=/usr/bin/chromium
+  NODE_OPTIONS=--require=tsconfig-paths/register
 
 WORKDIR /src
 
 # Copy entire repo from builder to retain dist + deps
 COPY --from=builder /src /src
 COPY apps/video-server/tsconfig.runtime.json /src/tsconfig.json
+
+# Pre-download Remotion's chrome-headless-shell and set cache permissions
+RUN node -e "require('@remotion/renderer').ensureBrowser().then(() => console.log('Browser ready'))" \
+  && mkdir -p /src/apps/video-server/node_modules/.cache \
+  && chown -R node:node /src/node_modules/.remotion \
+                        /src/apps/video-server/node_modules/.cache
 
 # Use default non-root user provided by the Node image
 USER node

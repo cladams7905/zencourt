@@ -10,7 +10,6 @@ import { klingService } from "./klingService";
 import { runwayService } from "./runwayService";
 import { storageService } from "./storageService";
 import { webhookService } from "./webhookService";
-import { remotionRenderService } from "./remotionRenderService";
 import {
   db,
   videoGenJobs as videoJobs,
@@ -399,7 +398,7 @@ class VideoGenerationService {
   }
 
   private getJobDurationSeconds(job: DBVideoGenJob): number {
-    return job.generationSettings?.durationSeconds ?? 5;
+    return job.generationSettings?.durationSeconds ?? 3;
   }
 
   private async runWithConcurrency<T>(
@@ -516,21 +515,19 @@ class VideoGenerationService {
     }
 
     if (!thumbnailBuffer) {
-      try {
-        thumbnailBuffer = await remotionRenderService.renderThumbnailFromVideo({
-          videoUrl: sourceUrl,
-          orientation: job.generationSettings?.orientation || "vertical",
-          videoId: job.videoGenBatchId,
-          jobId: job.id
-        });
-      } catch (error) {
-        logger.warn(
-          {
-            jobId: job.id,
-            error: error instanceof Error ? error.message : String(error)
-          },
-          "[VideoGenerationService] Failed to render thumbnail"
-        );
+      const listingImageUrl = job.generationSettings?.imageUrls?.[0];
+      if (listingImageUrl) {
+        try {
+          thumbnailBuffer = await downloadImageBufferWithRetry(listingImageUrl);
+        } catch (error) {
+          logger.warn(
+            {
+              jobId: job.id,
+              error: error instanceof Error ? error.message : String(error)
+            },
+            "[VideoGenerationService] Failed to download listing image for thumbnail"
+          );
+        }
       }
     }
 

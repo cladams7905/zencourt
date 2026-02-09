@@ -66,9 +66,7 @@ class RemotionRenderService {
     await this.ensureRemotionCacheDir();
 
     if (!this.browserReady) {
-      await ensureBrowser({
-        browserExecutable: process.env.CHROME_PATH ?? null
-      });
+      await ensureBrowser();
       this.browserReady = true;
     }
 
@@ -99,7 +97,8 @@ class RemotionRenderService {
     const composition = await selectComposition({
       serveUrl: bundleLocation,
       id: COMPOSITION_ID,
-      inputProps
+      inputProps,
+
     });
 
     const outputPath = path.join(
@@ -126,6 +125,7 @@ class RemotionRenderService {
         codec: "h264",
         outputLocation: outputPath,
         inputProps,
+  
         cancelSignal: options.cancelSignal,
         onProgress: (progress) => {
           options.onProgress?.(progress.progress);
@@ -137,6 +137,7 @@ class RemotionRenderService {
         serveUrl: bundleLocation,
         output: thumbPath,
         inputProps,
+  
         imageFormat: "jpeg"
       });
 
@@ -175,7 +176,8 @@ class RemotionRenderService {
     const composition = await selectComposition({
       serveUrl: bundleLocation,
       id: COMPOSITION_ID,
-      inputProps
+      inputProps,
+
     });
 
     const outputPath = path.join(
@@ -189,6 +191,7 @@ class RemotionRenderService {
         serveUrl: bundleLocation,
         output: outputPath,
         inputProps,
+  
         imageFormat: "jpeg"
       });
 

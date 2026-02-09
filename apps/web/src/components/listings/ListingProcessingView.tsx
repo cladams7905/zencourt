@@ -68,6 +68,9 @@ export function ListingProcessingView({
   const [canPollGeneration, setCanPollGeneration] = React.useState(
     mode !== "generate"
   );
+  const [listingContentStatus, setListingContentStatus] = React.useState<
+    "idle" | "running" | "succeeded" | "failed"
+  >("idle");
   const hasInitializedGenerationRef = React.useRef(false);
 
   const resolvedTotal = totalToProcess ?? batchTotal;
@@ -80,26 +83,32 @@ export function ListingProcessingView({
     if (mode !== "generate") {
       return {
         total: 0,
-        completed: 0,
+        terminal: 0,
         failed: 0,
+        canceled: 0,
         progressPercent: 0,
-        isComplete: false
+        isTerminal: false,
+        allSucceeded: false
       };
     }
     const total = generationJobs.length;
-    const completed = generationJobs.filter((job) =>
+    const terminal = generationJobs.filter((job) =>
       ["completed", "failed", "canceled"].includes(job.status)
     ).length;
     const failed = generationJobs.filter((job) => job.status === "failed")
       .length;
+    const canceled = generationJobs.filter((job) => job.status === "canceled")
+      .length;
     const progressPercent =
-      total > 0 ? Math.round((completed / total) * 100) : 0;
+      total > 0 ? Math.round((terminal / total) * 100) : 0;
     return {
       total,
-      completed,
+      terminal,
       failed,
+      canceled,
       progressPercent,
-      isComplete: total > 0 && completed >= total
+      isTerminal: total > 0 && terminal >= total,
+      allSucceeded: total > 0 && generationJobs.every((job) => job.status === "completed")
     };
   }, [generationJobs, mode]);
 
@@ -189,6 +198,41 @@ export function ListingProcessingView({
       return;
     }
     hasInitializedGenerationRef.current = true;
+
+    const startListingContentGeneration = async () => {
+      setListingContentStatus("running");
+      const response = await fetch(
+        `/api/v1/listings/${listingId}/content/generate`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ subcategory: "new_listing" })
+        }
+      );
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        setListingContentStatus("failed");
+        throw new Error(
+          payload?.message || payload?.error || "Failed to generate listing content."
+        );
+      }
+      setListingContentStatus("succeeded");
+    };
+
+    const startVideoGeneration = async () => {
+      const response = await fetch(`/api/v1/video/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ listingId })
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(
+          payload?.message || payload?.error || "Failed to start generation."
+        );
+      }
+    };
+
     try {
       const statusResponse = await fetch(`/api/v1/video/status/${listingId}`);
       if (statusResponse.ok) {
@@ -198,9 +242,12 @@ export function ListingProcessingView({
         };
         const jobs = statusPayload.data?.jobs ?? [];
         const hasFailedJob = jobs.some((job) => job.status === "failed");
+        const hasActiveJob = jobs.some((job) =>
+          ["pending", "processing"].includes(job.status)
+        );
         const allCompleted =
           jobs.length > 0 &&
-          jobs.every((job) => ["completed", "canceled"].includes(job.status));
+          jobs.every((job) => job.status === "completed");
 
         if (hasFailedJob) {
           await updateListing(userId, listingId, { listingStage: "review" });
@@ -214,6 +261,23 @@ export function ListingProcessingView({
         }
 
         if (allCompleted) {
+          try {
+            await startListingContentGeneration();
+          } catch (error) {
+            toast.error(
+              error instanceof Error
+                ? error.message
+                : "Failed to generate listing content."
+            );
+            await updateListing(userId, listingId, { listingStage: "review" });
+            emitListingSidebarUpdate({
+              id: listingId,
+              listingStage: "review",
+              lastOpenedAt: new Date().toISOString()
+            });
+            router.replace(`/listings/${listingId}/review`);
+            return;
+          }
           await updateListing(userId, listingId, { listingStage: "create" });
           emitListingSidebarUpdate({
             id: listingId,
@@ -224,23 +288,32 @@ export function ListingProcessingView({
           return;
         }
 
-        if (jobs.length > 0) {
+        if (hasActiveJob) {
           setGenerationJobs(jobs);
+          void startListingContentGeneration().catch((error) => {
+            toast.error(
+              error instanceof Error
+                ? error.message
+                : "Failed to generate listing content."
+            );
+          });
           return;
         }
       }
 
-      const response = await fetch(`/api/v1/video/generate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ listingId })
-      });
-      if (!response.ok) {
-        const payload = await response.json().catch(() => ({}));
-        throw new Error(
-          payload?.message || payload?.error || "Failed to start generation."
-        );
-      }
+      const listingContentPromise = startListingContentGeneration().catch(
+        (error) => {
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : "Failed to generate listing content."
+          );
+          setListingContentStatus("failed");
+        }
+      );
+
+      await startVideoGeneration();
+      void listingContentPromise;
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Failed to start generation."
@@ -355,10 +428,48 @@ export function ListingProcessingView({
     if (mode !== "generate") {
       return;
     }
-    if (!generationSummary.total || !generationSummary.isComplete) {
+    if (!generationSummary.total || !generationSummary.isTerminal) {
       return;
     }
     if (hasNavigatedRef.current) {
+      return;
+    }
+    if (generationSummary.failed > 0 || generationSummary.canceled > 0) {
+      hasNavigatedRef.current = true;
+      const fallbackToReview = async () => {
+        try {
+          await updateListing(userId, listingId, { listingStage: "review" });
+        } catch {
+          // Ignore transition failures; navigation will still proceed.
+        }
+        emitListingSidebarUpdate({
+          id: listingId,
+          listingStage: "review",
+          lastOpenedAt: new Date().toISOString()
+        });
+        router.replace(`/listings/${listingId}/review`);
+      };
+      void fallbackToReview();
+      return;
+    }
+    if (!generationSummary.allSucceeded || listingContentStatus !== "succeeded") {
+      if (listingContentStatus === "failed") {
+        hasNavigatedRef.current = true;
+        const fallbackToReview = async () => {
+          try {
+            await updateListing(userId, listingId, { listingStage: "review" });
+          } catch {
+            // Ignore transition failures; navigation will still proceed.
+          }
+          emitListingSidebarUpdate({
+            id: listingId,
+            listingStage: "review",
+            lastOpenedAt: new Date().toISOString()
+          });
+          router.replace(`/listings/${listingId}/review`);
+        };
+        void fallbackToReview();
+      }
       return;
     }
     hasNavigatedRef.current = true;
@@ -377,9 +488,13 @@ export function ListingProcessingView({
     };
     void finalize();
   }, [
-    generationSummary.isComplete,
+    generationSummary.allSucceeded,
+    generationSummary.canceled,
+    generationSummary.failed,
+    generationSummary.isTerminal,
     generationSummary.total,
     listingId,
+    listingContentStatus,
     mode,
     router,
     userId

@@ -2,6 +2,10 @@ import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import type { CommunityData, MarketData } from "@web/src/types/market";
+import type {
+  ListingContentSubcategory,
+  ListingPropertyDetails
+} from "@shared/types/models";
 
 type PromptValues = Record<string, string | number | null | undefined>;
 
@@ -41,6 +45,8 @@ export type PromptAssemblyInput = {
   city_description?: string | null;
   community_category_keys?: string[] | null;
   community_data_extra_sections?: Record<string, string> | null;
+  listing_subcategory?: ListingContentSubcategory | null;
+  listing_property_details?: ListingPropertyDetails | null;
   content_request?: ContentRequestInput | null;
   recent_hooks?: string[] | null;
 };
@@ -77,6 +83,26 @@ const CATEGORY_HOOK_FILES: Record<string, string> = {
   lifestyle: "hooks/lifestyle-hooks.md",
   seasonal: "hooks/seasonal_hooks.md"
 };
+
+const LISTING_SUBCATEGORY_DIRECTIVE_FILES: Record<
+  ListingContentSubcategory,
+  string
+> = {
+  new_listing: "listingSubcategories/new-listing.md",
+  open_house: "listingSubcategories/open-house.md",
+  price_change: "listingSubcategories/price-change.md",
+  status_update: "listingSubcategories/status-update.md",
+  property_features: "listingSubcategories/property-features.md"
+};
+
+const LISTING_SUBCATEGORY_HOOK_FILES: Record<ListingContentSubcategory, string> =
+  {
+    new_listing: "hooks/listing-new-listing-hooks.md",
+    open_house: "hooks/listing-open-house-hooks.md",
+    price_change: "hooks/listing-price-change-hooks.md",
+    status_update: "hooks/listing-status-update-hooks.md",
+    property_features: "hooks/listing-property-features-hooks.md"
+  };
 
 const HOOK_WORD_MIN = 3;
 const HOOK_WORD_MAX = 10;
@@ -497,11 +523,63 @@ async function loadAudienceDirectives(segments: string[]): Promise<string> {
   return directives.join("\n\n");
 }
 
-async function loadHookTemplates(category: string): Promise<{
+function normalizeListingSubcategory(
+  subcategory?: string | null
+): ListingContentSubcategory | null {
+  if (!subcategory) {
+    return null;
+  }
+  return subcategory in LISTING_SUBCATEGORY_HOOK_FILES
+    ? (subcategory as ListingContentSubcategory)
+    : null;
+}
+
+async function loadListingSubcategoryDirective(
+  subcategory?: string | null
+): Promise<string> {
+  const normalized = normalizeListingSubcategory(subcategory);
+  if (!normalized) {
+    return "";
+  }
+
+  const file = LISTING_SUBCATEGORY_DIRECTIVE_FILES[normalized];
+  return readPromptFile(file);
+}
+
+function buildListingDataXml(
+  listingPropertyDetails?: ListingPropertyDetails | null
+): string {
+  if (!listingPropertyDetails) {
+    return [
+      "<listing_data>",
+      "No structured listing details were provided. Do not invent property facts.",
+      "</listing_data>"
+    ].join("\n");
+  }
+
+  return [
+    "<listing_data>",
+    "Use this structured listing data as the primary factual source for listing content.",
+    "Do not fabricate missing values.",
+    "```json",
+    JSON.stringify(listingPropertyDetails, null, 2),
+    "```",
+    "</listing_data>"
+  ].join("\n");
+}
+
+async function loadHookTemplates(input: PromptAssemblyInput): Promise<{
   hookTemplates: string[];
 }> {
+  const { category } = input;
   const globalHooksContent = await readPromptFile("hooks/global-hooks.md");
-  const categoryFile = CATEGORY_HOOK_FILES[category];
+  const normalizedSubcategory = normalizeListingSubcategory(
+    input.listing_subcategory
+  );
+  const categoryFile =
+    category === "listing" && normalizedSubcategory
+      ? LISTING_SUBCATEGORY_HOOK_FILES[normalizedSubcategory]
+      : CATEGORY_HOOK_FILES[category];
   const categoryHooksContent = categoryFile
     ? await readPromptFile(categoryFile)
     : "";
@@ -541,10 +619,12 @@ export async function buildSystemPrompt(input: PromptAssemblyInput) {
         ? "basePrompts/market-insights-base-prompt.md"
         : input.category === "educational"
           ? "basePrompts/educational-base-prompt.md"
-          : input.category === "lifestyle"
+        : input.category === "lifestyle"
             ? "basePrompts/lifestyle-base-prompt.md"
             : input.category === "seasonal"
               ? "basePrompts/seasonal-base-prompt.md"
+              : input.category === "listing"
+                ? "basePrompts/listing-base-prompt.md"
             : "basePrompts/base-prompt.md";
   const baseSystemPrompt = await readPromptFile(basePromptFile);
   const audienceDirective = await loadAudienceDirectives(
@@ -557,7 +637,7 @@ export async function buildSystemPrompt(input: PromptAssemblyInput) {
         input.audience_description
       )
     : "";
-  const { hookTemplates } = await loadHookTemplates(input.category);
+  const { hookTemplates } = await loadHookTemplates(input);
   const agentTemplate = await readPromptFile("agent-profile.md");
   const communityTemplate = await readPromptFile("community-data.md");
   const complianceQuality = await readPromptFile("compliance-quality.md");
@@ -618,6 +698,18 @@ export async function buildSystemPrompt(input: PromptAssemblyInput) {
           "\n- "
         )}\n</recent_hooks>`
       : "";
+  const listingSubcategoryDirective =
+    input.category === "listing"
+      ? await loadListingSubcategoryDirective(input.listing_subcategory)
+      : "";
+  const listingSubcategoryBlock =
+    input.category === "listing" && listingSubcategoryDirective
+      ? `\n\n<listing_subcategory_directives>\n${listingSubcategoryDirective}\n</listing_subcategory_directives>`
+      : "";
+  const listingDataBlock =
+    input.category === "listing"
+      ? `\n\n${buildListingDataXml(input.listing_property_details)}`
+      : "";
 
   return `
 ${baseSystemPrompt}
@@ -634,7 +726,7 @@ ${formatTemplateList(hookTemplates)}
 </hook_templates>
 </hooks>
 
-${recentHooksBlock}${marketBlock}${communityBlock}${seasonalBlock}
+${recentHooksBlock}${marketBlock}${communityBlock}${seasonalBlock}${listingSubcategoryBlock}${listingDataBlock}
 
 ${complianceQuality}
 
@@ -656,6 +748,7 @@ export function buildUserPrompt(input: PromptAssemblyInput): string {
 - **Content Type:** ${contentType}
 - **Focus:** ${focus || "No additional focus"}
 - **Notes:** ${notes || "None"}
+- **Listing Subcategory:** ${input.listing_subcategory ?? "None"}
 </content_request>
 `.trim();
 }

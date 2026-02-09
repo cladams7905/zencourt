@@ -41,7 +41,7 @@ export interface BuildPreviewTimelineOptions {
   transitionDurationSeconds?: number;
 }
 
-const DEFAULT_CLIP_DURATION_SECONDS = 6;
+const DEFAULT_CLIP_DURATION_SECONDS = 3;
 const DEFAULT_TRANSITION_DURATION_SECONDS = 0.45;
 const MIN_CLIP_DURATION_SECONDS = 2;
 
@@ -75,9 +75,9 @@ function getEffectiveDurationSeconds(
     return Math.max(MIN_CLIP_DURATION_SECONDS, Number((base * 0.82).toFixed(2)));
   }
   if (!prioritized) {
-    return Math.max(MIN_CLIP_DURATION_SECONDS, Math.min(base, 6));
+    return Math.max(MIN_CLIP_DURATION_SECONDS, Math.min(base, 3));
   }
-  return Math.min(base, 8);
+  return Math.min(base, 4);
 }
 
 function orderClips(

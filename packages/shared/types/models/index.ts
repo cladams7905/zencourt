@@ -5,3 +5,4 @@ export * from "./db.video";
 export * from "./db.userAdditional";
 export * from "./db.userMedia";
 export * from "./listingProperty";
+export * from "./listingContent";
