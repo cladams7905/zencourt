@@ -1,6 +1,10 @@
 import {
   isPriorityCategory,
-  normalizeRoomCategory
+  normalizeRoomCategory,
+  type PreviewTextOverlay,
+  type PreviewTextOverlayBackground,
+  type PreviewTextOverlayFont,
+  type PreviewTextOverlayPosition
 } from "@shared/types/video";
 
 export type PreviewTransition =
@@ -10,6 +14,13 @@ export type PreviewTransition =
   | "light-flash"
   | "zoom-settle"
   | "wipe";
+
+export type {
+  PreviewTextOverlay,
+  PreviewTextOverlayBackground,
+  PreviewTextOverlayFont,
+  PreviewTextOverlayPosition
+};
 
 export interface PreviewTimelineClip {
   id: string;
@@ -24,6 +35,7 @@ export interface PreviewTimelineSegment {
   category: string | null;
   durationSeconds: number;
   transitionToNext?: PreviewTransition;
+  textOverlay?: PreviewTextOverlay;
 }
 
 export interface PreviewTimelinePlan {

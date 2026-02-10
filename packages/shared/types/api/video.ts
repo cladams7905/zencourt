@@ -1,4 +1,5 @@
 import type { VideoCompositionSettings } from "../video/composition";
+import type { PreviewTextOverlay } from "../video";
 
 export type { VideoCompositionSettings };
 export type KlingAspectRatio = "16:9" | "9:16" | "1:1";
@@ -44,6 +45,11 @@ export interface VideoServerGenerateRequest {
   jobIds: string[]; // Array of video_asset_jobs IDs to process
   listingId: string;
   userId: string;
+}
+
+export interface VideoServerRenderRequest {
+  videoId: string;
+  textOverlaysByJobId?: Record<string, PreviewTextOverlay>;
 }
 
 /**

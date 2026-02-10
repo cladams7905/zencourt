@@ -16,6 +16,7 @@ import {
   filterAndSortCompletedJobs,
   buildRenderJobData
 } from "@/utils/compositionHelpers";
+import type { VideoServerRenderRequest } from "@shared/types/api";
 
 const router = Router();
 
@@ -24,7 +25,7 @@ router.use(validateApiKey);
 router.post(
   "/",
   asyncHandler(async (req: Request, res: Response) => {
-    const { videoId } = req.body as { videoId?: string };
+    const { videoId, textOverlaysByJobId } = req.body as VideoServerRenderRequest;
 
     if (!videoId) {
       res.status(400).json({ success: false, error: "videoId required" });
@@ -70,7 +71,12 @@ router.post(
       return;
     }
 
-    const renderData = buildRenderJobData(context, completedJobs);
+    const renderData = buildRenderJobData(
+      context,
+      completedJobs,
+      0,
+      textOverlaysByJobId
+    );
 
     const jobId = remotionRenderQueue.createJob(
       renderData,

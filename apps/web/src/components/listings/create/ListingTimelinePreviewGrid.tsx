@@ -6,7 +6,23 @@ import { Download, Edit, Heart } from "lucide-react";
 import { Button } from "../../ui/button";
 import { cn } from "../../ui/utils";
 import type { ContentItem } from "../../dashboard/ContentGrid";
-import type { PreviewTimelinePlan } from "@web/src/lib/video/previewTimeline";
+import type {
+  PreviewTextOverlay,
+  PreviewTimelinePlan
+} from "@web/src/lib/video/previewTimeline";
+import {
+  pickPreviewTextOverlayVariant,
+  PREVIEW_TEXT_OVERLAY_BACKGROUND_COLOR,
+  PREVIEW_TEXT_OVERLAY_FONT_FAMILY,
+  PREVIEW_TEXT_OVERLAY_POSITION_TOP,
+  PREVIEW_TEXT_OVERLAY_LAYOUT,
+  PREVIEW_TEXT_OVERLAY_MAX_WIDTH,
+  PREVIEW_TEXT_OVERLAY_BORDER_RADIUS,
+  PREVIEW_TEXT_OVERLAY_TEXT_COLOR,
+  PREVIEW_TEXT_OVERLAY_LINE_HEIGHT,
+  PREVIEW_TEXT_OVERLAY_LETTER_SPACING,
+  overlayPxToCqw
+} from "@shared/utils";
 import { LoadingImage } from "../../ui/loading-image";
 import { toast } from "sonner";
 import {
@@ -31,6 +47,7 @@ type ListingTimelinePreviewGridProps = {
 type PlayablePreview = {
   id: string;
   resolvedSegments: TimelinePreviewResolvedSegment[];
+  thumbnailOverlay: PreviewTextOverlay | null;
   firstThumb: string | null;
   durationInFrames: number;
   captionItem: ContentItem | null;
@@ -39,6 +56,84 @@ type PlayablePreview = {
 
 const PREVIEW_FPS = 30;
 const PREVIEW_TRANSITION_SECONDS = 0;
+
+function getOverlayHeaders(captionItem: ContentItem | null): string[] {
+  const headers = (captionItem?.body ?? [])
+    .map((slide) => slide.header?.trim())
+    .filter((value): value is string => Boolean(value));
+
+  if (headers.length > 0) {
+    return headers;
+  }
+
+  const fallback = captionItem?.hook?.trim();
+  return fallback ? [fallback] : [];
+}
+
+function buildOverlay(
+  text: string,
+  variant: Pick<PreviewTextOverlay, "position" | "background" | "font">
+): PreviewTextOverlay {
+  return {
+    text,
+    ...variant
+  };
+}
+
+function pickOverlayVariant(
+  seed: string
+): Pick<PreviewTextOverlay, "position" | "background" | "font"> {
+  return pickPreviewTextOverlayVariant(seed);
+}
+
+function ThumbnailTextOverlay({
+  overlay,
+  hidden
+}: {
+  overlay: PreviewTextOverlay;
+  hidden: boolean;
+}) {
+  const hasBackground = overlay.background !== "none";
+  const layout = PREVIEW_TEXT_OVERLAY_LAYOUT.video;
+  return (
+    <div
+      className="absolute inset-x-0 z-1 flex justify-center transition-opacity duration-150"
+      style={{
+        top: PREVIEW_TEXT_OVERLAY_POSITION_TOP[overlay.position],
+        paddingLeft: overlayPxToCqw(layout.horizontalPaddingPx),
+        paddingRight: overlayPxToCqw(layout.horizontalPaddingPx),
+        opacity: hidden ? 0 : 1
+      }}
+    >
+      <div
+        style={{
+          maxWidth: PREVIEW_TEXT_OVERLAY_MAX_WIDTH,
+          borderRadius: hasBackground
+            ? overlayPxToCqw(PREVIEW_TEXT_OVERLAY_BORDER_RADIUS)
+            : 0,
+          backgroundColor:
+            PREVIEW_TEXT_OVERLAY_BACKGROUND_COLOR[overlay.background],
+          padding: hasBackground
+            ? `${overlayPxToCqw(layout.boxPaddingVerticalPx)} ${overlayPxToCqw(layout.boxPaddingHorizontalPx)}`
+            : "0",
+          color: PREVIEW_TEXT_OVERLAY_TEXT_COLOR,
+          textAlign: "center",
+          fontFamily: PREVIEW_TEXT_OVERLAY_FONT_FAMILY[overlay.font],
+          fontSize: overlayPxToCqw(layout.fontSizePx),
+          lineHeight: overlayPxToCqw(
+            layout.fontSizePx * PREVIEW_TEXT_OVERLAY_LINE_HEIGHT
+          ),
+          letterSpacing: overlayPxToCqw(PREVIEW_TEXT_OVERLAY_LETTER_SPACING),
+          textShadow: hasBackground
+            ? "none"
+            : `0 ${overlayPxToCqw(2)} ${overlayPxToCqw(8)} rgba(0, 0, 0, 0.5), 0 0 ${overlayPxToCqw(2)} rgba(0, 0, 0, 0.7)`
+        }}
+      >
+        {overlay.text}
+      </div>
+    </div>
+  );
+}
 
 export function ListingTimelinePreviewGrid({
   plans,
@@ -92,19 +187,40 @@ export function ListingTimelinePreviewGrid({
       if (resolvedSegments.length < 2) {
         return null;
       }
+      const captionItem = captionItems.at(index) ?? null;
+      const overlayHeaders = getOverlayHeaders(captionItem);
+      const seed = `${plan.id}:${captionItem?.id ?? "no-caption"}`;
+      const overlayVariant = pickOverlayVariant(seed);
+      const segmentsWithOverlays = resolvedSegments.map(
+        (segment, segmentIndex) => {
+          const text = overlayHeaders.length
+            ? overlayHeaders[segmentIndex % overlayHeaders.length]
+            : "";
+          return text
+            ? {
+                ...segment,
+                textOverlay: buildOverlay(text, overlayVariant)
+              }
+            : segment;
+        }
+      );
       const firstThumb =
         itemById.get(resolvedSegments[0].clipId)?.thumbnail ?? null;
+      const thumbnailOverlay =
+        segmentsWithOverlays.find((segment) => segment.textOverlay)
+          ?.textOverlay ?? null;
       const durationInFrames = getTimelineDurationInFrames(
-        resolvedSegments,
+        segmentsWithOverlays,
         PREVIEW_FPS,
         PREVIEW_TRANSITION_SECONDS
       );
       return {
         id: `${plan.id}-${resolvedSegments.length}`,
-        resolvedSegments,
+        resolvedSegments: segmentsWithOverlays,
+        thumbnailOverlay,
         firstThumb,
         durationInFrames,
-        captionItem: captionItems.at(index) ?? null,
+        captionItem,
         variationNumber: index + 1
       };
     });
@@ -227,7 +343,10 @@ export function ListingTimelinePreviewGrid({
                     />
                   </Button>
                 </div>
-                <div className="relative aspect-9/16 w-full bg-card">
+                <div
+                  className="relative aspect-9/16 w-full bg-card"
+                  style={{ containerType: "inline-size" }}
+                >
                   {preview.firstThumb ? (
                     <LoadingImage
                       src={preview.firstThumb}
@@ -236,6 +355,12 @@ export function ListingTimelinePreviewGrid({
                       unoptimized
                       sizes="(min-width: 1024px) 24vw, (min-width: 768px) 32vw, 100vw"
                       className="object-cover"
+                    />
+                  ) : null}
+                  {preview.thumbnailOverlay ? (
+                    <ThumbnailTextOverlay
+                      overlay={preview.thumbnailOverlay}
+                      hidden={isRevealed}
                     />
                   ) : null}
                   {isActive ? (

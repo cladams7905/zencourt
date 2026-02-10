@@ -4,6 +4,7 @@
  */
 
 import type { RenderJobData } from "@/services/remotionRenderQueue";
+import type { PreviewTextOverlay } from "@shared/types/video";
 
 export interface CompletedJobLike {
   id: string;
@@ -26,6 +27,7 @@ export interface VideoContextLike {
 export interface CompositionClip {
   src: string;
   durationSeconds: number;
+  textOverlay?: PreviewTextOverlay;
 }
 
 /**
@@ -46,11 +48,15 @@ export function filterAndSortCompletedJobs<T extends CompletedJobLike>(
 /**
  * Build clips array from completed jobs for Remotion rendering.
  */
-export function buildClipsFromJobs(jobs: CompletedJobLike[]): CompositionClip[] {
+export function buildClipsFromJobs(
+  jobs: CompletedJobLike[],
+  textOverlaysByJobId?: Record<string, PreviewTextOverlay>
+): CompositionClip[] {
   return jobs.map((job) => ({
     src: job.videoUrl!,
     durationSeconds:
-      job.metadata?.duration ?? job.generationSettings?.durationSeconds ?? 5
+      job.metadata?.duration ?? job.generationSettings?.durationSeconds ?? 5,
+    textOverlay: textOverlaysByJobId?.[job.id]
   }));
 }
 
@@ -69,9 +75,10 @@ export function getOrientationFromJobs(
 export function buildRenderJobData(
   videoContext: VideoContextLike,
   completedJobs: CompletedJobLike[],
-  transitionDurationSeconds: number = 0
+  transitionDurationSeconds: number = 0,
+  textOverlaysByJobId?: Record<string, PreviewTextOverlay>
 ): RenderJobData {
-  const clips = buildClipsFromJobs(completedJobs);
+  const clips = buildClipsFromJobs(completedJobs, textOverlaysByJobId);
   const orientation = getOrientationFromJobs(completedJobs);
 
   return {
