@@ -10,4 +10,5 @@ export type ImageMetadata = {
   format: string;
   size: number;
   lastModified: number;
+  perspective?: "aerial" | "ground";
 };

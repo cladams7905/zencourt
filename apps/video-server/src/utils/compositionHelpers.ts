@@ -69,7 +69,7 @@ export function getOrientationFromJobs(
 export function buildRenderJobData(
   videoContext: VideoContextLike,
   completedJobs: CompletedJobLike[],
-  transitionDurationSeconds: number = 0.5
+  transitionDurationSeconds: number = 0
 ): RenderJobData {
   const clips = buildClipsFromJobs(completedJobs);
   const orientation = getOrientationFromJobs(completedJobs);

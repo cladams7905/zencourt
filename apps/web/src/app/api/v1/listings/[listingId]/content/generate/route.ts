@@ -114,10 +114,11 @@ function buildListingContentCacheKey(params: {
   subcategory: ListingContentSubcategory;
   focus: string;
   notes: string;
+  generation_nonce: string;
   propertyFingerprint: string;
 }): string {
   const focusHash = createHash("sha1")
-    .update(`${params.focus}::${params.notes}`)
+    .update(`${params.focus}::${params.notes}::${params.generation_nonce}`)
     .digest("hex")
     .slice(0, 10);
   return [
@@ -207,6 +208,7 @@ export async function POST(
       subcategory?: string;
       focus?: string;
       notes?: string;
+      generation_nonce?: string;
     };
 
     const subcategory = body.subcategory?.trim() ?? "";
@@ -226,6 +228,7 @@ export async function POST(
     const resolvedState = locationState || addressParts.state;
     const focus = body.focus?.trim() ?? "";
     const notes = body.notes?.trim() ?? "";
+    const generationNonce = body.generation_nonce?.trim() ?? "";
     const propertyFingerprint = buildListingPropertyFingerprint(listingDetails);
     const cacheKey = buildListingContentCacheKey({
       userId: user.id,
@@ -233,6 +236,7 @@ export async function POST(
       subcategory,
       focus,
       notes,
+      generation_nonce: generationNonce,
       propertyFingerprint
     });
 

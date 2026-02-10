@@ -31,9 +31,13 @@ const CLASSIFICATION_SCHEMA = {
       enum: Object.keys(ROOM_CATEGORIES)
     },
     confidence: { type: "number", minimum: 0, maximum: 1 },
-    primary_score: { type: "number", minimum: 0, maximum: 1 }
+    primary_score: { type: "number", minimum: 0, maximum: 1 },
+    perspective: {
+      type: "string",
+      enum: ["aerial", "ground", "none"]
+    }
   },
-  required: ["category", "confidence", "primary_score"]
+  required: ["category", "confidence", "primary_score", "perspective"]
 } as const;
 
 type RetryOptions = {
@@ -85,6 +89,12 @@ PRIMARY_SCORE RUBRIC (0-1):
 - Clarity: sharp, not blurry, minimal obstructions/clutter
 - Composition: centered/balanced framing suitable as a thumbnail
 
+PERSPECTIVE CLASSIFICATION:
+For exterior images ONLY (exterior-front, exterior-backyard), classify the camera perspective:
+- "aerial": taken from above (elevated vantage point, bird's-eye view, looking down at the property)
+- "ground": taken from ground level (street view, eye-level, standing perspective)
+For all interior and non-exterior categories, always use "none".
+
 AVAILABLE CATEGORIES:
 ${CATEGORY_PROMPT_LINES}
 
@@ -93,20 +103,23 @@ You must respond with ONLY a valid JSON object, no additional text. Use this exa
 {
   "category": "<one of the categories above>",
   "confidence": <number between 0 and 1>,
-  "primary_score": <number between 0 and 1>
+  "primary_score": <number between 0 and 1>,
+  "perspective": "<aerial|ground|none>"
 }
 
 EXAMPLES:
 {
   "category": "kitchen",
   "confidence": 0.95,
-  "primary_score": 0.88
+  "primary_score": 0.88,
+  "perspective": "none"
 }
 
 {
-  "category": "bedroom",
-  "confidence": 0.88,
-  "primary_score": 0.62
+  "category": "exterior-front",
+  "confidence": 0.92,
+  "primary_score": 0.85,
+  "perspective": "aerial"
 }
 
 Now analyze the provided image and respond with the classification JSON:`;
@@ -493,10 +506,16 @@ Now analyze the provided image and respond with the classification JSON:`;
             ? parsed.primaryScore
             : undefined;
 
+      const perspective =
+        parsed.perspective === "aerial" || parsed.perspective === "ground"
+          ? parsed.perspective
+          : undefined;
+
       return {
         category: parsed.category as RoomCategory,
         confidence: parseFloat(parsed.confidence),
-        primaryScore
+        primaryScore,
+        perspective
       };
     } catch (error) {
       throw new AIVisionError(

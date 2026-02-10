@@ -1,22 +1,18 @@
-Content output requirements:
-
-- Provide a short hook.
-- Use either single-image or carousel format.
-- For carousels, each slide should have a clear header and 1-2 sentences of content.
-- Use a concise CTA when needed.
-- Captions must be readable with line breaks and avoid excessive length.
-- Include a `broll_query` field for each post. Keep it broad and simple (2-5 words), not overly specific. Just capture the general background scene that would make sense for this post.
-- If the post is a carousel, each slide in `body` must include its own `broll_query` with the same broad/simple guidance.
-
-Output constraints:
+Output requirements:
 
 - Return a JSON array of exactly 4 items.
 - Prefer single-image posts when possible.
-- Add new lines between every 1-2 sentences to make it easier to read.
-- Hooks should always be between 3-10 words.
+- Each post must include a short hook.
+- Use either `single-image` or `carousel` format.
 - If carousel, max 5 slides.
-- Captions must be concise and vary in length. Use this mix: 2 short (1-3 sentences), 1 medium (4-6 sentences), 1 long (7-10 sentences).
-- Captions must not exceed ~700 characters.
-- Writing style must match the writing style description and tone level. If a template conflicts with the required tone, rephrase it in the same structure and length.
-- Hooks must be based on the hook templates below. Do not invent a hook style that isn't clearly derived from the list.
-- Avoid engagement bait or false urgency.
+- Each carousel slide must have a clear header and 1-2 sentences.
+- Include a concise CTA when needed.
+- Add line breaks every 1-2 sentences for readability.
+- Hooks must be 3-10 words.
+- Hooks must be based on the provided hook templates, not invented styles.
+- Captions must be concise and vary by this mix: 2 short (1-3 sentences), 1 medium (4-6 sentences), 1 long (7-10 sentences).
+- Captions must not exceed about 700 characters.
+- Match the writing style description and tone level. If a template conflicts, rephrase in the same structure and length.
+- Include `broll_query` on each post, broad and simple (2-5 words).
+- For carousel posts, each slide in `body` must include its own broad/simple `broll_query`.
+- Avoid engagement bait and false urgency.

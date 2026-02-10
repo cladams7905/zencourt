@@ -14,7 +14,9 @@ import {
   requireListingAccess
 } from "../../_utils";
 import { VideoGenerateRequest, VideoGenerateResponse } from "@shared/types/api";
-import { getDurationSecondsForCategory } from "@shared/types/video";
+import {
+  isPriorityCategory
+} from "@shared/types/video";
 import { getVideoServerConfig } from "../_config";
 import { ROOM_CATEGORIES, RoomCategory } from "@web/src/types/vision";
 import {
@@ -36,6 +38,9 @@ const logger = createChildLogger(baseLogger, {
 });
 
 const DEFAULT_DURATION: "5" | "10" = "5";
+const CLIP_DURATION_SECONDS = 4;
+const PROMPT_CONSTRAINTS =
+  "No people. No added objects. Keep architecture and materials unchanged.";
 
 function getCategoryForRoom(room: { id: string; category?: string }): string {
   if (room.category) {
@@ -57,9 +62,10 @@ function getCategoryForRoom(room: { id: string; category?: string }): string {
 function buildPrompt(args: {
   roomName: string;
   category: string;
+  perspective?: "aerial" | "ground";
   previousTemplateKey?: string | null;
 }): { prompt: string; templateKey: string } {
-  const { roomName, category, previousTemplateKey } = args;
+  const { roomName, category, perspective, previousTemplateKey } = args;
 
   const baseCategory = category.replace(/-\d+$/, "");
   const metadata = ROOM_CATEGORIES[baseCategory as RoomCategory];
@@ -68,6 +74,7 @@ function buildPrompt(args: {
   const promptInfo = pickPromptTemplate({
     category: baseCategory,
     isExterior,
+    perspective,
     previousTemplateKey
   });
 
@@ -82,7 +89,7 @@ function buildPrompt(args: {
     .replace(/\{roomName\}/g, displayRoomName)
     .trim();
 
-  const prompt = `${motionPrompt} Preserve exact details as shown in the image. No morphing or distortion.`;
+  const prompt = `${motionPrompt} ${PROMPT_CONSTRAINTS}`;
 
   logger.debug(
     { prompt, templateKey: promptInfo.key },
@@ -199,73 +206,65 @@ type PromptTemplate = {
 
 const INTERIOR_TEMPLATES: PromptTemplate[] = [
   {
-    key: "interior-pan",
-    template: "Smooth horizontal pan through the {roomName}."
+    key: "interior-forward-pan",
+    template: "Forward pan through the {roomName}."
   },
   {
-    key: "interior-push-in",
-    template: "Steady push-in shot revealing the {roomName}."
+    key: "interior-center-push",
+    template: "Steady push-in toward the center of the {roomName}."
   },
   {
-    key: "interior-reveal",
-    template: "Gentle reveal around corner into the {roomName}."
-  },
-  {
-    key: "interior-tracking",
-    template: "Steady tracking shot along the {roomName}."
+    key: "interior-corner-reveal",
+    template: "Gentle corner reveal into the {roomName}."
   }
 ];
 
-const EXTERIOR_TEMPLATES: PromptTemplate[] = [
+const EXTERIOR_AERIAL_TEMPLATES: PromptTemplate[] = [
   {
-    key: "exterior-approach",
+    key: "exterior-aerial-flyover",
+    template:
+      "Aerial flyover of the {roomName}, gliding forward above the property."
+  },
+  {
+    key: "exterior-aerial-orbit",
+    template: "Smooth orbit around the {roomName}, aerial perspective."
+  },
+  {
+    key: "exterior-aerial-descend",
+    template: "Descending aerial shot toward the {roomName}."
+  },
+  {
+    key: "exterior-aerial-sweep",
+    template: "Aerial sweep across the {roomName}, wide cinematic movement."
+  }
+];
+
+const EXTERIOR_GROUND_TEMPLATES: PromptTemplate[] = [
+  {
+    key: "exterior-ground-approach",
     template: "Steady approach toward the {roomName}."
   },
   {
-    key: "exterior-sweep",
-    template: "Sweeping pan across the {roomName}."
+    key: "exterior-ground-lateral",
+    template: "Lateral tracking pan across the {roomName}."
   },
   {
-    key: "exterior-orbit",
-    template: "Steady orbital movement around the {roomName}."
-  },
-  {
-    key: "exterior-crane",
-    template: "Slight crane up revealing the {roomName}."
+    key: "exterior-ground-orbit",
+    template: "Steady pan around the {roomName}."
   }
 ];
 
 const CATEGORY_TEMPLATES: Partial<Record<RoomCategory, PromptTemplate[]>> = {
   bathroom: [
     {
-      key: "bathroom-reveal",
-      template: "Gentle reveal around doorway into {roomName}."
+      key: "bathroom-slow-push",
+      template: "Slow camera pan into the {roomName}."
     }
   ],
   bedroom: [
     {
-      key: "bedroom-push",
-      template: "Gentle push-in toward the focal point in {roomName}."
-    }
-  ],
-  "exterior-backyard": [
-    {
-      key: "backyard-sweep",
-      template: "Sweeping pan across {roomName}."
-    },
-    {
-      key: "backyard-crane",
-      template: "Slight crane up revealing {roomName}."
-    }
-  ],
-  "exterior-front": [
-    {
-      key: "front-approach",
-      template: "Steady approach toward {roomName}."
-    },
-    {
-      key: "front-orbit",
-      template: "Steady orbital movement around {roomName}."
+      key: "bedroom-center-push",
+      template: "Steady camera movement toward the center of the {roomName}."
     }
   ]
 };
@@ -273,10 +272,15 @@ const CATEGORY_TEMPLATES: Partial<Record<RoomCategory, PromptTemplate[]>> = {
 function pickPromptTemplate(args: {
   category: string;
   isExterior: boolean;
+  perspective?: "aerial" | "ground";
   previousTemplateKey?: string | null;
 }): PromptTemplate {
-  const { category, isExterior, previousTemplateKey } = args;
-  const baseTemplates = isExterior ? EXTERIOR_TEMPLATES : INTERIOR_TEMPLATES;
+  const { category, isExterior, perspective, previousTemplateKey } = args;
+  const baseTemplates = isExterior
+    ? perspective === "ground"
+      ? EXTERIOR_GROUND_TEMPLATES
+      : EXTERIOR_AERIAL_TEMPLATES
+    : INTERIOR_TEMPLATES;
   const overrides = CATEGORY_TEMPLATES[category as RoomCategory] ?? undefined;
   const pool = overrides ? [...overrides, ...baseTemplates] : baseTemplates;
 
@@ -341,6 +345,28 @@ function selectRoomAssetsForRoom(
   return {
     imageUrls
   };
+}
+
+function selectSecondaryImageForRoom(
+  room: { id: string; name: string; category: string; roomNumber?: number },
+  groupedImages: Map<string, DBListingImage[]>,
+  primaryImageUrl: string
+): RoomAssetSelection | null {
+  const availableImages = groupedImages.get(room.category) || [];
+
+  const candidates = availableImages
+    .filter((img) => img.url && img.url !== primaryImageUrl)
+    .sort((a, b) => {
+      const scoreA = a.primaryScore ?? -1;
+      const scoreB = b.primaryScore ?? -1;
+      return scoreB - scoreA;
+    });
+
+  if (candidates.length === 0) {
+    return null;
+  }
+
+  return { imageUrls: [candidates[0].url!] };
 }
 
 async function enqueueVideoServerJob(
@@ -483,6 +509,7 @@ export async function POST(
     // Step 2: Create video_gen_jobs records directly from rooms
     const videoJobRecords: InsertDBVideoGenJob[] = [];
     let previousTemplateKey: string | null = null;
+    let sortOrderCounter = 0;
 
     for (let index = 0; index < rooms.length; index += 1) {
       const room = rooms[index];
@@ -492,6 +519,10 @@ export async function POST(
         roomWithCategory,
         groupedImages
       );
+      const primaryImage = (groupedImages.get(category) || []).find(
+        (img) => img.url === imageUrls[0]
+      );
+      const perspective = primaryImage?.metadata?.perspective;
       let publicImageUrls: string[];
       try {
         publicImageUrls = await getSignedDownloadUrls(imageUrls);
@@ -512,10 +543,11 @@ export async function POST(
       const promptResult = buildPrompt({
         roomName: room.name,
         category,
+        perspective,
         previousTemplateKey
       });
       previousTemplateKey = promptResult.templateKey;
-      const durationSeconds = getDurationSecondsForCategory(category);
+      const durationSeconds = CLIP_DURATION_SECONDS;
       const jobId = nanoid();
 
       videoJobRecords.push({
@@ -525,25 +557,98 @@ export async function POST(
         status: "pending",
         videoUrl: null,
         thumbnailUrl: null,
-        generationModel: "runway-gen4-turbo",
+        generationModel: "veo3.1_fast",
         generationSettings: {
-          model: "runway-gen4-turbo",
+          model: "veo3.1_fast",
           orientation,
           aiDirections: body.aiDirections || "",
           imageUrls: publicImageUrls,
           prompt: promptResult.prompt,
           category,
-          sortOrder: index,
+          sortOrder: sortOrderCounter,
           durationSeconds,
           roomId: room.id,
           roomName: room.name,
-          roomNumber: room.roomNumber
+          roomNumber: room.roomNumber,
+          clipIndex: 0
         } as JobGenerationSettings,
         metadata: {
           orientation
         },
         errorMessage: null
       });
+      sortOrderCounter++;
+
+      // Create a 2nd clip for priority categories using the next-best image
+      if (isPriorityCategory(category)) {
+        const primaryImageUrl = imageUrls[0];
+        const secondarySelection = selectSecondaryImageForRoom(
+          roomWithCategory,
+          groupedImages,
+          primaryImageUrl
+        );
+
+        if (secondarySelection) {
+          const secondaryImage = (groupedImages.get(category) || []).find(
+            (img) => img.url === secondarySelection.imageUrls[0]
+          );
+          const secondaryPerspective = secondaryImage?.metadata?.perspective;
+          let publicSecondaryUrls: string[];
+          try {
+            publicSecondaryUrls = await getSignedDownloadUrls(
+              secondarySelection.imageUrls
+            );
+          } catch (error) {
+            logger.warn(
+              {
+                listingId: body.listingId,
+                roomId: room.id,
+                err: error instanceof Error ? error.message : String(error)
+              },
+              "Failed to get signed URLs for secondary clip, skipping"
+            );
+            continue;
+          }
+
+          const secondaryPrompt = buildPrompt({
+            roomName: room.name,
+            category,
+            perspective: secondaryPerspective,
+            previousTemplateKey
+          });
+          previousTemplateKey = secondaryPrompt.templateKey;
+          const secondaryJobId = nanoid();
+
+          videoJobRecords.push({
+            id: secondaryJobId,
+            videoGenBatchId: parentVideoId,
+            requestId: null,
+            status: "pending",
+            videoUrl: null,
+            thumbnailUrl: null,
+            generationModel: "veo3.1_fast",
+            generationSettings: {
+              model: "veo3.1_fast",
+              orientation,
+              aiDirections: body.aiDirections || "",
+              imageUrls: publicSecondaryUrls,
+              prompt: secondaryPrompt.prompt,
+              category,
+              sortOrder: sortOrderCounter,
+              durationSeconds,
+              roomId: room.id,
+              roomName: room.name,
+              roomNumber: room.roomNumber,
+              clipIndex: 1
+            } as JobGenerationSettings,
+            metadata: {
+              orientation
+            },
+            errorMessage: null
+          });
+          sortOrderCounter++;
+        }
+      }
     }
 
     // Create all video jobs

@@ -33,7 +33,10 @@ export type VideoMetadata = {
   checksumSha256?: string;
 };
 
-export type GENERATION_MODELS = "runway-gen4-turbo" | "kling1.6";
+export type GENERATION_MODELS =
+  | "veo3.1_fast"
+  | "runway-gen4-turbo"
+  | "kling1.6";
 
 export type JobGenerationSettings = {
   model: GENERATION_MODELS;
@@ -47,4 +50,5 @@ export type JobGenerationSettings = {
   roomId?: string;
   roomName?: string;
   roomNumber?: number;
+  clipIndex?: number;
 };

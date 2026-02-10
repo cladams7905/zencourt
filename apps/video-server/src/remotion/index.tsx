@@ -6,8 +6,6 @@ import { ListingVideo, type ListingVideoProps } from "./ListingVideo";
 export type ListingVideoInputProps = Required<ListingVideoProps>;
 
 const FPS = 30;
-const TRANSITION_DEFAULT_SECONDS = 0.5;
-
 export const RemotionRoot: React.FC = () => {
   return (
     <Composition
@@ -18,20 +16,12 @@ export const RemotionRoot: React.FC = () => {
       height={1280}
       defaultProps={{
         clips: [],
-        transitionDurationSeconds: TRANSITION_DEFAULT_SECONDS,
+        transitionDurationSeconds: 0,
         orientation: "vertical"
       }}
       calculateMetadata={({ props }) => {
-        const transitionFrames = Math.max(
-          1,
-          Math.round(props.transitionDurationSeconds * FPS)
-        );
-        const totalFrames = props.clips.reduce((acc, clip, index) => {
-          const clipFrames = Math.max(1, Math.round(clip.durationSeconds * FPS));
-          if (index === 0) {
-            return clipFrames;
-          }
-          return acc + clipFrames - transitionFrames;
+        const totalFrames = props.clips.reduce((acc, clip) => {
+          return acc + Math.max(1, Math.round(clip.durationSeconds * FPS));
         }, 0);
 
         const isLandscape = props.orientation === "landscape";

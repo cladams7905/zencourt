@@ -239,6 +239,12 @@ export class imageProcessorService {
             ? null
             : batchResult.classification.primaryScore ?? null;
           image.status = "analyzed";
+          if (batchResult.classification.perspective) {
+            image.metadata = {
+              ...(image.metadata ?? { width: 0, height: 0, format: "", size: 0, lastModified: 0 }),
+              perspective: batchResult.classification.perspective
+            };
+          }
         } else {
           image.status = "error";
           image.error = batchResult.error || "Analysis failed";

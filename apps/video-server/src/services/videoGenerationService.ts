@@ -263,6 +263,8 @@ class VideoGenerationService {
     }
 
     const durationSeconds = this.getJobDurationSeconds(job);
+    const runwayDurationSeconds =
+      VideoGenerationService.normalizeRunwayDuration(durationSeconds);
     // Gen4 turbo ratio format (different from gen3a)
     const runwayRatio = orientation === "vertical" ? "720:1280" : "1280:720";
 
@@ -272,7 +274,7 @@ class VideoGenerationService {
           jobId: job.id,
           videoId: job.videoGenBatchId,
           imageCount: imageUrls.length,
-          durationSeconds,
+          durationSeconds: runwayDurationSeconds,
           ratio: runwayRatio
         },
         "[VideoGenerationService] Dispatching job to Runway"
@@ -281,7 +283,7 @@ class VideoGenerationService {
         promptImage: imageUrls[0],
         promptText: prompt,
         ratio: runwayRatio,
-        duration: durationSeconds
+        duration: runwayDurationSeconds
       });
 
       logger.info(
@@ -295,7 +297,7 @@ class VideoGenerationService {
           requestId: task.id,
           status: "processing",
           updatedAt: new Date(),
-          generationModel: "runway-gen4-turbo"
+          generationModel: "veo3.1_fast"
         })
         .where(eq(videoJobs.id, job.id));
 
@@ -309,7 +311,7 @@ class VideoGenerationService {
           }
           // Runway doesn't provide thumbnails, so we'll generate one later
           return this.handleProviderSuccess(job, outputUrl, {
-            durationSeconds,
+            durationSeconds: runwayDurationSeconds,
             thumbnailUrl: null
           });
         })
@@ -398,7 +400,11 @@ class VideoGenerationService {
   }
 
   private getJobDurationSeconds(job: DBVideoGenJob): number {
-    return job.generationSettings?.durationSeconds ?? 3;
+    return job.generationSettings?.durationSeconds ?? 4;
+  }
+
+  private static normalizeRunwayDuration(_durationSeconds: number): 4 | 6 | 8 {
+    return 4;
   }
 
   private async runWithConcurrency<T>(
@@ -540,7 +546,7 @@ class VideoGenerationService {
         videoId: job.videoGenBatchId,
         listingId: videoContext.listingId,
         userId: videoContext.userId,
-        generationModel: job.generationModel || "runway-gen4-turbo"
+        generationModel: job.generationModel || "veo3.1_fast"
       }
     });
 

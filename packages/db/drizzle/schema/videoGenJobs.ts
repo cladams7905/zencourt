@@ -35,7 +35,7 @@ export const videoGenJobs = pgTable(
     thumbnailUrl: text("thumbnail_url"),
     generationModel: text("generation_model")
       .notNull()
-      .default("runway-gen4-turbo")
+      .default("veo3.1_fast")
       .$type<GENERATION_MODELS>(),
     generationSettings: jsonb(
       "generation_settings"

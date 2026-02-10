@@ -2,10 +2,19 @@
 
 import * as React from "react";
 import { Player } from "@remotion/player";
-import { Play } from "lucide-react";
+import { Download, Edit, Heart, Play } from "lucide-react";
+import { Button } from "../../ui/button";
+import { cn } from "../../ui/utils";
 import type { ContentItem } from "../../dashboard/ContentGrid";
 import type { PreviewTimelinePlan } from "@web/src/lib/video/previewTimeline";
 import { LoadingImage } from "../../ui/loading-image";
+import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle
+} from "../../ui/dialog";
 import {
   ListingTimelinePreviewComposition,
   getTimelineDurationInFrames,
@@ -15,10 +24,22 @@ import {
 type ListingTimelinePreviewGridProps = {
   plans: PreviewTimelinePlan[];
   items: ContentItem[];
+  captionItems: ContentItem[];
+  captionSubcategoryLabel: string;
+};
+
+type PlayablePreview = {
+  id: string;
+  plan: PreviewTimelinePlan;
+  resolvedSegments: TimelinePreviewResolvedSegment[];
+  firstThumb: string | null;
+  durationInFrames: number;
+  captionItem: ContentItem | null;
+  variationNumber: number;
 };
 
 const PREVIEW_FPS = 30;
-const PREVIEW_TRANSITION_SECONDS = 0.45;
+const PREVIEW_TRANSITION_SECONDS = 0;
 
 function formatVariantLabel(variant: PreviewTimelinePlan["variant"]): string {
   switch (variant) {
@@ -35,9 +56,17 @@ function formatVariantLabel(variant: PreviewTimelinePlan["variant"]): string {
 
 export function ListingTimelinePreviewGrid({
   plans,
-  items
+  items,
+  captionItems,
+  captionSubcategoryLabel
 }: ListingTimelinePreviewGridProps) {
   const [activePlanId, setActivePlanId] = React.useState<string | null>(null);
+  const [selectedPlanId, setSelectedPlanId] = React.useState<string | null>(
+    null
+  );
+  const [favoritePlanIds, setFavoritePlanIds] = React.useState<Set<string>>(
+    new Set()
+  );
 
   const itemById = React.useMemo(
     () =>
@@ -54,9 +83,8 @@ export function ListingTimelinePreviewGrid({
     [items]
   );
 
-  const playablePlans = React.useMemo(() => {
-    return plans
-      .map((plan) => {
+  const playablePlans = React.useMemo<PlayablePreview[]>(() => {
+    const resolved = plans.map<PlayablePreview | null>((plan, index) => {
         const resolvedSegments: TimelinePreviewResolvedSegment[] = plan.segments
           .map((segment) => {
             const source = itemById.get(segment.clipId);
@@ -82,108 +110,240 @@ export function ListingTimelinePreviewGrid({
           PREVIEW_TRANSITION_SECONDS
         );
         return {
-          id: `${plan.variant}-${resolvedSegments.length}`,
+          id: `${plan.id}-${resolvedSegments.length}`,
           plan,
           resolvedSegments,
           firstThumb,
-          durationInFrames
+          durationInFrames,
+          captionItem: captionItems.at(index) ?? null,
+          variationNumber: index + 1
         };
-      })
-      .filter(
-        (
-          plan
-        ): plan is {
-          id: string;
-          plan: PreviewTimelinePlan;
-          resolvedSegments: TimelinePreviewResolvedSegment[];
-          firstThumb: string | null;
-          durationInFrames: number;
-        } => Boolean(plan)
-      );
-  }, [itemById, plans]);
+      });
+    return resolved.filter((plan): plan is PlayablePreview => Boolean(plan));
+  }, [captionItems, itemById, plans]);
 
   if (playablePlans.length === 0) {
     return null;
   }
 
+  const selectedPreview =
+    playablePlans.find((preview) => preview.id === selectedPlanId) ?? null;
+
   return (
-    <div className="mb-10">
-      <div className="mb-4 space-y-1">
-        <h3 className="text-lg font-semibold text-foreground">Reel previews</h3>
-        <p className="text-xs text-muted-foreground">
-          Hover a card to preview a stitched timeline with dynamic transitions.
-        </p>
-      </div>
-      <div className="grid gap-4 md:grid-cols-3">
+    <>
+      <div className="columns-2 md:columns-3 xl:columns-4 gap-6">
         {playablePlans.map((preview) => {
           const isActive = activePlanId === preview.id;
           return (
             <div
               key={preview.id}
-              className="group overflow-hidden rounded-xl border border-border bg-background shadow-xs"
+              className="group break-inside-avoid mb-6 rounded-lg border border-border bg-card shadow-sm"
               onMouseEnter={() => setActivePlanId(preview.id)}
               onMouseLeave={() => setActivePlanId(null)}
-              onClick={() =>
-                setActivePlanId((current) =>
-                  current === preview.id ? null : preview.id
-                )
-              }
+              onClick={() => setSelectedPlanId(preview.id)}
             >
-              <div className="relative aspect-9/16 w-full bg-black">
-                {isActive ? (
-                  <Player
-                    component={ListingTimelinePreviewComposition}
-                    inputProps={{
-                      segments: preview.resolvedSegments,
-                      transitionDurationSeconds: PREVIEW_TRANSITION_SECONDS
+              <div className="relative overflow-hidden rounded-lg">
+                <div className="absolute right-3 top-3 z-10 flex gap-2 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      toast("Edit controls will be added here.");
                     }}
-                    durationInFrames={preview.durationInFrames}
-                    compositionWidth={1080}
-                    compositionHeight={1920}
-                    fps={PREVIEW_FPS}
-                    loop
-                    autoPlay
-                    controls={false}
-                    initiallyMuted
-                    clickToPlay={false}
-                    doubleClickToFullscreen={false}
-                    spaceKeyToPlayOrPause={false}
-                    style={{ width: "100%", height: "100%" }}
-                    acknowledgeRemotionLicense
-                  />
-                ) : (
-                  <>
-                    {preview.firstThumb ? (
-                      <LoadingImage
-                        src={preview.firstThumb}
-                        alt={`${formatVariantLabel(preview.plan.variant)} preview`}
-                        fill
-                        sizes="(min-width: 1024px) 24vw, (min-width: 768px) 32vw, 100vw"
-                        className="object-cover transition-transform duration-500 group-hover:scale-[1.02]"
-                      />
-                    ) : null}
-                    <div className="absolute inset-0 bg-black/20 transition-colors duration-300 group-hover:bg-black/35" />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <span className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/40 bg-black/45 text-white">
-                        <Play className="h-4 w-4 fill-current" />
-                      </span>
-                    </div>
-                  </>
-                )}
-              </div>
-              <div className="space-y-1 p-3">
-                <p className="text-sm font-medium text-foreground">
-                  {formatVariantLabel(preview.plan.variant)}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {preview.resolvedSegments.length} clips •{" "}
-                  {preview.plan.totalDurationSeconds.toFixed(1)}s
-                </p>
+                    className="h-6 w-6 rounded-full border border-background/30 bg-background/20 text-background backdrop-blur-md hover:bg-background/30 hover:border-background/70"
+                    aria-label="Edit reel preview"
+                  >
+                    <Edit className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      const sourceUrl = preview.resolvedSegments[0]?.src;
+                      if (!sourceUrl) {
+                        toast.error("No clip available to download.");
+                        return;
+                      }
+                      window.open(sourceUrl, "_blank", "noopener,noreferrer");
+                    }}
+                    className="h-6 w-6 rounded-full border border-background/30 bg-background/20 text-background backdrop-blur-md hover:bg-background/30 hover:border-background/70"
+                    aria-label="Download reel preview"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      setFavoritePlanIds((prev) => {
+                        const next = new Set(prev);
+                        if (next.has(preview.id)) {
+                          next.delete(preview.id);
+                        } else {
+                          next.add(preview.id);
+                        }
+                        return next;
+                      });
+                    }}
+                    className={cn(
+                      "h-6 w-6 rounded-full border backdrop-blur-md transition-all",
+                      favoritePlanIds.has(preview.id)
+                        ? "bg-primary/90 border-primary text-primary-foreground hover:bg-primary"
+                        : "bg-background/20 border-background/30 text-background hover:bg-background/30 hover:border-background/70"
+                    )}
+                    aria-label="Favorite reel preview"
+                  >
+                    <Heart
+                      className={cn(
+                        "h-3.5 w-3.5",
+                        favoritePlanIds.has(preview.id) && "fill-current"
+                      )}
+                    />
+                  </Button>
+                </div>
+                <div className="relative aspect-9/16 w-full bg-black">
+                  {isActive ? (
+                    <Player
+                      component={ListingTimelinePreviewComposition}
+                      inputProps={{
+                        segments: preview.resolvedSegments,
+                        transitionDurationSeconds: PREVIEW_TRANSITION_SECONDS
+                      }}
+                      durationInFrames={preview.durationInFrames}
+                      compositionWidth={1080}
+                      compositionHeight={1920}
+                      fps={PREVIEW_FPS}
+                      loop
+                      autoPlay
+                      controls={false}
+                      initiallyMuted
+                      clickToPlay={false}
+                      doubleClickToFullscreen={false}
+                      spaceKeyToPlayOrPause={false}
+                      style={{ width: "100%", height: "100%" }}
+                      acknowledgeRemotionLicense
+                    />
+                  ) : (
+                    <>
+                      {preview.firstThumb ? (
+                        <LoadingImage
+                          src={preview.firstThumb}
+                          alt={`${formatVariantLabel(preview.plan.variant)} preview`}
+                          fill
+                          sizes="(min-width: 1024px) 24vw, (min-width: 768px) 32vw, 100vw"
+                          className="object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+                        />
+                      ) : null}
+                      <div className="absolute inset-0 bg-linear-to-t from-black/60 via-black/10 to-transparent" />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/40 bg-black/45 text-white">
+                          <Play className="h-4 w-4 fill-current" />
+                        </span>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           );
         })}
       </div>
-    </div>
+
+      <Dialog
+        open={Boolean(selectedPreview)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedPlanId(null);
+          }
+        }}
+      >
+        <DialogContent className="h-[80vh] w-[60vw] max-w-[calc(100vw-2rem)] sm:max-w-[1600px] grid-rows-[auto_minmax(0,1fr)] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedPreview
+                ? `${formatVariantLabel(selectedPreview.plan.variant)} Reel Preview`
+                : "Reel Preview"}
+            </DialogTitle>
+          </DialogHeader>
+          {selectedPreview ? (
+            <div className="grid h-full min-h-0 gap-6 md:grid-cols-[minmax(0,1fr)_490px]">
+              <div className="flex min-h-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-black">
+                <div className="relative h-full aspect-9/16 w-auto">
+                  <Player
+                    component={ListingTimelinePreviewComposition}
+                    inputProps={{
+                      segments: selectedPreview.resolvedSegments,
+                      transitionDurationSeconds: PREVIEW_TRANSITION_SECONDS
+                    }}
+                    durationInFrames={selectedPreview.durationInFrames}
+                    compositionWidth={1080}
+                    compositionHeight={1920}
+                    fps={PREVIEW_FPS}
+                    loop
+                    autoPlay
+                    controls
+                    initiallyMuted
+                    style={{ width: "100%", height: "100%" }}
+                    acknowledgeRemotionLicense
+                  />
+                </div>
+              </div>
+              <div className="min-h-0 overflow-y-auto rounded-lg border border-border bg-card p-4">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  {captionSubcategoryLabel} Caption · Variation {selectedPreview.variationNumber}
+                </p>
+                <div className="mt-4 space-y-4">
+                  {selectedPreview.captionItem?.hook ? (
+                    <div>
+                      <p className="text-xs font-semibold text-muted-foreground">
+                        Hook
+                      </p>
+                      <p className="text-sm text-foreground">
+                        {selectedPreview.captionItem.hook}
+                      </p>
+                    </div>
+                  ) : null}
+
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground">
+                      Caption
+                    </p>
+                    <p className="mt-1 whitespace-pre-line text-sm text-foreground">
+                      {selectedPreview.captionItem?.caption?.trim()
+                        ? selectedPreview.captionItem.caption
+                        : "No caption available yet for this subcategory."}
+                    </p>
+                  </div>
+
+                  {selectedPreview.captionItem?.body?.length ? (
+                    <div>
+                      <p className="text-xs font-semibold text-muted-foreground">
+                        Slide Notes
+                      </p>
+                      <div className="mt-2 space-y-2">
+                        {selectedPreview.captionItem.body.map((slide, index) => (
+                          <p
+                            key={`${selectedPreview.captionItem?.id}-slide-${index}`}
+                            className="text-xs text-muted-foreground"
+                          >
+                            {index + 1}. {slide.header}: {slide.content}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

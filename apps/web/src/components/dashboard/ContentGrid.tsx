@@ -9,7 +9,7 @@ import { LoadingVideo } from "../ui/loading-video";
 import type { ListingContentSubcategory } from "@shared/types/models";
 
 type AspectRatio = "square" | "vertical" | "horizontal";
-type GenerationModel = "runway-gen4-turbo" | "kling1.6";
+type GenerationModel = "veo3.1_fast" | "runway-gen4-turbo" | "kling1.6";
 
 type CarouselSlide = {
   header: string;

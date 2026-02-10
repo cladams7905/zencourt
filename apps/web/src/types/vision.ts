@@ -18,6 +18,7 @@ export interface RoomClassification {
   category: RoomCategory;
   confidence: number;
   primaryScore?: number;
+  perspective?: "aerial" | "ground";
 }
 
 export interface BatchClassificationResult {

@@ -154,7 +154,8 @@ export async function categorizeListingImages(
       .set({
         category: image.category ?? null,
         confidence: image.confidence ?? null,
-        primaryScore: image.primaryScore ?? null
+        primaryScore: image.primaryScore ?? null,
+        metadata: image.metadata ?? undefined
       })
       .where(
         and(
@@ -274,7 +275,8 @@ export async function categorizeListingImagesByIds(
       .set({
         category: image.category ?? null,
         confidence: image.confidence ?? null,
-        primaryScore: image.primaryScore ?? null
+        primaryScore: image.primaryScore ?? null,
+        metadata: image.metadata ?? undefined
       })
       .where(
         and(

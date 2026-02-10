@@ -29,6 +29,7 @@ export interface PreviewTimelineSegment {
 }
 
 export interface PreviewTimelinePlan {
+  id: string;
   variant: PreviewVariant;
   segments: PreviewTimelineSegment[];
   totalDurationSeconds: number;
@@ -39,10 +40,11 @@ export interface BuildPreviewTimelineOptions {
   listingId: string;
   variant: PreviewVariant;
   transitionDurationSeconds?: number;
+  seedKey?: string;
 }
 
 const DEFAULT_CLIP_DURATION_SECONDS = 3;
-const DEFAULT_TRANSITION_DURATION_SECONDS = 0.45;
+const DEFAULT_TRANSITION_DURATION_SECONDS = 0;
 const MIN_CLIP_DURATION_SECONDS = 2;
 
 function hashSeed(seed: string): number {
@@ -75,9 +77,9 @@ function getEffectiveDurationSeconds(
     return Math.max(MIN_CLIP_DURATION_SECONDS, Number((base * 0.82).toFixed(2)));
   }
   if (!prioritized) {
-    return Math.max(MIN_CLIP_DURATION_SECONDS, Math.min(base, 3));
+    return Math.max(MIN_CLIP_DURATION_SECONDS, Math.min(base, 2));
   }
-  return Math.min(base, 4);
+  return Math.min(base, 3);
 }
 
 function orderClips(
@@ -108,6 +110,12 @@ function orderClips(
     const previous = normalizeRoomCategory(ordered[i - 1].category ?? "");
     const current = normalizeRoomCategory(ordered[i].category ?? "");
     if (!previous || !current || previous !== current) {
+      continue;
+    }
+    // Keep intentionally paired priority clips adjacent
+    const prevSort = ordered[i - 1].sortOrder ?? -1;
+    const currSort = ordered[i].sortOrder ?? -1;
+    if (currSort === prevSort + 1 && isPriorityCategory(current)) {
       continue;
     }
     let swapIndex = -1;
@@ -181,8 +189,10 @@ function pickTransition(
 export function buildPreviewTimelinePlan(
   options: BuildPreviewTimelineOptions
 ): PreviewTimelinePlan {
-  const { clips, listingId, variant, transitionDurationSeconds } = options;
-  const rng = createSeededRng(`${listingId}:${variant}`);
+  const { clips, listingId, variant, transitionDurationSeconds, seedKey } =
+    options;
+  const resolvedSeedKey = seedKey?.trim() ? seedKey.trim() : "base";
+  const rng = createSeededRng(`${listingId}:${variant}:${resolvedSeedKey}`);
   const ordered = orderClips(clips, rng);
 
   const segments: PreviewTimelineSegment[] = [];
@@ -214,24 +224,43 @@ export function buildPreviewTimelinePlan(
   );
 
   return {
+    id: `${variant}-${resolvedSeedKey}`,
     variant,
     segments,
     totalDurationSeconds
   };
 }
 
+const PREVIEW_VARIANTS: PreviewVariant[] = [
+  "cinematic",
+  "energetic",
+  "luxury-flow"
+];
+
+export function buildPreviewTimelinePlans(
+  clips: PreviewTimelineClip[],
+  listingId: string,
+  count: number,
+  seedPrefix = "series"
+): PreviewTimelinePlan[] {
+  if (clips.length === 0 || count <= 0) {
+    return [];
+  }
+
+  return Array.from({ length: count }, (_, index) => {
+    const variant = PREVIEW_VARIANTS[index % PREVIEW_VARIANTS.length]!;
+    return buildPreviewTimelinePlan({
+      clips,
+      listingId,
+      variant,
+      seedKey: `${seedPrefix}-${index + 1}`
+    });
+  });
+}
+
 export function buildPreviewTimelineVariants(
   clips: PreviewTimelineClip[],
   listingId: string
 ): PreviewTimelinePlan[] {
-  if (clips.length === 0) {
-    return [];
-  }
-  return (["cinematic", "energetic", "luxury-flow"] as const).map((variant) =>
-    buildPreviewTimelinePlan({
-      clips,
-      listingId,
-      variant
-    })
-  );
+  return buildPreviewTimelinePlans(clips, listingId, PREVIEW_VARIANTS.length);
 }

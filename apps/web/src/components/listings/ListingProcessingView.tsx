@@ -39,20 +39,10 @@ export function ListingProcessingView({
   userId,
   title,
   address,
-  batchCount,
   batchStartedAt
 }: ListingProcessingViewProps) {
   const router = useRouter();
   const [isProcessing, setIsProcessing] = React.useState(true);
-  const [totalToProcess, setTotalToProcess] = React.useState<number | null>(
-    typeof batchCount === "number" && batchCount > 0 ? batchCount : null
-  );
-  const [remainingUncategorized, setRemainingUncategorized] = React.useState(
-    typeof batchCount === "number" && batchCount > 0 ? batchCount : 0
-  );
-  const [batchTotal, setBatchTotal] = React.useState(
-    typeof batchCount === "number" && batchCount > 0 ? batchCount : 0
-  );
   const [generationJobs, setGenerationJobs] = React.useState<
     VideoJobUpdateEvent[]
   >([]);
@@ -62,7 +52,6 @@ export function ListingProcessingView({
     "loading"
   );
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
-  const [displayedProgress, setDisplayedProgress] = React.useState(0);
   const [isCancelOpen, setIsCancelOpen] = React.useState(false);
   const [isCanceling, setIsCanceling] = React.useState(false);
   const [canPollGeneration, setCanPollGeneration] = React.useState(
@@ -71,13 +60,9 @@ export function ListingProcessingView({
   const [listingContentStatus, setListingContentStatus] = React.useState<
     "idle" | "running" | "succeeded" | "failed"
   >("idle");
+  const [remainingEstimateSeconds, setRemainingEstimateSeconds] =
+    React.useState(0);
   const hasInitializedGenerationRef = React.useRef(false);
-
-  const resolvedTotal = totalToProcess ?? batchTotal;
-  const processedCount = Math.max(
-    0,
-    resolvedTotal - Math.min(resolvedTotal, remainingUncategorized)
-  );
 
   const generationSummary = React.useMemo(() => {
     if (mode !== "generate") {
@@ -86,7 +71,6 @@ export function ListingProcessingView({
         terminal: 0,
         failed: 0,
         canceled: 0,
-        progressPercent: 0,
         isTerminal: false,
         allSucceeded: false
       };
@@ -95,29 +79,35 @@ export function ListingProcessingView({
     const terminal = generationJobs.filter((job) =>
       ["completed", "failed", "canceled"].includes(job.status)
     ).length;
-    const failed = generationJobs.filter((job) => job.status === "failed")
-      .length;
-    const canceled = generationJobs.filter((job) => job.status === "canceled")
-      .length;
-    const progressPercent =
-      total > 0 ? Math.round((terminal / total) * 100) : 0;
+    const failed = generationJobs.filter(
+      (job) => job.status === "failed"
+    ).length;
+    const canceled = generationJobs.filter(
+      (job) => job.status === "canceled"
+    ).length;
     return {
       total,
       terminal,
       failed,
       canceled,
-      progressPercent,
       isTerminal: total > 0 && terminal >= total,
-      allSucceeded: total > 0 && generationJobs.every((job) => job.status === "completed")
+      allSucceeded:
+        total > 0 && generationJobs.every((job) => job.status === "completed")
     };
   }, [generationJobs, mode]);
 
-  const progressPercent =
-    mode === "categorize" && resolvedTotal > 0
-      ? Math.round((processedCount / resolvedTotal) * 100)
-      : mode === "generate"
-        ? generationSummary.progressPercent
-        : 0;
+  const estimatedTotalSeconds = React.useMemo(() => {
+    if (mode !== "generate") {
+      return 0;
+    }
+    return generationSummary.total > 0 ? generationSummary.total * 10 : 90;
+  }, [generationSummary.total, mode]);
+
+  const formattedEstimate = React.useMemo(() => {
+    const minutes = Math.floor(remainingEstimateSeconds / 60);
+    const seconds = remainingEstimateSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+  }, [remainingEstimateSeconds]);
   const copy = React.useMemo(() => {
     if (mode === "review") {
       return {
@@ -213,7 +203,9 @@ export function ListingProcessingView({
         const payload = await response.json().catch(() => ({}));
         setListingContentStatus("failed");
         throw new Error(
-          payload?.message || payload?.error || "Failed to generate listing content."
+          payload?.message ||
+            payload?.error ||
+            "Failed to generate listing content."
         );
       }
       setListingContentStatus("succeeded");
@@ -246,8 +238,7 @@ export function ListingProcessingView({
           ["pending", "processing"].includes(job.status)
         );
         const allCompleted =
-          jobs.length > 0 &&
-          jobs.every((job) => job.status === "completed");
+          jobs.length > 0 && jobs.every((job) => job.status === "completed");
 
         if (hasFailedJob) {
           await updateListing(userId, listingId, { listingStage: "review" });
@@ -343,18 +334,18 @@ export function ListingProcessingView({
         setIsProcessing(true);
         categorizeListingImages(userId, listingId).catch(() => null);
       }
-        const isProcessed = (image: { category: string | null }) => {
-          const candidate = image as {
-            category: string | null;
-            confidence?: number | null;
-            primaryScore?: number | null;
-          };
-          return Boolean(
-            candidate.category ||
-            candidate.confidence !== null ||
-            candidate.primaryScore !== null
-          );
+      const isProcessed = (image: { category: string | null }) => {
+        const candidate = image as {
+          category: string | null;
+          confidence?: number | null;
+          primaryScore?: number | null;
         };
+        return Boolean(
+          candidate.category ||
+          candidate.confidence !== null ||
+          candidate.primaryScore !== null
+        );
+      };
       const batchFiltered = batchStartedAt
         ? updated.filter((image) => {
             const uploadedAt =
@@ -367,13 +358,6 @@ export function ListingProcessingView({
       if (batchFiltered.length === 0) {
         return;
       }
-      const processedCount = batchFiltered.filter(isProcessed).length;
-      const uncategorizedCount = batchFiltered.length - processedCount;
-      setBatchTotal(batchFiltered.length);
-      setRemainingUncategorized(uncategorizedCount);
-      setTotalToProcess((prev) =>
-        prev === null ? batchFiltered.length : prev
-      );
       const needsCategorization = batchFiltered.some(
         (image) => !isProcessed(image)
       );
@@ -416,6 +400,31 @@ export function ListingProcessingView({
   }, [initializeGeneration, mode]);
 
   React.useEffect(() => {
+    if (mode !== "generate") {
+      setRemainingEstimateSeconds(0);
+      return;
+    }
+    setRemainingEstimateSeconds(estimatedTotalSeconds);
+  }, [estimatedTotalSeconds, listingId, mode]);
+
+  React.useEffect(() => {
+    if (mode !== "generate") {
+      return;
+    }
+    if (generationSummary.isTerminal) {
+      setRemainingEstimateSeconds(0);
+      return;
+    }
+    if (remainingEstimateSeconds <= 0) {
+      return;
+    }
+    const interval = setInterval(() => {
+      setRemainingEstimateSeconds((prev) => Math.max(prev - 1, 0));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [generationSummary.isTerminal, mode, remainingEstimateSeconds]);
+
+  React.useEffect(() => {
     if (mode === "generate" && canPollGeneration) {
       void refreshGenerationStatus();
       const interval = setInterval(refreshGenerationStatus, 2000);
@@ -452,7 +461,10 @@ export function ListingProcessingView({
       void fallbackToReview();
       return;
     }
-    if (!generationSummary.allSucceeded || listingContentStatus !== "succeeded") {
+    if (
+      !generationSummary.allSucceeded ||
+      listingContentStatus !== "succeeded"
+    ) {
       if (listingContentStatus === "failed") {
         hasNavigatedRef.current = true;
         const fallbackToReview = async () => {
@@ -499,41 +511,6 @@ export function ListingProcessingView({
     router,
     userId
   ]);
-
-  React.useEffect(() => {
-    if (mode !== "categorize" && mode !== "generate") {
-      return;
-    }
-    setDisplayedProgress(0);
-  }, [mode, listingId]);
-
-  React.useEffect(() => {
-    if (mode !== "categorize" && mode !== "generate") {
-      return;
-    }
-    setDisplayedProgress((prev) => Math.max(prev, progressPercent));
-  }, [mode, progressPercent]);
-
-  React.useEffect(() => {
-    if (mode !== "categorize" && mode !== "generate") {
-      return;
-    }
-    if (mode === "categorize" && !isProcessing) {
-      return;
-    }
-    const intervalMs = mode === "generate" ? 1000 : 500;
-    const interval = setInterval(() => {
-      setDisplayedProgress((prev) => {
-        const target = Math.max(progressPercent, prev);
-        const cap = target >= 100 ? 100 : Math.max(target, 95);
-        if (prev >= cap) {
-          return prev;
-        }
-        return Math.min(prev + 1, cap);
-      });
-    }, intervalMs);
-    return () => clearInterval(interval);
-  }, [isProcessing, mode, progressPercent]);
 
   React.useEffect(() => {
     if (mode !== "generate") {
@@ -607,9 +584,6 @@ export function ListingProcessingView({
           <div className="space-y-2">
             <h2 className="text-2xl font-header text-foreground">
               {copy.title}
-              {mode === "categorize" || mode === "generate"
-                ? ` (${displayedProgress}%)`
-                : ""}
             </h2>
             <div className="my-3 gap-3">
               <p className="text-sm text-muted-foreground">{copy.subtitle}</p>
@@ -622,6 +596,11 @@ export function ListingProcessingView({
           </div>
           <div className="h-px bg-border w-full" />
           <p className="text-xs text-muted-foreground">{copy.helperText}</p>
+          {mode === "generate" ? (
+            <p className="text-xs text-muted-foreground font-semibold">
+              Estimated time remaining: {formattedEstimate}
+            </p>
+          ) : null}
           {mode === "review" && status === "error" && errorMessage ? (
             <div className="rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-3 text-xs text-destructive">
               {errorMessage}

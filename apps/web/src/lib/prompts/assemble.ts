@@ -107,6 +107,12 @@ const LISTING_SUBCATEGORY_HOOK_FILES: Record<ListingContentSubcategory, string> 
 const HOOK_WORD_MIN = 3;
 const HOOK_WORD_MAX = 10;
 const HOOK_SAMPLE_COUNT = 10;
+const RECENT_HOOK_LIMIT = 4;
+const LISTING_PROMPT_DROPPED_KEYS = new Set([
+  "sources",
+  "sale_history",
+  "valuation_estimates"
+]);
 
 async function readPromptFile(relativePath: string): Promise<string> {
   if (promptCache.has(relativePath)) {
@@ -397,14 +403,20 @@ function buildAudienceSummary(
   const includeTopics =
     category !== "community" &&
     category !== "lifestyle" &&
-    category !== "seasonal";
+    category !== "seasonal" &&
+    category !== "listing";
   if (includeTopics && keyTopics) {
     summaryParts.push(`Key topics: ${keyTopics}`);
   }
   if (includeTopics && dataEmphasis) {
     summaryParts.push(`Data emphasis: ${dataEmphasis}`);
   }
-  if (audienceDescription && audienceDescription.trim()) {
+  const includeAudienceDescription = category !== "listing";
+  if (
+    includeAudienceDescription &&
+    audienceDescription &&
+    audienceDescription.trim()
+  ) {
     summaryParts.push(`Audience description: ${audienceDescription.trim()}`);
   }
 
@@ -557,12 +569,56 @@ function buildListingDataXml(
     ].join("\n");
   }
 
+  const sanitizeValue = (value: unknown): unknown | undefined => {
+    if (value === null || value === undefined) {
+      return undefined;
+    }
+
+    if (Array.isArray(value)) {
+      const cleaned = value
+        .map((entry) => sanitizeValue(entry))
+        .filter((entry) => entry !== undefined);
+      return cleaned.length > 0 ? cleaned : undefined;
+    }
+
+    if (typeof value === "object") {
+      const record = value as Record<string, unknown>;
+      const cleanedEntries = Object.entries(record)
+        .filter(([key]) => !LISTING_PROMPT_DROPPED_KEYS.has(key))
+        .map(
+          ([key, entry]) =>
+            [key, sanitizeValue(entry)] as [string, unknown | undefined]
+        )
+        .filter(([, entry]) => entry !== undefined);
+
+      if (cleanedEntries.length === 0) {
+        return undefined;
+      }
+
+      return Object.fromEntries(cleanedEntries);
+    }
+
+    return value;
+  };
+
+  const sanitizedListingData = sanitizeValue(listingPropertyDetails) as
+    | Record<string, unknown>
+    | undefined;
+
+  if (!sanitizedListingData) {
+    return [
+      "<listing_data>",
+      "No structured listing details were provided. Do not invent property facts.",
+      "</listing_data>"
+    ].join("\n");
+  }
+
   return [
     "<listing_data>",
     "Use this structured listing data as the primary factual source for listing content.",
     "Do not fabricate missing values.",
     "```json",
-    JSON.stringify(listingPropertyDetails, null, 2),
+    JSON.stringify(sanitizedListingData, null, 2),
     "```",
     "</listing_data>"
   ].join("\n");
@@ -691,7 +747,7 @@ export async function buildSystemPrompt(input: PromptAssemblyInput) {
     input.category === "seasonal" && seasonalExtras
       ? `\n\n<seasonal_data>\n${seasonalExtras}\n</seasonal_data>`
       : "";
-  const recentHooks = input.recent_hooks?.slice(0, 8) ?? [];
+  const recentHooks = input.recent_hooks?.slice(0, RECENT_HOOK_LIMIT) ?? [];
   const recentHooksBlock =
     recentHooks.length > 0
       ? `\n\n<recent_hooks>\nDo NOT reuse or closely paraphrase any of these hooks:\n- ${recentHooks.join(

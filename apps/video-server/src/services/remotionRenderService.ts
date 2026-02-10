@@ -85,7 +85,7 @@ class RemotionRenderService {
     cancelSignal?: CancelSignal;
   }): Promise<RenderResult> {
     const { clips, orientation, videoId } = options;
-    const transitionDurationSeconds = options.transitionDurationSeconds ?? 0.5;
+    const transitionDurationSeconds = options.transitionDurationSeconds ?? 0;
 
     const inputProps: ListingVideoInputProps = {
       clips,

@@ -12,7 +12,7 @@ import {
 
 type CreateContentInput = Omit<
   InsertDBContent,
-  "id" | "createdAt" | "updatedAt"
+  "id" | "userId" | "createdAt" | "updatedAt"
 > & { id?: string };
 
 /**

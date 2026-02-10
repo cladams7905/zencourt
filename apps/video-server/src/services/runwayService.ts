@@ -1,25 +1,23 @@
 import RunwayML from "@runwayml/sdk";
 import logger from "@/config/logger";
 
-type Gen4TurboRatio =
+type RunwayImageToVideoRatio =
   | "1280:720"
   | "720:1280"
-  | "1104:832"
-  | "832:1104"
-  | "960:960"
-  | "1584:672";
+  | "1080:1920"
+  | "1920:1080";
 
 type SubmitRunwayJobOptions = {
   promptImage: string;
   promptText: string;
-  ratio: Gen4TurboRatio;
-  duration?: number;
-  seed?: number;
+  ratio: RunwayImageToVideoRatio;
+  duration?: 4 | 6 | 8;
+  audio?: boolean;
 };
 
 const DEFAULT_API_BASE = "https://api.dev.runwayml.com";
 const DEFAULT_API_VERSION = "2024-11-06";
-const MODEL_ID = "gen4_turbo" as const;
+const MODEL_ID = "veo3.1_fast" as const;
 
 class RunwayService {
   private client: RunwayML | null = null;
@@ -60,26 +58,27 @@ class RunwayService {
     id: string;
     waitForTaskOutput: () => Promise<{ output?: Array<{ uri?: string }> }>;
   }> {
-    const { promptImage, promptText, ratio, duration, seed } = options;
+    const { promptImage, promptText, ratio, duration, audio = false } = options;
     const client = this.getClient();
+    const boundedPrompt = promptText.slice(0, 1000);
 
     try {
       logger.info(
         {
           ratio,
           duration,
-          seed,
+          audio,
           promptLength: promptText?.length ?? 0
         },
         "[RunwayService] Submitting image-to-video request"
       );
       const taskPromise = client.imageToVideo.create({
         model: MODEL_ID,
-        promptText,
+        promptText: boundedPrompt,
         promptImage: [{ uri: promptImage, position: "first" }],
         ratio,
         duration,
-        seed
+        audio
       });
 
       // Get the task ID immediately
