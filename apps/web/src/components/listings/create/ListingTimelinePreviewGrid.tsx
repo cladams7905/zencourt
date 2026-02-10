@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Player } from "@remotion/player";
-import { Download, Edit, Heart, Play } from "lucide-react";
+import { Download, Edit, Heart } from "lucide-react";
 import { Button } from "../../ui/button";
 import { cn } from "../../ui/utils";
 import type { ContentItem } from "../../dashboard/ContentGrid";
@@ -30,7 +30,6 @@ type ListingTimelinePreviewGridProps = {
 
 type PlayablePreview = {
   id: string;
-  plan: PreviewTimelinePlan;
   resolvedSegments: TimelinePreviewResolvedSegment[];
   firstThumb: string | null;
   durationInFrames: number;
@@ -41,19 +40,6 @@ type PlayablePreview = {
 const PREVIEW_FPS = 30;
 const PREVIEW_TRANSITION_SECONDS = 0;
 
-function formatVariantLabel(variant: PreviewTimelinePlan["variant"]): string {
-  switch (variant) {
-    case "cinematic":
-      return "Cinematic";
-    case "energetic":
-      return "Energetic";
-    case "luxury-flow":
-      return "Luxury Flow";
-    default:
-      return variant;
-  }
-}
-
 export function ListingTimelinePreviewGrid({
   plans,
   items,
@@ -61,12 +47,16 @@ export function ListingTimelinePreviewGrid({
   captionSubcategoryLabel
 }: ListingTimelinePreviewGridProps) {
   const [activePlanId, setActivePlanId] = React.useState<string | null>(null);
+  const [revealedPlanId, setRevealedPlanId] = React.useState<string | null>(
+    null
+  );
   const [selectedPlanId, setSelectedPlanId] = React.useState<string | null>(
     null
   );
   const [favoritePlanIds, setFavoritePlanIds] = React.useState<Set<string>>(
     new Set()
   );
+  const revealTimerRef = React.useRef<number | null>(null);
 
   const itemById = React.useMemo(
     () =>
@@ -85,42 +75,71 @@ export function ListingTimelinePreviewGrid({
 
   const playablePlans = React.useMemo<PlayablePreview[]>(() => {
     const resolved = plans.map<PlayablePreview | null>((plan, index) => {
-        const resolvedSegments: TimelinePreviewResolvedSegment[] = plan.segments
-          .map((segment) => {
-            const source = itemById.get(segment.clipId);
-            if (!source?.videoUrl) {
-              return null;
-            }
-            return {
-              ...segment,
-              src: source.videoUrl
-            };
-          })
-          .filter((segment): segment is TimelinePreviewResolvedSegment =>
-            Boolean(segment)
-          );
-        if (resolvedSegments.length < 2) {
-          return null;
-        }
-        const firstThumb =
-          itemById.get(resolvedSegments[0].clipId)?.thumbnail ?? null;
-        const durationInFrames = getTimelineDurationInFrames(
-          resolvedSegments,
-          PREVIEW_FPS,
-          PREVIEW_TRANSITION_SECONDS
+      const resolvedSegments: TimelinePreviewResolvedSegment[] = plan.segments
+        .map((segment) => {
+          const source = itemById.get(segment.clipId);
+          if (!source?.videoUrl) {
+            return null;
+          }
+          return {
+            ...segment,
+            src: source.videoUrl
+          };
+        })
+        .filter((segment): segment is TimelinePreviewResolvedSegment =>
+          Boolean(segment)
         );
-        return {
-          id: `${plan.id}-${resolvedSegments.length}`,
-          plan,
-          resolvedSegments,
-          firstThumb,
-          durationInFrames,
-          captionItem: captionItems.at(index) ?? null,
-          variationNumber: index + 1
-        };
-      });
+      if (resolvedSegments.length < 2) {
+        return null;
+      }
+      const firstThumb =
+        itemById.get(resolvedSegments[0].clipId)?.thumbnail ?? null;
+      const durationInFrames = getTimelineDurationInFrames(
+        resolvedSegments,
+        PREVIEW_FPS,
+        PREVIEW_TRANSITION_SECONDS
+      );
+      return {
+        id: `${plan.id}-${resolvedSegments.length}`,
+        resolvedSegments,
+        firstThumb,
+        durationInFrames,
+        captionItem: captionItems.at(index) ?? null,
+        variationNumber: index + 1
+      };
+    });
     return resolved.filter((plan): plan is PlayablePreview => Boolean(plan));
   }, [captionItems, itemById, plans]);
+
+  const clearRevealTimer = React.useCallback(() => {
+    if (revealTimerRef.current !== null) {
+      window.clearTimeout(revealTimerRef.current);
+      revealTimerRef.current = null;
+    }
+  }, []);
+
+  const handlePlanEnter = React.useCallback(
+    (planId: string) => {
+      clearRevealTimer();
+      setActivePlanId(planId);
+      setRevealedPlanId(null);
+      revealTimerRef.current = window.setTimeout(() => {
+        setRevealedPlanId(planId);
+        revealTimerRef.current = null;
+      }, 120);
+    },
+    [clearRevealTimer]
+  );
+
+  const handlePlanLeave = React.useCallback(() => {
+    clearRevealTimer();
+    setActivePlanId(null);
+    setRevealedPlanId(null);
+  }, [clearRevealTimer]);
+
+  React.useEffect(() => {
+    return () => clearRevealTimer();
+  }, [clearRevealTimer]);
 
   if (playablePlans.length === 0) {
     return null;
@@ -131,18 +150,19 @@ export function ListingTimelinePreviewGrid({
 
   return (
     <>
-      <div className="columns-2 md:columns-3 xl:columns-4 gap-6">
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-3 md:gap-3 xl:grid-cols-4">
         {playablePlans.map((preview) => {
           const isActive = activePlanId === preview.id;
+          const isRevealed = revealedPlanId === preview.id;
           return (
             <div
               key={preview.id}
-              className="group break-inside-avoid mb-6 rounded-lg border border-border bg-card shadow-sm"
-              onMouseEnter={() => setActivePlanId(preview.id)}
-              onMouseLeave={() => setActivePlanId(null)}
+              className="group overflow-hidden rounded-xl bg-card shadow-sm"
+              onMouseEnter={() => handlePlanEnter(preview.id)}
+              onMouseLeave={handlePlanLeave}
               onClick={() => setSelectedPlanId(preview.id)}
             >
-              <div className="relative overflow-hidden rounded-lg">
+              <div className="relative overflow-hidden">
                 <div className="absolute right-3 top-3 z-10 flex gap-2 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
                   <Button
                     size="icon"
@@ -207,7 +227,17 @@ export function ListingTimelinePreviewGrid({
                     />
                   </Button>
                 </div>
-                <div className="relative aspect-9/16 w-full bg-black">
+                <div className="relative aspect-9/16 w-full bg-card">
+                  {preview.firstThumb ? (
+                    <LoadingImage
+                      src={preview.firstThumb}
+                      alt="Reel preview"
+                      fill
+                      unoptimized
+                      sizes="(min-width: 1024px) 24vw, (min-width: 768px) 32vw, 100vw"
+                      className="object-cover"
+                    />
+                  ) : null}
                   {isActive ? (
                     <Player
                       component={ListingTimelinePreviewComposition}
@@ -223,31 +253,35 @@ export function ListingTimelinePreviewGrid({
                       autoPlay
                       controls={false}
                       initiallyMuted
+                      renderPoster={() =>
+                        preview.firstThumb ? (
+                          <LoadingImage
+                            src={preview.firstThumb}
+                            alt="Reel preview"
+                            fill
+                            style={{
+                              width: "100%",
+                              height: "100%",
+                              objectFit: "cover"
+                            }}
+                          />
+                        ) : null
+                      }
+                      showPosterWhenUnplayed
+                      showPosterWhenBuffering
+                      showPosterWhenBufferingAndPaused
                       clickToPlay={false}
                       doubleClickToFullscreen={false}
                       spaceKeyToPlayOrPause={false}
-                      style={{ width: "100%", height: "100%" }}
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        opacity: isRevealed ? 1 : 0,
+                        transition: "opacity 120ms ease"
+                      }}
                       acknowledgeRemotionLicense
                     />
-                  ) : (
-                    <>
-                      {preview.firstThumb ? (
-                        <LoadingImage
-                          src={preview.firstThumb}
-                          alt={`${formatVariantLabel(preview.plan.variant)} preview`}
-                          fill
-                          sizes="(min-width: 1024px) 24vw, (min-width: 768px) 32vw, 100vw"
-                          className="object-cover transition-transform duration-500 group-hover:scale-[1.02]"
-                        />
-                      ) : null}
-                      <div className="absolute inset-0 bg-linear-to-t from-black/60 via-black/10 to-transparent" />
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/40 bg-black/45 text-white">
-                          <Play className="h-4 w-4 fill-current" />
-                        </span>
-                      </div>
-                    </>
-                  )}
+                  ) : null}
                 </div>
               </div>
             </div>
@@ -265,15 +299,11 @@ export function ListingTimelinePreviewGrid({
       >
         <DialogContent className="h-[80vh] w-[60vw] max-w-[calc(100vw-2rem)] sm:max-w-[1600px] grid-rows-[auto_minmax(0,1fr)] overflow-hidden">
           <DialogHeader>
-            <DialogTitle>
-              {selectedPreview
-                ? `${formatVariantLabel(selectedPreview.plan.variant)} Reel Preview`
-                : "Reel Preview"}
-            </DialogTitle>
+            <DialogTitle>Reel Preview</DialogTitle>
           </DialogHeader>
           {selectedPreview ? (
             <div className="grid h-full min-h-0 gap-6 md:grid-cols-[minmax(0,1fr)_490px]">
-              <div className="flex min-h-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-black">
+              <div className="flex min-h-0 items-center justify-center overflow-hidden rounded-lg bg-card">
                 <div className="relative h-full aspect-9/16 w-auto">
                   <Player
                     component={ListingTimelinePreviewComposition}
@@ -289,6 +319,23 @@ export function ListingTimelinePreviewGrid({
                     autoPlay
                     controls
                     initiallyMuted
+                    renderPoster={() =>
+                      selectedPreview.firstThumb ? (
+                        <LoadingImage
+                          src={selectedPreview.firstThumb}
+                          alt="Reel preview"
+                          fill
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover"
+                          }}
+                        />
+                      ) : null
+                    }
+                    showPosterWhenUnplayed
+                    showPosterWhenBuffering
+                    showPosterWhenBufferingAndPaused
                     style={{ width: "100%", height: "100%" }}
                     acknowledgeRemotionLicense
                   />
@@ -296,7 +343,8 @@ export function ListingTimelinePreviewGrid({
               </div>
               <div className="min-h-0 overflow-y-auto rounded-lg border border-border bg-card p-4">
                 <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  {captionSubcategoryLabel} Caption · Variation {selectedPreview.variationNumber}
+                  {captionSubcategoryLabel} Caption · Variation{" "}
+                  {selectedPreview.variationNumber}
                 </p>
                 <div className="mt-4 space-y-4">
                   {selectedPreview.captionItem?.hook ? (
@@ -327,14 +375,16 @@ export function ListingTimelinePreviewGrid({
                         Slide Notes
                       </p>
                       <div className="mt-2 space-y-2">
-                        {selectedPreview.captionItem.body.map((slide, index) => (
-                          <p
-                            key={`${selectedPreview.captionItem?.id}-slide-${index}`}
-                            className="text-xs text-muted-foreground"
-                          >
-                            {index + 1}. {slide.header}: {slide.content}
-                          </p>
-                        ))}
+                        {selectedPreview.captionItem.body.map(
+                          (slide, index) => (
+                            <p
+                              key={`${selectedPreview.captionItem?.id}-slide-${index}`}
+                              className="text-xs text-muted-foreground"
+                            >
+                              {index + 1}. {slide.header}: {slide.content}
+                            </p>
+                          )
+                        )}
                       </div>
                     </div>
                   ) : null}

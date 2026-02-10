@@ -18,6 +18,9 @@ export interface ListingTimelinePreviewCompositionProps {
   transitionDurationSeconds: number;
 }
 
+const PREMOUNT_FRAMES = 15;
+const POSTMOUNT_FRAMES = 5;
+
 export function getTimelineDurationInFrames(
   segments: TimelinePreviewResolvedSegment[],
   fps: number,
@@ -50,9 +53,11 @@ export const ListingTimelinePreviewComposition: React.FC<
             key={`${segment.clipId}-${index}`}
             from={startFrame}
             durationInFrames={clipFrames}
+            premountFor={PREMOUNT_FRAMES}
+            postmountFor={POSTMOUNT_FRAMES}
           >
             <AbsoluteFill>
-              <Video src={segment.src} />
+              <Video src={segment.src} pauseWhenBuffering />
             </AbsoluteFill>
           </Sequence>
         );

@@ -3,8 +3,6 @@ import {
   normalizeRoomCategory
 } from "@shared/types/video";
 
-export type PreviewVariant = "cinematic" | "energetic" | "luxury-flow";
-
 export type PreviewTransition =
   | "crossfade"
   | "slide-left"
@@ -30,7 +28,6 @@ export interface PreviewTimelineSegment {
 
 export interface PreviewTimelinePlan {
   id: string;
-  variant: PreviewVariant;
   segments: PreviewTimelineSegment[];
   totalDurationSeconds: number;
 }
@@ -38,7 +35,6 @@ export interface PreviewTimelinePlan {
 export interface BuildPreviewTimelineOptions {
   clips: PreviewTimelineClip[];
   listingId: string;
-  variant: PreviewVariant;
   transitionDurationSeconds?: number;
   seedKey?: string;
 }
@@ -46,6 +42,10 @@ export interface BuildPreviewTimelineOptions {
 const DEFAULT_CLIP_DURATION_SECONDS = 3;
 const DEFAULT_TRANSITION_DURATION_SECONDS = 0;
 const MIN_CLIP_DURATION_SECONDS = 2;
+const PRIORITY_DURATION_MIN_RATIO = 0.75;
+const PRIORITY_DURATION_MAX_RATIO = 1;
+const STANDARD_DURATION_MIN_RATIO = 0.5;
+const STANDARD_DURATION_MAX_RATIO = 0.75;
 
 function hashSeed(seed: string): number {
   let hash = 2166136261;
@@ -66,20 +66,30 @@ function createSeededRng(seed: string): () => number {
 
 function getEffectiveDurationSeconds(
   clip: PreviewTimelineClip,
-  variant: PreviewVariant
+  rng: () => number
 ): number {
-  const base = Math.max(
+  const sourceDuration = Math.max(
     MIN_CLIP_DURATION_SECONDS,
     clip.durationSeconds ?? DEFAULT_CLIP_DURATION_SECONDS
   );
   const prioritized = clip.isPriorityCategory ?? isPriorityCategory(clip.category ?? "");
-  if (variant === "energetic") {
-    return Math.max(MIN_CLIP_DURATION_SECONDS, Number((base * 0.82).toFixed(2)));
-  }
-  if (!prioritized) {
-    return Math.max(MIN_CLIP_DURATION_SECONDS, Math.min(base, 2));
-  }
-  return Math.min(base, 3);
+  const [minRatio, maxRatio] = prioritized
+    ? [PRIORITY_DURATION_MIN_RATIO, PRIORITY_DURATION_MAX_RATIO]
+    : [STANDARD_DURATION_MIN_RATIO, STANDARD_DURATION_MAX_RATIO];
+  const ratio = minRatio + (maxRatio - minRatio) * rng();
+  const duration = sourceDuration * ratio;
+  return Number(
+    Math.min(sourceDuration, Math.max(MIN_CLIP_DURATION_SECONDS, duration)).toFixed(2)
+  );
+}
+
+function pullClip(
+  pool: PreviewTimelineClip[],
+  rng: () => number
+): PreviewTimelineClip {
+  const lookahead = Math.min(3, pool.length);
+  const index = Math.floor(rng() * lookahead);
+  return pool.splice(index, 1)[0]!;
 }
 
 function orderClips(
@@ -97,13 +107,20 @@ function orderClips(
   );
 
   const ordered: PreviewTimelineClip[] = [];
+  let preferPriority = rng() >= 0.5;
   while (priority.length > 0 || standard.length > 0) {
-    if (priority.length > 0) {
-      ordered.push(priority.shift()!);
+    const primary = preferPriority ? priority : standard;
+    const secondary = preferPriority ? standard : priority;
+
+    if (primary.length > 0) {
+      ordered.push(pullClip(primary, rng));
     }
-    if (standard.length > 0) {
-      ordered.push(standard.shift()!);
+
+    if (secondary.length > 0 && (ordered.length < 2 || rng() >= 0.2)) {
+      ordered.push(pullClip(secondary, rng));
     }
+
+    preferPriority = !preferPriority;
   }
 
   for (let i = 1; i < ordered.length; i += 1) {
@@ -138,13 +155,27 @@ function orderClips(
     }
   }
 
+  const swapPasses = Math.min(3, Math.floor(ordered.length / 3));
+  for (let pass = 0; pass < swapPasses; pass += 1) {
+    const i = Math.floor(rng() * ordered.length);
+    const j = Math.floor(rng() * ordered.length);
+    if (i === j) {
+      continue;
+    }
+    const aCategory = normalizeRoomCategory(ordered[i]?.category ?? "");
+    const bCategory = normalizeRoomCategory(ordered[j]?.category ?? "");
+    if (aCategory && bCategory && aCategory === bCategory) {
+      continue;
+    }
+    [ordered[i], ordered[j]] = [ordered[j], ordered[i]];
+  }
+
   return ordered;
 }
 
 function pickTransition(
   current: PreviewTimelineClip,
   next: PreviewTimelineClip,
-  variant: PreviewVariant,
   rng: () => number,
   previousTransition?: PreviewTransition
 ): PreviewTransition {
@@ -167,12 +198,8 @@ function pickTransition(
     pool = ["light-flash", "slide-left", "crossfade"];
   } else if (currentExterior && !nextExterior) {
     pool = ["zoom-settle", "crossfade"];
-  } else if (variant === "energetic") {
-    pool = ["push", "slide-left", "crossfade"];
-  } else if (variant === "luxury-flow") {
-    pool = ["crossfade", "zoom-settle", "wipe"];
   } else {
-    pool = ["crossfade", "slide-left", "wipe"];
+    pool = ["crossfade", "slide-left", "push", "wipe"];
   }
 
   if (previousTransition && pool.length > 1) {
@@ -189,10 +216,9 @@ function pickTransition(
 export function buildPreviewTimelinePlan(
   options: BuildPreviewTimelineOptions
 ): PreviewTimelinePlan {
-  const { clips, listingId, variant, transitionDurationSeconds, seedKey } =
-    options;
+  const { clips, listingId, transitionDurationSeconds, seedKey } = options;
   const resolvedSeedKey = seedKey?.trim() ? seedKey.trim() : "base";
-  const rng = createSeededRng(`${listingId}:${variant}:${resolvedSeedKey}`);
+  const rng = createSeededRng(`${listingId}:${resolvedSeedKey}`);
   const ordered = orderClips(clips, rng);
 
   const segments: PreviewTimelineSegment[] = [];
@@ -201,7 +227,7 @@ export function buildPreviewTimelinePlan(
     const clip = ordered[i];
     const next = ordered[i + 1];
     const transitionToNext = next
-      ? pickTransition(clip, next, variant, rng, previousTransition)
+      ? pickTransition(clip, next, rng, previousTransition)
       : undefined;
     if (transitionToNext) {
       previousTransition = transitionToNext;
@@ -209,7 +235,7 @@ export function buildPreviewTimelinePlan(
     segments.push({
       clipId: clip.id,
       category: clip.category ?? null,
-      durationSeconds: getEffectiveDurationSeconds(clip, variant),
+      durationSeconds: getEffectiveDurationSeconds(clip, rng),
       transitionToNext
     });
   }
@@ -224,18 +250,11 @@ export function buildPreviewTimelinePlan(
   );
 
   return {
-    id: `${variant}-${resolvedSeedKey}`,
-    variant,
+    id: `plan-${resolvedSeedKey}`,
     segments,
     totalDurationSeconds
   };
 }
-
-const PREVIEW_VARIANTS: PreviewVariant[] = [
-  "cinematic",
-  "energetic",
-  "luxury-flow"
-];
 
 export function buildPreviewTimelinePlans(
   clips: PreviewTimelineClip[],
@@ -248,11 +267,9 @@ export function buildPreviewTimelinePlans(
   }
 
   return Array.from({ length: count }, (_, index) => {
-    const variant = PREVIEW_VARIANTS[index % PREVIEW_VARIANTS.length]!;
     return buildPreviewTimelinePlan({
       clips,
       listingId,
-      variant,
       seedKey: `${seedPrefix}-${index + 1}`
     });
   });
@@ -262,5 +279,5 @@ export function buildPreviewTimelineVariants(
   clips: PreviewTimelineClip[],
   listingId: string
 ): PreviewTimelinePlan[] {
-  return buildPreviewTimelinePlans(clips, listingId, PREVIEW_VARIANTS.length);
+  return buildPreviewTimelinePlans(clips, listingId, 3);
 }
