@@ -683,9 +683,10 @@ export async function buildSystemPrompt(input: PromptAssemblyInput) {
                 ? "basePrompts/listing-base-prompt.md"
             : "basePrompts/base-prompt.md";
   const baseSystemPrompt = await readPromptFile(basePromptFile);
-  const audienceDirective = await loadAudienceDirectives(
-    input.audience_segments
-  );
+  const audienceDirective =
+    input.category === "listing"
+      ? ""
+      : await loadAudienceDirectives(input.audience_segments);
   const audienceSummary = audienceDirective
     ? buildAudienceSummary(
         audienceDirective,
@@ -796,11 +797,14 @@ export function buildUserPrompt(input: PromptAssemblyInput): string {
   const contentType = content_request?.content_type ?? "social_post";
   const focus = content_request?.focus ?? "";
   const notes = content_request?.notes ?? "";
+  const audienceLine =
+    category === "listing"
+      ? ""
+      : `- **Audience Segments:** ${audience_segments.join(", ") || "general"}\n`;
   return `
 <content_request>
 - **Category:** ${category}
-- **Audience Segments:** ${audience_segments.join(", ") || "general"}
-- **Platform:** ${platform}
+${audienceLine}- **Platform:** ${platform}
 - **Content Type:** ${contentType}
 - **Focus:** ${focus || "No additional focus"}
 - **Notes:** ${notes || "None"}

@@ -11,10 +11,17 @@ import type { ListingContentSubcategory } from "@shared/types/models";
 type AspectRatio = "square" | "vertical" | "horizontal";
 type GenerationModel = "veo3.1_fast" | "runway-gen4-turbo" | "kling1.6";
 
+export type TextOverlayInput = {
+  accent_top?: string | null;
+  headline: string;
+  accent_bottom?: string | null;
+};
+
 type CarouselSlide = {
   header: string;
   content: string;
   broll_query?: string | null;
+  text_overlay?: TextOverlayInput | null;
 };
 
 const FALLBACK_THUMBNAIL = `data:image/svg+xml,${encodeURIComponent(

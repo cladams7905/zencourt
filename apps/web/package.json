@@ -9,6 +9,7 @@
     "env:pull": "vercel env pull ../../.env.local",
     "start": "next start",
     "lint": "eslint",
+    "type-check": "tsc --noEmit",
     "test": "jest",
     "test:watch": "jest --watch"
   },

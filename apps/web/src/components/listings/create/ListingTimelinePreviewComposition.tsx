@@ -1,31 +1,29 @@
 "use client";
 
 import * as React from "react";
-import {
-  AbsoluteFill,
-  Sequence,
-  Video,
-  useVideoConfig
-} from "remotion";
+import { AbsoluteFill, Sequence, Video, useVideoConfig } from "remotion";
 import type {
   PreviewTextOverlay,
   PreviewTimelineSegment
 } from "@web/src/lib/video/previewTimeline";
 import {
   PREVIEW_TEXT_OVERLAY_BACKGROUND_COLOR,
-  PREVIEW_TEXT_OVERLAY_FONT_FAMILY,
+  PREVIEW_TEXT_OVERLAY_BACKGROUND_COLOR_OPAQUE,
   PREVIEW_TEXT_OVERLAY_POSITION_TOP,
   PREVIEW_TEXT_OVERLAY_LAYOUT,
   PREVIEW_TEXT_OVERLAY_MAX_WIDTH,
   PREVIEW_TEXT_OVERLAY_BORDER_RADIUS,
   PREVIEW_TEXT_OVERLAY_TEXT_COLOR,
-  PREVIEW_TEXT_OVERLAY_LINE_HEIGHT,
-  PREVIEW_TEXT_OVERLAY_LETTER_SPACING,
-  PREVIEW_TEXT_OVERLAY_NO_BACKGROUND_TEXT_SHADOW
+  computeOverlayLineStyles,
+  pickSandwichOverlayArrowPath
 } from "@shared/utils";
 
 export interface TimelinePreviewResolvedSegment extends PreviewTimelineSegment {
   src: string;
+  supplementalAddressOverlay?: {
+    overlay: PreviewTextOverlay;
+    placement: "bottom-third" | "below-primary" | "low-bottom";
+  };
 }
 
 export interface ListingTimelinePreviewCompositionProps {
@@ -36,40 +34,94 @@ export interface ListingTimelinePreviewCompositionProps {
 const PREMOUNT_FRAMES = 15;
 const POSTMOUNT_FRAMES = 5;
 
-function TextOverlay({ overlay }: { overlay: PreviewTextOverlay }) {
+function TextOverlay({
+  overlay,
+  topOverride,
+  baseFontSizePxOverride
+}: {
+  overlay: PreviewTextOverlay;
+  topOverride?: string;
+  baseFontSizePxOverride?: number;
+}) {
   const hasBackground = overlay.background !== "none";
+  const backgroundColor =
+    overlay.templatePattern === "simple"
+      ? PREVIEW_TEXT_OVERLAY_BACKGROUND_COLOR_OPAQUE[overlay.background]
+      : PREVIEW_TEXT_OVERLAY_BACKGROUND_COLOR[overlay.background];
+  const layout = PREVIEW_TEXT_OVERLAY_LAYOUT.video;
+  const lineStyles = computeOverlayLineStyles(
+    overlay,
+    baseFontSizePxOverride ?? layout.fontSizePx
+  );
+  const overlayTop =
+    topOverride ?? PREVIEW_TEXT_OVERLAY_POSITION_TOP[overlay.position];
+  const shouldCenterByPosition = !topOverride && overlay.position === "center";
+  const arrowPath = pickSandwichOverlayArrowPath(overlay);
+
   return (
     <div
       style={{
         position: "absolute",
-        top: PREVIEW_TEXT_OVERLAY_POSITION_TOP[overlay.position],
+        top: overlayTop,
         left: 0,
         right: 0,
         display: "flex",
         justifyContent: "center",
-        paddingLeft: PREVIEW_TEXT_OVERLAY_LAYOUT.video.horizontalPaddingPx,
-        paddingRight: PREVIEW_TEXT_OVERLAY_LAYOUT.video.horizontalPaddingPx,
-        pointerEvents: "none"
+        paddingLeft: layout.horizontalPaddingPx,
+        paddingRight: layout.horizontalPaddingPx,
+        pointerEvents: "none",
+        transform: shouldCenterByPosition ? "translateY(-50%)" : undefined
       }}
     >
       <div
         style={{
           maxWidth: PREVIEW_TEXT_OVERLAY_MAX_WIDTH,
-          borderRadius: hasBackground ? PREVIEW_TEXT_OVERLAY_BORDER_RADIUS : 0,
-          backgroundColor: PREVIEW_TEXT_OVERLAY_BACKGROUND_COLOR[overlay.background],
-          padding: hasBackground ? `${PREVIEW_TEXT_OVERLAY_LAYOUT.video.boxPaddingVerticalPx}px ${PREVIEW_TEXT_OVERLAY_LAYOUT.video.boxPaddingHorizontalPx}px` : "0",
-          color: PREVIEW_TEXT_OVERLAY_TEXT_COLOR,
-          textAlign: "center",
-          fontFamily: PREVIEW_TEXT_OVERLAY_FONT_FAMILY[overlay.font],
-          fontSize: PREVIEW_TEXT_OVERLAY_LAYOUT.video.fontSizePx,
-          lineHeight: PREVIEW_TEXT_OVERLAY_LINE_HEIGHT,
-          letterSpacing: PREVIEW_TEXT_OVERLAY_LETTER_SPACING,
-          textShadow: hasBackground
-            ? "none"
-            : PREVIEW_TEXT_OVERLAY_NO_BACKGROUND_TEXT_SHADOW
+          borderRadius: PREVIEW_TEXT_OVERLAY_BORDER_RADIUS,
+          backgroundColor,
+          padding: hasBackground
+            ? `${layout.boxPaddingVerticalPx}px ${layout.boxPaddingHorizontalPx}px`
+            : "0",
+          color: PREVIEW_TEXT_OVERLAY_TEXT_COLOR[overlay.background],
+          textAlign: "center"
         }}
       >
-        {overlay.text}
+        {lineStyles.map((line, i) => (
+          <div
+            key={i}
+            style={{
+              fontFamily: line.fontFamily,
+              fontWeight: line.fontWeight,
+              fontSize: line.fontSize,
+              textTransform: line.textTransform,
+              fontStyle: line.fontStyle,
+              lineHeight: line.lineHeight,
+              letterSpacing: line.letterSpacing,
+              textShadow: line.textShadow,
+              marginTop: line.marginTop,
+              marginBottom: line.marginBottom
+            }}
+          >
+            {line.text.startsWith("📍 ")
+              ? line.text.replace(/^📍\s+/, "📍\u00A0\u00A0")
+              : line.text}
+          </div>
+        ))}
+        {arrowPath ? (
+          <img
+            src={arrowPath}
+            alt=""
+            aria-hidden
+            style={{
+              display: "block",
+              margin: "8px auto 0",
+              width: 220,
+              maxWidth: "100%",
+              opacity: 0.95,
+              filter:
+                "invert(1) drop-shadow(0 2px 6px rgba(0, 0, 0, 0.45))"
+            }}
+          />
+        ) : null}
       </div>
     </div>
   );
@@ -98,7 +150,10 @@ export const ListingTimelinePreviewComposition: React.FC<
   return (
     <AbsoluteFill style={{ backgroundColor: "black" }}>
       {segments.map((segment, index) => {
-        const clipFrames = Math.max(1, Math.round(segment.durationSeconds * fps));
+        const clipFrames = Math.max(
+          1,
+          Math.round(segment.durationSeconds * fps)
+        );
         const startFrame = cursor;
         cursor += clipFrames;
 
@@ -116,7 +171,26 @@ export const ListingTimelinePreviewComposition: React.FC<
                 pauseWhenBuffering
                 style={{ width: "100%", height: "100%", objectFit: "cover" }}
               />
-              {segment.textOverlay ? <TextOverlay overlay={segment.textOverlay} /> : null}
+              {segment.textOverlay ? (
+                <TextOverlay overlay={segment.textOverlay} />
+              ) : null}
+              {segment.supplementalAddressOverlay ? (
+                <TextOverlay
+                  overlay={segment.supplementalAddressOverlay.overlay}
+                  topOverride={
+                    segment.supplementalAddressOverlay.placement ===
+                    "below-primary"
+                      ? "79%"
+                      : segment.supplementalAddressOverlay.placement ===
+                          "low-bottom"
+                        ? "84%"
+                        : PREVIEW_TEXT_OVERLAY_POSITION_TOP["bottom-third"]
+                  }
+                  baseFontSizePxOverride={
+                    PREVIEW_TEXT_OVERLAY_LAYOUT.video.fontSizePx * 0.58
+                  }
+                />
+              ) : null}
             </AbsoluteFill>
           </Sequence>
         );

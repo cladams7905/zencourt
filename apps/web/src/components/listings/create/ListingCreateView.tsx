@@ -21,6 +21,7 @@ import {
 type ListingCreateViewProps = {
   listingId: string;
   title: string;
+  listingAddress?: string | null;
   videoItems: ContentItem[];
   listingPostItems: ContentItem[];
 };
@@ -109,6 +110,7 @@ function filterFeatureClips(
 export function ListingCreateView({
   listingId,
   title,
+  listingAddress,
   videoItems,
   listingPostItems
 }: ListingCreateViewProps) {
@@ -320,7 +322,9 @@ export function ListingCreateView({
               plans={activePreviewPlans}
               items={videoItems}
               captionItems={activeCaptionItems}
+              listingSubcategory={activeSubcategory}
               captionSubcategoryLabel={SUBCATEGORY_LABELS[activeSubcategory]}
+              listingAddress={listingAddress ?? null}
             />
           ) : (
             <div className="rounded-xl border border-border bg-background p-8 text-center text-sm text-muted-foreground">

@@ -108,6 +108,7 @@ export default async function ListingCreatePage({
     <ListingCreateView
       listingId={listingId}
       title={listing.title?.trim() || "Listing"}
+      listingAddress={listing.address ?? null}
       videoItems={videoItems}
       listingPostItems={listingPostItems}
     />

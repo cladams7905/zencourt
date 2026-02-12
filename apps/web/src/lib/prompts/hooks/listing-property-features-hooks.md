@@ -5,6 +5,7 @@
 
 - Wait until you see the {feature} in this {neighborhood} home
 - This {feature} is what dreams are made of at {address}
+- Things I love about the {feature} at {address}
 - The {feature} at this {property_type} is an absolute showstopper
 - You won't believe the {feature} we found in {city}
 - Can we talk about this stunning {feature}?

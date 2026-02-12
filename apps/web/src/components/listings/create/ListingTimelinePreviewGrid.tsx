@@ -5,23 +5,31 @@ import { Player } from "@remotion/player";
 import { Download, Edit, Heart } from "lucide-react";
 import { Button } from "../../ui/button";
 import { cn } from "../../ui/utils";
-import type { ContentItem } from "../../dashboard/ContentGrid";
+import type {
+  ContentItem,
+  TextOverlayInput
+} from "../../dashboard/ContentGrid";
 import type {
   PreviewTextOverlay,
   PreviewTimelinePlan
 } from "@web/src/lib/video/previewTimeline";
+import type { ListingContentSubcategory } from "@shared/types/models";
 import {
+  hashTextOverlaySeed,
   pickPreviewTextOverlayVariant,
+  buildOverlayTemplateLines,
+  appendRandomHeaderSuffix,
+  pickSandwichOverlayArrowPath,
   PREVIEW_TEXT_OVERLAY_BACKGROUND_COLOR,
-  PREVIEW_TEXT_OVERLAY_FONT_FAMILY,
+  PREVIEW_TEXT_OVERLAY_BACKGROUND_COLOR_OPAQUE,
   PREVIEW_TEXT_OVERLAY_POSITION_TOP,
   PREVIEW_TEXT_OVERLAY_LAYOUT,
   PREVIEW_TEXT_OVERLAY_MAX_WIDTH,
   PREVIEW_TEXT_OVERLAY_BORDER_RADIUS,
   PREVIEW_TEXT_OVERLAY_TEXT_COLOR,
-  PREVIEW_TEXT_OVERLAY_LINE_HEIGHT,
-  PREVIEW_TEXT_OVERLAY_LETTER_SPACING,
-  overlayPxToCqw
+  overlayPxToCqw,
+  computeOverlayLineStyles,
+  type OverlayVariant
 } from "@shared/utils";
 import { LoadingImage } from "../../ui/loading-image";
 import { toast } from "sonner";
@@ -41,13 +49,18 @@ type ListingTimelinePreviewGridProps = {
   plans: PreviewTimelinePlan[];
   items: ContentItem[];
   captionItems: ContentItem[];
+  listingSubcategory: ListingContentSubcategory;
   captionSubcategoryLabel: string;
+  listingAddress: string | null;
 };
 
 type PlayablePreview = {
   id: string;
   resolvedSegments: TimelinePreviewResolvedSegment[];
   thumbnailOverlay: PreviewTextOverlay | null;
+  thumbnailAddressOverlay:
+    | TimelinePreviewResolvedSegment["supplementalAddressOverlay"]
+    | null;
   firstThumb: string | null;
   durationInFrames: number;
   captionItem: ContentItem | null;
@@ -56,90 +69,303 @@ type PlayablePreview = {
 
 const PREVIEW_FPS = 30;
 const PREVIEW_TRANSITION_SECONDS = 0;
+const LOCATION_EMOJI = "📍";
 
-function getOverlayHeaders(captionItem: ContentItem | null): string[] {
-  const headers = (captionItem?.body ?? [])
-    .map((slide) => slide.header?.trim())
-    .filter((value): value is string => Boolean(value));
+// ---------------------------------------------------------------------------
+// Overlay construction helpers
+// ---------------------------------------------------------------------------
 
-  if (headers.length > 0) {
-    return headers;
-  }
-
-  const fallback = captionItem?.hook?.trim();
-  return fallback ? [fallback] : [];
+interface SlideOverlayData {
+  plainText: string;
+  textOverlay?: TextOverlayInput | null;
 }
 
-function buildOverlay(
-  text: string,
-  variant: Pick<PreviewTextOverlay, "position" | "background" | "font">
-): PreviewTextOverlay {
+function getSlideOverlayData(
+  captionItem: ContentItem | null
+): SlideOverlayData[] {
+  const slides = captionItem?.body ?? [];
+  const data: SlideOverlayData[] = slides
+    .filter((slide) => slide.header?.trim())
+    .map((slide) => ({
+      plainText: slide.header.trim(),
+      textOverlay: slide.text_overlay ?? null
+    }));
+
+  if (data.length > 0) return data;
+
+  const fallback = captionItem?.hook?.trim();
+  return fallback ? [{ plainText: fallback }] : [];
+}
+
+function normalizeForAddressMatch(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function extractStreetAddress(address: string): string {
+  const street = address.split(",")[0]?.trim() ?? "";
+  return street;
+}
+
+function slideContainsAddress(
+  slideData: SlideOverlayData,
+  normalizedAddress: string
+): boolean {
+  const parts = [
+    slideData.plainText,
+    slideData.textOverlay?.headline ?? "",
+    slideData.textOverlay?.accent_top ?? "",
+    slideData.textOverlay?.accent_bottom ?? ""
+  ];
+  return parts.some((value) =>
+    normalizeForAddressMatch(value).includes(normalizedAddress)
+  );
+}
+
+function buildAddressSupplementalOverlay(
+  primaryOverlay: PreviewTextOverlay,
+  listingAddress: string
+): TimelinePreviewResolvedSegment["supplementalAddressOverlay"] {
+  const addressText = `${LOCATION_EMOJI} ${listingAddress.trim()}`;
+  const shouldPushLower =
+    primaryOverlay.templatePattern !== "simple" ||
+    primaryOverlay.position === "top-third";
   return {
-    text,
-    ...variant
+    placement: shouldPushLower
+      ? "low-bottom"
+      : primaryOverlay.position === "top-third"
+        ? "bottom-third"
+        : "below-primary",
+    overlay: {
+      text: addressText,
+      position: "bottom-third",
+      background:
+        primaryOverlay.templatePattern === "simple" &&
+        primaryOverlay.background === "none"
+          ? "none"
+          : primaryOverlay.background === "none"
+            ? "black"
+            : primaryOverlay.background,
+      font: primaryOverlay.font,
+      templatePattern: "simple",
+      lines: [{ text: addressText, fontRole: "body" }],
+      fontPairing: primaryOverlay.fontPairing
+    }
   };
 }
 
-function pickOverlayVariant(
-  seed: string
-): Pick<PreviewTextOverlay, "position" | "background" | "font"> {
-  return pickPreviewTextOverlayVariant(seed);
+function buildRichOverlay(
+  slideData: SlideOverlayData,
+  variant: OverlayVariant
+): PreviewTextOverlay {
+  const textOverlay = slideData.textOverlay;
+  const { pattern: templatePattern, lines } = buildOverlayTemplateLines(
+    textOverlay,
+    slideData.plainText
+  );
+  const isRichTemplate = templatePattern !== "simple";
+  const simpleSeedBase = `${slideData.plainText}:${textOverlay?.headline ?? "simple"}:${variant.position}:${variant.fontPairing}`;
+  const brownBackgroundOptions: PreviewTextOverlay["background"][] = [
+    "brown",
+    "brown-700",
+    "brown-500",
+    "brown-300",
+    "brown-200",
+    "brown-100"
+  ];
+  const simpleBackgroundBucket =
+    hashTextOverlaySeed(`${simpleSeedBase}:bg-bucket`) % 3;
+  const simpleBackground: PreviewTextOverlay["background"] =
+    simpleBackgroundBucket === 0
+      ? "none"
+      : simpleBackgroundBucket === 1
+        ? "black"
+      : brownBackgroundOptions[
+          hashTextOverlaySeed(`${simpleSeedBase}:bg-brown`) %
+            brownBackgroundOptions.length
+        ] ?? "brown";
+  const simplePositionOptions: PreviewTextOverlay["position"][] = [
+    "top-third",
+    "center",
+    "bottom-third"
+  ];
+  const simplePosition =
+    simplePositionOptions[
+      hashTextOverlaySeed(
+        `${simpleSeedBase}:position`
+      ) % simplePositionOptions.length
+    ] ?? variant.position;
+  const makeSimpleSuffixRandom = () => {
+    const values = [
+      hashTextOverlaySeed(`${simpleSeedBase}:suffix-bucket`) / 0x100000000,
+      hashTextOverlaySeed(`${simpleSeedBase}:suffix-emoji`) / 0x100000000
+    ];
+    let index = 0;
+    return () => {
+      const value = values[Math.min(index, values.length - 1)] ?? 0;
+      index += 1;
+      return value;
+    };
+  };
+  const resolvedLines =
+    templatePattern === "simple"
+      ? lines.map((line, index) =>
+          index === 0
+            ? {
+                ...line,
+                text: appendRandomHeaderSuffix(line.text, {
+                  random: makeSimpleSuffixRandom()
+                })
+              }
+            : line
+        )
+      : lines;
+
+  return {
+    text: slideData.plainText,
+    position: templatePattern === "simple" ? simplePosition : "center",
+    background: isRichTemplate ? "none" : simpleBackground,
+    font: variant.font,
+    templatePattern,
+    lines: resolvedLines,
+    fontPairing: variant.fontPairing
+  };
 }
+
+// ---------------------------------------------------------------------------
+// Thumbnail text overlay (DOM with CSS transform scaling)
+// ---------------------------------------------------------------------------
 
 function ThumbnailTextOverlay({
   overlay,
-  hidden
+  topOverride,
+  baseFontSizePxOverride
 }: {
   overlay: PreviewTextOverlay;
-  hidden: boolean;
+  topOverride?: string;
+  baseFontSizePxOverride?: number;
 }) {
   const hasBackground = overlay.background !== "none";
+  const backgroundColor =
+    overlay.templatePattern === "simple"
+      ? PREVIEW_TEXT_OVERLAY_BACKGROUND_COLOR_OPAQUE[overlay.background]
+      : PREVIEW_TEXT_OVERLAY_BACKGROUND_COLOR[overlay.background];
   const layout = PREVIEW_TEXT_OVERLAY_LAYOUT.video;
+  const lineStyles = computeOverlayLineStyles(
+    overlay,
+    baseFontSizePxOverride ?? layout.fontSizePx
+  );
+  const overlayTop =
+    topOverride ?? PREVIEW_TEXT_OVERLAY_POSITION_TOP[overlay.position];
+  const shouldCenterByPosition = !topOverride && overlay.position === "center";
+  const arrowPath = pickSandwichOverlayArrowPath(overlay);
+
   return (
     <div
-      className="absolute inset-x-0 z-1 flex justify-center transition-opacity duration-150"
       style={{
-        top: PREVIEW_TEXT_OVERLAY_POSITION_TOP[overlay.position],
-        paddingLeft: overlayPxToCqw(layout.horizontalPaddingPx),
-        paddingRight: overlayPxToCqw(layout.horizontalPaddingPx),
-        opacity: hidden ? 0 : 1
+        position: "absolute",
+        inset: 0,
+        overflow: "hidden",
+        pointerEvents: "none",
+        containerType: "inline-size"
       }}
     >
       <div
         style={{
-          maxWidth: PREVIEW_TEXT_OVERLAY_MAX_WIDTH,
-          borderRadius: hasBackground
-            ? overlayPxToCqw(PREVIEW_TEXT_OVERLAY_BORDER_RADIUS)
-            : 0,
-          backgroundColor:
-            PREVIEW_TEXT_OVERLAY_BACKGROUND_COLOR[overlay.background],
-          padding: hasBackground
-            ? `${overlayPxToCqw(layout.boxPaddingVerticalPx)} ${overlayPxToCqw(layout.boxPaddingHorizontalPx)}`
-            : "0",
-          color: PREVIEW_TEXT_OVERLAY_TEXT_COLOR,
-          textAlign: "center",
-          fontFamily: PREVIEW_TEXT_OVERLAY_FONT_FAMILY[overlay.font],
-          fontSize: overlayPxToCqw(layout.fontSizePx),
-          lineHeight: overlayPxToCqw(
-            layout.fontSizePx * PREVIEW_TEXT_OVERLAY_LINE_HEIGHT
-          ),
-          letterSpacing: overlayPxToCqw(PREVIEW_TEXT_OVERLAY_LETTER_SPACING),
-          textShadow: hasBackground
-            ? "none"
-            : `0 ${overlayPxToCqw(2)} ${overlayPxToCqw(8)} rgba(0, 0, 0, 0.5), 0 0 ${overlayPxToCqw(2)} rgba(0, 0, 0, 0.7)`
+          width: "100%",
+          height: "100%"
         }}
       >
-        {overlay.text}
+        <div
+          style={{
+            position: "absolute",
+            top: overlayTop,
+            left: 0,
+            right: 0,
+            display: "flex",
+            justifyContent: "center",
+            paddingLeft: overlayPxToCqw(layout.horizontalPaddingPx),
+            paddingRight: overlayPxToCqw(layout.horizontalPaddingPx),
+            transform: shouldCenterByPosition ? "translateY(-50%)" : undefined
+          }}
+        >
+          <div
+            style={{
+              maxWidth: PREVIEW_TEXT_OVERLAY_MAX_WIDTH,
+              borderRadius: PREVIEW_TEXT_OVERLAY_BORDER_RADIUS,
+              backgroundColor,
+              padding: hasBackground
+                ? `${overlayPxToCqw(layout.boxPaddingVerticalPx)} ${overlayPxToCqw(layout.boxPaddingHorizontalPx)}`
+                : "0",
+              color: PREVIEW_TEXT_OVERLAY_TEXT_COLOR[overlay.background],
+              textAlign: "center"
+            }}
+          >
+            {lineStyles.map((line, i) => (
+              <div
+                key={i}
+                style={{
+                  fontFamily: line.fontFamily,
+                  fontWeight: line.fontWeight,
+                  fontSize: overlayPxToCqw(line.fontSize),
+                  textTransform: line.textTransform,
+                  fontStyle: line.fontStyle,
+                  lineHeight: overlayPxToCqw(line.fontSize * line.lineHeight),
+                  letterSpacing:
+                    typeof line.letterSpacing === "number"
+                      ? overlayPxToCqw(line.letterSpacing)
+                      : line.letterSpacing,
+                  textShadow: line.textShadow,
+                  marginTop:
+                    typeof line.marginTop === "number"
+                      ? overlayPxToCqw(line.marginTop)
+                      : line.marginTop,
+                  marginBottom:
+                    typeof line.marginBottom === "number"
+                      ? overlayPxToCqw(line.marginBottom)
+                      : line.marginBottom
+                }}
+              >
+                {line.text}
+              </div>
+            ))}
+            {arrowPath ? (
+              <img
+                src={arrowPath}
+                alt=""
+                aria-hidden
+                style={{
+                  display: "block",
+                  margin: `${overlayPxToCqw(8)} auto 0`,
+                  width: overlayPxToCqw(220),
+                  maxWidth: "100%",
+                  opacity: 0.95,
+                  filter:
+                    "invert(1) drop-shadow(0 2px 6px rgba(0, 0, 0, 0.45))"
+                }}
+              />
+            ) : null}
+          </div>
+        </div>
       </div>
     </div>
   );
 }
 
+// ---------------------------------------------------------------------------
+// Main grid component
+// ---------------------------------------------------------------------------
+
 export function ListingTimelinePreviewGrid({
   plans,
   items,
   captionItems,
-  captionSubcategoryLabel
+  listingSubcategory,
+  captionSubcategoryLabel,
+  listingAddress
 }: ListingTimelinePreviewGridProps) {
   const [activePlanId, setActivePlanId] = React.useState<string | null>(null);
   const [revealedPlanId, setRevealedPlanId] = React.useState<string | null>(
@@ -169,6 +395,13 @@ export function ListingTimelinePreviewGrid({
   );
 
   const playablePlans = React.useMemo<PlayablePreview[]>(() => {
+    const listingStreetAddress = extractStreetAddress(listingAddress ?? "");
+    const normalizedListingAddress =
+      normalizeForAddressMatch(listingStreetAddress);
+    const shouldEnforceAddressOverlay =
+      listingSubcategory === "new_listing" &&
+      normalizedListingAddress.length > 0;
+
     const resolved = plans.map<PlayablePreview | null>((plan, index) => {
       const resolvedSegments: TimelinePreviewResolvedSegment[] = plan.segments
         .map((segment) => {
@@ -188,27 +421,41 @@ export function ListingTimelinePreviewGrid({
         return null;
       }
       const captionItem = captionItems.at(index) ?? null;
-      const overlayHeaders = getOverlayHeaders(captionItem);
+      const slideOverlayData = getSlideOverlayData(captionItem);
       const seed = `${plan.id}:${captionItem?.id ?? "no-caption"}`;
-      const overlayVariant = pickOverlayVariant(seed);
+      const overlayVariant = pickPreviewTextOverlayVariant(seed);
       const segmentsWithOverlays = resolvedSegments.map(
         (segment, segmentIndex) => {
-          const text = overlayHeaders.length
-            ? overlayHeaders[segmentIndex % overlayHeaders.length]
-            : "";
-          return text
-            ? {
-                ...segment,
-                textOverlay: buildOverlay(text, overlayVariant)
-              }
-            : segment;
+          const data = slideOverlayData.length
+            ? slideOverlayData[segmentIndex % slideOverlayData.length]
+            : undefined;
+          if (!data) return segment;
+          const primaryOverlay = buildRichOverlay(data, overlayVariant);
+          const needsAddressSupplement =
+            shouldEnforceAddressOverlay &&
+            !slideContainsAddress(data, normalizedListingAddress) &&
+            Boolean(listingAddress?.trim());
+
+          return {
+            ...segment,
+            textOverlay: primaryOverlay,
+            supplementalAddressOverlay: needsAddressSupplement
+              ? buildAddressSupplementalOverlay(
+                  primaryOverlay,
+                  listingStreetAddress
+                )
+              : undefined
+          };
         }
       );
       const firstThumb =
         itemById.get(resolvedSegments[0].clipId)?.thumbnail ?? null;
-      const thumbnailOverlay =
-        segmentsWithOverlays.find((segment) => segment.textOverlay)
-          ?.textOverlay ?? null;
+      const firstSegmentWithOverlay = segmentsWithOverlays.find(
+        (segment) => segment.textOverlay
+      );
+      const thumbnailOverlay = firstSegmentWithOverlay?.textOverlay ?? null;
+      const thumbnailAddressOverlay =
+        firstSegmentWithOverlay?.supplementalAddressOverlay ?? null;
       const durationInFrames = getTimelineDurationInFrames(
         segmentsWithOverlays,
         PREVIEW_FPS,
@@ -218,6 +465,7 @@ export function ListingTimelinePreviewGrid({
         id: `${plan.id}-${resolvedSegments.length}`,
         resolvedSegments: segmentsWithOverlays,
         thumbnailOverlay,
+        thumbnailAddressOverlay,
         firstThumb,
         durationInFrames,
         captionItem,
@@ -225,7 +473,13 @@ export function ListingTimelinePreviewGrid({
       };
     });
     return resolved.filter((plan): plan is PlayablePreview => Boolean(plan));
-  }, [captionItems, itemById, plans]);
+  }, [
+    captionItems,
+    itemById,
+    listingAddress,
+    listingSubcategory,
+    plans
+  ]);
 
   const clearRevealTimer = React.useCallback(() => {
     if (revealTimerRef.current !== null) {
@@ -249,8 +503,13 @@ export function ListingTimelinePreviewGrid({
 
   const handlePlanLeave = React.useCallback(() => {
     clearRevealTimer();
-    setActivePlanId(null);
+    // Fade out the player and fade in the thumbnail overlay first
     setRevealedPlanId(null);
+    // Unmount the player after the crossfade completes
+    revealTimerRef.current = window.setTimeout(() => {
+      setActivePlanId(null);
+      revealTimerRef.current = null;
+    }, 200);
   }, [clearRevealTimer]);
 
   React.useEffect(() => {
@@ -343,24 +602,36 @@ export function ListingTimelinePreviewGrid({
                     />
                   </Button>
                 </div>
-                <div
-                  className="relative aspect-9/16 w-full bg-card"
-                  style={{ containerType: "inline-size" }}
-                >
+                <div className="relative aspect-9/16 w-full bg-card">
                   {preview.firstThumb ? (
                     <LoadingImage
                       src={preview.firstThumb}
                       alt="Reel preview"
                       fill
                       unoptimized
+                      blurClassName=""
                       sizes="(min-width: 1024px) 24vw, (min-width: 768px) 32vw, 100vw"
                       className="object-cover"
                     />
                   ) : null}
                   {preview.thumbnailOverlay ? (
+                    <ThumbnailTextOverlay overlay={preview.thumbnailOverlay} />
+                  ) : null}
+                  {preview.thumbnailAddressOverlay ? (
                     <ThumbnailTextOverlay
-                      overlay={preview.thumbnailOverlay}
-                      hidden={isRevealed}
+                      overlay={preview.thumbnailAddressOverlay.overlay}
+                      topOverride={
+                        preview.thumbnailAddressOverlay.placement ===
+                        "below-primary"
+                          ? "79%"
+                          : preview.thumbnailAddressOverlay.placement ===
+                              "low-bottom"
+                            ? "84%"
+                            : PREVIEW_TEXT_OVERLAY_POSITION_TOP["bottom-third"]
+                      }
+                      baseFontSizePxOverride={
+                        PREVIEW_TEXT_OVERLAY_LAYOUT.video.fontSizePx * 0.58
+                      }
                     />
                   ) : null}
                   {isActive ? (

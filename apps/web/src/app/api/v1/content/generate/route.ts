@@ -73,9 +73,33 @@ const CONTENT_ITEM_SCHEMA = {
             properties: {
               header: { type: "string" },
               content: { type: "string" },
-              broll_query: { type: "string" }
+              broll_query: { type: "string" },
+              text_overlay: {
+                anyOf: [
+                  { type: "null" },
+                  {
+                    type: "object",
+                    properties: {
+                      accent_top: {
+                        anyOf: [{ type: "string" }, { type: "null" }]
+                      },
+                      headline: { type: "string" },
+                      accent_bottom: {
+                        anyOf: [{ type: "string" }, { type: "null" }]
+                      }
+                    },
+                    required: ["headline"],
+                    additionalProperties: false
+                  }
+                ]
+              }
             },
-            required: ["header", "content", "broll_query"],
+            required: [
+              "header",
+              "content",
+              "broll_query",
+              "text_overlay"
+            ],
             additionalProperties: false
           }
         }

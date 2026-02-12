@@ -2,7 +2,12 @@ import type { Metadata } from "next";
 import { StackProvider, StackTheme } from "@stackframe/stack";
 import { stackClientApp } from "../lib/stack/client";
 import { Toaster } from "../components/ui/sonner";
-import { Playfair_Display, Mulish } from "next/font/google";
+import {
+  Playfair_Display,
+  Mulish,
+  Libre_Caslon_Text,
+  Rouge_Script
+} from "next/font/google";
 import "./globals.css";
 
 const body = Mulish({
@@ -19,6 +24,20 @@ const header = Playfair_Display({
   display: "swap"
 });
 
+const libre = Libre_Caslon_Text({
+  subsets: ["latin"],
+  weight: ["400"],
+  variable: "--font-libre",
+  display: "swap"
+});
+
+const rougeScript = Rouge_Script({
+  subsets: ["latin"],
+  weight: ["400"],
+  variable: "--font-rouge",
+  display: "swap"
+});
+
 export const metadata: Metadata = {
   title: "Zencourt - Home",
   description: "AI Marketing Studio for Real Estate Professionals"
@@ -30,7 +49,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${body.variable} ${header.variable}`}>
+    <html
+      lang="en"
+      className={`${body.variable} ${header.variable} ${libre.variable} ${rougeScript.variable}`}
+    >
       <body className="antialiased">
         <StackProvider app={stackClientApp}>
           <StackTheme>{children}</StackTheme>

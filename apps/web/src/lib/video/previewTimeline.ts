@@ -95,90 +95,19 @@ function getEffectiveDurationSeconds(
   );
 }
 
-function pullClip(
-  pool: PreviewTimelineClip[],
-  rng: () => number
-): PreviewTimelineClip {
-  const lookahead = Math.min(3, pool.length);
-  const index = Math.floor(rng() * lookahead);
-  return pool.splice(index, 1)[0]!;
-}
-
 function orderClips(
   clips: PreviewTimelineClip[],
   rng: () => number
 ): PreviewTimelineClip[] {
-  const sorted = [...clips].sort(
-    (a, b) => (a.sortOrder ?? Number.MAX_SAFE_INTEGER) - (b.sortOrder ?? Number.MAX_SAFE_INTEGER)
-  );
-  const priority = sorted.filter(
-    (clip) => clip.isPriorityCategory ?? isPriorityCategory(clip.category ?? "")
-  );
-  const standard = sorted.filter(
-    (clip) => !(clip.isPriorityCategory ?? isPriorityCategory(clip.category ?? ""))
+  const ordered = [...clips].sort(
+    (a, b) =>
+      (a.sortOrder ?? Number.MAX_SAFE_INTEGER) -
+      (b.sortOrder ?? Number.MAX_SAFE_INTEGER)
   );
 
-  const ordered: PreviewTimelineClip[] = [];
-  let preferPriority = rng() >= 0.5;
-  while (priority.length > 0 || standard.length > 0) {
-    const primary = preferPriority ? priority : standard;
-    const secondary = preferPriority ? standard : priority;
-
-    if (primary.length > 0) {
-      ordered.push(pullClip(primary, rng));
-    }
-
-    if (secondary.length > 0 && (ordered.length < 2 || rng() >= 0.2)) {
-      ordered.push(pullClip(secondary, rng));
-    }
-
-    preferPriority = !preferPriority;
-  }
-
-  for (let i = 1; i < ordered.length; i += 1) {
-    const previous = normalizeRoomCategory(ordered[i - 1].category ?? "");
-    const current = normalizeRoomCategory(ordered[i].category ?? "");
-    if (!previous || !current || previous !== current) {
-      continue;
-    }
-    // Keep intentionally paired priority clips adjacent
-    const prevSort = ordered[i - 1].sortOrder ?? -1;
-    const currSort = ordered[i].sortOrder ?? -1;
-    if (currSort === prevSort + 1 && isPriorityCategory(current)) {
-      continue;
-    }
-    let swapIndex = -1;
-    for (let j = i + 1; j < ordered.length; j += 1) {
-      const candidate = normalizeRoomCategory(ordered[j].category ?? "");
-      if (candidate && candidate !== previous) {
-        swapIndex = j;
-        break;
-      }
-    }
-    if (swapIndex > i) {
-      [ordered[i], ordered[swapIndex]] = [ordered[swapIndex], ordered[i]];
-    }
-  }
-
-  if (ordered.length > 1 && rng() > 0.65) {
-    const last = ordered.pop();
-    if (last) {
-      ordered.splice(1, 0, last);
-    }
-  }
-
-  const swapPasses = Math.min(3, Math.floor(ordered.length / 3));
-  for (let pass = 0; pass < swapPasses; pass += 1) {
-    const i = Math.floor(rng() * ordered.length);
-    const j = Math.floor(rng() * ordered.length);
-    if (i === j) {
-      continue;
-    }
-    const aCategory = normalizeRoomCategory(ordered[i]?.category ?? "");
-    const bCategory = normalizeRoomCategory(ordered[j]?.category ?? "");
-    if (aCategory && bCategory && aCategory === bCategory) {
-      continue;
-    }
+  // Uniform Fisher-Yates shuffle so every clip has equal chance to be first.
+  for (let i = ordered.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(rng() * (i + 1));
     [ordered[i], ordered[j]] = [ordered[j], ordered[i]];
   }
 
