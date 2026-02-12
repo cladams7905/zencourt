@@ -139,60 +139,6 @@ function buildListingContentCacheKey(params: {
   ].join(":");
 }
 
-function parseStreamEvents(streamText: string): ContentStreamEvent[] {
-  const chunks = streamText.split("\n\n");
-  const events: ContentStreamEvent[] = [];
-
-  for (const chunk of chunks) {
-    const line = chunk
-      .split("\n")
-      .find((entry) => entry.startsWith("data:"));
-    if (!line) {
-      continue;
-    }
-
-    const payload = line.replace(/^data:\s*/, "");
-    if (!payload) {
-      continue;
-    }
-
-    try {
-      const parsed = JSON.parse(payload) as ContentStreamEvent;
-      events.push(parsed);
-    } catch {
-      // Ignore malformed event chunks.
-    }
-  }
-
-  return events;
-}
-
-function findCompletedItems(events: ContentStreamEvent[]): ListingGeneratedItem[] {
-  const errorEvent = events.find((event) => event.type === "error");
-  if (errorEvent && errorEvent.type === "error") {
-    throw new ApiError(502, {
-      error: "Upstream error",
-      message: errorEvent.message || "Listing content generation failed"
-    });
-  }
-
-  const doneEvent = events.find((event) => event.type === "done");
-  if (!doneEvent || doneEvent.type !== "done") {
-    throw new ApiError(502, {
-      error: "Invalid response",
-      message: "Listing content generation did not return completed items"
-    });
-  }
-
-  if (!Array.isArray(doneEvent.items) || doneEvent.items.length === 0) {
-    throw new ApiError(502, {
-      error: "Invalid response",
-      message: "Listing content generation returned no items"
-    });
-  }
-
-  return doneEvent.items;
-}
 
 function normalizeContentRecordForResponse(record: DBContent) {
   return {
@@ -203,14 +149,70 @@ function normalizeContentRecordForResponse(record: DBContent) {
   };
 }
 
+async function persistGeneratedItems(
+  userId: string,
+  listingId: string,
+  subcategory: ListingContentSubcategory,
+  mediaType: ListingMediaType,
+  cacheKeyValue: string,
+  propertyFingerprintValue: string,
+  items: ListingGeneratedItem[]
+) {
+  return Promise.all(
+    items.map((item, index) =>
+      createContent(userId, {
+        listingId,
+        contentType: "post",
+        status: "draft",
+        contentUrl: null,
+        thumbnailUrl: null,
+        metadata: {
+          listingSubcategory: subcategory,
+          mediaType,
+          promptCategory: "listing",
+          promptVersion: "listing-v1",
+          sortOrder: index,
+          source: "listing-content-generate-route",
+          cacheKey: cacheKeyValue,
+          propertyFingerprint: propertyFingerprintValue,
+          hook: item.hook,
+          caption: item.caption,
+          body: item.body,
+          cta: item.cta,
+          broll_query: item.broll_query
+        }
+      })
+    )
+  );
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ listingId: string }> }
 ) {
+  // Perform auth + validation before opening the stream so we can return
+  // proper HTTP error codes for bad requests.
+  let listingId: string;
+  let userId: string;
+  let listing: Awaited<ReturnType<typeof requireListingAccess>>;
+  let subcategory: ListingContentSubcategory;
+  let mediaType: ListingMediaType;
+  let addressParts: ReturnType<typeof parseListingAddressParts>;
+  let resolvedState: string;
+  let focus: string;
+  let notes: string;
+  let generationNonce: string;
+  let propertyFingerprint: string;
+  let cacheKey: string;
+  let listingDetails: ListingPropertyDetails | null;
+  let existingForCacheKey: DBContent[];
+  let generatedItems: ListingGeneratedItem[] | null;
+
   try {
-    const { listingId } = await params;
+    ({ listingId } = await params);
     const user = await requireAuthenticatedUser();
-    const listing = await requireListingAccess(listingId, user.id);
+    userId = user.id;
+    listing = await requireListingAccess(listingId, userId);
 
     const body = (await request.json()) as {
       subcategory?: string;
@@ -220,13 +222,15 @@ export async function POST(
       generation_nonce?: string;
     };
 
-    const subcategory = body.subcategory?.trim() ?? "";
-    if (!subcategory || !isListingSubcategory(subcategory)) {
+    const subcategoryCandidate = body.subcategory?.trim() ?? "";
+    if (!subcategoryCandidate || !isListingSubcategory(subcategoryCandidate)) {
       throw new ApiError(400, {
         error: "Invalid request",
         message: "A valid listing subcategory is required"
       });
     }
+    subcategory = subcategoryCandidate;
+
     const mediaTypeCandidate = body.media_type?.trim().toLowerCase() ?? "video";
     if (!isListingMediaType(mediaTypeCandidate)) {
       throw new ApiError(400, {
@@ -234,21 +238,21 @@ export async function POST(
         message: "media_type must be either 'video' or 'image'"
       });
     }
-    const mediaType: ListingMediaType = mediaTypeCandidate;
+    mediaType = mediaTypeCandidate;
 
-    const listingDetails =
+    listingDetails =
       (listing.propertyDetails as ListingPropertyDetails | null) ?? null;
     const address =
       listingDetails?.address?.trim() || listing.address?.trim() || "";
-    const addressParts = parseListingAddressParts(address);
+    addressParts = parseListingAddressParts(address);
     const locationState = listingDetails?.location_context?.state?.trim() ?? "";
-    const resolvedState = locationState || addressParts.state;
-    const focus = body.focus?.trim() ?? "";
-    const notes = body.notes?.trim() ?? "";
-    const generationNonce = body.generation_nonce?.trim() ?? "";
-    const propertyFingerprint = buildListingPropertyFingerprint(listingDetails);
-    const cacheKey = buildListingContentCacheKey({
-      userId: user.id,
+    resolvedState = locationState || addressParts.state;
+    focus = body.focus?.trim() ?? "";
+    notes = body.notes?.trim() ?? "";
+    generationNonce = body.generation_nonce?.trim() ?? "";
+    propertyFingerprint = buildListingPropertyFingerprint(listingDetails);
+    cacheKey = buildListingContentCacheKey({
+      userId,
       listingId: listing.id,
       subcategory,
       mediaType,
@@ -258,8 +262,8 @@ export async function POST(
       propertyFingerprint
     });
 
-    const existingListingContent = await getContentByListingId(user.id, listing.id);
-    const existingForCacheKey = existingListingContent.filter((entry) => {
+    const existingListingContent = await getContentByListingId(userId, listing.id);
+    existingForCacheKey = existingListingContent.filter((entry) => {
       const metadata = entry.metadata as Record<string, unknown> | null;
       const metadataMediaType =
         metadata?.mediaType === "image" || metadata?.mediaType === "video"
@@ -272,18 +276,6 @@ export async function POST(
       );
     });
 
-    if (existingForCacheKey.length > 0) {
-      return NextResponse.json({
-        success: true,
-        listingId: listing.id,
-        subcategory,
-        count: existingForCacheKey.length,
-        mediaType,
-        source: "db-cache-hit",
-        items: existingForCacheKey.map(normalizeContentRecordForResponse)
-      });
-    }
-
     const redis = getRedisClient();
     let cachedItems: ListingGeneratedItem[] | null = null;
     if (redis) {
@@ -293,123 +285,247 @@ export async function POST(
         logger.warn({ error, cacheKey }, "Failed reading listing content cache");
       }
     }
-    const generatedItems =
+    generatedItems =
       cachedItems && Array.isArray(cachedItems) && cachedItems.length > 0
         ? cachedItems
         : null;
-
-    let resolvedGeneratedItems: ListingGeneratedItem[];
-    if (generatedItems) {
-      resolvedGeneratedItems = generatedItems;
-    } else {
-      const upstreamResponse = await fetch(
-        `${request.nextUrl.origin}/api/v1/content/generate`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(request.headers.get("cookie")
-              ? { cookie: request.headers.get("cookie") as string }
-              : {})
-          },
-          body: JSON.stringify({
-            category: "listing",
-            audience_segments: [],
-            agent_profile: {
-              agent_name: "",
-              brokerage_name: "",
-              agent_title: "Realtor",
-              city: addressParts.city,
-              state: resolvedState,
-              zip_code: addressParts.zipCode
-            },
-            listing_subcategory: subcategory,
-            listing_property_details: listingDetails,
-            content_request: {
-              platform: "instagram",
-              content_type:
-                mediaType === "video" ? "listing_reel" : "social_post",
-              media_type: mediaType,
-              focus,
-              notes
-            }
-          }),
-          cache: "no-store"
-        }
-      );
-
-      if (!upstreamResponse.ok) {
-        const errorPayload = await upstreamResponse.json().catch(() => ({}));
-        throw new ApiError(upstreamResponse.status, {
-          error: "Upstream error",
-          message:
-            (errorPayload as { message?: string }).message ||
-            "Failed to generate listing content"
-        });
-      }
-
-      const streamText = await upstreamResponse.text();
-      const events = parseStreamEvents(streamText);
-      resolvedGeneratedItems = findCompletedItems(events);
-      if (redis) {
-        try {
-          await redis.set(cacheKey, resolvedGeneratedItems, {
-            ex: LISTING_CONTENT_CACHE_TTL_SECONDS
-          });
-        } catch (error) {
-          logger.warn({ error, cacheKey }, "Failed writing listing content cache");
-        }
-      }
-    }
-
-    const savedContent = await Promise.all(
-      resolvedGeneratedItems.map((item, index) =>
-        createContent(user.id, {
-          listingId: listing.id,
-          contentType: "post",
-          status: "draft",
-          contentUrl: null,
-          thumbnailUrl: null,
-          metadata: {
-            listingSubcategory: subcategory,
-            mediaType,
-            promptCategory: "listing",
-            promptVersion: "listing-v1",
-            sortOrder: index,
-            source: "listing-content-generate-route",
-            cacheKey,
-            propertyFingerprint,
-            hook: item.hook,
-            caption: item.caption,
-            body: item.body,
-            cta: item.cta,
-            broll_query: item.broll_query
-          }
-        })
-      )
-    );
-
-    return NextResponse.json({
-      success: true,
-      listingId: listing.id,
-      subcategory,
-      mediaType,
-      count: savedContent.length,
-      source: generatedItems ? "upstash-cache-hit" : "generated",
-      items: savedContent.map(normalizeContentRecordForResponse)
-    });
   } catch (error) {
     if (error instanceof ApiError) {
       return NextResponse.json(error.body, { status: error.status });
     }
-
-    logger.error({ error }, "Failed to generate listing content");
+    logger.error({ error }, "Failed to generate listing content (pre-stream)");
     return NextResponse.json(
-      {
-        error: "Server error",
-        message: "Failed to generate listing content"
-      },
+      { error: "Server error", message: "Failed to generate listing content" },
       { status: 500 }
     );
   }
+
+  // --- SSE streaming response ---
+  const encoder = new TextEncoder();
+  const sseEvent = (event: ContentStreamEvent) =>
+    encoder.encode(`data: ${JSON.stringify(event)}\n\n`);
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      try {
+        // Fast path: DB cache hit – send done immediately.
+        if (existingForCacheKey.length > 0) {
+          const items = existingForCacheKey.map(
+            normalizeContentRecordForResponse
+          );
+          controller.enqueue(
+            sseEvent({
+              type: "done",
+              items: items.map((item) => {
+                const m = item.metadata as Record<string, unknown> | null;
+                return {
+                  hook: (m?.hook as string) ?? "",
+                  broll_query: (m?.broll_query as string) ?? "",
+                  body: (m?.body as ListingGeneratedItem["body"]) ?? null,
+                  cta: (m?.cta as string) ?? null,
+                  caption: (m?.caption as string) ?? ""
+                };
+              }),
+              meta: { model: "cache", batch_size: items.length }
+            })
+          );
+          controller.close();
+          return;
+        }
+
+        // Redis / Upstash cache hit – persist to DB then send done.
+        if (generatedItems) {
+          const saved = await persistGeneratedItems(
+            userId,
+            listing.id,
+            subcategory,
+            mediaType,
+            cacheKey,
+            propertyFingerprint,
+            generatedItems
+          );
+          controller.enqueue(
+            sseEvent({
+              type: "done",
+              items: generatedItems,
+              meta: { model: "cache", batch_size: saved.length }
+            })
+          );
+          controller.close();
+          return;
+        }
+
+        // Fresh generation – proxy upstream SSE deltas to the client.
+        const upstreamResponse = await fetch(
+          `${request.nextUrl.origin}/api/v1/content/generate`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              ...(request.headers.get("cookie")
+                ? { cookie: request.headers.get("cookie") as string }
+                : {})
+            },
+            body: JSON.stringify({
+              category: "listing",
+              audience_segments: [],
+              agent_profile: {
+                agent_name: "",
+                brokerage_name: "",
+                agent_title: "Realtor",
+                city: addressParts.city,
+                state: resolvedState,
+                zip_code: addressParts.zipCode
+              },
+              listing_subcategory: subcategory,
+              listing_property_details: listingDetails,
+              content_request: {
+                platform: "instagram",
+                content_type:
+                  mediaType === "video" ? "listing_reel" : "social_post",
+                media_type: mediaType,
+                focus,
+                notes
+              }
+            }),
+            cache: "no-store"
+          }
+        );
+
+        if (!upstreamResponse.ok) {
+          const errorPayload = await upstreamResponse.json().catch(() => ({}));
+          const message =
+            (errorPayload as { message?: string }).message ||
+            "Failed to generate listing content";
+          controller.enqueue(sseEvent({ type: "error", message }));
+          controller.close();
+          return;
+        }
+
+        const reader = upstreamResponse.body?.getReader();
+        if (!reader) {
+          controller.enqueue(
+            sseEvent({
+              type: "error",
+              message: "Streaming response not available from upstream"
+            })
+          );
+          controller.close();
+          return;
+        }
+
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let upstreamDoneItems: ListingGeneratedItem[] | null = null;
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const parts = buffer.split("\n\n");
+          buffer = parts.pop() ?? "";
+
+          for (const part of parts) {
+            const line = part
+              .split("\n")
+              .find((entry) => entry.startsWith("data:"));
+            if (!line) continue;
+
+            const payload = line.replace(/^data:\s*/, "");
+            if (!payload) continue;
+
+            let event: ContentStreamEvent;
+            try {
+              event = JSON.parse(payload) as ContentStreamEvent;
+            } catch {
+              continue;
+            }
+
+            if (event.type === "delta") {
+              // Proxy delta to client for incremental JSON parsing.
+              controller.enqueue(sseEvent(event));
+            } else if (event.type === "error") {
+              controller.enqueue(sseEvent(event));
+              controller.close();
+              return;
+            } else if (event.type === "done") {
+              upstreamDoneItems = event.items;
+            }
+          }
+        }
+
+        if (!upstreamDoneItems || upstreamDoneItems.length === 0) {
+          controller.enqueue(
+            sseEvent({
+              type: "error",
+              message:
+                "Listing content generation did not return completed items"
+            })
+          );
+          controller.close();
+          return;
+        }
+
+        // Cache in Redis.
+        const redis = getRedisClient();
+        if (redis) {
+          try {
+            await redis.set(cacheKey, upstreamDoneItems, {
+              ex: LISTING_CONTENT_CACHE_TTL_SECONDS
+            });
+          } catch (error) {
+            logger.warn(
+              { error, cacheKey },
+              "Failed writing listing content cache"
+            );
+          }
+        }
+
+        // Persist to DB.
+        await persistGeneratedItems(
+          userId,
+          listing.id,
+          subcategory,
+          mediaType,
+          cacheKey,
+          propertyFingerprint,
+          upstreamDoneItems
+        );
+
+        // Send final done event to client.
+        controller.enqueue(
+          sseEvent({
+            type: "done",
+            items: upstreamDoneItems,
+            meta: {
+              model: "generated",
+              batch_size: upstreamDoneItems.length
+            }
+          })
+        );
+        controller.close();
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Failed to generate listing content";
+        logger.error({ error }, "Listing content stream error");
+        try {
+          controller.enqueue(sseEvent({ type: "error", message }));
+        } catch {
+          // Controller may already be closed.
+        }
+        controller.close();
+      }
+    }
+  });
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive"
+    }
+  });
 }

@@ -7,8 +7,9 @@ import { ProfileCompletionChecklist } from "./ProfileCompletionChecklist";
 import { ScheduleCard, type ScheduledPost } from "./ScheduleCard";
 import { ContentFilterBar, type ContentType } from "./ContentFilterBar";
 import { ContentGrid, type ContentItem } from "./ContentGrid";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, RefreshCw } from "lucide-react";
 import { Button } from "../ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { DBListing } from "@shared/types/models";
 import { toast } from "sonner";
 
@@ -111,6 +112,7 @@ const DEFAULT_GENERATED_STATE: Record<
 };
 
 const GENERATED_BATCH_SIZE = 4;
+const INITIAL_SKELETON_HOLD_MS = 350;
 const createItemId = (prefix: string) => {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return `${prefix}-${crypto.randomUUID()}`;
@@ -137,6 +139,11 @@ const DashboardView = ({
     Record<ContentType, Record<string, ContentItem[]>>
   >(DEFAULT_GENERATED_STATE);
   const [isGenerating, setIsGenerating] = React.useState(false);
+  const [activeBatchStreamedCount, setActiveBatchStreamedCount] =
+    React.useState(0);
+  const [holdInitialSkeletons, setHoldInitialSkeletons] = React.useState(false);
+  const [incompleteBatchSkeletonCount, setIncompleteBatchSkeletonCount] =
+    React.useState(0);
   const [generationError, setGenerationError] = React.useState<string | null>(
     null
   );
@@ -150,9 +157,9 @@ const DashboardView = ({
       broll_query?: string | null;
     }[]
   >([]);
-  const batchBaseIndexRef = React.useRef<Record<string, number>>({});
   const generatedContentItemsRef = React.useRef(generatedContentItems);
   const activeControllerRef = React.useRef<AbortController | null>(null);
+  const initialSkeletonHoldTimeoutRef = React.useRef<number | null>(null);
 
   React.useEffect(() => {
     if (typeof window === "undefined") {
@@ -178,7 +185,9 @@ const DashboardView = ({
         (Object.keys(parsed.data) as ContentType[]).forEach((type) => {
           normalized[type] = {};
           Object.entries(parsed.data[type] ?? {}).forEach(([key, items]) => {
-            normalized[type][key] = items.filter((item) => !item.isLoading);
+            normalized[type][key] = items.filter(
+              (item) => !item.id.startsWith("stream-")
+            );
           });
         });
         setGeneratedContentItems(normalized);
@@ -239,17 +248,6 @@ const DashboardView = ({
       return updated;
     });
   };
-
-  const buildLoadingItems = React.useCallback(
-    (offset: number) =>
-      Array.from({ length: GENERATED_BATCH_SIZE }, (_, index) => ({
-        id: createItemId("loading"),
-        aspectRatio: "square" as const,
-        isFavorite: false,
-        isLoading: true
-      })),
-    []
-  );
 
   const extractJsonItemsFromStream = React.useCallback((text: string) => {
     const items: {
@@ -319,71 +317,6 @@ const DashboardView = ({
     return items;
   }, []);
 
-  const estimatePartialItemProgress = React.useCallback((text: string) => {
-    let arrayStarted = false;
-    let inString = false;
-    let escape = false;
-    let braceDepth = 0;
-    let objectStart = -1;
-
-    for (let i = 0; i < text.length; i += 1) {
-      const char = text[i];
-      if (!arrayStarted) {
-        if (char === "[") {
-          arrayStarted = true;
-        }
-        continue;
-      }
-
-      if (inString) {
-        if (escape) {
-          escape = false;
-          continue;
-        }
-        if (char === "\\") {
-          escape = true;
-          continue;
-        }
-        if (char === '"') {
-          inString = false;
-        }
-        continue;
-      }
-
-      if (char === '"') {
-        inString = true;
-        continue;
-      }
-
-      if (char === "{") {
-        if (braceDepth === 0) {
-          objectStart = i;
-        }
-        braceDepth += 1;
-      } else if (char === "}") {
-        braceDepth -= 1;
-        if (braceDepth === 0) {
-          objectStart = -1;
-        }
-      }
-    }
-
-    if (braceDepth <= 0 || objectStart < 0) {
-      return 0;
-    }
-
-    const partial = text.slice(objectStart);
-    const fieldCount =
-      (/"hook"\s*:/.test(partial) ? 1 : 0) +
-      (/"caption"\s*:/.test(partial) ? 1 : 0) +
-      (/"body"\s*:/.test(partial) ? 1 : 0) +
-      (/"broll_query"\s*:/.test(partial) ? 1 : 0);
-
-    const rawProgress = fieldCount / 4;
-    const progress = Math.max(0.1, rawProgress);
-    return Math.min(0.9, progress);
-  }, []);
-
   const generateContent = React.useCallback(
     async (category: string, controller?: AbortController) => {
       if (activeControllerRef.current) {
@@ -392,24 +325,17 @@ const DashboardView = ({
       const localController = controller ?? new AbortController();
       activeControllerRef.current = localController;
       setIsGenerating(true);
+      setActiveBatchStreamedCount(0);
+      setIncompleteBatchSkeletonCount(0);
+      setHoldInitialSkeletons(true);
+      if (initialSkeletonHoldTimeoutRef.current !== null) {
+        window.clearTimeout(initialSkeletonHoldTimeoutRef.current);
+      }
+      initialSkeletonHoldTimeoutRef.current = window.setTimeout(() => {
+        setHoldInitialSkeletons(false);
+        initialSkeletonHoldTimeoutRef.current = null;
+      }, INITIAL_SKELETON_HOLD_MS);
       setGenerationError(null);
-      const batchBaseIndex =
-        generatedContentItemsRef.current[contentType]?.[category]?.length ?? 0;
-      batchBaseIndexRef.current = {
-        ...batchBaseIndexRef.current,
-        [category]: batchBaseIndex
-      };
-      setGeneratedContentItems((prev) => {
-        const currentTypeMap = prev[contentType] ?? {};
-        const currentItems = currentTypeMap[category] ?? [];
-        return {
-          ...prev,
-          [contentType]: {
-            ...currentTypeMap,
-            [category]: [...currentItems, ...buildLoadingItems(batchBaseIndex)]
-          }
-        };
-      });
       streamBufferRef.current = "";
       parsedItemsRef.current = [];
 
@@ -439,7 +365,6 @@ const DashboardView = ({
       };
 
       try {
-        console.debug("Generating content", { category, contentType });
         const response = await fetch("/api/v1/content/generate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -465,9 +390,8 @@ const DashboardView = ({
 
         while (true) {
           const { done, value } = await reader.read();
-          if (done) {
-            break;
-          }
+          if (done) break;
+
           buffer += decoder.decode(value, { stream: true });
           const parts = buffer.split("\n\n");
           buffer = parts.pop() ?? "";
@@ -476,13 +400,11 @@ const DashboardView = ({
             const line = part
               .split("\n")
               .find((entry) => entry.startsWith("data:"));
-            if (!line) {
-              continue;
-            }
+            if (!line) continue;
+
             const payload = line.replace(/^data:\s*/, "");
-            if (!payload) {
-              continue;
-            }
+            if (!payload) continue;
+
             const event = JSON.parse(payload) as
               | { type: "delta"; text: string }
               | {
@@ -507,80 +429,41 @@ const DashboardView = ({
               const parsedItems = extractJsonItemsFromStream(
                 streamBufferRef.current
               );
-              const partialProgress = estimatePartialItemProgress(
-                streamBufferRef.current
-              );
+
               if (parsedItems.length > parsedItemsRef.current.length) {
                 const newItems = parsedItems.slice(
                   parsedItemsRef.current.length
                 );
                 parsedItemsRef.current = parsedItems;
+
+                const streamedItems: ContentItem[] = newItems.map((item) => ({
+                  id: createItemId("stream"),
+                  aspectRatio: "square" as const,
+                  isFavorite: false,
+                  hook: item.hook,
+                  caption: item.caption ?? null,
+                  body: item.body ?? null,
+                  brollQuery: item.broll_query ?? null
+                }));
+
                 setGeneratedContentItems((prev) => {
                   const currentTypeMap = prev[contentType] ?? {};
-                  const updatedCategory = [...(currentTypeMap[category] ?? [])];
-                  const baseIndex = batchBaseIndexRef.current[category] ?? 0;
-                  const startIndex =
-                    baseIndex +
-                    (parsedItemsRef.current.length - newItems.length);
-                  newItems.forEach((item, idx) => {
-                    const index = startIndex + idx;
-                    updatedCategory[index] = {
-                      id: createItemId("generated"),
-                      aspectRatio: "square" as const,
-                      isFavorite: false,
-                      hook: item.hook,
-                      caption: item.caption ?? null,
-                      body: item.body ?? null,
-                      brollQuery: item.broll_query ?? null
-                    };
-                  });
+                  const currentItems = currentTypeMap[category] ?? [];
                   return {
                     ...prev,
                     [contentType]: {
                       ...currentTypeMap,
-                      [category]: updatedCategory
+                      [category]: [...currentItems, ...streamedItems]
                     }
                   };
                 });
+                setActiveBatchStreamedCount((prev) =>
+                  Math.min(
+                    GENERATED_BATCH_SIZE,
+                    prev + streamedItems.length
+                  )
+                );
               }
-
-              setGeneratedContentItems((prev) => {
-                const currentTypeMap = prev[contentType] ?? {};
-                const updatedCategory = [...(currentTypeMap[category] ?? [])];
-                const baseIndex = batchBaseIndexRef.current[category] ?? 0;
-                for (let i = 0; i < GENERATED_BATCH_SIZE; i += 1) {
-                  const index = baseIndex + i;
-                  const currentItem = updatedCategory[index];
-                  if (!currentItem?.isLoading) {
-                    continue;
-                  }
-                  if (i < parsedItemsRef.current.length) {
-                    updatedCategory[index] = {
-                      ...currentItem,
-                      progress: 1
-                    };
-                    continue;
-                  }
-                  if (i === parsedItemsRef.current.length) {
-                    updatedCategory[index] = {
-                      ...currentItem,
-                      progress: partialProgress
-                    };
-                    continue;
-                  }
-                  updatedCategory[index] = {
-                    ...currentItem,
-                    progress: 0
-                  };
-                }
-                return {
-                  ...prev,
-                  [contentType]: {
-                    ...currentTypeMap,
-                    [category]: updatedCategory
-                  }
-                };
-              });
             }
 
             if (event.type === "error") {
@@ -589,7 +472,19 @@ const DashboardView = ({
 
             if (event.type === "done") {
               didReceiveDone = true;
-              const generatedItems = event.items.map((item, index) => ({
+              setActiveBatchStreamedCount(
+                Math.min(GENERATED_BATCH_SIZE, event.items.length)
+              );
+              const missingCount = Math.max(
+                0,
+                GENERATED_BATCH_SIZE - event.items.length
+              );
+              if (missingCount > 0) {
+                setIncompleteBatchSkeletonCount(missingCount);
+                setGenerationError("sorry, an error occurred. Please retry.");
+                toast.error("Sorry, an error occurred. Please retry.");
+              }
+              const finalItems: ContentItem[] = event.items.map((item) => ({
                 id: createItemId("generated"),
                 aspectRatio: "square" as const,
                 isFavorite: false,
@@ -601,46 +496,17 @@ const DashboardView = ({
 
               setGeneratedContentItems((prev) => {
                 const currentTypeMap = prev[contentType] ?? {};
-                const updatedCategory = [...(currentTypeMap[category] ?? [])];
-                const baseIndex = batchBaseIndexRef.current[category] ?? 0;
-                for (let i = 0; i < generatedItems.length; i += 1) {
-                  updatedCategory[baseIndex + i] = generatedItems[i];
-                }
+                const currentItems = (currentTypeMap[category] ?? []).filter(
+                  (item) => !item.id.startsWith("stream-")
+                );
                 return {
                   ...prev,
                   [contentType]: {
                     ...currentTypeMap,
-                    [category]: updatedCategory
+                    [category]: [...currentItems, ...finalItems]
                   }
                 };
               });
-
-              if (generatedItems.length < GENERATED_BATCH_SIZE) {
-                setGenerationError("sorry, an error occurred. Please retry.");
-                toast.error("Sorry, an error occurred. Please retry.");
-                setGeneratedContentItems((prev) => {
-                  const currentTypeMap = prev[contentType] ?? {};
-                  const current = currentTypeMap[category] ?? [];
-                  if (current.length === 0) {
-                    return prev;
-                  }
-                  const batchStart = batchBaseIndexRef.current[category] ?? 0;
-                  const batchEnd = batchStart + GENERATED_BATCH_SIZE;
-                  const next = current.filter((item, index) => {
-                    if (index < batchStart || index >= batchEnd) {
-                      return true;
-                    }
-                    return !item.isLoading;
-                  });
-                  return {
-                    ...prev,
-                    [contentType]: {
-                      ...currentTypeMap,
-                      [category]: next
-                    }
-                  };
-                });
-              }
             }
           }
         }
@@ -655,26 +521,18 @@ const DashboardView = ({
         const errorMessage = "sorry, an error occurred. Please retry.";
         setGenerationError(errorMessage);
         toast.error("Sorry, an error occurred. Please retry.");
+        setIncompleteBatchSkeletonCount(GENERATED_BATCH_SIZE);
+        // Clean up any streamed items on error.
         setGeneratedContentItems((prev) => {
           const currentTypeMap = prev[contentType] ?? {};
+          const currentItems = (currentTypeMap[category] ?? []).filter(
+            (item) => !item.id.startsWith("stream-")
+          );
           return {
             ...prev,
             [contentType]: {
               ...currentTypeMap,
-              [category]: (() => {
-                const current = currentTypeMap[category] ?? [];
-                if (current.length === 0) {
-                  return current;
-                }
-                const batchStart = batchBaseIndexRef.current[category] ?? 0;
-                const batchEnd = batchStart + GENERATED_BATCH_SIZE;
-                return current.filter((item, index) => {
-                  if (index < batchStart || index >= batchEnd) {
-                    return true;
-                  }
-                  return !item.isLoading;
-                });
-              })()
+              [category]: currentItems
             }
           };
         });
@@ -682,18 +540,25 @@ const DashboardView = ({
         if (activeControllerRef.current === localController) {
           activeControllerRef.current = null;
         }
+        if (initialSkeletonHoldTimeoutRef.current !== null) {
+          window.clearTimeout(initialSkeletonHoldTimeoutRef.current);
+          initialSkeletonHoldTimeoutRef.current = null;
+        }
+        setHoldInitialSkeletons(false);
         setIsGenerating(false);
+        setActiveBatchStreamedCount(0);
       }
     },
-    [
-      activeFilters,
-      buildLoadingItems,
-      contentType,
-      extractJsonItemsFromStream,
-      headerName,
-      location
-    ]
+    [activeFilters, contentType, extractJsonItemsFromStream, headerName, location]
   );
+
+  React.useEffect(() => {
+    return () => {
+      if (initialSkeletonHoldTimeoutRef.current !== null) {
+        window.clearTimeout(initialSkeletonHoldTimeoutRef.current);
+      }
+    };
+  }, []);
 
   React.useEffect(() => {
     generatedContentItemsRef.current = generatedContentItems;
@@ -709,18 +574,8 @@ const DashboardView = ({
 
     const existingItems =
       generatedContentItemsRef.current[contentType]?.[category] ?? [];
-    const hasRealItems = existingItems.some((item) => !item.isLoading);
-    if (hasRealItems) {
+    if (existingItems.length > 0) {
       return;
-    }
-    if (existingItems.length > 0 && !hasRealItems) {
-      setGeneratedContentItems((prev) => ({
-        ...prev,
-        [contentType]: {
-          ...prev[contentType],
-          [category]: []
-        }
-      }));
     }
 
     const controller = new AbortController();
@@ -731,6 +586,19 @@ const DashboardView = ({
 
   const activeFilter = activeFilters[0];
   const activeCategory = activeFilter ? categoryMap[activeFilter] : null;
+  const activeGeneratedItems = activeCategory
+    ? generatedContentItems[contentType]?.[activeCategory] ?? []
+    : [];
+
+  React.useEffect(() => {
+    setIncompleteBatchSkeletonCount(0);
+  }, [activeCategory, contentType]);
+
+  const loadingCount = isGenerating
+    ? holdInitialSkeletons
+      ? GENERATED_BATCH_SIZE
+      : Math.max(0, GENERATED_BATCH_SIZE - activeBatchStreamedCount)
+    : incompleteBatchSkeletonCount;
 
   return (
     <div className={cn("relative", className)}>
@@ -800,13 +668,11 @@ const DashboardView = ({
           )}
 
           {activeCategory &&
-            (generatedContentItems[contentType]?.[activeCategory]?.length ??
-              0) > 0 && (
+            (activeGeneratedItems.length > 0 || isGenerating) && (
               <div className="mt-10">
                 <ContentGrid
-                  items={
-                    generatedContentItems[contentType]?.[activeCategory] ?? []
-                  }
+                  items={activeGeneratedItems}
+                  loadingCount={loadingCount}
                   onFavoriteToggle={handleFavoriteToggle}
                   onEdit={(id) => console.log("Edit", id)}
                   onDownload={(id) => console.log("Download", id)}
@@ -829,16 +695,24 @@ const DashboardView = ({
             )}
           {activeCategory && (
             <div className="mt-6 flex justify-center">
-              <Button
-                variant="secondary"
-                disabled={isGenerating}
-                onClick={() => {
-                  const controller = new AbortController();
-                  generateContent(activeCategory, controller);
-                }}
-              >
-                Generate more {contentType}
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="icon"
+                    variant="secondary"
+                    className="rounded-full"
+                    aria-label="Generate more"
+                    disabled={isGenerating}
+                    onClick={() => {
+                      const controller = new AbortController();
+                      generateContent(activeCategory, controller);
+                    }}
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">Generate more</TooltipContent>
+              </Tooltip>
             </div>
           )}
         </section>

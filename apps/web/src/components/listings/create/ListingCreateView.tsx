@@ -7,6 +7,7 @@ import {
   type TextOverlayInput
 } from "../../dashboard/ContentGrid";
 import { emitListingSidebarUpdate } from "@web/src/lib/listingSidebarEvents";
+import { usePathname, useRouter } from "next/navigation";
 import {
   buildPreviewTimelinePlan,
   type PreviewTimelineClip,
@@ -25,7 +26,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from "../../ui/dropdown-menu";
-import { Camera, ChevronDown, Clapperboard } from "lucide-react";
+import {
+  Camera,
+  ChevronDown,
+  Clapperboard,
+  RefreshCw,
+  Settings
+} from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../../ui/tooltip";
 import { toast } from "sonner";
 import {
   LISTING_CONTENT_SUBCATEGORIES,
@@ -39,6 +47,8 @@ type ListingCreateViewProps = {
   videoItems: ContentItem[];
   listingPostItems: ContentItem[];
   listingImages: ListingCreateImage[];
+  initialMediaTab?: ListingCreateMediaTab;
+  initialSubcategory?: ListingContentSubcategory;
 };
 
 const SUBCATEGORY_LABELS: Record<ListingContentSubcategory, string> = {
@@ -52,7 +62,7 @@ const SUBCATEGORY_LABELS: Record<ListingContentSubcategory, string> = {
 type PreviewClipCandidate = PreviewTimelineClip & {
   searchableText: string;
 };
-type ListingCreateMediaTab = "videos" | "images";
+export type ListingCreateMediaTab = "videos" | "images";
 type ListingCreateImage = {
   id: string;
   url: string;
@@ -66,6 +76,84 @@ const MEDIA_TAB_LABELS: Record<ListingCreateMediaTab, string> = {
   videos: "Videos",
   images: "Photos"
 };
+
+const GENERATED_BATCH_SIZE = 4;
+const INITIAL_SKELETON_HOLD_MS = 350;
+
+const createBatchId = () => {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+};
+
+function extractJsonItemsFromStream(text: string) {
+  const items: {
+    hook: string;
+    body?: { header: string; content: string; broll_query?: string }[] | null;
+    caption?: string | null;
+    broll_query?: string | null;
+  }[] = [];
+
+  let arrayStarted = false;
+  let inString = false;
+  let escape = false;
+  let braceDepth = 0;
+  let objectStart = -1;
+
+  for (let i = 0; i < text.length; i += 1) {
+    const char = text[i];
+    if (!arrayStarted) {
+      if (char === "[") {
+        arrayStarted = true;
+      }
+      continue;
+    }
+
+    if (inString) {
+      if (escape) {
+        escape = false;
+        continue;
+      }
+      if (char === "\\") {
+        escape = true;
+        continue;
+      }
+      if (char === '"') {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (char === '"') {
+      inString = true;
+      continue;
+    }
+
+    if (char === "{") {
+      if (braceDepth === 0) {
+        objectStart = i;
+      }
+      braceDepth += 1;
+    } else if (char === "}") {
+      braceDepth -= 1;
+      if (braceDepth === 0 && objectStart >= 0) {
+        const objectText = text.slice(objectStart, i + 1);
+        try {
+          const parsed = JSON.parse(objectText);
+          if (parsed && typeof parsed === "object") {
+            items.push(parsed);
+          }
+        } catch {
+          // Ignore incomplete/invalid JSON objects
+        }
+        objectStart = -1;
+      }
+    }
+  }
+
+  return items;
+}
 
 const FEATURE_KEYWORDS = [
   "kitchen",
@@ -213,8 +301,12 @@ export function ListingCreateView({
   listingAddress,
   videoItems,
   listingPostItems,
-  listingImages
+  listingImages,
+  initialMediaTab = "videos",
+  initialSubcategory = LISTING_CONTENT_SUBCATEGORIES[0]
 }: ListingCreateViewProps) {
+  const router = useRouter();
+  const pathname = usePathname();
   const filterSentinelRef = React.useRef<HTMLDivElement | null>(null);
   const filterTagsRef = React.useRef<HTMLDivElement | null>(null);
   const [isFilterStickyActive, setIsFilterStickyActive] = React.useState(false);
@@ -222,15 +314,33 @@ export function ListingCreateView({
     "none" | "right" | "left" | "both"
   >("none");
   const [activeMediaTab, setActiveMediaTab] =
-    React.useState<ListingCreateMediaTab>("videos");
+    React.useState<ListingCreateMediaTab>(initialMediaTab);
   const [activeSubcategory, setActiveSubcategory] =
-    React.useState<ListingContentSubcategory>(LISTING_CONTENT_SUBCATEGORIES[0]);
+    React.useState<ListingContentSubcategory>(initialSubcategory);
   const [localPostItems, setLocalPostItems] =
     React.useState<ContentItem[]>(listingPostItems);
   const [isGenerating, setIsGenerating] = React.useState(false);
+  const [activeBatchStreamedCount, setActiveBatchStreamedCount] =
+    React.useState(0);
+  const [holdInitialSkeletons, setHoldInitialSkeletons] = React.useState(false);
+  const [incompleteBatchSkeletonCount, setIncompleteBatchSkeletonCount] =
+    React.useState(0);
   const [generationError, setGenerationError] = React.useState<string | null>(
     null
   );
+  const streamBufferRef = React.useRef("");
+  const parsedItemsRef = React.useRef<
+    {
+      hook: string;
+      body?: { header: string; content: string; broll_query?: string }[] | null;
+      caption?: string | null;
+      broll_query?: string | null;
+    }[]
+  >([]);
+  const activeControllerRef = React.useRef<AbortController | null>(null);
+  const initialSkeletonHoldTimeoutRef = React.useRef<number | null>(null);
+  const activeBatchIdRef = React.useRef<string>("");
+  const activeBatchItemIdsRef = React.useRef<string[]>([]);
 
   React.useEffect(() => {
     emitListingSidebarUpdate({
@@ -244,6 +354,26 @@ export function ListingCreateView({
     setLocalPostItems(listingPostItems);
   }, [listingPostItems]);
 
+  React.useEffect(() => {
+    const next = new URLSearchParams(window.location.search);
+    const mediaTypeParam = activeMediaTab === "images" ? "photos" : "videos";
+    const filterParam = activeSubcategory;
+    const currentMediaType = next.get("mediaType");
+    const currentFilter = next.get("filter");
+
+    if (currentMediaType === mediaTypeParam && currentFilter === filterParam) {
+      return;
+    }
+
+    next.set("mediaType", mediaTypeParam);
+    next.set("filter", filterParam);
+
+    const query = next.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, {
+      scroll: false
+    });
+  }, [activeMediaTab, activeSubcategory, pathname, router]);
+
   const createGenerationNonce = React.useCallback(() => {
     if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
       return crypto.randomUUID();
@@ -256,8 +386,31 @@ export function ListingCreateView({
       subcategory: ListingContentSubcategory,
       options?: { forceNewBatch?: boolean }
     ) => {
+      if (activeControllerRef.current) {
+        activeControllerRef.current.abort();
+      }
+      const controller = new AbortController();
+      activeControllerRef.current = controller;
+      activeBatchIdRef.current = createBatchId();
+      activeBatchItemIdsRef.current = [];
       setIsGenerating(true);
+      setActiveBatchStreamedCount(0);
+      setIncompleteBatchSkeletonCount(0);
+      setHoldInitialSkeletons(true);
+      if (initialSkeletonHoldTimeoutRef.current !== null) {
+        window.clearTimeout(initialSkeletonHoldTimeoutRef.current);
+      }
+      initialSkeletonHoldTimeoutRef.current = window.setTimeout(() => {
+        setHoldInitialSkeletons(false);
+        initialSkeletonHoldTimeoutRef.current = null;
+      }, INITIAL_SKELETON_HOLD_MS);
       setGenerationError(null);
+      streamBufferRef.current = "";
+      parsedItemsRef.current = [];
+
+      const resolvedMediaType: "video" | "image" =
+        activeMediaTab === "videos" ? "video" : "image";
+
       try {
         const response = await fetch(
           `/api/v1/listings/${listingId}/content/generate`,
@@ -266,93 +419,217 @@ export function ListingCreateView({
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               subcategory,
-              media_type: activeMediaTab === "videos" ? "video" : "image",
+              media_type: resolvedMediaType,
               focus: SUBCATEGORY_LABELS[subcategory],
               generation_nonce: options?.forceNewBatch
                 ? createGenerationNonce()
                 : ""
-            })
+            }),
+            signal: controller.signal
           }
         );
 
-        const payload = (await response.json().catch(() => ({}))) as {
-          success?: boolean;
-          message?: string;
-          items?: Array<{ id: string; metadata?: Record<string, unknown> }>;
-        };
-
-        if (!response.ok || !payload.success) {
+        if (!response.ok) {
+          const errorPayload = await response.json().catch(() => ({}));
           throw new Error(
-            payload.message || "Failed to generate listing post content"
+            (errorPayload as { message?: string }).message ||
+              "Failed to generate listing post content"
           );
         }
 
-        const generated = (payload.items ?? []).map((item) => {
-          const mediaType: "video" | "image" =
-            item.metadata?.mediaType === "image" ||
-            item.metadata?.mediaType === "video"
-              ? item.metadata.mediaType
-              : activeMediaTab === "videos"
-                ? "video"
-                : "image";
-          return {
-            id: item.id,
-            aspectRatio: "square" as const,
-            isFavorite: false,
-            hook:
-              typeof item.metadata?.hook === "string"
-                ? item.metadata.hook
-                : undefined,
-            caption:
-              typeof item.metadata?.caption === "string"
-                ? item.metadata.caption
-                : null,
-            body: Array.isArray(item.metadata?.body)
-              ? (item.metadata.body as ContentItem["body"])
-              : null,
-            brollQuery:
-              typeof item.metadata?.broll_query === "string"
-                ? item.metadata.broll_query
-                : null,
-            listingSubcategory:
-              typeof item.metadata?.listingSubcategory === "string"
-                ? (item.metadata
-                    .listingSubcategory as ListingContentSubcategory)
-                : subcategory,
-            mediaType
-          };
-        });
-
-        if (generated.length === 0) {
-          return;
+        const reader = response.body?.getReader();
+        if (!reader) {
+          throw new Error("Streaming response not available");
         }
 
-        setLocalPostItems((prev) => {
-          if (!options?.forceNewBatch) {
-            const existingIds = new Set(prev.map((item) => item.id));
-            const uniqueGenerated = generated.filter(
-              (item) => !existingIds.has(item.id)
-            );
-            if (uniqueGenerated.length === 0) {
-              return prev;
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let didReceiveDone = false;
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const parts = buffer.split("\n\n");
+          buffer = parts.pop() ?? "";
+
+          for (const part of parts) {
+            const line = part
+              .split("\n")
+              .find((entry) => entry.startsWith("data:"));
+            if (!line) continue;
+
+            const payload = line.replace(/^data:\s*/, "");
+            if (!payload) continue;
+
+            const event = JSON.parse(payload) as
+              | { type: "delta"; text: string }
+              | {
+                  type: "done";
+                  items: {
+                    hook: string;
+                    body?:
+                      | {
+                          header: string;
+                          content: string;
+                          broll_query?: string | null;
+                        }[]
+                      | null;
+                    caption?: string | null;
+                    broll_query?: string | null;
+                  }[];
+                }
+              | { type: "error"; message: string };
+
+            if (event.type === "delta") {
+              streamBufferRef.current += event.text;
+              const parsedItems = extractJsonItemsFromStream(
+                streamBufferRef.current
+              );
+
+              if (parsedItems.length > parsedItemsRef.current.length) {
+                parsedItemsRef.current = parsedItems;
+
+                const streamedContentItems: ContentItem[] = parsedItems.map(
+                  (item, absoluteIndex) => {
+                    const id =
+                      activeBatchItemIdsRef.current[absoluteIndex] ??
+                      `generated-${activeBatchIdRef.current}-${absoluteIndex}`;
+                    activeBatchItemIdsRef.current[absoluteIndex] = id;
+                    return {
+                      id,
+                      aspectRatio: "square" as const,
+                      isFavorite: false,
+                      hook: item.hook,
+                      caption: item.caption ?? null,
+                      body: item.body ?? null,
+                      brollQuery: item.broll_query ?? null,
+                      listingSubcategory: subcategory,
+                      mediaType: resolvedMediaType
+                    };
+                  }
+                );
+
+                setLocalPostItems((prev) => {
+                  const currentBatchIds = new Set(activeBatchItemIdsRef.current);
+                  const withoutCurrentBatch = prev.filter(
+                    (item) => !currentBatchIds.has(item.id)
+                  );
+                  return [...withoutCurrentBatch, ...streamedContentItems];
+                });
+                setActiveBatchStreamedCount(
+                  Math.min(GENERATED_BATCH_SIZE, parsedItems.length)
+                );
+              }
             }
-            return [...uniqueGenerated, ...prev];
+
+            if (event.type === "error") {
+              throw new Error(event.message);
+            }
+
+            if (event.type === "done") {
+              didReceiveDone = true;
+              setActiveBatchStreamedCount(
+                Math.min(GENERATED_BATCH_SIZE, event.items.length)
+              );
+              const missingCount = Math.max(
+                0,
+                GENERATED_BATCH_SIZE - event.items.length
+              );
+              if (missingCount > 0) {
+                setIncompleteBatchSkeletonCount(missingCount);
+                setGenerationError("sorry, an error occurred. Please retry.");
+                toast.error("Sorry, an error occurred. Please retry.");
+              }
+              // Replace streamed items with the final set from the done event.
+              const finalItems: ContentItem[] = event.items.map((item, index) => {
+                const id =
+                  activeBatchItemIdsRef.current[index] ??
+                  `generated-${activeBatchIdRef.current}-${index}`;
+                return {
+                  id,
+                  aspectRatio: "square" as const,
+                  isFavorite: false,
+                  hook: item.hook,
+                  caption: item.caption ?? null,
+                  body: item.body ?? null,
+                  brollQuery: item.broll_query ?? null,
+                  listingSubcategory: subcategory,
+                  mediaType: resolvedMediaType
+                };
+              });
+
+              setLocalPostItems((prev) => {
+                const currentBatchIds = new Set(activeBatchItemIdsRef.current);
+                const withoutCurrentBatch = prev.filter(
+                  (item) => !currentBatchIds.has(item.id)
+                );
+                if (!options?.forceNewBatch) {
+                  const existingIds = new Set(
+                    withoutCurrentBatch.map((item) => item.id)
+                  );
+                  const unique = finalItems.filter(
+                    (item) => !existingIds.has(item.id)
+                  );
+                  return unique.length > 0
+                    ? [...withoutCurrentBatch, ...unique]
+                    : withoutCurrentBatch;
+                }
+                return [...withoutCurrentBatch, ...finalItems];
+              });
+            }
           }
-          return [...generated, ...prev];
-        });
+        }
+
+        if (!didReceiveDone) {
+          throw new Error("Stream ended before completing output.");
+        }
       } catch (error) {
+        if ((error as Error).name === "AbortError") {
+          setLocalPostItems((prev) => {
+            const currentBatchIds = new Set(activeBatchItemIdsRef.current);
+            return prev.filter((item) => !currentBatchIds.has(item.id));
+          });
+          return;
+        }
         const message =
           error instanceof Error
             ? error.message
             : "Failed to generate listing content.";
         setGenerationError(message);
         toast.error(message);
+        setIncompleteBatchSkeletonCount(GENERATED_BATCH_SIZE);
+        // Clean up any streamed items on error.
+        setLocalPostItems((prev) => {
+          const currentBatchIds = new Set(activeBatchItemIdsRef.current);
+          return prev.filter((item) => !currentBatchIds.has(item.id));
+        });
       } finally {
+        if (activeControllerRef.current === controller) {
+          activeControllerRef.current = null;
+        }
+        if (initialSkeletonHoldTimeoutRef.current !== null) {
+          window.clearTimeout(initialSkeletonHoldTimeoutRef.current);
+          initialSkeletonHoldTimeoutRef.current = null;
+        }
+        setHoldInitialSkeletons(false);
         setIsGenerating(false);
+        setActiveBatchStreamedCount(0);
+        activeBatchIdRef.current = "";
+        activeBatchItemIdsRef.current = [];
       }
     },
     [activeMediaTab, createGenerationNonce, listingId]
   );
+
+  React.useEffect(() => {
+    return () => {
+      if (initialSkeletonHoldTimeoutRef.current !== null) {
+        window.clearTimeout(initialSkeletonHoldTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const activeMediaItems = React.useMemo(
     () =>
@@ -373,6 +650,16 @@ export function ListingCreateView({
         : activeMediaItems,
     [activeMediaItems, activeMediaTab]
   );
+  React.useEffect(() => {
+    setIncompleteBatchSkeletonCount(0);
+  }, [activeSubcategory, activeMediaTab]);
+
+  const loadingCount = isGenerating
+    ? holdInitialSkeletons
+      ? GENERATED_BATCH_SIZE
+      : Math.max(0, GENERATED_BATCH_SIZE - activeBatchStreamedCount)
+    : incompleteBatchSkeletonCount;
+
   const activeImagePreviewItems = React.useMemo<
     ListingImagePreviewItem[]
   >(() => {
@@ -453,7 +740,7 @@ export function ListingCreateView({
       return [];
     }
 
-    return activeCaptionItems.map((captionItem, index): PreviewTimelinePlan => {
+    return activeCaptionItems.map((captionItem): PreviewTimelinePlan => {
       const scopedClips =
         activeSubcategory === "property_features"
           ? filterFeatureClips(clips, captionItem)
@@ -461,7 +748,7 @@ export function ListingCreateView({
       return buildPreviewTimelinePlan({
         clips: scopedClips,
         listingId,
-        seedKey: `${activeSubcategory}-${index + 1}`
+        seedKey: `${activeSubcategory}-${captionItem.id}`
       });
     });
   }, [
@@ -577,7 +864,7 @@ export function ListingCreateView({
           isFilterStickyActive ? "shadow-xs border-b border-border" : ""
         )}
       >
-        <div className="mx-auto w-full max-w-[1600px] px-8">
+        <div className="mx-auto w-full max-w-[1600px] px-4 md:px-8">
           <div className="flex w-full items-center gap-3">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -647,15 +934,34 @@ export function ListingCreateView({
                 );
               })}
             </div>
+            <div className="ml-auto flex items-center gap-3">
+              <div className="h-6 w-px bg-border/70" />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-9 w-9 shrink-0 rounded-full"
+                    aria-label="Generation settings"
+                  >
+                    <Settings className="h-5 w-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  Generation settings
+                </TooltipContent>
+              </Tooltip>
+            </div>
           </div>
           {generationError ? (
             <p className="mt-3 text-sm text-red-500">{generationError}</p>
           ) : null}
         </div>
       </div>
-      <div className="mx-auto w-full max-w-[1600px] px-8 pb-8 pt-8 md:pt-0">
+      <div className="mx-auto w-full max-w-[1600px] px-4 md:px-8 pb-8 pt-8 md:pt-0">
         <section className="space-y-4">
-          {activeMediaTab === "videos" && activePreviewPlans.length > 0 ? (
+          {activeMediaTab === "videos" &&
+          (activePreviewPlans.length > 0 || isGenerating) ? (
             <ListingTimelinePreviewGrid
               plans={activePreviewPlans}
               items={videoItems}
@@ -664,36 +970,42 @@ export function ListingCreateView({
               captionSubcategoryLabel={SUBCATEGORY_LABELS[activeSubcategory]}
               listingAddress={listingAddress ?? null}
               forceSimpleOverlayTemplate
+              loadingCount={loadingCount}
             />
           ) : activeMediaTab === "images" &&
-            activeImagePreviewItems.length > 0 ? (
+            (activeImagePreviewItems.length > 0 || isGenerating) ? (
             <ListingImagePreviewGrid
               items={activeImagePreviewItems}
               captionSubcategoryLabel={SUBCATEGORY_LABELS[activeSubcategory]}
+              loadingCount={loadingCount}
             />
           ) : (
             <div className="rounded-xl border border-border bg-background p-8 text-center text-sm text-muted-foreground">
-              {isGenerating
-                ? activeMediaTab === "videos"
-                  ? "Generating content and reel variations..."
-                  : "Generating image post drafts..."
-                : activeMediaTab === "videos"
-                  ? "No reel variations yet for this subcategory."
-                  : "No image post drafts yet for this subcategory."}
+              {activeMediaTab === "videos"
+                ? "No reel variations yet for this subcategory."
+                : "No image post drafts yet for this subcategory."}
             </div>
           )}
           <div className="mt-6 flex justify-center">
-            <Button
-              variant="secondary"
-              disabled={isGenerating}
-              onClick={() =>
-                void generateSubcategoryContent(activeSubcategory, {
-                  forceNewBatch: true
-                })
-              }
-            >
-              Generate More
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="icon"
+                  variant="secondary"
+                  className="rounded-full"
+                  aria-label="Generate more"
+                  disabled={isGenerating}
+                  onClick={() =>
+                    void generateSubcategoryContent(activeSubcategory, {
+                      forceNewBatch: true
+                    })
+                  }
+                >
+                  <RefreshCw className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top">Generate more</TooltipContent>
+            </Tooltip>
           </div>
         </section>
       </div>

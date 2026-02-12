@@ -7,18 +7,45 @@ import {
 } from "@web/src/server/actions/db/listings";
 import { getContentByListingId } from "@web/src/server/actions/db/content";
 import { getListingVideoStatus } from "@web/src/server/services/videoStatusService";
-import { ListingCreateView } from "@web/src/components/listings/create/ListingCreateView";
+import {
+  ListingCreateView,
+  type ListingCreateMediaTab
+} from "@web/src/components/listings/create/ListingCreateView";
 import type { ContentItem } from "@web/src/components/dashboard/ContentGrid";
-import { type ListingContentSubcategory } from "@shared/types/models";
+import {
+  LISTING_CONTENT_SUBCATEGORIES,
+  type ListingContentSubcategory
+} from "@shared/types/models";
 
 interface ListingCreatePageProps {
   params: Promise<{ listingId: string }>;
+  searchParams?: Promise<{ mediaType?: string; filter?: string }>;
+}
+
+function parseInitialMediaTab(value?: string): ListingCreateMediaTab {
+  return value === "photos" ? "images" : "videos";
+}
+
+function parseInitialSubcategory(value?: string): ListingContentSubcategory {
+  if (
+    value &&
+    LISTING_CONTENT_SUBCATEGORIES.includes(value as ListingContentSubcategory)
+  ) {
+    return value as ListingContentSubcategory;
+  }
+  return LISTING_CONTENT_SUBCATEGORIES[0];
 }
 
 export default async function ListingCreatePage({
-  params
+  params,
+  searchParams
 }: ListingCreatePageProps) {
   const { listingId } = await params;
+  const resolvedSearchParams = (await searchParams) ?? {};
+  const initialMediaTab = parseInitialMediaTab(resolvedSearchParams.mediaType);
+  const initialSubcategory = parseInitialSubcategory(
+    resolvedSearchParams.filter
+  );
   const user = await getUser();
 
   if (!user) {
@@ -117,6 +144,8 @@ export default async function ListingCreatePage({
       listingAddress={listing.address ?? null}
       videoItems={videoItems}
       listingPostItems={listingPostItems}
+      initialMediaTab={initialMediaTab}
+      initialSubcategory={initialSubcategory}
       listingImages={listingImages.map((image) => ({
         id: image.id,
         url: image.url,

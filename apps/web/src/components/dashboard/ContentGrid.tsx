@@ -45,8 +45,6 @@ interface ContentItem {
   generationModel?: GenerationModel | null;
   orientation?: "vertical" | "landscape" | null;
   isPriorityCategory?: boolean;
-  isLoading?: boolean;
-  progress?: number;
   listingSubcategory?: ListingContentSubcategory | null;
   mediaType?: ListingMediaType | null;
 }
@@ -54,6 +52,7 @@ interface ContentItem {
 interface ContentGridProps {
   items: ContentItem[];
   className?: string;
+  loadingCount?: number;
   onFavoriteToggle?: (id: string) => void;
   onEdit?: (id: string) => void;
   onDownload?: (id: string) => void;
@@ -92,49 +91,6 @@ const ContentGridItem = ({
       );
     })
   );
-
-  const getItemProgress = (): number => {
-    if (typeof item.progress === "number") {
-      return Math.min(1, Math.max(0, item.progress));
-    }
-    const steps = [
-      Boolean(item.hook),
-      Boolean(item.caption),
-      Boolean(item.body?.length),
-      Boolean(item.brollQuery),
-      Boolean(item.thumbnail)
-    ];
-    const completed = steps.filter(Boolean).length;
-    return steps.length > 0 ? completed / steps.length : 0;
-  };
-
-  if (item.isLoading) {
-    const progress = getItemProgress();
-    const progressPercent = Math.round(progress * 100);
-    return (
-      <div className="break-inside-avoid relative rounded-2xl mb-6 animate-pulse">
-        <div className="rounded-lg border border-border bg-secondary p-4">
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>Generating</span>
-            <span>{progressPercent}%</span>
-          </div>
-          <div className="mt-2 h-2 w-full rounded-full bg-muted-foreground/20 overflow-hidden">
-            <div
-              className="h-full rounded-full bg-primary/70 transition-all duration-500"
-              style={{ width: `${progressPercent}%` }}
-              aria-label={`Generation progress ${progressPercent}%`}
-            />
-          </div>
-          <div className="h-5 w-4/5 rounded bg-muted-foreground/20" />
-          <div className="mt-3 h-4 w-2/3 rounded bg-muted-foreground/20" />
-          <div className="mt-5 h-4 w-full rounded bg-muted-foreground/20" />
-          <div className="mt-3 h-4 w-5/6 rounded bg-muted-foreground/20" />
-          <div className="mt-3 h-4 w-3/4 rounded bg-muted-foreground/20" />
-          <div className="mt-3 h-4 w-2/3 rounded bg-muted-foreground/20" />
-        </div>
-      </div>
-    );
-  }
 
   if (!item.thumbnail && !item.videoUrl && !hasTextContent) {
     return null;
@@ -358,12 +314,15 @@ const ContentGridItem = ({
 const ContentGrid = ({
   items,
   className,
+  loadingCount = 0,
   onFavoriteToggle,
   onEdit,
   onDownload,
   onShare,
   onDelete
 }: ContentGridProps) => {
+  const skeletonCount = Math.max(0, loadingCount);
+
   return (
     <div className={cn("columns-2 md:columns-3 xl:columns-4 gap-6", className)}>
       {items.map((item) => (
@@ -376,6 +335,14 @@ const ContentGrid = ({
           onShare={onShare}
           onDelete={onDelete}
         />
+      ))}
+      {Array.from({ length: skeletonCount }, (_, i) => (
+        <div
+          key={`skeleton-content-${i}`}
+          className="break-inside-avoid relative rounded-2xl mb-6 animate-pulse"
+        >
+          <div className="rounded-xl bg-secondary aspect-square w-full" />
+        </div>
       ))}
     </div>
   );

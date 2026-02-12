@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { LoadingImage } from "../../ui/loading-image";
 import { Button } from "../../ui/button";
 import { cn } from "../../ui/utils";
@@ -48,6 +48,7 @@ export type ListingImagePreviewItem = {
 type ListingImagePreviewGridProps = {
   items: ListingImagePreviewItem[];
   captionSubcategoryLabel: string;
+  loadingCount?: number;
 };
 
 const IMAGE_OVERLAY_BASE_FONT_SIZE_PX = 38;
@@ -126,7 +127,8 @@ function ImageTextOverlay({ overlay }: { overlay: PreviewTextOverlay }) {
           top: PREVIEW_TEXT_OVERLAY_POSITION_TOP[overlay.position],
           paddingLeft: overlayPxToCqw(IMAGE_OVERLAY_HORIZONTAL_PADDING_PX),
           paddingRight: overlayPxToCqw(IMAGE_OVERLAY_HORIZONTAL_PADDING_PX),
-          transform: overlay.position === "center" ? "translateY(-50%)" : undefined
+          transform:
+            overlay.position === "center" ? "translateY(-50%)" : undefined
         }}
       >
         <div
@@ -170,14 +172,15 @@ function ImageTextOverlay({ overlay }: { overlay: PreviewTextOverlay }) {
             </div>
           ))}
           {arrowPath ? (
-            <img
+            <LoadingImage
               src={arrowPath}
               alt=""
               aria-hidden
+              width={120}
+              height={20}
               style={{
                 display: "block",
                 margin: `${overlayPxToCqw(8)} auto 0`,
-                width: overlayPxToCqw(120),
                 maxWidth: "100%",
                 opacity: 0.95,
                 filter: "invert(1) drop-shadow(0 2px 6px rgba(0, 0, 0, 0.45))"
@@ -192,9 +195,12 @@ function ImageTextOverlay({ overlay }: { overlay: PreviewTextOverlay }) {
 
 export function ListingImagePreviewGrid({
   items,
-  captionSubcategoryLabel
+  captionSubcategoryLabel,
+  loadingCount = 0
 }: ListingImagePreviewGridProps) {
-  const [selectedItemId, setSelectedItemId] = React.useState<string | null>(null);
+  const [selectedItemId, setSelectedItemId] = React.useState<string | null>(
+    null
+  );
   const [activeSlideIndex, setActiveSlideIndex] = React.useState(0);
   const [cardSlideIndexById, setCardSlideIndexById] = React.useState<
     Record<string, number>
@@ -209,7 +215,9 @@ export function ListingImagePreviewGrid({
     setActiveSlideIndex(0);
   }, [selectedItemId]);
 
-  if (items.length === 0) {
+  const skeletonCount = Math.max(0, loadingCount);
+
+  if (items.length === 0 && skeletonCount === 0) {
     return null;
   }
 
@@ -276,9 +284,11 @@ export function ListingImagePreviewGrid({
                   />
                 ) : null}
                 {hasOverlay ? (
-                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/35 via-black/15 to-black/40" />
+                  <div className="pointer-events-none absolute inset-0 bg-linear-to-b from-black/35 via-black/15 to-black/40" />
                 ) : null}
-                {coverOverlay ? <ImageTextOverlay overlay={coverOverlay} /> : null}
+                {coverOverlay ? (
+                  <ImageTextOverlay overlay={coverOverlay} />
+                ) : null}
                 {item.slides.length > 1 ? (
                   <div className="absolute inset-x-0 top-1/2 flex -translate-y-1/2 items-center justify-between px-2 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
                     <Button
@@ -310,7 +320,8 @@ export function ListingImagePreviewGrid({
                         event.stopPropagation();
                         setCardSlideIndexById((prev) => ({
                           ...prev,
-                          [item.id]: ((prev[item.id] ?? 0) + 1) % item.slides.length
+                          [item.id]:
+                            ((prev[item.id] ?? 0) + 1) % item.slides.length
                         }));
                       }}
                       aria-label="Next slide"
@@ -348,6 +359,17 @@ export function ListingImagePreviewGrid({
             </div>
           );
         })}
+        {Array.from({ length: skeletonCount }, (_, i) => (
+          <div
+            key={`skeleton-image-${i}`}
+            className="relative overflow-hidden rounded-xl bg-secondary animate-pulse"
+          >
+            <div className="aspect-square w-full" />
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground/70" />
+            </div>
+          </div>
+        ))}
       </div>
 
       <Dialog
@@ -377,7 +399,7 @@ export function ListingImagePreviewGrid({
                   ) : null}
                   {selectedOverlay ? (
                     <>
-                      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/35 via-black/15 to-black/40" />
+                      <div className="pointer-events-none absolute inset-0 bg-linear-to-b from-black/35 via-black/15 to-black/40" />
                       <ImageTextOverlay overlay={selectedOverlay} />
                     </>
                   ) : null}
@@ -392,7 +414,8 @@ export function ListingImagePreviewGrid({
                       onClick={() =>
                         setActiveSlideIndex(
                           (prev) =>
-                            (prev - 1 + selectedSlides.length) % selectedSlides.length
+                            (prev - 1 + selectedSlides.length) %
+                            selectedSlides.length
                         )
                       }
                     >
@@ -432,17 +455,24 @@ export function ListingImagePreviewGrid({
               </div>
               <div className="min-h-0 overflow-y-auto rounded-lg border border-border bg-card p-4">
                 <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  {captionSubcategoryLabel} Caption · Variation {selectedItem.variationNumber}
+                  {captionSubcategoryLabel} Caption · Variation{" "}
+                  {selectedItem.variationNumber}
                 </p>
                 <div className="mt-4 space-y-4">
                   {selectedItem.hook ? (
                     <div>
-                      <p className="text-xs font-semibold text-muted-foreground">Hook</p>
-                      <p className="text-sm text-foreground">{selectedItem.hook}</p>
+                      <p className="text-xs font-semibold text-muted-foreground">
+                        Hook
+                      </p>
+                      <p className="text-sm text-foreground">
+                        {selectedItem.hook}
+                      </p>
                     </div>
                   ) : null}
                   <div>
-                    <p className="text-xs font-semibold text-muted-foreground">Caption</p>
+                    <p className="text-xs font-semibold text-muted-foreground">
+                      Caption
+                    </p>
                     <p className="mt-1 whitespace-pre-line text-sm text-foreground">
                       {selectedItem.caption?.trim()
                         ? selectedItem.caption
