@@ -32,6 +32,8 @@ type ListingGeneratedItem = {
   caption: string;
 };
 
+type ListingMediaType = "video" | "image";
+
 type ContentStreamEvent =
   | { type: "delta"; text: string }
   | {
@@ -83,6 +85,10 @@ function isListingSubcategory(value: string): value is ListingContentSubcategory
   ).includes(value);
 }
 
+function isListingMediaType(value: string): value is ListingMediaType {
+  return value === "video" || value === "image";
+}
+
 function getRedisClient(): Redis | null {
   if (redisClient !== undefined) {
     return redisClient;
@@ -112,6 +118,7 @@ function buildListingContentCacheKey(params: {
   userId: string;
   listingId: string;
   subcategory: ListingContentSubcategory;
+  mediaType: ListingMediaType;
   focus: string;
   notes: string;
   generation_nonce: string;
@@ -126,6 +133,7 @@ function buildListingContentCacheKey(params: {
     params.userId,
     params.listingId,
     params.subcategory,
+    params.mediaType,
     params.propertyFingerprint,
     focusHash
   ].join(":");
@@ -206,6 +214,7 @@ export async function POST(
 
     const body = (await request.json()) as {
       subcategory?: string;
+      media_type?: string;
       focus?: string;
       notes?: string;
       generation_nonce?: string;
@@ -218,6 +227,14 @@ export async function POST(
         message: "A valid listing subcategory is required"
       });
     }
+    const mediaTypeCandidate = body.media_type?.trim().toLowerCase() ?? "video";
+    if (!isListingMediaType(mediaTypeCandidate)) {
+      throw new ApiError(400, {
+        error: "Invalid request",
+        message: "media_type must be either 'video' or 'image'"
+      });
+    }
+    const mediaType: ListingMediaType = mediaTypeCandidate;
 
     const listingDetails =
       (listing.propertyDetails as ListingPropertyDetails | null) ?? null;
@@ -234,6 +251,7 @@ export async function POST(
       userId: user.id,
       listingId: listing.id,
       subcategory,
+      mediaType,
       focus,
       notes,
       generation_nonce: generationNonce,
@@ -243,8 +261,13 @@ export async function POST(
     const existingListingContent = await getContentByListingId(user.id, listing.id);
     const existingForCacheKey = existingListingContent.filter((entry) => {
       const metadata = entry.metadata as Record<string, unknown> | null;
+      const metadataMediaType =
+        metadata?.mediaType === "image" || metadata?.mediaType === "video"
+          ? metadata.mediaType
+          : "video";
       return (
         metadata?.listingSubcategory === subcategory &&
+        metadataMediaType === mediaType &&
         metadata?.cacheKey === cacheKey
       );
     });
@@ -255,6 +278,7 @@ export async function POST(
         listingId: listing.id,
         subcategory,
         count: existingForCacheKey.length,
+        mediaType,
         source: "db-cache-hit",
         items: existingForCacheKey.map(normalizeContentRecordForResponse)
       });
@@ -303,7 +327,9 @@ export async function POST(
             listing_property_details: listingDetails,
             content_request: {
               platform: "instagram",
-              content_type: "social_post",
+              content_type:
+                mediaType === "video" ? "listing_reel" : "social_post",
+              media_type: mediaType,
               focus,
               notes
             }
@@ -346,6 +372,7 @@ export async function POST(
           thumbnailUrl: null,
           metadata: {
             listingSubcategory: subcategory,
+            mediaType,
             promptCategory: "listing",
             promptVersion: "listing-v1",
             sortOrder: index,
@@ -366,6 +393,7 @@ export async function POST(
       success: true,
       listingId: listing.id,
       subcategory,
+      mediaType,
       count: savedContent.length,
       source: generatedItems ? "upstash-cache-hit" : "generated",
       items: savedContent.map(normalizeContentRecordForResponse)

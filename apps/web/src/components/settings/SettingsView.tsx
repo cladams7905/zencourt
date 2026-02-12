@@ -151,21 +151,21 @@ export function SettingsView({
             <TabsList className="flex-col h-fit w-full bg-secondary border border-border p-2 gap-2 py-2">
               <TabsTrigger
                 value="account"
-                className="w-full justify-start gap-3 py-2 px-3 rounded-lg transition-all text-muted-foreground hover:text-foreground data-[state=active]:shadow-sm data-[state=active]:text-foreground data-[state=active]:bg-background data-[state=active]:border-border"
+                className="w-full justify-start gap-3 py-2 px-3 rounded-lg transition-all text-muted-foreground hover:text-foreground data-[state=active]:shadow-sm data-[state=active]:text-foreground data-[state=active]:bg-background data-[state=active]:border-border/60"
               >
                 <UserCircle className="h-5 w-5" />
                 Account
               </TabsTrigger>
               <TabsTrigger
                 value="branding"
-                className="w-full justify-start gap-3 py-2 px-3 rounded-lg transition-all text-muted-foreground hover:text-foreground data-[state=active]:shadow-sm data-[state=active]:text-foreground data-[state=active]:bg-background data-[state=active]:border-border"
+                className="w-full justify-start gap-3 py-2 px-3 rounded-lg transition-all text-muted-foreground hover:text-foreground data-[state=active]:shadow-sm data-[state=active]:text-foreground data-[state=active]:bg-background data-[state=active]:border-border/60"
               >
                 <PenTool className="h-5 w-5" />
                 Branding
               </TabsTrigger>
               <TabsTrigger
                 value="subscription"
-                className="w-full justify-start gap-3 py-2 px-3 rounded-lg transition-all text-muted-foreground hover:text-foreground data-[state=active]:shadow-sm data-[state=active]:text-foreground data-[state=active]:bg-background data-[state=active]:border-border"
+                className="w-full justify-start gap-3 py-2 px-3 rounded-lg transition-all text-muted-foreground hover:text-foreground data-[state=active]:shadow-sm data-[state=active]:text-foreground data-[state=active]:bg-background data-[state=active]:border-border/60"
               >
                 <CreditCard className="h-5 w-5" />
                 Subscription

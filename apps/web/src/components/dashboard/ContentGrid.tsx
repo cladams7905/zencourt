@@ -10,6 +10,7 @@ import type { ListingContentSubcategory } from "@shared/types/models";
 
 type AspectRatio = "square" | "vertical" | "horizontal";
 type GenerationModel = "veo3.1_fast" | "runway-gen4-turbo" | "kling1.6";
+type ListingMediaType = "video" | "image";
 
 export type TextOverlayInput = {
   accent_top?: string | null;
@@ -47,6 +48,7 @@ interface ContentItem {
   isLoading?: boolean;
   progress?: number;
   listingSubcategory?: ListingContentSubcategory | null;
+  mediaType?: ListingMediaType | null;
 }
 
 interface ContentGridProps {
@@ -76,6 +78,19 @@ const ContentGridItem = ({
 }) => {
   const hasTextContent = Boolean(
     item.hook || item.caption || item.body?.length || item.brollQuery
+  );
+  const hasSlideTextOverlay = Boolean(
+    item.body?.some((slide) => {
+      const overlay = slide.text_overlay;
+      if (!overlay) {
+        return false;
+      }
+      return Boolean(
+        overlay.headline?.trim() ||
+          overlay.accent_top?.trim() ||
+          overlay.accent_bottom?.trim()
+      );
+    })
   );
 
   const getItemProgress = (): number => {
@@ -139,6 +154,9 @@ const ContentGridItem = ({
   };
 
   const aspectRatioStyle = getAspectRatio();
+  const shouldDimImageForOverlay = Boolean(
+    item.thumbnail && !item.videoUrl && hasSlideTextOverlay
+  );
 
   return (
     <div className="break-inside-avoid relative rounded-2xl mb-6">
@@ -203,6 +221,9 @@ const ContentGridItem = ({
             ) : null}
           </div>
 
+          {shouldDimImageForOverlay ? (
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/35 via-black/15 to-black/40" />
+          ) : null}
           <div className="pointer-events-none absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300" />
 
           <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">

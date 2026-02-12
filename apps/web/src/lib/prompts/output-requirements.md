@@ -1,11 +1,7 @@
 Output requirements:
 
 - Return a JSON array of exactly 4 items.
-- Prefer single-image posts when possible.
 - Each post must include a short hook.
-- Use either `single-image` or `carousel` format.
-- If carousel, max 5 slides.
-- Each carousel slide must have a clear header and 1-2 sentences.
 - Include a concise CTA when needed.
 - Add line breaks every 1-2 sentences for readability.
 - Hooks must be 3-10 words.
@@ -14,11 +10,4 @@ Output requirements:
 - Captions must not exceed about 700 characters.
 - Match the writing style description and tone level. If a template conflicts, rephrase in the same structure and length.
 - Include `broll_query` on each post, broad and simple (2-5 words).
-- For carousel posts, each slide in `body` must include its own broad/simple `broll_query`.
-- For each carousel slide, include a `text_overlay` object with short, punchy text designed for on-screen video overlays:
-  - `headline` (required): 1-4 impactful words — the main visual focus, the biggest text on screen. Example: "COUNTY NAME", "content weapon", "First Time Home Buyer Gift".
-  - `accent_top` (optional, null if not used): 3-6 word lead-in phrase displayed in small script font above the headline. Example: "this weekend in", "for realtors", "a glimpse into my".
-  - `accent_bottom` (optional, null if not used): 3-8 word supporting detail displayed in small script font below the headline. Example: "{County}'s Hallmark Town", "every Realtor already has", "for every month in Q1".
-  - Keep overlay text short, punchy, and visually balanced. This is NOT the slide header — it is separate decorative text for video overlays.
-  - Vary the structure: some slides should have both accents (3-line sandwich), some only a bottom accent (2-line), and some just a headline.
 - Avoid engagement bait and false urgency.

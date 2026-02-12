@@ -3,7 +3,7 @@
 import * as React from "react";
 import { cn } from "../ui/utils";
 import { Button } from "../ui/button";
-import { PillTabs } from "../ui/pill-tabs";
+import { Tabs, TabsList, TabsTrigger } from "../ui/tabs";
 import { Progress } from "../ui/progress";
 import { ChevronDown, Settings } from "lucide-react";
 
@@ -62,16 +62,32 @@ const ContentFilterBar = ({
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
         {/* Type Tabs */}
-        <PillTabs
+        <Tabs
           value={activeType}
-          onValueChange={onTypeChange}
+          onValueChange={(value) => onTypeChange?.(value as ContentType)}
           className="shrink-0"
-          options={[
-            { value: "videos", label: "Videos" },
-            { value: "posts", label: "Posts" },
-            { value: "stories", label: "Stories" }
-          ]}
-        />
+        >
+          <TabsList className="h-fit w-fit gap-2 bg-secondary border border-border/60 p-1">
+            <TabsTrigger
+              value="videos"
+              className="px-3 py-2 rounded-lg text-muted-foreground hover:text-foreground data-[state=active]:shadow-sm data-[state=active]:text-foreground data-[state=active]:bg-background data-[state=active]:border-border/60"
+            >
+              Videos
+            </TabsTrigger>
+            <TabsTrigger
+              value="posts"
+              className="px-3 py-2 rounded-lg text-muted-foreground hover:text-foreground data-[state=active]:shadow-sm data-[state=active]:text-foreground data-[state=active]:bg-background data-[state=active]:border-border/60"
+            >
+              Posts
+            </TabsTrigger>
+            <TabsTrigger
+              value="stories"
+              className="px-3 py-2 rounded-lg text-muted-foreground hover:text-foreground data-[state=active]:shadow-sm data-[state=active]:text-foreground data-[state=active]:bg-background data-[state=active]:border-border/60"
+            >
+              Stories
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
 
         {/* Filter Chips */}
         <div className="flex w-full items-center gap-2 sm:w-auto">

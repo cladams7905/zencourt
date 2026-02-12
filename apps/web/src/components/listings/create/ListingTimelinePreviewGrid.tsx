@@ -52,6 +52,7 @@ type ListingTimelinePreviewGridProps = {
   listingSubcategory: ListingContentSubcategory;
   captionSubcategoryLabel: string;
   listingAddress: string | null;
+  forceSimpleOverlayTemplate?: boolean;
 };
 
 type PlayablePreview = {
@@ -159,15 +160,24 @@ function buildAddressSupplementalOverlay(
 
 function buildRichOverlay(
   slideData: SlideOverlayData,
-  variant: OverlayVariant
+  variant: OverlayVariant,
+  options?: { forceSimpleTemplate?: boolean }
 ): PreviewTextOverlay {
   const textOverlay = slideData.textOverlay;
+  const normalizedOverlay = options?.forceSimpleTemplate
+    ? {
+        headline: textOverlay?.headline ?? slideData.plainText,
+        accent_top: null,
+        accent_bottom: null
+      }
+    : textOverlay;
   const { pattern: templatePattern, lines } = buildOverlayTemplateLines(
-    textOverlay,
-    slideData.plainText
+    normalizedOverlay,
+    slideData.plainText,
+    options?.forceSimpleTemplate ? "simple" : undefined
   );
   const isRichTemplate = templatePattern !== "simple";
-  const simpleSeedBase = `${slideData.plainText}:${textOverlay?.headline ?? "simple"}:${variant.position}:${variant.fontPairing}`;
+  const simpleSeedBase = `${slideData.plainText}:${normalizedOverlay?.headline ?? "simple"}:${variant.position}:${variant.fontPairing}`;
   const brownBackgroundOptions: PreviewTextOverlay["background"][] = [
     "brown",
     "brown-700",
@@ -183,10 +193,10 @@ function buildRichOverlay(
       ? "none"
       : simpleBackgroundBucket === 1
         ? "black"
-      : brownBackgroundOptions[
-          hashTextOverlaySeed(`${simpleSeedBase}:bg-brown`) %
-            brownBackgroundOptions.length
-        ] ?? "brown";
+        : (brownBackgroundOptions[
+            hashTextOverlaySeed(`${simpleSeedBase}:bg-brown`) %
+              brownBackgroundOptions.length
+          ] ?? "brown");
   const simplePositionOptions: PreviewTextOverlay["position"][] = [
     "top-third",
     "center",
@@ -194,9 +204,8 @@ function buildRichOverlay(
   ];
   const simplePosition =
     simplePositionOptions[
-      hashTextOverlaySeed(
-        `${simpleSeedBase}:position`
-      ) % simplePositionOptions.length
+      hashTextOverlaySeed(`${simpleSeedBase}:position`) %
+        simplePositionOptions.length
     ] ?? variant.position;
   const makeSimpleSuffixRandom = () => {
     const values = [
@@ -333,9 +342,11 @@ function ThumbnailTextOverlay({
               </div>
             ))}
             {arrowPath ? (
-              <img
+              <LoadingImage
                 src={arrowPath}
                 alt=""
+                width={220}
+                height={40}
                 aria-hidden
                 style={{
                   display: "block",
@@ -343,8 +354,7 @@ function ThumbnailTextOverlay({
                   width: overlayPxToCqw(220),
                   maxWidth: "100%",
                   opacity: 0.95,
-                  filter:
-                    "invert(1) drop-shadow(0 2px 6px rgba(0, 0, 0, 0.45))"
+                  filter: "invert(1) drop-shadow(0 2px 6px rgba(0, 0, 0, 0.45))"
                 }}
               />
             ) : null}
@@ -365,7 +375,8 @@ export function ListingTimelinePreviewGrid({
   captionItems,
   listingSubcategory,
   captionSubcategoryLabel,
-  listingAddress
+  listingAddress,
+  forceSimpleOverlayTemplate = false
 }: ListingTimelinePreviewGridProps) {
   const [activePlanId, setActivePlanId] = React.useState<string | null>(null);
   const [revealedPlanId, setRevealedPlanId] = React.useState<string | null>(
@@ -430,7 +441,9 @@ export function ListingTimelinePreviewGrid({
             ? slideOverlayData[segmentIndex % slideOverlayData.length]
             : undefined;
           if (!data) return segment;
-          const primaryOverlay = buildRichOverlay(data, overlayVariant);
+          const primaryOverlay = buildRichOverlay(data, overlayVariant, {
+            forceSimpleTemplate: forceSimpleOverlayTemplate
+          });
           const needsAddressSupplement =
             shouldEnforceAddressOverlay &&
             !slideContainsAddress(data, normalizedListingAddress) &&
@@ -475,6 +488,7 @@ export function ListingTimelinePreviewGrid({
     return resolved.filter((plan): plan is PlayablePreview => Boolean(plan));
   }, [
     captionItems,
+    forceSimpleOverlayTemplate,
     itemById,
     listingAddress,
     listingSubcategory,

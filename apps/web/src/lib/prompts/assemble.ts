@@ -31,6 +31,7 @@ export type CommunityDataInput = CommunityData;
 export type ContentRequestInput = {
   platform?: string | null;
   content_type?: string | null;
+  media_type?: "image" | "video" | null;
   focus?: string | null;
   notes?: string | null;
 };
@@ -307,6 +308,12 @@ function formatTemplateList(templates: string[]): string {
 
 function cleanSummaryText(value: string): string {
   return value.replace(/—/g, ",").replace(/\s+/g, " ").trim();
+}
+
+function resolveContentMediaType(
+  contentRequest?: ContentRequestInput | null
+): "image" | "video" {
+  return contentRequest?.media_type === "video" ? "video" : "image";
 }
 
 function extractSectionText(
@@ -668,6 +675,7 @@ async function loadHookTemplates(input: PromptAssemblyInput): Promise<{
 }
 
 export async function buildSystemPrompt(input: PromptAssemblyInput) {
+  const mediaType = resolveContentMediaType(input.content_request);
   const basePromptFile =
     input.category === "community"
       ? "basePrompts/community-base-prompt.md"
@@ -698,7 +706,20 @@ export async function buildSystemPrompt(input: PromptAssemblyInput) {
   const agentTemplate = await readPromptFile("agent-profile.md");
   const communityTemplate = await readPromptFile("community-data.md");
   const complianceQuality = await readPromptFile("compliance-quality.md");
-  const outputRequirements = await readPromptFile("output-requirements.md");
+  const outputRequirementsShared = await readPromptFile("output-requirements.md");
+  const outputRequirementsMedia = await readPromptFile(
+    mediaType === "video"
+      ? "output-requirements-video.md"
+      : "output-requirements-image.md"
+  );
+  const textOverlayTemplates =
+    input.category === "listing"
+      ? await readPromptFile(
+          mediaType === "video"
+            ? "textOverlayTemplates/video.md"
+            : "textOverlayTemplates/image.md"
+        )
+      : "";
 
   const styleNotes = input.agent_profile.writing_style_notes?.trim();
   const styleNotesBlock = styleNotes
@@ -767,6 +788,10 @@ export async function buildSystemPrompt(input: PromptAssemblyInput) {
     input.category === "listing"
       ? `\n\n${buildListingDataXml(input.listing_property_details)}`
       : "";
+  const textOverlayTemplatesBlock =
+    input.category === "listing" && textOverlayTemplates
+      ? `\n\n<text_overlay_templates>\n${textOverlayTemplates}\n</text_overlay_templates>`
+      : "";
 
   return `
 ${baseSystemPrompt}
@@ -783,11 +808,13 @@ ${formatTemplateList(hookTemplates)}
 </hook_templates>
 </hooks>
 
-${recentHooksBlock}${marketBlock}${communityBlock}${seasonalBlock}${listingSubcategoryBlock}${listingDataBlock}
+${recentHooksBlock}${marketBlock}${communityBlock}${seasonalBlock}${listingSubcategoryBlock}${listingDataBlock}${textOverlayTemplatesBlock}
 
 ${complianceQuality}
 
-${outputRequirements}
+${outputRequirementsShared}
+
+${outputRequirementsMedia}
 `.trim();
 }
 
@@ -795,6 +822,7 @@ export function buildUserPrompt(input: PromptAssemblyInput): string {
   const { content_request, category, audience_segments } = input;
   const platform = content_request?.platform ?? "instagram";
   const contentType = content_request?.content_type ?? "social_post";
+  const mediaType = resolveContentMediaType(content_request);
   const focus = content_request?.focus ?? "";
   const notes = content_request?.notes ?? "";
   const audienceLine =
@@ -806,6 +834,7 @@ export function buildUserPrompt(input: PromptAssemblyInput): string {
 - **Category:** ${category}
 ${audienceLine}- **Platform:** ${platform}
 - **Content Type:** ${contentType}
+- **Media Type:** ${mediaType}
 - **Focus:** ${focus || "No additional focus"}
 - **Notes:** ${notes || "None"}
 - **Listing Subcategory:** ${input.listing_subcategory ?? "None"}

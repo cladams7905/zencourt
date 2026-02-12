@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getUser } from "@web/src/server/actions/db/users";
 import {
+  getListingImages,
   getListingById,
   updateListing
 } from "@web/src/server/actions/db/listings";
@@ -66,6 +67,7 @@ export default async function ListingCreatePage({
       aspectRatio: "vertical",
       alt: job.roomName ? `${job.roomName} clip` : "Generated clip"
     }));
+  const listingImages = await getListingImages(user.id, listingId);
   const listingContent = await getContentByListingId(user.id, listingId);
   const listingPostItems: ContentItem[] = listingContent
     .filter((entry) => entry.contentType === "post")
@@ -101,7 +103,11 @@ export default async function ListingCreatePage({
         listingSubcategory:
           typeof metadata.listingSubcategory === "string"
             ? (metadata.listingSubcategory as ListingContentSubcategory)
-            : null
+            : null,
+        mediaType:
+          metadata.mediaType === "image" || metadata.mediaType === "video"
+            ? metadata.mediaType
+            : "video"
       } satisfies ContentItem;
     });
   return (
@@ -111,6 +117,15 @@ export default async function ListingCreatePage({
       listingAddress={listing.address ?? null}
       videoItems={videoItems}
       listingPostItems={listingPostItems}
+      listingImages={listingImages.map((image) => ({
+        id: image.id,
+        url: image.url,
+        category: image.category ?? null,
+        isPrimary: Boolean(image.isPrimary),
+        primaryScore:
+          typeof image.primaryScore === "number" ? image.primaryScore : null,
+        uploadedAtMs: image.uploadedAt.getTime()
+      }))}
     />
   );
 }
