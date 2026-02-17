@@ -4,7 +4,7 @@ import {
   getListingById,
   updateListing
 } from "@web/src/server/actions/db/listings";
-import { ListingProcessingView } from "@web/src/components/listings/ListingProcessingView";
+import { ListingProcessingView } from "@web/src/components/listings/processing";
 
 interface ListingGeneratePageProps {
   params: Promise<{ listingId: string }>;

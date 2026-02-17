@@ -8,7 +8,7 @@ import {
   MULTI_ROOM_CATEGORIES,
   getNextCategoryValue,
   normalizeCategory
-} from "@web/src/components/listings/categorize/domain";
+} from "@web/src/components/listings/categorize/domain/categoryRules";
 
 type UseCategorizeActionsParams = {
   images: ListingImageItem[];

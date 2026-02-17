@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getUser } from "@web/src/server/actions/db/users";
 import { getListingById } from "@web/src/server/actions/db/listings";
-import { ListingProcessingView } from "@web/src/components/listings/ListingProcessingView";
+import { ListingProcessingView } from "@web/src/components/listings/processing";
 
 interface ListingProcessingPageProps {
   params: Promise<{ listingId: string }>;

@@ -12,6 +12,11 @@
 
 # testing
 /coverage
+/apps/web/coverage/
+coverage/
+*.lcov
+coverage-final.json
+clover.xml
 
 # next.js
 /.next/

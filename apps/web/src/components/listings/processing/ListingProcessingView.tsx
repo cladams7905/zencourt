@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { ListingViewHeader } from "./ListingViewHeader";
+import { ListingViewHeader } from "../ListingViewHeader";
 import { categorizeListingImages } from "@web/src/server/actions/api/vision";
 import { fetchListingPropertyDetails } from "@web/src/server/actions/api/listingProperty";
 import {
@@ -10,7 +10,7 @@ import {
   updateListing
 } from "@web/src/server/actions/db/listings";
 import { AlertTriangle, Loader2 } from "lucide-react";
-import { Button } from "../ui/button";
+import { Button } from "../../ui/button";
 import { toast } from "sonner";
 import { emitListingSidebarUpdate } from "@web/src/lib/listingSidebarEvents";
 import type { VideoJobUpdateEvent } from "@web/src/types/video-status";
@@ -21,7 +21,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle
-} from "../ui/dialog";
+} from "../../ui/dialog";
 
 type ListingProcessingViewProps = {
   mode: "categorize" | "review" | "generate";
