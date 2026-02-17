@@ -8,16 +8,16 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle
-} from "../../ui/dialog";
+} from "@web/src/components/ui/dialog";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue
-} from "../../ui/select";
-import { Input } from "../../ui/input";
-import { Button } from "../../ui/button";
+} from "@web/src/components/ui/select";
+import { Input } from "@web/src/components/ui/input";
+import { Button } from "@web/src/components/ui/button";
 import { ROOM_CATEGORIES, type RoomCategory } from "@web/src/types/vision";
 
 const MAX_CUSTOM_CATEGORY_LENGTH = 20;

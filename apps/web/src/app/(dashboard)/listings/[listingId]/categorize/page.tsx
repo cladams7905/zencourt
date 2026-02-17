@@ -5,7 +5,7 @@ import {
   getListingImages,
   updateListing
 } from "@web/src/server/actions/db/listings";
-import { ListingCategorizeView } from "@web/src/components/listings/categorize/ListingCategorizeView";
+import { ListingCategorizeView } from "@web/src/components/listings/categorize";
 
 interface ListingCategorizePageProps {
   params: Promise<{ listingId: string }>;

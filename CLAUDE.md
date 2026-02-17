@@ -190,6 +190,13 @@ Rules:
 - Use `index.ts` barrel files at major boundaries (`feature`, `orchestrators`, `shared`, `domain`, `media/*`) for stable imports.
 - Prefer this pattern only for complex domains; keep small/simple components flat.
 - **Single-file folder rule:** if a folder only contains one non-index file, flatten it (do not keep a dedicated subfolder for one file).
+- **Anti-drift rule for feature folders:** keep responsibilities strict and consistent.
+  - `orchestrators/`: compose hooks + pass props only; no domain logic.
+  - `components/`: presentation/UI only; no server-action calls.
+  - `domain/hooks/`: feature behavior and state transitions.
+  - `services/`: wrappers around server actions/external APIs.
+  - `shared/`: feature-local constants/types/shared hooks.
+  - External callers should import from the feature boundary (`feature/index.ts`) rather than deep internal files.
 
 ### 5. Database Access Consistency
 

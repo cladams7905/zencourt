@@ -2,7 +2,7 @@
 import * as React from "react";
 import { act } from "react";
 import { render } from "@testing-library/react";
-import { ListingCategorizeView } from "../ListingCategorizeView";
+import { ListingCategorizeView } from "@web/src/components/listings/categorize";
 
 const mockPush = jest.fn();
 const mockToastError = jest.fn();
@@ -21,34 +21,34 @@ jest.mock("sonner", () => ({
   }
 }));
 
-jest.mock("../../uploads/UploadDialog", () => ({
+jest.mock("@web/src/components/uploads/UploadDialog", () => ({
   UploadDialog: (props: any) => {
     latestUploadProps = props;
     return null;
   }
 }));
 
-jest.mock("../../location/AddressAutocomplete", () => ({
+jest.mock("@web/src/components/location/AddressAutocomplete", () => ({
   AddressAutocomplete: () => null
 }));
 
-jest.mock("../ListingViewHeader", () => ({
+jest.mock("@web/src/components/listings/ListingViewHeader", () => ({
   ListingViewHeader: () => null
 }));
 
-jest.mock("../ListingCategoryDialog", () => ({
+jest.mock("@web/src/components/listings/categorize/components/dialogs/ListingCategoryDialog", () => ({
   ListingCategoryDialog: () => null
 }));
 
-jest.mock("../ListingCategoryDeleteDialog", () => ({
+jest.mock("@web/src/components/listings/categorize/components/dialogs/ListingCategoryDeleteDialog", () => ({
   ListingCategoryDeleteDialog: () => null
 }));
 
-jest.mock("../ListingImageMoveDialog", () => ({
+jest.mock("@web/src/components/listings/categorize/components/dialogs/ListingImageMoveDialog", () => ({
   ListingImageMoveDialog: () => null
 }));
 
-jest.mock("../ListingImageDeleteDialog", () => ({
+jest.mock("@web/src/components/listings/categorize/components/dialogs/ListingImageDeleteDialog", () => ({
   ListingImageDeleteDialog: () => null
 }));
 

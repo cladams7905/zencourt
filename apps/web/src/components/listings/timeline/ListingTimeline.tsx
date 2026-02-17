@@ -1,13 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { cn } from "../ui/utils";
-
-type ListingTimelineStep = {
-  label: string;
-  active?: boolean;
-  completed?: boolean;
-};
+import { cn } from "@web/src/components/ui/utils";
+import type { ListingTimelineStep } from "./types";
 
 type ListingTimelineProps = {
   steps: ListingTimelineStep[];

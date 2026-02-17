@@ -8,8 +8,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle
-} from "../../ui/dialog";
-import { Button } from "../../ui/button";
+} from "@web/src/components/ui/dialog";
+import { Button } from "@web/src/components/ui/button";
 
 type ListingCategoryDeleteDialogProps = {
   open: boolean;

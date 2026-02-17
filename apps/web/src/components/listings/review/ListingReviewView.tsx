@@ -39,7 +39,10 @@ import type {
   ListingSaleHistory,
   ListingValuationExample
 } from "@shared/types/models";
-import { ListingTimeline } from "../ListingTimeline";
+import {
+  ListingTimeline,
+  buildListingTimelineSteps
+} from "@web/src/components/listings/timeline";
 import { useRouter } from "next/navigation";
 import { emitListingSidebarUpdate } from "@web/src/lib/listingSidebarEvents";
 
@@ -51,12 +54,6 @@ type ListingReviewViewProps = {
   propertyDetails: ListingPropertyDetails | null;
   targetAudiences?: string[] | null;
 };
-
-const timelineSteps = [
-  { label: "Categorize", active: false, completed: true },
-  { label: "Review", active: true, completed: false },
-  { label: "Create", active: false, completed: false }
-];
 
 const toNullableString = (value: string) => {
   const trimmed = value.trim();
@@ -619,7 +616,12 @@ export function ListingReviewView({
     <>
       <ListingViewHeader
         title={title}
-        timeline={<ListingTimeline steps={timelineSteps} className="mb-0" />}
+        timeline={
+          <ListingTimeline
+            steps={buildListingTimelineSteps("review")}
+            className="mb-0"
+          />
+        }
         action={
           isSaving ? (
             <div className="flex items-center gap-2 rounded-full border border-border bg-secondary/80 px-3 py-1.5 text-xs font-medium text-foreground">

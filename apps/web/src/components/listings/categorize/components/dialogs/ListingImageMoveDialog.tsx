@@ -8,15 +8,15 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle
-} from "../../ui/dialog";
+} from "@web/src/components/ui/dialog";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue
-} from "../../ui/select";
-import { Button } from "../../ui/button";
+} from "@web/src/components/ui/select";
+import { Button } from "@web/src/components/ui/button";
 
 type MoveOption = {
   value: string;
