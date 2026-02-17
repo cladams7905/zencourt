@@ -2,15 +2,11 @@
 
 import * as React from "react";
 import { ListingViewHeader } from "../ListingViewHeader";
-import {
-  type ContentItem,
-  type TextOverlayInput
-} from "../../dashboard/ContentGrid";
+import { type ContentItem } from "../../dashboard/ContentGrid";
 import { emitListingSidebarUpdate } from "@web/src/lib/listingSidebarEvents";
 import { usePathname, useRouter } from "next/navigation";
 import {
   buildPreviewTimelinePlan,
-  type PreviewTimelineClip,
   type PreviewTimelinePlan
 } from "@web/src/lib/video/previewTimeline";
 import { ListingTimelinePreviewGrid } from "./ListingTimelinePreviewGrid";
@@ -18,6 +14,21 @@ import {
   ListingImagePreviewGrid,
   type ListingImagePreviewItem
 } from "./ListingImagePreviewGrid";
+import {
+  type PreviewClipCandidate,
+  type ListingCreateImage,
+  filterFeatureClips,
+  resolveContentMediaType,
+  rankListingImagesForItem,
+  buildVariedImageSequence
+} from "./utils/listingCreateUtils";
+import { useStickyHeader } from "./utils/useStickyHeader";
+import { useScrollFade } from "./utils/useScrollFade";
+import { useOrshotRender } from "./utils/useOrshotRender";
+import {
+  useContentGeneration,
+  GENERATED_BATCH_SIZE
+} from "./utils/useContentGeneration";
 import { cn } from "../../ui/utils";
 import { Button } from "../../ui/button";
 import {
@@ -34,7 +45,6 @@ import {
   Settings
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../../ui/tooltip";
-import { toast } from "sonner";
 import {
   LISTING_CONTENT_SUBCATEGORIES,
   type ListingContentSubcategory
@@ -59,286 +69,12 @@ const SUBCATEGORY_LABELS: Record<ListingContentSubcategory, string> = {
   property_features: "Property Features"
 };
 
-type PreviewClipCandidate = PreviewTimelineClip & {
-  searchableText: string;
-};
 export type ListingCreateMediaTab = "videos" | "images";
-type ListingCreateImage = {
-  id: string;
-  url: string;
-  category: string | null;
-  isPrimary: boolean;
-  primaryScore: number | null;
-  uploadedAtMs: number;
-};
 
 const MEDIA_TAB_LABELS: Record<ListingCreateMediaTab, string> = {
   videos: "Videos",
   images: "Photos"
 };
-
-const GENERATED_BATCH_SIZE = 4;
-const INITIAL_SKELETON_HOLD_MS = 350;
-
-const createBatchId = () => {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return crypto.randomUUID();
-  }
-  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-};
-
-function extractJsonItemsFromStream(text: string) {
-  const items: {
-    hook: string;
-    body?: { header: string; content: string; broll_query?: string }[] | null;
-    caption?: string | null;
-    broll_query?: string | null;
-  }[] = [];
-
-  let arrayStarted = false;
-  let inString = false;
-  let escape = false;
-  let braceDepth = 0;
-  let objectStart = -1;
-
-  for (let i = 0; i < text.length; i += 1) {
-    const char = text[i];
-    if (!arrayStarted) {
-      if (char === "[") {
-        arrayStarted = true;
-      }
-      continue;
-    }
-
-    if (inString) {
-      if (escape) {
-        escape = false;
-        continue;
-      }
-      if (char === "\\") {
-        escape = true;
-        continue;
-      }
-      if (char === '"') {
-        inString = false;
-      }
-      continue;
-    }
-
-    if (char === '"') {
-      inString = true;
-      continue;
-    }
-
-    if (char === "{") {
-      if (braceDepth === 0) {
-        objectStart = i;
-      }
-      braceDepth += 1;
-    } else if (char === "}") {
-      braceDepth -= 1;
-      if (braceDepth === 0 && objectStart >= 0) {
-        const objectText = text.slice(objectStart, i + 1);
-        try {
-          const parsed = JSON.parse(objectText);
-          if (parsed && typeof parsed === "object") {
-            items.push(parsed);
-          }
-        } catch {
-          // Ignore incomplete/invalid JSON objects
-        }
-        objectStart = -1;
-      }
-    }
-  }
-
-  return items;
-}
-
-const FEATURE_KEYWORDS = [
-  "kitchen",
-  "countertop",
-  "granite",
-  "pantry",
-  "breakfast bar",
-  "island",
-  "bedroom",
-  "bathroom",
-  "tub",
-  "shower",
-  "closet",
-  "laundry",
-  "den",
-  "office",
-  "living room",
-  "great room",
-  "open concept",
-  "hardwood",
-  "porch",
-  "deck",
-  "yard",
-  "firepit",
-  "shed",
-  "garage",
-  "exterior",
-  "acre",
-  "lot",
-  "suite"
-];
-
-function buildFeatureNeedle(item: ContentItem): string {
-  const bodyText = (item.body ?? [])
-    .map(
-      (slide) =>
-        `${slide.header ?? ""} ${slide.content ?? ""} ${slide.broll_query ?? ""}`
-    )
-    .join(" ");
-  return `${item.hook ?? ""} ${item.caption ?? ""} ${item.brollQuery ?? ""} ${bodyText}`
-    .toLowerCase()
-    .replace(/[^\w\s]/g, " ");
-}
-
-function filterFeatureClips(
-  clips: PreviewClipCandidate[],
-  captionItem: ContentItem
-): PreviewClipCandidate[] {
-  const needle = buildFeatureNeedle(captionItem);
-  const matchedKeywords = FEATURE_KEYWORDS.filter((keyword) =>
-    needle.includes(keyword)
-  );
-
-  if (matchedKeywords.length === 0) {
-    return clips;
-  }
-
-  const matched = clips.filter((clip) =>
-    matchedKeywords.some((keyword) => clip.searchableText.includes(keyword))
-  );
-
-  if (matched.length >= 2) {
-    return matched;
-  }
-
-  if (matched.length === 1 && clips.length > 1) {
-    const fallback = clips.find((clip) => clip.id !== matched[0]?.id);
-    return fallback ? [matched[0], fallback] : matched;
-  }
-
-  return clips;
-}
-
-function resolveContentMediaType(item: ContentItem): "video" | "image" {
-  return item.mediaType === "image" ? "image" : "video";
-}
-
-function isSimpleTextOverlayTemplate(
-  overlay?: TextOverlayInput | null
-): boolean {
-  if (!overlay) {
-    return true;
-  }
-  return !overlay.accent_top?.trim() && !overlay.accent_bottom?.trim();
-}
-
-function hasAnyNonSimpleOverlayTemplate(item: ContentItem): boolean {
-  if (!item.body || item.body.length === 0) {
-    return true;
-  }
-  const overlays = item.body
-    .map((slide) => slide.text_overlay ?? null)
-    .filter(Boolean);
-  if (overlays.length === 0) {
-    return true;
-  }
-  return overlays.some((overlay) => !isSimpleTextOverlayTemplate(overlay));
-}
-
-function buildImageNeedle(item: ContentItem): string {
-  const bodyText = (item.body ?? [])
-    .map(
-      (slide) =>
-        `${slide.header ?? ""} ${slide.content ?? ""} ${slide.broll_query ?? ""}`
-    )
-    .join(" ");
-  return `${item.hook ?? ""} ${item.caption ?? ""} ${item.brollQuery ?? ""} ${bodyText}`
-    .toLowerCase()
-    .replace(/[^\w\s]/g, " ");
-}
-
-function rankListingImagesForItem(
-  images: ListingCreateImage[],
-  item: ContentItem
-): ListingCreateImage[] {
-  const needle = buildImageNeedle(item);
-  return [...images].sort((a, b) => {
-    const aPrimary = a.isPrimary ? 1 : 0;
-    const bPrimary = b.isPrimary ? 1 : 0;
-    if (aPrimary !== bPrimary) {
-      return bPrimary - aPrimary;
-    }
-
-    const aCategoryMatch =
-      a.category && needle.includes(a.category.toLowerCase()) ? 1 : 0;
-    const bCategoryMatch =
-      b.category && needle.includes(b.category.toLowerCase()) ? 1 : 0;
-    if (aCategoryMatch !== bCategoryMatch) {
-      return bCategoryMatch - aCategoryMatch;
-    }
-
-    const aScore = a.primaryScore ?? -Infinity;
-    const bScore = b.primaryScore ?? -Infinity;
-    if (aScore !== bScore) {
-      return bScore - aScore;
-    }
-
-    return b.uploadedAtMs - a.uploadedAtMs;
-  });
-}
-
-function hashImageSeed(value: string): number {
-  let hash = 2166136261;
-  for (let i = 0; i < value.length; i += 1) {
-    hash ^= value.charCodeAt(i);
-    hash = Math.imul(hash, 16777619);
-  }
-  return hash >>> 0;
-}
-
-function gcd(a: number, b: number): number {
-  let x = Math.abs(a);
-  let y = Math.abs(b);
-  while (y !== 0) {
-    const t = x % y;
-    x = y;
-    y = t;
-  }
-  return x;
-}
-
-function buildVariedImageSequence(
-  images: ListingCreateImage[],
-  seed: string
-): ListingCreateImage[] {
-  if (images.length <= 1) {
-    return images;
-  }
-
-  const total = images.length;
-  const start = hashImageSeed(`${seed}:start`) % total;
-  let step = (hashImageSeed(`${seed}:step`) % (total - 1)) + 1;
-  while (gcd(step, total) !== 1) {
-    step = (step % (total - 1)) + 1;
-  }
-
-  const sequence: ListingCreateImage[] = [];
-  let cursor = start;
-  for (let i = 0; i < total; i += 1) {
-    sequence.push(images[cursor]!);
-    cursor = (cursor + step) % total;
-  }
-
-  return sequence;
-}
 
 export function ListingCreateView({
   listingId,
@@ -352,40 +88,27 @@ export function ListingCreateView({
 }: ListingCreateViewProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const filterSentinelRef = React.useRef<HTMLDivElement | null>(null);
-  const filterTagsRef = React.useRef<HTMLDivElement | null>(null);
-  const [isFilterStickyActive, setIsFilterStickyActive] = React.useState(false);
-  const [tagScrollFade, setTagScrollFade] = React.useState<
-    "none" | "right" | "left" | "both"
-  >("none");
+  const { sentinelRef: filterSentinelRef, isSticky: isFilterStickyActive } =
+    useStickyHeader();
+  const { containerRef: filterTagsRef, maskImage: tagFadeMask } =
+    useScrollFade();
   const [activeMediaTab, setActiveMediaTab] =
     React.useState<ListingCreateMediaTab>(initialMediaTab);
   const [activeSubcategory, setActiveSubcategory] =
     React.useState<ListingContentSubcategory>(initialSubcategory);
-  const [localPostItems, setLocalPostItems] =
-    React.useState<ContentItem[]>(listingPostItems);
-  const [isGenerating, setIsGenerating] = React.useState(false);
-  const [activeBatchStreamedCount, setActiveBatchStreamedCount] =
-    React.useState(0);
-  const [holdInitialSkeletons, setHoldInitialSkeletons] = React.useState(false);
-  const [incompleteBatchSkeletonCount, setIncompleteBatchSkeletonCount] =
-    React.useState(0);
-  const [generationError, setGenerationError] = React.useState<string | null>(
-    null
-  );
-  const streamBufferRef = React.useRef("");
-  const parsedItemsRef = React.useRef<
-    {
-      hook: string;
-      body?: { header: string; content: string; broll_query?: string }[] | null;
-      caption?: string | null;
-      broll_query?: string | null;
-    }[]
-  >([]);
-  const activeControllerRef = React.useRef<AbortController | null>(null);
-  const initialSkeletonHoldTimeoutRef = React.useRef<number | null>(null);
-  const activeBatchIdRef = React.useRef<string>("");
-  const activeBatchItemIdsRef = React.useRef<string[]>([]);
+  const {
+    localPostItems,
+    isGenerating,
+    generationError,
+    loadingCount,
+    generateSubcategoryContent
+  } = useContentGeneration({
+    listingId,
+    listingPostItems,
+    activeMediaTab,
+    activeSubcategory
+  });
+  const hasHandledInitialAutoGenerateRef = React.useRef(false);
 
   React.useEffect(() => {
     emitListingSidebarUpdate({
@@ -394,10 +117,6 @@ export function ListingCreateView({
       lastOpenedAt: new Date().toISOString()
     });
   }, [listingId]);
-
-  React.useEffect(() => {
-    setLocalPostItems(listingPostItems);
-  }, [listingPostItems]);
 
   React.useEffect(() => {
     const next = new URLSearchParams(window.location.search);
@@ -419,263 +138,6 @@ export function ListingCreateView({
     });
   }, [activeMediaTab, activeSubcategory, pathname, router]);
 
-  const createGenerationNonce = React.useCallback(() => {
-    if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-      return crypto.randomUUID();
-    }
-    return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-  }, []);
-
-  const generateSubcategoryContent = React.useCallback(
-    async (
-      subcategory: ListingContentSubcategory,
-      options?: { forceNewBatch?: boolean }
-    ) => {
-      if (activeControllerRef.current) {
-        activeControllerRef.current.abort();
-      }
-      const controller = new AbortController();
-      activeControllerRef.current = controller;
-      activeBatchIdRef.current = createBatchId();
-      activeBatchItemIdsRef.current = [];
-      setIsGenerating(true);
-      setActiveBatchStreamedCount(0);
-      setIncompleteBatchSkeletonCount(0);
-      setHoldInitialSkeletons(true);
-      if (initialSkeletonHoldTimeoutRef.current !== null) {
-        window.clearTimeout(initialSkeletonHoldTimeoutRef.current);
-      }
-      initialSkeletonHoldTimeoutRef.current = window.setTimeout(() => {
-        setHoldInitialSkeletons(false);
-        initialSkeletonHoldTimeoutRef.current = null;
-      }, INITIAL_SKELETON_HOLD_MS);
-      setGenerationError(null);
-      streamBufferRef.current = "";
-      parsedItemsRef.current = [];
-
-      const resolvedMediaType: "video" | "image" =
-        activeMediaTab === "videos" ? "video" : "image";
-
-      try {
-        const response = await fetch(
-          `/api/v1/listings/${listingId}/content/generate`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              subcategory,
-              media_type: resolvedMediaType,
-              focus: SUBCATEGORY_LABELS[subcategory],
-              generation_nonce: options?.forceNewBatch
-                ? createGenerationNonce()
-                : ""
-            }),
-            signal: controller.signal
-          }
-        );
-
-        if (!response.ok) {
-          const errorPayload = await response.json().catch(() => ({}));
-          throw new Error(
-            (errorPayload as { message?: string }).message ||
-              "Failed to generate listing post content"
-          );
-        }
-
-        const reader = response.body?.getReader();
-        if (!reader) {
-          throw new Error("Streaming response not available");
-        }
-
-        const decoder = new TextDecoder();
-        let buffer = "";
-        let didReceiveDone = false;
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-          const parts = buffer.split("\n\n");
-          buffer = parts.pop() ?? "";
-
-          for (const part of parts) {
-            const line = part
-              .split("\n")
-              .find((entry) => entry.startsWith("data:"));
-            if (!line) continue;
-
-            const payload = line.replace(/^data:\s*/, "");
-            if (!payload) continue;
-
-            const event = JSON.parse(payload) as
-              | { type: "delta"; text: string }
-              | {
-                  type: "done";
-                  items: {
-                    hook: string;
-                    body?:
-                      | {
-                          header: string;
-                          content: string;
-                          broll_query?: string | null;
-                        }[]
-                      | null;
-                    caption?: string | null;
-                    broll_query?: string | null;
-                  }[];
-                }
-              | { type: "error"; message: string };
-
-            if (event.type === "delta") {
-              streamBufferRef.current += event.text;
-              const parsedItems = extractJsonItemsFromStream(
-                streamBufferRef.current
-              );
-
-              if (parsedItems.length > parsedItemsRef.current.length) {
-                parsedItemsRef.current = parsedItems;
-
-                const streamedContentItems: ContentItem[] = parsedItems.map(
-                  (item, absoluteIndex) => {
-                    const id =
-                      activeBatchItemIdsRef.current[absoluteIndex] ??
-                      `generated-${activeBatchIdRef.current}-${absoluteIndex}`;
-                    activeBatchItemIdsRef.current[absoluteIndex] = id;
-                    return {
-                      id,
-                      aspectRatio: "square" as const,
-                      isFavorite: false,
-                      hook: item.hook,
-                      caption: item.caption ?? null,
-                      body: item.body ?? null,
-                      brollQuery: item.broll_query ?? null,
-                      listingSubcategory: subcategory,
-                      mediaType: resolvedMediaType
-                    };
-                  }
-                );
-
-                setLocalPostItems((prev) => {
-                  const currentBatchIds = new Set(activeBatchItemIdsRef.current);
-                  const withoutCurrentBatch = prev.filter(
-                    (item) => !currentBatchIds.has(item.id)
-                  );
-                  return [...withoutCurrentBatch, ...streamedContentItems];
-                });
-                setActiveBatchStreamedCount(
-                  Math.min(GENERATED_BATCH_SIZE, parsedItems.length)
-                );
-              }
-            }
-
-            if (event.type === "error") {
-              throw new Error(event.message);
-            }
-
-            if (event.type === "done") {
-              didReceiveDone = true;
-              setActiveBatchStreamedCount(
-                Math.min(GENERATED_BATCH_SIZE, event.items.length)
-              );
-              const missingCount = Math.max(
-                0,
-                GENERATED_BATCH_SIZE - event.items.length
-              );
-              if (missingCount > 0) {
-                setIncompleteBatchSkeletonCount(missingCount);
-                setGenerationError("sorry, an error occurred. Please retry.");
-                toast.error("Sorry, an error occurred. Please retry.");
-              }
-              // Replace streamed items with the final set from the done event.
-              const finalItems: ContentItem[] = event.items.map((item, index) => {
-                const id =
-                  activeBatchItemIdsRef.current[index] ??
-                  `generated-${activeBatchIdRef.current}-${index}`;
-                return {
-                  id,
-                  aspectRatio: "square" as const,
-                  isFavorite: false,
-                  hook: item.hook,
-                  caption: item.caption ?? null,
-                  body: item.body ?? null,
-                  brollQuery: item.broll_query ?? null,
-                  listingSubcategory: subcategory,
-                  mediaType: resolvedMediaType
-                };
-              });
-
-              setLocalPostItems((prev) => {
-                const currentBatchIds = new Set(activeBatchItemIdsRef.current);
-                const withoutCurrentBatch = prev.filter(
-                  (item) => !currentBatchIds.has(item.id)
-                );
-                if (!options?.forceNewBatch) {
-                  const existingIds = new Set(
-                    withoutCurrentBatch.map((item) => item.id)
-                  );
-                  const unique = finalItems.filter(
-                    (item) => !existingIds.has(item.id)
-                  );
-                  return unique.length > 0
-                    ? [...withoutCurrentBatch, ...unique]
-                    : withoutCurrentBatch;
-                }
-                return [...withoutCurrentBatch, ...finalItems];
-              });
-            }
-          }
-        }
-
-        if (!didReceiveDone) {
-          throw new Error("Stream ended before completing output.");
-        }
-      } catch (error) {
-        if ((error as Error).name === "AbortError") {
-          setLocalPostItems((prev) => {
-            const currentBatchIds = new Set(activeBatchItemIdsRef.current);
-            return prev.filter((item) => !currentBatchIds.has(item.id));
-          });
-          return;
-        }
-        const message =
-          error instanceof Error
-            ? error.message
-            : "Failed to generate listing content.";
-        setGenerationError(message);
-        toast.error(message);
-        setIncompleteBatchSkeletonCount(GENERATED_BATCH_SIZE);
-        // Clean up any streamed items on error.
-        setLocalPostItems((prev) => {
-          const currentBatchIds = new Set(activeBatchItemIdsRef.current);
-          return prev.filter((item) => !currentBatchIds.has(item.id));
-        });
-      } finally {
-        if (activeControllerRef.current === controller) {
-          activeControllerRef.current = null;
-        }
-        if (initialSkeletonHoldTimeoutRef.current !== null) {
-          window.clearTimeout(initialSkeletonHoldTimeoutRef.current);
-          initialSkeletonHoldTimeoutRef.current = null;
-        }
-        setHoldInitialSkeletons(false);
-        setIsGenerating(false);
-        setActiveBatchStreamedCount(0);
-        activeBatchIdRef.current = "";
-        activeBatchItemIdsRef.current = [];
-      }
-    },
-    [activeMediaTab, createGenerationNonce, listingId]
-  );
-
-  React.useEffect(() => {
-    return () => {
-      if (initialSkeletonHoldTimeoutRef.current !== null) {
-        window.clearTimeout(initialSkeletonHoldTimeoutRef.current);
-      }
-    };
-  }, []);
-
   const activeMediaItems = React.useMemo(
     () =>
       localPostItems.filter(
@@ -686,29 +148,10 @@ export function ListingCreateView({
       ),
     [activeMediaTab, activeSubcategory, localPostItems]
   );
-  const activeCaptionItems = React.useMemo(
-    () =>
-      activeMediaTab === "images"
-        ? activeMediaItems.filter((item) =>
-            hasAnyNonSimpleOverlayTemplate(item)
-          )
-        : activeMediaItems,
-    [activeMediaItems, activeMediaTab]
-  );
-  React.useEffect(() => {
-    setIncompleteBatchSkeletonCount(0);
-  }, [activeSubcategory, activeMediaTab]);
-
-  const loadingCount = isGenerating
-    ? holdInitialSkeletons
-      ? GENERATED_BATCH_SIZE
-      : Math.max(0, GENERATED_BATCH_SIZE - activeBatchStreamedCount)
-    : incompleteBatchSkeletonCount;
-
-  const activeImagePreviewItems = React.useMemo<
+  const fallbackImagePreviewItems = React.useMemo<
     ListingImagePreviewItem[]
   >(() => {
-    if (activeMediaTab !== "images" || activeCaptionItems.length === 0) {
+    if (activeMediaTab !== "images" || activeMediaItems.length === 0) {
       return [];
     }
 
@@ -724,7 +167,7 @@ export function ListingCreateView({
       return b.uploadedAtMs - a.uploadedAtMs;
     });
 
-    return activeCaptionItems.map((item, index) => {
+    return activeMediaItems.map((item, index) => {
       const rankedForItem = rankListingImagesForItem(
         fallbackSortedImages,
         item
@@ -736,9 +179,7 @@ export function ListingCreateView({
       const fallbackSlides = [
         {
           id: `${item.id}-slide-fallback`,
-          imageUrl:
-            variedForItem[0]?.url ??
-            null,
+          imageUrl: variedForItem[0]?.url ?? null,
           header: item.hook?.trim() || "Listing",
           content: item.caption?.trim() || "",
           textOverlay: null
@@ -767,7 +208,34 @@ export function ListingCreateView({
         coverImageUrl: slides[0]?.imageUrl ?? null
       };
     });
-  }, [activeCaptionItems, activeMediaTab, listingImages]);
+  }, [activeMediaItems, activeMediaTab, listingImages]);
+
+  const {
+    previewItems: orshotPreviewItems,
+    isRendering: isOrshotRendering,
+    renderError: orshotRenderError
+  } = useOrshotRender({
+    listingId,
+    activeSubcategory,
+    activeMediaTab,
+    captionItems: activeMediaItems,
+    isGenerating
+  });
+
+  const activeImagePreviewItems = React.useMemo(
+    () =>
+      orshotPreviewItems.length > 0
+        ? orshotPreviewItems
+        : fallbackImagePreviewItems,
+    [fallbackImagePreviewItems, orshotPreviewItems]
+  );
+
+  const imageLoadingCount =
+    loadingCount > 0
+      ? loadingCount
+      : activeMediaTab === "images" && isOrshotRendering
+        ? GENERATED_BATCH_SIZE
+        : 0;
   const activePreviewPlans = React.useMemo(() => {
     if (activeMediaTab !== "videos") {
       return [];
@@ -784,11 +252,11 @@ export function ListingCreateView({
           .toLowerCase()
           .replace(/[^\w\s]/g, " ")
       }));
-    if (clips.length === 0 || activeCaptionItems.length === 0) {
+    if (clips.length === 0 || activeMediaItems.length === 0) {
       return [];
     }
 
-    return activeCaptionItems.map((captionItem): PreviewTimelinePlan => {
+    return activeMediaItems.map((captionItem): PreviewTimelinePlan => {
       const scopedClips =
         activeSubcategory === "property_features"
           ? filterFeatureClips(clips, captionItem)
@@ -800,7 +268,7 @@ export function ListingCreateView({
       });
     });
   }, [
-    activeCaptionItems,
+    activeMediaItems,
     activeMediaTab,
     activeSubcategory,
     listingId,
@@ -808,96 +276,32 @@ export function ListingCreateView({
   ]);
 
   React.useEffect(() => {
-    if (isGenerating || activeMediaItems.length > 0) {
+    if (hasHandledInitialAutoGenerateRef.current) {
       return;
     }
-    void generateSubcategoryContent(activeSubcategory);
+    if (isGenerating) {
+      return;
+    }
+    if (
+      activeMediaTab !== initialMediaTab ||
+      activeSubcategory !== initialSubcategory
+    ) {
+      return;
+    }
+
+    hasHandledInitialAutoGenerateRef.current = true;
+    if (activeMediaItems.length === 0) {
+      void generateSubcategoryContent(activeSubcategory);
+    }
   }, [
     activeMediaItems.length,
+    activeMediaTab,
     activeSubcategory,
     generateSubcategoryContent,
+    initialMediaTab,
+    initialSubcategory,
     isGenerating
   ]);
-
-  React.useEffect(() => {
-    const sentinel = filterSentinelRef.current;
-    if (!sentinel) {
-      return;
-    }
-
-    // Find the nearest scrollable ancestor to use as the observer root.
-    let root: HTMLElement | null = null;
-    let ancestor: HTMLElement | null = sentinel.parentElement;
-    while (ancestor) {
-      const style = getComputedStyle(ancestor);
-      if (style.overflowY === "auto" || style.overflowY === "scroll") {
-        root = ancestor;
-        break;
-      }
-      ancestor = ancestor.parentElement;
-    }
-
-    // A negative top rootMargin equal to the sticky offset means the
-    // sentinel is considered "not intersecting" exactly when the sticky
-    // bar starts sticking.
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry) {
-          setIsFilterStickyActive(!entry.isIntersecting);
-        }
-      },
-      { root, rootMargin: "-88px 0px 0px 0px", threshold: 0 }
-    );
-
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, []);
-
-  const updateTagScrollFade = React.useCallback(() => {
-    const el = filterTagsRef.current;
-    if (!el) {
-      return;
-    }
-    const canLeft = el.scrollLeft > 1;
-    const canRight = el.scrollLeft + el.clientWidth < el.scrollWidth - 1;
-    const next =
-      canLeft && canRight
-        ? "both"
-        : canLeft
-          ? "left"
-          : canRight
-            ? "right"
-            : "none";
-    setTagScrollFade((prev) => (prev === next ? prev : next));
-  }, []);
-
-  React.useEffect(() => {
-    const el = filterTagsRef.current;
-    if (!el) {
-      return;
-    }
-    updateTagScrollFade();
-    el.addEventListener("scroll", updateTagScrollFade, { passive: true });
-    const ro = new ResizeObserver(updateTagScrollFade);
-    ro.observe(el);
-    return () => {
-      el.removeEventListener("scroll", updateTagScrollFade);
-      ro.disconnect();
-    };
-  }, [updateTagScrollFade]);
-
-  const tagFadeMask = React.useMemo(() => {
-    switch (tagScrollFade) {
-      case "both":
-        return "linear-gradient(to right, transparent, black 24px, black calc(100% - 24px), transparent)";
-      case "left":
-        return "linear-gradient(to right, transparent, black 24px)";
-      case "right":
-        return "linear-gradient(to right, black calc(100% - 24px), transparent)";
-      default:
-        return undefined;
-    }
-  }, [tagScrollFade]);
 
   return (
     <>
@@ -1001,8 +405,10 @@ export function ListingCreateView({
               </Tooltip>
             </div>
           </div>
-          {generationError ? (
-            <p className="mt-3 text-sm text-red-500">{generationError}</p>
+          {generationError || orshotRenderError ? (
+            <p className="mt-3 text-sm text-red-500">
+              {generationError ?? orshotRenderError}
+            </p>
           ) : null}
         </div>
       </div>
@@ -1013,7 +419,7 @@ export function ListingCreateView({
             <ListingTimelinePreviewGrid
               plans={activePreviewPlans}
               items={videoItems}
-              captionItems={activeCaptionItems}
+              captionItems={activeMediaItems}
               listingSubcategory={activeSubcategory}
               captionSubcategoryLabel={SUBCATEGORY_LABELS[activeSubcategory]}
               listingAddress={listingAddress ?? null}
@@ -1021,11 +427,13 @@ export function ListingCreateView({
               loadingCount={loadingCount}
             />
           ) : activeMediaTab === "images" &&
-            (activeImagePreviewItems.length > 0 || isGenerating) ? (
+            (activeImagePreviewItems.length > 0 ||
+              isGenerating ||
+              isOrshotRendering) ? (
             <ListingImagePreviewGrid
               items={activeImagePreviewItems}
               captionSubcategoryLabel={SUBCATEGORY_LABELS[activeSubcategory]}
-              loadingCount={loadingCount}
+              loadingCount={imageLoadingCount}
             />
           ) : (
             <div className="rounded-xl border border-border bg-background p-8 text-center text-sm text-muted-foreground">

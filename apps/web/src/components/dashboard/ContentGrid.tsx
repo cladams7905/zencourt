@@ -86,8 +86,8 @@ const ContentGridItem = ({
       }
       return Boolean(
         overlay.headline?.trim() ||
-          overlay.accent_top?.trim() ||
-          overlay.accent_bottom?.trim()
+        overlay.accent_top?.trim() ||
+        overlay.accent_bottom?.trim()
       );
     })
   );
@@ -178,7 +178,7 @@ const ContentGridItem = ({
           </div>
 
           {shouldDimImageForOverlay ? (
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/35 via-black/15 to-black/40" />
+            <div className="pointer-events-none absolute inset-0 bg-linear-to-b from-black/35 via-black/15 to-black/40" />
           ) : null}
           <div className="pointer-events-none absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300" />
 

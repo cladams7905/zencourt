@@ -55,7 +55,8 @@ const tikTokSans = TikTok_Sans({
   subsets: ["latin"],
   weight: ["600", "700"],
   variable: "--font-tiktok",
-  display: "swap"
+  display: "swap",
+  adjustFontFallback: false
 });
 
 const dmSerif = DM_Serif_Text({
