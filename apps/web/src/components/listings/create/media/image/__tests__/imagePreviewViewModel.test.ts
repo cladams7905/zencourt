@@ -32,15 +32,26 @@ jest.mock(
   { virtual: true }
 );
 
+const buildPreviewItem = (
+  overrides: Partial<ListingImagePreviewItem>
+): ListingImagePreviewItem => ({
+  id: "i1",
+  variationNumber: 1,
+  hook: null,
+  caption: null,
+  coverImageUrl: null,
+  slides: [],
+  ...overrides
+});
+
 describe("imagePreviewViewModel", () => {
   it("resolves sandwich when no slides", () => {
-    const item = { id: "i1", slides: [] } as ListingImagePreviewItem;
+    const item = buildPreviewItem({ slides: [] });
     expect(resolveItemTemplatePattern(item)).toBe("sandwich");
   });
 
   it("resolves sandwich when a slide has both accents", () => {
-    const item = {
-      id: "i1",
+    const item = buildPreviewItem({
       slides: [
         {
           id: "s1",
@@ -50,15 +61,14 @@ describe("imagePreviewViewModel", () => {
           textOverlay: { headline: "Headline", accent_top: "Top", accent_bottom: "Bottom" }
         }
       ]
-    } as ListingImagePreviewItem;
+    });
     expect(resolveItemTemplatePattern(item)).toBe("sandwich");
   });
 
   it("resolves accent-headline without both accents", () => {
-    const item = {
-      id: "i1",
+    const item = buildPreviewItem({
       slides: [{ id: "s1", imageUrl: null, header: "Header", content: "" }]
-    } as ListingImagePreviewItem;
+    });
     expect(resolveItemTemplatePattern(item)).toBe("accent-headline");
   });
 
