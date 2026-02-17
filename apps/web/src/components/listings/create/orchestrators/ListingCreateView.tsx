@@ -9,7 +9,7 @@ import {
   buildPreviewTimelinePlan,
   type PreviewTimelinePlan
 } from "@web/src/lib/video/previewTimeline";
-import { ListingTimelinePreviewGrid } from "@web/src/components/listings/create/orchestrators/ListingTimelinePreviewGrid";
+import { ListingVideoPreviewGrid } from "@web/src/components/listings/create/orchestrators/ListingVideoPreviewGrid";
 import { ListingImagePreviewGrid } from "@web/src/components/listings/create/orchestrators/ListingImagePreviewGrid";
 import {
   type PreviewClipCandidate,
@@ -408,7 +408,7 @@ export function ListingCreateView({
         <section className="space-y-4">
           {activeMediaTab === "videos" &&
           (activePreviewPlans.length > 0 || isGenerating) ? (
-            <ListingTimelinePreviewGrid
+            <ListingVideoPreviewGrid
               plans={activePreviewPlans}
               items={videoItems}
               captionItems={activeMediaItems}

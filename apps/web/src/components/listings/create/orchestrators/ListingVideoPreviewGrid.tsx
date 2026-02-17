@@ -11,7 +11,7 @@ import { VideoPreviewCard } from "@web/src/components/listings/create/media/vide
 import { VideoPreviewModal } from "@web/src/components/listings/create/media/video/components/VideoPreviewModal";
 import { VideoPreviewSkeletonCard } from "@web/src/components/listings/create/media/video/components/VideoPreviewSkeletonCard";
 
-type ListingTimelinePreviewGridProps = {
+type ListingVideoPreviewGridProps = {
   plans: PreviewTimelinePlan[];
   items: ContentItem[];
   captionItems: ContentItem[];
@@ -22,7 +22,7 @@ type ListingTimelinePreviewGridProps = {
   loadingCount?: number;
 };
 
-export function ListingTimelinePreviewGrid({
+export function ListingVideoPreviewGrid({
   plans,
   items,
   captionItems,
@@ -31,7 +31,7 @@ export function ListingTimelinePreviewGrid({
   listingAddress,
   forceSimpleOverlayTemplate = false,
   loadingCount = 0
-}: ListingTimelinePreviewGridProps) {
+}: ListingVideoPreviewGridProps) {
   const [selectedPlanId, setSelectedPlanId] = React.useState<string | null>(null);
   const [favoritePlanIds, setFavoritePlanIds] = React.useState<Set<string>>(
     new Set()

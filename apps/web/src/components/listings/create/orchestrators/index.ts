@@ -1,3 +1,3 @@
 export * from "./ListingCreateView";
 export * from "./ListingImagePreviewGrid";
-export * from "./ListingTimelinePreviewGrid";
+export * from "./ListingVideoPreviewGrid";

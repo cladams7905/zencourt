@@ -194,7 +194,6 @@ Rules:
   - `orchestrators/`: compose hooks + pass props only; no domain logic.
   - `components/`: presentation/UI only; no server-action calls.
   - `domain/hooks/`: feature behavior and state transitions.
-  - `services/`: wrappers around server actions/external APIs.
   - `shared/`: feature-local constants/types/shared hooks.
   - External callers should import from the feature boundary (`feature/index.ts`) rather than deep internal files.
 

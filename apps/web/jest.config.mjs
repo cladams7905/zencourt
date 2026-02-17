@@ -15,8 +15,8 @@ const customJestConfig = {
   moduleNameMapper: {
     "^@web/src/(.*)$": "<rootDir>/src/$1",
     "^@web/(.*)$": "<rootDir>/src/$1",
-    "^@shared/(.*)$": "<rootDir>/../../packages/shared/src/$1",
-    "^@db/(.*)$": "<rootDir>/../../packages/db/src/$1",
+    "^@shared/(.*)$": "<rootDir>/../../packages/shared/$1",
+    "^@db/(.*)$": "<rootDir>/../../packages/db/$1",
     "\\.(css|less|scss|sass)$": "<rootDir>/src/test/styleMock.js"
   }
 };
