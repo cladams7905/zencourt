@@ -1,19 +1,16 @@
 "use client";
 
 import * as React from "react";
-import { ListingViewHeader } from "../ListingViewHeader";
-import { type ContentItem } from "../../dashboard/ContentGrid";
+import { ListingViewHeader } from "@web/src/components/listings/ListingViewHeader";
+import { type ContentItem } from "@web/src/components/dashboard/ContentGrid";
 import { emitListingSidebarUpdate } from "@web/src/lib/listingSidebarEvents";
 import { usePathname, useRouter } from "next/navigation";
 import {
   buildPreviewTimelinePlan,
   type PreviewTimelinePlan
 } from "@web/src/lib/video/previewTimeline";
-import { ListingTimelinePreviewGrid } from "./ListingTimelinePreviewGrid";
-import {
-  ListingImagePreviewGrid,
-  type ListingImagePreviewItem
-} from "./ListingImagePreviewGrid";
+import { ListingTimelinePreviewGrid } from "@web/src/components/listings/create/orchestrators/ListingTimelinePreviewGrid";
+import { ListingImagePreviewGrid } from "@web/src/components/listings/create/orchestrators/ListingImagePreviewGrid";
 import {
   type PreviewClipCandidate,
   type ListingCreateImage,
@@ -21,22 +18,26 @@ import {
   resolveContentMediaType,
   rankListingImagesForItem,
   buildVariedImageSequence
-} from "./utils/listingCreateUtils";
-import { useStickyHeader } from "./utils/useStickyHeader";
-import { useScrollFade } from "./utils/useScrollFade";
-import { useOrshotRender } from "./utils/useOrshotRender";
+} from "@web/src/components/listings/create/domain/listingCreateUtils";
+import { useStickyHeader } from "@web/src/components/listings/create/shared/hooks/useStickyHeader";
+import { useScrollFade } from "@web/src/components/listings/create/shared/hooks/useScrollFade";
+import { useOrshotRender } from "@web/src/components/listings/create/domain/hooks/useOrshotRender";
+import { useContentGeneration } from "@web/src/components/listings/create/domain/hooks/useContentGeneration";
+import type { ListingImagePreviewItem } from "@web/src/components/listings/create/shared/types";
 import {
-  useContentGeneration,
-  GENERATED_BATCH_SIZE
-} from "./utils/useContentGeneration";
-import { cn } from "../../ui/utils";
-import { Button } from "../../ui/button";
+  LISTING_CREATE_GENERATED_BATCH_SIZE,
+  MEDIA_TAB_LABELS,
+  SUBCATEGORY_LABELS,
+  type ListingCreateMediaTab
+} from "@web/src/components/listings/create/shared/constants";
+import { cn } from "@web/src/components/ui/utils";
+import { Button } from "@web/src/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger
-} from "../../ui/dropdown-menu";
+} from "@web/src/components/ui/dropdown-menu";
 import {
   Camera,
   ChevronDown,
@@ -44,7 +45,7 @@ import {
   RefreshCw,
   Settings
 } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipTrigger } from "../../ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@web/src/components/ui/tooltip";
 import {
   LISTING_CONTENT_SUBCATEGORIES,
   type ListingContentSubcategory
@@ -61,20 +62,7 @@ type ListingCreateViewProps = {
   initialSubcategory?: ListingContentSubcategory;
 };
 
-const SUBCATEGORY_LABELS: Record<ListingContentSubcategory, string> = {
-  new_listing: "New Listing",
-  open_house: "Open House",
-  price_change: "Price Change",
-  status_update: "Status Update",
-  property_features: "Property Features"
-};
-
-export type ListingCreateMediaTab = "videos" | "images";
-
-const MEDIA_TAB_LABELS: Record<ListingCreateMediaTab, string> = {
-  videos: "Videos",
-  images: "Photos"
-};
+export type { ListingCreateMediaTab } from "@web/src/components/listings/create/shared/constants";
 
 export function ListingCreateView({
   listingId,
@@ -234,7 +222,7 @@ export function ListingCreateView({
     loadingCount > 0
       ? loadingCount
       : activeMediaTab === "images" && isOrshotRendering
-        ? GENERATED_BATCH_SIZE
+        ? LISTING_CREATE_GENERATED_BATCH_SIZE
         : 0;
   const activePreviewPlans = React.useMemo(() => {
     if (activeMediaTab !== "videos") {

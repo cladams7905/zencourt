@@ -1,6 +1,6 @@
 import type { PreviewTimelineClip } from "@web/src/lib/video/previewTimeline";
-import type { ContentItem } from "../../../dashboard/ContentGrid";
-import type { ListingImagePreviewItem } from "./../ListingImagePreviewGrid";
+import type { ContentItem } from "@web/src/components/dashboard/ContentGrid";
+import type { ListingImagePreviewItem } from "@web/src/components/listings/create/shared/types";
 import type {
   OrshotCaptionItemInput,
   ListingOrshotRenderedItem

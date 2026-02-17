@@ -160,6 +160,37 @@ Also use shared helpers for storage URL parsing/building (`extractStorageKeyFrom
 
 Video job details live in `apps/video-server/README.md`. Keep this file focused on web app usage unless the task is video-server specific.
 
+### 4. Large Component Organizational Standard (Web)
+
+For large/monolithic frontend components (typically >200-300 LOC or files mixing orchestration + async + mapping + rendering), use this standard structure so domains are consistent across the app:
+
+```
+feature/
+  orchestrators/      # container wiring and cross-subdomain state
+  shared/             # shared constants/types/hooks for that feature
+  domain/             # business logic and feature behavior
+    hooks/
+    ...               # keep supporting files flat unless multiple files justify a subfolder
+  media/              # optional subdomains (e.g. image/video)
+    image/
+      components/
+      ...             # only create subfolders when they contain multiple files
+    video/
+      components/
+      ...
+```
+
+Rules:
+
+- Keep `orchestrators/` thin; no heavy business logic.
+- Keep rendering in `components/`, behavior in `hooks/`, pure transforms in `view-models/`.
+- Put API/protocol code in `services/`; model conversion in `mappers/`.
+- Avoid top-level catch-all `utils/` unless scoped under a domain.
+- Centralize shared feature contracts in `shared/types.ts` rather than importing types from presentation components.
+- Use `index.ts` barrel files at major boundaries (`feature`, `orchestrators`, `shared`, `domain`, `media/*`) for stable imports.
+- Prefer this pattern only for complex domains; keep small/simple components flat.
+- **Single-file folder rule:** if a folder only contains one non-index file, flatten it (do not keep a dedicated subfolder for one file).
+
 ### 5. Database Access Consistency
 
 - Use `@db/client` for **all** DB access (web + video-server) to guarantee a single source of schema and Drizzle helpers.

@@ -9,7 +9,7 @@ import { getListingVideoStatus } from "@web/src/server/services/videoStatusServi
 import {
   ListingCreateView,
   type ListingCreateMediaTab
-} from "@web/src/components/listings/create/ListingCreateView";
+} from "@web/src/components/listings/create/orchestrators";
 import type { ContentItem } from "@web/src/components/dashboard/ContentGrid";
 import {
   LISTING_CONTENT_SUBCATEGORIES,

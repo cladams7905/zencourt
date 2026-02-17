@@ -1,15 +1,18 @@
 import * as React from "react";
-import type { ContentItem } from "../../../dashboard/ContentGrid";
-import type { ListingImagePreviewItem } from "./../ListingImagePreviewGrid";
+import type { ContentItem } from "@web/src/components/dashboard/ContentGrid";
 import type { ListingOrshotRenderResult } from "@web/src/lib/orshot/types";
 import type { ListingContentSubcategory } from "@shared/types/models";
-import type { ListingCreateMediaTab } from "./../ListingCreateView";
 import {
   buildOrshotCaptionItems,
   mapOrshotItemsToPreviewItems
-} from "./listingCreateUtils";
+} from "@web/src/components/listings/create/domain/listingCreateUtils";
+import type { ListingImagePreviewItem } from "@web/src/components/listings/create/shared/types";
+import {
+  LISTING_CREATE_GENERATED_BATCH_SIZE,
+  type ListingCreateMediaTab
+} from "@web/src/components/listings/create/shared/constants";
 
-const GENERATED_BATCH_SIZE = 4;
+const GENERATED_BATCH_SIZE = LISTING_CREATE_GENERATED_BATCH_SIZE;
 let orshotDisabledForSession = false;
 
 export function useOrshotRender(params: {
