@@ -4,7 +4,7 @@ import type { ContentItem } from "@web/src/components/dashboard/ContentGrid";
 import type { ListingContentSubcategory } from "@shared/types/models";
 import { extractJsonItemsFromStream } from "@web/src/lib/streamParsing";
 import {
-  LISTING_CREATE_GENERATED_BATCH_SIZE,
+  GENERATED_BATCH_SIZE,
   SUBCATEGORY_LABELS,
   type ListingCreateMediaTab
 } from "@web/src/components/listings/create/shared/constants";
@@ -21,7 +21,6 @@ import {
 } from "@web/src/components/listings/create/domain/contentGenerationStream";
 import type { StreamedContentItem } from "@web/src/components/listings/create/domain/contentGenerationTypes";
 
-const GENERATED_BATCH_SIZE = LISTING_CREATE_GENERATED_BATCH_SIZE;
 const INITIAL_SKELETON_HOLD_MS = 350;
 
 const generateUUID = () => {
@@ -30,8 +29,6 @@ const generateUUID = () => {
   }
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 };
-
-export { GENERATED_BATCH_SIZE };
 
 export function useContentGeneration(params: {
   listingId: string;

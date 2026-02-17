@@ -8,12 +8,9 @@ import {
 } from "@web/src/components/listings/create/domain/listingCreateUtils";
 import type { ListingImagePreviewItem } from "@web/src/components/listings/create/shared/types";
 import {
-  LISTING_CREATE_GENERATED_BATCH_SIZE,
+  GENERATED_BATCH_SIZE,
   type ListingCreateMediaTab
 } from "@web/src/components/listings/create/shared/constants";
-
-const GENERATED_BATCH_SIZE = LISTING_CREATE_GENERATED_BATCH_SIZE;
-let orshotDisabledForSession = false;
 
 export function useOrshotRender(params: {
   listingId: string;
@@ -39,7 +36,12 @@ export function useOrshotRender(params: {
   >([]);
   const [isRendering, setIsRendering] = React.useState(false);
   const [renderError, setRenderError] = React.useState<string | null>(null);
+  const [isOrshotDisabled, setIsOrshotDisabled] = React.useState(false);
   const requestRef = React.useRef(0);
+
+  React.useEffect(() => {
+    setIsOrshotDisabled(false);
+  }, [listingId]);
 
   React.useEffect(() => {
     if (activeMediaTab !== "images") {
@@ -58,7 +60,8 @@ export function useOrshotRender(params: {
       setRenderError(null);
       return;
     }
-    if (orshotDisabledForSession) {
+    if (isOrshotDisabled) {
+      setIsRendering(false);
       setRenderError("Orshot is unavailable. Showing fallback.");
       setPreviewItems([]);
       return;
@@ -68,6 +71,7 @@ export function useOrshotRender(params: {
     requestRef.current = requestId;
     setIsRendering(true);
     setRenderError(null);
+    const controller = new AbortController();
 
     void fetch(`/api/v1/listings/${listingId}/orshot/render`, {
       method: "POST",
@@ -77,7 +81,8 @@ export function useOrshotRender(params: {
         captionItems: orshotCaptionItems.slice(0, GENERATED_BATCH_SIZE),
         templateCount: GENERATED_BATCH_SIZE
       }),
-      cache: "no-store"
+      cache: "no-store",
+      signal: controller.signal
     })
       .then(async (response) => {
         if (!response.ok) {
@@ -107,12 +112,15 @@ export function useOrshotRender(params: {
         if (requestRef.current !== requestId) {
           return;
         }
+        if ((error as Error).name === "AbortError") {
+          return;
+        }
         const message =
           error instanceof Error
             ? error.message
             : "Failed to render Orshot templates";
         if (message.includes("ORSHOT_API_KEY")) {
-          orshotDisabledForSession = true;
+          setIsOrshotDisabled(true);
         }
         setRenderError(message);
         setPreviewItems([]);
@@ -122,10 +130,15 @@ export function useOrshotRender(params: {
           setIsRendering(false);
         }
       });
+
+    return () => {
+      controller.abort();
+    };
   }, [
     captionItems,
     activeMediaTab,
     activeSubcategory,
+    isOrshotDisabled,
     isGenerating,
     listingId
   ]);

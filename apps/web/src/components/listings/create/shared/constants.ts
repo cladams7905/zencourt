@@ -15,4 +15,4 @@ export const SUBCATEGORY_LABELS: Record<ListingContentSubcategory, string> = {
   property_features: "Property Features"
 };
 
-export const LISTING_CREATE_GENERATED_BATCH_SIZE = 4;
+export const GENERATED_BATCH_SIZE = 4;

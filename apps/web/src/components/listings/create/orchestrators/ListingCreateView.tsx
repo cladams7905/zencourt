@@ -25,7 +25,7 @@ import { useOrshotRender } from "@web/src/components/listings/create/domain/hook
 import { useContentGeneration } from "@web/src/components/listings/create/domain/hooks/useContentGeneration";
 import type { ListingImagePreviewItem } from "@web/src/components/listings/create/shared/types";
 import {
-  LISTING_CREATE_GENERATED_BATCH_SIZE,
+  GENERATED_BATCH_SIZE,
   MEDIA_TAB_LABELS,
   SUBCATEGORY_LABELS,
   type ListingCreateMediaTab
@@ -45,7 +45,11 @@ import {
   RefreshCw,
   Settings
 } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@web/src/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger
+} from "@web/src/components/ui/tooltip";
 import {
   LISTING_CONTENT_SUBCATEGORIES,
   type ListingContentSubcategory
@@ -222,7 +226,7 @@ export function ListingCreateView({
     loadingCount > 0
       ? loadingCount
       : activeMediaTab === "images" && isOrshotRendering
-        ? LISTING_CREATE_GENERATED_BATCH_SIZE
+        ? GENERATED_BATCH_SIZE
         : 0;
   const activePreviewPlans = React.useMemo(() => {
     if (activeMediaTab !== "videos") {
