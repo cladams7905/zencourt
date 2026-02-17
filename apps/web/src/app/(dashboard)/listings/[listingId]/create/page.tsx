@@ -5,7 +5,6 @@ import {
   getListingById,
   updateListing
 } from "@web/src/server/actions/db/listings";
-import { getContentByListingId } from "@web/src/server/actions/db/content";
 import { getListingVideoStatus } from "@web/src/server/services/videoStatusService";
 import {
   ListingCreateView,
@@ -95,48 +94,7 @@ export default async function ListingCreatePage({
       alt: job.roomName ? `${job.roomName} clip` : "Generated clip"
     }));
   const listingImages = await getListingImages(user.id, listingId);
-  const listingContent = await getContentByListingId(user.id, listingId);
-  const listingPostItems: ContentItem[] = listingContent
-    .filter((entry) => entry.contentType === "post")
-    .sort((a, b) => {
-      const sortA =
-        typeof (a.metadata as Record<string, unknown> | null)?.sortOrder ===
-        "number"
-          ? ((a.metadata as Record<string, unknown>).sortOrder as number)
-          : 0;
-      const sortB =
-        typeof (b.metadata as Record<string, unknown> | null)?.sortOrder ===
-        "number"
-          ? ((b.metadata as Record<string, unknown>).sortOrder as number)
-          : 0;
-      return sortA - sortB;
-    })
-    .map((entry) => {
-      const metadata = (entry.metadata ?? {}) as Record<string, unknown>;
-      return {
-        id: entry.id,
-        aspectRatio: "square",
-        isFavorite: entry.isFavorite ?? false,
-        hook: typeof metadata.hook === "string" ? metadata.hook : undefined,
-        caption:
-          typeof metadata.caption === "string" ? metadata.caption : null,
-        body: Array.isArray(metadata.body)
-          ? (metadata.body as ContentItem["body"])
-          : null,
-        brollQuery:
-          typeof metadata.broll_query === "string"
-            ? metadata.broll_query
-            : null,
-        listingSubcategory:
-          typeof metadata.listingSubcategory === "string"
-            ? (metadata.listingSubcategory as ListingContentSubcategory)
-            : null,
-        mediaType:
-          metadata.mediaType === "image" || metadata.mediaType === "video"
-            ? metadata.mediaType
-            : "video"
-      } satisfies ContentItem;
-    });
+  const listingPostItems: ContentItem[] = [];
   return (
     <ListingCreateView
       listingId={listingId}

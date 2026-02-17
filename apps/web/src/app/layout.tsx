@@ -5,8 +5,12 @@ import { Toaster } from "../components/ui/sonner";
 import {
   Playfair_Display,
   Mulish,
-  Libre_Caslon_Text,
-  Rouge_Script
+  Italiana,
+  Rouge_Script,
+  TikTok_Sans,
+  Gwendolyn,
+  DM_Serif_Text,
+  Onest
 } from "next/font/google";
 import "./globals.css";
 
@@ -24,10 +28,12 @@ const header = Playfair_Display({
   display: "swap"
 });
 
-const libre = Libre_Caslon_Text({
+// |---------- BEGIN Text Overlay Fonts -------------|
+
+const italiana = Italiana({
   subsets: ["latin"],
   weight: ["400"],
-  variable: "--font-libre",
+  variable: "--font-italiana",
   display: "swap"
 });
 
@@ -37,6 +43,36 @@ const rougeScript = Rouge_Script({
   variable: "--font-rouge",
   display: "swap"
 });
+
+const gwendolyn = Gwendolyn({
+  subsets: ["latin"],
+  weight: ["700"],
+  variable: "--font-gwendolyn",
+  display: "swap"
+});
+
+const tikTokSans = TikTok_Sans({
+  subsets: ["latin"],
+  weight: ["600", "700"],
+  variable: "--font-tiktok",
+  display: "swap"
+});
+
+const dmSerif = DM_Serif_Text({
+  subsets: ["latin"],
+  weight: ["400"],
+  variable: "--font-dm-serif",
+  display: "swap"
+});
+
+const onest = Onest({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-onest",
+  display: "swap"
+});
+
+// |---------- END Text Overlay Fonts -------------|
 
 export const metadata: Metadata = {
   title: "Zencourt - Home",
@@ -51,7 +87,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${body.variable} ${header.variable} ${libre.variable} ${rougeScript.variable}`}
+      className={`${body.variable} ${header.variable} ${italiana.variable} ${rougeScript.variable} ${gwendolyn.variable} ${tikTokSans.variable} ${dmSerif.variable} ${onest.variable}`}
     >
       <body className="antialiased">
         <StackProvider app={stackClientApp}>

@@ -1,0 +1,1 @@
+ALTER TABLE "video_gen_jobs" DROP COLUMN "generation_model";

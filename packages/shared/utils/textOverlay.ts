@@ -109,6 +109,34 @@ export function pickPreviewTextOverlayVariant(seed: string): OverlayVariant {
   return PREVIEW_TEXT_OVERLAY_VARIANTS[index]!;
 }
 
+const RICH_OVERLAY_POSITION_OPTIONS: PreviewTextOverlay["position"][] = [
+  "top-third",
+  "center",
+  "bottom-third"
+];
+
+export function pickRichOverlayPosition(
+  seed: string
+): PreviewTextOverlay["position"] {
+  const index = hashTextOverlaySeed(`${seed}:position`) % 3;
+  return RICH_OVERLAY_POSITION_OPTIONS[index] ?? "center";
+}
+
+export function pickRichOverlayFontPairing(seed: string): OverlayFontPairing {
+  const index =
+    hashTextOverlaySeed(`${seed}:font-pairing`) %
+    RICH_OVERLAY_FONT_PAIRINGS.length;
+  return RICH_OVERLAY_FONT_PAIRINGS[index] ?? "block-rouge-italiana";
+}
+
+export function pickRichOverlayFontPairingForVariation(
+  variationNumber: number
+): OverlayFontPairing {
+  const normalizedVariation = Math.max(1, Math.floor(variationNumber));
+  const index = (normalizedVariation - 1) % RICH_OVERLAY_FONT_PAIRINGS.length;
+  return RICH_OVERLAY_FONT_PAIRINGS[index] ?? "block-rouge-italiana";
+}
+
 // ---------------------------------------------------------------------------
 // Font families
 // ---------------------------------------------------------------------------
@@ -118,7 +146,7 @@ export const PREVIEW_TEXT_OVERLAY_FONT_FAMILY: Record<
   string
 > = {
   "serif-elegant":
-    'var(--font-libre, "Libre Calson Text"), "Times New Roman", serif',
+    'var(--font-italiana, "Italiana"), "Times New Roman", serif',
   "serif-classic": 'Georgia, "Times New Roman", serif',
   "sans-modern":
     'var(--font-body, "Mulish"), "Avenir Next", "Segoe UI", Arial, sans-serif'
@@ -126,6 +154,26 @@ export const PREVIEW_TEXT_OVERLAY_FONT_FAMILY: Record<
 
 export const OVERLAY_SCRIPT_FONT_FAMILY =
   'var(--font-rouge, "Rouge Script"), cursive';
+export const OVERLAY_ROUGE_FONT_FAMILY =
+  'var(--font-rouge, "Rouge Script"), cursive';
+export const OVERLAY_GWENDOLYN_FONT_FAMILY =
+  'var(--font-gwendolyn, "Gwendolyn"), cursive';
+export const OVERLAY_TIKTOK_FONT_FAMILY =
+  'var(--font-tiktok, "TikTok Sans"), "Arial Black", "Helvetica Neue", sans-serif';
+export const OVERLAY_DM_SERIF_FONT_FAMILY =
+  'var(--font-dm-serif, "DM Serif Text"), "Times New Roman", serif';
+export const OVERLAY_ITALIANA_FONT_FAMILY =
+  'var(--font-italiana, "Italiana"), "Times New Roman", serif';
+export const OVERLAY_ONEST_FONT_FAMILY =
+  'var(--font-onest, "Onest"), "Avenir Next", "Segoe UI", Arial, sans-serif';
+
+export const RICH_OVERLAY_FONT_PAIRINGS = [
+  "block-rouge-italiana",
+  "block-league-dm",
+  "block-rouge-onest",
+  "serif-dm-gwendolyn",
+  "serif-italiana-rouge"
+] as const satisfies readonly OverlayFontPairing[];
 
 // ---------------------------------------------------------------------------
 // Font pairings — maps each pairing to font-family + weight per role.
@@ -189,6 +237,61 @@ export const OVERLAY_FONT_PAIRINGS: Record<
       fontFamily: PREVIEW_TEXT_OVERLAY_FONT_FAMILY["sans-modern"],
       fontWeight: 400
     }
+  },
+  "block-rouge-italiana": {
+    headline: {
+      fontFamily: OVERLAY_TIKTOK_FONT_FAMILY,
+      fontWeight: 700
+    },
+    accent: { fontFamily: OVERLAY_ROUGE_FONT_FAMILY, fontWeight: 400 },
+    body: {
+      fontFamily: OVERLAY_ITALIANA_FONT_FAMILY,
+      fontWeight: 700
+    }
+  },
+  "block-league-dm": {
+    headline: {
+      fontFamily: OVERLAY_TIKTOK_FONT_FAMILY,
+      fontWeight: 700
+    },
+    accent: { fontFamily: OVERLAY_GWENDOLYN_FONT_FAMILY, fontWeight: 700 },
+    body: {
+      fontFamily: OVERLAY_DM_SERIF_FONT_FAMILY,
+      fontWeight: 400
+    }
+  },
+  "block-rouge-onest": {
+    headline: {
+      fontFamily: OVERLAY_TIKTOK_FONT_FAMILY,
+      fontWeight: 600
+    },
+    accent: { fontFamily: OVERLAY_ROUGE_FONT_FAMILY, fontWeight: 400 },
+    body: {
+      fontFamily: OVERLAY_ONEST_FONT_FAMILY,
+      fontWeight: 500
+    }
+  },
+  "serif-dm-gwendolyn": {
+    headline: {
+      fontFamily: OVERLAY_DM_SERIF_FONT_FAMILY,
+      fontWeight: 400
+    },
+    accent: { fontFamily: OVERLAY_GWENDOLYN_FONT_FAMILY, fontWeight: 700 },
+    body: {
+      fontFamily: OVERLAY_ONEST_FONT_FAMILY,
+      fontWeight: 500
+    }
+  },
+  "serif-italiana-rouge": {
+    headline: {
+      fontFamily: OVERLAY_ITALIANA_FONT_FAMILY,
+      fontWeight: 500
+    },
+    accent: { fontFamily: OVERLAY_ROUGE_FONT_FAMILY, fontWeight: 400 },
+    body: {
+      fontFamily: OVERLAY_DM_SERIF_FONT_FAMILY,
+      fontWeight: 400
+    }
   }
 };
 
@@ -238,34 +341,35 @@ export const OVERLAY_TEMPLATES: Record<
     lines: [
       {
         fontRole: "accent",
-        fontSizeScale: 0.9,
+        fontSizeScale: 0.88,
         textTransform: "none",
         fontStyle: "normal"
       },
       {
         fontRole: "headline",
-        fontSizeScale: 2.1,
+        fontSizeScale: 2.05,
         textTransform: "none",
         fontStyle: "normal"
       },
       {
         fontRole: "accent",
-        fontSizeScale: 0.9,
+        fontSizeScale: 0.88,
         textTransform: "none",
         fontStyle: "normal"
       }
     ],
     layout: {
-      lineHeightScale: 0.88,
+      lineHeightScale: 0.76,
       lineMarginTopByIndex: {
-        1: "0.14em",
-        2: "0.14em"
+        1: "0.06em",
+        2: "0.08em"
       },
       lineMarginBottomByIndex: {
-        1: "0.14em"
+        1: "0.06em"
       },
       letterSpacingByRole: {
-        headline: "-0.055em"
+        headline: "-0.045em",
+        accent: "-0.01em"
       }
     }
   },
@@ -284,18 +388,20 @@ export const OVERLAY_TEMPLATES: Record<
         textTransform: "none",
         fontStyle: "normal"
       }
-    ]
-  },
-  "script-headline": {
-    pattern: "script-headline",
-    lines: [
-      {
-        fontRole: "accent",
-        fontSizeScale: 2.2,
-        textTransform: "none",
-        fontStyle: "normal"
+    ],
+    layout: {
+      lineHeightScale: 0.78,
+      lineMarginTopByIndex: {
+        1: "0.08em"
+      },
+      lineMarginBottomByIndex: {
+        0: "0.04em"
+      },
+      letterSpacingByRole: {
+        headline: "-0.035em",
+        accent: "-0.01em"
       }
-    ]
+    }
   }
 };
 
@@ -345,17 +451,7 @@ const OVERLAY_TEMPLATE_LINE_BUILDERS: Record<
       lines.push({ text: accent, fontRole: "accent" });
     }
     return lines;
-  },
-  "script-headline": (input, fallbackText) => [
-    {
-      text:
-        input.accent_top ??
-        input.accent_bottom ??
-        input.headline ??
-        fallbackText,
-      fontRole: "accent"
-    }
-  ]
+  }
 };
 
 export function resolveOverlayTemplatePattern(
@@ -436,6 +532,47 @@ export function appendRandomHeaderSuffix(
   return emoji ? `${trimmedHeader} ${emoji}` : trimmedHeader;
 }
 
+export interface InlineTextSegment {
+  text: string;
+  italic: boolean;
+}
+
+const INLINE_ITALIC_PATTERN = /\*([^*]+)\*/g;
+
+export function parseInlineItalicSegments(text: string): InlineTextSegment[] {
+  if (!text) {
+    return [{ text: "", italic: false }];
+  }
+
+  const segments: InlineTextSegment[] = [];
+  let lastIndex = 0;
+
+  for (const match of text.matchAll(INLINE_ITALIC_PATTERN)) {
+    const matchedText = match[0];
+    const italicText = match[1];
+    const matchIndex = match.index ?? -1;
+    if (!matchedText || !italicText || matchIndex < 0) {
+      continue;
+    }
+
+    if (matchIndex > lastIndex) {
+      segments.push({
+        text: text.slice(lastIndex, matchIndex),
+        italic: false
+      });
+    }
+
+    segments.push({ text: italicText, italic: true });
+    lastIndex = matchIndex + matchedText.length;
+  }
+
+  if (lastIndex < text.length) {
+    segments.push({ text: text.slice(lastIndex), italic: false });
+  }
+
+  return segments.length > 0 ? segments : [{ text, italic: false }];
+}
+
 export const PREVIEW_TEXT_OVERLAY_ARROW_PATHS = [
   "/overlays/arrows/noun-arrow-2581915.svg",
   "/overlays/arrows/noun-arrow-3004573.svg",
@@ -459,7 +596,8 @@ export const PREVIEW_TEXT_OVERLAY_ARROW_PATHS = [
 
 function buildOverlayArrowSeed(overlay: PreviewTextOverlay): string {
   const lineSeed =
-    overlay.lines?.map((line) => `${line.fontRole}:${line.text}`).join("|") ?? "";
+    overlay.lines?.map((line) => `${line.fontRole}:${line.text}`).join("|") ??
+    "";
   return `${overlay.templatePattern ?? "simple"}:${overlay.text}:${lineSeed}`;
 }
 

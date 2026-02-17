@@ -622,8 +622,6 @@ function buildListingDataXml(
 
   return [
     "<listing_data>",
-    "Use this structured listing data as the primary factual source for listing content.",
-    "Do not fabricate missing values.",
     "```json",
     JSON.stringify(sanitizedListingData, null, 2),
     "```",
@@ -635,14 +633,20 @@ async function loadHookTemplates(input: PromptAssemblyInput): Promise<{
   hookTemplates: string[];
 }> {
   const { category } = input;
-  const globalHooksContent = await readPromptFile("hooks/global-hooks.md");
   const normalizedSubcategory = normalizeListingSubcategory(
     input.listing_subcategory
   );
-  const categoryFile =
-    category === "listing" && normalizedSubcategory
-      ? LISTING_SUBCATEGORY_HOOK_FILES[normalizedSubcategory]
-      : CATEGORY_HOOK_FILES[category];
+  const isListingWithSubcategory =
+    category === "listing" && normalizedSubcategory !== null;
+
+  // Skip global hooks for listing subcategories — subcategory hooks are
+  // already 20-25 templates and more relevant than generic global hooks.
+  const globalHooksContent = isListingWithSubcategory
+    ? ""
+    : await readPromptFile("hooks/global-hooks.md");
+  const categoryFile = isListingWithSubcategory
+    ? LISTING_SUBCATEGORY_HOOK_FILES[normalizedSubcategory]
+    : CATEGORY_HOOK_FILES[category];
   const categoryHooksContent = categoryFile
     ? await readPromptFile(categoryFile)
     : "";
@@ -801,8 +805,7 @@ ${agentProfile}
 ${audienceSummary}
 
 <hooks>
-Use these hook templates as the required source for hook phrasing. Pick one per item and adapt it with specifics.
-Hooks must be 3-10 words and come from the hook templates list.
+Pick one hook template per item and adapt it with specifics from the context provided.
 <hook_templates>
 ${formatTemplateList(hookTemplates)}
 </hook_templates>

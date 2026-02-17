@@ -1,6 +1,7 @@
 import type { PreviewTextOverlay } from "../types/video";
 import {
   OVERLAY_FONT_PAIRINGS,
+  OVERLAY_ITALIANA_FONT_FAMILY,
   getOverlayTemplate,
   PREVIEW_TEXT_OVERLAY_FONT_FAMILY,
   PREVIEW_TEXT_OVERLAY_LINE_HEIGHT,
@@ -37,6 +38,21 @@ function normalizeOverlayLineText(text: string): string {
   return trimmed
     .toLowerCase()
     .replace(/\b([a-z])/g, (match) => match.toUpperCase());
+}
+
+function isTikTokFont(fontFamily: string): boolean {
+  return (
+    fontFamily.includes("var(--font-tiktok") ||
+    fontFamily.includes("TikTok Sans")
+  );
+}
+
+function isItalianaFont(fontFamily: string): boolean {
+  return (
+    fontFamily.includes("var(--font-italiana") ||
+    fontFamily.includes("Italiana") ||
+    fontFamily.includes(OVERLAY_ITALIANA_FONT_FAMILY)
+  );
 }
 
 /**
@@ -96,6 +112,7 @@ export function computeOverlayLineStyles(
     const isRougeScript =
       resolvedFontFamily.includes("var(--font-rouge") ||
       resolvedFontFamily.includes("Rouge Script");
+    const useTikTokUppercase = isTikTokFont(resolvedFontFamily);
     const baseWeight = roleStyle?.fontWeight ?? 400;
     const fontSize =
       baseFontSizePx * scale * multiFontSizeBoost * (isRougeScript ? 1.25 : 1);
@@ -109,24 +126,33 @@ export function computeOverlayLineStyles(
     const marginBottom = templateLayout?.lineMarginBottomByIndex?.[index] ?? 0;
     const roleLetterSpacing =
       templateLayout?.letterSpacingByRole?.[line.fontRole];
+    const resolvedLetterSpacing = isItalianaFont(resolvedFontFamily)
+      ? line.fontRole === "headline"
+        ? "-0.05em"
+        : PREVIEW_TEXT_OVERLAY_LETTER_SPACING
+      : (roleLetterSpacing ?? PREVIEW_TEXT_OVERLAY_LETTER_SPACING);
 
     return {
-      text: isRougeScript
-        ? line.text.toLowerCase()
-        : normalizeOverlayLineText(line.text),
+      text: useTikTokUppercase
+        ? line.text.toUpperCase()
+        : isRougeScript
+          ? line.text.toLowerCase()
+          : normalizeOverlayLineText(line.text),
       fontFamily: resolvedFontFamily,
       fontWeight: isRougeScript ? Math.max(baseWeight, 700) : baseWeight,
       fontSize,
       textTransform: isRougeScript
         ? "none"
-        : (templateLine?.textTransform ?? "none"),
+        : useTikTokUppercase
+          ? "uppercase"
+          : (templateLine?.textTransform ?? "none"),
       fontStyle: isRougeScript
         ? "normal"
         : (templateLine?.fontStyle ?? "normal"),
       lineHeight:
         PREVIEW_TEXT_OVERLAY_LINE_HEIGHT *
         (templateLayout?.lineHeightScale ?? 1),
-      letterSpacing: roleLetterSpacing ?? PREVIEW_TEXT_OVERLAY_LETTER_SPACING,
+      letterSpacing: resolvedLetterSpacing,
       textShadow: useNoBackgroundTextShadow
         ? PREVIEW_TEXT_OVERLAY_NO_BACKGROUND_TEXT_SHADOW
         : "none",

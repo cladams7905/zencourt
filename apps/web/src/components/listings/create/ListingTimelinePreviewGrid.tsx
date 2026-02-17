@@ -17,6 +17,8 @@ import type { ListingContentSubcategory } from "@shared/types/models";
 import {
   hashTextOverlaySeed,
   pickPreviewTextOverlayVariant,
+  pickRichOverlayFontPairing,
+  pickRichOverlayPosition,
   buildOverlayTemplateLines,
   appendRandomHeaderSuffix,
   pickSandwichOverlayArrowPath,
@@ -179,6 +181,7 @@ function buildRichOverlay(
   );
   const isRichTemplate = templatePattern !== "simple";
   const simpleSeedBase = `${slideData.plainText}:${normalizedOverlay?.headline ?? "simple"}:${variant.position}:${variant.fontPairing}`;
+  const richSeedBase = `${slideData.plainText}:${normalizedOverlay?.headline ?? "rich"}:${variant.position}`;
   const brownBackgroundOptions: PreviewTextOverlay["background"][] = [
     "brown",
     "brown-700",
@@ -236,12 +239,18 @@ function buildRichOverlay(
 
   return {
     text: slideData.plainText,
-    position: templatePattern === "simple" ? simplePosition : "center",
+    position:
+      templatePattern === "simple"
+        ? simplePosition
+        : pickRichOverlayPosition(richSeedBase),
     background: isRichTemplate ? "none" : simpleBackground,
     font: variant.font,
     templatePattern,
     lines: resolvedLines,
-    fontPairing: variant.fontPairing
+    fontPairing:
+      templatePattern === "simple"
+        ? variant.fontPairing
+        : pickRichOverlayFontPairing(richSeedBase)
   };
 }
 
@@ -351,7 +360,7 @@ function ThumbnailTextOverlay({
                 aria-hidden
                 style={{
                   display: "block",
-                  margin: `${overlayPxToCqw(8)} auto 0`,
+                  margin: `${overlayPxToCqw(3)} auto 0`,
                   width: overlayPxToCqw(220),
                   maxWidth: "100%",
                   opacity: 0.95,

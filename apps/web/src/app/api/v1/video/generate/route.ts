@@ -557,7 +557,6 @@ export async function POST(
         status: "pending",
         videoUrl: null,
         thumbnailUrl: null,
-        generationModel: "veo3.1_fast",
         generationSettings: {
           model: "veo3.1_fast",
           orientation,
@@ -626,7 +625,6 @@ export async function POST(
             status: "pending",
             videoUrl: null,
             thumbnailUrl: null,
-            generationModel: "veo3.1_fast",
             generationSettings: {
               model: "veo3.1_fast",
               orientation,

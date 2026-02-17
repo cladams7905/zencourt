@@ -72,7 +72,8 @@ These hook templates are specifically designed for educational content, how-to g
 ## Mistakes & Warnings
 
 - Mistakes I made when {action}
-- Common pitfalls when buying/selling in {location}
+- {number} things nobody warns you about before listing your home
+- {number} common pitfalls when buying/selling in {location}
 - This is the biggest mistake I see sellers make (and how to avoid it)
 - What's the number one mistake sellers make before listing?
 - {number} mistakes {demographic} makes during {topic}

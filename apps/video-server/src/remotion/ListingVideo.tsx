@@ -5,8 +5,12 @@ import {
   useVideoConfig,
   Video
 } from "remotion";
-import { loadFont as loadCormorant } from "@remotion/google-fonts/CormorantGaramond";
 import { loadFont as loadRougeScript } from "@remotion/google-fonts/RougeScript";
+import { loadFont as loadGwendolyn } from "@remotion/google-fonts/Gwendolyn";
+import { loadFont as loadTikTokSans } from "@remotion/google-fonts/TikTokSans";
+import { loadFont as loadDMSerifText } from "@remotion/google-fonts/DMSerifText";
+import { loadFont as loadItaliana } from "@remotion/google-fonts/Italiana";
+import { loadFont as loadOnest } from "@remotion/google-fonts/Onest";
 import type { PreviewTextOverlay } from "@shared/types/video";
 import {
   PREVIEW_TEXT_OVERLAY_BACKGROUND_COLOR,
@@ -19,8 +23,12 @@ import {
   computeOverlayLineStyles
 } from "@shared/utils";
 
-loadCormorant();
 loadRougeScript();
+loadGwendolyn();
+loadTikTokSans();
+loadDMSerifText();
+loadItaliana();
+loadOnest();
 
 export type ListingClip = {
   src: string;

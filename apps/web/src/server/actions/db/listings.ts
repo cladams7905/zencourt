@@ -126,22 +126,11 @@ export async function createListing(userId: string): Promise<DBListing> {
           })
           .returning();
 
-        const [primaryContent] = await tx
-          .insert(content)
-          .values({
-            id: nanoid(),
-            listingId,
-            userId,
-            contentType: "video",
-            status: "draft"
-          })
-          .returning();
-
         return {
           ...newListing,
-          primaryContentId: primaryContent.id,
-          thumbnailUrl: primaryContent.thumbnailUrl,
-          contents: [primaryContent]
+          primaryContentId: null,
+          thumbnailUrl: null,
+          contents: []
         };
       });
     },

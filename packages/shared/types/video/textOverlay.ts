@@ -22,14 +22,18 @@ export type OverlayFontRole = "headline" | "accent" | "body";
 export type OverlayTemplatePattern =
   | "simple"
   | "sandwich"
-  | "accent-headline"
-  | "script-headline";
+  | "accent-headline";
 
 export type OverlayFontPairing =
   | "elegant-script"
   | "modern-script"
   | "classic-clean"
-  | "script-forward";
+  | "script-forward"
+  | "block-rouge-italiana"
+  | "block-league-dm"
+  | "block-rouge-onest"
+  | "serif-dm-gwendolyn"
+  | "serif-italiana-rouge";
 
 export interface OverlayLine {
   text: string;

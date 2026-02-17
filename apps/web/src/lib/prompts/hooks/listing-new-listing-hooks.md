@@ -8,10 +8,12 @@
 - Why I am in love with this new listing at {address}
 - I think I found your next home in {county}
 - POV: You just stepped into your new home in {location}
-- You need to see this home before it's gone
+- You need to see this home before it's gone,
+- If I was moving to {location}, this is the home I would choose!
 - Can't wait to show you this {square_feet} sq ft stunner
 - Let me walk you through this {neighborhood} gem
 - This is exactly what you've been waiting for in {city}
+- Things we love about our {location} listing
 - I had to share this {price} listing with you right away
 - Something special just popped up in {neighborhood}
 - Found the perfect {property_type} in {city}

@@ -295,6 +295,51 @@ function rankListingImagesForItem(
   });
 }
 
+function hashImageSeed(value: string): number {
+  let hash = 2166136261;
+  for (let i = 0; i < value.length; i += 1) {
+    hash ^= value.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function gcd(a: number, b: number): number {
+  let x = Math.abs(a);
+  let y = Math.abs(b);
+  while (y !== 0) {
+    const t = x % y;
+    x = y;
+    y = t;
+  }
+  return x;
+}
+
+function buildVariedImageSequence(
+  images: ListingCreateImage[],
+  seed: string
+): ListingCreateImage[] {
+  if (images.length <= 1) {
+    return images;
+  }
+
+  const total = images.length;
+  const start = hashImageSeed(`${seed}:start`) % total;
+  let step = (hashImageSeed(`${seed}:step`) % (total - 1)) + 1;
+  while (gcd(step, total) !== 1) {
+    step = (step % (total - 1)) + 1;
+  }
+
+  const sequence: ListingCreateImage[] = [];
+  let cursor = start;
+  for (let i = 0; i < total; i += 1) {
+    sequence.push(images[cursor]!);
+    cursor = (cursor + step) % total;
+  }
+
+  return sequence;
+}
+
 export function ListingCreateView({
   listingId,
   title,
@@ -684,12 +729,15 @@ export function ListingCreateView({
         fallbackSortedImages,
         item
       );
+      const variedForItem = buildVariedImageSequence(
+        rankedForItem,
+        `${item.id}:${index}`
+      );
       const fallbackSlides = [
         {
           id: `${item.id}-slide-fallback`,
           imageUrl:
-            rankedForItem[index % rankedForItem.length]?.url ??
-            rankedForItem[0]?.url ??
+            variedForItem[0]?.url ??
             null,
           header: item.hook?.trim() || "Listing",
           content: item.caption?.trim() || "",
@@ -701,8 +749,8 @@ export function ListingCreateView({
           ? item.body.map((slide, slideIndex) => ({
               id: `${item.id}-slide-${slideIndex}`,
               imageUrl:
-                rankedForItem[slideIndex % rankedForItem.length]?.url ??
-                rankedForItem[0]?.url ??
+                variedForItem[slideIndex % variedForItem.length]?.url ??
+                variedForItem[0]?.url ??
                 null,
               header: slide.header?.trim() || item.hook?.trim() || "Listing",
               content: slide.content?.trim() || "",

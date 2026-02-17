@@ -12,8 +12,12 @@ import {
   buildOverlayTemplateLines,
   computeOverlayLineStyles,
   overlayPxToCqw,
+  parseInlineItalicSegments,
   pickSandwichOverlayArrowPath,
   pickPreviewTextOverlayVariant,
+  pickRichOverlayFontPairing,
+  pickRichOverlayFontPairingForVariation,
+  pickRichOverlayPosition,
   PREVIEW_TEXT_OVERLAY_BACKGROUND_COLOR,
   PREVIEW_TEXT_OVERLAY_BACKGROUND_COLOR_OPAQUE,
   PREVIEW_TEXT_OVERLAY_BORDER_RADIUS,
@@ -79,28 +83,43 @@ function resolveItemTemplatePattern(
 function buildPreviewOverlay(
   itemId: string,
   slide: ListingImagePreviewSlide,
-  slideIndex: number,
+  variationNumber: number,
   patternOverride?: Exclude<OverlayTemplatePattern, "simple">
 ): PreviewTextOverlay | null {
   const plainText = slide.header?.trim();
   if (!plainText && !slide.textOverlay?.headline?.trim()) {
     return null;
   }
-  const variant = pickPreviewTextOverlayVariant(`${itemId}-${slideIndex}`);
+  const variationSeed = `${itemId}:${variationNumber}`;
+  const variant = pickPreviewTextOverlayVariant(`${variationSeed}:base`);
   const { pattern, lines } = buildOverlayTemplateLines(
     slide.textOverlay,
     plainText || slide.textOverlay?.headline || "",
     patternOverride
   );
+  const hasSubheaders = Boolean(
+    slide.textOverlay?.accent_top?.trim() ||
+    slide.textOverlay?.accent_bottom?.trim()
+  );
 
   return {
     text: plainText || slide.textOverlay?.headline || "",
-    position: pattern === "simple" ? variant.position : "center",
+    position:
+      pattern === "simple"
+        ? variant.position
+        : pickRichOverlayPosition(variationSeed),
     background: pattern === "simple" ? variant.background : "none",
     font: variant.font,
     templatePattern: pattern,
     lines,
-    fontPairing: variant.fontPairing
+    fontPairing:
+      pattern === "simple"
+        ? variant.fontPairing
+        : hasSubheaders
+          ? pickRichOverlayFontPairingForVariation(variationNumber)
+          : pickRichOverlayFontPairing(
+              `${variationSeed}:${plainText || "headline"}`
+            )
   };
 }
 
@@ -168,7 +187,16 @@ function ImageTextOverlay({ overlay }: { overlay: PreviewTextOverlay }) {
                     : line.marginBottom
               }}
             >
-              {line.text}
+              {parseInlineItalicSegments(line.text).map(
+                (segment, segmentIndex) => (
+                  <span
+                    key={segmentIndex}
+                    style={segment.italic ? { fontStyle: "italic" } : undefined}
+                  >
+                    {segment.text}
+                  </span>
+                )
+              )}
             </div>
           ))}
           {arrowPath ? (
@@ -176,11 +204,11 @@ function ImageTextOverlay({ overlay }: { overlay: PreviewTextOverlay }) {
               src={arrowPath}
               alt=""
               aria-hidden
-              width={120}
+              width={80}
               height={20}
               style={{
                 display: "block",
-                margin: `${overlayPxToCqw(8)} auto 0`,
+                margin: `-${overlayPxToCqw(30)} auto 0`,
                 maxWidth: "100%",
                 opacity: 0.95,
                 filter: "invert(1) drop-shadow(0 2px 6px rgba(0, 0, 0, 0.45))"
@@ -231,7 +259,7 @@ export function ListingImagePreviewGrid({
       ? buildPreviewOverlay(
           selectedItem.id,
           selectedSlide,
-          activeSlideIndex,
+          selectedItem.variationNumber,
           selectedTemplatePattern
         )
       : null;
@@ -252,7 +280,7 @@ export function ListingImagePreviewGrid({
             ? buildPreviewOverlay(
                 item.id,
                 coverSlide,
-                normalizedCardSlideIndex,
+                item.variationNumber,
                 itemTemplatePattern
               )
             : null;

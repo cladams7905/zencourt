@@ -297,7 +297,10 @@ class VideoGenerationService {
           requestId: task.id,
           status: "processing",
           updatedAt: new Date(),
-          generationModel: "veo3.1_fast"
+          generationSettings: {
+            ...settings,
+            model: "veo3.1_fast"
+          }
         })
         .where(eq(videoJobs.id, job.id));
 
@@ -385,7 +388,10 @@ class VideoGenerationService {
         requestId,
         status: "processing",
         updatedAt: new Date(),
-        generationModel: "kling1.6"
+        generationSettings: {
+          ...settings,
+          model: "kling1.6"
+        }
       })
       .where(eq(videoJobs.id, job.id));
 
@@ -445,7 +451,7 @@ class VideoGenerationService {
       return;
     }
 
-    if (job.generationModel === "kling1.6") {
+    if (job.generationSettings?.model === "kling1.6") {
       return;
     }
 
@@ -546,7 +552,7 @@ class VideoGenerationService {
         videoId: job.videoGenBatchId,
         listingId: videoContext.listingId,
         userId: videoContext.userId,
-        generationModel: job.generationModel || "veo3.1_fast"
+        generationModel: job.generationSettings?.model || "veo3.1_fast"
       }
     });
 

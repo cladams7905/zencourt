@@ -113,7 +113,7 @@ function TextOverlay({
             aria-hidden
             style={{
               display: "block",
-              margin: "8px auto 0",
+              margin: "3px auto 0",
               width: 220,
               maxWidth: "100%",
               opacity: 0.95,

@@ -3,6 +3,7 @@
 <hook_templates type="listing_price_change">
 
 - Big news on {address}: new price!
+- The price just changed on {address}!
 - This {bedrooms}-bed just got even better in {city}
 - Price drop alert: now {price} in {neighborhood}
 - You're going to want to see this...

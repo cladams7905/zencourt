@@ -1,5 +1,5 @@
 import { db, videoGenJobs, videoGenBatch } from "@db/client";
-import { asc, desc, eq } from "drizzle-orm";
+import { asc, desc, eq } from "@db/client";
 import type {
   InitialVideoStatusPayload,
   VideoJobUpdateEvent
@@ -34,7 +34,6 @@ export async function getListingVideoStatus(
         status: videoGenJobs.status,
         videoUrl: videoGenJobs.videoUrl,
         thumbnailUrl: videoGenJobs.thumbnailUrl,
-        generationModel: videoGenJobs.generationModel,
         metadata: videoGenJobs.metadata,
         errorMessage: videoGenJobs.errorMessage,
         generationSettings: videoGenJobs.generationSettings
@@ -61,7 +60,7 @@ export async function getListingVideoStatus(
           status: job.status,
           videoUrl: signedVideoUrl ?? job.videoUrl,
           thumbnailUrl: signedThumbnailUrl ?? job.thumbnailUrl,
-          generationModel: job.generationModel,
+          generationModel: job.generationSettings?.model ?? null,
           orientation: job.metadata?.orientation ?? null,
           errorMessage: job.errorMessage,
           roomId: job.generationSettings?.roomId,

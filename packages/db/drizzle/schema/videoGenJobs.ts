@@ -9,7 +9,6 @@ import {
 import { authenticatedRole, crudPolicy } from "drizzle-orm/neon";
 
 import type {
-  GENERATION_MODELS,
   JobGenerationSettings,
   VideoMetadata,
   VideoStatus
@@ -33,10 +32,6 @@ export const videoGenJobs = pgTable(
       .$type<VideoStatus>(),
     videoUrl: text("video_url"),
     thumbnailUrl: text("thumbnail_url"),
-    generationModel: text("generation_model")
-      .notNull()
-      .default("veo3.1_fast")
-      .$type<GENERATION_MODELS>(),
     generationSettings: jsonb(
       "generation_settings"
     ).$type<JobGenerationSettings>(),

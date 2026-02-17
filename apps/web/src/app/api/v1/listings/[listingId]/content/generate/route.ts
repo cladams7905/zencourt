@@ -5,13 +5,8 @@ import {
   requireAuthenticatedUser,
   requireListingAccess
 } from "../../../../_utils";
-import {
-  createContent,
-  getContentByListingId
-} from "@web/src/server/actions/db/content";
 import { createChildLogger, logger as baseLogger } from "@web/src/lib/logger";
 import type {
-  DBContent,
   ListingContentSubcategory,
   ListingPropertyDetails
 } from "@shared/types/models";
@@ -139,53 +134,6 @@ function buildListingContentCacheKey(params: {
   ].join(":");
 }
 
-
-function normalizeContentRecordForResponse(record: DBContent) {
-  return {
-    id: record.id,
-    status: record.status,
-    contentType: record.contentType,
-    metadata: record.metadata
-  };
-}
-
-async function persistGeneratedItems(
-  userId: string,
-  listingId: string,
-  subcategory: ListingContentSubcategory,
-  mediaType: ListingMediaType,
-  cacheKeyValue: string,
-  propertyFingerprintValue: string,
-  items: ListingGeneratedItem[]
-) {
-  return Promise.all(
-    items.map((item, index) =>
-      createContent(userId, {
-        listingId,
-        contentType: "post",
-        status: "draft",
-        contentUrl: null,
-        thumbnailUrl: null,
-        metadata: {
-          listingSubcategory: subcategory,
-          mediaType,
-          promptCategory: "listing",
-          promptVersion: "listing-v1",
-          sortOrder: index,
-          source: "listing-content-generate-route",
-          cacheKey: cacheKeyValue,
-          propertyFingerprint: propertyFingerprintValue,
-          hook: item.hook,
-          caption: item.caption,
-          body: item.body,
-          cta: item.cta,
-          broll_query: item.broll_query
-        }
-      })
-    )
-  );
-}
-
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ listingId: string }> }
@@ -205,7 +153,6 @@ export async function POST(
   let propertyFingerprint: string;
   let cacheKey: string;
   let listingDetails: ListingPropertyDetails | null;
-  let existingForCacheKey: DBContent[];
   let generatedItems: ListingGeneratedItem[] | null;
 
   try {
@@ -262,20 +209,6 @@ export async function POST(
       propertyFingerprint
     });
 
-    const existingListingContent = await getContentByListingId(userId, listing.id);
-    existingForCacheKey = existingListingContent.filter((entry) => {
-      const metadata = entry.metadata as Record<string, unknown> | null;
-      const metadataMediaType =
-        metadata?.mediaType === "image" || metadata?.mediaType === "video"
-          ? metadata.mediaType
-          : "video";
-      return (
-        metadata?.listingSubcategory === subcategory &&
-        metadataMediaType === mediaType &&
-        metadata?.cacheKey === cacheKey
-      );
-    });
-
     const redis = getRedisClient();
     let cachedItems: ListingGeneratedItem[] | null = null;
     if (redis) {
@@ -308,47 +241,13 @@ export async function POST(
   const stream = new ReadableStream({
     async start(controller) {
       try {
-        // Fast path: DB cache hit – send done immediately.
-        if (existingForCacheKey.length > 0) {
-          const items = existingForCacheKey.map(
-            normalizeContentRecordForResponse
-          );
-          controller.enqueue(
-            sseEvent({
-              type: "done",
-              items: items.map((item) => {
-                const m = item.metadata as Record<string, unknown> | null;
-                return {
-                  hook: (m?.hook as string) ?? "",
-                  broll_query: (m?.broll_query as string) ?? "",
-                  body: (m?.body as ListingGeneratedItem["body"]) ?? null,
-                  cta: (m?.cta as string) ?? null,
-                  caption: (m?.caption as string) ?? ""
-                };
-              }),
-              meta: { model: "cache", batch_size: items.length }
-            })
-          );
-          controller.close();
-          return;
-        }
-
-        // Redis / Upstash cache hit – persist to DB then send done.
+        // Redis / Upstash cache hit.
         if (generatedItems) {
-          const saved = await persistGeneratedItems(
-            userId,
-            listing.id,
-            subcategory,
-            mediaType,
-            cacheKey,
-            propertyFingerprint,
-            generatedItems
-          );
           controller.enqueue(
             sseEvent({
               type: "done",
               items: generatedItems,
-              meta: { model: "cache", batch_size: saved.length }
+              meta: { model: "cache", batch_size: generatedItems.length }
             })
           );
           controller.close();
@@ -481,17 +380,6 @@ export async function POST(
             );
           }
         }
-
-        // Persist to DB.
-        await persistGeneratedItems(
-          userId,
-          listing.id,
-          subcategory,
-          mediaType,
-          cacheKey,
-          propertyFingerprint,
-          upstreamDoneItems
-        );
 
         // Send final done event to client.
         controller.enqueue(
