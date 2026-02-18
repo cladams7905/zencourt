@@ -13,12 +13,13 @@ import {
   buildUserPrompt,
   type PromptAssemblyInput
 } from "@web/src/lib/ai/prompts/engine/assemble";
-import { createChildLogger, logger as baseLogger } from "@web/src/lib/core/logging/logger";
+import {
+  createChildLogger,
+  logger as baseLogger
+} from "@web/src/lib/core/logging/logger";
 import { db, eq, userAdditional } from "@db/client";
 import { Redis } from "@upstash/redis";
-import {
-  getMarketData
-} from "@web/src/server/services/marketDataService";
+import { getMarketData } from "@web/src/server/services/marketDataService";
 import { parseMarketLocation } from "@web/src/lib/domain/location/marketLocation";
 import {
   getCityDescription,
@@ -27,15 +28,15 @@ import {
   getPerplexityMonthlyEventsSectionByZip,
   prefetchPerplexityCategoriesByZip
 } from "@web/src/server/services/community/communityDataService";
-import { getCommunityDataProvider } from "@web/src/server/services/community/perplexity/provider";
+import { getCommunityDataProvider } from "@web/src/server/services/community/config";
 import {
   AUDIENCE_SEGMENT_ALIASES,
   NORMALIZED_AUDIENCE_SEGMENTS,
   shouldIncludeServiceAreasInCache,
   type AudienceSegment
-} from "@web/src/server/services/community/communityDataConfig";
-import { getCachedPerplexityCategoryPayload } from "@web/src/server/services/community/perplexity/cache";
-import type { CategoryKey } from "@web/src/server/services/community/communityDataConfig";
+} from "@web/src/server/services/community/config";
+import { getCachedPerplexityCategoryPayload } from "@web/src/server/services/community/providers/perplexity/cache";
+import type { CategoryKey } from "@web/src/server/services/community/config";
 
 const logger = createChildLogger(baseLogger, {
   module: "content-generate-route"
@@ -94,12 +95,7 @@ const CONTENT_ITEM_SCHEMA = {
                 ]
               }
             },
-            required: [
-              "header",
-              "content",
-              "broll_query",
-              "text_overlay"
-            ],
+            required: ["header", "content", "broll_query", "text_overlay"],
             additionalProperties: false
           }
         }
@@ -150,7 +146,6 @@ async function writePromptLog(payload: {
   await mkdir(outputDir, { recursive: true });
   await writeFile(outputPath, content, "utf8");
 }
-
 
 type ClaudeMessage = {
   role: "user";
@@ -275,7 +270,9 @@ type CommunityCategoryCycleState = {
   cyclesCompleted: number;
 };
 
-function normalizeAudienceSegment(segment?: string | null): AudienceSegment | undefined {
+function normalizeAudienceSegment(
+  segment?: string | null
+): AudienceSegment | undefined {
   if (!segment) {
     return undefined;
   }
@@ -663,12 +660,12 @@ export async function POST(request: NextRequest) {
     if (body.category === "community" && marketLocation) {
       const provider = getCommunityDataProvider();
       if (provider === "perplexity") {
-      const eventsSection = await getPerplexityMonthlyEventsSectionByZip(
-        marketLocation.zip_code,
-        activeAudience,
-        marketLocation.city,
-        marketLocation.state
-      );
+        const eventsSection = await getPerplexityMonthlyEventsSectionByZip(
+          marketLocation.zip_code,
+          activeAudience,
+          marketLocation.city,
+          marketLocation.state
+        );
         const availableKeys = COMMUNITY_CATEGORY_KEYS.concat(
           eventsSection ? [eventsSection.key] : []
         );
@@ -753,15 +750,10 @@ export async function POST(request: NextRequest) {
         const normalized = value.trim().toLowerCase();
         return normalized !== "" && !normalized.includes("(none found)");
       }).concat(seasonalKeys);
-      const selectedKeys = communityCategoryKeys ??
-        (
-          await selectCommunityCategories(
-            redis,
-            user.id,
-            2,
-            availableKeys
-          )
-        ).selected;
+      const selectedKeys =
+        communityCategoryKeys ??
+        (await selectCommunityCategories(redis, user.id, 2, availableKeys))
+          .selected;
       communityCategoryKeys = selectedKeys;
     }
 
@@ -808,7 +800,7 @@ export async function POST(request: NextRequest) {
       community_data_extra_sections:
         body.category === "seasonal"
           ? seasonalExtraSections
-          : communityData?.seasonal_geo_sections ?? null,
+          : (communityData?.seasonal_geo_sections ?? null),
       city_description: cityDescription,
       community_category_keys: communityCategoryKeys
     };

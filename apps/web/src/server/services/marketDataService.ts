@@ -1,16 +1,18 @@
 import type { MarketData, MarketLocation } from "@web/src/types/market";
-import { createChildLogger, logger as baseLogger } from "@web/src/lib/core/logging/logger";
+import {
+  createChildLogger,
+  logger as baseLogger
+} from "@web/src/lib/core/logging/logger";
 import {
   formatCurrencyUsd,
   formatNumberUs
 } from "@web/src/lib/core/formatting/number";
-import { parseMarketLocation } from "@web/src/lib/domain/location/marketLocation";
 import { Redis } from "@upstash/redis";
-import { requestPerplexity } from "./community/perplexity/client";
-import type {
-  PerplexityMessage,
-  PerplexityResponseFormat
-} from "./community/perplexity/types";
+import {
+  requestPerplexity,
+  type PerplexityMessage,
+  type PerplexityResponseFormat
+} from "./community/providers/perplexity";
 
 const logger = createChildLogger(baseLogger, {
   module: "market-data-service"
@@ -393,7 +395,9 @@ type FredObservationResponse = {
   observations?: Array<Record<string, unknown>>;
 };
 
-async function getFredSeriesLatestValue(seriesId: string): Promise<number | null> {
+async function getFredSeriesLatestValue(
+  seriesId: string
+): Promise<number | null> {
   const apiKey = getFredApiKey();
   if (!apiKey) {
     return null;
@@ -410,10 +414,7 @@ async function getFredSeriesLatestValue(seriesId: string): Promise<number | null
   try {
     response = await fetch(url, { method: "GET" });
   } catch (error) {
-    logger.warn(
-      { error, seriesId },
-      "FRED request failed"
-    );
+    logger.warn({ error, seriesId }, "FRED request failed");
     return null;
   }
   if (!response.ok) {
@@ -445,7 +446,7 @@ function buildSummary(
   priceChange: string,
   inventory: string,
   monthsSupply: string
-): { summary: string; } {
+): { summary: string } {
   const summaryParts: string[] = [];
 
   if (medianPrice !== NOT_AVAILABLE && priceChange !== NOT_AVAILABLE) {
@@ -550,15 +551,14 @@ async function getPerplexityMarketData(
     affordability_index: sanitizeMarketField(payload?.affordability_index),
     entry_level_price: sanitizeMarketField(payload?.entry_level_price),
     entry_level_payment: sanitizeMarketField(payload?.entry_level_payment),
-    market_summary:
-      narrativeField !== NOT_AVAILABLE ? narrativeField : summary,
+    market_summary: narrativeField !== NOT_AVAILABLE ? narrativeField : summary,
     citations: (response?.search_results ?? [])
-    .map((result) => ({
-      title: result.title,
-      url: result.url,
-      source: result.source ?? result.date
-    }))
-    .filter((item) => item.title || item.url || item.source)
+      .map((result) => ({
+        title: result.title,
+        url: result.url,
+        source: result.source ?? result.date
+      }))
+      .filter((item) => item.title || item.url || item.source)
   };
 
   if (redis) {

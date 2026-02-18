@@ -1,14 +1,18 @@
 import { createHash } from "crypto";
-import { createChildLogger, logger as baseLogger } from "@web/src/lib/core/logging/logger";
-import { requestPerplexity } from "./community/perplexity/client";
-import type { PerplexityResponseFormat } from "./community/perplexity/types";
+import {
+  createChildLogger,
+  logger as baseLogger
+} from "@web/src/lib/core/logging/logger";
+import {
+  requestPerplexity,
+  type PerplexityResponseFormat
+} from "./community/providers/perplexity";
 import type { ListingPropertyDetails } from "@shared/types/models";
 import { parsePossiblyWrappedJson } from "@web/src/server/utils/jsonParsing";
 import {
   isRecord,
   normalizeNullableString as normalizeString,
   normalizeNullableNumber as normalizeNumber,
-  normalizeNullableBoolean as normalizeBoolean,
   normalizeNullableStringArray as normalizeStringArray
 } from "@web/src/server/utils/normalization";
 
