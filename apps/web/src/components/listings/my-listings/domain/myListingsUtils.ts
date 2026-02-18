@@ -3,24 +3,17 @@ import {
   type ListingRowViewModel,
   type ListingSummaryItem
 } from "@web/src/components/listings/my-listings/shared";
-import { LISTING_STAGE_LABELS, type ListingStage } from "../../shared";
+import {
+  LISTING_STAGE_LABELS,
+  resolveListingPath as resolveSharedListingPath,
+  formatListingStageLabel,
+  type ListingStage
+} from "../../shared";
 
 export const resolveListingPath = (listing: {
   id: string;
   listingStage: string | null;
-}) => {
-  switch (listing.listingStage) {
-    case "review":
-      return `/listings/${listing.id}/review`;
-    case "generate":
-      return `/listings/${listing.id}/generate`;
-    case "create":
-      return `/listings/${listing.id}/create`;
-    case "categorize":
-    default:
-      return `/listings/${listing.id}/categorize`;
-  }
-};
+}) => resolveSharedListingPath(listing);
 
 export const formatDateLabel = (value?: string | Date | null) => {
   if (!value) {
@@ -38,8 +31,7 @@ export const formatDateLabel = (value?: string | Date | null) => {
 };
 
 export const formatStageLabel = (stage?: string | null) => {
-  if (!stage) return "Draft";
-  return stage.charAt(0).toUpperCase() + stage.slice(1);
+  return formatListingStageLabel(stage);
 };
 
 export const toListingRowViewModel = (

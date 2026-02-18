@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import Image from "next/image";
 import { cn } from "../ui/utils";
 import { Button } from "../ui/button";
 import { Label } from "../ui/label";
@@ -26,6 +25,7 @@ import { audienceCategories } from "../settings/shared";
 import { logger as baseLogger, createChildLogger } from "@web/src/lib/logger";
 import { toast } from "sonner";
 import { normalizeCountyName } from "@web/src/lib/locationHelpers";
+import { ZencourtLogo } from "../ui/zencourt-logo";
 
 const logger = createChildLogger(baseLogger, {
   module: "welcome-survey"
@@ -200,8 +200,7 @@ export const SurveyPage = ({
         <div className="w-full px-8 lg:px-16 md:pt-12 md:pb-8 border-b">
           {/* Mobile Logo */}
           <div className="lg:hidden flex items-center gap-3 mb-8">
-            <Image
-              src="/zencourt-logo.svg"
+            <ZencourtLogo
               alt="Zencourt"
               width={28}
               height={28}
@@ -239,9 +238,7 @@ export const SurveyPage = ({
                     <div className="flex flex-col items-center justify-center min-h-[500px] space-y-8 py-12">
                       {/* Animated decorative element */}
                       <div className="relative">
-                        <Image
-                          src="/zencourt-logo.svg"
-                          alt="Zencourt Logo"
+                        <ZencourtLogo
                           width={48}
                           height={48}
                           className="object-contain"

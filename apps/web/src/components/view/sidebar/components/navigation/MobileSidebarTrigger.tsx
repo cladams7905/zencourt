@@ -2,11 +2,10 @@
 
 import * as React from "react";
 import { Menu, Bell } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
-import Logo from "../../../public/zencourt-logo.svg";
-import { cn } from "../ui/utils";
-import { useViewSidebar } from "./ViewSidebarContext";
+import { cn } from "../../../../ui/utils";
+import { ZencourtLogo } from "../../../../ui/zencourt-logo";
+import { useViewSidebar } from "../../shared/ViewSidebarContext";
 
 interface MobileSidebarTriggerProps {
   hasNotifications?: boolean;
@@ -31,13 +30,7 @@ export function MobileSidebarTrigger({
     >
       {/* Logo on the left */}
       <Link href="/" className="flex items-center gap-2">
-        <Image
-          src={Logo}
-          alt="Zencourt Logo"
-          width={24}
-          height={24}
-          className="object-contain"
-        />
+        <ZencourtLogo className="object-contain" />
       </Link>
 
       {/* Right side: Notifications + Hamburger */}

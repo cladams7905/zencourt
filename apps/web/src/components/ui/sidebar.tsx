@@ -368,7 +368,7 @@ function SidebarSeparator({
   );
 }
 
-function SidebarContent({ className, ...props }: React.ComponentProps<"div">) {
+function SidebarLayout({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="sidebar-content"
@@ -701,7 +701,7 @@ function SidebarMenuSubButton({
 
 export {
   Sidebar,
-  SidebarContent,
+  SidebarLayout,
   SidebarFooter,
   SidebarGroup,
   SidebarGroupAction,

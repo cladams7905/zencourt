@@ -1,8 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { Button } from "../ui/button";
+import { ZencourtLogo } from "../ui/zencourt-logo";
 
 export function Navigation() {
   return (
@@ -11,13 +11,7 @@ export function Navigation() {
         <div className="flex justify-between items-center h-20">
           {/* Logo */}
           <div className="flex items-center gap-3">
-            <Image
-              src="/zencourt-logo.svg"
-              alt="Zencourt Logo"
-              width={24}
-              height={24}
-              className="object-contain"
-            />
+            <ZencourtLogo className="object-contain" />
             <span className="text-foreground font-header text-2xl font-semibold tracking-tight">
               zencourt
             </span>

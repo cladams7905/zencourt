@@ -18,3 +18,27 @@ export function buildListingStageSteps(
     completed: activeIndex > index
   }));
 }
+
+export function resolveListingPath(input: {
+  id: string;
+  listingStage: string | null;
+}): string {
+  switch (input.listingStage) {
+    case "review":
+      return `/listings/${input.id}/review`;
+    case "generate":
+      return `/listings/${input.id}/generate`;
+    case "create":
+      return `/listings/${input.id}/create`;
+    case "categorize":
+    default:
+      return `/listings/${input.id}/categorize`;
+  }
+}
+
+export function formatListingStageLabel(stage?: string | null): string {
+  if (!stage) {
+    return "Draft";
+  }
+  return stage.charAt(0).toUpperCase() + stage.slice(1);
+}

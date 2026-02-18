@@ -1,8 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import { Loader2 } from "lucide-react";
-import { SidebarSkeleton } from "@web/src/components/view/SidebarSkeleton";
+import { SidebarSkeleton } from "@web/src/components/view/sidebar/components";
+import { ZencourtLogo } from "@web/src/components/ui/zencourt-logo";
 
 export default function DashboardLoading() {
   return (
@@ -24,8 +24,7 @@ export default function DashboardLoading() {
 
       <div className="relative z-10 flex h-full flex-col items-center justify-center px-6 text-center">
         <div className="relative flex flex-col gap-6 items-center justify-center">
-          <Image
-            src="/zencourt-logo.svg"
+          <ZencourtLogo
             alt="Zencourt"
             width={48}
             height={48}

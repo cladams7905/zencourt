@@ -2,9 +2,9 @@
 
 import * as React from "react";
 import { ChevronLeft } from "lucide-react";
-import { cn } from "../ui/utils";
-import { useViewSidebar } from "./ViewSidebarContext";
-import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
+import { cn } from "../../../../ui/utils";
+import { useViewSidebar } from "../../shared/ViewSidebarContext";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../../../../ui/tooltip";
 
 export function ViewSidebarToggle() {
   const { isCollapsed, toggleSidebar } = useViewSidebar();

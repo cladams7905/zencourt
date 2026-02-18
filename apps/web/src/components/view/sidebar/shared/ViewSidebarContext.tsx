@@ -1,10 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { useIsMobile } from "../ui/use-mobile";
+import { useIsMobile } from "../../../ui/use-mobile";
+import {
+  getCookie,
+  setCookie,
+  SIDEBAR_COOKIE_MAX_AGE,
+  SIDEBAR_COOKIE_NAME
+} from "./sidebarPersistence";
 
-const SIDEBAR_COOKIE_NAME = "view_sidebar_state";
-const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 const SIDEBAR_KEYBOARD_SHORTCUT = "b";
 
 type ViewSidebarContextProps = {
@@ -19,18 +23,6 @@ type ViewSidebarContextProps = {
 const ViewSidebarContext = React.createContext<ViewSidebarContextProps | null>(
   null
 );
-
-function getCookie(name: string): string | undefined {
-  if (typeof document === "undefined") return undefined;
-  const value = `; ${document.cookie}`;
-  const parts = value.split(`; ${name}=`);
-  if (parts.length === 2) return parts.pop()?.split(";").shift();
-  return undefined;
-}
-
-function setCookie(name: string, value: string, maxAge: number) {
-  document.cookie = `${name}=${value}; path=/; max-age=${maxAge}`;
-}
 
 interface ViewSidebarProviderProps {
   children: React.ReactNode;

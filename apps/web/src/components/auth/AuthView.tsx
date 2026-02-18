@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
-import Image from "next/image";
 import Link from "next/link";
+import { ZencourtLogo } from "../ui/zencourt-logo";
 
 interface AuthViewProps {
   title?: string;
@@ -21,8 +21,7 @@ export function AuthView({ children }: AuthViewProps) {
         <div className="relative z-10 flex flex-col justify-between p-16 w-full">
           {/* Logo */}
           <div className="flex items-center gap-3">
-            <Image
-              src="/zencourt-logo.svg"
+            <ZencourtLogo
               alt="Zencourt"
               width={32}
               height={32}
@@ -81,8 +80,7 @@ export function AuthView({ children }: AuthViewProps) {
         <div className="w-full max-w-md">
           {/* Mobile Logo */}
           <div className="lg:hidden flex items-center gap-3 mb-12">
-            <Image
-              src="/zencourt-logo.svg"
+            <ZencourtLogo
               alt="Zencourt"
               width={28}
               height={28}

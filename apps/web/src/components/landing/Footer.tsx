@@ -1,6 +1,6 @@
-import Image from "next/image";
 import Link from "next/link";
 import { Users, Globe } from "lucide-react";
+import { ZencourtLogo } from "../ui/zencourt-logo";
 
 export function Footer() {
   const footerLinks = {
@@ -31,13 +31,7 @@ export function Footer() {
           {/* Brand Column */}
           <div className="col-span-2 md:col-span-1">
             <div className="flex items-center gap-2 mb-6">
-              <Image
-                src="/zencourt-logo.svg"
-                alt="Zencourt Logo"
-                width={24}
-                height={24}
-                className="object-contain opacity-80"
-              />
+              <ZencourtLogo className="object-contain opacity-80" />
               <span className="text-foreground font-header text-xl font-semibold tracking-tight">
                 zencourt
               </span>

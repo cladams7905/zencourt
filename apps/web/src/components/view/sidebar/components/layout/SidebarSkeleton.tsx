@@ -1,7 +1,7 @@
 "use client";
 
-import { cn } from "../ui/utils";
-import { useViewSidebar } from "./ViewSidebarContext";
+import { cn } from "../../../../ui/utils";
+import { useViewSidebar } from "../../shared/ViewSidebarContext";
 
 export function SidebarSkeleton() {
   const { isMobile, isCollapsed } = useViewSidebar();

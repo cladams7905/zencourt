@@ -4,7 +4,7 @@ import * as React from "react";
 import { Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { cn } from "../ui/utils";
-import { useViewSidebar } from "./ViewSidebarContext";
+import { useViewSidebar } from "./sidebar/shared/ViewSidebarContext";
 import {
   DropdownMenu,
   DropdownMenuContent,
