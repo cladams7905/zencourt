@@ -21,8 +21,8 @@ export const useMediaPagination = ({
 
   React.useEffect(() => {
     setVisibleCount(pageSize);
-    // reset when filters/sort/list changes
-  }, [pageSize, ...resetDeps]);
+    // reset when filters/sort/list changes (caller should memoize resetDeps)
+  }, [pageSize, resetDeps]);
 
   React.useEffect(() => {
     const node = loadMoreNode;

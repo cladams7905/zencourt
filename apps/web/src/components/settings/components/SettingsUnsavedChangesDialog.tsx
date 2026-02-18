@@ -9,8 +9,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle
-} from "../ui/alert-dialog";
-import { Button } from "../ui/button";
+} from "../../ui/alert-dialog";
+import { Button } from "../../ui/button";
 
 interface SettingsUnsavedChangesDialogProps {
   isDirty: boolean;
@@ -101,11 +101,19 @@ export function SettingsUnsavedChangesDialog({
       }
       const nextUrl = new URL(href, window.location.href);
       const currentUrl = new URL(window.location.href);
+      const isHttpNavigation =
+        nextUrl.protocol === "http:" || nextUrl.protocol === "https:";
+      if (!isHttpNavigation) {
+        return;
+      }
+      if (nextUrl.origin !== currentUrl.origin) {
+        return;
+      }
       if (nextUrl.href === currentUrl.href) {
         return;
       }
       event.preventDefault();
-      setPendingNavigation(nextUrl.toString());
+      setPendingNavigation(`${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`);
       setIsOpen(true);
     };
 

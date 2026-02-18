@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { SettingsView } from "@web/src/components/settings/SettingsView";
+import { SettingsView } from "@web/src/components/settings";
 import { getUser } from "@web/src/server/actions/db/users";
 import {
   getOrCreateUserAdditional,

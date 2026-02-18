@@ -7,34 +7,18 @@ import {
   CardDescription,
   CardHeader,
   CardTitle
-} from "../ui/card";
+} from "../../../ui/card";
 import { useStackApp, useUser } from "@stackframe/stack";
-import { Label } from "../ui/label";
-import { Input } from "../ui/input";
-import { Button } from "../ui/button";
-import { Badge } from "../ui/badge";
+import { Label } from "../../../ui/label";
+import { Input } from "../../../ui/input";
+import { Button } from "../../../ui/button";
+import { Badge } from "../../../ui/badge";
 import { Mail } from "lucide-react";
-import { LoadingImage } from "../ui/loading-image";
+import { LoadingImage } from "../../../ui/loading-image";
 import { toast } from "sonner";
-import {
-  LocationAutocomplete,
-  type LocationData
-} from "../location";
-import { updateUserLocation } from "@web/src/server/actions/db/userAdditional";
-import {
-  formatLocationForStorage,
-  normalizeCountyName
-} from "@web/src/lib/locationHelpers";
-import { LocationDetailsPanel } from "../location";
-
-interface AccountTabProps {
-  userId: string;
-  userEmail: string;
-  location: string | null;
-  googleMapsApiKey: string;
-  onDirtyChange?: (dirty: boolean) => void;
-  onRegisterSave?: (save: () => Promise<void>) => void;
-}
+import { LocationAutocomplete, LocationDetailsPanel } from "../../../location";
+import type { AccountTabProps } from "@web/src/components/settings/shared";
+import { useAccountLocationSettings } from "@web/src/components/settings/domain";
 
 export function AccountTab({
   userId,
@@ -51,34 +35,31 @@ export function AccountTab({
   const authLabel = isGoogleUser ? "Google" : "Email & Password";
   const displayedEmail = user?.primaryEmail ?? userEmail;
   const [isSendingReset, setIsSendingReset] = React.useState(false);
-  const [locationValue, setLocationValue] = React.useState<LocationData | null>(
-    null
-  );
-  const [isSavingLocation, setIsSavingLocation] = React.useState(false);
-  const [savedLocation, setSavedLocation] = React.useState(location ?? "");
-  const [isEditingLocationDetails, setIsEditingLocationDetails] =
-    React.useState(false);
-  const [countyOverride, setCountyOverride] = React.useState("");
-  const [serviceAreasOverride, setServiceAreasOverride] = React.useState("");
-  const [locationHasErrors, setLocationHasErrors] = React.useState(false);
 
-  const suggestedCounty = locationValue?.county ?? "";
-  const suggestedServiceAreas = React.useMemo(
-    () => locationValue?.serviceAreas ?? [],
-    [locationValue?.serviceAreas]
-  );
-  const suggestedServiceAreasText = suggestedServiceAreas.join(", ");
-
-  React.useEffect(() => {
-    if (!locationValue) {
-      setCountyOverride("");
-      setServiceAreasOverride("");
-      setIsEditingLocationDetails(false);
-      return;
-    }
-    setCountyOverride(suggestedCounty);
-    setServiceAreasOverride(suggestedServiceAreasText);
-  }, [locationValue, suggestedCounty, suggestedServiceAreasText]);
+  const {
+    locationValue,
+    setLocationValue,
+    isSavingLocation,
+    savedLocation,
+    isEditingLocationDetails,
+    setIsEditingLocationDetails,
+    countyOverride,
+    setCountyOverride,
+    serviceAreasOverride,
+    setServiceAreasOverride,
+    locationHasErrors,
+    setLocationHasErrors,
+    suggestedCounty,
+    suggestedServiceAreas,
+    suggestedServiceAreasText,
+    isLocationDirty,
+    handleSaveLocation
+  } = useAccountLocationSettings({
+    userId,
+    location,
+    onDirtyChange,
+    onRegisterSave
+  });
 
   const handlePasswordReset = async () => {
     if (!displayedEmail) {
@@ -106,88 +87,8 @@ export function AccountTab({
     }
   };
 
-  const locationDraft = React.useMemo(() => {
-    return locationValue ? formatLocationForStorage(locationValue) : "";
-  }, [locationValue]);
-
-  const isLocationDirty = React.useMemo(() => {
-    if (!locationValue) {
-      return false;
-    }
-    const overridesDirty =
-      countyOverride.trim() !== suggestedCounty.trim() ||
-      serviceAreasOverride.trim() !== suggestedServiceAreasText.trim();
-    return locationDraft !== savedLocation || overridesDirty;
-  }, [
-    locationDraft,
-    locationValue,
-    savedLocation,
-    countyOverride,
-    serviceAreasOverride,
-    suggestedCounty,
-    suggestedServiceAreasText
-  ]);
-
-  React.useEffect(() => {
-    if (locationValue) {
-      return;
-    }
-    setSavedLocation(location ?? "");
-  }, [location, locationValue]);
-
-  const handleLocationChange = (nextLocation: LocationData | null) => {
-    setLocationValue(nextLocation);
-  };
-
-  const handleSaveLocation = React.useCallback(async () => {
-    if (!locationValue) {
-      return;
-    }
-    const formattedLocation = formatLocationForStorage(locationValue);
-    setIsSavingLocation(true);
-    try {
-      const resolvedCounty = normalizeCountyName(
-        countyOverride.trim() || suggestedCounty
-      );
-      const resolvedServiceAreas = serviceAreasOverride
-        .split(",")
-        .map((area) => area.trim())
-        .filter(Boolean);
-
-      await updateUserLocation(userId, formattedLocation, {
-        county: resolvedCounty || null,
-        serviceAreas:
-          resolvedServiceAreas.length > 0
-            ? resolvedServiceAreas
-            : suggestedServiceAreas
-      });
-      setSavedLocation(formattedLocation);
-      toast.success("Location updated.");
-    } catch (error) {
-      toast.error((error as Error).message || "Failed to update location.");
-    } finally {
-      setIsSavingLocation(false);
-    }
-  }, [
-    locationValue,
-    userId,
-    countyOverride,
-    suggestedCounty,
-    serviceAreasOverride,
-    suggestedServiceAreas
-  ]);
-
-  React.useEffect(() => {
-    onDirtyChange?.(isLocationDirty);
-  }, [isLocationDirty, onDirtyChange]);
-
-  React.useEffect(() => {
-    onRegisterSave?.(handleSaveLocation);
-  }, [handleSaveLocation, onRegisterSave]);
-
   return (
     <div className="grid gap-6">
-      {/* Authentication */}
       <Card id="account">
         <CardHeader>
           <div className="flex items-center gap-2">
@@ -257,7 +158,6 @@ export function AccountTab({
         </CardContent>
       </Card>
 
-      {/* Location */}
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
@@ -272,7 +172,7 @@ export function AccountTab({
             <Label htmlFor="location">Current Location</Label>
             <LocationAutocomplete
               value={locationValue}
-              onChange={handleLocationChange}
+              onChange={setLocationValue}
               apiKey={googleMapsApiKey}
               initialValue={savedLocation}
               placeholder="Enter your ZIP code"

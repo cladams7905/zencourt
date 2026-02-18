@@ -1,30 +1,23 @@
 "use client";
 
-import * as React from "react";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle
-} from "../ui/card";
-import { Badge } from "../ui/badge";
-import { Button } from "../ui/button";
-import { Label } from "../ui/label";
+} from "../../../ui/card";
+import { Badge } from "../../../ui/badge";
+import { Button } from "../../../ui/button";
+import { Label } from "../../../ui/label";
+import { SUBSCRIPTION_PLAN_LABELS } from "@web/src/components/settings/shared";
 
 interface SubscriptionTabProps {
   paymentPlan: string;
 }
 
 export function SubscriptionTab({ paymentPlan }: SubscriptionTabProps) {
-  const paymentPlanLabels: Record<string, { label: string; color: string }> = {
-    free: { label: "Free", color: "secondary" },
-    starter: { label: "Starter", color: "default" },
-    growth: { label: "Growth", color: "default" },
-    enterprise: { label: "Enterprise", color: "default" }
-  };
-
-  const plan = paymentPlanLabels[paymentPlan] || {
+  const plan = SUBSCRIPTION_PLAN_LABELS[paymentPlan] || {
     label: paymentPlan || "Free",
     color: "secondary"
   };
@@ -45,7 +38,7 @@ export function SubscriptionTab({ paymentPlan }: SubscriptionTabProps) {
             <div className="space-y-2">
               <Label>Current Plan</Label>
               <div>
-                <Badge variant="secondary" className="text-sm">
+                <Badge variant={plan.color} className="text-sm">
                   {plan.label}
                 </Badge>
               </div>

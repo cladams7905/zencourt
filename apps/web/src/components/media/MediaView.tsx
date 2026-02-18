@@ -62,10 +62,14 @@ const MediaView = ({ userId, initialMedia = [] }: MediaViewProps) => {
     [mediaItems, selectedTypes, usageSort]
   );
 
+  const paginationResetDeps = React.useMemo(
+    () => [selectedTypes, usageSort, mediaItems.length],
+    [selectedTypes, usageSort, mediaItems.length]
+  );
   const { visibleCount, loadMoreRef, hasMore } = useMediaPagination({
     pageSize: MEDIA_PAGE_SIZE,
     totalCount: filteredBrandKitItems.length,
-    resetDeps: [selectedTypes, usageSort, mediaItems.length]
+    resetDeps: paginationResetDeps
   });
 
   const { totalImages, totalVideos } = React.useMemo(

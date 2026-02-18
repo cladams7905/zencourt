@@ -22,7 +22,7 @@ import {
 import { LocationDetailsPanel } from "../location";
 import { ArrowRight, ArrowLeft } from "lucide-react";
 import type { ReferralSource, TargetAudience } from "@db/client";
-import { audienceCategories } from "../settings/audienceCategories";
+import { audienceCategories } from "../settings/shared";
 import { logger as baseLogger, createChildLogger } from "@web/src/lib/logger";
 import { toast } from "sonner";
 import { normalizeCountyName } from "@web/src/lib/locationHelpers";
