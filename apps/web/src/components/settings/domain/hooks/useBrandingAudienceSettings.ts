@@ -1,3 +1,5 @@
+"use client";
+
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -10,7 +12,8 @@ interface UseBrandingAudienceSettingsArgs {
   userAdditional: BrandingTabProps["userAdditional"];
 }
 
-const normalizeText = (value: string | null | undefined) => (value ?? "").trim();
+const normalizeText = (value: string | null | undefined) =>
+  (value ?? "").trim();
 
 export const useBrandingAudienceSettings = ({
   userId,
@@ -18,9 +21,9 @@ export const useBrandingAudienceSettings = ({
 }: UseBrandingAudienceSettingsArgs) => {
   const router = useRouter();
   const [isLoadingAudiences, setIsLoadingAudiences] = React.useState(false);
-  const [targetAudiences, setTargetAudiences] = React.useState<TargetAudience[]>(
-    () => userAdditional.targetAudiences ?? []
-  );
+  const [targetAudiences, setTargetAudiences] = React.useState<
+    TargetAudience[]
+  >(() => userAdditional.targetAudiences ?? []);
   const [initialTargetAudiences, setInitialTargetAudiences] = React.useState<
     TargetAudience[]
   >(() => userAdditional.targetAudiences ?? []);

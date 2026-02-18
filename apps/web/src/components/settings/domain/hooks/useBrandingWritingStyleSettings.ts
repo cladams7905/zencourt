@@ -1,3 +1,5 @@
+"use client";
+
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -49,9 +51,10 @@ export const useBrandingWritingStyleSettings = ({
     return false;
   }, [writingToneLevel, writingStyleCustom, initialWritingStyle]);
 
-  const toneValue = React.useMemo(() => coerceToneValue(writingToneLevel), [
-    writingToneLevel
-  ]);
+  const toneValue = React.useMemo(
+    () => coerceToneValue(writingToneLevel),
+    [writingToneLevel]
+  );
   const toneMeta =
     TONE_SCALE.find((tone) => tone.value === toneValue) ?? TONE_SCALE[2];
 

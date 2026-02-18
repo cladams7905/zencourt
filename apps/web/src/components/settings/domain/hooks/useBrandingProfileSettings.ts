@@ -1,7 +1,12 @@
+"use client";
+
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import type { BrandingProfileState, BrandingTabProps } from "@web/src/components/settings/shared";
+import type {
+  BrandingProfileState,
+  BrandingTabProps
+} from "@web/src/components/settings/shared";
 import {
   ensureGoogleHeadshot,
   updateUserProfile
@@ -18,7 +23,8 @@ interface UseBrandingProfileSettingsArgs {
   defaultHeadshotUrl?: string;
 }
 
-const normalizeText = (value: string | null | undefined) => (value ?? "").trim();
+const normalizeText = (value: string | null | undefined) =>
+  (value ?? "").trim();
 
 export const useBrandingProfileSettings = ({
   userId,
@@ -105,7 +111,9 @@ export const useBrandingProfileSettings = ({
         if (isMounted) {
           setAvatarPreviewUrl(headshotUrl);
         }
-        toast.error((error as Error).message || "Failed to load headshot preview");
+        toast.error(
+          (error as Error).message || "Failed to load headshot preview"
+        );
       }
     };
 
@@ -176,7 +184,9 @@ export const useBrandingProfileSettings = ({
         };
       })
       .catch((error) => {
-        toast.error((error as Error).message || "Failed to save Google headshot");
+        toast.error(
+          (error as Error).message || "Failed to save Google headshot"
+        );
       })
       .finally(() => {
         setIsUploadingAvatar(false);
@@ -188,7 +198,8 @@ export const useBrandingProfileSettings = ({
       normalizeText(agentName) !== normalizeText(initialAgentInfo.agentName) ||
       normalizeText(brokerageName) !==
         normalizeText(initialAgentInfo.brokerageName) ||
-      normalizeText(agentTitle) !== normalizeText(initialAgentInfo.agentTitle) ||
+      normalizeText(agentTitle) !==
+        normalizeText(initialAgentInfo.agentTitle) ||
       normalizeText(agentBio) !== normalizeText(initialAgentInfo.agentBio)
     );
   }, [agentName, brokerageName, agentTitle, agentBio, initialAgentInfo]);
@@ -222,7 +233,8 @@ export const useBrandingProfileSettings = ({
     overrides: Partial<BrandingProfileState> = {}
   ): BrandingProfileState => ({
     agentName: overrides.agentName ?? savedProfileRef.current.agentName,
-    brokerageName: overrides.brokerageName ?? savedProfileRef.current.brokerageName,
+    brokerageName:
+      overrides.brokerageName ?? savedProfileRef.current.brokerageName,
     headshotUrl: overrides.headshotUrl ?? headshotUrl,
     personalLogoUrl: overrides.personalLogoUrl ?? personalLogoUrl,
     agentBio: overrides.agentBio ?? savedProfileRef.current.agentBio
