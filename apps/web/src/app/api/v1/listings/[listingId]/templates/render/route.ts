@@ -30,7 +30,9 @@ function isListingSubcategory(
   return (LISTING_CONTENT_SUBCATEGORIES as readonly string[]).includes(value);
 }
 
-function sanitizeCaptionItems(input: unknown): TemplateRenderCaptionItemInput[] {
+function sanitizeCaptionItems(
+  input: unknown
+): TemplateRenderCaptionItemInput[] {
   if (!Array.isArray(input)) {
     return [];
   }

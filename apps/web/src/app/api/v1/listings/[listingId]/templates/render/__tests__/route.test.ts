@@ -4,7 +4,9 @@ describe("listing templates render route", () => {
   async function loadRoute() {
     jest.resetModules();
 
-    const mockRequireAuthenticatedUser = jest.fn().mockResolvedValue({ id: "user-1" });
+    const mockRequireAuthenticatedUser = jest
+      .fn()
+      .mockResolvedValue({ id: "user-1" });
     const mockRequireListingAccess = jest.fn().mockResolvedValue({
       id: "listing-1",
       title: "Listing"
@@ -38,8 +40,10 @@ describe("listing templates render route", () => {
 
     jest.doMock("@web/src/app/api/v1/_utils", () => ({
       ApiError: MockApiError,
-      requireAuthenticatedUser: (...args: unknown[]) => mockRequireAuthenticatedUser(...args),
-      requireListingAccess: (...args: unknown[]) => mockRequireListingAccess(...args)
+      requireAuthenticatedUser: (...args: unknown[]) =>
+        mockRequireAuthenticatedUser(...args),
+      requireListingAccess: (...args: unknown[]) =>
+        mockRequireListingAccess(...args)
     }));
     jest.doMock("@web/src/server/actions/db/listingImages", () => ({
       getListingImages: (...args: unknown[]) => mockGetListingImages(...args)

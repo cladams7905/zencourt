@@ -1,5 +1,5 @@
 import { render, screen, waitFor } from "@testing-library/react";
-import VerifyEmailPage from "@web/src/app/(auth)/verify-email/page";
+import VerifyEmailPage from "@web/src/app/(auth)/verifyEmail/page";
 
 const mockReplace = jest.fn();
 const mockGet = jest.fn();
@@ -26,7 +26,9 @@ describe("VerifyEmailPage", () => {
     render(<VerifyEmailPage />);
 
     expect(
-      screen.getByText("No verification code found. Please check your email link.")
+      screen.getByText(
+        "No verification code found. Please check your email link."
+      )
     ).toBeInTheDocument();
     expect(mockVerifyEmail).not.toHaveBeenCalled();
   });
@@ -73,7 +75,9 @@ describe("VerifyEmailPage", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText("Unable to verify your email right now. Please try again.")
+        screen.getByText(
+          "Unable to verify your email right now. Please try again."
+        )
       ).toBeInTheDocument();
     });
   });

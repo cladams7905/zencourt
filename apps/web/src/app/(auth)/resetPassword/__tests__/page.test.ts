@@ -1,4 +1,4 @@
-import { resolveResetPasswordCode } from "@web/src/app/(auth)/reset-password/resetPasswordCode";
+import { resolveResetPasswordCode } from "@web/src/app/(auth)/resetPassword/resetPasswordCode";
 import { URL as NodeURL } from "url";
 
 describe("resolveResetPasswordCode", () => {

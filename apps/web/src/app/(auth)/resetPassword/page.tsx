@@ -1,7 +1,7 @@
 import * as React from "react";
 import { PasswordReset } from "@stackframe/stack";
 import { AuthView } from "@web/src/components/auth/AuthView";
-import { resolveResetPasswordCode } from "@web/src/app/(auth)/reset-password/resetPasswordCode";
+import { resolveResetPasswordCode } from "@web/src/app/(auth)/resetPassword/resetPasswordCode";
 
 interface ResetPasswordPageProps {
   searchParams: Promise<{
