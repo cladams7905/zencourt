@@ -10,6 +10,11 @@ import type {
   PerplexityChatCompletionResponse,
   PerplexityRequest
 } from "./types";
+import {
+  getExponentialBackoffDelayMs,
+  isRetryableHttpStatus,
+  sleep
+} from "@web/src/server/utils/retry";
 
 const logger = createChildLogger(baseLogger, {
   module: "community-perplexity-client"
@@ -36,14 +41,6 @@ function getPerplexityApiKey(): string | null {
   return apiKey;
 }
 
-async function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function shouldRetry(status: number): boolean {
-  return status === 429 || (status >= 500 && status < 600);
-}
-
 async function fetchWithRetry(
   url: string,
   options: RequestInit,
@@ -54,7 +51,7 @@ async function fetchWithRetry(
   for (let attempt = 1; attempt <= config.maxAttempts; attempt += 1) {
     try {
       const response = await fetch(url, options);
-      if (response.ok || !shouldRetry(response.status)) {
+      if (response.ok || !isRetryableHttpStatus(response.status)) {
         return response;
       }
       logger.warn(
@@ -62,8 +59,9 @@ async function fetchWithRetry(
         "Retryable Perplexity response"
       );
       if (attempt < config.maxAttempts) {
-        const delay = Math.min(
-          config.baseDelayMs * Math.pow(2, attempt - 1),
+        const delay = getExponentialBackoffDelayMs(
+          attempt,
+          config.baseDelayMs,
           config.maxDelayMs
         );
         await sleep(delay);
@@ -75,8 +73,9 @@ async function fetchWithRetry(
         "Retryable Perplexity fetch error"
       );
       if (attempt < config.maxAttempts) {
-        const delay = Math.min(
-          config.baseDelayMs * Math.pow(2, attempt - 1),
+        const delay = getExponentialBackoffDelayMs(
+          attempt,
+          config.baseDelayMs,
           config.maxDelayMs
         );
         await sleep(delay);

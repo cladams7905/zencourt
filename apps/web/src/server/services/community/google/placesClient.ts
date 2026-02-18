@@ -1,4 +1,9 @@
 import { createChildLogger, logger as baseLogger } from "@web/src/lib/core/logging/logger";
+import {
+  getExponentialBackoffDelayMs,
+  isRetryableHttpStatus,
+  sleep
+} from "@web/src/server/utils/retry";
 
 const logger = createChildLogger(baseLogger, {
   module: "community-places-client"
@@ -101,15 +106,6 @@ const DEFAULT_RETRY_CONFIG: RetryConfig = {
   maxDelayMs: 2000
 };
 
-async function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function shouldRetry(status: number): boolean {
-  // Retry on rate limits (429), server errors (5xx), and network issues
-  return status === 429 || (status >= 500 && status < 600);
-}
-
 async function fetchWithRetry(
   url: string,
   options: RequestInit,
@@ -121,7 +117,7 @@ async function fetchWithRetry(
     try {
       const response = await fetch(url, options);
 
-      if (response.ok || !shouldRetry(response.status)) {
+      if (response.ok || !isRetryableHttpStatus(response.status)) {
         return response;
       }
 
@@ -132,8 +128,9 @@ async function fetchWithRetry(
 
       // Calculate exponential backoff delay
       if (attempt < config.maxAttempts) {
-        const delay = Math.min(
-          config.baseDelayMs * Math.pow(2, attempt - 1),
+        const delay = getExponentialBackoffDelayMs(
+          attempt,
+          config.baseDelayMs,
           config.maxDelayMs
         );
         await sleep(delay);
@@ -148,8 +145,9 @@ async function fetchWithRetry(
 
       // Only retry on network errors for remaining attempts
       if (attempt < config.maxAttempts) {
-        const delay = Math.min(
-          config.baseDelayMs * Math.pow(2, attempt - 1),
+        const delay = getExponentialBackoffDelayMs(
+          attempt,
+          config.baseDelayMs,
           config.maxDelayMs
         );
         await sleep(delay);

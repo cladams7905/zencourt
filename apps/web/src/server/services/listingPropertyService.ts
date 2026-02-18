@@ -3,6 +3,14 @@ import { createChildLogger, logger as baseLogger } from "@web/src/lib/core/loggi
 import { requestPerplexity } from "./community/perplexity/client";
 import type { PerplexityResponseFormat } from "./community/perplexity/types";
 import type { ListingPropertyDetails } from "@shared/types/models";
+import { parsePossiblyWrappedJson } from "@web/src/server/utils/jsonParsing";
+import {
+  isRecord,
+  normalizeNullableString as normalizeString,
+  normalizeNullableNumber as normalizeNumber,
+  normalizeNullableBoolean as normalizeBoolean,
+  normalizeNullableStringArray as normalizeStringArray
+} from "@web/src/server/utils/normalization";
 
 const logger = createChildLogger(baseLogger, {
   module: "listing-property-service"
@@ -250,88 +258,12 @@ const PERPLEXITY_PROPERTY_SCHEMA: PerplexityResponseFormat = {
   }
 };
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function normalizeString(value: unknown): string | null | undefined {
-  if (value === null) {
-    return null;
-  }
-  if (typeof value !== "string") {
-    return undefined;
-  }
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : undefined;
-}
-
-function normalizeNumber(value: unknown): number | null | undefined {
-  if (value === null) {
-    return null;
-  }
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return value;
-  }
-  if (typeof value === "string") {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : undefined;
-  }
-  return undefined;
-}
-
-function normalizeBoolean(value: unknown): boolean | null | undefined {
-  if (value === null) {
-    return null;
-  }
-  if (typeof value === "boolean") {
-    return value;
-  }
-  if (typeof value === "string") {
-    const trimmed = value.trim().toLowerCase();
-    if (trimmed === "true") return true;
-    if (trimmed === "false") return false;
-  }
-  return undefined;
-}
-
-function normalizeStringArray(value: unknown): string[] | null | undefined {
-  if (value === null) {
-    return null;
-  }
-  if (!Array.isArray(value)) {
-    return undefined;
-  }
-  const normalized = value
-    .map((entry) => normalizeString(entry))
-    .filter((entry): entry is string => Boolean(entry));
-  return normalized.length > 0 ? normalized : undefined;
-}
-
 function hasDefinedValues(value: Record<string, unknown>): boolean {
   return Object.values(value).some((entry) => entry !== undefined);
 }
 
 function parsePerplexityJson(raw: unknown): unknown | null {
-  if (raw === null || raw === undefined) {
-    return null;
-  }
-  if (typeof raw !== "string") {
-    return raw;
-  }
-  try {
-    return JSON.parse(raw);
-  } catch {
-    const firstBrace = raw.indexOf("{");
-    const lastBrace = raw.lastIndexOf("}");
-    if (firstBrace === -1 || lastBrace <= firstBrace) {
-      return null;
-    }
-    try {
-      return JSON.parse(raw.slice(firstBrace, lastBrace + 1));
-    } catch {
-      return null;
-    }
-  }
+  return parsePossiblyWrappedJson(raw);
 }
 
 function normalizeListingPropertyDetails(

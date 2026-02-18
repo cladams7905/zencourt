@@ -12,39 +12,13 @@ import type {
   PerplexitySearchResult
 } from "./types";
 import { getWhySuitableFieldKey } from "./config";
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function normalizeString(value: unknown): string | undefined {
-  if (typeof value !== "string") {
-    return undefined;
-  }
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : undefined;
-}
-
-function normalizeNumber(value: unknown): number | undefined {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return value;
-  }
-  if (typeof value === "string") {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : undefined;
-  }
-  return undefined;
-}
-
-function normalizeStringArray(value: unknown): string[] | undefined {
-  if (!Array.isArray(value)) {
-    return undefined;
-  }
-  const normalized = value
-    .map((entry) => normalizeString(entry))
-    .filter((entry): entry is string => Boolean(entry));
-  return normalized.length > 0 ? normalized : undefined;
-}
+import { parsePossiblyWrappedJson } from "@web/src/server/utils/jsonParsing";
+import {
+  isRecord,
+  normalizeOptionalString as normalizeString,
+  normalizeOptionalNumber as normalizeNumber,
+  normalizeOptionalStringArray as normalizeStringArray
+} from "@web/src/server/utils/normalization";
 
 function normalizeCitation(
   value: unknown
@@ -105,29 +79,7 @@ export function parsePerplexityCategoryJson(
   raw: unknown,
   audience?: AudienceSegment
 ): PerplexityCategoryResponse | null {
-  if (raw === null || raw === undefined) {
-    return null;
-  }
-
-  const parsed: unknown =
-    typeof raw === "string"
-      ? (() => {
-          try {
-            return JSON.parse(raw);
-          } catch {
-            const firstBrace = raw.indexOf("{");
-            const lastBrace = raw.lastIndexOf("}");
-            if (firstBrace === -1 || lastBrace <= firstBrace) {
-              return null;
-            }
-            try {
-              return JSON.parse(raw.slice(firstBrace, lastBrace + 1));
-            } catch {
-              return null;
-            }
-          }
-        })()
-      : raw;
+  const parsed = parsePossiblyWrappedJson(raw);
 
   if (!parsed) {
     return null;
