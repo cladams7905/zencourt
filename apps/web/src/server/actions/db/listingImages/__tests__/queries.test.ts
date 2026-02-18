@@ -12,7 +12,7 @@ const mockWithDbErrorHandling = jest.fn(
 
 jest.mock("@db/client", () => ({
   db: {
-    select: (...args: unknown[]) => mockSelect(...args)
+    select: (...args: unknown[]) => ((mockSelect as (...a: unknown[]) => unknown)(...args))
   },
   listingImages: { id: "id", listingId: "listingId", uploadedAt: "uploadedAt" },
   eq: (...args: unknown[]) => args,
@@ -20,22 +20,20 @@ jest.mock("@db/client", () => ({
 }));
 
 jest.mock("@web/src/server/actions/db/listingImages/helpers", () => ({
-  ensureListingImageAccess: (...args: unknown[]) =>
-    mockEnsureListingImageAccess(...args)
+  ensureListingImageAccess: (...args: unknown[]) => ((mockEnsureListingImageAccess as (...a: unknown[]) => unknown)(...args))
 }));
 
 jest.mock("@web/src/server/actions/shared/urlSigning", () => ({
-  mapWithSignedUrl: (...args: unknown[]) => mockMapWithSignedUrl(...args)
+  mapWithSignedUrl: (...args: unknown[]) => ((mockMapWithSignedUrl as (...a: unknown[]) => unknown)(...args))
 }));
 
 jest.mock("@web/src/server/utils/storageUrls", () => ({
   DEFAULT_THUMBNAIL_TTL_SECONDS: 3600,
-  resolveSignedDownloadUrl: (...args: unknown[]) =>
-    mockResolveSignedDownloadUrl(...args)
+  resolveSignedDownloadUrl: (...args: unknown[]) => ((mockResolveSignedDownloadUrl as (...a: unknown[]) => unknown)(...args))
 }));
 
 jest.mock("@web/src/server/actions/shared/dbErrorHandling", () => ({
-  withDbErrorHandling: (...args: unknown[]) => mockWithDbErrorHandling(...args)
+  withDbErrorHandling: (...args: unknown[]) => ((mockWithDbErrorHandling as (...a: unknown[]) => unknown)(...args))
 }));
 
 import { getListingImages } from "@web/src/server/actions/db/listingImages/queries";

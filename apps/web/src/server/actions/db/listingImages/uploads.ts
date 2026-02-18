@@ -3,7 +3,7 @@
 import { db, eq, listingImages } from "@db/client";
 import { MAX_IMAGE_BYTES } from "@shared/utils/mediaUpload";
 import { getListingImagePath } from "@shared/utils/storagePaths";
-import storageService from "@web/src/server/services/storageService";
+import storageService from "@web/src/server/services/storage";
 import { withDbErrorHandling } from "@web/src/server/actions/shared/dbErrorHandling";
 import {
   buildUploadFailure,

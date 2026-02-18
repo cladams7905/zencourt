@@ -1,2 +1,2 @@
 export * from "./useContentGeneration";
-export * from "./useOrshotRender";
+export * from "./useTemplateRender";

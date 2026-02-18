@@ -2,7 +2,7 @@ const mockGetUser = jest.fn();
 
 jest.mock("@web/src/lib/core/auth/stack/server", () => ({
   stackServerApp: {
-    getUser: (...args: unknown[]) => mockGetUser(...args)
+    getUser: (...args: unknown[]) => ((mockGetUser as (...a: unknown[]) => unknown)(...args))
   }
 }));
 

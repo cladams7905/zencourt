@@ -3,7 +3,7 @@ import {
   requireAuthenticatedUser,
   requireListingAccess
 } from "../../../_utils";
-import { getListingVideoStatus } from "@web/src/server/services/videoStatusService";
+import { getListingVideoStatus } from "@web/src/server/services/videoStatus";
 import { createChildLogger } from "@shared/utils";
 import {logger as baseLogger} from "@web/src/lib/core/logging/logger";
 

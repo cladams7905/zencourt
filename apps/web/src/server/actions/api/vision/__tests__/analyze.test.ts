@@ -5,15 +5,15 @@ const mockLoggerError = jest.fn();
 jest.mock("@web/src/server/services/imageProcessor", () => ({
   __esModule: true,
   default: {
-    analyzeImagesWorkflow: (...args: unknown[]) => mockAnalyzeImagesWorkflow(...args)
+    analyzeImagesWorkflow: (...args: unknown[]) => ((mockAnalyzeImagesWorkflow as (...a: unknown[]) => unknown)(...args))
   }
 }));
 
 jest.mock("@web/src/lib/core/logging/logger", () => ({
   logger: {},
   createChildLogger: () => ({
-    info: (...args: unknown[]) => mockLoggerInfo(...args),
-    error: (...args: unknown[]) => mockLoggerError(...args)
+    info: (...args: unknown[]) => ((mockLoggerInfo as (...a: unknown[]) => unknown)(...args)),
+    error: (...args: unknown[]) => ((mockLoggerError as (...a: unknown[]) => unknown)(...args))
   })
 }));
 

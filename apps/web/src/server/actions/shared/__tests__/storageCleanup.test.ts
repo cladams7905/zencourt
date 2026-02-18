@@ -1,9 +1,9 @@
 const mockDeleteFile = jest.fn();
 
-jest.mock("@web/src/server/services/storageService", () => ({
+jest.mock("@web/src/server/services/storage", () => ({
   __esModule: true,
   default: {
-    deleteFile: (...args: unknown[]) => mockDeleteFile(...args)
+    deleteFile: (...args: unknown[]) => ((mockDeleteFile as (...a: unknown[]) => unknown)(...args))
   }
 }));
 

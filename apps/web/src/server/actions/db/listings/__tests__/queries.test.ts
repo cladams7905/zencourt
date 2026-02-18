@@ -8,7 +8,7 @@ const mockWithDbErrorHandling = jest.fn(
 
 jest.mock("@db/client", () => ({
   db: {
-    select: (...args: unknown[]) => mockSelect(...args)
+    select: (...args: unknown[]) => ((mockSelect as (...a: unknown[]) => unknown)(...args))
   },
   listings: { id: "id", userId: "userId", title: "title" },
   eq: (...args: unknown[]) => args,
@@ -17,7 +17,7 @@ jest.mock("@db/client", () => ({
 }));
 
 jest.mock("@web/src/server/actions/shared/dbErrorHandling", () => ({
-  withDbErrorHandling: (...args: unknown[]) => mockWithDbErrorHandling(...args)
+  withDbErrorHandling: (...args: unknown[]) => ((mockWithDbErrorHandling as (...a: unknown[]) => unknown)(...args))
 }));
 
 import {

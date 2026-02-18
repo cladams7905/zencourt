@@ -7,7 +7,7 @@
 
 import { StorageUploadRequest } from "@shared/types/api/requests";
 import { StorageUploadBatchResponse } from "@shared/types/api/responses";
-import storageService from "../../services/storageService";
+import storageService from "../../services/storage";
 import { createChildLogger, logger as baseLogger } from "@web/src/lib/core/logging/logger";
 import { getSignedDownloadUrl as getSignedDownloadUrlInternal } from "../../utils/storageUrls";
 

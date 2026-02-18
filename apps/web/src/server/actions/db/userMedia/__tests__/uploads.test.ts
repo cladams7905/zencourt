@@ -20,17 +20,17 @@ jest.mock("nanoid", () => ({ nanoid: () => mockNanoid() }));
 
 jest.mock("@db/client", () => ({
   db: {
-    insert: (...args: unknown[]) => mockInsert(...args)
+    insert: (...args: unknown[]) => ((mockInsert as (...a: unknown[]) => unknown)(...args))
   },
   userMedia: {},
   userAdditional: { userId: "userId" }
 }));
 
-jest.mock("@web/src/server/services/storageService", () => ({
+jest.mock("@web/src/server/services/storage", () => ({
   __esModule: true,
   default: {
-    getSignedUploadUrl: (...args: unknown[]) => mockGetSignedUploadUrl(...args),
-    buildPublicUrlForKey: (...args: unknown[]) => mockBuildPublicUrlForKey(...args)
+    getSignedUploadUrl: (...args: unknown[]) => ((mockGetSignedUploadUrl as (...a: unknown[]) => unknown)(...args)),
+    buildPublicUrlForKey: (...args: unknown[]) => ((mockBuildPublicUrlForKey as (...a: unknown[]) => unknown)(...args))
   }
 }));
 
@@ -44,11 +44,11 @@ jest.mock("@shared/utils/storagePaths", () => ({
 }));
 
 jest.mock("@web/src/server/utils/storageUrls", () => ({
-  getSignedDownloadUrlSafe: (...args: unknown[]) => mockGetSignedDownloadUrlSafe(...args)
+  getSignedDownloadUrlSafe: (...args: unknown[]) => ((mockGetSignedDownloadUrlSafe as (...a: unknown[]) => unknown)(...args))
 }));
 
 jest.mock("@web/src/server/actions/shared/dbErrorHandling", () => ({
-  withDbErrorHandling: (...args: unknown[]) => mockWithDbErrorHandling(...args)
+  withDbErrorHandling: (...args: unknown[]) => ((mockWithDbErrorHandling as (...a: unknown[]) => unknown)(...args))
 }));
 
 import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES } from "@shared/utils/mediaUpload";
@@ -131,7 +131,7 @@ describe("userMedia uploads", () => {
   it("validates media key prefixes", async () => {
     await expect(
       createUserMediaRecords("u1", [
-        { type: "image", key: "wrong/key", fileName: "a.jpg", publicUrl: "https://p" }
+        { type: "image", key: "wrong/key" }
       ])
     ).rejects.toThrow("Invalid media upload key");
 
@@ -140,8 +140,6 @@ describe("userMedia uploads", () => {
         {
           type: "video",
           key: "user_u1/media/video/a.mp4",
-          fileName: "a.mp4",
-          publicUrl: "https://p",
           thumbnailKey: "wrong/thumb"
         }
       ])
@@ -159,9 +157,7 @@ describe("userMedia uploads", () => {
     const result = await createUserMediaRecords("u1", [
       {
         type: "image",
-        key: "user_u1/media/image/a.jpg",
-        fileName: "a.jpg",
-        publicUrl: "https://public/user_u1/media/image/a.jpg"
+        key: "user_u1/media/image/a.jpg"
       }
     ]);
 

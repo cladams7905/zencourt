@@ -3,7 +3,7 @@
 import imageProcessorService, {
   type ProcessingResult
 } from "@web/src/server/services/imageProcessor";
-import type { SerializableImageData } from "@web/src/types/images";
+import type { SerializableImageData } from "@web/src/lib/domain/listing/images";
 import { createChildLogger, logger as baseLogger } from "@web/src/lib/core/logging/logger";
 import type { VisionActionOptions } from "./types";
 

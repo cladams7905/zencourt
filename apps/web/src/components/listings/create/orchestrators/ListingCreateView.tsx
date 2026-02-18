@@ -21,7 +21,7 @@ import {
 } from "@web/src/components/listings/create/domain/listingCreateUtils";
 import { useStickyHeader } from "@web/src/components/listings/create/shared/hooks/useStickyHeader";
 import { useScrollFade } from "@web/src/components/listings/create/shared/hooks/useScrollFade";
-import { useOrshotRender } from "@web/src/components/listings/create/domain/hooks/useOrshotRender";
+import { useTemplateRender } from "@web/src/components/listings/create/domain/hooks/useTemplateRender";
 import { useContentGeneration } from "@web/src/components/listings/create/domain/hooks/useContentGeneration";
 import type { ListingImagePreviewItem } from "@web/src/components/listings/create/shared/types";
 import {
@@ -203,10 +203,10 @@ export function ListingCreateView({
   }, [activeMediaItems, activeMediaTab, listingImages]);
 
   const {
-    previewItems: orshotPreviewItems,
-    isRendering: isOrshotRendering,
-    renderError: orshotRenderError
-  } = useOrshotRender({
+    previewItems: templatePreviewItems,
+    isRendering: isTemplateRendering,
+    renderError: templateRenderError
+  } = useTemplateRender({
     listingId,
     activeSubcategory,
     activeMediaTab,
@@ -216,16 +216,16 @@ export function ListingCreateView({
 
   const activeImagePreviewItems = React.useMemo(
     () =>
-      orshotPreviewItems.length > 0
-        ? orshotPreviewItems
+      templatePreviewItems.length > 0
+        ? templatePreviewItems
         : fallbackImagePreviewItems,
-    [fallbackImagePreviewItems, orshotPreviewItems]
+    [fallbackImagePreviewItems, templatePreviewItems]
   );
 
   const imageLoadingCount =
     loadingCount > 0
       ? loadingCount
-      : activeMediaTab === "images" && isOrshotRendering
+      : activeMediaTab === "images" && isTemplateRendering
         ? GENERATED_BATCH_SIZE
         : 0;
   const activePreviewPlans = React.useMemo(() => {
@@ -397,9 +397,9 @@ export function ListingCreateView({
               </Tooltip>
             </div>
           </div>
-          {generationError || orshotRenderError ? (
+          {generationError || templateRenderError ? (
             <p className="mt-3 text-sm text-red-500">
-              {generationError ?? orshotRenderError}
+              {generationError ?? templateRenderError}
             </p>
           ) : null}
         </div>
@@ -421,7 +421,7 @@ export function ListingCreateView({
           ) : activeMediaTab === "images" &&
             (activeImagePreviewItems.length > 0 ||
               isGenerating ||
-              isOrshotRendering) ? (
+              isTemplateRendering) ? (
             <ListingImagePreviewGrid
               items={activeImagePreviewItems}
               captionSubcategoryLabel={SUBCATEGORY_LABELS[activeSubcategory]}

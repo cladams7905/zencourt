@@ -5,24 +5,24 @@ const mockGetSignedDownloadUrl = jest.fn();
 const mockLoggerInfo = jest.fn();
 const mockLoggerError = jest.fn();
 
-jest.mock("@web/src/server/services/storageService", () => ({
+jest.mock("@web/src/server/services/storage", () => ({
   __esModule: true,
   default: {
-    uploadFile: (...args: unknown[]) => mockUploadFile(...args),
-    uploadFilesBatch: (...args: unknown[]) => mockUploadFilesBatch(...args),
-    deleteFile: (...args: unknown[]) => mockDeleteFile(...args)
+    uploadFile: (...args: unknown[]) => ((mockUploadFile as (...a: unknown[]) => unknown)(...args)),
+    uploadFilesBatch: (...args: unknown[]) => ((mockUploadFilesBatch as (...a: unknown[]) => unknown)(...args)),
+    deleteFile: (...args: unknown[]) => ((mockDeleteFile as (...a: unknown[]) => unknown)(...args))
   }
 }));
 
 jest.mock("@web/src/server/utils/storageUrls", () => ({
-  getSignedDownloadUrl: (...args: unknown[]) => mockGetSignedDownloadUrl(...args)
+  getSignedDownloadUrl: (...args: unknown[]) => ((mockGetSignedDownloadUrl as (...a: unknown[]) => unknown)(...args))
 }));
 
 jest.mock("@web/src/lib/core/logging/logger", () => ({
   logger: {},
   createChildLogger: () => ({
-    info: (...args: unknown[]) => mockLoggerInfo(...args),
-    error: (...args: unknown[]) => mockLoggerError(...args)
+    info: (...args: unknown[]) => ((mockLoggerInfo as (...a: unknown[]) => unknown)(...args)),
+    error: (...args: unknown[]) => ((mockLoggerError as (...a: unknown[]) => unknown)(...args))
   })
 }));
 

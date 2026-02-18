@@ -3,7 +3,7 @@ const mockInsertValues = jest.fn(() => ({ returning: mockInsertReturning }));
 const mockTxInsert = jest.fn(() => ({ values: mockInsertValues }));
 
 const mockTransaction = jest.fn(async (cb: (tx: unknown) => Promise<unknown>) =>
-  cb({ insert: (...args: unknown[]) => mockTxInsert(...args) })
+  cb({ insert: (...args: unknown[]) => ((mockTxInsert as (...a: unknown[]) => unknown)(...args)) })
 );
 
 const mockUpdateReturning = jest.fn();
@@ -22,8 +22,8 @@ jest.mock("nanoid", () => ({ nanoid: () => mockNanoid() }));
 
 jest.mock("@db/client", () => ({
   db: {
-    transaction: (...args: unknown[]) => mockTransaction(...args),
-    update: (...args: unknown[]) => mockUpdate(...args)
+    transaction: (...args: unknown[]) => ((mockTransaction as (...a: unknown[]) => unknown)(...args)),
+    update: (...args: unknown[]) => ((mockUpdate as (...a: unknown[]) => unknown)(...args))
   },
   listings: { id: "id", userId: "userId" },
   eq: (...args: unknown[]) => args,
@@ -31,12 +31,12 @@ jest.mock("@db/client", () => ({
 }));
 
 jest.mock("@web/src/server/actions/shared/dbErrorHandling", () => ({
-  withDbErrorHandling: (...args: unknown[]) => mockWithDbErrorHandling(...args)
+  withDbErrorHandling: (...args: unknown[]) => ((mockWithDbErrorHandling as (...a: unknown[]) => unknown)(...args))
 }));
 
 jest.mock("@web/src/server/actions/db/listings/queries", () => ({
-  getNextDraftNumber: (...args: unknown[]) => mockGetNextDraftNumber(...args),
-  getListingById: (...args: unknown[]) => mockGetListingById(...args)
+  getNextDraftNumber: (...args: unknown[]) => ((mockGetNextDraftNumber as (...a: unknown[]) => unknown)(...args)),
+  getListingById: (...args: unknown[]) => ((mockGetListingById as (...a: unknown[]) => unknown)(...args))
 }));
 
 import {

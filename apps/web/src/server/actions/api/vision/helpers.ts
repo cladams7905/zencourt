@@ -1,5 +1,5 @@
 import { and, db, eq, inArray, listingImages } from "@db/client";
-import type { SerializableImageData } from "@web/src/types/images";
+import type { SerializableImageData } from "@web/src/lib/domain/listing/images";
 import { getListingById } from "@web/src/server/actions/db/listings";
 import { assignPrimaryListingImageForCategory } from "@web/src/server/actions/db/listingImages";
 

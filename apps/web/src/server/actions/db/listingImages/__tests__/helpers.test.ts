@@ -5,7 +5,7 @@ const mockSelect = jest.fn(() => ({ from: mockFrom }));
 
 jest.mock("@db/client", () => ({
   db: {
-    select: (...args: unknown[]) => mockSelect(...args)
+    select: (...args: unknown[]) => ((mockSelect as (...a: unknown[]) => unknown)(...args))
   },
   listings: { id: "id", userId: "userId" },
   eq: (...args: unknown[]) => args,

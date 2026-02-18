@@ -5,20 +5,18 @@ const mockBuildPropertyDetailsRevision = jest.fn();
 const mockLoggerInfo = jest.fn();
 
 jest.mock("@web/src/server/actions/db/listings", () => ({
-  getListingById: (...args: unknown[]) => mockGetListingById(...args),
-  updateListing: (...args: unknown[]) => mockUpdateListing(...args)
+  getListingById: (...args: unknown[]) => ((mockGetListingById as (...a: unknown[]) => unknown)(...args)),
+  updateListing: (...args: unknown[]) => ((mockUpdateListing as (...a: unknown[]) => unknown)(...args))
 }));
 
-jest.mock("@web/src/server/services/listingPropertyService", () => ({
-  fetchPropertyDetailsFromPerplexity: (...args: unknown[]) =>
-    mockFetchPropertyDetailsFromPerplexity(...args),
-  buildPropertyDetailsRevision: (...args: unknown[]) =>
-    mockBuildPropertyDetailsRevision(...args)
+jest.mock("@web/src/server/services/listingProperty", () => ({
+  fetchPropertyDetailsFromPerplexity: (...args: unknown[]) => ((mockFetchPropertyDetailsFromPerplexity as (...a: unknown[]) => unknown)(...args)),
+  buildPropertyDetailsRevision: (...args: unknown[]) => ((mockBuildPropertyDetailsRevision as (...a: unknown[]) => unknown)(...args))
 }));
 
 jest.mock("@web/src/lib/core/logging/logger", () => ({
   logger: {},
-  createChildLogger: () => ({ info: (...args: unknown[]) => mockLoggerInfo(...args) })
+  createChildLogger: () => ({ info: (...args: unknown[]) => ((mockLoggerInfo as (...a: unknown[]) => unknown)(...args)) })
 }));
 
 import {

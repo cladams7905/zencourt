@@ -7,9 +7,9 @@ const mockError = jest.fn();
 jest.mock("@web/src/lib/core/logging/logger", () => ({
   logger: {},
   createChildLogger: () => ({
-    debug: (...args: unknown[]) => mockDebug(...args),
-    info: (...args: unknown[]) => mockInfo(...args),
-    error: (...args: unknown[]) => mockError(...args)
+    debug: (...args: unknown[]) => ((mockDebug as (...a: unknown[]) => unknown)(...args)),
+    info: (...args: unknown[]) => ((mockInfo as (...a: unknown[]) => unknown)(...args)),
+    error: (...args: unknown[]) => ((mockError as (...a: unknown[]) => unknown)(...args))
   })
 }));
 

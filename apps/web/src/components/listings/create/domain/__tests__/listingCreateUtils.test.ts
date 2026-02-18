@@ -1,10 +1,10 @@
 import type { ContentItem } from "@web/src/components/dashboard/components/ContentGrid";
 import {
   buildFeatureNeedle,
-  buildOrshotCaptionItems,
+  buildTemplateRenderCaptionItems,
   buildVariedImageSequence,
   filterFeatureClips,
-  mapOrshotItemsToPreviewItems,
+  mapTemplateRenderItemsToPreviewItems,
   rankListingImagesForItem,
   resolveContentMediaType,
   type ListingCreateImage,
@@ -156,8 +156,8 @@ describe("listingCreateUtils", () => {
     expect(buildVariedImageSequence(input, "seed")).toBe(input);
   });
 
-  it("sanitizes and filters caption items for orshot", () => {
-    const result = buildOrshotCaptionItems([
+  it("sanitizes and filters caption items for template rendering", () => {
+    const result = buildTemplateRenderCaptionItems([
       {
         id: "item-1",
         hook: "  Hook  ",
@@ -185,8 +185,8 @@ describe("listingCreateUtils", () => {
     ]);
   });
 
-  it("maps orshot items to preview items with matched caption fallback", () => {
-    const mapped = mapOrshotItemsToPreviewItems({
+  it("maps rendered items to preview items with matched caption fallback", () => {
+    const mapped = mapTemplateRenderItemsToPreviewItems({
       renderedItems: [
         {
           templateId: "tpl-1",
@@ -201,7 +201,7 @@ describe("listingCreateUtils", () => {
     });
 
     expect(mapped[0]).toMatchObject({
-      id: "orshot-tpl-1-item-1-0",
+      id: "template-render-tpl-1-item-1-0",
       variationNumber: 1,
       hook: "My Hook",
       caption: "My Caption",

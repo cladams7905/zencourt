@@ -10,8 +10,8 @@ const mockAssignPrimaryListingImageForCategory = jest.fn();
 
 jest.mock("@db/client", () => ({
   db: {
-    select: (...args: unknown[]) => mockSelect(...args),
-    update: (...args: unknown[]) => mockUpdate(...args)
+    select: (...args: unknown[]) => ((mockSelect as (...a: unknown[]) => unknown)(...args)),
+    update: (...args: unknown[]) => ((mockUpdate as (...a: unknown[]) => unknown)(...args))
   },
   listingImages: {
     id: "id",
@@ -24,12 +24,11 @@ jest.mock("@db/client", () => ({
 }));
 
 jest.mock("@web/src/server/actions/db/listings", () => ({
-  getListingById: (...args: unknown[]) => mockGetListingById(...args)
+  getListingById: (...args: unknown[]) => ((mockGetListingById as (...a: unknown[]) => unknown)(...args))
 }));
 
 jest.mock("@web/src/server/actions/db/listingImages", () => ({
-  assignPrimaryListingImageForCategory: (...args: unknown[]) =>
-    mockAssignPrimaryListingImageForCategory(...args)
+  assignPrimaryListingImageForCategory: (...args: unknown[]) => ((mockAssignPrimaryListingImageForCategory as (...a: unknown[]) => unknown)(...args))
 }));
 
 import {

@@ -1,7 +1,7 @@
 "use server";
 
 import { db, eq, userAdditional } from "@db/client";
-import storageService from "@web/src/server/services/storageService";
+import storageService from "@web/src/server/services/storage";
 import { withDbErrorHandling } from "@web/src/server/actions/shared/dbErrorHandling";
 import { requireUserId } from "@web/src/server/actions/shared/validation";
 

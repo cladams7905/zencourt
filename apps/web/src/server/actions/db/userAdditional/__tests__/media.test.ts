@@ -12,22 +12,22 @@ const mockWithDbErrorHandling = jest.fn(async (fn: () => Promise<unknown>) => aw
 
 jest.mock("@db/client", () => ({
   db: {
-    select: (...args: unknown[]) => mockSelect(...args),
-    insert: (...args: unknown[]) => mockInsert(...args)
+    select: (...args: unknown[]) => ((mockSelect as (...a: unknown[]) => unknown)(...args)),
+    insert: (...args: unknown[]) => ((mockInsert as (...a: unknown[]) => unknown)(...args))
   },
   userAdditional: { userId: "userId", headshotUrl: "headshotUrl" },
   eq: (...args: unknown[]) => args
 }));
 
-jest.mock("@web/src/server/services/storageService", () => ({
+jest.mock("@web/src/server/services/storage", () => ({
   __esModule: true,
   default: {
-    uploadFile: (...args: unknown[]) => mockUploadFile(...args)
+    uploadFile: (...args: unknown[]) => ((mockUploadFile as (...a: unknown[]) => unknown)(...args))
   }
 }));
 
 jest.mock("@web/src/server/actions/shared/dbErrorHandling", () => ({
-  withDbErrorHandling: (...args: unknown[]) => mockWithDbErrorHandling(...args)
+  withDbErrorHandling: (...args: unknown[]) => ((mockWithDbErrorHandling as (...a: unknown[]) => unknown)(...args))
 }));
 
 import { ensureGoogleHeadshot } from "@web/src/server/actions/db/userAdditional/media";

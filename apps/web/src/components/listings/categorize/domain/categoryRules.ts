@@ -1,4 +1,4 @@
-import { ROOM_CATEGORIES, type RoomCategory } from "@web/src/types/vision";
+import { ROOM_CATEGORIES, type RoomCategory } from "@web/src/lib/domain/listing/vision";
 import { UNCATEGORIZED_CATEGORY_ID } from "@web/src/components/listings/categorize/shared/constants";
 
 export const normalizeCategory = (value: string) => value.trim().toLowerCase();

@@ -5,7 +5,7 @@ import { getListingById, updateListing } from "../db/listings";
 import {
   buildPropertyDetailsRevision,
   fetchPropertyDetailsFromPerplexity
-} from "../../services/listingPropertyService";
+} from "../../services/listingProperty";
 import type { ListingPropertyDetails } from "@shared/types/models";
 import {
   requireListingId,

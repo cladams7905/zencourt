@@ -15,30 +15,30 @@ const mockWithDbErrorHandling = jest.fn(
 
 jest.mock("@db/client", () => ({
   db: {
-    select: (...args: unknown[]) => mockSelect(...args)
+    select: (...args: unknown[]) => ((mockSelect as (...a: unknown[]) => unknown)(...args))
   },
   listingImages: { id: "id", listingId: "listingId" },
   eq: (...args: unknown[]) => args
 }));
 
 jest.mock("@web/src/server/actions/db/listingImages/helpers", () => ({
-  ensureListingImageAccess: (...args: unknown[]) => mockEnsureListingImageAccess(...args)
+  ensureListingImageAccess: (...args: unknown[]) => ((mockEnsureListingImageAccess as (...a: unknown[]) => unknown)(...args))
 }));
 
-jest.mock("@web/src/server/services/storageService", () => ({
+jest.mock("@web/src/server/services/storage", () => ({
   __esModule: true,
   default: {
-    getSignedUploadUrl: (...args: unknown[]) => mockGetSignedUploadUrl(...args),
-    buildPublicUrlForKey: (...args: unknown[]) => mockBuildPublicUrlForKey(...args)
+    getSignedUploadUrl: (...args: unknown[]) => ((mockGetSignedUploadUrl as (...a: unknown[]) => unknown)(...args)),
+    buildPublicUrlForKey: (...args: unknown[]) => ((mockBuildPublicUrlForKey as (...a: unknown[]) => unknown)(...args))
   }
 }));
 
 jest.mock("@shared/utils/storagePaths", () => ({
-  getListingImagePath: (...args: unknown[]) => mockGetListingImagePath(...args)
+  getListingImagePath: (...args: unknown[]) => ((mockGetListingImagePath as (...a: unknown[]) => unknown)(...args))
 }));
 
 jest.mock("@web/src/server/actions/shared/dbErrorHandling", () => ({
-  withDbErrorHandling: (...args: unknown[]) => mockWithDbErrorHandling(...args)
+  withDbErrorHandling: (...args: unknown[]) => ((mockWithDbErrorHandling as (...a: unknown[]) => unknown)(...args))
 }));
 
 import { MAX_IMAGE_BYTES } from "@shared/utils/mediaUpload";

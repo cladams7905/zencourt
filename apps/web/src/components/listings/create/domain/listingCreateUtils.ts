@@ -2,9 +2,9 @@ import type { PreviewTimelineClip } from "@web/src/lib/domain/listing/previewTim
 import type { ContentItem } from "@web/src/components/dashboard/components/ContentGrid";
 import type { ListingImagePreviewItem } from "@web/src/components/listings/create/shared/types";
 import type {
-  OrshotCaptionItemInput,
-  ListingOrshotRenderedItem
-} from "@web/src/lib/domain/media/orshot/types";
+  ListingTemplateRenderedItem,
+  TemplateRenderCaptionItemInput
+} from "@web/src/lib/domain/media/templateRender/types";
 
 export type PreviewClipCandidate = PreviewTimelineClip & {
   searchableText: string;
@@ -170,9 +170,9 @@ export function buildVariedImageSequence(
   return sequence;
 }
 
-export function buildOrshotCaptionItems(
+export function buildTemplateRenderCaptionItems(
   items: ContentItem[]
-): OrshotCaptionItemInput[] {
+): TemplateRenderCaptionItemInput[] {
   return items
     .map((item) => ({
       id: item.id,
@@ -188,9 +188,9 @@ export function buildOrshotCaptionItems(
     .filter((item) => item.hook || item.caption || item.body.length > 0);
 }
 
-export function mapOrshotItemsToPreviewItems(params: {
-  renderedItems: ListingOrshotRenderedItem[];
-  captionItems: OrshotCaptionItemInput[];
+export function mapTemplateRenderItemsToPreviewItems(params: {
+  renderedItems: ListingTemplateRenderedItem[];
+  captionItems: TemplateRenderCaptionItemInput[];
 }): ListingImagePreviewItem[] {
   const captionById = new Map(
     params.captionItems.map((item) => [item.id, item] as const)
@@ -201,7 +201,7 @@ export function mapOrshotItemsToPreviewItems(params: {
     const fallbackHeader = matchedCaption?.hook || "Listing";
     const fallbackContent = matchedCaption?.caption || "";
     return {
-      id: `orshot-${renderedItem.templateId}-${renderedItem.captionItemId}-${index}`,
+      id: `template-render-${renderedItem.templateId}-${renderedItem.captionItemId}-${index}`,
       variationNumber: index + 1,
       hook: matchedCaption?.hook ?? null,
       caption: matchedCaption?.caption ?? null,

@@ -1,4 +1,4 @@
-import storageService from "../services/storageService";
+import storageService from "../services/storage";
 import {
   createChildLogger,
   logger as baseLogger

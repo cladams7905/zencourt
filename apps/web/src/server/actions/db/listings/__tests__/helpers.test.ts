@@ -2,7 +2,7 @@ const mockResolveSignedDownloadUrl = jest.fn();
 
 jest.mock("@web/src/server/utils/storageUrls", () => ({
   DEFAULT_THUMBNAIL_TTL_SECONDS: 3600,
-  resolveSignedDownloadUrl: (...args: unknown[]) => mockResolveSignedDownloadUrl(...args)
+  resolveSignedDownloadUrl: (...args: unknown[]) => ((mockResolveSignedDownloadUrl as (...a: unknown[]) => unknown)(...args))
 }));
 
 import { withSignedContentThumbnails } from "@web/src/server/actions/db/listings/helpers";

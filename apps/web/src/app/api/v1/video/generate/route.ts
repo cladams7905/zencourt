@@ -18,7 +18,7 @@ import {
   isPriorityCategory
 } from "@shared/types/video";
 import { getVideoServerConfig } from "../_config";
-import { ROOM_CATEGORIES, RoomCategory } from "@web/src/types/vision";
+import { ROOM_CATEGORIES, RoomCategory } from "@web/src/lib/domain/listing/vision";
 import {
   createChildLogger,
   logger as baseLogger

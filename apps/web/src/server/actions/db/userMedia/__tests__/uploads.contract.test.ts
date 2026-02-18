@@ -12,16 +12,16 @@ jest.mock("@db/client", () => ({
   userAdditional: { userId: "userId" }
 }));
 
-jest.mock("@web/src/server/services/storageService", () => ({
+jest.mock("@web/src/server/services/storage", () => ({
   __esModule: true,
   default: {
-    getSignedUploadUrl: (...args: unknown[]) => mockGetSignedUploadUrl(...args),
-    buildPublicUrlForKey: (...args: unknown[]) => mockBuildPublicUrlForKey(...args)
+    getSignedUploadUrl: (...args: unknown[]) => ((mockGetSignedUploadUrl as (...a: unknown[]) => unknown)(...args)),
+    buildPublicUrlForKey: (...args: unknown[]) => ((mockBuildPublicUrlForKey as (...a: unknown[]) => unknown)(...args))
   }
 }));
 
 jest.mock("@web/src/server/actions/shared/dbErrorHandling", () => ({
-  withDbErrorHandling: (...args: unknown[]) => mockWithDbErrorHandling(...args)
+  withDbErrorHandling: (...args: unknown[]) => ((mockWithDbErrorHandling as (...a: unknown[]) => unknown)(...args))
 }));
 
 import { getUserMediaUploadUrls } from "@web/src/server/actions/db/userMedia/uploads";

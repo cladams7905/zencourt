@@ -1,6 +1,6 @@
 import * as React from "react";
 import { toast } from "sonner";
-import { ROOM_CATEGORIES, type RoomCategory } from "@web/src/types/vision";
+import { ROOM_CATEGORIES, type RoomCategory } from "@web/src/lib/domain/listing/vision";
 import { MAX_IMAGES_PER_ROOM } from "@shared/utils/mediaUpload";
 import { UNCATEGORIZED_CATEGORY_ID } from "@web/src/components/listings/categorize/shared";
 import type { ListingImageItem } from "@web/src/components/listings/categorize/shared";

@@ -5,7 +5,7 @@ import {
   updateListing
 } from "@web/src/server/actions/db/listings";
 import { getListingImages } from "@web/src/server/actions/db/listingImages";
-import { getListingVideoStatus } from "@web/src/server/services/videoStatusService";
+import { getListingVideoStatus } from "@web/src/server/services/videoStatus";
 import {
   ListingCreateView
 } from "@web/src/components/listings/create/orchestrators";

@@ -19,7 +19,7 @@ import {
 } from "@web/src/lib/core/logging/logger";
 import { db, eq, userAdditional } from "@db/client";
 import { Redis } from "@upstash/redis";
-import { getMarketData } from "@web/src/server/services/marketDataService";
+import { getMarketData } from "@web/src/server/services/marketData";
 import { parseMarketLocation } from "@web/src/lib/domain/location/marketLocation";
 import {
   getCityDescription,
@@ -27,16 +27,16 @@ import {
   getPerplexityCommunityDataByZipAndAudienceForCategories,
   getPerplexityMonthlyEventsSectionByZip,
   prefetchPerplexityCategoriesByZip
-} from "@web/src/server/services/community/communityDataService";
-import { getCommunityDataProvider } from "@web/src/server/services/community/config";
+} from "@web/src/server/services/communityData/service";
+import { getCommunityDataProvider } from "@web/src/server/services/communityData/config";
 import {
   AUDIENCE_SEGMENT_ALIASES,
   NORMALIZED_AUDIENCE_SEGMENTS,
   shouldIncludeServiceAreasInCache,
   type AudienceSegment
-} from "@web/src/server/services/community/config";
-import { getCachedPerplexityCategoryPayload } from "@web/src/server/services/community/providers/perplexity/cache";
-import type { CategoryKey } from "@web/src/server/services/community/config";
+} from "@web/src/server/services/communityData/config";
+import { getCachedPerplexityCategoryPayload } from "@web/src/server/services/communityData/providers/perplexity/cache";
+import type { CategoryKey } from "@web/src/server/services/communityData/config";
 
 const logger = createChildLogger(baseLogger, {
   module: "content-generate-route"

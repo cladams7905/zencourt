@@ -1,4 +1,4 @@
-import type { CommunityData, MarketData } from "@web/src/types/market";
+import type { CommunityData, MarketData } from "@web/src/lib/domain/market/types";
 import type {
   ListingContentSubcategory,
   ListingPropertyDetails

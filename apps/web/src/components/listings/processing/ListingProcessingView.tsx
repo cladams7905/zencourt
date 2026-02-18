@@ -13,7 +13,7 @@ import { AlertTriangle, Loader2 } from "lucide-react";
 import { Button } from "../../ui/button";
 import { toast } from "sonner";
 import { emitListingSidebarUpdate } from "@web/src/lib/domain/listing/sidebarEvents";
-import type { VideoJobUpdateEvent } from "@web/src/types/video-status";
+import type { VideoJobUpdateEvent } from "@web/src/lib/domain/listing/videoStatus";
 import {
   Dialog,
   DialogContent,

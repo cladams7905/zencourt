@@ -28,10 +28,10 @@ jest.mock("nanoid", () => ({ nanoid: () => mockNanoid() }));
 
 jest.mock("@db/client", () => ({
   db: {
-    select: (...args: unknown[]) => mockSelect(...args),
-    delete: (...args: unknown[]) => mockDelete(...args),
-    update: (...args: unknown[]) => mockUpdate(...args),
-    insert: (...args: unknown[]) => mockInsert(...args)
+    select: (...args: unknown[]) => ((mockSelect as (...a: unknown[]) => unknown)(...args)),
+    delete: (...args: unknown[]) => ((mockDelete as (...a: unknown[]) => unknown)(...args)),
+    update: (...args: unknown[]) => ((mockUpdate as (...a: unknown[]) => unknown)(...args)),
+    insert: (...args: unknown[]) => ((mockInsert as (...a: unknown[]) => unknown)(...args))
   },
   listingImages: {
     id: "id",
@@ -49,23 +49,23 @@ jest.mock("@db/client", () => ({
 }));
 
 jest.mock("@web/src/server/actions/db/listingImages/helpers", () => ({
-  ensureListingImageAccess: (...args: unknown[]) => mockEnsureListingImageAccess(...args)
+  ensureListingImageAccess: (...args: unknown[]) => ((mockEnsureListingImageAccess as (...a: unknown[]) => unknown)(...args))
 }));
 
 jest.mock("@web/src/server/actions/shared/storageCleanup", () => ({
-  deleteStorageUrlsOrThrow: (...args: unknown[]) => mockDeleteStorageUrlsOrThrow(...args)
+  deleteStorageUrlsOrThrow: (...args: unknown[]) => ((mockDeleteStorageUrlsOrThrow as (...a: unknown[]) => unknown)(...args))
 }));
 
 jest.mock("@shared/utils/storagePaths", () => ({
-  getListingFolder: (...args: unknown[]) => mockGetListingFolder(...args)
+  getListingFolder: (...args: unknown[]) => ((mockGetListingFolder as (...a: unknown[]) => unknown)(...args))
 }));
 
 jest.mock("@web/src/server/utils/storageUrls", () => ({
-  isManagedStorageUrl: (...args: unknown[]) => mockIsManagedStorageUrl(...args)
+  isManagedStorageUrl: (...args: unknown[]) => ((mockIsManagedStorageUrl as (...a: unknown[]) => unknown)(...args))
 }));
 
 jest.mock("@web/src/server/actions/shared/dbErrorHandling", () => ({
-  withDbErrorHandling: (...args: unknown[]) => mockWithDbErrorHandling(...args)
+  withDbErrorHandling: (...args: unknown[]) => ((mockWithDbErrorHandling as (...a: unknown[]) => unknown)(...args))
 }));
 
 import {

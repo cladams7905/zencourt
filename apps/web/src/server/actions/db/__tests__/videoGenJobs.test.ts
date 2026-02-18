@@ -11,9 +11,9 @@ const mockSelect = jest.fn(() => ({ from: mockSelectFrom }));
 
 jest.mock("@db/client", () => ({
   db: {
-    insert: (...args: unknown[]) => mockInsert(...args),
-    update: (...args: unknown[]) => mockUpdate(...args),
-    select: (...args: unknown[]) => mockSelect(...args)
+    insert: (...args: unknown[]) => ((mockInsert as (...a: unknown[]) => unknown)(...args)),
+    update: (...args: unknown[]) => ((mockUpdate as (...a: unknown[]) => unknown)(...args)),
+    select: (...args: unknown[]) => ((mockSelect as (...a: unknown[]) => unknown)(...args))
   },
   videoGenJobs: { id: "id" },
   eq: (...args: unknown[]) => args

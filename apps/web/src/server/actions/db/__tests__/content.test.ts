@@ -25,23 +25,22 @@ jest.mock("nanoid", () => ({ nanoid: () => mockNanoid() }));
 
 jest.mock("@db/client", () => ({
   db: {
-    insert: (...args: unknown[]) => mockInsert(...args),
-    update: (...args: unknown[]) => mockUpdate(...args),
-    select: (...args: unknown[]) => mockSelect(...args),
-    delete: (...args: unknown[]) => mockDelete(...args)
+    insert: (...args: unknown[]) => ((mockInsert as (...a: unknown[]) => unknown)(...args)),
+    update: (...args: unknown[]) => ((mockUpdate as (...a: unknown[]) => unknown)(...args)),
+    select: (...args: unknown[]) => ((mockSelect as (...a: unknown[]) => unknown)(...args)),
+    delete: (...args: unknown[]) => ((mockDelete as (...a: unknown[]) => unknown)(...args))
   },
   content: { id: "id", listingId: "listingId" },
   eq: (...args: unknown[]) => args
 }));
 
 jest.mock("@web/src/server/actions/shared/dbErrorHandling", () => ({
-  withDbErrorHandling: (...args: unknown[]) => mockWithDbErrorHandling(...args)
+  withDbErrorHandling: (...args: unknown[]) => ((mockWithDbErrorHandling as (...a: unknown[]) => unknown)(...args))
 }));
 
 jest.mock("@web/src/server/utils/storageUrls", () => ({
   DEFAULT_THUMBNAIL_TTL_SECONDS: 3600,
-  resolveSignedDownloadUrl: (...args: unknown[]) =>
-    mockResolveSignedDownloadUrl(...args)
+  resolveSignedDownloadUrl: (...args: unknown[]) => ((mockResolveSignedDownloadUrl as (...a: unknown[]) => unknown)(...args))
 }));
 
 import {

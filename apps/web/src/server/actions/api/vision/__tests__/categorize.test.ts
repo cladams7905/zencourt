@@ -7,16 +7,15 @@ const mockAssignPrimaryImagesByCategory = jest.fn();
 jest.mock("@web/src/server/services/imageProcessor", () => ({
   __esModule: true,
   default: {
-    analyzeImagesWorkflow: (...args: unknown[]) => mockAnalyzeImagesWorkflow(...args)
+    analyzeImagesWorkflow: (...args: unknown[]) => ((mockAnalyzeImagesWorkflow as (...a: unknown[]) => unknown)(...args))
   }
 }));
 
 jest.mock("@web/src/server/actions/api/vision/helpers", () => ({
-  assertListingExists: (...args: unknown[]) => mockAssertListingExists(...args),
-  loadListingImages: (...args: unknown[]) => mockLoadListingImages(...args),
-  persistListingImageAnalysis: (...args: unknown[]) => mockPersistListingImageAnalysis(...args),
-  assignPrimaryImagesByCategory: (...args: unknown[]) =>
-    mockAssignPrimaryImagesByCategory(...args),
+  assertListingExists: (...args: unknown[]) => ((mockAssertListingExists as (...a: unknown[]) => unknown)(...args)),
+  loadListingImages: (...args: unknown[]) => ((mockLoadListingImages as (...a: unknown[]) => unknown)(...args)),
+  persistListingImageAnalysis: (...args: unknown[]) => ((mockPersistListingImageAnalysis as (...a: unknown[]) => unknown)(...args)),
+  assignPrimaryImagesByCategory: (...args: unknown[]) => ((mockAssignPrimaryImagesByCategory as (...a: unknown[]) => unknown)(...args)),
   toSerializableImageData: (image: unknown) => image
 }));
 

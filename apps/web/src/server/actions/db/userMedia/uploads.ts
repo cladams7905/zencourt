@@ -10,7 +10,7 @@ import {
   getUserMediaThumbnailPath
 } from "@shared/utils/storagePaths";
 import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES } from "@shared/utils/mediaUpload";
-import storageService from "@web/src/server/services/storageService";
+import storageService from "@web/src/server/services/storage";
 import { withDbErrorHandling } from "@web/src/server/actions/shared/dbErrorHandling";
 import { requireUserId } from "@web/src/server/actions/shared/validation";
 import {

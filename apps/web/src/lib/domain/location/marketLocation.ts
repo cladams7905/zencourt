@@ -1,4 +1,4 @@
-import type { MarketLocation } from "@web/src/types/market";
+import type { MarketLocation } from "@web/src/lib/domain/market/types";
 
 const US_ZIP_REGEX = /\b\d{5}(?:-\d{4})?\b/;
 

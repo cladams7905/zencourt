@@ -1,4 +1,4 @@
-import storageService from "@web/src/server/services/storageService";
+import storageService from "@web/src/server/services/storage";
 
 export async function deleteStorageUrlsOrThrow(
   urls: Array<string | null | undefined>,

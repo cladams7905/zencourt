@@ -7,8 +7,8 @@ const mockUpdate = jest.fn(() => ({ set: mockSet }));
 
 jest.mock("@db/client", () => ({
   db: {
-    insert: (...args: unknown[]) => mockInsert(...args),
-    update: (...args: unknown[]) => mockUpdate(...args)
+    insert: (...args: unknown[]) => ((mockInsert as (...a: unknown[]) => unknown)(...args)),
+    update: (...args: unknown[]) => ((mockUpdate as (...a: unknown[]) => unknown)(...args))
   },
   videoGenBatch: { id: "id" },
   eq: (...args: unknown[]) => args
