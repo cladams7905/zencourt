@@ -1,8 +1,12 @@
 #!/usr/bin/env node
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const summaryPath = path.resolve("coverage/coverage-summary.json");
+const scriptDir = path.dirname(fileURLToPath(import.meta.url));
+const webRoot = path.resolve(scriptDir, "..");
+
+const summaryPath = path.resolve(webRoot, "coverage/coverage-summary.json");
 if (!fs.existsSync(summaryPath)) {
   console.error(`Coverage summary not found at ${summaryPath}`);
   process.exit(1);
@@ -19,7 +23,7 @@ const THRESHOLDS = {
 
 function subfolderPrefixes(root, srcRelative) {
   return fs
-    .readdirSync(path.resolve(root), { withFileTypes: true })
+    .readdirSync(path.resolve(webRoot, root), { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
     .map((entry) => `${srcRelative}/${entry.name}/`)
     .sort();
