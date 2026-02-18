@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { Redis } from "@upstash/redis";
-import { createChildLogger, logger as baseLogger } from "@web/src/lib/logger";
+import { createChildLogger, logger as baseLogger } from "@web/src/lib/core/logging/logger";
 import {
   COMMUNITY_CACHE_KEY_PREFIX,
   shouldIncludeServiceAreasInCache,

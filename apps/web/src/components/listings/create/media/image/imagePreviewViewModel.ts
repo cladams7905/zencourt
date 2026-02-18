@@ -1,4 +1,4 @@
-import type { PreviewTextOverlay } from "@web/src/lib/video/previewTimeline";
+import type { PreviewTextOverlay } from "@web/src/lib/domain/listing/previewTimeline";
 import type { OverlayTemplatePattern } from "@shared/types/video";
 import {
   buildOverlayTemplateLines,

@@ -12,14 +12,14 @@ import {
   buildSystemPrompt,
   buildUserPrompt,
   type PromptAssemblyInput
-} from "@web/src/lib/prompts/assemble";
-import { createChildLogger, logger as baseLogger } from "@web/src/lib/logger";
+} from "@web/src/lib/ai/prompts/engine/assemble";
+import { createChildLogger, logger as baseLogger } from "@web/src/lib/core/logging/logger";
 import { db, eq, userAdditional } from "@db/client";
 import { Redis } from "@upstash/redis";
 import {
-  getMarketData,
-  parseMarketLocation
+  getMarketData
 } from "@web/src/server/services/marketDataService";
+import { parseMarketLocation } from "@web/src/lib/domain/location/marketLocation";
 import {
   getCityDescription,
   getCommunityDataByZipAndAudience,
@@ -56,7 +56,7 @@ const TONE_DESCRIPTIONS: Record<number, string> = {
   5: "Very formal, highly professional and structured voice"
 };
 
-const OUTPUT_LOGS_DIR = "src/lib/prompts/logs";
+const OUTPUT_LOGS_DIR = "src/lib/ai/prompts/content/logs";
 
 const CONTENT_ITEM_SCHEMA = {
   type: "object",

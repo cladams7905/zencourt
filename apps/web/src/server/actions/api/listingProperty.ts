@@ -1,6 +1,6 @@
 "use server";
 
-import { createChildLogger, logger as baseLogger } from "@web/src/lib/logger";
+import { createChildLogger, logger as baseLogger } from "@web/src/lib/core/logging/logger";
 import { getListingById, updateListing } from "../db/listings";
 import {
   buildPropertyDetailsRevision,

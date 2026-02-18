@@ -3,10 +3,10 @@ import { useLocationDetailsValidation } from "@web/src/components/location/domai
 import {
   getCityNameSetForState,
   getCountyNameSetForState
-} from "@web/src/lib/locationHelpers";
+} from "@web/src/lib/domain/location/cityDataset";
 
-jest.mock("@web/src/lib/locationHelpers", () => {
-  const actual = jest.requireActual("@web/src/lib/locationHelpers");
+jest.mock("@web/src/lib/domain/location/cityDataset", () => {
+  const actual = jest.requireActual("@web/src/lib/domain/location/cityDataset");
   return {
     ...actual,
     getCityNameSetForState: jest.fn(),

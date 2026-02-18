@@ -7,7 +7,7 @@ import { LandingPage } from "@web/src/components/landing/LandingPage";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
-import { getLocationLabel, getUserDisplayNames } from "@web/src/lib/userDisplay";
+import { getLocationLabel, getUserDisplayNames } from "@web/src/lib/core/formatting/userDisplay";
 
 export const dynamic = "force-dynamic";
 

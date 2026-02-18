@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { StackProvider, StackTheme } from "@stackframe/stack";
-import { stackClientApp } from "../lib/stack/client";
+import { stackClientApp } from "@web/src/lib/core/auth/stack/client";
 import { Toaster } from "../components/ui/sonner";
 import {
   Playfair_Display,

@@ -17,8 +17,8 @@ import {
   ListingImageDeleteDialog,
   ListingImageMoveDialog
 } from "@web/src/components/listings/categorize/components";
-import { getImageMetadataFromFile } from "@web/src/lib/imageMetadata";
-import { emitListingSidebarUpdate } from "@web/src/lib/listingSidebarEvents";
+import { getImageMetadataFromFile } from "@web/src/lib/domain/media/imageMetadata";
+import { emitListingSidebarUpdate } from "@web/src/lib/domain/listing/sidebarEvents";
 import {
   UNCATEGORIZED_CATEGORY_ID,
   useDragAutoScroll,
@@ -38,7 +38,7 @@ import {
   ListingTimeline,
   buildListingStageSteps
 } from "@web/src/components/listings/shared";
-import { formatBytes } from "@web/src/lib/formatBytes";
+import { formatBytes } from "@web/src/lib/core/formatting/bytes";
 
 export function ListingCategorizeView({
   title,

@@ -14,7 +14,7 @@ import {
 import {
   createChildLogger,
   logger as baseLogger
-} from "../../../../../lib/logger";
+} from "@web/src/lib/core/logging/logger";
 import type { VideoJobWebhookPayload } from "@shared/types/api";
 import type { DBVideoGenJob } from "@shared/types/models";
 import {

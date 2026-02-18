@@ -8,7 +8,7 @@ import { getVideoServerConfig } from "@web/src/app/api/v1/video/_config";
 import {
   createChildLogger,
   logger as baseLogger
-} from "@web/src/lib/logger";
+} from "@web/src/lib/core/logging/logger";
 
 const logger = createChildLogger(baseLogger, {
   module: "generation-cancel-route"

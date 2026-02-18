@@ -1,7 +1,5 @@
 "use client";
 
-import type { LocationData } from "../components/location/shared/types";
-
 export type CityRecord = {
   city: string;
   city_ascii: string;
@@ -156,15 +154,4 @@ export const getCountyNameSetForState = async (
 
   countySetByState.set(stateUpper, countySet);
   return countySet;
-};
-
-export const formatLocationForStorage = (location: LocationData): string => {
-  if (location.country === "United States") {
-    const stateAndZip = [location.state, location.postalCode]
-      .filter(Boolean)
-      .join(" ");
-    return [location.city, stateAndZip].filter(Boolean).join(", ");
-  }
-
-  return [location.city, location.country].filter(Boolean).join(", ");
 };

@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { emitListingSidebarUpdate } from "@web/src/lib/listingSidebarEvents";
+import { emitListingSidebarUpdate } from "@web/src/lib/domain/listing/sidebarEvents";
 import { updateListing } from "@web/src/server/actions/db/listings";
 
 type RunDraftSave = <T>(fn: () => Promise<T>) => Promise<T>;

@@ -4,9 +4,9 @@ import type {
   OrshotCaptionItemInput,
   OrshotParameterKey,
   OrshotTemplateConfig
-} from "@web/src/lib/orshot/types";
+} from "@web/src/lib/domain/media/orshot/types";
 import type { ListingContentSubcategory } from "@shared/types/models";
-import { createChildLogger, logger as baseLogger } from "@web/src/lib/logger";
+import { createChildLogger, logger as baseLogger } from "@web/src/lib/core/logging/logger";
 import { renderOrshotTemplate } from "./client";
 import { resolveOrshotTemplateParameters } from "./parameterResolver";
 import { pickRandomTemplatesForSubcategory } from "./templateConfig";

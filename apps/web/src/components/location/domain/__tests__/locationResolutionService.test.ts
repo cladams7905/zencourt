@@ -5,10 +5,10 @@ import {
   resolveServiceAreasFromDataset,
   resolveZipFromDataset
 } from "@web/src/components/location/domain/locationResolutionService";
-import * as locationHelpers from "@web/src/lib/locationHelpers";
+import * as cityDataset from "@web/src/lib/domain/location/cityDataset";
 
-jest.mock("@web/src/lib/locationHelpers", () => {
-  const actual = jest.requireActual("@web/src/lib/locationHelpers");
+jest.mock("@web/src/lib/domain/location/cityDataset", () => {
+  const actual = jest.requireActual("@web/src/lib/domain/location/cityDataset");
   return {
     ...actual,
     loadCityDataset: jest.fn()
@@ -16,8 +16,8 @@ jest.mock("@web/src/lib/locationHelpers", () => {
 });
 
 const mockLoadCityDataset =
-  locationHelpers.loadCityDataset as jest.MockedFunction<
-    typeof locationHelpers.loadCityDataset
+  cityDataset.loadCityDataset as jest.MockedFunction<
+    typeof cityDataset.loadCityDataset
   >;
 
 describe("locationResolutionService", () => {

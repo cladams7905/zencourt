@@ -1,6 +1,6 @@
 import type { ListingContentSubcategory } from "@shared/types/models";
-import type { OrshotTemplateConfig } from "@web/src/lib/orshot/types";
-import templatesJson from "@web/src/lib/orshot/templates.json";
+import type { OrshotTemplateConfig } from "@web/src/lib/domain/media/orshot/types";
+import templatesJson from "@web/src/lib/domain/media/orshot/templates.json";
 
 const ORSHOT_TEMPLATES = templatesJson as OrshotTemplateConfig[];
 

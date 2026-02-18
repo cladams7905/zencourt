@@ -2,7 +2,7 @@ import * as React from "react";
 import { toast } from "sonner";
 import type { ContentItem } from "@web/src/components/dashboard/components/ContentGrid";
 import type { ListingContentSubcategory } from "@shared/types/models";
-import { extractJsonItemsFromStream } from "@web/src/lib/streamParsing";
+import { extractJsonItemsFromStream } from "@web/src/lib/parsing/stream/extractJsonItemsFromStream";
 import {
   GENERATED_BATCH_SIZE,
   SUBCATEGORY_LABELS,

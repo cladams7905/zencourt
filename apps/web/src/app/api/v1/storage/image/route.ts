@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db, listingImages, listings } from "@db/client";
 import storageService from "@web/src/server/services/storageService";
-import { createChildLogger, logger as baseLogger } from "@web/src/lib/logger";
+import { createChildLogger, logger as baseLogger } from "@web/src/lib/core/logging/logger";
 import {
   ApiError,
   requireAuthenticatedUser

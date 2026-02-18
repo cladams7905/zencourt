@@ -11,7 +11,7 @@ import {
   type RoomCategory,
   type RoomClassification
 } from "@web/src/types/vision";
-import { createChildLogger, logger as baseLogger } from "../../lib/logger";
+import { createChildLogger, logger as baseLogger } from "@web/src/lib/core/logging/logger";
 
 const visionLogger = createChildLogger(baseLogger, {
   module: "vision-service"

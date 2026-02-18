@@ -1,5 +1,5 @@
 import { act, renderHook } from "@testing-library/react";
-import { emitListingSidebarUpdate } from "@web/src/lib/listingSidebarEvents";
+import { emitListingSidebarUpdate } from "@web/src/lib/domain/listing/sidebarEvents";
 import { useSidebarListings } from "@web/src/components/view/sidebar/domain/hooks/useSidebarListings";
 import type { ListingSidebarItem } from "@web/src/components/view/sidebar/shared";
 

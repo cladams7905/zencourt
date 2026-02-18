@@ -5,7 +5,7 @@ import { getUserListings } from "@web/src/server/actions/db/listings";
 import {
   getPaymentPlanLabel,
   getUserDisplayNames
-} from "@web/src/lib/userDisplay";
+} from "@web/src/lib/core/formatting/userDisplay";
 
 export async function SidebarWrapper() {
   const user = await getUser();

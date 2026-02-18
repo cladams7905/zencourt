@@ -2,36 +2,12 @@ import type { DBListing, DBListingImage, DBUserAdditional } from "@shared/types/
 import type { ListingContentSubcategory, ListingPropertyDetails } from "@shared/types/models";
 import { PREVIEW_TEXT_OVERLAY_ARROW_PATHS } from "@shared/utils";
 import { isPriorityCategory } from "@shared/types/video/priorityCategories";
-import type { OrshotCaptionItemInput, OrshotParameterKey } from "@web/src/lib/orshot/types";
-
-function formatCurrency(value?: number | null): string {
-  if (typeof value !== "number" || !Number.isFinite(value)) {
-    return "$0";
-  }
-
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0
-  }).format(value);
-}
-
-function formatNumber(value?: number | null): string {
-  if (typeof value !== "number" || !Number.isFinite(value)) {
-    return "";
-  }
-  return new Intl.NumberFormat("en-US", {
-    maximumFractionDigits: 0
-  }).format(value);
-}
-
-function formatCount(value: number | null | undefined, noun: string): string {
-  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
-    return "";
-  }
-  const suffix = value === 1 ? noun : `${noun}s`;
-  return `${formatNumber(value)} ${suffix}`;
-}
+import type { OrshotCaptionItemInput, OrshotParameterKey } from "@web/src/lib/domain/media/orshot/types";
+import {
+  formatCurrencyUsd,
+  formatNumberUs,
+  formatCountWithNoun
+} from "@web/src/lib/core/formatting/number";
 
 function toOrdinal(day: number): string {
   const mod10 = day % 10;
@@ -155,14 +131,14 @@ export function resolveOrshotTemplateParameters(params: {
 
   const fallbackHeader = params.captionItem.hook?.trim() || "Just listed";
   const { headerTextTop, headerTextBottom } = splitHeaderText(fallbackHeader);
-  const bedCount = formatCount(details?.bedrooms, "bed");
-  const bathCount = formatCount(details?.bathrooms, "bath");
+  const bedCount = formatCountWithNoun(details?.bedrooms, "bed");
+  const bathCount = formatCountWithNoun(details?.bathrooms, "bath");
   const squareFootageRaw =
     typeof details?.living_area_sq_ft === "number"
-      ? `${formatNumber(details.living_area_sq_ft)} sqft`
+      ? `${formatNumberUs(details.living_area_sq_ft)} sqft`
       : "";
 
-  const listingPrice = formatCurrency(details?.listing_price ?? null);
+  const listingPrice = formatCurrencyUsd(details?.listing_price ?? null, "$0");
   const priceLabel = params.subcategory === "status_update" ? "sold for" : "starting from";
 
   const featureItems = compactList([

@@ -7,7 +7,7 @@ import {
   getCityNameSetForState,
   getCountyNameSetForState,
   normalizeCountyName
-} from "@web/src/lib/locationHelpers";
+} from "@web/src/lib/domain/location/cityDataset";
 
 interface UseLocationDetailsValidationArgs {
   state: string;

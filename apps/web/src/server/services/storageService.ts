@@ -24,7 +24,7 @@ import {
   buildStorageConfigFromEnv,
   buildStoragePublicUrl
 } from "@shared/utils";
-import { createChildLogger, logger as baseLogger } from "../../lib/logger";
+import { createChildLogger, logger as baseLogger } from "@web/src/lib/core/logging/logger";
 
 const logger = createChildLogger(baseLogger, { module: "storage-service" });
 

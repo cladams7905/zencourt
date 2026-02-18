@@ -4,8 +4,8 @@ import {
   createListingImageRecords,
   getListingImageUploadUrls
 } from "@web/src/server/actions/db/listings";
-import { emitListingSidebarUpdate } from "@web/src/lib/listingSidebarEvents";
-import { getImageMetadataFromFile } from "@web/src/lib/imageMetadata";
+import { emitListingSidebarUpdate } from "@web/src/lib/domain/listing/sidebarEvents";
+import { getImageMetadataFromFile } from "@web/src/lib/domain/media/imageMetadata";
 import {
   buildListingUploadRecordInput,
   buildProcessingRoute,

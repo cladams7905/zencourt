@@ -14,7 +14,7 @@ jest.mock("@web/src/components/dashboard/domain/dashboardContentStream", () => (
   streamDashboardContentEvents: (...args: unknown[]) => mockStreamEvents(...args)
 }));
 
-jest.mock("@web/src/lib/streamParsing", () => ({
+jest.mock("@web/src/lib/parsing/stream/extractJsonItemsFromStream", () => ({
   extractJsonItemsFromStream: (...args: unknown[]) => mockExtractJsonItems(...args)
 }));
 

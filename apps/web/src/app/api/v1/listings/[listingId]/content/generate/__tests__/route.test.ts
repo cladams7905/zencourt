@@ -82,7 +82,7 @@ describe("listing content generate route", () => {
         set = mockRedis.set;
       }
     }));
-    jest.doMock("@web/src/lib/logger", () => ({
+    jest.doMock("@web/src/lib/core/logging/logger", () => ({
       logger: { error: jest.fn(), warn: jest.fn() },
       createChildLogger: () => ({ error: jest.fn(), warn: jest.fn() })
     }));

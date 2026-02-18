@@ -2,7 +2,7 @@ import storageService from "../services/storageService";
 import {
   createChildLogger,
   logger as baseLogger
-} from "../../lib/logger";
+} from "@web/src/lib/core/logging/logger";
 import {
   extractStorageKeyFromUrl,
   isUrlFromStorageEndpoint

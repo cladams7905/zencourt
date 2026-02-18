@@ -1,5 +1,5 @@
 import { db, listings } from "@db/client";
-import { stackServerApp } from "@web/src/lib/stack/server";
+import { stackServerApp } from "@web/src/lib/core/auth/stack/server";
 import type { CurrentServerUser } from "@stackframe/stack";
 import { eq } from "drizzle-orm";
 

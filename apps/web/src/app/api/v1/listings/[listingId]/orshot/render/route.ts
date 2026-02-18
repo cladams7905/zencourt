@@ -11,10 +11,10 @@ import {
 import type {
   ListingOrshotRenderResult,
   OrshotCaptionItemInput
-} from "@web/src/lib/orshot/types";
+} from "@web/src/lib/domain/media/orshot/types";
 import { getListingImages } from "@web/src/server/actions/db/listings";
 import { getOrCreateUserAdditional } from "@web/src/server/actions/db/userAdditional";
-import { createChildLogger, logger as baseLogger } from "@web/src/lib/logger";
+import { createChildLogger, logger as baseLogger } from "@web/src/lib/core/logging/logger";
 import { renderListingOrshotBatch } from "@web/src/server/services/orshot/renderService";
 
 const logger = createChildLogger(baseLogger, {

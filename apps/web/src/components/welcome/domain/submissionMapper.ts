@@ -1,4 +1,4 @@
-import { formatLocationForStorage } from "@web/src/lib/locationHelpers";
+import { formatLocationForStorage } from "@web/src/lib/domain/location/formatters";
 import type { SurveyFormData } from "../shared";
 
 export type WelcomeSurveySubmission = {

@@ -22,7 +22,7 @@ import { ROOM_CATEGORIES, RoomCategory } from "@web/src/types/vision";
 import {
   createChildLogger,
   logger as baseLogger
-} from "../../../../../lib/logger";
+} from "@web/src/lib/core/logging/logger";
 import {
   DBListingImage,
   JobGenerationSettings,

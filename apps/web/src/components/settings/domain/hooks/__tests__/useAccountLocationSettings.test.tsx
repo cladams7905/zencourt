@@ -19,10 +19,13 @@ jest.mock("@web/src/server/actions/db/userAdditional", () => ({
   updateUserLocation: (...args: unknown[]) => mockUpdateUserLocation(...args)
 }));
 
-jest.mock("@web/src/lib/locationHelpers", () => ({
-  formatLocationForStorage: (...args: unknown[]) =>
-    mockFormatLocationForStorage(...args),
+jest.mock("@web/src/lib/domain/location/cityDataset", () => ({
   normalizeCountyName: (...args: unknown[]) => mockNormalizeCountyName(...args)
+}));
+
+jest.mock("@web/src/lib/domain/location/formatters", () => ({
+  formatLocationForStorage: (...args: unknown[]) =>
+    mockFormatLocationForStorage(...args)
 }));
 
 describe("useAccountLocationSettings", () => {

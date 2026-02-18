@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { formatBytes } from "@web/src/lib/formatBytes";
+import { formatBytes } from "@web/src/lib/core/formatting/bytes";
 import {
   Dialog,
   DialogContent,

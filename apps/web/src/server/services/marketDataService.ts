@@ -1,5 +1,10 @@
 import type { MarketData, MarketLocation } from "@web/src/types/market";
-import { createChildLogger, logger as baseLogger } from "@web/src/lib/logger";
+import { createChildLogger, logger as baseLogger } from "@web/src/lib/core/logging/logger";
+import {
+  formatCurrencyUsd,
+  formatNumberUs
+} from "@web/src/lib/core/formatting/number";
+import { parseMarketLocation } from "@web/src/lib/domain/location/marketLocation";
 import { Redis } from "@upstash/redis";
 import { requestPerplexity } from "./community/perplexity/client";
 import type {
@@ -54,30 +59,6 @@ type PerplexityMarketPayload = {
   entry_level_payment?: string | null;
   market_summary?: string | null;
 };
-
-const US_ZIP_REGEX = /\b\d{5}(?:-\d{4})?\b/;
-
-export function parseMarketLocation(
-  location: string | null | undefined
-): MarketLocation | null {
-  if (!location) {
-    return null;
-  }
-
-  const zipMatch = location.match(US_ZIP_REGEX);
-  const zip_code = zipMatch?.[0] ?? "";
-
-  const [cityPart, restPart] = location.split(",");
-  const city = cityPart?.trim() ?? "";
-  const restTokens = (restPart ?? "").trim().split(/\s+/);
-  const state = restTokens[0] ?? "";
-
-  if (!city || !state || !zip_code) {
-    return null;
-  }
-
-  return { city, state, zip_code };
-}
 
 function getRentCastApiKey(): string | null {
   const apiKey = process.env.RENTCAST_API_KEY;
@@ -191,14 +172,7 @@ function pickObservationValue(
 }
 
 function formatCurrency(value: number | null): string {
-  if (value === null) {
-    return NOT_AVAILABLE;
-  }
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0
-  }).format(value);
+  return formatCurrencyUsd(value, NOT_AVAILABLE);
 }
 
 function formatPercent(value: number | null): string {
@@ -210,10 +184,7 @@ function formatPercent(value: number | null): string {
 }
 
 function formatCount(value: number | null): string {
-  if (value === null) {
-    return NOT_AVAILABLE;
-  }
-  return new Intl.NumberFormat("en-US").format(value);
+  return formatNumberUs(value, NOT_AVAILABLE);
 }
 
 function normalizePayload(

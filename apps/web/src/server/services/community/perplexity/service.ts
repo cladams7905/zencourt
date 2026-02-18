@@ -1,5 +1,5 @@
 import type { CommunityData } from "@web/src/types/market";
-import { createChildLogger, logger as baseLogger } from "@web/src/lib/logger";
+import { createChildLogger, logger as baseLogger } from "@web/src/lib/core/logging/logger";
 import {
   getCategoryDisplayLimit,
   shouldIncludeServiceAreasInCache,

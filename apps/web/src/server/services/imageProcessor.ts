@@ -15,7 +15,7 @@ import type {
   ProcessingPhase,
   ProcessingProgress
 } from "../../types/images";
-import { createChildLogger, logger as baseLogger } from "../../lib/logger";
+import { createChildLogger, logger as baseLogger } from "@web/src/lib/core/logging/logger";
 
 type ProgressCallback = (progress: ProcessingProgress) => void;
 

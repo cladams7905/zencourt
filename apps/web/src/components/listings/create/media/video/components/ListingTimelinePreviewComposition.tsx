@@ -5,7 +5,7 @@ import { AbsoluteFill, Sequence, Video, useVideoConfig } from "remotion";
 import type {
   PreviewTextOverlay,
   PreviewTimelineSegment
-} from "@web/src/lib/video/previewTimeline";
+} from "@web/src/lib/domain/listing/previewTimeline";
 import {
   PREVIEW_TEXT_OVERLAY_BACKGROUND_COLOR,
   PREVIEW_TEXT_OVERLAY_BACKGROUND_COLOR_OPAQUE,

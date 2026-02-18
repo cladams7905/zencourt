@@ -1,5 +1,5 @@
 import * as React from "react";
-import type { PreviewTextOverlay } from "@web/src/lib/video/previewTimeline";
+import type { PreviewTextOverlay } from "@web/src/lib/domain/listing/previewTimeline";
 import {
   computeOverlayLineStyles,
   overlayPxToCqw,

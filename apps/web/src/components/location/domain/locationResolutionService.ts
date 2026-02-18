@@ -13,7 +13,7 @@ import {
 import {
   loadCityDataset,
   normalizeCountyName
-} from "@web/src/lib/locationHelpers";
+} from "@web/src/lib/domain/location/cityDataset";
 
 const haversineKm = (
   lat1: number,

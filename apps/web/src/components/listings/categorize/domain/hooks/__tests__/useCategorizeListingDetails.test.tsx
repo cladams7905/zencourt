@@ -18,7 +18,7 @@ jest.mock("sonner", () => ({
   }
 }));
 
-jest.mock("@web/src/lib/listingSidebarEvents", () => ({
+jest.mock("@web/src/lib/domain/listing/sidebarEvents", () => ({
   emitListingSidebarUpdate: (...args: unknown[]) =>
     mockEmitListingSidebarUpdate(...args)
 }));

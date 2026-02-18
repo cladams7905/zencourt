@@ -56,7 +56,7 @@ jest.mock("@web/src/components/listings/categorize/components/dialogs/ListingIma
   ListingImageDeleteDialog: () => null
 }));
 
-jest.mock("@web/src/lib/imageMetadata", () => ({
+jest.mock("@web/src/lib/domain/media/imageMetadata", () => ({
   getImageMetadataFromFile: jest.fn(() => Promise.resolve({}))
 }));
 

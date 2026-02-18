@@ -5,7 +5,7 @@ import {
 } from "../../../_utils";
 import { getListingVideoStatus } from "@web/src/server/services/videoStatusService";
 import { createChildLogger } from "@shared/utils";
-import {logger as baseLogger} from "@web/src/lib/logger";
+import {logger as baseLogger} from "@web/src/lib/core/logging/logger";
 
 export const runtime = "nodejs";
 

@@ -2,7 +2,7 @@ import { mapSurveyFormDataToSurveySubmission } from "@web/src/components/welcome
 
 const mockFormatLocationForStorage = jest.fn();
 
-jest.mock("@web/src/lib/locationHelpers", () => ({
+jest.mock("@web/src/lib/domain/location/formatters", () => ({
   formatLocationForStorage: (...args: unknown[]) =>
     mockFormatLocationForStorage(...args)
 }));

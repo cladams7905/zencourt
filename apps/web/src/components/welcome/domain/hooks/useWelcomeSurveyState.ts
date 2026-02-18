@@ -2,8 +2,8 @@ import * as React from "react";
 import type { ReferralSource, TargetAudience } from "@db/client";
 import type { CarouselApi } from "@web/src/components/ui/carousel";
 import type { LocationData } from "@web/src/components/location";
-import { normalizeCountyName } from "@web/src/lib/locationHelpers";
-import { logger as baseLogger, createChildLogger } from "@web/src/lib/logger";
+import { normalizeCountyName } from "@web/src/lib/domain/location/cityDataset";
+import { logger as baseLogger, createChildLogger } from "@web/src/lib/core/logging/logger";
 import { toast } from "sonner";
 import type { SurveyFormData } from "../../shared";
 
@@ -15,21 +15,26 @@ const logger = createChildLogger(baseLogger, {
   module: "welcome-survey"
 });
 
-export function useWelcomeSurveyState({ onSubmit }: UseWelcomeSurveyStateParams) {
-  const [targetAudiences, setTargetAudiences] = React.useState<TargetAudience[]>(
-    []
-  );
+export function useWelcomeSurveyState({
+  onSubmit
+}: UseWelcomeSurveyStateParams) {
+  const [targetAudiences, setTargetAudiences] = React.useState<
+    TargetAudience[]
+  >([]);
   const [weeklyPostingFrequency, setWeeklyPostingFrequency] = React.useState(3);
-  const [referralSource, setReferralSource] = React.useState<ReferralSource | "">(
-    ""
-  );
+  const [referralSource, setReferralSource] = React.useState<
+    ReferralSource | ""
+  >("");
   const [referralSourceOther, setReferralSourceOther] = React.useState("");
   const [location, setLocation] = React.useState<LocationData | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [currentStep, setCurrentStep] = React.useState(0);
   const [api, setApi] = React.useState<CarouselApi>();
   const suggestedCounty = location?.county ?? "";
-  const suggestedServiceAreas = location?.serviceAreas ?? [];
+  const suggestedServiceAreas = React.useMemo(
+    () => location?.serviceAreas ?? [],
+    [location?.serviceAreas]
+  );
   const suggestedServiceAreasText = suggestedServiceAreas.join(", ");
   const [isEditingLocationDetails, setIsEditingLocationDetails] =
     React.useState(false);

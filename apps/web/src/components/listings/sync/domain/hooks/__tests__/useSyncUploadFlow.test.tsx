@@ -15,12 +15,12 @@ jest.mock("@web/src/server/actions/db/listings", () => ({
     mockGetListingImageUploadUrls(...args)
 }));
 
-jest.mock("@web/src/lib/listingSidebarEvents", () => ({
+jest.mock("@web/src/lib/domain/listing/sidebarEvents", () => ({
   emitListingSidebarUpdate: (...args: unknown[]) =>
     mockEmitListingSidebarUpdate(...args)
 }));
 
-jest.mock("@web/src/lib/imageMetadata", () => ({
+jest.mock("@web/src/lib/domain/media/imageMetadata", () => ({
   getImageMetadataFromFile: (...args: unknown[]) =>
     mockGetImageMetadataFromFile(...args)
 }));

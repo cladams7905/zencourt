@@ -51,7 +51,7 @@ describe("listing orshot render route", () => {
     jest.doMock("@web/src/server/services/orshot/renderService", () => ({
       renderListingOrshotBatch: (...args: unknown[]) => mockRenderListingOrshotBatch(...args)
     }));
-    jest.doMock("@web/src/lib/logger", () => ({
+    jest.doMock("@web/src/lib/core/logging/logger", () => ({
       logger: { error: jest.fn(), warn: jest.fn() },
       createChildLogger: () => ({ error: jest.fn(), warn: jest.fn() })
     }));

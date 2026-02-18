@@ -5,7 +5,7 @@ import type {
 import type {
   PreviewTextOverlay,
   PreviewTimelinePlan
-} from "@web/src/lib/video/previewTimeline";
+} from "@web/src/lib/domain/listing/previewTimeline";
 import type { ListingContentSubcategory } from "@shared/types/models";
 import {
   hashTextOverlaySeed,

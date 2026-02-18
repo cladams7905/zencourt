@@ -1,5 +1,5 @@
 import { Orshot } from "orshot";
-import { createChildLogger, logger as baseLogger } from "@web/src/lib/logger";
+import { createChildLogger, logger as baseLogger } from "@web/src/lib/core/logging/logger";
 
 const logger = createChildLogger(baseLogger, { module: "orshot-client" });
 

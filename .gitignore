@@ -48,3 +48,6 @@ next-env.d.ts
 
 # demo images for testing
 demo-images/
+
+# prompt debug logs
+apps/web/src/lib/prompts/logs/

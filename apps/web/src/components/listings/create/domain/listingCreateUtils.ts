@@ -1,10 +1,10 @@
-import type { PreviewTimelineClip } from "@web/src/lib/video/previewTimeline";
+import type { PreviewTimelineClip } from "@web/src/lib/domain/listing/previewTimeline";
 import type { ContentItem } from "@web/src/components/dashboard/components/ContentGrid";
 import type { ListingImagePreviewItem } from "@web/src/components/listings/create/shared/types";
 import type {
   OrshotCaptionItemInput,
   ListingOrshotRenderedItem
-} from "@web/src/lib/orshot/types";
+} from "@web/src/lib/domain/media/orshot/types";
 
 export type PreviewClipCandidate = PreviewTimelineClip & {
   searchableText: string;

@@ -27,7 +27,7 @@ import {
   MediaHelpCard,
   MediaToolbar
 } from "@web/src/components/media/components";
-import { formatBytes } from "@web/src/lib/formatBytes";
+import { formatBytes } from "@web/src/lib/core/formatting/bytes";
 
 const MediaView = ({ userId, initialMedia = [] }: MediaViewProps) => {
   const { selectedTypes, usageSort, setUsageSort, handleTypeToggle } =

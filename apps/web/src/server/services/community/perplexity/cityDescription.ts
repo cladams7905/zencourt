@@ -1,4 +1,4 @@
-import { createChildLogger, logger as baseLogger } from "@web/src/lib/logger";
+import { createChildLogger, logger as baseLogger } from "@web/src/lib/core/logging/logger";
 import type { PerplexityMessage, PerplexityResponseFormat } from "./types";
 import { requestPerplexity } from "./client";
 

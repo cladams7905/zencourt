@@ -2,7 +2,7 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { toast } from "sonner";
 import { useAddressAutocomplete } from "@web/src/components/location/domain/hooks/useAddressAutocomplete";
 
-jest.mock("@web/src/lib/logger", () => ({
+jest.mock("@web/src/lib/core/logging/logger", () => ({
   logger: {},
   createChildLogger: () => ({
     error: jest.fn(),

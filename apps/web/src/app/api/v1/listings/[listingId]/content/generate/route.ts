@@ -5,7 +5,7 @@ import {
   requireAuthenticatedUser,
   requireListingAccess
 } from "../../../../_utils";
-import { createChildLogger, logger as baseLogger } from "@web/src/lib/logger";
+import { createChildLogger, logger as baseLogger } from "@web/src/lib/core/logging/logger";
 import type {
   ListingContentSubcategory,
   ListingPropertyDetails

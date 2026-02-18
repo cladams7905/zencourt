@@ -6,7 +6,7 @@ const mockNormalizeCountyName = jest.fn();
 const mockToastError = jest.fn();
 const mockLoggerError = jest.fn();
 
-jest.mock("@web/src/lib/locationHelpers", () => ({
+jest.mock("@web/src/lib/domain/location/cityDataset", () => ({
   normalizeCountyName: (...args: unknown[]) => mockNormalizeCountyName(...args)
 }));
 
@@ -16,7 +16,7 @@ jest.mock("sonner", () => ({
   }
 }));
 
-jest.mock("@web/src/lib/logger", () => ({
+jest.mock("@web/src/lib/core/logging/logger", () => ({
   logger: {},
   createChildLogger: () => ({
     error: (...args: unknown[]) => mockLoggerError(...args)

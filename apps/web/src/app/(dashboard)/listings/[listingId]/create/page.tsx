@@ -7,32 +7,17 @@ import {
 } from "@web/src/server/actions/db/listings";
 import { getListingVideoStatus } from "@web/src/server/services/videoStatusService";
 import {
-  ListingCreateView,
-  type ListingCreateMediaTab
+  ListingCreateView
 } from "@web/src/components/listings/create/orchestrators";
 import type { ContentItem } from "@web/src/components/dashboard/components/ContentGrid";
 import {
-  LISTING_CONTENT_SUBCATEGORIES,
-  type ListingContentSubcategory
-} from "@shared/types/models";
+  parseInitialMediaTab,
+  parseInitialSubcategory
+} from "@web/src/components/listings/create/domain";
 
 interface ListingCreatePageProps {
   params: Promise<{ listingId: string }>;
   searchParams?: Promise<{ mediaType?: string; filter?: string }>;
-}
-
-function parseInitialMediaTab(value?: string): ListingCreateMediaTab {
-  return value === "photos" ? "images" : "videos";
-}
-
-function parseInitialSubcategory(value?: string): ListingContentSubcategory {
-  if (
-    value &&
-    LISTING_CONTENT_SUBCATEGORIES.includes(value as ListingContentSubcategory)
-  ) {
-    return value as ListingContentSubcategory;
-  }
-  return LISTING_CONTENT_SUBCATEGORIES[0];
 }
 
 export default async function ListingCreatePage({

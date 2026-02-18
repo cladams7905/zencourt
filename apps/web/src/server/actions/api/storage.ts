@@ -8,7 +8,7 @@
 import { StorageUploadRequest } from "@shared/types/api/requests";
 import { StorageUploadBatchResponse } from "@shared/types/api/responses";
 import storageService from "../../services/storageService";
-import { createChildLogger, logger as baseLogger } from "../../../lib/logger";
+import { createChildLogger, logger as baseLogger } from "@web/src/lib/core/logging/logger";
 import { getSignedDownloadUrl as getSignedDownloadUrlInternal } from "../../utils/storageUrls";
 
 const logger = createChildLogger(baseLogger, { module: "storage-actions" });

@@ -1,13 +1,4 @@
-export interface LocationData {
-  city: string;
-  state: string;
-  country: string;
-  postalCode?: string;
-  county?: string;
-  serviceAreas?: string[];
-  placeId: string;
-  formattedAddress: string;
-}
+export type { LocationData } from "@web/src/lib/domain/location/types";
 
 export interface AddressSelection {
   formattedAddress: string;

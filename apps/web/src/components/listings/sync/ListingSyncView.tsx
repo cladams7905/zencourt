@@ -21,7 +21,7 @@ import {
 import { useRouter } from "next/navigation";
 import { validateImageFile } from "@web/src/components/listings/sync/domain";
 import { useSyncUploadFlow } from "@web/src/components/listings/sync/domain/hooks";
-import { formatBytes } from "@web/src/lib/formatBytes";
+import { formatBytes } from "@web/src/lib/core/formatting/bytes";
 
 interface ListingSyncViewProps {
   userId: string;

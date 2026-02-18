@@ -11,7 +11,7 @@ import {
   getPaymentPlanLabel,
   getUserDisplayNames,
   getUserEmailInfo
-} from "@web/src/lib/userDisplay";
+} from "@web/src/lib/core/formatting/userDisplay";
 
 export default async function SettingsPage() {
   const user = await getUser();

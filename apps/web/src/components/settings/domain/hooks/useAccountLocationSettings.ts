@@ -1,10 +1,8 @@
 import * as React from "react";
 import { toast } from "sonner";
 import { updateUserLocation } from "@web/src/server/actions/db/userAdditional";
-import {
-  formatLocationForStorage,
-  normalizeCountyName
-} from "@web/src/lib/locationHelpers";
+import { normalizeCountyName } from "@web/src/lib/domain/location/cityDataset";
+import { formatLocationForStorage } from "@web/src/lib/domain/location/formatters";
 import type { LocationData } from "@web/src/components/location";
 
 interface UseAccountLocationSettingsArgs {

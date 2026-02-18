@@ -13,7 +13,7 @@ jest.mock("@web/src/server/actions/db/listings", () => ({
   updateListing: (...args: unknown[]) => mockUpdateListing(...args)
 }));
 
-jest.mock("@web/src/lib/listingSidebarEvents", () => ({
+jest.mock("@web/src/lib/domain/listing/sidebarEvents", () => ({
   emitListingSidebarUpdate: (...args: unknown[]) =>
     mockEmitListingSidebarUpdate(...args)
 }));

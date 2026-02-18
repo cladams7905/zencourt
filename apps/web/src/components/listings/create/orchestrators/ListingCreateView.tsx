@@ -3,12 +3,12 @@
 import * as React from "react";
 import { ListingViewHeader } from "@web/src/components/listings/shared";
 import { type ContentItem } from "@web/src/components/dashboard/components/ContentGrid";
-import { emitListingSidebarUpdate } from "@web/src/lib/listingSidebarEvents";
+import { emitListingSidebarUpdate } from "@web/src/lib/domain/listing/sidebarEvents";
 import { usePathname, useRouter } from "next/navigation";
 import {
   buildPreviewTimelinePlan,
   type PreviewTimelinePlan
-} from "@web/src/lib/video/previewTimeline";
+} from "@web/src/lib/domain/listing/previewTimeline";
 import { ListingVideoPreviewGrid } from "@web/src/components/listings/create/orchestrators/ListingVideoPreviewGrid";
 import { ListingImagePreviewGrid } from "@web/src/components/listings/create/orchestrators/ListingImagePreviewGrid";
 import {

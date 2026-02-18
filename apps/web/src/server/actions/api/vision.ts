@@ -9,7 +9,7 @@ import imageProcessorService, {
   type ProcessingResult
 } from "../../services/imageProcessor";
 import type { SerializableImageData } from "@web/src/types/images";
-import { createChildLogger, logger as baseLogger } from "../../../lib/logger";
+import { createChildLogger, logger as baseLogger } from "@web/src/lib/core/logging/logger";
 import { db, listingImages, and, eq, inArray } from "@db/client";
 import {
   assignPrimaryListingImageForCategory,

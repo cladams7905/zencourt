@@ -1,7 +1,7 @@
 import * as React from "react";
 import { toast } from "sonner";
 import { updateListing } from "@web/src/server/actions/db/listings";
-import { emitListingSidebarUpdate } from "@web/src/lib/listingSidebarEvents";
+import { emitListingSidebarUpdate } from "@web/src/lib/domain/listing/sidebarEvents";
 
 type UseReviewStageActionsParams = {
   listingId: string;

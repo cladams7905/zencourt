@@ -1,4 +1,4 @@
-import { normalizeCountyName } from "@web/src/lib/locationHelpers";
+import { normalizeCountyName } from "@web/src/lib/domain/location/cityDataset";
 import type { LocationData } from "@web/src/components/location/shared/types";
 
 export type ParsedAddressFields = Pick<

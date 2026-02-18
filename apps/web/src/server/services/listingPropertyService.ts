@@ -1,5 +1,5 @@
 import { createHash } from "crypto";
-import { createChildLogger, logger as baseLogger } from "@web/src/lib/logger";
+import { createChildLogger, logger as baseLogger } from "@web/src/lib/core/logging/logger";
 import { requestPerplexity } from "./community/perplexity/client";
 import type { PerplexityResponseFormat } from "./community/perplexity/types";
 import type { ListingPropertyDetails } from "@shared/types/models";
