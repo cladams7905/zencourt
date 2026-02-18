@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { ListingSyncView } from "@web/src/components/listings/sync/ListingSyncView";
+import { ListingSyncView } from "@web/src/components/listings/sync";
 import { getUser } from "@web/src/server/actions/db/users";
 
 export default async function ListingSyncPage() {

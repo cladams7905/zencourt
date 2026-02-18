@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ListingViewHeader } from "@web/src/components/listings/ListingViewHeader";
+import { ListingViewHeader } from "@web/src/components/listings/shared";
 import { type ContentItem } from "@web/src/components/dashboard/ContentGrid";
 import { emitListingSidebarUpdate } from "@web/src/lib/listingSidebarEvents";
 import { usePathname, useRouter } from "next/navigation";

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ListingViewHeader } from "@web/src/components/listings/ListingViewHeader";
+import { ListingViewHeader } from "@web/src/components/listings/shared";
 import { Loader2 } from "lucide-react";
 import { UploadDialog } from "@web/src/components/uploads/UploadDialog";
 import {
@@ -37,8 +37,8 @@ import {
 } from "@web/src/components/listings/categorize/domain";
 import {
   ListingTimeline,
-  buildListingTimelineSteps
-} from "@web/src/components/listings/timeline";
+  buildListingStageSteps
+} from "@web/src/components/listings/shared";
 
 export function ListingCategorizeView({
   title,
@@ -220,19 +220,27 @@ export function ListingCategorizeView({
     setCategoryDialogCategory(null);
     setIsCategoryDialogOpen(true);
   }, []);
-  const handleOpenCategoriesChange = React.useCallback((categories: string[]) => {
-    setOpenCategories(categories);
-  }, []);
+  const handleOpenCategoriesChange = React.useCallback(
+    (categories: string[]) => {
+      setOpenCategories(categories);
+    },
+    []
+  );
   const handleCategoryDragOver = React.useCallback((category: string) => {
-    setOpenCategories((prev) => (prev.includes(category) ? prev : [...prev, category]));
+    setOpenCategories((prev) =>
+      prev.includes(category) ? prev : [...prev, category]
+    );
     setDragOverCategory((prev) => (prev === category ? prev : category));
   }, []);
   const handleCategoryDragLeave = React.useCallback(() => {
     setDragOverCategory(null);
   }, []);
-  const handleOpenImageMenuChange = React.useCallback((imageId: string | null) => {
-    setOpenImageMenuId(imageId);
-  }, []);
+  const handleOpenImageMenuChange = React.useCallback(
+    (imageId: string | null) => {
+      setOpenImageMenuId(imageId);
+    },
+    []
+  );
   const handleOpenEditCategory = React.useCallback((category: string) => {
     setCategoryDialogMode("edit");
     setCategoryDialogCategory(category);
@@ -255,7 +263,7 @@ export function ListingCategorizeView({
         title={draftTitle}
         timeline={
           <ListingTimeline
-            steps={buildListingTimelineSteps("categorize")}
+            steps={buildListingStageSteps("categorize")}
             className="mb-0"
           />
         }
@@ -357,9 +365,7 @@ export function ListingCategorizeView({
           }
           return { accepted: true };
         }}
-        getUploadUrls={(requests) =>
-          getUploadUrls(requests)
-        }
+        getUploadUrls={(requests) => getUploadUrls(requests)}
         buildRecordInput={async ({ upload, file }) => {
           if (!upload.fileName || !upload.publicUrl) {
             throw new Error("Listing upload is missing metadata.");

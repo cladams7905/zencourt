@@ -5,7 +5,7 @@ import {
   updateListing
 } from "@web/src/server/actions/db/listings";
 import { getOrCreateUserAdditional } from "@web/src/server/actions/db/userAdditional";
-import { ListingReviewView } from "@web/src/components/listings/review/orchestrators";
+import { ListingReviewView } from "@web/src/components/listings/review";
 
 interface ListingReviewPageProps {
   params: Promise<{ listingId: string }>;

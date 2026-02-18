@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { ListingViewHeader } from "../ListingViewHeader";
+import { ListingViewHeader } from "@web/src/components/listings/shared";
 import { categorizeListingImages } from "@web/src/server/actions/api/vision";
 import { fetchListingPropertyDetails } from "@web/src/server/actions/api/listingProperty";
 import {
@@ -341,9 +341,11 @@ export function ListingProcessingView({
           primaryScore?: number | null;
         };
         return Boolean(
-          candidate.category ||
-          candidate.confidence !== null ||
-          candidate.primaryScore !== null
+          candidate.category &&
+            candidate.confidence !== null &&
+            candidate.confidence !== undefined &&
+            candidate.primaryScore !== null &&
+            candidate.primaryScore !== undefined
         );
       };
       const batchFiltered = batchStartedAt
@@ -393,7 +395,7 @@ export function ListingProcessingView({
       void initializeGeneration();
       const timeout = setTimeout(() => {
         setCanPollGeneration(true);
-      }, 60000);
+      }, 30000);
       return () => clearTimeout(timeout);
     }
     setCanPollGeneration(true);

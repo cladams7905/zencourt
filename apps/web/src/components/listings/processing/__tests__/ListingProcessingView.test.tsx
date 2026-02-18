@@ -101,11 +101,15 @@ describe("ListingProcessingView", () => {
       {
         id: "image-1",
         category: "kitchen",
+        confidence: 0.95,
+        primaryScore: 0.8,
         uploadedAt: new Date().toISOString()
       },
       {
         id: "image-2",
         category: "living-room",
+        confidence: 0.91,
+        primaryScore: 0.7,
         uploadedAt: new Date().toISOString()
       }
     ]);
@@ -187,6 +191,29 @@ describe("ListingProcessingView", () => {
       expect(mockReplace).toHaveBeenCalledWith("/listings/listing-1/categorize");
     });
 
+    unmount();
+  });
+
+  it("does not treat undefined confidence and primary score as processed", async () => {
+    mockedGetListingImages.mockResolvedValue([
+      {
+        id: "image-1",
+        category: "kitchen",
+        uploadedAt: new Date().toISOString()
+      }
+    ]);
+
+    const { unmount } = render(<ListingProcessingView {...baseProps} />);
+
+    await waitFor(() => {
+      expect(mockedGetListingImages).toHaveBeenCalledTimes(1);
+    });
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 1100));
+    });
+
+    expect(mockReplace).not.toHaveBeenCalledWith("/listings/listing-1/categorize");
     unmount();
   });
 

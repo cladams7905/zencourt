@@ -1,12 +1,12 @@
 "use client";
 
 import * as React from "react";
-import { ListingViewHeader } from "../../ListingViewHeader";
+import { ListingViewHeader } from "@web/src/components/listings/shared";
 import { Loader2 } from "lucide-react";
 import {
   ListingTimeline,
-  buildListingTimelineSteps
-} from "@web/src/components/listings/timeline";
+  buildListingStageSteps
+} from "@web/src/components/listings/shared";
 import { useRouter } from "next/navigation";
 import {
   ARCHITECTURE_OPTIONS,
@@ -98,12 +98,11 @@ export function ListingReviewView({
   const saleHistory = details.sale_history ?? [];
   const valuationExamples = valuation.third_party_examples ?? [];
   const sources = details.sources ?? [];
-  const { showInvestorFields, requiredFixes, canContinue } = useReviewValidation(
-    {
+  const { showInvestorFields, requiredFixes, canContinue } =
+    useReviewValidation({
       details,
       targetAudiences
-    }
-  );
+    });
 
   const propertyTypeOptions = React.useMemo(
     () => [...PROPERTY_TYPE_OPTIONS, "Custom"],
@@ -129,7 +128,7 @@ export function ListingReviewView({
         title={title}
         timeline={
           <ListingTimeline
-            steps={buildListingTimelineSteps("review")}
+            steps={buildListingStageSteps("review")}
             className="mb-0"
           />
         }

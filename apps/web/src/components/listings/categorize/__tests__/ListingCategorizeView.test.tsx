@@ -32,9 +32,13 @@ jest.mock("@web/src/components/location/AddressAutocomplete", () => ({
   AddressAutocomplete: () => null
 }));
 
-jest.mock("@web/src/components/listings/ListingViewHeader", () => ({
-  ListingViewHeader: () => null
-}));
+jest.mock("@web/src/components/listings/shared", () => {
+  const actual = jest.requireActual("@web/src/components/listings/shared");
+  return {
+    ...actual,
+    ListingViewHeader: () => null
+  };
+});
 
 jest.mock("@web/src/components/listings/categorize/components/dialogs/ListingCategoryDialog", () => ({
   ListingCategoryDialog: () => null

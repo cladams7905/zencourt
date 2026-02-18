@@ -18,82 +18,29 @@ import {
   MAX_IMAGE_BYTES,
   MAX_IMAGES_PER_ROOM
 } from "@shared/utils/mediaUpload";
-import {
-  createDraftListing,
-  createListingImageRecords,
-  getListingImageUploadUrls
-} from "@web/src/server/actions/db/listings";
 import { useRouter } from "next/navigation";
-import { getImageMetadataFromFile } from "@web/src/lib/imageMetadata";
-import type { ImageMetadata } from "@shared/types/models";
-import { emitListingSidebarUpdate } from "@web/src/lib/listingSidebarEvents";
+import {
+  formatBytes,
+  validateImageFile
+} from "@web/src/components/listings/sync/domain";
+import { useSyncUploadFlow } from "@web/src/components/listings/sync/domain/hooks";
 
 interface ListingSyncViewProps {
   userId: string;
 }
 
-const formatBytes = (bytes: number) => {
-  if (bytes === 0) return "0 B";
-  const sizes = ["B", "KB", "MB", "GB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(1024));
-  return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[i]}`;
-};
-
 export function ListingSyncView({ userId }: ListingSyncViewProps) {
   const router = useRouter();
   const [isUploadOpen, setIsUploadOpen] = React.useState(false);
-  const [listingId, setListingId] = React.useState<string | null>(null);
-  const [lastUploadCount, setLastUploadCount] = React.useState(0);
-  const listingIdRef = React.useRef<string | null>(null);
-  const lastUploadCountRef = React.useRef(0);
-  const batchStartedAtRef = React.useRef<number | null>(null);
-
-  React.useEffect(() => {
-    listingIdRef.current = listingId;
-  }, [listingId]);
-
-  const ensureListingId = React.useCallback(async () => {
-    if (listingIdRef.current) {
-      return listingIdRef.current;
-    }
-
-    const listing = await createDraftListing(userId);
-    if (!listing?.id) {
-      throw new Error("Draft listing could not be created.");
-    }
-    listingIdRef.current = listing.id;
-    setListingId(listing.id);
-    emitListingSidebarUpdate({
-      id: listing.id,
-      title: listing.title ?? null,
-      listingStage: listing.listingStage ?? "categorize",
-      lastOpenedAt: new Date().toISOString()
-    });
-    return listing.id;
-  }, [userId]);
-
-  const handleCreateRecords = React.useCallback(
-    async (
-      records: Array<{
-        key: string;
-        fileName: string;
-        publicUrl: string;
-        metadata?: ImageMetadata;
-      }>
-    ) => {
-      const activeListingId = listingIdRef.current;
-      if (!activeListingId) {
-        throw new Error("Listing is missing for upload.");
-      }
-      setLastUploadCount(records.length);
-      lastUploadCountRef.current = records.length;
-      if (batchStartedAtRef.current === null) {
-        batchStartedAtRef.current = Date.now();
-      }
-      await createListingImageRecords(userId, activeListingId, records);
-    },
-    [userId]
-  );
+  const {
+    getUploadUrls,
+    buildRecordInput,
+    onCreateRecords,
+    onUploadsComplete
+  } = useSyncUploadFlow({
+    userId,
+    navigate: router.push
+  });
 
   return (
     <>
@@ -118,9 +65,7 @@ export function ListingSyncView({ userId }: ListingSyncViewProps) {
             <CardHeader>
               <div className="flex flex-wrap items-center gap-2">
                 <CardTitle>Sync from MLS</CardTitle>
-                <Badge variant="secondary" className="">
-                  Recommended
-                </Badge>
+                <Badge variant="secondary">Recommended</Badge>
               </div>
               <CardDescription>
                 Connect your MLS to import active listings and generate social
@@ -185,45 +130,12 @@ export function ListingSyncView({ userId }: ListingSyncViewProps) {
         maxImageBytes={MAX_IMAGE_BYTES}
         compressDriveImages
         compressOversizeImages
-        fileMetaLabel={(file) => formatBytes(file.size)}
-        fileValidator={(file) => {
-          if (file.type.startsWith("image/")) {
-            return { accepted: true };
-          }
-          return { accepted: false, error: "Only image files are supported." };
-        }}
-        getUploadUrls={async (requests) => {
-          const activeListingId = await ensureListingId();
-          return getListingImageUploadUrls(userId, activeListingId, requests);
-        }}
-        buildRecordInput={async ({ upload, file }) => {
-          if (!upload.fileName || !upload.publicUrl) {
-            throw new Error("Listing upload is missing metadata.");
-          }
-          const metadata = await getImageMetadataFromFile(file);
-          return {
-            key: upload.key,
-            fileName: upload.fileName,
-            publicUrl: upload.publicUrl,
-            metadata
-          };
-        }}
-        onCreateRecords={handleCreateRecords}
-        onUploadsComplete={({ count, batchStartedAt }) => {
-          const activeListingId = listingIdRef.current;
-          if (activeListingId) {
-            setLastUploadCount(count);
-            lastUploadCountRef.current = count;
-            batchStartedAtRef.current = batchStartedAt;
-            const batchParam =
-              count > 0
-                ? `?batch=${count}&batchStartedAt=${batchStartedAt}`
-                : `?batchStartedAt=${batchStartedAt}`;
-            router.push(
-              `/listings/${activeListingId}/categorize/processing${batchParam}`
-            );
-          }
-        }}
+        fileMetaLabel={(file: File) => formatBytes(file.size)}
+        fileValidator={validateImageFile}
+        getUploadUrls={getUploadUrls}
+        buildRecordInput={buildRecordInput}
+        onCreateRecords={onCreateRecords}
+        onUploadsComplete={onUploadsComplete}
       />
     </>
   );

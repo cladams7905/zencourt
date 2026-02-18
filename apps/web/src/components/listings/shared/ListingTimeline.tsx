@@ -2,10 +2,10 @@
 
 import * as React from "react";
 import { cn } from "@web/src/components/ui/utils";
-import type { ListingTimelineStep } from "./types";
+import type { ListingStageStep } from "./types";
 
 type ListingTimelineProps = {
-  steps: ListingTimelineStep[];
+  steps: ListingStageStep[];
   className?: string;
 };
 

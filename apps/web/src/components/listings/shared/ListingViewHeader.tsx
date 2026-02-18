@@ -1,15 +1,15 @@
 "use client";
 
 import * as React from "react";
-import { cn } from "../ui/utils";
-import { Button } from "../ui/button";
+import { cn } from "../../ui/utils";
+import { Button } from "../../ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger
-} from "../ui/dropdown-menu";
+} from "../../ui/dropdown-menu";
 import { Plus, Bell } from "lucide-react";
 import { useRouter } from "next/navigation";
 
