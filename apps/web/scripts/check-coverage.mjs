@@ -17,17 +17,18 @@ const THRESHOLDS = {
   branches: 70
 };
 
-const COMPONENTS_ROOT = path.resolve("src/components");
-const componentSubfolders = fs
-  .readdirSync(COMPONENTS_ROOT, { withFileTypes: true })
-  .filter((entry) => entry.isDirectory())
-  .map((entry) => `src/components/${entry.name}/`)
-  .sort();
+function subfolderPrefixes(root, srcRelative) {
+  return fs
+    .readdirSync(path.resolve(root), { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => `${srcRelative}/${entry.name}/`)
+    .sort();
+}
 
 const MODULE_PREFIXES = [
-  ...componentSubfolders,
+  ...subfolderPrefixes("src/components", "src/components"),
+  ...subfolderPrefixes("src/server/services", "src/server/services"),
   "src/lib/",
-  "src/server/services/community/",
   "src/server/actions/"
 ];
 

@@ -226,11 +226,19 @@ Rules:
 - Prefer importing from folder boundaries (`.../db/listings`, `.../db/listingImages`) instead of deep file paths.
 - Extract shared action utilities to `apps/web/src/server/actions/shared/*` when reused across modules.
 
-### 6. Docker Build Context
+### 6. Type Placement
+
+Types should be placed at the appropriate scope — never higher than necessary:
+
+- **Cross-workspace types** (`packages/shared/types/`) — types shared between `apps/web` and `apps/video-server` (e.g., API contracts, shared enums, DB model types). Use the `@shared/types/*` alias to import.
+- **Web app workspace-level types** (`apps/web/src/lib/domain/`) — types shared between client and server code within the web app (e.g., domain models used by both server actions and React components).
+- **Module-level types** (`types.ts` at the module root) — types scoped to a single module or feature; keep them co-located rather than hoisting to a broader scope.
+
+### 7. Docker Build Context
 
 See `apps/video-server/README.md` for video-server deployment and Docker details.
 
-### 7. Next.js Monorepo Configuration
+### 8. Next.js Monorepo Configuration
 
 Non-standard config in `next.config.ts`:
 
@@ -238,7 +246,7 @@ Non-standard config in `next.config.ts`:
 - Externalizes Pino to prevent bundling issues
 - Output file tracing includes monorepo root
 
-### 8. Video Server Details
+### 9. Video Server Details
 
 Refer to `apps/video-server/README.md` for video-server specific rendering and queueing behavior.
 
@@ -269,4 +277,12 @@ Video-server has Jest configuration with:
 - **Test patterns:** `**/__tests__/**/*.ts`, `**/*.{spec,test}.ts`
 - **Module mapping:** Supports workspace aliases
 
-Web app also has a Jest configuration, but coverage is currently minimal.
+Web app has a Jest configuration with per-module coverage enforcement via `apps/web/scripts/check-coverage.mjs`:
+
+- **Coverage thresholds:** 80% statements/lines/functions, 70% branches — applied to each module prefix individually (not just the global total)
+- **Covered modules:** every subfolder under `src/components/` and `src/server/services/` (discovered dynamically), plus `src/lib/` and `src/server/actions/` — adding a new service folder automatically enrolls it in coverage checks
+- Run: `npm run test:coverage --workspace=@zencourt/web`
+
+## Code Change Philosophy
+
+**Do not optimize for backwards compatibility** unless the user prompt explicitly requests it. When refactoring, renaming, or reorganizing code, make clean breaks — remove old exports, delete deprecated aliases, and update all call sites rather than preserving shims or dual exports. Backwards-compatibility hacks add maintenance burden and obscure intent.
