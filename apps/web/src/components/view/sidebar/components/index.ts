@@ -8,5 +8,6 @@ export * from "./navigation/SidebarContentSection";
 export * from "./navigation/SidebarListingsSection";
 export * from "./navigation/SidebarManageSection";
 export * from "./navigation/SidebarNavIcons";
+export * from "./navigation/SidebarPrimarySection";
 export * from "./profile/SidebarFeedbackDialog";
 export * from "./profile/SidebarUserMenu";

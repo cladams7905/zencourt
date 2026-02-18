@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
-import { SurveyClient } from "@web/src/components/welcome/SurveyClient";
+import { SurveyClient } from "@web/src/components/welcome";
 import { getUser } from "@web/src/server/actions/db/users";
 import { getOrCreateUserAdditional } from "@web/src/server/actions/db/userAdditional";
 

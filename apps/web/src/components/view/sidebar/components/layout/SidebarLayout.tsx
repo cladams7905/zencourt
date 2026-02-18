@@ -3,8 +3,7 @@
 import * as React from "react";
 import { useUser } from "@stackframe/stack";
 import { useRouter } from "next/navigation";
-import { LayoutDashboard, Calendar, Plus, ChevronDown } from "lucide-react";
-import Link from "next/link";
+import { Plus, ChevronDown } from "lucide-react";
 import { cn } from "../../../../ui/utils";
 import { Button } from "../../../../ui/button";
 import {
@@ -19,6 +18,7 @@ import {
   SidebarListingsSection,
   SidebarManageSection,
   SidebarNavIcons,
+  SidebarPrimarySection,
   SidebarUserMenu
 } from "..";
 import { useSidebarFeedback, useSidebarListings } from "../../domain/hooks";
@@ -113,27 +113,7 @@ export function SidebarLayout({
       </div>
 
       <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
-        <div className="flex flex-col pt-4 gap-1">
-          <Link href={"/"} onClick={handleLinkClick}>
-            <Button
-              variant="ghost"
-              className="w-full justify-start gap-3 hover:bg-foreground/5"
-            >
-              <LayoutDashboard className="h-5 w-5" />
-              <span className="text-sm font-medium">Dashboard</span>
-            </Button>
-          </Link>
-
-          <Link href={"/"} onClick={handleLinkClick}>
-            <Button
-              variant="ghost"
-              className="w-full justify-start gap-3 hover:bg-foreground/5"
-            >
-              <Calendar className="h-5 w-5" />
-              <span className="text-sm font-medium">Calendar</span>
-            </Button>
-          </Link>
-        </div>
+        <SidebarPrimarySection onLinkClick={handleLinkClick} />
         <div className="py-4">
           <div className="h-px bg-border w-full" />
         </div>

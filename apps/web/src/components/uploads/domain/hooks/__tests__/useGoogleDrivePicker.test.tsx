@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { toast } from "sonner";
 import { useGoogleDrivePicker } from "@web/src/components/uploads/domain/hooks/useGoogleDrivePicker";
@@ -36,7 +37,9 @@ describe("useGoogleDrivePicker", () => {
       result.current.openFromButton();
     });
 
-    expect(toast.error).toHaveBeenCalledWith("Google Drive client ID is missing.");
+    expect(toast.error).toHaveBeenCalledWith(
+      "Google Drive client ID is missing."
+    );
   });
 
   it("downloads selected files and calls onFilesSelected", async () => {
@@ -54,7 +57,10 @@ describe("useGoogleDrivePicker", () => {
     document.head.appendChild(apiScript);
 
     let pickerCallback:
-      | ((data: { action?: string; docs?: { id?: string; name?: string; mimeType?: string }[] }) => void)
+      | ((data: {
+          action?: string;
+          docs?: { id?: string; name?: string; mimeType?: string }[];
+        }) => void)
       | null = null;
 
     const pickerBuilder = {
@@ -75,13 +81,16 @@ describe("useGoogleDrivePicker", () => {
     window.gapi = {
       load: (_name, options) => options.callback()
     };
-    (window as any).google = ({
+    (window as any).google = {
       accounts: {
         oauth2: {
           initTokenClient: ({
             callback
           }: {
-            callback: (response: { access_token?: string; error?: string }) => void;
+            callback: (response: {
+              access_token?: string;
+              error?: string;
+            }) => void;
           }) => ({
             requestAccessToken: () => callback({ access_token: "token" })
           })
@@ -95,12 +104,14 @@ describe("useGoogleDrivePicker", () => {
           return {
             setMimeTypes: viewSetMimeTypes
           };
-        } as unknown as new (viewId: string) => { setMimeTypes: (mimeTypes: string) => void },
+        } as unknown as new (viewId: string) => {
+          setMimeTypes: (mimeTypes: string) => void;
+        },
         PickerBuilder: function () {
           return pickerBuilder;
         } as unknown as new () => typeof pickerBuilder
       }
-    } as unknown) as Window["google"];
+    } as unknown as Window["google"];
 
     global.fetch = jest.fn(async () => ({
       ok: true,
@@ -166,13 +177,16 @@ describe("useGoogleDrivePicker", () => {
     window.gapi = {
       load: (_name, options) => options.callback()
     };
-    (window as any).google = ({
+    (window as any).google = {
       accounts: {
         oauth2: {
           initTokenClient: ({
             callback
           }: {
-            callback: (response: { access_token?: string; error?: string }) => void;
+            callback: (response: {
+              access_token?: string;
+              error?: string;
+            }) => void;
           }) => ({
             requestAccessToken: () => callback({ access_token: "token" })
           })
@@ -186,7 +200,9 @@ describe("useGoogleDrivePicker", () => {
           return {
             setMimeTypes: jest.fn()
           };
-        } as unknown as new (viewId: string) => { setMimeTypes: (mimeTypes: string) => void },
+        } as unknown as new (viewId: string) => {
+          setMimeTypes: (mimeTypes: string) => void;
+        },
         PickerBuilder: function () {
           return {
             addView: jest.fn().mockReturnThis(),
@@ -207,7 +223,7 @@ describe("useGoogleDrivePicker", () => {
           build: () => { setVisible: (visible: boolean) => void };
         }
       }
-    } as unknown) as Window["google"];
+    } as unknown as Window["google"];
 
     const { result } = renderHook(() => useGoogleDrivePicker({}));
     act(() => {
@@ -215,7 +231,9 @@ describe("useGoogleDrivePicker", () => {
     });
 
     await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith("Google Drive API key is missing.");
+      expect(toast.error).toHaveBeenCalledWith(
+        "Google Drive API key is missing."
+      );
     });
 
     identityScript.remove();
@@ -239,13 +257,16 @@ describe("useGoogleDrivePicker", () => {
     window.gapi = {
       load: (_name, options) => options.callback()
     };
-    (window as any).google = ({
+    (window as any).google = {
       accounts: {
         oauth2: {
           initTokenClient: ({
             callback
           }: {
-            callback: (response: { access_token?: string; error?: string }) => void;
+            callback: (response: {
+              access_token?: string;
+              error?: string;
+            }) => void;
           }) => ({
             requestAccessToken: () => callback({ error: "access_denied" })
           })
@@ -259,7 +280,9 @@ describe("useGoogleDrivePicker", () => {
           return {
             setMimeTypes: jest.fn()
           };
-        } as unknown as new (viewId: string) => { setMimeTypes: (mimeTypes: string) => void },
+        } as unknown as new (viewId: string) => {
+          setMimeTypes: (mimeTypes: string) => void;
+        },
         PickerBuilder: function () {
           return {
             addView: jest.fn().mockReturnThis(),
@@ -280,7 +303,7 @@ describe("useGoogleDrivePicker", () => {
           build: () => { setVisible: (visible: boolean) => void };
         }
       }
-    } as unknown) as Window["google"];
+    } as unknown as Window["google"];
 
     const onPickerOpenChange = jest.fn();
     const { result } = renderHook(() =>
@@ -291,7 +314,9 @@ describe("useGoogleDrivePicker", () => {
     });
 
     await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith("Google Drive authorization failed.");
+      expect(toast.error).toHaveBeenCalledWith(
+        "Google Drive authorization failed."
+      );
       expect(onPickerOpenChange).toHaveBeenCalledWith(false);
     });
 
@@ -316,13 +341,16 @@ describe("useGoogleDrivePicker", () => {
     window.gapi = {
       load: (_name, options) => options.callback()
     };
-    (window as any).google = ({
+    (window as any).google = {
       accounts: {
         oauth2: {
           initTokenClient: ({
             callback
           }: {
-            callback: (response: { access_token?: string; error?: string }) => void;
+            callback: (response: {
+              access_token?: string;
+              error?: string;
+            }) => void;
           }) => ({
             requestAccessToken: () => callback({})
           })
@@ -336,7 +364,9 @@ describe("useGoogleDrivePicker", () => {
           return {
             setMimeTypes: jest.fn()
           };
-        } as unknown as new (viewId: string) => { setMimeTypes: (mimeTypes: string) => void },
+        } as unknown as new (viewId: string) => {
+          setMimeTypes: (mimeTypes: string) => void;
+        },
         PickerBuilder: function () {
           return {
             addView: jest.fn().mockReturnThis(),
@@ -357,7 +387,7 @@ describe("useGoogleDrivePicker", () => {
           build: () => { setVisible: (visible: boolean) => void };
         }
       }
-    } as unknown) as Window["google"];
+    } as unknown as Window["google"];
 
     const { result } = renderHook(() => useGoogleDrivePicker({}));
     act(() => {
@@ -365,7 +395,9 @@ describe("useGoogleDrivePicker", () => {
     });
 
     await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith("Missing Google Drive access token.");
+      expect(toast.error).toHaveBeenCalledWith(
+        "Missing Google Drive access token."
+      );
     });
 
     identityScript.remove();
@@ -387,7 +419,10 @@ describe("useGoogleDrivePicker", () => {
     document.head.appendChild(apiScript);
 
     let pickerCallback:
-      | ((data: { action?: string; docs?: { id?: string; name?: string; mimeType?: string }[] }) => void)
+      | ((data: {
+          action?: string;
+          docs?: { id?: string; name?: string; mimeType?: string }[];
+        }) => void)
       | null = null;
     const pickerBuilder = {
       addView: jest.fn().mockReturnThis(),
@@ -405,13 +440,16 @@ describe("useGoogleDrivePicker", () => {
     window.gapi = {
       load: (_name, options) => options.callback()
     };
-    (window as any).google = ({
+    (window as any).google = {
       accounts: {
         oauth2: {
           initTokenClient: ({
             callback
           }: {
-            callback: (response: { access_token?: string; error?: string }) => void;
+            callback: (response: {
+              access_token?: string;
+              error?: string;
+            }) => void;
           }) => ({
             requestAccessToken: () => callback({ access_token: "token" })
           })
@@ -425,12 +463,14 @@ describe("useGoogleDrivePicker", () => {
           return {
             setMimeTypes: jest.fn()
           };
-        } as unknown as new (viewId: string) => { setMimeTypes: (mimeTypes: string) => void },
+        } as unknown as new (viewId: string) => {
+          setMimeTypes: (mimeTypes: string) => void;
+        },
         PickerBuilder: function () {
           return pickerBuilder;
         } as unknown as new () => typeof pickerBuilder
       }
-    } as unknown) as Window["google"];
+    } as unknown as Window["google"];
 
     global.fetch = jest.fn(async () => ({
       ok: false,
