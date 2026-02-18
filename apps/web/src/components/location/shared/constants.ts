@@ -1,0 +1,7 @@
+export const SERVICE_AREA_RADIUS_KM = 35;
+export const MAX_SERVICE_AREAS = 3;
+export const MAX_SERVICE_AREAS_EDIT_LIMIT = 5;
+export const MAX_SERVICE_AREA_LENGTH = 40;
+export const AUTOCOMPLETE_DEBOUNCE_MS = 300;
+export const BLUR_DISMISS_DELAY_MS = 150;
+export const GEOLOCATION_TIMEOUT_MS = 8000;

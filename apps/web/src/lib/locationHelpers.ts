@@ -1,6 +1,6 @@
 "use client";
 
-import type { LocationData } from "../components/location/LocationAutocomplete";
+import type { LocationData } from "../components/location/shared/types";
 
 export type CityRecord = {
   city: string;

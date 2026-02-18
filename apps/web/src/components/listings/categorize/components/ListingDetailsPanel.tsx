@@ -1,6 +1,6 @@
 import * as React from "react";
 import { AlertTriangle } from "lucide-react";
-import { AddressAutocomplete } from "@web/src/components/location/AddressAutocomplete";
+import { AddressAutocomplete } from "@web/src/components/location";
 import { Button } from "@web/src/components/ui/button";
 import {
   MAX_CATEGORIES,

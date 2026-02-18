@@ -166,7 +166,7 @@ For large/monolithic frontend components (typically >200-300 LOC or files mixing
 
 ```
 feature/
-  orchestrators/      # container wiring and cross-subdomain state
+  orchestrators/      # container wiring and cross-subdomain state (only needed if more than one orchestrator component)
   shared/             # shared constants/types/hooks for that feature
   domain/             # business logic and feature behavior
     hooks/

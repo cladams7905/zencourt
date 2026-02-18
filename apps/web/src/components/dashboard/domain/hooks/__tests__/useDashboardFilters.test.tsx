@@ -37,15 +37,21 @@ describe("useDashboardFilters", () => {
     const realUseState = React.useState;
     const useStateSpy = jest
       .spyOn(React, "useState")
-      .mockImplementation((initial) => {
+      .mockImplementation((initial?: unknown) => {
         if (
           Array.isArray(initial) &&
           initial.length === 1 &&
           initial[0] === "Market Insights"
         ) {
-          return [[], jest.fn()] as unknown as ReturnType<typeof React.useState>;
+          return [[], jest.fn()] as [unknown, React.Dispatch<unknown>];
         }
-        return realUseState(initial);
+        if (typeof initial === "undefined") {
+          return (realUseState as () => [unknown, React.Dispatch<unknown>])();
+        }
+        return (realUseState as (value: unknown) => [
+          unknown,
+          React.Dispatch<unknown>
+        ])(initial);
       });
 
     const { result } = renderHook(() => useDashboardFilters());

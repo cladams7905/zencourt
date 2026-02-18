@@ -19,13 +19,13 @@ import { toast } from "sonner";
 import {
   LocationAutocomplete,
   type LocationData
-} from "../location/LocationAutocomplete";
+} from "../location";
 import { updateUserLocation } from "@web/src/server/actions/db/userAdditional";
 import {
   formatLocationForStorage,
   normalizeCountyName
 } from "@web/src/lib/locationHelpers";
-import { LocationDetailsPanel } from "../location/LocationDetailsPanel";
+import { LocationDetailsPanel } from "../location";
 
 interface AccountTabProps {
   userId: string;

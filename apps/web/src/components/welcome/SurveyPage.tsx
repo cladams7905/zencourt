@@ -18,8 +18,8 @@ import {
 import {
   LocationAutocomplete,
   type LocationData
-} from "../location/LocationAutocomplete";
-import { LocationDetailsPanel } from "../location/LocationDetailsPanel";
+} from "../location";
+import { LocationDetailsPanel } from "../location";
 import { ArrowRight, ArrowLeft } from "lucide-react";
 import type { ReferralSource, TargetAudience } from "@db/client";
 import { audienceCategories } from "../settings/audienceCategories";

@@ -24,7 +24,8 @@ export function useDashboardFilters() {
     setHasSelectedFilter(true);
   }, []);
 
-  const activeFilter = activeFilters[0] as DashboardFilterLabel;
+  const activeFilter =
+    activeFilters[0] ?? DEFAULT_ACTIVE_FILTER;
   const activeCategory = CATEGORY_LABEL_MAP[activeFilter];
 
   return {

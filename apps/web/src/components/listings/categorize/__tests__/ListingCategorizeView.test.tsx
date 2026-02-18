@@ -28,7 +28,7 @@ jest.mock("@web/src/components/uploads/UploadDialog", () => ({
   }
 }));
 
-jest.mock("@web/src/components/location/AddressAutocomplete", () => ({
+jest.mock("@web/src/components/location", () => ({
   AddressAutocomplete: () => null
 }));
 
