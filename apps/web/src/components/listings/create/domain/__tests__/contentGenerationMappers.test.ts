@@ -1,4 +1,4 @@
-import type { ContentItem } from "@web/src/components/dashboard/ContentGrid";
+import type { ContentItem } from "@web/src/components/dashboard/components/ContentGrid";
 import {
   ensureBatchItemIds,
   mapFinalItemsToContentItems,

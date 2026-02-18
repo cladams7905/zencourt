@@ -1,6 +1,6 @@
 import * as React from "react";
 import { toast } from "sonner";
-import type { ContentItem } from "@web/src/components/dashboard/ContentGrid";
+import type { ContentItem } from "@web/src/components/dashboard/components/ContentGrid";
 import type { ListingContentSubcategory } from "@shared/types/models";
 import { extractJsonItemsFromStream } from "@web/src/lib/streamParsing";
 import {

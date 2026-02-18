@@ -1,4 +1,4 @@
-import type { ContentItem } from "@web/src/components/dashboard/ContentGrid";
+import type { ContentItem } from "@web/src/components/dashboard/components/ContentGrid";
 import type { PreviewTimelinePlan } from "@web/src/lib/video/previewTimeline";
 import { buildPlayablePreviews } from "@web/src/components/listings/create/media/video/videoPreviewViewModel";
 
@@ -17,11 +17,14 @@ jest.mock(
     pickRichOverlayPosition: () => "center",
     appendRandomHeaderSuffix: (text: string) => text,
     buildOverlayTemplateLines: (
-      textOverlay: {
-        headline?: string | null;
-        accent_top?: string | null;
-        accent_bottom?: string | null;
-      } | null | undefined,
+      textOverlay:
+        | {
+            headline?: string | null;
+            accent_top?: string | null;
+            accent_bottom?: string | null;
+          }
+        | null
+        | undefined,
       plainText: string,
       forcePattern?: "simple"
     ) => {
@@ -58,7 +61,8 @@ jest.mock(
       fps: number
     ) =>
       segments.reduce(
-        (sum, segment) => sum + Math.max(1, Math.round(segment.durationSeconds * fps)),
+        (sum, segment) =>
+          sum + Math.max(1, Math.round(segment.durationSeconds * fps)),
         0
       )
   })
@@ -85,8 +89,16 @@ describe("videoPreviewViewModel", () => {
   ];
 
   const baseItems: ContentItem[] = [
-    { id: "clip-1", videoUrl: "https://video/1.mp4", thumbnail: "https://img/1.jpg" },
-    { id: "clip-2", videoUrl: "https://video/2.mp4", thumbnail: "https://img/2.jpg" }
+    {
+      id: "clip-1",
+      videoUrl: "https://video/1.mp4",
+      thumbnail: "https://img/1.jpg"
+    },
+    {
+      id: "clip-2",
+      videoUrl: "https://video/2.mp4",
+      thumbnail: "https://img/2.jpg"
+    }
   ];
 
   it("returns playable previews only when at least two video segments resolve", () => {
@@ -97,7 +109,11 @@ describe("videoPreviewViewModel", () => {
           totalDurationSeconds: 4,
           segments: [
             { clipId: "clip-1", category: "kitchen", durationSeconds: 2 },
-            { clipId: "clip-missing", category: "living room", durationSeconds: 2 }
+            {
+              clipId: "clip-missing",
+              category: "living room",
+              durationSeconds: 2
+            }
           ]
         }
       ],
@@ -120,7 +136,9 @@ describe("videoPreviewViewModel", () => {
         {
           id: "cap-1",
           hook: "Luxury home",
-          body: [{ header: "Fresh interiors", content: "Bright and open spaces" }]
+          body: [
+            { header: "Fresh interiors", content: "Bright and open spaces" }
+          ]
         } as ContentItem
       ],
       listingSubcategory: "status_update",
@@ -153,7 +171,9 @@ describe("videoPreviewViewModel", () => {
       previewTransitionSeconds: 0
     });
 
-    expect(result[0]?.resolvedSegments[0]?.supplementalAddressOverlay).toBeDefined();
+    expect(
+      result[0]?.resolvedSegments[0]?.supplementalAddressOverlay
+    ).toBeDefined();
     expect(
       result[0]?.resolvedSegments[0]?.supplementalAddressOverlay?.overlay.text
     ).toContain("123 Main St");
@@ -176,7 +196,9 @@ describe("videoPreviewViewModel", () => {
     });
 
     expect(
-      result[0]?.resolvedSegments.some((segment) => segment.supplementalAddressOverlay)
+      result[0]?.resolvedSegments.some(
+        (segment) => segment.supplementalAddressOverlay
+      )
     ).toBe(false);
   });
 

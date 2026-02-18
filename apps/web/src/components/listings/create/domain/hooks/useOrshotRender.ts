@@ -1,5 +1,5 @@
 import * as React from "react";
-import type { ContentItem } from "@web/src/components/dashboard/ContentGrid";
+import type { ContentItem } from "@web/src/components/dashboard/components/ContentGrid";
 import type { ListingOrshotRenderResult } from "@web/src/lib/orshot/types";
 import type { ListingContentSubcategory } from "@shared/types/models";
 import {

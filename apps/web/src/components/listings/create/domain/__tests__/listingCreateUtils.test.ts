@@ -1,4 +1,4 @@
-import type { ContentItem } from "@web/src/components/dashboard/ContentGrid";
+import type { ContentItem } from "@web/src/components/dashboard/components/ContentGrid";
 import {
   buildFeatureNeedle,
   buildOrshotCaptionItems,
@@ -59,12 +59,12 @@ describe("listingCreateUtils", () => {
   });
 
   it("resolves content media type with video default", () => {
-    expect(resolveContentMediaType({ id: "a", mediaType: "image" } as ContentItem)).toBe(
-      "image"
-    );
-    expect(resolveContentMediaType({ id: "b", mediaType: null } as ContentItem)).toBe(
-      "video"
-    );
+    expect(
+      resolveContentMediaType({ id: "a", mediaType: "image" } as ContentItem)
+    ).toBe("image");
+    expect(
+      resolveContentMediaType({ id: "b", mediaType: null } as ContentItem)
+    ).toBe("video");
   });
 
   it("ranks listing images by primary, category relevance, score, and recency", () => {
@@ -137,7 +137,9 @@ describe("listingCreateUtils", () => {
     const first = buildVariedImageSequence(images, "seed-1");
     const second = buildVariedImageSequence(images, "seed-1");
 
-    expect(first.map((image) => image.id)).toEqual(second.map((image) => image.id));
+    expect(first.map((image) => image.id)).toEqual(
+      second.map((image) => image.id)
+    );
     expect(new Set(first.map((image) => image.id)).size).toBe(images.length);
   });
 
@@ -193,7 +195,9 @@ describe("listingCreateUtils", () => {
           parametersUsed: {}
         }
       ],
-      captionItems: [{ id: "item-1", hook: "My Hook", caption: "My Caption", body: [] }]
+      captionItems: [
+        { id: "item-1", hook: "My Hook", caption: "My Caption", body: [] }
+      ]
     });
 
     expect(mapped[0]).toMatchObject({

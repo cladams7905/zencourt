@@ -1,19 +1,22 @@
 "use client";
 
 import * as React from "react";
-import { cn } from "../ui/utils";
-import { Button } from "../ui/button";
-import { Tabs, TabsList, TabsTrigger } from "../ui/tabs";
-import { Progress } from "../ui/progress";
+import { cn } from "../../ui/utils";
+import { Button } from "../../ui/button";
+import { Tabs, TabsList, TabsTrigger } from "../../ui/tabs";
+import { Progress } from "../../ui/progress";
 import { ChevronDown, Settings } from "lucide-react";
-
-type ContentType = "videos" | "posts" | "stories";
+import {
+  DASHBOARD_FILTERS,
+  type DashboardContentType,
+  type DashboardFilterLabel
+} from "@web/src/components/dashboard/shared";
 
 interface ContentFilterBarProps {
-  activeType?: ContentType;
-  onTypeChange?: (type: ContentType) => void;
-  activeFilters?: string[];
-  onFilterToggle?: (filter: string) => void;
+  activeType?: DashboardContentType;
+  onTypeChange?: (type: DashboardContentType) => void;
+  activeFilters?: DashboardFilterLabel[];
+  onFilterToggle?: (filter: DashboardFilterLabel) => void;
   generationCount?: number;
   generationLimit?: number;
   className?: string;
@@ -28,15 +31,6 @@ const ContentFilterBar = ({
   generationLimit = 50,
   className
 }: ContentFilterBarProps) => {
-  const filters = [
-    { id: "listings", label: "Listings" },
-    { id: "market-insights", label: "Market Insights" },
-    { id: "educational", label: "Educational" },
-    { id: "community", label: "Community" },
-    { id: "lifestyle", label: "Lifestyle" },
-    { id: "seasonal", label: "Seasonal" }
-  ];
-
   const generationPercentage = (generationCount / generationLimit) * 100;
 
   return (
@@ -64,7 +58,9 @@ const ContentFilterBar = ({
         {/* Type Tabs */}
         <Tabs
           value={activeType}
-          onValueChange={(value) => onTypeChange?.(value as ContentType)}
+          onValueChange={(value) =>
+            onTypeChange?.(value as DashboardContentType)
+          }
           className="shrink-0"
         >
           <TabsList className="h-fit w-fit gap-2 bg-secondary border border-border/60 p-1">
@@ -92,7 +88,7 @@ const ContentFilterBar = ({
         {/* Filter Chips */}
         <div className="flex w-full items-center gap-2 sm:w-auto">
           <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide max-w-full justify-end w-full sm:w-auto">
-            {filters.map((filter) => {
+            {DASHBOARD_FILTERS.map((filter) => {
               const isActive = activeFilters.includes(filter.label);
               const isListings = filter.id === "listings";
 
@@ -125,4 +121,4 @@ const ContentFilterBar = ({
   );
 };
 
-export { ContentFilterBar, type ContentType };
+export { ContentFilterBar, type DashboardContentType as ContentType };

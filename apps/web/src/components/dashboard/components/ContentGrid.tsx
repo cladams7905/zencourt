@@ -1,53 +1,21 @@
 "use client";
 
 import * as React from "react";
-import { cn } from "../ui/utils";
-import { Button } from "../ui/button";
+import { cn } from "../../ui/utils";
+import { Button } from "../../ui/button";
 import { Heart, Edit, Download, Share2, Trash2 } from "lucide-react";
 import Image from "next/image";
-import { LoadingVideo } from "../ui/loading-video";
-import type { ListingContentSubcategory } from "@shared/types/models";
-
-type AspectRatio = "square" | "vertical" | "horizontal";
-type GenerationModel = "veo3.1_fast" | "runway-gen4-turbo" | "kling1.6";
-type ListingMediaType = "video" | "image";
-
-export type TextOverlayInput = {
-  accent_top?: string | null;
-  headline: string;
-  accent_bottom?: string | null;
-};
-
-type CarouselSlide = {
-  header: string;
-  content: string;
-  broll_query?: string | null;
-  text_overlay?: TextOverlayInput | null;
-};
+import { LoadingVideo } from "../../ui/loading-video";
+import type {
+  DashboardContentItem,
+  TextOverlayInput
+} from "@web/src/components/dashboard/shared";
 
 const FALLBACK_THUMBNAIL = `data:image/svg+xml,${encodeURIComponent(
   "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 1200'><rect width='800' height='1200' fill='#111827'/><rect x='120' y='300' width='560' height='600' rx='24' fill='#1f2937'/><text x='400' y='640' font-family='Arial, sans-serif' font-size='28' fill='#9ca3af' text-anchor='middle'>Thumbnail unavailable</text></svg>"
 )}`;
 
-interface ContentItem {
-  id: string;
-  thumbnail?: string;
-  videoUrl?: string | null;
-  aspectRatio?: AspectRatio;
-  isFavorite?: boolean;
-  alt?: string;
-  hook?: string;
-  caption?: string | null;
-  body?: CarouselSlide[] | null;
-  brollQuery?: string | null;
-  category?: string | null;
-  durationSeconds?: number | null;
-  generationModel?: GenerationModel | null;
-  orientation?: "vertical" | "landscape" | null;
-  isPriorityCategory?: boolean;
-  listingSubcategory?: ListingContentSubcategory | null;
-  mediaType?: ListingMediaType | null;
-}
+type ContentItem = DashboardContentItem;
 
 interface ContentGridProps {
   items: ContentItem[];
@@ -348,4 +316,4 @@ const ContentGrid = ({
   );
 };
 
-export { ContentGrid, type ContentItem };
+export { ContentGrid, type ContentItem, type TextOverlayInput };

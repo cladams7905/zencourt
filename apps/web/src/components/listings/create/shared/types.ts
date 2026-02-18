@@ -1,4 +1,7 @@
-import type { ContentItem, TextOverlayInput } from "@web/src/components/dashboard/ContentGrid";
+import type {
+  ContentItem,
+  TextOverlayInput
+} from "@web/src/components/dashboard/components/ContentGrid";
 import type { PreviewTextOverlay } from "@web/src/lib/video/previewTimeline";
 import type { TimelinePreviewResolvedSegment } from "@web/src/components/listings/create/media/video/components/ListingTimelinePreviewComposition";
 

@@ -1,9 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { cn } from "../ui/utils";
-import { Button } from "../ui/button";
-import { Card, CardContent } from "../ui/card";
+import { cn } from "../../ui/utils";
+import { Button } from "../../ui/button";
+import { Card, CardContent } from "../../ui/card";
 import { Facebook, Instagram, Plus, FileEdit } from "lucide-react";
 
 type Platform = "facebook" | "instagram";

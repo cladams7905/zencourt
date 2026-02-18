@@ -1,7 +1,7 @@
 import type {
   ContentItem,
   TextOverlayInput
-} from "@web/src/components/dashboard/ContentGrid";
+} from "@web/src/components/dashboard/components/ContentGrid";
 import type {
   PreviewTextOverlay,
   PreviewTimelinePlan
@@ -29,7 +29,9 @@ interface SlideOverlayData {
   textOverlay?: TextOverlayInput | null;
 }
 
-function getSlideOverlayData(captionItem: ContentItem | null): SlideOverlayData[] {
+function getSlideOverlayData(
+  captionItem: ContentItem | null
+): SlideOverlayData[] {
   const slides = captionItem?.body ?? [];
   const data: SlideOverlayData[] = slides
     .filter((slide) => slide.header?.trim())
@@ -227,8 +229,11 @@ export function buildPlayablePreviews(params: {
     ])
   );
 
-  const listingStreetAddress = extractStreetAddress(params.listingAddress ?? "");
-  const normalizedListingAddress = normalizeForAddressMatch(listingStreetAddress);
+  const listingStreetAddress = extractStreetAddress(
+    params.listingAddress ?? ""
+  );
+  const normalizedListingAddress =
+    normalizeForAddressMatch(listingStreetAddress);
   const shouldEnforceAddressOverlay =
     params.listingSubcategory === "new_listing" &&
     normalizedListingAddress.length > 0;
@@ -258,34 +263,40 @@ export function buildPlayablePreviews(params: {
     const seed = `${plan.id}:${captionItem?.id ?? "no-caption"}`;
     const overlayVariant = pickPreviewTextOverlayVariant(seed);
 
-    const segmentsWithOverlays = resolvedSegments.map((segment, segmentIndex) => {
-      const data = slideOverlayData.length
-        ? slideOverlayData[segmentIndex % slideOverlayData.length]
-        : undefined;
+    const segmentsWithOverlays = resolvedSegments.map(
+      (segment, segmentIndex) => {
+        const data = slideOverlayData.length
+          ? slideOverlayData[segmentIndex % slideOverlayData.length]
+          : undefined;
 
-      if (!data) {
-        return segment;
+        if (!data) {
+          return segment;
+        }
+
+        const primaryOverlay = buildRichOverlay(data, overlayVariant, {
+          forceSimpleTemplate: params.forceSimpleOverlayTemplate
+        });
+
+        const needsAddressSupplement =
+          shouldEnforceAddressOverlay &&
+          !slideContainsAddress(data, normalizedListingAddress) &&
+          Boolean(params.listingAddress?.trim());
+
+        return {
+          ...segment,
+          textOverlay: primaryOverlay,
+          supplementalAddressOverlay: needsAddressSupplement
+            ? buildAddressSupplementalOverlay(
+                primaryOverlay,
+                listingStreetAddress
+              )
+            : undefined
+        };
       }
+    );
 
-      const primaryOverlay = buildRichOverlay(data, overlayVariant, {
-        forceSimpleTemplate: params.forceSimpleOverlayTemplate
-      });
-
-      const needsAddressSupplement =
-        shouldEnforceAddressOverlay &&
-        !slideContainsAddress(data, normalizedListingAddress) &&
-        Boolean(params.listingAddress?.trim());
-
-      return {
-        ...segment,
-        textOverlay: primaryOverlay,
-        supplementalAddressOverlay: needsAddressSupplement
-          ? buildAddressSupplementalOverlay(primaryOverlay, listingStreetAddress)
-          : undefined
-      };
-    });
-
-    const firstThumb = itemById.get(resolvedSegments[0].clipId)?.thumbnail ?? null;
+    const firstThumb =
+      itemById.get(resolvedSegments[0].clipId)?.thumbnail ?? null;
     const firstSegmentWithOverlay = segmentsWithOverlays.find(
       (segment) => segment.textOverlay
     );

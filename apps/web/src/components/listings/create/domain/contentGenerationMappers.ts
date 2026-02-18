@@ -1,4 +1,4 @@
-import type { ContentItem } from "@web/src/components/dashboard/ContentGrid";
+import type { ContentItem } from "@web/src/components/dashboard/components/ContentGrid";
 import type { ListingContentSubcategory } from "@shared/types/models";
 import type {
   FinalContentItem,
@@ -89,7 +89,9 @@ export function mergeBatchItems(params: {
 
   if (!params.forceNewBatch) {
     const existingIds = new Set(withoutCurrentBatch.map((item) => item.id));
-    const unique = params.finalItems.filter((item) => !existingIds.has(item.id));
+    const unique = params.finalItems.filter(
+      (item) => !existingIds.has(item.id)
+    );
     return unique.length > 0
       ? [...withoutCurrentBatch, ...unique]
       : withoutCurrentBatch;

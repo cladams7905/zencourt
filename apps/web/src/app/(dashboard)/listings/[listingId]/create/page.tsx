@@ -10,7 +10,7 @@ import {
   ListingCreateView,
   type ListingCreateMediaTab
 } from "@web/src/components/listings/create/orchestrators";
-import type { ContentItem } from "@web/src/components/dashboard/ContentGrid";
+import type { ContentItem } from "@web/src/components/dashboard/components/ContentGrid";
 import {
   LISTING_CONTENT_SUBCATEGORIES,
   type ListingContentSubcategory

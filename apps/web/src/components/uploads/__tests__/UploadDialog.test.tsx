@@ -230,7 +230,7 @@ describe("UploadDialog", () => {
     expect(onSuccess).toHaveBeenCalledTimes(1);
   });
 
-  it("keeps valid files when some are rejected", () => {
+  it("keeps valid files when some are rejected", async () => {
     renderDialog({
       fileValidator: (file) =>
         file.type === "image/jpeg"
@@ -243,11 +243,13 @@ describe("UploadDialog", () => {
       target: { files: [createFile("a.jpg"), createFile("a.txt", "text/plain")] }
     });
 
-    expect(toastError).toHaveBeenCalledWith("Unsupported type");
-    expect(screen.getByText("1 file selected")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(toastError).toHaveBeenCalledWith("Unsupported type");
+      expect(screen.getByText("1 file selected")).toBeInTheDocument();
+    });
   });
 
-  it("ignores duplicate files by name, size, and type", () => {
+  it("ignores duplicate files by name, size, and type", async () => {
     renderDialog({
       fileValidator: () => ({ accepted: true })
     });
@@ -257,6 +259,8 @@ describe("UploadDialog", () => {
     fireEvent.change(input, { target: { files: [file] } });
     fireEvent.change(input, { target: { files: [file] } });
 
-    expect(screen.getByText("1 file selected")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("1 file selected")).toBeInTheDocument();
+    });
   });
 });

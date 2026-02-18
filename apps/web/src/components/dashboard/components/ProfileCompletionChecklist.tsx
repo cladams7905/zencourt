@@ -3,8 +3,8 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, Circle, ChevronRight } from "lucide-react";
-import { cn } from "../ui/utils";
-import { Card, CardContent } from "../ui/card";
+import { cn } from "../../ui/utils";
+import { Card, CardContent } from "../../ui/card";
 
 interface ProfileCompletionChecklistProps {
   profileCompleted: boolean;

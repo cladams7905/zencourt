@@ -1,11 +1,14 @@
 "use client";
 
 import * as React from "react";
-import type { ContentItem } from "@web/src/components/dashboard/ContentGrid";
+import type { ContentItem } from "@web/src/components/dashboard/components/ContentGrid";
 import type { PreviewTimelinePlan } from "@web/src/lib/video/previewTimeline";
 import type { ListingContentSubcategory } from "@shared/types/models";
 import { buildPlayablePreviews } from "@web/src/components/listings/create/media/video/videoPreviewViewModel";
-import { PREVIEW_FPS, PREVIEW_TRANSITION_SECONDS } from "@web/src/components/listings/create/media/video/previewConstants";
+import {
+  PREVIEW_FPS,
+  PREVIEW_TRANSITION_SECONDS
+} from "@web/src/components/listings/create/media/video/previewConstants";
 import { useHoverReveal } from "@web/src/components/listings/create/media/video/useHoverReveal";
 import { VideoPreviewCard } from "@web/src/components/listings/create/media/video/components/VideoPreviewCard";
 import { VideoPreviewModal } from "@web/src/components/listings/create/media/video/components/VideoPreviewModal";
@@ -32,7 +35,9 @@ export function ListingVideoPreviewGrid({
   forceSimpleOverlayTemplate = false,
   loadingCount = 0
 }: ListingVideoPreviewGridProps) {
-  const [selectedPlanId, setSelectedPlanId] = React.useState<string | null>(null);
+  const [selectedPlanId, setSelectedPlanId] = React.useState<string | null>(
+    null
+  );
   const [favoritePlanIds, setFavoritePlanIds] = React.useState<Set<string>>(
     new Set()
   );
