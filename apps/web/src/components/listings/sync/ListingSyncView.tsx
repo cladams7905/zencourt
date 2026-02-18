@@ -12,7 +12,7 @@ import {
   CardHeader,
   CardTitle
 } from "../../ui/card";
-import { UploadDialog } from "../../uploads/UploadDialog";
+import { UploadDialog } from "../../uploads/orchestrators/UploadDialog";
 import {
   IMAGE_UPLOAD_LIMIT,
   MAX_IMAGE_BYTES,

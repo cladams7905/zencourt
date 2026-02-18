@@ -1,7 +1,5 @@
 import * as React from "react";
-import {
-  fetchListingsPage
-} from "@web/src/components/listings/my-listings/domain/myListingsUtils";
+import { fetchListingsPage } from "@web/src/components/listings/my-listings/domain/services";
 import {
   MY_LISTINGS_PAGE_SIZE,
   type ListingSummaryItem

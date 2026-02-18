@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { ViewHeader } from "@web/src/components/view/ViewHeader";
-import { UploadDialog } from "@web/src/components/uploads/UploadDialog";
+import { UploadDialog } from "@web/src/components/uploads/orchestrators/UploadDialog";
 import { getUserMediaUploadUrls } from "@web/src/server/actions/db/userMedia";
 import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES } from "@shared/utils/mediaUpload";
 import {

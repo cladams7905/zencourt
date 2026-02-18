@@ -12,7 +12,7 @@ describe("settingsPreviewViewModel", () => {
   it("resolves legacy tone labels and falls back to Custom", () => {
     expect(resolveWritingToneLabel("professional" as never)).toBe("Professional");
     expect(resolveWritingToneLabel("unknown" as never)).toBe("Custom");
-    expect(resolveWritingToneLabel(null)).toBe("Custom");
+    expect(resolveWritingToneLabel(null as never)).toBe("Custom");
   });
 
   it("builds preview model with user defaults", () => {

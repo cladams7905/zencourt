@@ -1,3 +1,4 @@
+import * as React from "react";
 import { act, renderHook } from "@testing-library/react";
 import { useMediaPagination } from "@web/src/components/media/domain/hooks/useMediaPagination";
 
@@ -18,6 +19,15 @@ class IntersectionObserverMock {
 }
 
 describe("useMediaPagination", () => {
+  const useTestPagination = (
+    pageSize: number,
+    totalCount: number,
+    dep: string
+  ) => {
+    const resetDeps = React.useMemo(() => [dep], [dep]);
+    return useMediaPagination({ pageSize, totalCount, resetDeps });
+  };
+
   beforeEach(() => {
     IntersectionObserverMock.instances = [];
     Object.defineProperty(window, "IntersectionObserver", {
@@ -29,7 +39,7 @@ describe("useMediaPagination", () => {
 
   it("starts with page size and exposes hasMore", () => {
     const { result } = renderHook(() =>
-      useMediaPagination({ pageSize: 12, totalCount: 30, resetDeps: ["a"] })
+      useTestPagination(12, 30, "a")
     );
 
     expect(result.current.visibleCount).toBe(12);
@@ -38,8 +48,7 @@ describe("useMediaPagination", () => {
 
   it("resets visible count when reset deps change", () => {
     const { result, rerender } = renderHook(
-      (dep: string) =>
-        useMediaPagination({ pageSize: 12, totalCount: 30, resetDeps: [dep] }),
+      (dep: string) => useTestPagination(12, 30, dep),
       { initialProps: "a" }
     );
     act(() => {
@@ -59,7 +68,7 @@ describe("useMediaPagination", () => {
 
   it("increases and clamps visible count on intersection", () => {
     const { result } = renderHook(() =>
-      useMediaPagination({ pageSize: 12, totalCount: 20, resetDeps: ["a"] })
+      useTestPagination(12, 20, "a")
     );
     act(() => {
       result.current.loadMoreRef(document.createElement("div"));
@@ -75,9 +84,7 @@ describe("useMediaPagination", () => {
   });
 
   it("does not create observer when all items are visible", () => {
-    renderHook(() =>
-      useMediaPagination({ pageSize: 12, totalCount: 10, resetDeps: ["a"] })
-    );
+    renderHook(() => useTestPagination(12, 10, "a"));
 
     expect(IntersectionObserverMock.instances).toHaveLength(0);
   });

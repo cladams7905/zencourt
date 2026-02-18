@@ -1,4 +1,5 @@
 import type { ImageMetadata } from "@shared/types/models";
+import { formatBytes as formatFileBytes } from "@web/src/lib/formatBytes";
 
 export type ListingSyncUploadRecordInput = {
   key: string;
@@ -13,12 +14,7 @@ type UploadDescriptor = {
   publicUrl?: string;
 };
 
-export const formatBytes = (bytes: number) => {
-  if (bytes === 0) return "0 B";
-  const sizes = ["B", "KB", "MB", "GB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(1024));
-  return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[i]}`;
-};
+export const formatBytes = (bytes: number) => formatFileBytes(bytes);
 
 export const validateImageFile = (file: File) => {
   if (file.type.startsWith("image/")) {

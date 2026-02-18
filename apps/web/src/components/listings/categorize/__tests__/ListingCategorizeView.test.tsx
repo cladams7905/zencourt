@@ -21,7 +21,7 @@ jest.mock("sonner", () => ({
   }
 }));
 
-jest.mock("@web/src/components/uploads/UploadDialog", () => ({
+jest.mock("@web/src/components/uploads/orchestrators/UploadDialog", () => ({
   UploadDialog: (props: any) => {
     latestUploadProps = props;
     return null;

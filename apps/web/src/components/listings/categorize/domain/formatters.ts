@@ -1,6 +1,3 @@
-export const formatBytes = (bytes: number) => {
-  if (bytes === 0) return "0 B";
-  const sizes = ["B", "KB", "MB", "GB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(1024));
-  return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[i]}`;
-};
+import { formatBytes as formatFileBytes } from "@web/src/lib/formatBytes";
+
+export const formatBytes = (bytes: number) => formatFileBytes(bytes);
