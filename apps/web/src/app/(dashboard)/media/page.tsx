@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { MediaView } from "@web/src/components/media/MediaView";
+import { MediaView } from "@web/src/components/media";
 import { getUser } from "@web/src/server/actions/db/users";
 import { getUserMedia } from "@web/src/server/actions/db/userMedia";
 import { getSignedDownloadUrlSafe } from "@web/src/server/utils/storageUrls";
