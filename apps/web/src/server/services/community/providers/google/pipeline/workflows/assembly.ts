@@ -4,9 +4,7 @@ import {
   buildNeighborhoodDetailList,
   formatPlaceList
 } from "../../core/places";
-import {
-  buildCategoryListWithDetails
-} from "../../core/places/details";
+import { buildCategoryListWithDetails } from "../../core/places/details";
 import {
   buildSeasonalQuerySections,
   CATEGORY_FIELD_MAP,
@@ -16,10 +14,7 @@ import {
   getCategoryDisplayLimit,
   type CategoryKey
 } from "@web/src/server/services/community/config";
-import {
-  communityCache,
-  getPlaceDetailsCached
-} from "../shared";
+import { communityCache, getPlaceDetailsCached } from "../shared";
 
 export async function buildAndPersistCategoryListMap(params: {
   zipCode: string;
@@ -40,9 +35,10 @@ export async function buildAndPersistCategoryListMap(params: {
     cachedCategoryLists
   } = params;
 
-  const listConfigs: Array<{ category: CategoryKey; max: number }> = NON_NEIGHBORHOOD_CATEGORY_KEYS
-    .filter((category) => categoriesToFetch.has(category))
-    .map((category) => ({
+  const listConfigs: Array<{ category: CategoryKey; max: number }> =
+    NON_NEIGHBORHOOD_CATEGORY_KEYS.filter((category) =>
+      categoriesToFetch.has(category)
+    ).map((category) => ({
       category,
       max: getCategoryDisplayLimit(category)
     }));
@@ -119,7 +115,13 @@ export async function getAndPersistNeighborhoodLists(params: {
   grouped: Record<string, ScoredPlace[]>;
   cachedNeighborhoodLists: Map<string, string>;
 }) {
-  const { zipCode, preferredCity, preferredState, grouped, cachedNeighborhoodLists } = params;
+  const {
+    zipCode,
+    preferredCity,
+    preferredState,
+    grouped,
+    cachedNeighborhoodLists
+  } = params;
 
   const neighborhoodsGeneral =
     cachedNeighborhoodLists.get("neighborhoods_general") ??

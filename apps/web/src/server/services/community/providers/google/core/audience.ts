@@ -8,7 +8,6 @@ import type {
 import type { QueryOverrides, SearchAnchor } from "./search";
 import { fetchScoredPlacesForQueries, getSearchAnchors } from "./search";
 import { formatPlaceList, dedupePlaces, type ScoredPlace } from "./places";
-import { hydratePlacesFromItems } from "./places/details";
 import { getPooledCategoryPlaces } from "./pools";
 import {
   buildSeasonalQueries,
@@ -29,6 +28,7 @@ import {
 } from "@web/src/server/services/community/config";
 import { getUtcMonthKey } from "../../../shared/common";
 import { estimateGoogleCallsCostUsd } from "../../../shared/apiCost";
+import { hydratePlacesFromItems } from "./places/details";
 
 type LoggerLike = {
   info: (context: unknown, message?: string) => void;

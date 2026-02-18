@@ -27,6 +27,7 @@ const componentSubfolders = fs
 const MODULE_PREFIXES = [
   ...componentSubfolders,
   "src/lib/",
+  "src/server/services/community/",
   "src/server/actions/"
 ];
 

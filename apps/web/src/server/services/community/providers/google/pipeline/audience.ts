@@ -1,12 +1,12 @@
 import type { CommunityData } from "@web/src/types/market";
-import { fetchCityDescription } from "../../shared/cityDescription";
+import { fetchCityDescription } from "../../../shared/cityDescription";
 import { buildAudienceAugmentDelta } from "../core/audience";
 import {
   applyAudienceDelta,
   getAudienceSkipCategories,
   trimCommunityDataLists
 } from "../core/communityLists";
-import { normalizeAudienceSegment } from "../../shared/audience";
+import { normalizeAudienceSegment } from "../../../shared/audience";
 import { SEARCH_ANCHOR_OFFSETS } from "@web/src/server/services/community/config";
 import { getCommunityDataByZip } from "./service";
 import {

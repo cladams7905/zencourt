@@ -6,7 +6,11 @@ import {
 import { getPooledCategoryPlaces } from "../../core/pools";
 import type { ScoredPlace } from "../../core/places";
 import { hydratePlacesFromItems } from "../../core/places/details";
-import { SEARCH_ANCHOR_OFFSETS, type CategoryKey, NEIGHBORHOOD_QUERIES } from "@web/src/server/services/community/config";
+import {
+  SEARCH_ANCHOR_OFFSETS,
+  type CategoryKey,
+  NEIGHBORHOOD_QUERIES
+} from "@web/src/server/services/community/config";
 import {
   communityCache,
   getPlaceDetailsCached,
@@ -48,23 +52,25 @@ export async function fetchGroupedPlaces(params: {
     neighborhoodsToFetch
   } = params;
 
-  const makeFetchFn = (category: {
-    key: string;
-    queries: string[];
-    seasonalQueries: Set<string>;
-    max: number;
-  }) => async (): Promise<ScoredPlace[]> =>
-    fetchScoredPlacesForQueries({
-      queries: category.queries,
-      category: category.key,
-      maxResults: category.max,
-      location,
-      distanceCache,
-      anchorOffsets: SEARCH_ANCHOR_OFFSETS,
-      serviceAreaCache,
-      seasonalQueries: category.seasonalQueries,
-      overridesForQuery: (query) => getQueryOverrides(category.key, query)
-    });
+  const makeFetchFn =
+    (category: {
+      key: string;
+      queries: string[];
+      seasonalQueries: Set<string>;
+      max: number;
+    }) =>
+    async (): Promise<ScoredPlace[]> =>
+      fetchScoredPlacesForQueries({
+        queries: category.queries,
+        category: category.key,
+        maxResults: category.max,
+        location,
+        distanceCache,
+        anchorOffsets: SEARCH_ANCHOR_OFFSETS,
+        serviceAreaCache,
+        seasonalQueries: category.seasonalQueries,
+        overridesForQuery: (query) => getQueryOverrides(category.key, query)
+      });
 
   const categoryResults = await Promise.all(
     categoryQueries.map(async (category) => {
