@@ -14,10 +14,6 @@ export function useDashboardSessionCache() {
     React.useState<GeneratedContentState>(DEFAULT_GENERATED_STATE);
 
   React.useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-
     const rawValue = sessionStorage.getItem(SESSION_STORAGE_KEY);
     const parsed = parseGeneratedContentSession(rawValue);
 
@@ -32,10 +28,6 @@ export function useDashboardSessionCache() {
   }, []);
 
   React.useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-
     try {
       sessionStorage.setItem(
         SESSION_STORAGE_KEY,

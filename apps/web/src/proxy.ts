@@ -9,7 +9,8 @@ export async function proxy(request: NextRequest) {
     "/terms",
     "/privacy",
     "/check-inbox",
-    "/verify-email"
+    "/verify-email",
+    "/reset-password"
   ];
 
   const hasStackSession =

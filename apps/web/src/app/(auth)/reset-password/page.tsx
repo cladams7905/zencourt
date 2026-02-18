@@ -1,6 +1,7 @@
 import * as React from "react";
 import { PasswordReset } from "@stackframe/stack";
 import { AuthView } from "@web/src/components/auth/AuthView";
+import { resolveResetPasswordCode } from "@web/src/app/(auth)/reset-password/resetPasswordCode";
 
 interface ResetPasswordPageProps {
   searchParams: Promise<{
@@ -17,38 +18,7 @@ export default function ResetPasswordPage({
   searchParams
 }: ResetPasswordPageProps) {
   const resolvedSearchParams = React.use(searchParams);
-  const coerceParam = (value?: string | string[]) =>
-    Array.isArray(value) ? value[0] : value;
-
-  const getCodeFromCallback = (value?: string | string[]) => {
-    const callbackUrl = coerceParam(value);
-    if (!callbackUrl) {
-      return undefined;
-    }
-
-    try {
-      const url = new URL(callbackUrl);
-      return (
-        url.searchParams.get("code") ??
-        url.searchParams.get("verification_code") ??
-        url.searchParams.get("verificationCode") ??
-        url.searchParams.get("token") ??
-        url.searchParams.get("reset_code") ??
-        undefined
-      );
-    } catch {
-      return undefined;
-    }
-  };
-
-  const code =
-    coerceParam(resolvedSearchParams.code) ??
-    coerceParam(resolvedSearchParams.verification_code) ??
-    coerceParam(resolvedSearchParams.verificationCode) ??
-    coerceParam(resolvedSearchParams.token) ??
-    coerceParam(resolvedSearchParams.reset_code) ??
-    getCodeFromCallback(resolvedSearchParams.callbackUrl) ??
-    "";
+  const code = resolveResetPasswordCode(resolvedSearchParams);
 
   return (
     <AuthView>

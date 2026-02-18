@@ -29,25 +29,35 @@ export default function VerifyEmailPage() {
     }
 
     let cancelled = false;
+    let redirectTimer: ReturnType<typeof setTimeout> | null = null;
+    const codeToVerify = code;
 
     async function verify() {
-      const result = await stackApp.verifyEmail(code!);
+      try {
+        const result = await stackApp.verifyEmail(codeToVerify);
 
-      if (cancelled) return;
+        if (cancelled) return;
 
-      if (result.status === "error") {
-        setStatus("error");
-        setErrorMessage(
-          "This verification link is invalid or has expired. Please request a new one."
-        );
-      } else {
+        if (result.status === "error") {
+          setStatus("error");
+          setErrorMessage(
+            "This verification link is invalid or has expired. Please request a new one."
+          );
+          return;
+        }
+
         setStatus("success");
         // Brief delay so user sees success, then redirect
-        setTimeout(() => {
+        redirectTimer = setTimeout(() => {
           if (!cancelled) {
             router.replace("/welcome");
           }
         }, 1500);
+      } catch {
+        setStatus("error");
+        setErrorMessage(
+          "Unable to verify your email right now. Please try again."
+        );
       }
     }
 
@@ -55,6 +65,9 @@ export default function VerifyEmailPage() {
 
     return () => {
       cancelled = true;
+      if (redirectTimer) {
+        clearTimeout(redirectTimer);
+      }
     };
   }, [code, stackApp, router]);
 

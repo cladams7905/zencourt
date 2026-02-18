@@ -21,13 +21,11 @@ export function useDashboardFilters() {
 
   const handleTypeChange = React.useCallback((type: DashboardContentType) => {
     setContentType(type);
-    if (activeFilters.length > 0) {
-      setHasSelectedFilter(true);
-    }
-  }, [activeFilters.length]);
+    setHasSelectedFilter(true);
+  }, []);
 
-  const activeFilter = activeFilters[0] ?? null;
-  const activeCategory = activeFilter ? CATEGORY_LABEL_MAP[activeFilter] : null;
+  const activeFilter = activeFilters[0] as DashboardFilterLabel;
+  const activeCategory = CATEGORY_LABEL_MAP[activeFilter];
 
   return {
     contentType,

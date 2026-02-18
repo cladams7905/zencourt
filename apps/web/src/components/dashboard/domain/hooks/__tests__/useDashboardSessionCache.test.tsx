@@ -19,6 +19,7 @@ const VALID_SESSION = JSON.stringify({
 describe("useDashboardSessionCache", () => {
   beforeEach(() => {
     sessionStorage.clear();
+    jest.restoreAllMocks();
   });
 
   it("hydrates generated content from session", async () => {
@@ -49,5 +50,37 @@ describe("useDashboardSessionCache", () => {
       expect(nextRaw).toBeTruthy();
       expect(nextRaw).toContain("generated-2");
     });
+  });
+
+  it("removes invalid persisted state", async () => {
+    const removeSpy = jest.spyOn(Storage.prototype, "removeItem");
+    sessionStorage.setItem(SESSION_STORAGE_KEY, "{invalid");
+
+    renderHook(() => useDashboardSessionCache());
+
+    await waitFor(() => {
+      expect(removeSpy).toHaveBeenCalledWith(SESSION_STORAGE_KEY);
+    });
+  });
+
+  it("does not remove session key when value is absent", async () => {
+    const removeSpy = jest.spyOn(Storage.prototype, "removeItem");
+
+    renderHook(() => useDashboardSessionCache());
+
+    await waitFor(() => {
+      expect(removeSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  it("swallows storage write errors", async () => {
+    const setItemSpy = jest
+      .spyOn(Storage.prototype, "setItem")
+      .mockImplementation(() => {
+        throw new Error("quota exceeded");
+      });
+
+    expect(() => renderHook(() => useDashboardSessionCache())).not.toThrow();
+    expect(setItemSpy).toHaveBeenCalled();
   });
 });
