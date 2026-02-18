@@ -1,14 +1,17 @@
 import { act, renderHook } from "@testing-library/react";
 import { useSyncUploadFlow } from "@web/src/components/listings/sync/domain/hooks/useSyncUploadFlow";
 
-const mockCreateDraftListing = jest.fn();
+const mockCreateListing = jest.fn();
 const mockCreateListingImageRecords = jest.fn();
 const mockGetListingImageUploadUrls = jest.fn();
 const mockEmitListingSidebarUpdate = jest.fn();
 const mockGetImageMetadataFromFile = jest.fn();
 
 jest.mock("@web/src/server/actions/db/listings", () => ({
-  createDraftListing: (...args: unknown[]) => mockCreateDraftListing(...args),
+  createListing: (...args: unknown[]) => mockCreateListing(...args)
+}));
+
+jest.mock("@web/src/server/actions/db/listingImages", () => ({
   createListingImageRecords: (...args: unknown[]) =>
     mockCreateListingImageRecords(...args),
   getListingImageUploadUrls: (...args: unknown[]) =>
@@ -27,7 +30,7 @@ jest.mock("@web/src/lib/domain/media/imageMetadata", () => ({
 
 describe("useSyncUploadFlow", () => {
   beforeEach(() => {
-    mockCreateDraftListing.mockReset();
+    mockCreateListing.mockReset();
     mockCreateListingImageRecords.mockReset();
     mockGetListingImageUploadUrls.mockReset();
     mockEmitListingSidebarUpdate.mockReset();
@@ -36,7 +39,7 @@ describe("useSyncUploadFlow", () => {
 
   it("dedupes concurrent listing creation", async () => {
     let resolveDraft: ((value: unknown) => void) | null = null;
-    mockCreateDraftListing.mockImplementation(
+    mockCreateListing.mockImplementation(
       () => new Promise((resolve) => (resolveDraft = resolve))
     );
 
@@ -55,7 +58,7 @@ describe("useSyncUploadFlow", () => {
         id2 = id;
       });
 
-      expect(mockCreateDraftListing).toHaveBeenCalledTimes(1);
+      expect(mockCreateListing).toHaveBeenCalledTimes(1);
 
       resolveDraft?.({ id: "listing-1", title: null, listingStage: "categorize" });
       await Promise.all([p1, p2]);
@@ -78,7 +81,7 @@ describe("useSyncUploadFlow", () => {
 
   it("creates records and navigates after uploads complete", async () => {
     const navigate = jest.fn();
-    mockCreateDraftListing.mockResolvedValue({
+    mockCreateListing.mockResolvedValue({
       id: "listing-1",
       title: "Title",
       listingStage: "categorize"

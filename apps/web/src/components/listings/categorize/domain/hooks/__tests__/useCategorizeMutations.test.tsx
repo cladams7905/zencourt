@@ -11,7 +11,7 @@ jest.mock("sonner", () => ({
   }
 }));
 
-jest.mock("@web/src/server/actions/db/listings", () => ({
+jest.mock("@web/src/server/actions/db/listingImages", () => ({
   updateListingImageAssignments: (...args: unknown[]) =>
     mockUpdateListingImageAssignments(...args),
   assignPrimaryListingImageForCategory: (...args: unknown[]) =>

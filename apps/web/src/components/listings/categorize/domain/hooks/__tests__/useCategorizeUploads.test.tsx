@@ -19,7 +19,7 @@ jest.mock("sonner", () => ({
   }
 }));
 
-jest.mock("@web/src/server/actions/db/listings", () => ({
+jest.mock("@web/src/server/actions/db/listingImages", () => ({
   getListingImageUploadUrls: (...args: unknown[]) => mockGetUploadUrls(...args),
   createListingImageRecords: (...args: unknown[]) =>
     mockCreateListingImageRecords(...args),

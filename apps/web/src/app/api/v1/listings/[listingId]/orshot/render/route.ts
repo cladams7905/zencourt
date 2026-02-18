@@ -12,7 +12,7 @@ import type {
   ListingOrshotRenderResult,
   OrshotCaptionItemInput
 } from "@web/src/lib/domain/media/orshot/types";
-import { getListingImages } from "@web/src/server/actions/db/listings";
+import { getListingImages } from "@web/src/server/actions/db/listingImages";
 import { getOrCreateUserAdditional } from "@web/src/server/actions/db/userAdditional";
 import { createChildLogger, logger as baseLogger } from "@web/src/lib/core/logging/logger";
 import { renderListingOrshotBatch } from "@web/src/server/services/orshot/renderService";

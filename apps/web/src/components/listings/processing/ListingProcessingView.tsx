@@ -6,9 +6,9 @@ import { ListingViewHeader } from "@web/src/components/listings/shared";
 import { categorizeListingImages } from "@web/src/server/actions/api/vision";
 import { fetchListingPropertyDetails } from "@web/src/server/actions/api/listingProperty";
 import {
-  getListingImages,
   updateListing
 } from "@web/src/server/actions/db/listings";
+import { getListingImages } from "@web/src/server/actions/db/listingImages";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import { Button } from "../../ui/button";
 import { toast } from "sonner";

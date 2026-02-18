@@ -3,64 +3,12 @@ import { createChildLogger, logger as baseLogger } from "@web/src/lib/core/loggi
 
 const logger = createChildLogger(baseLogger, { module: "server-actions" });
 
-/**
- * Options for wrapping a database action
- */
 export interface DbActionOptions {
-  /**
-   * Name of the action for logging purposes
-   */
   actionName: string;
-
-  /**
-   * Context to include in logs (e.g., { listingId, userId })
-   */
   context?: Record<string, unknown>;
-
-  /**
-   * Custom error message for database errors
-   * @default "Database operation failed. Please try again."
-   */
   errorMessage?: string;
 }
 
-/**
- * Wraps a database operation with error handling and logging
- *
- * Provides consistent error handling for all database operations:
- * - Catches DrizzleError and logs with context
- * - Provides user-friendly error messages
- * - Logs successful operations with timing
- * - Re-throws validation errors as-is
- *
- * @param fn - The database operation to execute
- * @param options - Configuration options
- * @returns The result of the database operation
- * @throws Error with user-friendly message if operation fails
- *
- * @example
- * ```typescript
- * export async function saveImages(listingId: string, imageData: InsertDBImage[]) {
- *   // Validate inputs first
- *   if (!listingId) throw new Error("Listing ID is required");
- *
- *   return withDbErrorHandling(
- *     async () => {
- *       const savedImages = await db
- *         .insert(images)
- *         .values(imageData)
- *         .returning();
- *       return savedImages;
- *     },
- *     {
- *       actionName: "saveImages",
- *       context: { listingId, imageCount: imageData.length },
- *       errorMessage: "Failed to save images to database"
- *     }
- *   );
- * }
- * ```
- */
 export async function withDbErrorHandling<T>(
   fn: () => Promise<T>,
   options: DbActionOptions
@@ -87,7 +35,6 @@ export async function withDbErrorHandling<T>(
   } catch (error) {
     const duration = Date.now() - startTime;
 
-    // Drizzle database errors
     if (error instanceof DrizzleError) {
       logger.error(
         {
@@ -102,7 +49,6 @@ export async function withDbErrorHandling<T>(
       throw new Error(errorMessage);
     }
 
-    // Re-throw validation errors or other known errors as-is
     if (error instanceof Error) {
       logger.error(
         {
@@ -116,7 +62,6 @@ export async function withDbErrorHandling<T>(
       throw error;
     }
 
-    // Unexpected error type
     logger.error(
       { action: actionName, duration, error, ...context },
       `Unexpected error in ${actionName}`

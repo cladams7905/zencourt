@@ -2,9 +2,9 @@ import { redirect } from "next/navigation";
 import { getUser } from "@web/src/server/actions/db/users";
 import {
   getListingById,
-  getListingImages,
   updateListing
 } from "@web/src/server/actions/db/listings";
+import { getListingImages } from "@web/src/server/actions/db/listingImages";
 import { ListingCategorizeView } from "@web/src/components/listings/categorize";
 
 interface ListingCategorizePageProps {

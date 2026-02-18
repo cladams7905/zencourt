@@ -1,11 +1,11 @@
 "use server";
 
-import { db, videoGenJobs } from "@db/client";
+import { db, eq, videoGenJobs } from "@db/client";
 import type {
   DBVideoGenJob,
   InsertDBVideoGenJob
 } from "@shared/types/models";
-import { eq } from "drizzle-orm";
+import { requireNonEmptyString } from "../shared/validation";
 
 /**
  * Create a new video generation job record
@@ -28,6 +28,8 @@ export async function updateVideoGenJob(
     >
   >
 ): Promise<DBVideoGenJob> {
+  requireNonEmptyString(jobId, "jobId is required");
+
   const [updated] = await db
     .update(videoGenJobs)
     .set({
@@ -50,6 +52,8 @@ export async function updateVideoGenJob(
 export async function getVideoGenJobById(
   jobId: string
 ): Promise<DBVideoGenJob | null> {
+  requireNonEmptyString(jobId, "jobId is required");
+
   const [job] = await db
     .select()
     .from(videoGenJobs)

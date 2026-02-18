@@ -64,6 +64,10 @@ const mockCreateListingImageRecords = jest.fn();
 const mockDeleteListingImageUploads = jest.fn();
 
 jest.mock("@web/src/server/actions/db/listings", () => ({
+  updateListing: jest.fn()
+}));
+
+jest.mock("@web/src/server/actions/db/listingImages", () => ({
   createListingImageRecords: (...args: unknown[]) =>
     mockCreateListingImageRecords(...args),
   deleteListingImageUploads: (...args: unknown[]) =>
@@ -72,7 +76,6 @@ jest.mock("@web/src/server/actions/db/listings", () => ({
     Promise.resolve({ uploads: [], failed: [] })
   ),
   assignPrimaryListingImageForCategory: jest.fn(),
-  updateListing: jest.fn(),
   updateListingImageAssignments: jest.fn()
 }));
 

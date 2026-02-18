@@ -1,11 +1,11 @@
 "use server";
 
-import { db, videoGenBatch } from "@db/client";
+import { db, eq, videoGenBatch } from "@db/client";
 import type {
   DBVideoGenBatch,
   InsertDBVideoGenBatch
 } from "@shared/types/models";
-import { eq } from "drizzle-orm";
+import { requireNonEmptyString } from "../shared/validation";
 
 /**
  * Create a new video generation batch record
@@ -25,9 +25,7 @@ export async function updateVideoGenBatch(
     Omit<InsertDBVideoGenBatch, "id" | "listingId" | "createdAt">
   >
 ): Promise<DBVideoGenBatch> {
-  if (!videoId) {
-    throw new Error("videoId is required");
-  }
+  requireNonEmptyString(videoId, "videoId is required");
 
   const [updated] = await db
     .update(videoGenBatch)

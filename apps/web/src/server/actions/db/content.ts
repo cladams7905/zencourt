@@ -1,10 +1,14 @@
 "use server";
 
 import { nanoid } from "nanoid";
-import { eq } from "drizzle-orm";
-import { db, content } from "@db/client";
+import { db, content, eq } from "@db/client";
 import type { DBContent, InsertDBContent } from "@shared/types/models";
-import { withDbErrorHandling } from "../_utils";
+import { withDbErrorHandling } from "../shared/dbErrorHandling";
+import {
+  requireContentId,
+  requireListingId,
+  requireUserId
+} from "../shared/validation";
 import {
   DEFAULT_THUMBNAIL_TTL_SECONDS,
   resolveSignedDownloadUrl
@@ -22,13 +26,9 @@ export async function createContent(
   userId: string,
   payload: CreateContentInput
 ): Promise<DBContent> {
-  if (!userId || userId.trim() === "") {
-    throw new Error("User ID is required to create content");
-  }
+  requireUserId(userId, "User ID is required to create content");
   const listingId = payload.listingId;
-  if (!listingId || listingId.trim() === "") {
-    throw new Error("Listing ID is required to create content");
-  }
+  requireListingId(listingId ?? "", "Listing ID is required to create content");
 
   return withDbErrorHandling(
     async () => {
@@ -65,12 +65,8 @@ export async function updateContent(
   contentId: string,
   updates: Partial<Omit<InsertDBContent, "id" | "listingId" | "createdAt">>
 ): Promise<DBContent> {
-  if (!userId || userId.trim() === "") {
-    throw new Error("User ID is required to update content");
-  }
-  if (!contentId || contentId.trim() === "") {
-    throw new Error("Content ID is required");
-  }
+  requireUserId(userId, "User ID is required to update content");
+  requireContentId(contentId, "Content ID is required");
 
   return withDbErrorHandling(
     async () => {
@@ -110,12 +106,8 @@ export async function getContentByListingId(
   userId: string,
   listingId: string
 ): Promise<DBContent[]> {
-  if (!userId || userId.trim() === "") {
-    throw new Error("User ID is required to fetch content");
-  }
-  if (!listingId || listingId.trim() === "") {
-    throw new Error("Listing ID is required to fetch content");
-  }
+  requireUserId(userId, "User ID is required to fetch content");
+  requireListingId(listingId, "Listing ID is required to fetch content");
 
   return withDbErrorHandling(
     async () => {
@@ -148,12 +140,8 @@ export async function getContentById(
   userId: string,
   contentId: string
 ): Promise<DBContent | null> {
-  if (!userId || userId.trim() === "") {
-    throw new Error("User ID is required to fetch content");
-  }
-  if (!contentId || contentId.trim() === "") {
-    throw new Error("Content ID is required");
-  }
+  requireUserId(userId, "User ID is required to fetch content");
+  requireContentId(contentId, "Content ID is required");
 
   return withDbErrorHandling(
     async () => {
@@ -188,12 +176,8 @@ export async function deleteContent(
   userId: string,
   contentId: string
 ): Promise<void> {
-  if (!userId || userId.trim() === "") {
-    throw new Error("User ID is required to delete content");
-  }
-  if (!contentId || contentId.trim() === "") {
-    throw new Error("Content ID is required");
-  }
+  requireUserId(userId, "User ID is required to delete content");
+  requireContentId(contentId, "Content ID is required");
 
   return withDbErrorHandling(
     async () => {

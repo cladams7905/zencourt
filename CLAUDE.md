@@ -203,6 +203,29 @@ Rules:
 - Refrain from importing `drizzle-orm` helpers directly from node_modules—schema types will mismatch across packages.
 - Server actions (web) and services (video-server) must respect project ownership checks already encoded in RLS/policies.
 
+### 5a. Server Action Subfolder Naming (Web)
+
+When refactoring `apps/web/src/server/actions` into subfolders, use consistent file names.
+
+Required boundary files:
+
+- `index.ts` - module export boundary
+- `types.ts` - module-local contracts
+- `helpers.ts` - shared internal helpers (only when needed)
+
+Standard operation file names:
+
+- `queries.ts` - read-only DB lookups/selects
+- `mutations.ts` - inserts/updates/deletes
+- `uploads.ts` - signed upload URL prep + upload-oriented orchestration
+- Domain-specific orchestration files should use concise nouns/verbs (e.g., `analyze.ts`, `categorize.ts`) and avoid `*Actions.ts`.
+
+Rules:
+
+- Do not mix unrelated table concerns in one module boundary (e.g., keep `db/listings` separate from `db/listingImages`).
+- Prefer importing from folder boundaries (`.../db/listings`, `.../db/listingImages`) instead of deep file paths.
+- Extract shared action utilities to `apps/web/src/server/actions/shared/*` when reused across modules.
+
 ### 6. Docker Build Context
 
 See `apps/video-server/README.md` for video-server deployment and Docker details.

@@ -1,9 +1,11 @@
 import * as React from "react";
 import {
-  createDraftListing,
+  createListing,
+} from "@web/src/server/actions/db/listings";
+import {
   createListingImageRecords,
   getListingImageUploadUrls
-} from "@web/src/server/actions/db/listings";
+} from "@web/src/server/actions/db/listingImages";
 import { emitListingSidebarUpdate } from "@web/src/lib/domain/listing/sidebarEvents";
 import { getImageMetadataFromFile } from "@web/src/lib/domain/media/imageMetadata";
 import {
@@ -47,7 +49,7 @@ export const useSyncUploadFlow = ({
     }
 
     const pending = (async () => {
-      const listing = await createDraftListing(userId);
+      const listing = await createListing(userId);
       if (!listing?.id) {
         throw new Error("Draft listing could not be created.");
       }

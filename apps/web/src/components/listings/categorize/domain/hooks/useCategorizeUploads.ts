@@ -8,7 +8,7 @@ import {
   createListingImageRecords,
   deleteListingImageUploads,
   getListingImageUploadUrls
-} from "@web/src/server/actions/db/listings";
+} from "@web/src/server/actions/db/listingImages";
 
 type RunDraftSave = <T>(fn: () => Promise<T>) => Promise<T>;
 

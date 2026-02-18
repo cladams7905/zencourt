@@ -41,7 +41,7 @@ describe("listing orshot render route", () => {
       requireAuthenticatedUser: (...args: unknown[]) => mockRequireAuthenticatedUser(...args),
       requireListingAccess: (...args: unknown[]) => mockRequireListingAccess(...args)
     }));
-    jest.doMock("@web/src/server/actions/db/listings", () => ({
+    jest.doMock("@web/src/server/actions/db/listingImages", () => ({
       getListingImages: (...args: unknown[]) => mockGetListingImages(...args)
     }));
     jest.doMock("@web/src/server/actions/db/userAdditional", () => ({

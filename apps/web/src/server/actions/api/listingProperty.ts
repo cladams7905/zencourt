@@ -7,6 +7,10 @@ import {
   fetchPropertyDetailsFromPerplexity
 } from "../../services/listingPropertyService";
 import type { ListingPropertyDetails } from "@shared/types/models";
+import {
+  requireListingId,
+  requireUserId
+} from "../shared/validation";
 
 const logger = createChildLogger(baseLogger, {
   module: "listing-property-actions"
@@ -17,12 +21,8 @@ export async function fetchListingPropertyDetails(
   listingId: string,
   addressOverride?: string | null
 ) {
-  if (!userId || userId.trim() === "") {
-    throw new Error("User ID is required to fetch listing details");
-  }
-  if (!listingId || listingId.trim() === "") {
-    throw new Error("Listing ID is required to fetch listing details");
-  }
+  requireUserId(userId, "User ID is required to fetch listing details");
+  requireListingId(listingId, "Listing ID is required to fetch listing details");
 
   const listing = await getListingById(userId, listingId);
   if (!listing) {
@@ -63,12 +63,8 @@ export async function saveListingPropertyDetails(
   listingId: string,
   propertyDetails: ListingPropertyDetails
 ) {
-  if (!userId || userId.trim() === "") {
-    throw new Error("User ID is required to save listing details");
-  }
-  if (!listingId || listingId.trim() === "") {
-    throw new Error("Listing ID is required to save listing details");
-  }
+  requireUserId(userId, "User ID is required to save listing details");
+  requireListingId(listingId, "Listing ID is required to save listing details");
 
   const revision = buildPropertyDetailsRevision(propertyDetails);
 

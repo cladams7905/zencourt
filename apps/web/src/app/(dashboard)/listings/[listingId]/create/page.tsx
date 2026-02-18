@@ -1,10 +1,10 @@
 import { redirect } from "next/navigation";
 import { getUser } from "@web/src/server/actions/db/users";
 import {
-  getListingImages,
   getListingById,
   updateListing
 } from "@web/src/server/actions/db/listings";
+import { getListingImages } from "@web/src/server/actions/db/listingImages";
 import { getListingVideoStatus } from "@web/src/server/services/videoStatusService";
 import {
   ListingCreateView

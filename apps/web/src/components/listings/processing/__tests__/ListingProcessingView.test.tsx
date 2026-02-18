@@ -32,8 +32,10 @@ const getListingImagesMock = mockedGetListingImages as (
   ...a: unknown[]
 ) => unknown;
 jest.mock("@web/src/server/actions/db/listings", () => ({
-  getListingImages: (...args: unknown[]) => getListingImagesMock(...args),
   updateListing: (...args: unknown[]) => mockedUpdateListing(...args)
+}));
+jest.mock("@web/src/server/actions/db/listingImages", () => ({
+  getListingImages: (...args: unknown[]) => getListingImagesMock(...args)
 }));
 jest.mock("sonner", () => ({
   toast: { error: (...args: unknown[]) => mockedToastError(...args) }
