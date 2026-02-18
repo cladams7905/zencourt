@@ -19,11 +19,9 @@ import {
   MAX_IMAGES_PER_ROOM
 } from "@shared/utils/mediaUpload";
 import { useRouter } from "next/navigation";
-import {
-  formatBytes,
-  validateImageFile
-} from "@web/src/components/listings/sync/domain";
+import { validateImageFile } from "@web/src/components/listings/sync/domain";
 import { useSyncUploadFlow } from "@web/src/components/listings/sync/domain/hooks";
+import { formatBytes } from "@web/src/lib/formatBytes";
 
 interface ListingSyncViewProps {
   userId: string;

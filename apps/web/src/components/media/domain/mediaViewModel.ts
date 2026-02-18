@@ -1,6 +1,5 @@
 import type { DBUserMedia, UserMediaType } from "@shared/types/models";
 import type { MediaUsageSort } from "@web/src/components/media/shared";
-import { formatBytes as formatFileBytes } from "@web/src/lib/formatBytes";
 
 export const formatUploadDate = (value: Date | string) => {
   const date = value instanceof Date ? value : new Date(value);
@@ -10,8 +9,6 @@ export const formatUploadDate = (value: Date | string) => {
     year: "numeric"
   }).format(date);
 };
-
-export const formatBytes = (bytes: number) => formatFileBytes(bytes);
 
 export const filterAndSortMedia = (input: {
   mediaItems: DBUserMedia[];

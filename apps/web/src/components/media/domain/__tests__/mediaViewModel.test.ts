@@ -1,7 +1,6 @@
 import {
   buildMediaCounts,
   filterAndSortMedia,
-  formatBytes,
   formatUploadDate
 } from "@web/src/components/media/domain/mediaViewModel";
 import type { DBUserMedia } from "@shared/types/models";
@@ -42,12 +41,6 @@ describe("mediaViewModel", () => {
     const fromString = formatUploadDate("2025-01-01T00:00:00.000Z");
     expect(fromDate).toBe(fromString);
     expect(fromDate).toMatch(/^[A-Z][a-z]{2} \d{1,2}, \d{4}$/);
-  });
-
-  it("formats bytes across B/KB/MB thresholds", () => {
-    expect(formatBytes(512)).toBe("512 B");
-    expect(formatBytes(2048)).toBe("2.0 KB");
-    expect(formatBytes(3 * 1024 * 1024)).toBe("3.0 MB");
   });
 
   it("filters by selected types", () => {

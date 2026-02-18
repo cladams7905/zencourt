@@ -26,7 +26,6 @@ import {
   type ListingImageItem
 } from "@web/src/components/listings/categorize/shared";
 import {
-  formatBytes,
   formatCategoryLabel,
   useCategorizeActions,
   useCategorizeConstraints,
@@ -39,6 +38,7 @@ import {
   ListingTimeline,
   buildListingStageSteps
 } from "@web/src/components/listings/shared";
+import { formatBytes } from "@web/src/lib/formatBytes";
 
 export function ListingCategorizeView({
   title,

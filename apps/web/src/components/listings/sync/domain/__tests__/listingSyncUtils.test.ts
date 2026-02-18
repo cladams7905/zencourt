@@ -1,16 +1,10 @@
 import {
   buildListingUploadRecordInput,
   buildProcessingRoute,
-  formatBytes,
   validateImageFile
 } from "@web/src/components/listings/sync/domain/listingSyncUtils";
 
 describe("listingSyncUtils", () => {
-  it("formats bytes for readable upload labels", () => {
-    expect(formatBytes(0)).toBe("0 B");
-    expect(formatBytes(1024)).toBe("1.0 KB");
-  });
-
   it("validates image uploads only", () => {
     const image = new File(["a"], "a.jpg", { type: "image/jpeg" });
     const text = new File(["a"], "a.txt", { type: "text/plain" });

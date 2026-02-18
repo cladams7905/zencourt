@@ -11,7 +11,6 @@ import {
   useMediaPagination,
   filterAndSortMedia,
   buildMediaCounts,
-  formatBytes,
   validateMediaFile,
   buildUploadRecordInput,
   getMediaFileMetaLabel
@@ -28,14 +27,11 @@ import {
   MediaHelpCard,
   MediaToolbar
 } from "@web/src/components/media/components";
+import { formatBytes } from "@web/src/lib/formatBytes";
 
 const MediaView = ({ userId, initialMedia = [] }: MediaViewProps) => {
-  const {
-    selectedTypes,
-    usageSort,
-    setUsageSort,
-    handleTypeToggle
-  } = useMediaFilters();
+  const { selectedTypes, usageSort, setUsageSort, handleTypeToggle } =
+    useMediaFilters();
   const {
     mediaItems,
     isUploadOpen,
@@ -105,7 +101,11 @@ const MediaView = ({ userId, initialMedia = [] }: MediaViewProps) => {
             hasFilteredBrandKitMedia ? (
               <div className="columns-1 gap-6 sm:columns-2 xl:columns-4 2xl:columns-4">
                 {visibleBrandKitItems.map((item) => (
-                  <MediaCard key={item.id} item={item} onDelete={handleRequestDelete} />
+                  <MediaCard
+                    key={item.id}
+                    item={item}
+                    onDelete={handleRequestDelete}
+                  />
                 ))}
               </div>
             ) : (
