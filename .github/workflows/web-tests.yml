@@ -22,6 +22,11 @@ jobs:
     timeout-minutes: 30
 
     steps:
+      - name: "notify vercel"
+        uses: "vercel/repository-dispatch/actions/status@v1"
+        with:
+          name: "Vercel - zencourt: web-tests"
+
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -39,8 +44,3 @@ jobs:
 
       - name: Enforce coverage thresholds (global + modules)
         run: node apps/web/scripts/check-coverage.mjs
-
-      - name: 'notify vercel'
-        uses: 'vercel/repository-dispatch/actions/status@v1'
-        with:
-          name: "Vercel - zencourt: web-tests"
