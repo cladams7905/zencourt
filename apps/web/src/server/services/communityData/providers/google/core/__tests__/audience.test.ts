@@ -12,7 +12,7 @@ const mockGetAllAudienceAugmentQueries = jest.fn();
 const mockEstimateGoogleCallsCostUsd = jest.fn();
 
 jest.mock(
-  "@web/src/server/services/community/providers/google/core/search",
+  "@web/src/server/services/communityData/providers/google/core/search",
   () => ({
     fetchScoredPlacesForQueries: (...args: unknown[]) =>
       mockFetchScoredPlacesForQueries(...args),
@@ -21,7 +21,7 @@ jest.mock(
 );
 
 jest.mock(
-  "@web/src/server/services/community/providers/google/core/places/index",
+  "@web/src/server/services/communityData/providers/google/core/places/index",
   () => ({
     formatPlaceList: (...args: unknown[]) => mockFormatPlaceList(...args),
     dedupePlaces: (...args: unknown[]) => mockDedupePlaces(...args),
@@ -31,7 +31,7 @@ jest.mock(
 );
 
 jest.mock(
-  "@web/src/server/services/community/providers/google/core/pools",
+  "@web/src/server/services/communityData/providers/google/core/pools",
   () => ({
     getPooledCategoryPlaces: (...args: unknown[]) =>
       mockGetPooledCategoryPlaces(...args)
@@ -39,7 +39,7 @@ jest.mock(
 );
 
 jest.mock(
-  "@web/src/server/services/community/providers/google/core/seasonal",
+  "@web/src/server/services/communityData/providers/google/core/seasonal",
   () => ({
     buildSeasonalQueries: (...args: unknown[]) =>
       mockBuildSeasonalQueries(...args),
@@ -51,7 +51,7 @@ jest.mock(
   })
 );
 
-jest.mock("@web/src/server/services/community/config", () => ({
+jest.mock("@web/src/server/services/communityData/config", () => ({
   AUDIENCE_AUGMENT_CATEGORIES: ["dining", "education"],
   getAllAudienceAugmentQueries: (...args: unknown[]) =>
     mockGetAllAudienceAugmentQueries(...args),
@@ -62,11 +62,11 @@ jest.mock("@web/src/server/services/community/config", () => ({
   getCategoryTargetQueryCount: jest.fn(() => 2)
 }));
 
-jest.mock("@web/src/server/services/community/shared/common", () => ({
+jest.mock("@web/src/server/services/communityData/shared/common", () => ({
   getUtcMonthKey: jest.fn(() => "february")
 }));
 
-jest.mock("@web/src/server/services/community/shared/apiCost", () => ({
+jest.mock("@web/src/server/services/communityData/shared/apiCost", () => ({
   estimateGoogleCallsCostUsd: (...args: unknown[]) =>
     mockEstimateGoogleCallsCostUsd(...args)
 }));

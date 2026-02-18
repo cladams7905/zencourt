@@ -4,7 +4,7 @@ import {
 } from "@web/src/server/services/communityData/providers/perplexity/pipeline/assembly";
 
 jest.mock(
-  "@web/src/server/services/community/providers/perplexity/pipeline/formatting",
+  "@web/src/server/services/communityData/providers/perplexity/pipeline/formatting",
   () => ({
     formatPerplexityCategoryList: jest.fn(() => "- Cafe")
   })

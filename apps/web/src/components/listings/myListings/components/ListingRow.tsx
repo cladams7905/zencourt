@@ -5,15 +5,12 @@ import {
   TooltipContent,
   TooltipTrigger
 } from "@web/src/components/ui/tooltip";
-import {
-  TableCell,
-  TableRow
-} from "@web/src/components/ui/table";
-import { ListingImageStack } from "@web/src/components/listings/my-listings/components/ListingImageStack";
+import { TableCell, TableRow } from "@web/src/components/ui/table";
+import { ListingImageStack } from "@web/src/components/listings/myListings/components/ListingImageStack";
 import {
   MAX_LISTING_IMAGES,
   type ListingRowViewModel
-} from "@web/src/components/listings/my-listings/shared";
+} from "@web/src/components/listings/myListings/shared";
 
 type ListingRowProps = {
   row: ListingRowViewModel;
@@ -36,7 +33,9 @@ export const ListingRow = ({ row, onOpen }: ListingRowProps) => {
                   <FileEdit className="text-muted-foreground w-[14px]! h-[14px]!" />
                 </Badge>
               </TooltipTrigger>
-              <TooltipContent sideOffset={6}>{row.draftTooltipLabel}</TooltipContent>
+              <TooltipContent sideOffset={6}>
+                {row.draftTooltipLabel}
+              </TooltipContent>
             </Tooltip>
           ) : null}
         </div>

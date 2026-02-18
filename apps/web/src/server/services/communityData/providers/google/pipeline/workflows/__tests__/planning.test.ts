@@ -2,20 +2,20 @@ const mockCountListItems = jest.fn();
 const mockGetCachedCommunityCategoryList = jest.fn();
 
 jest.mock(
-  "@web/src/server/services/community/providers/google/core/places",
+  "@web/src/server/services/communityData/providers/google/core/places",
   () => ({
     countListItems: (...args: unknown[]) => mockCountListItems(...args)
   })
 );
 
 jest.mock(
-  "@web/src/server/services/community/providers/google/core/seasonal",
+  "@web/src/server/services/communityData/providers/google/core/seasonal",
   () => ({
     NON_NEIGHBORHOOD_CATEGORY_KEYS: ["dining", "education"]
   })
 );
 
-jest.mock("@web/src/server/services/community/config", () => ({
+jest.mock("@web/src/server/services/communityData/config", () => ({
   NEIGHBORHOOD_QUERIES: [
     { key: "neighborhoods_general", query: "q1", max: 3 },
     { key: "neighborhoods_family", query: "q2", max: 3 }
@@ -23,7 +23,7 @@ jest.mock("@web/src/server/services/community/config", () => ({
 }));
 
 jest.mock(
-  "@web/src/server/services/community/providers/google/pipeline/shared",
+  "@web/src/server/services/communityData/providers/google/pipeline/shared",
   () => ({
     communityCache: {
       getCachedCommunityCategoryList: (...args: unknown[]) =>

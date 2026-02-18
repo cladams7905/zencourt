@@ -6,13 +6,13 @@ const mockFetchMonthlyPayload = jest.fn();
 const mockFormatAudienceLabel = jest.fn();
 const mockFormatPerplexityCategoryList = jest.fn();
 
-jest.mock("@web/src/server/services/community/shared/common", () => ({
+jest.mock("@web/src/server/services/communityData/shared/common", () => ({
   ALL_CATEGORY_KEYS: ["dining", "community_events"],
   getUtcMonthKey: (...args: unknown[]) => mockGetUtcMonthKey(...args)
 }));
 
 jest.mock(
-  "@web/src/server/services/community/providers/perplexity/pipeline/assembly",
+  "@web/src/server/services/communityData/providers/perplexity/pipeline/assembly",
   () => ({
     buildCategoryList: (...args: unknown[]) => mockBuildCategoryList(...args),
     buildPerplexityCommunityData: (...args: unknown[]) =>
@@ -21,7 +21,7 @@ jest.mock(
 );
 
 jest.mock(
-  "@web/src/server/services/community/providers/perplexity/pipeline/fetching",
+  "@web/src/server/services/communityData/providers/perplexity/pipeline/fetching",
   () => ({
     fetchPerplexityCategoryPayload: (...args: unknown[]) =>
       mockFetchCategoryPayload(...args),
@@ -33,7 +33,7 @@ jest.mock(
 );
 
 jest.mock(
-  "@web/src/server/services/community/providers/perplexity/pipeline/formatting",
+  "@web/src/server/services/communityData/providers/perplexity/pipeline/formatting",
   () => ({
     formatPerplexityCategoryList: (...args: unknown[]) =>
       mockFormatPerplexityCategoryList(...args)

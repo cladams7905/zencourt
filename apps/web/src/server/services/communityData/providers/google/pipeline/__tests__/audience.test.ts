@@ -12,13 +12,16 @@ const mockSetCachedAudienceDelta = jest.fn();
 const mockGetCachedCityDescription = jest.fn();
 const mockSetCachedCityDescription = jest.fn();
 
-jest.mock("@web/src/server/services/community/shared/cityDescription", () => ({
-  fetchCityDescription: (...args: unknown[]) =>
-    mockFetchCityDescription(...args)
-}));
+jest.mock(
+  "@web/src/server/services/communityData/shared/cityDescription",
+  () => ({
+    fetchCityDescription: (...args: unknown[]) =>
+      mockFetchCityDescription(...args)
+  })
+);
 
 jest.mock(
-  "@web/src/server/services/community/providers/google/core/audience",
+  "@web/src/server/services/communityData/providers/google/core/audience",
   () => ({
     buildAudienceAugmentDelta: (...args: unknown[]) =>
       mockBuildAudienceAugmentDelta(...args)
@@ -26,7 +29,7 @@ jest.mock(
 );
 
 jest.mock(
-  "@web/src/server/services/community/providers/google/core/communityLists",
+  "@web/src/server/services/communityData/providers/google/core/communityLists",
   () => ({
     applyAudienceDelta: (...args: unknown[]) => mockApplyAudienceDelta(...args),
     getAudienceSkipCategories: (...args: unknown[]) =>
@@ -36,17 +39,17 @@ jest.mock(
   })
 );
 
-jest.mock("@web/src/server/services/community/shared/audience", () => ({
+jest.mock("@web/src/server/services/communityData/shared/audience", () => ({
   normalizeAudienceSegment: (...args: unknown[]) =>
     mockNormalizeAudienceSegment(...args)
 }));
 
-jest.mock("@web/src/server/services/community/config", () => ({
+jest.mock("@web/src/server/services/communityData/config", () => ({
   SEARCH_ANCHOR_OFFSETS: [{ lat: 0, lng: 0 }]
 }));
 
 jest.mock(
-  "@web/src/server/services/community/providers/google/pipeline/service",
+  "@web/src/server/services/communityData/providers/google/pipeline/service",
   () => ({
     getCommunityDataByZip: (...args: unknown[]) =>
       mockGetCommunityDataByZip(...args)
@@ -54,7 +57,7 @@ jest.mock(
 );
 
 jest.mock(
-  "@web/src/server/services/community/providers/google/pipeline/shared",
+  "@web/src/server/services/communityData/providers/google/pipeline/shared",
   () => ({
     resolveLocationOrWarn: (...args: unknown[]) =>
       mockResolveLocationOrWarn(...args),

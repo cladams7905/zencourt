@@ -4,25 +4,28 @@ jest.mock("@web/src/lib/core/logging/logger", () => ({
 }));
 
 jest.mock(
-  "@web/src/server/services/community/providers/google/transport/client",
+  "@web/src/server/services/communityData/providers/google/transport/client",
   () => ({
     fetchPlaceDetails: jest.fn()
   })
 );
 
-jest.mock("@web/src/server/services/community/providers/google/cache", () => {
-  const cacheObj = {
-    getCachedPlaceDetails: jest.fn().mockResolvedValue(null),
-    setCachedPlaceDetails: jest.fn().mockResolvedValue(undefined)
-  };
-  return {
-    createCommunityCache: jest.fn(() => cacheObj),
-    __cacheObj: cacheObj
-  };
-});
+jest.mock(
+  "@web/src/server/services/communityData/providers/google/cache",
+  () => {
+    const cacheObj = {
+      getCachedPlaceDetails: jest.fn().mockResolvedValue(null),
+      setCachedPlaceDetails: jest.fn().mockResolvedValue(undefined)
+    };
+    return {
+      createCommunityCache: jest.fn(() => cacheObj),
+      __cacheObj: cacheObj
+    };
+  }
+);
 
 jest.mock(
-  "@web/src/server/services/community/providers/google/core/geo",
+  "@web/src/server/services/communityData/providers/google/core/geo",
   () => ({
     DistanceCache: class {
       constructor(
@@ -50,10 +53,10 @@ import {
 
 describe("google pipeline shared", () => {
   const geoMock = jest.requireMock(
-    "@web/src/server/services/community/providers/google/core/geo"
+    "@web/src/server/services/communityData/providers/google/core/geo"
   );
   const transportMock = jest.requireMock(
-    "@web/src/server/services/community/providers/google/transport/client"
+    "@web/src/server/services/communityData/providers/google/transport/client"
   );
 
   beforeEach(() => {

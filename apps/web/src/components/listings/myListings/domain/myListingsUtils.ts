@@ -2,7 +2,7 @@ import {
   MAX_LISTING_IMAGES,
   type ListingRowViewModel,
   type ListingSummaryItem
-} from "@web/src/components/listings/my-listings/shared";
+} from "@web/src/components/listings/myListings/shared";
 import {
   LISTING_STAGE_LABELS,
   resolveListingPath as resolveSharedListingPath,

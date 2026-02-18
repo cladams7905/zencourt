@@ -1,13 +1,13 @@
 const mockFetchPlaces = jest.fn();
 
 jest.mock(
-  "@web/src/server/services/community/providers/google/transport/client",
+  "@web/src/server/services/communityData/providers/google/transport/client",
   () => ({
     fetchPlaces: (...args: unknown[]) => mockFetchPlaces(...args)
   })
 );
 
-jest.mock("@web/src/server/services/community/config", () => ({
+jest.mock("@web/src/server/services/communityData/config", () => ({
   CHAIN_FILTER_CATEGORIES: ["dining", "coffee_brunch"],
   CHAIN_NAME_BLACKLIST: ["starbucks"],
   DEFAULT_SEARCH_RADIUS_METERS: 1000,
@@ -18,7 +18,7 @@ jest.mock("@web/src/server/services/community/config", () => ({
 }));
 
 jest.mock(
-  "@web/src/server/services/community/providers/google/core/seasonal",
+  "@web/src/server/services/communityData/providers/google/core/seasonal",
   () => ({
     LOW_PRIORITY_ANCHOR_CATEGORIES: new Set(["education"]),
     normalizeQueryKey: (q: string) => q.toLowerCase().trim()

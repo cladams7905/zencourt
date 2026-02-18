@@ -2,7 +2,7 @@ const mockSampleRandom = jest.fn();
 const mockFormatPlaceList = jest.fn();
 
 jest.mock(
-  "@web/src/server/services/community/providers/google/core/places",
+  "@web/src/server/services/communityData/providers/google/core/places",
   () => ({
     sampleRandom: (...args: unknown[]) => mockSampleRandom(...args),
     formatPlaceList: (...args: unknown[]) => mockFormatPlaceList(...args)

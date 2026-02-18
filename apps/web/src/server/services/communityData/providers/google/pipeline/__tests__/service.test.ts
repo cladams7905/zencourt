@@ -16,7 +16,7 @@ const mockGetCachedCommunityData = jest.fn();
 const mockLoggerInfo = jest.fn();
 
 jest.mock(
-  "@web/src/server/services/community/providers/google/core/base",
+  "@web/src/server/services/communityData/providers/google/core/base",
   () => ({
     buildBaseCategoryFieldValues: (...args: unknown[]) =>
       mockBuildBaseCategoryFieldValues(...args),
@@ -28,14 +28,14 @@ jest.mock(
 );
 
 jest.mock(
-  "@web/src/server/services/community/providers/google/core/search",
+  "@web/src/server/services/communityData/providers/google/core/search",
   () => ({
     getSearchAnchors: (...args: unknown[]) => mockGetSearchAnchors(...args)
   })
 );
 
 jest.mock(
-  "@web/src/server/services/community/providers/google/core/seasonal",
+  "@web/src/server/services/communityData/providers/google/core/seasonal",
   () => ({
     estimateSearchCallsForQueries: (...args: unknown[]) =>
       mockEstimateSearchCallsForQueries(...args),
@@ -45,7 +45,7 @@ jest.mock(
 );
 
 jest.mock(
-  "@web/src/server/services/community/providers/google/pipeline/shared",
+  "@web/src/server/services/communityData/providers/google/pipeline/shared",
   () => ({
     buildGeoRuntimeContext: (...args: unknown[]) =>
       mockBuildGeoRuntimeContext(...args),
@@ -62,21 +62,21 @@ jest.mock(
 );
 
 jest.mock(
-  "@web/src/server/services/community/providers/google/pipeline/workflows/planning",
+  "@web/src/server/services/communityData/providers/google/pipeline/workflows/planning",
   () => ({
     loadBaseCachePlan: (...args: unknown[]) => mockLoadBaseCachePlan(...args)
   })
 );
 
 jest.mock(
-  "@web/src/server/services/community/providers/google/pipeline/workflows/fetching",
+  "@web/src/server/services/communityData/providers/google/pipeline/workflows/fetching",
   () => ({
     fetchGroupedPlaces: (...args: unknown[]) => mockFetchGroupedPlaces(...args)
   })
 );
 
 jest.mock(
-  "@web/src/server/services/community/providers/google/pipeline/workflows/assembly",
+  "@web/src/server/services/communityData/providers/google/pipeline/workflows/assembly",
   () => ({
     buildAndPersistCategoryListMap: (...args: unknown[]) =>
       mockBuildAndPersistCategoryListMap(...args),

@@ -1,7 +1,7 @@
 const mockGetCommunityDataProvider = jest.fn();
 const mockFetchPerplexityCityDescription = jest.fn();
 
-jest.mock("@web/src/server/services/community/config", () => ({
+jest.mock("@web/src/server/services/communityData/config", () => ({
   CommunityDataProvider: {
     Perplexity: "perplexity",
     Google: "google"
@@ -11,7 +11,7 @@ jest.mock("@web/src/server/services/community/config", () => ({
 }));
 
 jest.mock(
-  "@web/src/server/services/community/providers/perplexity/pipeline/cityDescription",
+  "@web/src/server/services/communityData/providers/perplexity/pipeline/cityDescription",
   () => ({
     fetchPerplexityCityDescription: (...args: unknown[]) =>
       mockFetchPerplexityCityDescription(...args)

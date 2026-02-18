@@ -1,15 +1,15 @@
-jest.mock("@web/src/server/services/community/config", () => ({
+jest.mock("@web/src/server/services/communityData/config", () => ({
   COMMUNITY_CACHE_KEY_PREFIX: "community",
   shouldIncludeServiceAreasInCache: jest.fn(() => true)
 }));
 
-jest.mock("@web/src/server/services/community/shared/common", () => ({
+jest.mock("@web/src/server/services/communityData/shared/common", () => ({
   buildServiceAreasSignature: jest.fn(() => "sig"),
   getSecondsUntilEndOfMonth: jest.fn(() => 1000),
   slugify: jest.fn((v: string) => v.toLowerCase())
 }));
 
-jest.mock("@web/src/server/services/community/shared/redis", () => {
+jest.mock("@web/src/server/services/communityData/shared/redis", () => {
   const redis = {
     get: jest.fn(),
     set: jest.fn()
@@ -36,13 +36,13 @@ import {
 
 describe("perplexity cache", () => {
   const configMock = jest.requireMock(
-    "@web/src/server/services/community/config"
+    "@web/src/server/services/communityData/config"
   );
   const commonMock = jest.requireMock(
-    "@web/src/server/services/community/shared/common"
+    "@web/src/server/services/communityData/shared/common"
   );
   const redisMod = jest.requireMock(
-    "@web/src/server/services/community/shared/redis"
+    "@web/src/server/services/communityData/shared/redis"
   );
   const redis = redisMod.__redis;
 

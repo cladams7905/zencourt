@@ -1,4 +1,4 @@
-import type { ListingSummaryItem } from "@web/src/components/listings/my-listings/shared";
+import type { ListingSummaryItem } from "@web/src/components/listings/myListings/shared";
 
 type FetchListingsResponse = {
   items: ListingSummaryItem[];

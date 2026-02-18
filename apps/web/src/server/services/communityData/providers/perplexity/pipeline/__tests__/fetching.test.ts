@@ -10,19 +10,19 @@ const mockGetCachedMonthly = jest.fn();
 const mockSetCachedMonthly = jest.fn();
 const mockRequestPerplexity = jest.fn();
 
-jest.mock("@web/src/server/services/community/config", () => ({
+jest.mock("@web/src/server/services/communityData/config", () => ({
   getCategoryDisplayLimit: (...args: unknown[]) =>
     mockGetCategoryDisplayLimit(...args),
   shouldIncludeServiceAreasInCache: (...args: unknown[]) =>
     mockShouldIncludeServiceAreasInCache(...args)
 }));
 
-jest.mock("@web/src/server/services/community/shared/common", () => ({
+jest.mock("@web/src/server/services/communityData/shared/common", () => ({
   getUtcMonthKey: (...args: unknown[]) => mockGetUtcMonthKey(...args)
 }));
 
 jest.mock(
-  "@web/src/server/services/community/providers/perplexity/pipeline/parsing",
+  "@web/src/server/services/communityData/providers/perplexity/pipeline/parsing",
   () => ({
     buildCommunityCategoryPayload: (...args: unknown[]) =>
       mockBuildCommunityCategoryPayload(...args)
@@ -30,7 +30,7 @@ jest.mock(
 );
 
 jest.mock(
-  "@web/src/server/services/community/providers/perplexity/transport/prompts",
+  "@web/src/server/services/communityData/providers/perplexity/transport/prompts",
   () => ({
     buildPerplexityCommunityMessages: (...args: unknown[]) =>
       mockBuildMessages(...args),
@@ -39,7 +39,7 @@ jest.mock(
 );
 
 jest.mock(
-  "@web/src/server/services/community/providers/perplexity/transport/schema",
+  "@web/src/server/services/communityData/providers/perplexity/transport/schema",
   () => ({
     buildPerplexityResponseFormat: (...args: unknown[]) =>
       mockBuildResponseFormat(...args)
@@ -47,7 +47,7 @@ jest.mock(
 );
 
 jest.mock(
-  "@web/src/server/services/community/providers/perplexity/cache",
+  "@web/src/server/services/communityData/providers/perplexity/cache",
   () => ({
     getCachedPerplexityCategoryPayload: (...args: unknown[]) =>
       mockGetCachedCategory(...args),
@@ -61,7 +61,7 @@ jest.mock(
 );
 
 jest.mock(
-  "@web/src/server/services/community/providers/perplexity/transport/client",
+  "@web/src/server/services/communityData/providers/perplexity/transport/client",
   () => ({
     requestPerplexity: (...args: unknown[]) => mockRequestPerplexity(...args)
   })

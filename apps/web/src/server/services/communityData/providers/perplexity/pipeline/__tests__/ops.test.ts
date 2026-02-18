@@ -5,13 +5,13 @@ const mockPrefetchCategories = jest.fn();
 const mockResolveLocationOrWarn = jest.fn();
 const mockToOriginLocationInput = jest.fn();
 
-jest.mock("@web/src/server/services/community/shared/audience", () => ({
+jest.mock("@web/src/server/services/communityData/shared/audience", () => ({
   normalizeAudienceSegment: (...args: unknown[]) =>
     mockNormalizeAudienceSegment(...args)
 }));
 
 jest.mock(
-  "@web/src/server/services/community/providers/perplexity/pipeline/service",
+  "@web/src/server/services/communityData/providers/perplexity/pipeline/service",
   () => ({
     getPerplexityCommunityDataForCategories: (...args: unknown[]) =>
       mockGetByCategories(...args),
@@ -22,7 +22,7 @@ jest.mock(
   })
 );
 
-jest.mock("@web/src/server/services/community/providers/google", () => ({
+jest.mock("@web/src/server/services/communityData/providers/google", () => ({
   resolveLocationOrWarn: (...args: unknown[]) =>
     mockResolveLocationOrWarn(...args),
   toOriginLocationInput: (...args: unknown[]) =>

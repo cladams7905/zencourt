@@ -8,19 +8,22 @@ const mockGetGoogleByZipAndAudience = jest.fn();
 const mockResolveLocationOrWarn = jest.fn();
 const mockToOriginLocationInput = jest.fn();
 
-jest.mock("@web/src/server/services/community/providers/perplexity", () => ({
-  getPerplexityCommunityData: (...args: unknown[]) =>
-    mockGetPerplexityCommunityData(...args),
-  getPerplexityCommunityDataByZipAndAudienceForCategories: (
-    ...args: unknown[]
-  ) => mockGetPerplexityByCategories(...args),
-  getPerplexityMonthlyEventsSectionByZip: (...args: unknown[]) =>
-    mockGetPerplexityMonthlyEvents(...args),
-  prefetchPerplexityCategoriesByZip: (...args: unknown[]) =>
-    mockPrefetchPerplexityCategories(...args)
-}));
+jest.mock(
+  "@web/src/server/services/communityData/providers/perplexity",
+  () => ({
+    getPerplexityCommunityData: (...args: unknown[]) =>
+      mockGetPerplexityCommunityData(...args),
+    getPerplexityCommunityDataByZipAndAudienceForCategories: (
+      ...args: unknown[]
+    ) => mockGetPerplexityByCategories(...args),
+    getPerplexityMonthlyEventsSectionByZip: (...args: unknown[]) =>
+      mockGetPerplexityMonthlyEvents(...args),
+    prefetchPerplexityCategoriesByZip: (...args: unknown[]) =>
+      mockPrefetchPerplexityCategories(...args)
+  })
+);
 
-jest.mock("@web/src/server/services/community/providers/google", () => ({
+jest.mock("@web/src/server/services/communityData/providers/google", () => ({
   getCommunityDataByZip: (...args: unknown[]) => mockGetGoogleByZip(...args),
   getCommunityDataByZipAndAudience: (...args: unknown[]) =>
     mockGetGoogleByZipAndAudience(...args),

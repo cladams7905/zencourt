@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getUser } from "@web/src/server/actions/db/users";
 import { getUserListingSummariesPage } from "@web/src/server/actions/db/listings";
-import { MyListingsView } from "@web/src/components/listings/my-listings";
+import { MyListingsView } from "@web/src/components/listings/myListings";
 
 export default async function ListingsIndexPage() {
   const user = await getUser();

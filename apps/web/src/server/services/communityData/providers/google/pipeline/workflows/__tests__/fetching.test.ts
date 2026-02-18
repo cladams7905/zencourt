@@ -6,7 +6,7 @@ const mockHydratePlacesFromItems = jest.fn();
 const mockGetQueryOverrides = jest.fn();
 
 jest.mock(
-  "@web/src/server/services/community/providers/google/core/search",
+  "@web/src/server/services/communityData/providers/google/core/search",
   () => ({
     fetchScoredPlacesForQueries: (...args: unknown[]) =>
       mockFetchScoredPlacesForQueries(...args),
@@ -17,7 +17,7 @@ jest.mock(
 );
 
 jest.mock(
-  "@web/src/server/services/community/providers/google/core/pools",
+  "@web/src/server/services/communityData/providers/google/core/pools",
   () => ({
     getPooledCategoryPlaces: (...args: unknown[]) =>
       mockGetPooledCategoryPlaces(...args)
@@ -25,20 +25,20 @@ jest.mock(
 );
 
 jest.mock(
-  "@web/src/server/services/community/providers/google/core/places/details",
+  "@web/src/server/services/communityData/providers/google/core/places/details",
   () => ({
     hydratePlacesFromItems: (...args: unknown[]) =>
       mockHydratePlacesFromItems(...args)
   })
 );
 
-jest.mock("@web/src/server/services/community/config", () => ({
+jest.mock("@web/src/server/services/communityData/config", () => ({
   SEARCH_ANCHOR_OFFSETS: [{ lat: 0, lng: 0 }],
   NEIGHBORHOOD_QUERIES: []
 }));
 
 jest.mock(
-  "@web/src/server/services/community/providers/google/pipeline/shared",
+  "@web/src/server/services/communityData/providers/google/pipeline/shared",
   () => ({
     communityCache: {},
     logger: {},

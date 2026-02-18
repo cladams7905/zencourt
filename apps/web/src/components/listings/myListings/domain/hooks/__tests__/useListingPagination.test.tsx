@@ -1,5 +1,5 @@
 import { act, renderHook } from "@testing-library/react";
-import { useListingPagination } from "@web/src/components/listings/my-listings/domain/hooks/useListingPagination";
+import { useListingPagination } from "@web/src/components/listings/myListings/domain/hooks/useListingPagination";
 
 describe("useListingPagination", () => {
   const originalFetch = global.fetch;

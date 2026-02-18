@@ -79,7 +79,7 @@ npm run type-check --workspace=@zencourt/video-server
   - `components/ui/` - Radix UI component primitives
 - `lib/prompts/` - Prompt templates, hooks, and assembly logic
 - `server/actions/` - Server actions for DB and API wrappers
-- `server/services/` - Market/community/property data, vision, and AI helpers
+- `server/services/` - Market/communityData/property data, vision, and AI helpers
 - `server/utils/` - Webhook verification + storage URL helpers
 - `middleware.ts` - Stack Auth session validation
 
@@ -93,7 +93,7 @@ npm run type-check --workspace=@zencourt/video-server
 
 - `app/api/v1/content/generate/` - Content generation flow (prompt assembly + AI response parsing)
 - `lib/prompts/` - Base prompts, hooks, compliance, and assembly helpers
-- `server/services/community/` - Perplexity-powered community data + caching
+- `server/services/communityData/` - Perplexity-powered community data + caching
 - `server/services/marketDataService.ts` - Market insights lookup
 - `server/services/listingPropertyService.ts` - Listing metadata + Perplexity enrichment
 - `components/listings/` - Core listing workflow UI and steps

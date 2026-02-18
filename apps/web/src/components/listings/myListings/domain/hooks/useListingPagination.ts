@@ -1,9 +1,9 @@
 import * as React from "react";
-import { fetchListingsPage } from "@web/src/components/listings/my-listings/domain/services";
+import { fetchListingsPage } from "@web/src/components/listings/myListings/domain/services";
 import {
   MY_LISTINGS_PAGE_SIZE,
   type ListingSummaryItem
-} from "@web/src/components/listings/my-listings/shared";
+} from "@web/src/components/listings/myListings/shared";
 
 type UseListingPaginationParams = {
   initialListings: ListingSummaryItem[];
@@ -14,9 +14,8 @@ export const useListingPagination = ({
   initialListings,
   initialHasMore
 }: UseListingPaginationParams) => {
-  const [listings, setListings] = React.useState<ListingSummaryItem[]>(
-    initialListings
-  );
+  const [listings, setListings] =
+    React.useState<ListingSummaryItem[]>(initialListings);
   const [offset, setOffset] = React.useState(initialListings.length);
   const [hasMore, setHasMore] = React.useState(initialHasMore);
   const [isLoadingMore, setIsLoadingMore] = React.useState(false);

@@ -12,10 +12,13 @@ import {
   TableRow
 } from "@web/src/components/ui/table";
 import { Button } from "@web/src/components/ui/button";
-import { ListingRow, ListingSkeletonRow } from "@web/src/components/listings/my-listings/components";
-import { useListingPagination } from "@web/src/components/listings/my-listings/domain";
-import { toListingRowViewModel } from "@web/src/components/listings/my-listings/domain/myListingsUtils";
-import type { MyListingsViewProps } from "@web/src/components/listings/my-listings/shared";
+import {
+  ListingRow,
+  ListingSkeletonRow
+} from "@web/src/components/listings/myListings/components";
+import { useListingPagination } from "@web/src/components/listings/myListings/domain";
+import { toListingRowViewModel } from "@web/src/components/listings/myListings/domain/myListingsUtils";
+import type { MyListingsViewProps } from "@web/src/components/listings/myListings/shared";
 
 export function MyListingsView({
   initialListings,
@@ -50,7 +53,9 @@ export function MyListingsView({
           <Table>
             <TableHeader className="h-14">
               <TableRow>
-                <TableHead className="w-[40%] rounded-tl-lg">Listing name</TableHead>
+                <TableHead className="w-[40%] rounded-tl-lg">
+                  Listing name
+                </TableHead>
                 <TableHead>Last opened</TableHead>
                 <TableHead>Uploaded images</TableHead>
                 <TableHead className="rounded-tr-lg">Stage</TableHead>
@@ -85,7 +90,11 @@ export function MyListingsView({
           {loadError ? (
             <div className="flex items-center justify-between border-t border-border px-4 py-3 text-sm">
               <span className="text-destructive">{loadError}</span>
-              <Button variant="outline" size="sm" onClick={() => void fetchMoreListings()}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => void fetchMoreListings()}
+              >
                 Retry
               </Button>
             </div>

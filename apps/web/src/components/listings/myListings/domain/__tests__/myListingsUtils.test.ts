@@ -3,7 +3,7 @@ import {
   formatStageLabel,
   resolveListingPath,
   toListingRowViewModel
-} from "@web/src/components/listings/my-listings/domain/myListingsUtils";
+} from "@web/src/components/listings/myListings/domain/myListingsUtils";
 
 describe("myListingsUtils", () => {
   it("resolves listing paths by stage", () => {

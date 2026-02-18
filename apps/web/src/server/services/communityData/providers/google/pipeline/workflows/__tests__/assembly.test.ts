@@ -9,7 +9,7 @@ const mockSetCachedSeasonalSections = jest.fn();
 const mockSetCachedCommunityCategoryList = jest.fn();
 
 jest.mock(
-  "@web/src/server/services/community/providers/google/core/places",
+  "@web/src/server/services/communityData/providers/google/core/places",
   () => ({
     buildNeighborhoodDetailList: (...args: unknown[]) =>
       mockBuildNeighborhoodDetailList(...args),
@@ -18,7 +18,7 @@ jest.mock(
 );
 
 jest.mock(
-  "@web/src/server/services/community/providers/google/core/places/details",
+  "@web/src/server/services/communityData/providers/google/core/places/details",
   () => ({
     buildCategoryListWithDetails: (...args: unknown[]) =>
       mockBuildCategoryListWithDetails(...args)
@@ -26,7 +26,7 @@ jest.mock(
 );
 
 jest.mock(
-  "@web/src/server/services/community/providers/google/core/seasonal",
+  "@web/src/server/services/communityData/providers/google/core/seasonal",
   () => ({
     buildSeasonalQuerySections: (...args: unknown[]) =>
       mockBuildSeasonalQuerySections(...args),
@@ -38,13 +38,13 @@ jest.mock(
   })
 );
 
-jest.mock("@web/src/server/services/community/config", () => ({
+jest.mock("@web/src/server/services/communityData/config", () => ({
   getCategoryDisplayLimit: (...args: unknown[]) =>
     mockGetCategoryDisplayLimit(...args)
 }));
 
 jest.mock(
-  "@web/src/server/services/community/providers/google/pipeline/shared",
+  "@web/src/server/services/communityData/providers/google/pipeline/shared",
   () => ({
     getPlaceDetailsCached: (...args: unknown[]) =>
       mockGetPlaceDetailsCached(...args),
