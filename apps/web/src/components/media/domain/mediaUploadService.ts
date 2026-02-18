@@ -1,6 +1,6 @@
 import type { UserMediaType } from "@shared/types/models";
 import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES } from "@shared/utils/mediaUpload";
-import { formatBytes } from "@web/src/components/media/domain/mediaViewModel";
+import { formatBytes } from "@web/src/lib/formatBytes";
 
 export const validateMediaFile = (file: File) => {
   if (file.type.startsWith("image/")) {
