@@ -48,7 +48,8 @@ describe("shared cityDescription", () => {
 
     await expect(fetchCityDescription("Austin", "TX", logger)).resolves.toEqual(
       {
-        description: "A great city"
+        description: "A great city",
+        citations: null
       }
     );
     expect(global.fetch).not.toHaveBeenCalled();
