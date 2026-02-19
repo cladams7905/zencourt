@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { ApiError } from "../../../_utils";
-import { encodeSseEvent, makeSseStreamHeaders } from "@web/src/lib/sse/sseEncoder";
+import {
+  encodeSseEvent,
+  makeSseStreamHeaders
+} from "@web/src/lib/sse/sseEncoder";
+import { generateStructuredStream } from "@web/src/server/services/ai";
 import {
   RECENT_HOOKS_MAX,
   RECENT_HOOKS_TTL_SECONDS
@@ -12,29 +16,14 @@ import {
   validateGeneratedItems
 } from "../domain/parse";
 
-const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
-const CLAUDE_MODEL = "claude-haiku-4-5-20251001";
+const DEFAULT_AI_MODEL = "claude-haiku-4-5-20251001";
 
-type ClaudeMessage = {
-  role: "user";
-  content: string;
-};
-
-function getClaudeApiKey(): string {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    throw new ApiError(500, {
-      error: "Missing configuration",
-      message: "ANTHROPIC_API_KEY is not configured"
-    });
-  }
-  return apiKey;
-}
-
-export async function createClaudeSseResponse(args: {
+export async function createSseResponse(args: {
   systemPrompt: string;
   userPrompt: string;
-  redis: ReturnType<typeof import("@web/src/lib/cache/redisClient").getSharedRedisClient>;
+  redis: ReturnType<
+    typeof import("@web/src/lib/cache/redisClient").getSharedRedisClient
+  >;
   recentHooksKey: string;
   logger: {
     error: (payload: unknown, message: string) => void;
@@ -43,37 +32,36 @@ export async function createClaudeSseResponse(args: {
 }): Promise<NextResponse> {
   const { systemPrompt, userPrompt, redis, recentHooksKey, logger } = args;
 
-  const messages: ClaudeMessage[] = [
-    {
-      role: "user",
-      content: userPrompt
-    }
-  ];
-
-  const response = await fetch(CLAUDE_API_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": getClaudeApiKey(),
-      "anthropic-version": "2023-06-01",
-      "anthropic-beta": "structured-outputs-2025-11-13"
-    },
-    body: JSON.stringify({
-      model: CLAUDE_MODEL,
-      max_tokens: 2800,
+  let response: Response;
+  try {
+    response = await generateStructuredStream({
+      provider: "anthropic",
+      model: process.env.CONTENT_GENERATION_MODEL || DEFAULT_AI_MODEL,
+      maxTokens: 2800,
       system: systemPrompt,
-      messages,
-      stream: true,
-      output_format: OUTPUT_FORMAT
-    })
-  });
+      messages: [{ role: "user", content: userPrompt }],
+      outputFormat: OUTPUT_FORMAT,
+      betaHeader: "structured-outputs-2025-11-13"
+    });
+  } catch (error) {
+    throw new ApiError(500, {
+      error: "Missing configuration",
+      message:
+        error instanceof Error
+          ? error.message
+          : "Failed to initialize AI stream"
+    });
+  }
 
   if (!response.ok) {
     const errorPayload = await response.json().catch(() => ({}));
-    logger.error({ status: response.status, errorPayload }, "Claude API error");
+    logger.error(
+      { status: response.status, errorPayload },
+      "AI provider error"
+    );
     throw new ApiError(response.status, {
       error: "Upstream error",
-      message: "Claude API request failed"
+      message: "AI provider request failed"
     });
   }
 
@@ -81,7 +69,7 @@ export async function createClaudeSseResponse(args: {
   if (!upstream) {
     throw new ApiError(502, {
       error: "Invalid response",
-      message: "Claude response stream missing"
+      message: "AI provider response stream missing"
     });
   }
 
@@ -130,7 +118,9 @@ export async function createClaudeSseResponse(args: {
             const deltaText = extractTextDelta(payload);
             if (deltaText) {
               fullText += deltaText;
-              controller.enqueue(encodeSseEvent({ type: "delta", text: deltaText }));
+              controller.enqueue(
+                encodeSseEvent({ type: "delta", text: deltaText })
+              );
             }
           }
           if (stopReceived) {
@@ -143,11 +133,14 @@ export async function createClaudeSseResponse(args: {
         try {
           parsed = parseJsonArray(fullText);
         } catch (error) {
-          logger.error({ error, text: fullText }, "Failed to parse Claude response");
+          logger.error(
+            { error, text: fullText },
+            "Failed to parse AI response"
+          );
           controller.enqueue(
             encodeSseEvent({
               type: "error",
-              message: "Claude response could not be parsed as JSON"
+              message: "AI response could not be parsed as JSON"
             })
           );
           controller.close();
@@ -164,7 +157,10 @@ export async function createClaudeSseResponse(args: {
             await redis.lpush(recentHooksKey, ...hooks);
             await redis.ltrim(recentHooksKey, 0, RECENT_HOOKS_MAX - 1);
             await redis.expire(recentHooksKey, RECENT_HOOKS_TTL_SECONDS);
-            logger.info({ recentHooksKey, hookCount: hooks.length }, "Updated recent hooks");
+            logger.info(
+              { recentHooksKey, hookCount: hooks.length },
+              "Updated recent hooks"
+            );
           }
         }
 
@@ -173,7 +169,7 @@ export async function createClaudeSseResponse(args: {
             type: "done",
             items: parsed as unknown[],
             meta: {
-              model: CLAUDE_MODEL,
+              model: process.env.CONTENT_GENERATION_MODEL || DEFAULT_AI_MODEL,
               batch_size: (parsed as unknown[]).length
             }
           })

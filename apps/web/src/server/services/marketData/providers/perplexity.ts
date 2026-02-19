@@ -1,8 +1,8 @@
 import {
-  requestPerplexity,
   type PerplexityMessage,
   type PerplexityResponseFormat
 } from "../../communityData/providers/perplexity";
+import { generateText } from "@web/src/server/services/ai";
 import type {
   MarketData,
   MarketLocation,
@@ -91,11 +91,23 @@ export async function fetchPerplexityMarketData(
   location: MarketLocation,
   deps: { logger: LoggerLike; now: Clock }
 ): Promise<MarketData | null> {
-  const response = await requestPerplexity({
+  const result = await generateText({
+    provider: "perplexity",
     messages: buildPerplexityMarketMessages(location),
-    response_format: PERPLEXITY_MARKET_SCHEMA,
-    max_tokens: 900
+    responseFormat: PERPLEXITY_MARKET_SCHEMA,
+    maxTokens: 900
   });
+  const response = result?.raw as
+    | {
+        choices?: Array<{ message?: { content?: string } }>;
+        search_results?: Array<{
+          title?: string;
+          url?: string;
+          source?: string;
+          date?: string;
+        }>;
+      }
+    | undefined;
 
   const raw = response?.choices?.[0]?.message?.content;
   if (!raw) {

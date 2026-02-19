@@ -23,10 +23,10 @@ describe("content/generate parse domain", () => {
 
   it("throws for invalid generated items", () => {
     expect(() => validateGeneratedItems({})).toThrow(
-      "Claude response was not a JSON array"
+      "AI response was not a JSON array"
     );
     expect(() => validateGeneratedItems([])).toThrow(
-      "Claude response did not contain any items"
+      "AI response did not contain any items"
     );
     expect(() => validateGeneratedItems([{}])).not.toThrow();
   });

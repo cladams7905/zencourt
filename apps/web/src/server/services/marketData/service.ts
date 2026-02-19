@@ -1,15 +1,14 @@
 import { Redis } from "@upstash/redis";
-import { createChildLogger, logger as baseLogger } from "@web/src/lib/core/logging/logger";
-import type { MarketData, MarketLocation } from "./types";
 import {
-  readMarketCache,
-  type RedisLike,
-  writeMarketCache
-} from "./cache";
+  createChildLogger,
+  logger as baseLogger
+} from "@web/src/lib/core/logging/logger";
+import type { MarketData, MarketLocation } from "./types";
+import { readMarketCache, type RedisLike, writeMarketCache } from "./cache";
 import {
   createMarketDataProviderRegistry,
   type MarketDataProviderStrategy
-} from "./providerRegistry";
+} from "./registry";
 
 type LoggerLike = {
   info: (obj: unknown, msg?: string) => void;
@@ -58,11 +57,7 @@ export function createMarketDataService(deps: MarketDataServiceDeps = {}) {
       const client = new Redis({ url, token });
       return {
         get: <T>(key: string) => client.get<T>(key),
-        set: async (
-          key: string,
-          value: unknown,
-          options?: { ex?: number }
-        ) => {
+        set: async (key: string, value: unknown, options?: { ex?: number }) => {
           if (typeof options?.ex === "number") {
             return client.set(key, value, { ex: options.ex });
           }
@@ -138,7 +133,9 @@ export function createMarketDataService(deps: MarketDataServiceDeps = {}) {
     return data;
   }
 
-  async function getMarketData(location: MarketLocation): Promise<MarketData | null> {
+  async function getMarketData(
+    location: MarketLocation
+  ): Promise<MarketData | null> {
     const chain = providerRegistry.getProviderChain();
     for (let i = 0; i < chain.length; i += 1) {
       const provider = chain[i];
@@ -148,7 +145,11 @@ export function createMarketDataService(deps: MarketDataServiceDeps = {}) {
       }
       if (i < chain.length - 1) {
         logger.warn(
-          { city: location.city, state: location.state, zip: location.zip_code },
+          {
+            city: location.city,
+            state: location.state,
+            zip: location.zip_code
+          },
           `${provider.displayName} market data unavailable; falling back to ${chain[i + 1].displayName}`
         );
       }

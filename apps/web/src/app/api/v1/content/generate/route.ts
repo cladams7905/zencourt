@@ -1,5 +1,5 @@
 /**
- * API Route: Generate social content via Claude Sonnet
+ * API Route: Generate social content via configured AI provider
  *
  * POST /api/v1/content/generate
  */
@@ -27,7 +27,7 @@ import {
 } from "./domain/promptInput";
 import { resolveContentContext } from "./services/context";
 import { writePromptLog } from "./services/promptLog";
-import { createClaudeSseResponse } from "./services/anthropicStream";
+import { createSseResponse } from "./services/aiStream";
 import { getUserAdditionalSnapshot } from "./services/userAdditional";
 
 const logger = createChildLogger(baseLogger, {
@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
       userPrompt
     });
 
-    return await createClaudeSseResponse({
+    return await createSseResponse({
       systemPrompt,
       userPrompt,
       redis,
