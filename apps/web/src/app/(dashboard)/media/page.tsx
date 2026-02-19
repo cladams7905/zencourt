@@ -1,15 +1,10 @@
-import { redirect } from "next/navigation";
 import { MediaView } from "@web/src/components/media";
-import { getUser } from "@web/src/server/actions/db/users";
+import { requireUserOrRedirect } from "@web/src/app/(dashboard)/_utils/requireUserOrRedirect";
 import { getUserMedia } from "@web/src/server/actions/db/userMedia";
 import { getSignedDownloadUrlSafe } from "@web/src/server/utils/storageUrls";
 
 export default async function MediaPage() {
-  const user = await getUser();
-
-  if (!user) {
-    redirect("/handler/sign-in");
-  }
+  const user = await requireUserOrRedirect();
 
   const userMedia = await getUserMedia(user.id);
   const signedUserMediaUrls = await Promise.all(

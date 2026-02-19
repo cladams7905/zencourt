@@ -83,8 +83,8 @@ describe("listing content generate route", () => {
       }
     }));
     jest.doMock("@web/src/lib/core/logging/logger", () => ({
-      logger: { error: jest.fn(), warn: jest.fn() },
-      createChildLogger: () => ({ error: jest.fn(), warn: jest.fn() })
+      logger: { error: jest.fn(), warn: jest.fn(), info: jest.fn() },
+      createChildLogger: () => ({ error: jest.fn(), warn: jest.fn(), info: jest.fn() })
     }));
 
     const module = await import("../route");

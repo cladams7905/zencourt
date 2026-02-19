@@ -1,14 +1,9 @@
-import { redirect } from "next/navigation";
-import { getUser } from "@web/src/server/actions/db/users";
 import { getUserListingSummariesPage } from "@web/src/server/actions/db/listings";
 import { MyListingsView } from "@web/src/components/listings/myListings";
+import { requireUserOrRedirect } from "@web/src/app/(dashboard)/_utils/requireUserOrRedirect";
 
 export default async function ListingsIndexPage() {
-  const user = await getUser();
-
-  if (!user) {
-    redirect("/handler/sign-in");
-  }
+  const user = await requireUserOrRedirect();
 
   const { items, hasMore } = await getUserListingSummariesPage(user.id, {
     limit: 10,

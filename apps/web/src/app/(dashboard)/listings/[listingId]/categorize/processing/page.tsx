@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
-import { getUser } from "@web/src/server/actions/db/users";
 import { getListingById } from "@web/src/server/actions/db/listings";
+import { requireUserOrRedirect } from "@web/src/app/(dashboard)/_utils/requireUserOrRedirect";
 import { ListingProcessingView } from "@web/src/components/listings/processing";
+import { redirectToListingStage } from "../../_utils/redirectToListingStage";
 
 interface ListingProcessingPageProps {
   params: Promise<{ listingId: string }>;
@@ -20,11 +21,7 @@ export default async function ListingProcessingPage({
   const batchStartedAt = resolvedSearchParams.batchStartedAt
     ? Number(resolvedSearchParams.batchStartedAt)
     : null;
-  const user = await getUser();
-
-  if (!user) {
-    redirect("/handler/sign-in");
-  }
+  const user = await requireUserOrRedirect();
 
   if (!listingId?.trim()) {
     redirect("/listings/sync");
@@ -35,18 +32,7 @@ export default async function ListingProcessingPage({
     redirect("/listings/sync");
   }
 
-  if (listing.listingStage !== "categorize") {
-    switch (listing.listingStage) {
-      case "create":
-        redirect(`/listings/${listingId}/create`);
-      case "generate":
-        redirect(`/listings/${listingId}/generate`);
-      case "review":
-        redirect(`/listings/${listingId}/review`);
-      default:
-        redirect(`/listings/${listingId}/categorize`);
-    }
-  }
+  redirectToListingStage(listingId, listing.listingStage, "categorize");
 
   return (
     <ListingProcessingView

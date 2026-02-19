@@ -46,7 +46,7 @@ const MODULE_PREFIXES = [
   ...subfolderPrefixes("src/server/services", "src/server/services"),
   "src/lib/",
   "src/server/actions/"
-];
+].filter((value, index, arr) => arr.indexOf(value) === index);
 
 function percentage(covered, total) {
   return total === 0 ? 100 : (covered / total) * 100;

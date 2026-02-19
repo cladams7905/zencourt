@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
-import { getUser } from "@web/src/server/actions/db/users";
 import { getListingById } from "@web/src/server/actions/db/listings";
+import { requireUserOrRedirect } from "@web/src/app/(dashboard)/_utils/requireUserOrRedirect";
 import { ListingProcessingView } from "@web/src/components/listings/processing";
+import { redirectToListingStage } from "../../_utils/redirectToListingStage";
 
 interface ListingPropertyProcessingPageProps {
   params: Promise<{ listingId: string }>;
@@ -11,11 +12,7 @@ export default async function ListingPropertyProcessingPage({
   params
 }: ListingPropertyProcessingPageProps) {
   const { listingId } = await params;
-  const user = await getUser();
-
-  if (!user) {
-    redirect("/handler/sign-in");
-  }
+  const user = await requireUserOrRedirect();
 
   if (!listingId?.trim()) {
     redirect("/listings/sync");
@@ -26,17 +23,7 @@ export default async function ListingPropertyProcessingPage({
     redirect("/listings/sync");
   }
 
-  if (listing.listingStage !== "review") {
-    switch (listing.listingStage) {
-      case "create":
-        redirect(`/listings/${listingId}/create`);
-      case "generate":
-        redirect(`/listings/${listingId}/generate`);
-      case "categorize":
-      default:
-        redirect(`/listings/${listingId}/categorize`);
-    }
-  }
+  redirectToListingStage(listingId, listing.listingStage, "review");
 
   return (
     <ListingProcessingView

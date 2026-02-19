@@ -1,10 +1,13 @@
 import { redirect } from "next/navigation";
-import { getUser } from "@web/src/server/actions/db/users";
 import {
   getListingById,
   updateListing
 } from "@web/src/server/actions/db/listings";
-import { getListingImages } from "@web/src/server/actions/db/listingImages";
+import { requireUserOrRedirect } from "@web/src/app/(dashboard)/_utils/requireUserOrRedirect";
+import {
+  getListingImages,
+  mapListingImageToDisplayItem
+} from "@web/src/server/actions/db/listingImages";
 import { getListingVideoStatus } from "@web/src/server/services/videoStatus";
 import {
   ListingCreateView
@@ -14,6 +17,7 @@ import {
   parseInitialMediaTab,
   parseInitialSubcategory
 } from "@web/src/components/listings/create/domain";
+import { redirectToListingStage } from "../_utils/redirectToListingStage";
 
 interface ListingCreatePageProps {
   params: Promise<{ listingId: string }>;
@@ -30,11 +34,7 @@ export default async function ListingCreatePage({
   const initialSubcategory = parseInitialSubcategory(
     resolvedSearchParams.filter
   );
-  const user = await getUser();
-
-  if (!user) {
-    redirect("/handler/sign-in");
-  }
+  const user = await requireUserOrRedirect();
 
   if (!listingId?.trim()) {
     redirect("/listings/sync");
@@ -45,17 +45,7 @@ export default async function ListingCreatePage({
     redirect("/listings/sync");
   }
 
-  if (listing.listingStage !== "create") {
-    switch (listing.listingStage) {
-      case "generate":
-        redirect(`/listings/${listingId}/generate`);
-      case "review":
-        redirect(`/listings/${listingId}/review`);
-      case "categorize":
-      default:
-        redirect(`/listings/${listingId}/categorize`);
-    }
-  }
+  redirectToListingStage(listingId, listing.listingStage, "create");
 
   await updateListing(user.id, listingId, {
     lastOpenedAt: new Date(),
@@ -89,15 +79,7 @@ export default async function ListingCreatePage({
       listingPostItems={listingPostItems}
       initialMediaTab={initialMediaTab}
       initialSubcategory={initialSubcategory}
-      listingImages={listingImages.map((image) => ({
-        id: image.id,
-        url: image.url,
-        category: image.category ?? null,
-        isPrimary: Boolean(image.isPrimary),
-        primaryScore:
-          typeof image.primaryScore === "number" ? image.primaryScore : null,
-        uploadedAtMs: image.uploadedAt.getTime()
-      }))}
+      listingImages={listingImages.map(mapListingImageToDisplayItem)}
     />
   );
 }

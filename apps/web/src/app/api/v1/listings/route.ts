@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
-  ApiError,
-  requireAuthenticatedUser
+  requireAuthenticatedUser,
+  withApiErrorHandling
 } from "@web/src/app/api/v1/_utils";
 import { getUserListingSummariesPage } from "@web/src/server/actions/db/listings";
 
@@ -12,25 +12,17 @@ const clampNumber = (value: string | null, fallback: number) => {
 };
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
-  let userId: string;
-  try {
+  return withApiErrorHandling(async () => {
     const user = await requireAuthenticatedUser();
-    userId = user.id;
-  } catch (error) {
-    if (error instanceof ApiError) {
-      return NextResponse.json(error.body, { status: error.status });
-    }
-    throw error;
-  }
+    const { searchParams } = request.nextUrl;
+    const limit = clampNumber(searchParams.get("limit"), 10);
+    const offset = clampNumber(searchParams.get("offset"), 0);
 
-  const { searchParams } = request.nextUrl;
-  const limit = clampNumber(searchParams.get("limit"), 10);
-  const offset = clampNumber(searchParams.get("offset"), 0);
+    const result = await getUserListingSummariesPage(user.id, {
+      limit,
+      offset
+    });
 
-  const result = await getUserListingSummariesPage(userId, {
-    limit,
-    offset
+    return NextResponse.json(result);
   });
-
-  return NextResponse.json(result);
 }

@@ -1,6 +1,6 @@
 import * as React from "react";
 import { toast } from "sonner";
-import { extractJsonItemsFromStream } from "@web/src/lib/parsing/stream/extractJsonItemsFromStream";
+import { extractJsonItemsFromStream } from "@web/src/lib/sse/extractJsonItemsFromStream";
 import {
   DEFAULT_AGENT_PROFILE,
   GENERATED_BATCH_SIZE,
