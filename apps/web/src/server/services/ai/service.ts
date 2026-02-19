@@ -1,3 +1,4 @@
+import { getAiUseCaseConfig, type AIUseCase } from "./config";
 import type {
   AIStructuredStreamRequest,
   AITextRequest,
@@ -20,6 +21,24 @@ export async function generateText(
   );
 }
 
+export async function generateTextForUseCase(args: {
+  useCase: AIUseCase;
+  system?: string;
+  messages: AITextRequest["messages"];
+  responseFormat?: AITextRequest["responseFormat"];
+}): Promise<AITextResult | null> {
+  const config = getAiUseCaseConfig(args.useCase);
+  return generateText({
+    provider: config.provider,
+    model: config.model,
+    maxTokens: config.maxTokens,
+    temperature: config.temperature,
+    system: args.system,
+    messages: args.messages,
+    responseFormat: args.responseFormat
+  });
+}
+
 export async function generateStructuredStream(
   request: AIStructuredStreamRequest
 ): Promise<Response> {
@@ -31,4 +50,30 @@ export async function generateStructuredStream(
   throw new Error(
     `No structured stream strategy registered for provider: ${request.provider}`
   );
+}
+
+export async function generateStructuredStreamForUseCase(args: {
+  useCase: AIUseCase;
+  system: string;
+  messages: AIStructuredStreamRequest["messages"];
+  outputFormat: AIStructuredStreamRequest["outputFormat"];
+}): Promise<Response> {
+  const config = getAiUseCaseConfig(args.useCase);
+  if (config.provider !== "anthropic") {
+    throw new Error(
+      `Structured stream provider is not supported for use case: ${args.useCase}`
+    );
+  }
+  if (!config.model) {
+    throw new Error(`Missing AI model for structured stream use case: ${args.useCase}`);
+  }
+  return generateStructuredStream({
+    provider: "anthropic",
+    model: config.model,
+    maxTokens: config.maxTokens,
+    system: args.system,
+    messages: args.messages,
+    outputFormat: args.outputFormat,
+    betaHeader: config.betaHeader
+  });
 }

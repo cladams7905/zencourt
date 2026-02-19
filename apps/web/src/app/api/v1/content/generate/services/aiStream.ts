@@ -4,7 +4,10 @@ import {
   encodeSseEvent,
   makeSseStreamHeaders
 } from "@web/src/lib/sse/sseEncoder";
-import { generateStructuredStream } from "@web/src/server/services/ai";
+import {
+  generateStructuredStreamForUseCase,
+  getAiUseCaseConfig
+} from "@web/src/server/services/ai";
 import {
   RECENT_HOOKS_MAX,
   RECENT_HOOKS_TTL_SECONDS
@@ -15,8 +18,6 @@ import {
   parseJsonArray,
   validateGeneratedItems
 } from "../domain/parse";
-
-const DEFAULT_AI_MODEL = "claude-haiku-4-5-20251001";
 
 export async function createSseResponse(args: {
   systemPrompt: string;
@@ -31,17 +32,15 @@ export async function createSseResponse(args: {
   };
 }): Promise<NextResponse> {
   const { systemPrompt, userPrompt, redis, recentHooksKey, logger } = args;
+  const streamConfig = getAiUseCaseConfig("content_generation_stream");
 
   let response: Response;
   try {
-    response = await generateStructuredStream({
-      provider: "anthropic",
-      model: process.env.CONTENT_GENERATION_MODEL || DEFAULT_AI_MODEL,
-      maxTokens: 2800,
+    response = await generateStructuredStreamForUseCase({
+      useCase: "content_generation_stream",
       system: systemPrompt,
       messages: [{ role: "user", content: userPrompt }],
-      outputFormat: OUTPUT_FORMAT,
-      betaHeader: "structured-outputs-2025-11-13"
+      outputFormat: OUTPUT_FORMAT
     });
   } catch (error) {
     throw new ApiError(500, {
@@ -169,7 +168,7 @@ export async function createSseResponse(args: {
             type: "done",
             items: parsed as unknown[],
             meta: {
-              model: process.env.CONTENT_GENERATION_MODEL || DEFAULT_AI_MODEL,
+              model: streamConfig.model ?? "configured-provider",
               batch_size: (parsed as unknown[]).length
             }
           })

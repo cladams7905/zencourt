@@ -1,6 +1,6 @@
 /** @jest-environment node */
 
-const mockGenerateStructuredStream = jest.fn();
+const mockGenerateStructuredStreamForUseCase = jest.fn();
 jest.mock("../../../../_utils", () => ({
   ApiError: class extends Error {
     status: number;
@@ -14,7 +14,9 @@ jest.mock("../../../../_utils", () => ({
 }));
 
 jest.mock("@web/src/server/services/ai", () => ({
-  generateStructuredStream: (...args: unknown[]) => mockGenerateStructuredStream(...args)
+  generateStructuredStreamForUseCase: (...args: unknown[]) =>
+    mockGenerateStructuredStreamForUseCase(...args),
+  getAiUseCaseConfig: () => ({ model: "test-model" })
 }));
 
 import { createSseResponse } from "../aiStream";
@@ -52,7 +54,7 @@ describe("content/generate services/aiStream", () => {
   });
 
   it("throws ApiError when provider request returns non-ok", async () => {
-    mockGenerateStructuredStream.mockResolvedValue(
+    mockGenerateStructuredStreamForUseCase.mockResolvedValue(
       new Response(JSON.stringify({ error: "bad" }), { status: 502 })
     );
 
@@ -68,7 +70,7 @@ describe("content/generate services/aiStream", () => {
   });
 
   it("streams delta and done events when upstream response is valid", async () => {
-    mockGenerateStructuredStream.mockResolvedValue(
+    mockGenerateStructuredStreamForUseCase.mockResolvedValue(
       makeUpstreamSseResponse([
         { type: "content_block_delta", delta: { type: "text_delta", text: "[" } },
         { type: "content_block_delta", delta: { type: "text_delta", text: '{"hook":"A"}' } },
@@ -104,7 +106,7 @@ describe("content/generate services/aiStream", () => {
       expire: jest.fn().mockResolvedValue(undefined)
     };
 
-    mockGenerateStructuredStream.mockResolvedValue(
+    mockGenerateStructuredStreamForUseCase.mockResolvedValue(
       makeUpstreamSseResponse([
         { type: "content_block_delta", delta: { type: "text_delta", text: '[{"hook":"A"}]' } },
         { type: "message_stop" }
@@ -127,7 +129,7 @@ describe("content/generate services/aiStream", () => {
   });
 
   it("emits error event when parsed response is invalid JSON", async () => {
-    mockGenerateStructuredStream.mockResolvedValue(
+    mockGenerateStructuredStreamForUseCase.mockResolvedValue(
       makeUpstreamSseResponse([
         { type: "content_block_delta", delta: { type: "text_delta", text: "not-json" } },
         { type: "message_stop" }
