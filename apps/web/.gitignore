@@ -3,4 +3,4 @@
 .swc
 .cursor
 node_modules/
-src/lib/prompts/logs/
+src/lib/ai/prompts/content/logs/

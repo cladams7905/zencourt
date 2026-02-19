@@ -1,5 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
 import { useBrandingProfileSettings } from "@web/src/components/settings/domain/hooks/useBrandingProfileSettings";
+import type { DBUserAdditional } from "@shared/types/models";
 
 const mockRefresh = jest.fn();
 const mockToastSuccess = jest.fn();
@@ -33,16 +34,18 @@ jest.mock("@web/src/server/actions/api/storage", () => ({
 }));
 
 describe("useBrandingProfileSettings", () => {
+  const baseUserAdditional = {
+    agentName: "",
+    brokerageName: "",
+    agentTitle: "",
+    agentBio: "",
+    headshotUrl: "",
+    personalLogoUrl: ""
+  } as unknown as DBUserAdditional;
+
   const baseArgs = {
     userId: "u1",
-    userAdditional: {
-      agentName: "",
-      brokerageName: "",
-      agentTitle: "",
-      agentBio: "",
-      headshotUrl: "",
-      personalLogoUrl: ""
-    } as never,
+    userAdditional: baseUserAdditional,
     defaultAgentName: "Default Agent",
     defaultHeadshotUrl: undefined
   };
@@ -141,5 +144,41 @@ describe("useBrandingProfileSettings", () => {
       "u1",
       "https://google/avatar.png"
     );
+  });
+
+  it("removes image and persists cleared value", async () => {
+    const { result } = renderHook(() =>
+      useBrandingProfileSettings({
+        ...baseArgs,
+        userAdditional: {
+          ...baseArgs.userAdditional,
+          personalLogoUrl: "https://cdn.example/logo.png"
+        }
+      })
+    );
+
+    await act(async () => {
+      await result.current.handleImageRemove("personalLogoUrl", "Logo");
+    });
+
+    expect(mockUpdateUserProfile).toHaveBeenCalled();
+    expect(mockToastSuccess).toHaveBeenCalledWith(
+      "Successfully updated Logo to removed."
+    );
+  });
+
+  it("surfaces upload failures", async () => {
+    mockUploadFile.mockRejectedValueOnce(new Error("upload failed"));
+    const { result } = renderHook(() => useBrandingProfileSettings(baseArgs));
+    const smallFile = new File([new Uint8Array([1, 2, 3])], "avatar.png", {
+      type: "image/png"
+    });
+
+    await act(async () => {
+      await result.current.handleImageUpload(smallFile, "headshotUrl", "Headshot");
+    });
+
+    expect(mockToastError).toHaveBeenCalledWith("upload failed");
+    expect(result.current.isUploadingAvatar).toBe(false);
   });
 });

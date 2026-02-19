@@ -51,6 +51,7 @@ describe("imageProcessor/service", () => {
                 perspective?: "aerial" | "ground";
               } | null;
               error: string | null;
+              duration: number;
             }
           ) => void;
         }
@@ -64,13 +65,15 @@ describe("imageProcessor/service", () => {
             primaryScore: 0.7,
             perspective: "ground"
           },
-          error: null
+          error: null,
+          duration: 12
         });
         options?.onProgress?.(2, imageUrls.length, {
           imageUrl: imageUrls[1] as string,
           success: false,
           classification: null,
-          error: "invalid response"
+          error: "invalid response",
+          duration: 7
         });
         return [];
       }

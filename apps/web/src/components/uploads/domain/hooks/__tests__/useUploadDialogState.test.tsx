@@ -5,6 +5,11 @@ import {
   compressImageToTarget,
   createVideoThumbnailBlob
 } from "@web/src/components/uploads/domain/services";
+import type {
+  UploadDescriptor,
+  UploadFailure,
+  UploadRequest
+} from "@web/src/components/uploads/shared";
 
 jest.mock("sonner", () => ({
   toast: {
@@ -41,13 +46,18 @@ describe("useUploadDialogState", () => {
   const originalCreateObjectUrl = URL.createObjectURL;
   const originalRevokeObjectUrl = URL.revokeObjectURL;
 
+  type UploadUrlsResponse = {
+    uploads: UploadDescriptor[];
+    failed: UploadFailure[];
+  };
+
   const buildArgs = () => ({
     open: true,
     onOpenChange: jest.fn(),
     selectedLabel: "file",
     fileValidator: jest.fn(() => ({ accepted: true })),
     getUploadUrls: jest.fn(
-      async (requests: { id: string; fileName: string; fileType: string }[]) => ({
+      async (requests: UploadRequest[]): Promise<UploadUrlsResponse> => ({
         uploads: requests.map((request, index) => ({
           id: request.id,
           uploadUrl: `https://example.com/${index}`,
@@ -206,5 +216,181 @@ describe("useUploadDialogState", () => {
 
     expect(result.current.pendingFiles).toHaveLength(0);
     expect(URL.revokeObjectURL).toHaveBeenCalled();
+  });
+
+  it("reports thumbnail generation failures for video uploads", async () => {
+    const args = buildArgs();
+    args.getUploadUrls = jest.fn(async (requests) => ({
+      uploads: requests.map((request) => ({
+        id: request.id,
+        uploadUrl: "https://example.com/video",
+        key: request.fileName,
+        type: request.fileType,
+        publicUrl: `https://cdn/${request.fileName}`,
+        thumbnailUploadUrl: "https://example.com/thumb",
+        thumbnailKey: "thumb-key"
+      })),
+      failed: []
+    }));
+    (createVideoThumbnailBlob as jest.Mock).mockResolvedValue(null);
+
+    const { result } = renderHook(() => useUploadDialogState(args));
+    const file = new File(["video"], "tour.mp4", { type: "video/mp4" });
+
+    await act(async () => {
+      await result.current.addFiles([file]);
+    });
+    await waitFor(() => {
+      expect(result.current.pendingFiles).toHaveLength(1);
+    });
+    await act(async () => {
+      await result.current.handleUpload();
+    });
+
+    await waitFor(() => {
+      expect(args.onCreateRecords).toHaveBeenCalledTimes(1);
+      expect(toast.error).toHaveBeenCalledWith("1 thumbnail(s) failed");
+    });
+  });
+
+  it("marks uploads as failed when upload URLs are missing from response", async () => {
+    const args = buildArgs();
+    args.getUploadUrls = jest.fn(async (_requests): Promise<UploadUrlsResponse> => ({
+      uploads: [],
+      failed: []
+    }));
+
+    const { result } = renderHook(() => useUploadDialogState(args));
+    const file = new File(["a"], "a.jpg", { type: "image/jpeg" });
+
+    await act(async () => {
+      await result.current.addFiles([file]);
+    });
+    await waitFor(() => {
+      expect(result.current.pendingFiles).toHaveLength(1);
+    });
+    await act(async () => {
+      await result.current.handleUpload();
+    });
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("1 file(s) failed to start uploading.");
+      expect(result.current.pendingFiles).toHaveLength(1);
+      expect(result.current.pendingFiles[0]?.status).toBe("error");
+    });
+  });
+
+  it("surfaces validator errors and skips rejected files", async () => {
+    const args = buildArgs();
+    args.fileValidator = jest.fn(() => ({
+      accepted: false,
+      error: "unsupported file"
+    }));
+    const { result } = renderHook(() => useUploadDialogState(args));
+
+    await act(async () => {
+      await result.current.addFiles([
+        new File(["x"], "bad.txt", { type: "text/plain" })
+      ]);
+    });
+
+    expect(toast.error).toHaveBeenCalledWith("unsupported file");
+    expect(result.current.pendingFiles).toHaveLength(0);
+  });
+
+  it("retries failed uploads via handleRetryFailed", async () => {
+    jest.useFakeTimers();
+    const args = buildArgs();
+    args.getUploadUrls = jest.fn(async (_requests): Promise<UploadUrlsResponse> => ({
+      uploads: [],
+      failed: []
+    }));
+
+    const { result } = renderHook(() => useUploadDialogState(args));
+    const file = new File(["a"], "retry.jpg", { type: "image/jpeg" });
+
+    await act(async () => {
+      await result.current.addFiles([file]);
+    });
+    await waitFor(() => {
+      expect(result.current.pendingFiles).toHaveLength(1);
+    });
+    await act(async () => {
+      await result.current.handleUpload();
+    });
+
+    expect(result.current.hasFailedUploads).toBe(true);
+
+    act(() => {
+      result.current.handleRetryFailed();
+      jest.runOnlyPendingTimers();
+    });
+
+    await waitFor(() => {
+      expect(args.getUploadUrls).toHaveBeenCalledTimes(2);
+    });
+    jest.useRealTimers();
+  });
+
+  it("marks validator-failed upload urls as error", async () => {
+    const args = buildArgs();
+    args.getUploadUrls = jest.fn(async (requests) => ({
+      uploads: requests.map((request) => ({
+        id: request.id,
+        uploadUrl: "https://example.com/upload",
+        key: request.fileName,
+        type: request.fileType,
+        publicUrl: `https://cdn/${request.fileName}`
+      })),
+      failed: [{ id: requests[0]!.id }]
+    }));
+
+    const { result } = renderHook(() => useUploadDialogState(args));
+    const file = new File(["a"], "a.jpg", { type: "image/jpeg" });
+    await act(async () => {
+      await result.current.addFiles([file]);
+    });
+    await act(async () => {
+      await result.current.handleUpload();
+    });
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("1 file(s) failed validation.");
+      expect(result.current.pendingFiles[0]?.status).toBe("error");
+    });
+  });
+
+  it("marks upload as failed when xhr upload request fails", async () => {
+    class FailingXHR extends MockXHR {
+      status = 500;
+    }
+    global.XMLHttpRequest = FailingXHR as unknown as typeof XMLHttpRequest;
+
+    const args = buildArgs();
+    const { result } = renderHook(() => useUploadDialogState(args));
+    const file = new File(["a"], "a.jpg", { type: "image/jpeg" });
+    await act(async () => {
+      await result.current.addFiles([file]);
+    });
+    await act(async () => {
+      await result.current.handleUpload();
+    });
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("1 file(s) failed to upload.");
+      expect(result.current.pendingFiles[0]?.status).toBe("error");
+    });
+  });
+
+  it("ignores empty addFiles input", async () => {
+    const args = buildArgs();
+    const { result } = renderHook(() => useUploadDialogState(args));
+
+    await act(async () => {
+      await result.current.addFiles([]);
+    });
+
+    expect(result.current.pendingFiles).toHaveLength(0);
+    expect(args.fileValidator).not.toHaveBeenCalled();
   });
 });

@@ -1,3 +1,9 @@
+import type {
+  DBListing,
+  DBListingImage,
+  DBUserAdditional
+} from "@shared/types/models";
+
 const mockRenderTemplate = jest.fn();
 const mockResolveTemplateParameters = jest.fn();
 const mockPickRandomTemplatesForSubcategory = jest.fn();
@@ -15,9 +21,9 @@ import { renderListingTemplateBatch } from "../service";
 function buildParams() {
   return {
     subcategory: "new_listing" as const,
-    listing: { id: "listing-1" },
-    listingImages: [],
-    userAdditional: { id: "user-additional-1" },
+    listing: { id: "listing-1" } as unknown as DBListing,
+    listingImages: [] as DBListingImage[],
+    userAdditional: { id: "user-additional-1" } as unknown as DBUserAdditional,
     captionItems: [
       {
         id: "caption-1",
@@ -98,5 +104,106 @@ describe("templateRender/service", () => {
       ],
       failedTemplateIds: ["template-2"]
     });
+  });
+
+  it("uses all resolved keys when requiredParams is empty and filters non-public image urls", async () => {
+    mockPickRandomTemplatesForSubcategory.mockReturnValue([
+      {
+        id: "template-3",
+        subcategories: ["new_listing"],
+        requiredParams: []
+      }
+    ]);
+    mockResolveTemplateParameters.mockReturnValue({
+      headerText: "  Heading  ",
+      feature1: "  Pool  ",
+      backgroundImage1: "ftp://private/asset.jpg",
+      listingPrice: "   "
+    });
+    mockRenderTemplate.mockResolvedValueOnce("https://cdn.example.com/render-3.jpg");
+
+    const result = await renderListingTemplateBatch(buildParams());
+
+    expect(mockRenderTemplate).toHaveBeenCalledWith({
+      templateId: "template-3",
+      modifications: {
+        headerText: "Heading",
+        "heading:headerText": "Heading",
+        feature1: "Pool",
+        "heading:feature1": "Pool"
+      }
+    });
+    expect(result.failedTemplateIds).toEqual([]);
+    expect(result.items).toHaveLength(1);
+  });
+
+  it("processes required params and still renders when image param is filtered", async () => {
+    mockPickRandomTemplatesForSubcategory.mockReturnValue([
+      {
+        id: "template-4",
+        subcategories: ["new_listing"],
+        requiredParams: ["backgroundImage1", "headerText"]
+      }
+    ]);
+    mockResolveTemplateParameters.mockReturnValue({
+      headerText: "Public Image",
+      backgroundImage1: "https://cdn.example.com/public.jpg"
+    });
+    mockRenderTemplate.mockResolvedValueOnce("https://cdn.example.com/render-4.jpg");
+
+    await renderListingTemplateBatch(buildParams());
+
+    expect(mockRenderTemplate).toHaveBeenCalledWith({
+      templateId: "template-4",
+      modifications: {
+        headerText: "Public Image",
+        "heading:headerText": "Public Image"
+      }
+    });
+  });
+
+  it("filters malformed image urls while keeping other required params", async () => {
+    mockPickRandomTemplatesForSubcategory.mockReturnValue([
+      {
+        id: "template-5",
+        subcategories: ["new_listing"],
+        requiredParams: ["backgroundImage1", "headerText", "feature1"]
+      }
+    ]);
+    mockResolveTemplateParameters.mockReturnValue({
+      headerText: "Title",
+      feature1: "Patio",
+      backgroundImage1: "not-a-url"
+    });
+    mockRenderTemplate.mockResolvedValueOnce("https://cdn.example.com/render-5.jpg");
+
+    await renderListingTemplateBatch(buildParams());
+
+    expect(mockRenderTemplate).toHaveBeenCalledWith({
+      templateId: "template-5",
+      modifications: {
+        headerText: "Title",
+        "heading:headerText": "Title",
+        feature1: "Patio",
+        "heading:feature1": "Patio"
+      }
+    });
+  });
+
+  it("captures failed template ids when renderer rejects with non-Error value", async () => {
+    mockPickRandomTemplatesForSubcategory.mockReturnValue([
+      {
+        id: "template-non-error",
+        subcategories: ["new_listing"],
+        requiredParams: ["headerText"]
+      }
+    ]);
+    mockResolveTemplateParameters.mockReturnValue({ headerText: "Hello" });
+    mockRenderTemplate.mockRejectedValueOnce("boom");
+
+    const result = await renderListingTemplateBatch(buildParams());
+
+    expect(result.items).toEqual([]);
+    expect(result.failedTemplateIds).toEqual(["template-non-error"]);
   });
 });

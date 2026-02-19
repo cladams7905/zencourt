@@ -36,4 +36,13 @@ describe("templateRender/providers/orshot/templates", () => {
       true
     );
   });
+
+  it("returns empty list when subcategory has no templates", () => {
+    expect(
+      pickRandomTemplatesForSubcategory({
+        subcategory: "unknown_subcategory" as never,
+        count: 3
+      })
+    ).toEqual([]);
+  });
 });

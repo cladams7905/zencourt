@@ -492,4 +492,60 @@ describe("useLocationAutocomplete", () => {
       await flushAsyncUpdates();
     });
   });
+
+  it("does not resolve postal entry on blur when a value is already selected", async () => {
+    const geocode = jest.fn();
+
+    Object.defineProperty(window, "google", {
+      configurable: true,
+      value: {
+        maps: {
+          places: {
+            PlacesServiceStatus: {
+              OK: "OK"
+            }
+          },
+          GeocoderStatus: {
+            OK: "OK"
+          },
+          Geocoder: function Geocoder() {
+            return {
+              geocode
+            };
+          }
+        }
+      }
+    });
+
+    useGooglePlacesServices.mockReturnValue({
+      isScriptLoaded: true,
+      autocompleteService: { current: { getPlacePredictions: jest.fn() } },
+      placesService: { current: null }
+    });
+
+    const onChange = jest.fn();
+    const { result } = renderHook(() =>
+      useLocationAutocomplete({
+        value: {
+          city: "Seattle",
+          state: "WA",
+          country: "United States",
+          postalCode: "98101",
+          placeId: "p1",
+          formattedAddress: "Seattle, WA 98101"
+        },
+        onChange,
+        apiKey: "test-key",
+        initialValue: undefined,
+        autoFillFromGeolocation: false
+      })
+    );
+
+    act(() => {
+      result.current.handleBlur();
+      jest.advanceTimersByTime(200);
+    });
+
+    expect(geocode).not.toHaveBeenCalled();
+  });
 });

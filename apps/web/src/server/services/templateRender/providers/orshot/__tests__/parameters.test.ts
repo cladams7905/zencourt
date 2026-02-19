@@ -108,4 +108,47 @@ describe("templateRender/providers/orshot/parameters", () => {
     expect(result.realtorName).toBe("Your Realtor");
     expect(result.backgroundImage1).toBe("");
   });
+
+  it("uses default header tag for non listing/status subcategories and single-word header splitting", () => {
+    const result = resolveTemplateParameters({
+      subcategory: "community" as never,
+      listing: {
+        ...listingBase,
+        propertyDetails: {
+          address: "123 Main St"
+        }
+      } as never,
+      listingImages: [] as never,
+      userAdditional: {
+        agentName: "  ",
+        agentTitle: "",
+        brokerageName: "",
+        headshotUrl: ""
+      } as never,
+      captionItem: {
+        ...captionItem,
+        hook: "Hello"
+      },
+      random: () => 0.1
+    });
+
+    expect(result.headerTag).toBe("");
+    expect(result.headerTextTop).toBe("Hello");
+    expect(result.headerTextBottom).toBe("");
+    expect(result.realtorName).toBe("Your Realtor");
+  });
+
+  it("falls back to raw arrow path when siteOrigin is invalid", () => {
+    const result = resolveTemplateParameters({
+      subcategory: "new_listing",
+      listing: listingBase as never,
+      listingImages: listingImages as never,
+      userAdditional: userAdditional as never,
+      captionItem,
+      siteOrigin: "://not-a-valid-origin",
+      random: () => 0
+    });
+
+    expect(result.arrowImage).toBe("/overlays/a.svg");
+  });
 });

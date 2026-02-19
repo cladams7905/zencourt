@@ -24,6 +24,12 @@ describe("marketData/providers/rentcast", () => {
     warn: jest.fn(),
     error: jest.fn()
   };
+  const withEnv = (
+    overrides: Record<string, string | undefined> = {}
+  ): NodeJS.ProcessEnv => ({
+    ...process.env,
+    ...overrides
+  });
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -39,7 +45,7 @@ describe("marketData/providers/rentcast", () => {
         fetcher: jest.fn() as never,
         now: () => new Date("2026-02-18T00:00:00.000Z"),
         logger,
-        env: {},
+        env: withEnv(),
         timeoutMs: 1000,
         fredTimeoutMs: 1000
       })
@@ -57,7 +63,7 @@ describe("marketData/providers/rentcast", () => {
         fetcher: jest.fn() as never,
         now: () => new Date("2026-02-18T00:00:00.000Z"),
         logger,
-        env: {},
+        env: withEnv(),
         timeoutMs: 1000,
         fredTimeoutMs: 1000
       })
@@ -80,7 +86,7 @@ describe("marketData/providers/rentcast", () => {
         fetcher: jest.fn() as never,
         now: () => new Date("2026-02-18T00:00:00.000Z"),
         logger,
-        env: {},
+        env: withEnv(),
         timeoutMs: 1000,
         fredTimeoutMs: 1000
       })
@@ -124,10 +130,10 @@ describe("marketData/providers/rentcast", () => {
       fetcher: jest.fn() as never,
       now: () => new Date("2026-02-18T00:00:00.000Z"),
       logger,
-      env: {
+      env: withEnv({
         FRED_MORTGAGE_SERIES: "CUSTOM_MORT",
         FRED_INCOME_SERIES: "CUSTOM_INC"
-      },
+      }),
       timeoutMs: 1000,
       fredTimeoutMs: 2000
     });

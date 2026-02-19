@@ -33,6 +33,12 @@ describe("marketData/service", () => {
     error: jest.fn()
   };
   const fetcher = jest.fn() as unknown as typeof fetch;
+  const withEnv = (
+    overrides: Record<string, string | undefined>
+  ): NodeJS.ProcessEnv => ({
+    ...process.env,
+    ...overrides
+  });
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -46,8 +52,10 @@ describe("marketData/service", () => {
 
     const service = createMarketDataService({
       env: {
-        KV_REST_API_URL: "https://redis.example.com",
-        KV_REST_API_TOKEN: "token"
+        ...withEnv({
+          KV_REST_API_URL: "https://redis.example.com",
+          KV_REST_API_TOKEN: "token"
+        })
       },
       fetcher,
       logger,
@@ -70,8 +78,10 @@ describe("marketData/service", () => {
 
     const service = createMarketDataService({
       env: {
-        KV_REST_API_URL: "https://redis.example.com",
-        KV_REST_API_TOKEN: "token"
+        ...withEnv({
+          KV_REST_API_URL: "https://redis.example.com",
+          KV_REST_API_TOKEN: "token"
+        })
       },
       fetcher,
       logger,
@@ -96,8 +106,10 @@ describe("marketData/service", () => {
 
     const service = createMarketDataService({
       env: {
-        KV_REST_API_URL: "https://redis.example.com",
-        KV_REST_API_TOKEN: "token"
+        ...withEnv({
+          KV_REST_API_URL: "https://redis.example.com",
+          KV_REST_API_TOKEN: "token"
+        })
       },
       fetcher,
       logger,
@@ -119,7 +131,9 @@ describe("marketData/service", () => {
 
     const service = createMarketDataService({
       env: {
-        MARKET_DATA_PROVIDER: "rentcast"
+        ...withEnv({
+          MARKET_DATA_PROVIDER: "rentcast"
+        })
       },
       fetcher,
       logger
