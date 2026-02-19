@@ -1,5 +1,5 @@
 const mockGetCommunityDataProvider = jest.fn();
-const mockFetchPerplexityCityDescription = jest.fn();
+const mockGenerateText = jest.fn();
 
 jest.mock("@web/src/server/services/communityData/config", () => ({
   CommunityDataProvider: {
@@ -10,87 +10,90 @@ jest.mock("@web/src/server/services/communityData/config", () => ({
     mockGetCommunityDataProvider(...args)
 }));
 
-jest.mock(
-  "@web/src/server/services/communityData/providers/perplexity/pipeline/cityDescription",
-  () => ({
-    fetchPerplexityCityDescription: (...args: unknown[]) =>
-      mockFetchPerplexityCityDescription(...args)
-  })
-);
+jest.mock("@web/src/server/services/ai", () => ({
+  generateText: (...args: unknown[]) => mockGenerateText(...args)
+}));
 
 import { fetchCityDescription } from "@web/src/server/services/communityData/shared/cityDescription";
 
 describe("shared cityDescription", () => {
-  const originalFetch = global.fetch;
-  const originalApiKey = process.env.ANTHROPIC_API_KEY;
+  const originalProvider = process.env.CITY_DESCRIPTION_PROVIDER;
   const logger = { warn: jest.fn() };
 
   beforeEach(() => {
     mockGetCommunityDataProvider.mockReset();
-    mockFetchPerplexityCityDescription.mockReset();
+    mockGenerateText.mockReset();
     logger.warn.mockReset();
-    global.fetch = jest.fn();
   });
 
   afterEach(() => {
-    process.env.ANTHROPIC_API_KEY = originalApiKey;
+    process.env.CITY_DESCRIPTION_PROVIDER = originalProvider;
   });
 
-  afterAll(() => {
-    global.fetch = originalFetch;
-  });
-
-  it("delegates to perplexity provider when selected", async () => {
+  it("uses perplexity provider when community provider is perplexity", async () => {
     mockGetCommunityDataProvider.mockReturnValue("perplexity");
-    mockFetchPerplexityCityDescription.mockResolvedValueOnce({
-      description: "A great city"
+    mockGenerateText.mockResolvedValueOnce({
+      provider: "perplexity",
+      text: JSON.stringify({
+        description: "A great city",
+        citations: [{ title: "Ref", url: "https://ref.test", source: "Ref" }]
+      }),
+      raw: {}
     });
 
     await expect(fetchCityDescription("Austin", "TX", logger)).resolves.toEqual(
       {
         description: "A great city",
-        citations: null
+        citations: [{ title: "Ref", url: "https://ref.test", source: "Ref" }]
       }
     );
-    expect(global.fetch).not.toHaveBeenCalled();
+    expect(mockGenerateText).toHaveBeenCalledWith(
+      expect.objectContaining({ provider: "perplexity" })
+    );
   });
 
-  it("returns null when anthropic key is missing", async () => {
+  it("uses anthropic provider when community provider is google", async () => {
     mockGetCommunityDataProvider.mockReturnValue("google");
-    delete process.env.ANTHROPIC_API_KEY;
+    mockGenerateText.mockResolvedValueOnce({
+      provider: "anthropic",
+      text: " Austin is vibrant. ",
+      raw: {}
+    });
 
     await expect(
       fetchCityDescription("Austin", "TX", logger)
-    ).resolves.toBeNull();
-    expect(logger.warn).toHaveBeenCalled();
+    ).resolves.toEqual({
+      description: "Austin is vibrant.",
+      citations: null
+    });
+    expect(mockGenerateText).toHaveBeenCalledWith(
+      expect.objectContaining({ provider: "anthropic" })
+    );
   });
 
-  it("requests anthropic and parses response", async () => {
+  it("uses provider override when CITY_DESCRIPTION_PROVIDER is set", async () => {
     mockGetCommunityDataProvider.mockReturnValue("google");
-    process.env.ANTHROPIC_API_KEY = "key";
-    (global.fetch as jest.Mock).mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      json: async () => ({
-        content: [{ type: "text", text: " Austin is vibrant. " }]
-      })
+    process.env.CITY_DESCRIPTION_PROVIDER = "perplexity";
+    mockGenerateText.mockResolvedValueOnce({
+      provider: "perplexity",
+      text: "Austin is vibrant.",
+      raw: {}
     });
 
     await expect(fetchCityDescription("Austin", "TX", logger)).resolves.toEqual(
       {
-        description: "Austin is vibrant."
+        description: "Austin is vibrant.",
+        citations: null
       }
+    );
+    expect(mockGenerateText).toHaveBeenCalledWith(
+      expect.objectContaining({ provider: "perplexity" })
     );
   });
 
-  it("returns null when anthropic response is not ok", async () => {
+  it("returns null when generateText returns null", async () => {
     mockGetCommunityDataProvider.mockReturnValue("google");
-    process.env.ANTHROPIC_API_KEY = "key";
-    (global.fetch as jest.Mock).mockResolvedValueOnce({
-      ok: false,
-      status: 500,
-      json: async () => ({})
-    });
+    mockGenerateText.mockResolvedValueOnce(null);
 
     await expect(
       fetchCityDescription("Austin", "TX", logger)
@@ -98,13 +101,12 @@ describe("shared cityDescription", () => {
     expect(logger.warn).toHaveBeenCalled();
   });
 
-  it("returns null when anthropic payload has no text content", async () => {
+  it("returns null when model result has no text", async () => {
     mockGetCommunityDataProvider.mockReturnValue("google");
-    process.env.ANTHROPIC_API_KEY = "key";
-    (global.fetch as jest.Mock).mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      json: async () => ({ content: [{ type: "tool_use", text: "ignored" }] })
+    mockGenerateText.mockResolvedValueOnce({
+      provider: "anthropic",
+      text: null,
+      raw: {}
     });
 
     await expect(
@@ -112,17 +114,20 @@ describe("shared cityDescription", () => {
     ).resolves.toBeNull();
   });
 
-  it("returns null when anthropic text is only whitespace", async () => {
+  it("uses result citations when plain text output is returned", async () => {
     mockGetCommunityDataProvider.mockReturnValue("google");
-    process.env.ANTHROPIC_API_KEY = "key";
-    (global.fetch as jest.Mock).mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      json: async () => ({ content: [{ type: "text", text: "   " }] })
+    mockGenerateText.mockResolvedValueOnce({
+      provider: "perplexity",
+      text: "Austin is vibrant.",
+      citations: [{ title: "Source", url: "https://src.test", source: "S" }],
+      raw: {}
     });
 
     await expect(
       fetchCityDescription("Austin", "TX", logger)
-    ).resolves.toBeNull();
+    ).resolves.toEqual({
+      description: "Austin is vibrant.",
+      citations: [{ title: "Source", url: "https://src.test", source: "S" }]
+    });
   });
 });

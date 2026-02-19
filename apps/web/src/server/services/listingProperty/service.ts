@@ -3,7 +3,7 @@ import {
   createChildLogger,
   logger as baseLogger
 } from "@web/src/lib/core/logging/logger";
-import { requestPerplexity } from "../communityData/providers/perplexity";
+import { generateText } from "@web/src/server/services/ai";
 import type { ListingPropertyDetails } from "@shared/types/models";
 import { parsePossiblyWrappedJson } from "@web/src/server/utils/jsonParsing";
 import { PERPLEXITY_PROPERTY_SCHEMA } from "./schema";
@@ -40,13 +40,18 @@ export async function fetchPropertyDetailsFromPerplexity(
     "Fetching property details with prompt version"
   );
 
-  const response = await requestPerplexity({
+  const result = await generateText({
+    provider: "perplexity",
     messages: [
       { role: "system", content: buildPropertyDetailsSystemPrompt() },
       { role: "user", content: buildPropertyDetailsUserPrompt(address) }
     ],
-    response_format: PERPLEXITY_PROPERTY_SCHEMA
+    responseFormat: PERPLEXITY_PROPERTY_SCHEMA
   });
+
+  const response = result?.raw as
+    | { choices?: Array<{ message?: { content?: string } }> }
+    | undefined;
 
   if (!response?.choices?.length) {
     logger.warn({ address }, "Perplexity property response empty");

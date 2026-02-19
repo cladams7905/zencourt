@@ -11,7 +11,7 @@ import {
 import {
   createCommunityDataProviderRegistry,
   type CommunityDataProviderStrategy
-} from "./providerRegistry";
+} from "./registry";
 
 type ByZipOptions = {
   skipCategories?: Set<CategoryKey>;
@@ -98,9 +98,7 @@ async function getCommunityDataByZipAndAudienceWithFallback(
   return fallbackData ?? null;
 }
 
-function toCategoryKey(
-  categoryKey: CommunityCategoryKey
-): CategoryKey | null {
+function toCategoryKey(categoryKey: CommunityCategoryKey): CategoryKey | null {
   return COMMUNITY_CATEGORY_KEY_TO_CATEGORY[categoryKey] ?? null;
 }
 
@@ -199,7 +197,10 @@ export function createCommunityDataOrchestrator() {
     const primary = registry.getPrimaryProvider();
     const fallback = registry.getFallbackProvider();
 
-    if (params.category === "seasonal" && primary.getMonthlyEventsSectionByZip) {
+    if (
+      params.category === "seasonal" &&
+      primary.getMonthlyEventsSectionByZip
+    ) {
       const seasonalSection = await primary.getMonthlyEventsSectionByZip({
         zipCode: params.zipCode,
         audienceSegment: params.audienceSegment ?? undefined,
@@ -303,12 +304,14 @@ export function createCommunityDataOrchestrator() {
       const availableKeys = toAvailableCategoryKeys(communityData);
       const selectedKeys =
         communityCategoryKeys ??
-        (await selectCommunityCategories(
-          params.redis,
-          params.userId,
-          2,
-          availableKeys
-        )).selected;
+        (
+          await selectCommunityCategories(
+            params.redis,
+            params.userId,
+            2,
+            availableKeys
+          )
+        ).selected;
       communityCategoryKeys = selectedKeys;
     }
 

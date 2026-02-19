@@ -1,7 +1,7 @@
-const mockRequestPerplexity = jest.fn();
+const mockGenerateText = jest.fn();
 
-jest.mock("../../communityData/providers/perplexity", () => ({
-  requestPerplexity: (...args: unknown[]) => mockRequestPerplexity(...args)
+jest.mock("@web/src/server/services/ai", () => ({
+  generateText: (...args: unknown[]) => mockGenerateText(...args)
 }));
 
 import {
@@ -35,7 +35,7 @@ describe("listingProperty/service", () => {
   });
 
   it("returns null when perplexity response has no choices", async () => {
-    mockRequestPerplexity.mockResolvedValue({ choices: [] });
+    mockGenerateText.mockResolvedValue({ raw: { choices: [] } });
 
     await expect(
       fetchPropertyDetailsFromPerplexity("123 Main St, Austin, TX")
@@ -43,19 +43,21 @@ describe("listingProperty/service", () => {
   });
 
   it("parses and normalizes valid perplexity payload content", async () => {
-    mockRequestPerplexity.mockResolvedValue({
-      choices: [
-        {
-          message: {
-            content: JSON.stringify({
-              address: "123 Main St",
-              bedrooms: "4",
-              bathrooms: "2.5",
-              living_spaces: ["Living Room", " "]
-            })
+    mockGenerateText.mockResolvedValue({
+      raw: {
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                address: "123 Main St",
+                bedrooms: "4",
+                bathrooms: "2.5",
+                living_spaces: ["Living Room", " "]
+              })
+            }
           }
-        }
-      ]
+        ]
+      }
     });
 
     await expect(
@@ -69,14 +71,16 @@ describe("listingProperty/service", () => {
   });
 
   it("returns null for invalid payload content", async () => {
-    mockRequestPerplexity.mockResolvedValue({
-      choices: [
-        {
-          message: {
-            content: "not-json"
+    mockGenerateText.mockResolvedValue({
+      raw: {
+        choices: [
+          {
+            message: {
+              content: "not-json"
+            }
           }
-        }
-      ]
+        ]
+      }
     });
 
     await expect(

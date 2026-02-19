@@ -31,10 +31,10 @@ export function extractTextDelta(payload: {
 
 export function validateGeneratedItems(items: unknown): asserts items is unknown[] {
   if (!Array.isArray(items)) {
-    throw new Error("Claude response was not a JSON array");
+    throw new Error("AI response was not a JSON array");
   }
 
   if (items.length === 0) {
-    throw new Error("Claude response did not contain any items");
+    throw new Error("AI response did not contain any items");
   }
 }

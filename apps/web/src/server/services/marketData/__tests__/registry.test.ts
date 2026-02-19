@@ -11,7 +11,7 @@ jest.mock("../providers/rentcast", () => ({
     mockFetchRentCastMarketData(...args)
 }));
 
-import { createMarketDataProviderRegistry } from "../providerRegistry";
+import { createMarketDataProviderRegistry } from "../registry";
 
 describe("marketData/providerRegistry", () => {
   const baseDeps = {
@@ -31,10 +31,9 @@ describe("marketData/providerRegistry", () => {
       env: { ...process.env }
     });
 
-    expect(registry.getProviderChain().map((provider) => provider.name)).toEqual([
-      "perplexity",
-      "rentcast"
-    ]);
+    expect(
+      registry.getProviderChain().map((provider) => provider.name)
+    ).toEqual(["perplexity", "rentcast"]);
   });
 
   it("builds rentcast-only chain when MARKET_DATA_PROVIDER=rentcast", () => {
@@ -43,9 +42,9 @@ describe("marketData/providerRegistry", () => {
       env: { ...process.env, MARKET_DATA_PROVIDER: "rentcast" }
     });
 
-    expect(registry.getProviderChain().map((provider) => provider.name)).toEqual([
-      "rentcast"
-    ]);
+    expect(
+      registry.getProviderChain().map((provider) => provider.name)
+    ).toEqual(["rentcast"]);
   });
 
   it("routes rentcast provider calls with resolved API keys", async () => {
