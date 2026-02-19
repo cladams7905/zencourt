@@ -1,6 +1,6 @@
 import * as React from "react";
 import { toast } from "sonner";
-import { extractJsonItemsFromStream } from "@web/src/lib/sse/extractJsonItemsFromStream";
+import { extractJsonItemsFromStream } from "@web/src/lib/sse/contentExtractor";
 import {
   DEFAULT_AGENT_PROFILE,
   GENERATED_BATCH_SIZE,
@@ -27,7 +27,9 @@ type UseDashboardContentGenerationParams = {
   activeCategory: DashboardContentCategory | null;
   hasSelectedFilter: boolean;
   generatedContentItems: GeneratedContentState;
-  setGeneratedContentItems: React.Dispatch<React.SetStateAction<GeneratedContentState>>;
+  setGeneratedContentItems: React.Dispatch<
+    React.SetStateAction<GeneratedContentState>
+  >;
   headerName?: string;
   location?: string;
 };
@@ -67,7 +69,10 @@ export function useDashboardContentGeneration({
   }, [activeCategory, contentType]);
 
   const generateContent = React.useCallback(
-    async (category: DashboardContentCategory, controller?: AbortController) => {
+    async (
+      category: DashboardContentCategory,
+      controller?: AbortController
+    ) => {
       if (activeControllerRef.current) {
         activeControllerRef.current.abort();
       }
@@ -172,7 +177,10 @@ export function useDashboardContentGeneration({
                 ...prev,
                 [contentType]: {
                   ...prev[contentType],
-                  [category]: replaceStreamItemsWithDoneItems(currentItems, finalItems)
+                  [category]: replaceStreamItemsWithDoneItems(
+                    currentItems,
+                    finalItems
+                  )
                 }
               };
             });
@@ -244,7 +252,7 @@ export function useDashboardContentGeneration({
   }, [activeCategory, contentType, generateContent, hasSelectedFilter]);
 
   const activeGeneratedItems = activeCategory
-    ? generatedContentItems[contentType]?.[activeCategory] ?? []
+    ? (generatedContentItems[contentType]?.[activeCategory] ?? [])
     : [];
 
   const loadingCount = isGenerating
