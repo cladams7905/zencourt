@@ -2,27 +2,12 @@ import {
   CommunityDataProvider,
   getCommunityDataProvider
 } from "@web/src/server/services/communityData/config";
-import { generateText, type AIProviderName } from "@web/src/server/services/ai";
+import { generateTextForUseCase } from "@web/src/server/services/ai";
 import type { CityDescriptionCachePayload } from "../providers/google/cache";
-
-const CITY_DESCRIPTION_MODEL = "claude-haiku-4-5-20251001";
-const CITY_DESCRIPTION_MAX_TOKENS = 160;
-const CITY_DESCRIPTION_PROVIDER_ENV = "CITY_DESCRIPTION_PROVIDER";
 
 type LoggerLike = {
   warn: (...args: unknown[]) => void;
 };
-
-function resolveCityDescriptionProvider(): AIProviderName {
-  const override = process.env[CITY_DESCRIPTION_PROVIDER_ENV];
-  if (override === "anthropic" || override === "perplexity") {
-    return override;
-  }
-
-  return getCommunityDataProvider() === CommunityDataProvider.Perplexity
-    ? "perplexity"
-    : "anthropic";
-}
 
 function buildCityDescriptionPrompt(city: string, state: string): string {
   return `Write a 2-3 sentence high-quality description summarizing the city of ${city}, ${state}. This should include the general vibe of the area, places of interest, and its proximity to other things in the geographic region. Keep it brief but informative. Output only the sentences.`;
@@ -76,12 +61,8 @@ export async function fetchCityDescription(
   state: string,
   logger: LoggerLike
 ): Promise<CityDescriptionCachePayload | null> {
-  const provider = resolveCityDescriptionProvider();
-
-  const result = await generateText({
-    provider,
-    model: provider === "anthropic" ? CITY_DESCRIPTION_MODEL : undefined,
-    maxTokens: CITY_DESCRIPTION_MAX_TOKENS,
+  const result = await generateTextForUseCase({
+    useCase: "city_description",
     system:
       "You write concise, factual city descriptions for real estate marketing prompts.",
     messages: [
@@ -93,7 +74,17 @@ export async function fetchCityDescription(
   });
 
   if (!result) {
-    logger.warn({ city, state, provider }, "City description request failed");
+    logger.warn(
+      {
+        city,
+        state,
+        provider:
+          getCommunityDataProvider() === CommunityDataProvider.Perplexity
+            ? "perplexity"
+            : "anthropic"
+      },
+      "City description request failed"
+    );
     return null;
   }
 

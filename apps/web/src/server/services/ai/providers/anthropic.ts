@@ -2,6 +2,10 @@ import {
   createChildLogger,
   logger as baseLogger
 } from "@web/src/lib/core/logging/logger";
+import {
+  DEFAULT_AI_TEXT_MAX_TOKENS,
+  DEFAULT_ANTHROPIC_MODEL
+} from "../config";
 import type {
   AIStructuredStreamRequest,
   AIStructuredStreamStrategy,
@@ -16,7 +20,6 @@ const logger = createChildLogger(baseLogger, {
 
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
 const ANTHROPIC_VERSION = "2023-06-01";
-const DEFAULT_TEXT_MODEL = "claude-haiku-4-5-20251001";
 
 function getApiKey(): string | null {
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -50,8 +53,8 @@ export const anthropicTextStrategy: AITextStrategy = {
         "anthropic-version": ANTHROPIC_VERSION
       },
       body: JSON.stringify({
-        model: request.model ?? DEFAULT_TEXT_MODEL,
-        max_tokens: request.maxTokens ?? 512,
+        model: request.model ?? DEFAULT_ANTHROPIC_MODEL,
+        max_tokens: request.maxTokens ?? DEFAULT_AI_TEXT_MAX_TOKENS,
         ...(request.system ? { system: request.system } : {}),
         messages: request.messages
       })
