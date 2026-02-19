@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createHash } from "node:crypto";
 import {
   ApiError,
   requireAuthenticatedUser,
@@ -10,8 +9,21 @@ import type {
   ListingContentSubcategory,
   ListingPropertyDetails
 } from "@shared/types/models";
-import { LISTING_CONTENT_SUBCATEGORIES } from "@shared/types/models";
-import { Redis } from "@upstash/redis";
+import { getSharedRedisClient } from "@web/src/lib/cache/redisClient";
+import {
+  encodeSseEvent,
+  makeSseStreamHeaders
+} from "@web/src/lib/sse/sseEncoder";
+import { consumeSseStream } from "@web/src/lib/sse/sseStreamReader";
+import {
+  LISTING_CONTENT_CACHE_TTL_SECONDS,
+  parseListingAddressParts,
+  isListingSubcategory,
+  isListingMediaType,
+  buildListingPropertyFingerprint,
+  buildListingContentCacheKey,
+  type ListingMediaType
+} from "@web/src/lib/domain/listing";
 
 type ListingGeneratedItem = {
   hook: string;
@@ -27,8 +39,6 @@ type ListingGeneratedItem = {
   caption: string;
 };
 
-type ListingMediaType = "video" | "image";
-
 type ContentStreamEvent =
   | { type: "delta"; text: string }
   | {
@@ -41,98 +51,6 @@ type ContentStreamEvent =
 const logger = createChildLogger(baseLogger, {
   module: "listing-content-generate-route"
 });
-const LISTING_CONTENT_CACHE_PREFIX = "listing-content";
-const LISTING_CONTENT_CACHE_TTL_SECONDS = 60 * 60 * 12;
-let redisClient: Redis | null | undefined;
-
-function parseListingAddressParts(address?: string | null): {
-  city: string;
-  state: string;
-  zipCode: string;
-} {
-  const normalized = (address ?? "").trim();
-  if (!normalized) {
-    return { city: "", state: "", zipCode: "" };
-  }
-
-  const zipMatch = normalized.match(/\b\d{5}(?:-\d{4})?\b/);
-  const zipCode = zipMatch?.[0] ?? "";
-
-  const segments = normalized
-    .split(",")
-    .map((part) => part.trim())
-    .filter(Boolean);
-  const city = segments.length >= 2 ? segments[segments.length - 2] : "";
-
-  let state = "";
-  if (segments.length > 0) {
-    const tail = segments[segments.length - 1];
-    const stateMatch = tail.match(/\b[A-Z]{2}\b/);
-    state = stateMatch?.[0] ?? "";
-  }
-
-  return { city, state, zipCode };
-}
-
-function isListingSubcategory(value: string): value is ListingContentSubcategory {
-  return (
-    LISTING_CONTENT_SUBCATEGORIES as readonly string[]
-  ).includes(value);
-}
-
-function isListingMediaType(value: string): value is ListingMediaType {
-  return value === "video" || value === "image";
-}
-
-function getRedisClient(): Redis | null {
-  if (redisClient !== undefined) {
-    return redisClient;
-  }
-
-  const url = process.env.KV_REST_API_URL;
-  const token = process.env.KV_REST_API_TOKEN;
-  if (!url || !token) {
-    redisClient = null;
-    return redisClient;
-  }
-
-  redisClient = new Redis({ url, token });
-  return redisClient;
-}
-
-function buildListingPropertyFingerprint(
-  listingPropertyDetails?: ListingPropertyDetails | null
-): string {
-  return createHash("sha256")
-    .update(JSON.stringify(listingPropertyDetails ?? {}))
-    .digest("hex")
-    .slice(0, 16);
-}
-
-function buildListingContentCacheKey(params: {
-  userId: string;
-  listingId: string;
-  subcategory: ListingContentSubcategory;
-  mediaType: ListingMediaType;
-  focus: string;
-  notes: string;
-  generation_nonce: string;
-  propertyFingerprint: string;
-}): string {
-  const focusHash = createHash("sha1")
-    .update(`${params.focus}::${params.notes}::${params.generation_nonce}`)
-    .digest("hex")
-    .slice(0, 10);
-  return [
-    LISTING_CONTENT_CACHE_PREFIX,
-    params.userId,
-    params.listingId,
-    params.subcategory,
-    params.mediaType,
-    params.propertyFingerprint,
-    focusHash
-  ].join(":");
-}
 
 export async function POST(
   request: NextRequest,
@@ -209,7 +127,7 @@ export async function POST(
       propertyFingerprint
     });
 
-    const redis = getRedisClient();
+    const redis = getSharedRedisClient();
     let cachedItems: ListingGeneratedItem[] | null = null;
     if (redis) {
       try {
@@ -234,17 +152,13 @@ export async function POST(
   }
 
   // --- SSE streaming response ---
-  const encoder = new TextEncoder();
-  const sseEvent = (event: ContentStreamEvent) =>
-    encoder.encode(`data: ${JSON.stringify(event)}\n\n`);
-
   const stream = new ReadableStream({
     async start(controller) {
       try {
         // Redis / Upstash cache hit.
         if (generatedItems) {
           controller.enqueue(
-            sseEvent({
+            encodeSseEvent({
               type: "done",
               items: generatedItems,
               meta: { model: "cache", batch_size: generatedItems.length }
@@ -296,15 +210,14 @@ export async function POST(
           const message =
             (errorPayload as { message?: string }).message ||
             "Failed to generate listing content";
-          controller.enqueue(sseEvent({ type: "error", message }));
+          controller.enqueue(encodeSseEvent({ type: "error", message }));
           controller.close();
           return;
         }
 
-        const reader = upstreamResponse.body?.getReader();
-        if (!reader) {
+        if (!upstreamResponse.body) {
           controller.enqueue(
-            sseEvent({
+            encodeSseEvent({
               type: "error",
               message: "Streaming response not available from upstream"
             })
@@ -313,50 +226,34 @@ export async function POST(
           return;
         }
 
-        const decoder = new TextDecoder();
-        let buffer = "";
+        // eslint-disable-next-line prefer-const
         let upstreamDoneItems: ListingGeneratedItem[] | null = null;
+        let upstreamErrored = false;
 
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-          const parts = buffer.split("\n\n");
-          buffer = parts.pop() ?? "";
-
-          for (const part of parts) {
-            const line = part
-              .split("\n")
-              .find((entry) => entry.startsWith("data:"));
-            if (!line) continue;
-
-            const payload = line.replace(/^data:\s*/, "");
-            if (!payload) continue;
-
-            let event: ContentStreamEvent;
-            try {
-              event = JSON.parse(payload) as ContentStreamEvent;
-            } catch {
-              continue;
-            }
-
+        await consumeSseStream<ContentStreamEvent>(
+          upstreamResponse.body,
+          (event) => {
             if (event.type === "delta") {
               // Proxy delta to client for incremental JSON parsing.
-              controller.enqueue(sseEvent(event));
+              controller.enqueue(encodeSseEvent(event));
             } else if (event.type === "error") {
-              controller.enqueue(sseEvent(event));
-              controller.close();
-              return;
+              controller.enqueue(encodeSseEvent(event));
+              upstreamErrored = true;
             } else if (event.type === "done") {
               upstreamDoneItems = event.items;
             }
           }
+        );
+
+        if (upstreamErrored) {
+          controller.close();
+          return;
         }
 
-        if (!upstreamDoneItems || upstreamDoneItems.length === 0) {
+        const doneItems = upstreamDoneItems as ListingGeneratedItem[] | null;
+        if (!doneItems || doneItems.length === 0) {
           controller.enqueue(
-            sseEvent({
+            encodeSseEvent({
               type: "error",
               message:
                 "Listing content generation did not return completed items"
@@ -367,10 +264,10 @@ export async function POST(
         }
 
         // Cache in Redis.
-        const redis = getRedisClient();
+        const redis = getSharedRedisClient();
         if (redis) {
           try {
-            await redis.set(cacheKey, upstreamDoneItems, {
+            await redis.set(cacheKey, doneItems, {
               ex: LISTING_CONTENT_CACHE_TTL_SECONDS
             });
           } catch (error) {
@@ -383,12 +280,12 @@ export async function POST(
 
         // Send final done event to client.
         controller.enqueue(
-          sseEvent({
+          encodeSseEvent({
             type: "done",
-            items: upstreamDoneItems,
+            items: doneItems,
             meta: {
               model: "generated",
-              batch_size: upstreamDoneItems.length
+              batch_size: doneItems.length
             }
           })
         );
@@ -400,7 +297,7 @@ export async function POST(
             : "Failed to generate listing content";
         logger.error({ error }, "Listing content stream error");
         try {
-          controller.enqueue(sseEvent({ type: "error", message }));
+          controller.enqueue(encodeSseEvent({ type: "error", message }));
         } catch {
           // Controller may already be closed.
         }
@@ -409,11 +306,5 @@ export async function POST(
     }
   });
 
-  return new Response(stream, {
-    headers: {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      Connection: "keep-alive"
-    }
-  });
+  return new Response(stream, { headers: makeSseStreamHeaders() });
 }

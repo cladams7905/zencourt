@@ -1,4 +1,4 @@
-import { extractJsonItemsFromStream } from "@web/src/lib/parsing/stream/extractJsonItemsFromStream";
+import { extractJsonItemsFromStream } from "@web/src/lib/sse/extractJsonItemsFromStream";
 
 describe("extractJsonItemsFromStream", () => {
   it("parses complete objects from a streamed array", () => {

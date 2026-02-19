@@ -13,3 +13,6 @@ export type {
   ListingImageRecordInput,
   ListingImageUpdate
 } from "./types";
+
+export { mapListingImageToDisplayItem } from "./mappers";
+export type { ListingImageDisplayItem } from "./mappers";

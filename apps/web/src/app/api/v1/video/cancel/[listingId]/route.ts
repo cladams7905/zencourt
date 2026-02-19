@@ -40,10 +40,7 @@ export async function POST(
 
   if (!listingId) {
     return NextResponse.json(
-      {
-        error: "Invalid request",
-        message: "listingId is required"
-      },
+      { success: false, error: "Invalid request", message: "listingId is required" },
       { status: 400 }
     );
   }
@@ -72,11 +69,10 @@ export async function POST(
     if (!response.ok) {
       const message =
         payload?.error || payload?.message || "Failed to cancel generation";
-
-      throw new ApiError(response.status, {
-        error: "Video server cancel error",
-        message
-      });
+      return NextResponse.json(
+        { success: false, error: "Video server cancel error", message },
+        { status: response.status }
+      );
     }
 
     logger.info(
@@ -95,24 +91,18 @@ export async function POST(
       canceledJobs: payload?.canceledJobs ?? 0
     });
   } catch (error) {
-    logger.error(
-      {
-        listingId,
-        error: error instanceof Error ? error.message : String(error)
-      },
-      "Failed to cancel generation"
-    );
-
     if (error instanceof ApiError) {
-      return NextResponse.json(error.body, { status: error.status });
+      return NextResponse.json(
+        { success: false, error: error.body.error, message: error.body.message },
+        { status: error.status }
+      );
     }
-
+    logger.error(
+      { err: error instanceof Error ? error.message : String(error) },
+      "Unexpected error canceling generation"
+    );
     return NextResponse.json(
-      {
-        error: "Internal server error",
-        message:
-          error instanceof Error ? error.message : "Unable to cancel generation"
-      },
+      { success: false, error: "InternalError", message: "Unable to cancel generation" },
       { status: 500 }
     );
   }

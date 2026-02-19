@@ -1,11 +1,12 @@
 import { redirect } from "next/navigation";
-import { getUser } from "@web/src/server/actions/db/users";
 import {
   getListingById,
   updateListing
 } from "@web/src/server/actions/db/listings";
+import { requireUserOrRedirect } from "@web/src/app/(dashboard)/_utils/requireUserOrRedirect";
 import { getOrCreateUserAdditional } from "@web/src/server/actions/db/userAdditional";
 import { ListingReviewView } from "@web/src/components/listings/review";
+import { redirectToListingStage } from "../_utils/redirectToListingStage";
 
 interface ListingReviewPageProps {
   params: Promise<{ listingId: string }>;
@@ -15,11 +16,7 @@ export default async function ListingReviewPage({
   params
 }: ListingReviewPageProps) {
   const { listingId } = await params;
-  const user = await getUser();
-
-  if (!user) {
-    redirect("/handler/sign-in");
-  }
+  const user = await requireUserOrRedirect();
 
   if (!listingId?.trim()) {
     redirect("/listings/sync");
@@ -30,17 +27,7 @@ export default async function ListingReviewPage({
     redirect("/listings/sync");
   }
 
-  if (listing.listingStage !== "review") {
-    switch (listing.listingStage) {
-      case "create":
-        redirect(`/listings/${listingId}/create`);
-      case "generate":
-        redirect(`/listings/${listingId}/generate`);
-      case "categorize":
-      default:
-        redirect(`/listings/${listingId}/categorize`);
-    }
-  }
+  redirectToListingStage(listingId, listing.listingStage, "review");
 
   const userAdditional = await getOrCreateUserAdditional(user.id);
 

@@ -35,12 +35,13 @@ jest.mock("@web/src/server/services/communityData/providers/google", () => ({
   getCityDescription: jest.fn()
 }));
 
+jest.mock("@web/src/server/services/communityData/providers/perplexity/cache", () => ({
+  getCachedPerplexityCategoryPayload: jest.fn()
+}));
+
 import {
   getCommunityDataByZip,
-  getCommunityDataByZipAndAudience,
-  getPerplexityCommunityDataByZipAndAudienceForCategories,
-  getPerplexityMonthlyEventsSectionByZip,
-  prefetchPerplexityCategoriesByZip
+  getCommunityDataByZipAndAudience
 } from "@web/src/server/services/communityData/service";
 
 describe("communityDataService routing", () => {
@@ -158,33 +159,5 @@ describe("communityDataService routing", () => {
       getCommunityDataByZipAndAudience("30301", "relocators")
     ).resolves.toBeNull();
     expect(mockGetPerplexityCommunityData).not.toHaveBeenCalled();
-  });
-
-  it("re-exports perplexity ops through communityDataService", async () => {
-    mockGetPerplexityByCategories.mockResolvedValueOnce({ zip_code: "11111" });
-    mockGetPerplexityMonthlyEvents.mockResolvedValueOnce({
-      key: "things_to_do_january",
-      value: "- Event"
-    });
-    mockPrefetchPerplexityCategories.mockResolvedValueOnce(undefined);
-
-    await expect(
-      getPerplexityCommunityDataByZipAndAudienceForCategories("11111", [
-        "dining"
-      ])
-    ).resolves.toEqual({ zip_code: "11111" });
-    await expect(
-      getPerplexityMonthlyEventsSectionByZip("11111")
-    ).resolves.toEqual({
-      key: "things_to_do_january",
-      value: "- Event"
-    });
-    await expect(
-      prefetchPerplexityCategoriesByZip("11111", ["dining"])
-    ).resolves.toBeUndefined();
-
-    expect(mockGetPerplexityByCategories).toHaveBeenCalled();
-    expect(mockGetPerplexityMonthlyEvents).toHaveBeenCalled();
-    expect(mockPrefetchPerplexityCategories).toHaveBeenCalled();
   });
 });

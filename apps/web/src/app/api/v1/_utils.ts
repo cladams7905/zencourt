@@ -2,6 +2,7 @@ import { db, listings } from "@db/client";
 import { stackServerApp } from "@web/src/lib/core/auth/stack/server";
 import type { CurrentServerUser } from "@stackframe/stack";
 import { eq } from "drizzle-orm";
+import { NextResponse } from "next/server";
 
 type Listing = typeof listings.$inferSelect;
 
@@ -62,4 +63,30 @@ export async function requireListingAccess(
   }
 
   return listing;
+}
+
+export function errorResponse(
+  status: number,
+  error: string,
+  message: string
+): NextResponse {
+  return NextResponse.json({ error, message }, { status });
+}
+
+export async function withApiErrorHandling<T>(
+  fn: () => Promise<NextResponse<T>>,
+  fallbackMessage = "An unexpected error occurred"
+): Promise<NextResponse> {
+  try {
+    return await fn();
+  } catch (error) {
+    if (error instanceof ApiError) {
+      return errorResponse(error.status, error.body.error, error.body.message);
+    }
+    return errorResponse(
+      500,
+      "Internal server error",
+      error instanceof Error ? error.message : fallbackMessage
+    );
+  }
 }

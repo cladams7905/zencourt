@@ -18,25 +18,21 @@ import {
   logger as baseLogger
 } from "@web/src/lib/core/logging/logger";
 import { db, eq, userAdditional } from "@db/client";
-import { Redis } from "@upstash/redis";
+import { getSharedRedisClient } from "@web/src/lib/cache/redisClient";
+import {
+  encodeSseEvent,
+  makeSseStreamHeaders
+} from "@web/src/lib/sse/sseEncoder";
 import { getMarketData } from "@web/src/server/services/marketData";
 import { parseMarketLocation } from "@web/src/lib/domain/location/marketLocation";
+import { getCommunityContentContext } from "@web/src/server/services/communityData/service";
 import {
-  getCityDescription,
-  getCommunityDataByZipAndAudience,
-  getPerplexityCommunityDataByZipAndAudienceForCategories,
-  getPerplexityMonthlyEventsSectionByZip,
-  prefetchPerplexityCategoriesByZip
-} from "@web/src/server/services/communityData/service";
-import { getCommunityDataProvider } from "@web/src/server/services/communityData/config";
-import {
-  AUDIENCE_SEGMENT_ALIASES,
-  NORMALIZED_AUDIENCE_SEGMENTS,
-  shouldIncludeServiceAreasInCache,
-  type AudienceSegment
-} from "@web/src/server/services/communityData/config";
-import { getCachedPerplexityCategoryPayload } from "@web/src/server/services/communityData/providers/perplexity/cache";
-import type { CategoryKey } from "@web/src/server/services/communityData/config";
+  RECENT_HOOKS_TTL_SECONDS,
+  RECENT_HOOKS_MAX,
+  getRecentHooksKey,
+  selectRotatedAudienceSegment,
+  type CommunityCategoryKey
+} from "@web/src/server/services/contentRotation";
 
 const logger = createChildLogger(baseLogger, {
   module: "content-generate-route"
@@ -44,10 +40,7 @@ const logger = createChildLogger(baseLogger, {
 
 const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
 const CLAUDE_MODEL = "claude-haiku-4-5-20251001";
-const RECENT_HOOKS_TTL_SECONDS = 60 * 60 * 24 * 7;
-const RECENT_HOOKS_MAX = 50;
 const DEFAULT_TONE_LEVEL = 3;
-const AUDIENCE_ROTATION_PREFIX = "content:audience-rotation";
 
 const TONE_DESCRIPTIONS: Record<number, string> = {
   1: "Very informal, uses texting lingo, and uses lots of exclamation points",
@@ -161,265 +154,6 @@ type StreamEvent =
     }
   | { type: "error"; message: string };
 
-let redisClient: Redis | null | undefined;
-
-function getRedisClient(): Redis | null {
-  if (redisClient !== undefined) {
-    return redisClient;
-  }
-
-  const url = process.env.KV_REST_API_URL;
-  const token = process.env.KV_REST_API_TOKEN;
-
-  if (!url || !token) {
-    logger.warn(
-      { hasUrl: Boolean(url), hasToken: Boolean(token) },
-      "Upstash Redis env vars missing; cache disabled"
-    );
-    redisClient = null;
-    return redisClient;
-  }
-
-  redisClient = new Redis({ url, token });
-  logger.info("Upstash Redis client initialized");
-  return redisClient;
-}
-
-async function selectRotatedAudienceSegment(
-  redis: Redis | null,
-  userId: string,
-  category: string,
-  segments: string[]
-): Promise<string[]> {
-  const normalized = segments.filter(Boolean);
-  if (normalized.length <= 1 || !redis) {
-    return normalized.slice(0, 1);
-  }
-
-  const key = `${AUDIENCE_ROTATION_PREFIX}:${userId}:${category}`;
-  try {
-    const last = await redis.get<string>(key);
-    const lastIndex = last ? normalized.indexOf(last) : -1;
-    const next =
-      lastIndex >= 0
-        ? normalized[(lastIndex + 1) % normalized.length]
-        : normalized[0];
-    await redis.set(key, next);
-    return [next];
-  } catch {
-    return normalized.slice(0, 1);
-  }
-}
-
-function getRecentHooksKey(userId: string, category: string): string {
-  return `recent_hooks:${userId}:${category}`;
-}
-
-const COMMUNITY_CATEGORY_KEYS = [
-  "neighborhoods_list",
-  "dining_list",
-  "coffee_brunch_list",
-  "nature_outdoors_list",
-  "entertainment_list",
-  "attractions_list",
-  "sports_rec_list",
-  "arts_culture_list",
-  "nightlife_social_list",
-  "fitness_wellness_list",
-  "shopping_list",
-  "education_list",
-  "community_events_list"
-];
-
-type CommunityCategoryKey = string;
-
-const COMMUNITY_CATEGORY_KEY_TO_CATEGORY: Record<
-  CommunityCategoryKey,
-  CategoryKey
-> = {
-  neighborhoods_list: "neighborhoods",
-  dining_list: "dining",
-  coffee_brunch_list: "coffee_brunch",
-  nature_outdoors_list: "nature_outdoors",
-  entertainment_list: "entertainment",
-  attractions_list: "attractions",
-  sports_rec_list: "sports_rec",
-  arts_culture_list: "arts_culture",
-  nightlife_social_list: "nightlife_social",
-  fitness_wellness_list: "fitness_wellness",
-  shopping_list: "shopping",
-  education_list: "education",
-  community_events_list: "community_events"
-};
-
-function getCommunityCategoryCycleKey(userId: string): string {
-  return `community_category_cycle:${userId}`;
-}
-
-function shuffleArray<T>(values: readonly T[]): T[] {
-  const result = [...values];
-  for (let i = result.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [result[i], result[j]] = [result[j], result[i]];
-  }
-  return result;
-}
-
-type CommunityCategoryCycleState = {
-  remaining: CommunityCategoryKey[];
-  cyclesCompleted: number;
-};
-
-function normalizeAudienceSegment(
-  segment?: string | null
-): AudienceSegment | undefined {
-  if (!segment) {
-    return undefined;
-  }
-  const normalized = AUDIENCE_SEGMENT_ALIASES[segment] ?? segment;
-  return NORMALIZED_AUDIENCE_SEGMENTS.has(normalized as AudienceSegment)
-    ? (normalized as AudienceSegment)
-    : undefined;
-}
-
-async function selectCommunityCategories(
-  redis: Redis | null,
-  userId: string,
-  count: number,
-  availableKeys: CommunityCategoryKey[]
-): Promise<{ selected: CommunityCategoryKey[]; shouldRefresh: boolean }> {
-  if (availableKeys.length === 0) {
-    return { selected: [], shouldRefresh: false };
-  }
-  if (!redis) {
-    return {
-      selected: shuffleArray(availableKeys).slice(0, count),
-      shouldRefresh: false
-    };
-  }
-
-  const key = getCommunityCategoryCycleKey(userId);
-  let remaining: CommunityCategoryKey[] | null = null;
-  let cyclesCompleted = 0;
-
-  try {
-    const cached = await redis.get<
-      CommunityCategoryCycleState | CommunityCategoryKey[]
-    >(key);
-    if (Array.isArray(cached)) {
-      remaining = cached.filter((item) => availableKeys.includes(item));
-    } else if (cached && Array.isArray(cached.remaining)) {
-      remaining = cached.remaining.filter((item) =>
-        availableKeys.includes(item)
-      );
-      cyclesCompleted = cached.cyclesCompleted ?? 0;
-    }
-  } catch (error) {
-    logger.warn(
-      { userId, error: error instanceof Error ? error.message : String(error) },
-      "Failed to read community category cycle cache"
-    );
-  }
-
-  if (!remaining || remaining.length === 0) {
-    cyclesCompleted += 1;
-    remaining = shuffleArray(availableKeys);
-  }
-
-  let selected: CommunityCategoryKey[] = [];
-  if (remaining.length >= count) {
-    selected = remaining.slice(0, count);
-    remaining = remaining.slice(count);
-  } else {
-    const carry = [...remaining];
-    let refill = shuffleArray(availableKeys);
-    if (carry.length === 1 && refill.length > 1 && refill[0] === carry[0]) {
-      refill = refill.slice(1).concat(refill[0]);
-    }
-    const need = count - carry.length;
-    selected = carry.concat(refill.slice(0, need));
-    remaining = refill.slice(need);
-  }
-
-  try {
-    const shouldRefresh = cyclesCompleted >= 2;
-    const nextState: CommunityCategoryCycleState = {
-      remaining,
-      cyclesCompleted: shouldRefresh ? 0 : cyclesCompleted
-    };
-    await redis.set(key, nextState);
-    return { selected, shouldRefresh };
-  } catch (error) {
-    logger.warn(
-      { userId, error: error instanceof Error ? error.message : String(error) },
-      "Failed to write community category cycle cache"
-    );
-  }
-
-  return { selected, shouldRefresh: false };
-}
-
-async function peekNextCommunityCategories(
-  redis: Redis | null,
-  userId: string,
-  count: number
-): Promise<CommunityCategoryKey[]> {
-  if (!redis) {
-    return [];
-  }
-  try {
-    const cached = await redis.get<
-      CommunityCategoryCycleState | CommunityCategoryKey[]
-    >(getCommunityCategoryCycleKey(userId));
-    if (Array.isArray(cached)) {
-      return cached.slice(0, count);
-    }
-    if (cached && Array.isArray(cached.remaining)) {
-      return cached.remaining.slice(0, count);
-    }
-  } catch (error) {
-    logger.warn(
-      { userId, error: error instanceof Error ? error.message : String(error) },
-      "Failed to read community category cycle cache for prefetch"
-    );
-  }
-  return [];
-}
-
-async function buildPerplexityAvoidRecommendations(params: {
-  zipCode: string;
-  city?: string | null;
-  state?: string | null;
-  audience?: string | null;
-  serviceAreas?: string[] | null;
-  categories: CategoryKey[];
-}): Promise<Record<CategoryKey, string[]>> {
-  const avoidMap = new Map<CategoryKey, string[]>();
-  const normalizedAudience = normalizeAudienceSegment(params.audience);
-  await Promise.all(
-    params.categories.map(async (category) => {
-      const cached = await getCachedPerplexityCategoryPayload({
-        zipCode: params.zipCode,
-        category,
-        audience: normalizedAudience,
-        serviceAreas: shouldIncludeServiceAreasInCache(category)
-          ? params.serviceAreas
-          : null,
-        city: params.city ?? undefined,
-        state: params.state ?? undefined
-      });
-      const names = (cached?.items ?? [])
-        .map((item) => item.name?.trim())
-        .filter((name): name is string => Boolean(name));
-      if (names.length > 0) {
-        avoidMap.set(category, Array.from(new Set(names)));
-      }
-    })
-  );
-
-  return Object.fromEntries(avoidMap) as Record<CategoryKey, string[]>;
-}
-
 type UserAdditionalSnapshot = {
   targetAudiences: string[] | null;
   location: string | null;
@@ -507,10 +241,6 @@ function parseJsonArray(text: string) {
   }
 }
 
-function buildSseMessage(event: StreamEvent): Uint8Array {
-  const payload = `data: ${JSON.stringify(event)}\n\n`;
-  return new TextEncoder().encode(payload);
-}
 
 function extractTextDelta(payload: {
   type?: string;
@@ -601,7 +331,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const redis = getRedisClient();
+    const redis = getSharedRedisClient();
     const userAdditionalSnapshot = await getUserAdditionalSnapshot(user.id);
     const allAudienceSegments = parsePrimaryAudienceSegments(
       userAdditionalSnapshot.targetAudiences
@@ -623,6 +353,7 @@ export async function POST(request: NextRequest) {
     let communityData = null;
     let cityDescription = null;
     let communityCategoryKeys: CommunityCategoryKey[] | null = null;
+    let seasonalExtraSections: Record<string, string> | null = null;
 
     if (body.category === "market_insights") {
       if (!marketLocation) {
@@ -641,126 +372,23 @@ export async function POST(request: NextRequest) {
         });
       }
     }
-    let seasonalExtraSections: Record<string, string> | null = null;
-
-    if (body.category === "seasonal" && marketLocation) {
-      const seasonalSection = await getPerplexityMonthlyEventsSectionByZip(
-        marketLocation.zip_code,
-        activeAudience,
-        marketLocation.city,
-        marketLocation.state
-      );
-      if (seasonalSection?.key && seasonalSection.value) {
-        seasonalExtraSections = {
-          [seasonalSection.key]: seasonalSection.value
-        };
-      }
-    }
-
-    if (body.category === "community" && marketLocation) {
-      const provider = getCommunityDataProvider();
-      if (provider === "perplexity") {
-        const eventsSection = await getPerplexityMonthlyEventsSectionByZip(
-          marketLocation.zip_code,
-          activeAudience,
-          marketLocation.city,
-          marketLocation.state
-        );
-        const availableKeys = COMMUNITY_CATEGORY_KEYS.concat(
-          eventsSection ? [eventsSection.key] : []
-        );
-        const selection = await selectCommunityCategories(
-          redis,
-          user.id,
-          2,
-          availableKeys
-        );
-        communityCategoryKeys = selection.selected;
-
-        const selectedCategoryKeys = selection.selected
-          .map((key) => COMMUNITY_CATEGORY_KEY_TO_CATEGORY[key])
-          .filter(Boolean) as CategoryKey[];
-        const avoidRecommendations = selection.shouldRefresh
-          ? await buildPerplexityAvoidRecommendations({
-              zipCode: marketLocation.zip_code,
-              city: marketLocation.city,
-              state: marketLocation.state,
-              audience: activeAudience,
-              serviceAreas: userAdditionalSnapshot.serviceAreas,
-              categories: selectedCategoryKeys
-            })
-          : null;
-
-        communityData =
-          await getPerplexityCommunityDataByZipAndAudienceForCategories(
-            marketLocation.zip_code,
-            selectedCategoryKeys,
-            activeAudience,
-            userAdditionalSnapshot.serviceAreas,
-            marketLocation.city,
-            marketLocation.state,
-            eventsSection,
-            {
-              forceRefresh: selection.shouldRefresh,
-              avoidRecommendations
-            }
-          );
-
-        const nextKeys = await peekNextCommunityCategories(redis, user.id, 2);
-        const nextCategoryKeys = nextKeys
-          .map((key) => COMMUNITY_CATEGORY_KEY_TO_CATEGORY[key])
-          .filter(Boolean) as CategoryKey[];
-        if (nextCategoryKeys.length > 0) {
-          void prefetchPerplexityCategoriesByZip(
-            marketLocation.zip_code,
-            nextCategoryKeys,
-            activeAudience,
-            userAdditionalSnapshot.serviceAreas,
-            marketLocation.city,
-            marketLocation.state
-          );
-        }
-      } else {
-        communityData = await getCommunityDataByZipAndAudience(
-          marketLocation.zip_code,
-          activeAudience,
-          userAdditionalSnapshot.serviceAreas,
-          marketLocation.city,
-          marketLocation.state
-        );
-      }
-    }
-
-    if (body.category === "community" && communityData) {
-      const seasonalSections = communityData.seasonal_geo_sections ?? {};
-      const seasonalKeys = Object.entries(seasonalSections)
-        .filter(([, value]) => {
-          if (!value) {
-            return false;
-          }
-          const normalized = value.trim().toLowerCase();
-          return normalized !== "" && !normalized.includes("(none found)");
-        })
-        .map(([key]) => key);
-      const availableKeys = COMMUNITY_CATEGORY_KEYS.filter((key) => {
-        const value = (communityData as Record<string, unknown>)[key];
-        if (typeof value !== "string") {
-          return false;
-        }
-        const normalized = value.trim().toLowerCase();
-        return normalized !== "" && !normalized.includes("(none found)");
-      }).concat(seasonalKeys);
-      const selectedKeys =
-        communityCategoryKeys ??
-        (await selectCommunityCategories(redis, user.id, 2, availableKeys))
-          .selected;
-      communityCategoryKeys = selectedKeys;
-    }
-
-    if (body.category === "community" || body.category === "seasonal") {
-      const city = marketLocation?.city ?? body.agent_profile.city;
-      const state = marketLocation?.state ?? body.agent_profile.state;
-      cityDescription = await getCityDescription(city, state);
+    if ((body.category === "community" || body.category === "seasonal") && marketLocation) {
+      const communityContentContext = await getCommunityContentContext({
+        redis,
+        userId: user.id,
+        category: body.category,
+        zipCode: marketLocation.zip_code,
+        audienceSegment: activeAudience,
+        serviceAreas: userAdditionalSnapshot.serviceAreas,
+        preferredCity: marketLocation.city,
+        preferredState: marketLocation.state
+      });
+      communityData = communityContentContext.communityData;
+      cityDescription = communityContentContext.cityDescription;
+      communityCategoryKeys = communityContentContext.communityCategoryKeys;
+      seasonalExtraSections = communityContentContext.seasonalExtraSections;
+    } else if (body.category === "community" || body.category === "seasonal") {
+      cityDescription = null;
     }
 
     // Enhance agent profile with user's data from database
@@ -904,7 +532,7 @@ export async function POST(request: NextRequest) {
               if (deltaText) {
                 fullText += deltaText;
                 controller.enqueue(
-                  buildSseMessage({ type: "delta", text: deltaText })
+                  encodeSseEvent({ type: "delta", text: deltaText })
                 );
               }
             }
@@ -923,7 +551,7 @@ export async function POST(request: NextRequest) {
               "Failed to parse Claude response"
             );
             controller.enqueue(
-              buildSseMessage({
+              encodeSseEvent({
                 type: "error",
                 message: "Claude response could not be parsed as JSON"
               })
@@ -950,7 +578,7 @@ export async function POST(request: NextRequest) {
           }
 
           controller.enqueue(
-            buildSseMessage({
+            encodeSseEvent({
               type: "done",
               items: parsed as unknown[],
               meta: {
@@ -963,7 +591,7 @@ export async function POST(request: NextRequest) {
         } catch (error) {
           logger.error({ error }, "Streaming error");
           controller.enqueue(
-            buildSseMessage({
+            encodeSseEvent({
               type: "error",
               message: "Failed to stream response"
             })
@@ -973,13 +601,7 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    return new NextResponse(stream, {
-      headers: {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        Connection: "keep-alive"
-      }
-    });
+    return new NextResponse(stream, { headers: makeSseStreamHeaders() });
   } catch (error) {
     if (error instanceof ApiError) {
       return NextResponse.json(error.body, { status: error.status });

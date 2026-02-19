@@ -281,6 +281,7 @@ Web app has a Jest configuration with per-module coverage enforcement via `apps/
 
 - **Coverage thresholds:** 80% statements/lines/functions, 70% branches — applied to each module prefix individually (not just the global total)
 - **Covered modules:** every subfolder under `src/components/` and `src/server/services/` (discovered dynamically), plus `src/lib/` and `src/server/actions/` — adding a new service folder automatically enrolls it in coverage checks
+- **Maintenance rule:** when adding new unit-tested modules (especially after moving files between `src/server/services` and `src/lib`), update `apps/web/scripts/check-coverage.mjs` module prefixes if needed so coverage checks keep enforcing the new location.
 - Run: `npm run test:coverage --workspace=@zencourt/web`
 
 ## Code Change Philosophy
