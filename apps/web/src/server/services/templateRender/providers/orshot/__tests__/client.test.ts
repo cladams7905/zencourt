@@ -1,6 +1,10 @@
 import { createTemplateRenderer } from "../client";
 
 describe("templateRender/providers/orshot/client", () => {
+  afterEach(() => {
+    delete process.env.ORSHOT_API_KEY;
+  });
+
   it("throws when API key is missing", async () => {
     const render = createTemplateRenderer({
       apiKey: " ",
@@ -67,5 +71,22 @@ describe("templateRender/providers/orshot/client", () => {
     await expect(
       render({ templateId: "t4", modifications: {} })
     ).rejects.toThrow("Orshot render returned an empty image response");
+  });
+
+  it("uses env api key fallback and preserves data url responses", async () => {
+    process.env.ORSHOT_API_KEY = "env-key";
+    const renderFromTemplate = jest
+      .fn()
+      .mockResolvedValue("  data:image/png;base64,xyz  ");
+    const createClient = jest.fn(() => ({ renderFromTemplate }));
+    const render = createTemplateRenderer({
+      createClient: createClient as never
+    });
+
+    await expect(
+      render({ templateId: "template-env", modifications: {} })
+    ).resolves.toBe("data:image/png;base64,xyz");
+
+    expect(createClient).toHaveBeenCalledWith("env-key");
   });
 });

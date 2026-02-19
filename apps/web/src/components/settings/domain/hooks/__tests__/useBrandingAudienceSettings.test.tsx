@@ -106,4 +106,21 @@ describe("useBrandingAudienceSettings", () => {
     expect(mockToastError).toHaveBeenCalledWith("boom");
     expect(result.current.isLoadingAudiences).toBe(false);
   });
+
+  it("uses trimmed description when server does not return audienceDescription", async () => {
+    mockUpdateTargetAudiences.mockResolvedValue({});
+
+    const { result } = renderHook(() => useBrandingAudienceSettings(baseArgs));
+
+    act(() => {
+      result.current.setAudienceDescription("  Keep this  ");
+    });
+
+    await act(async () => {
+      await result.current.handleSaveTargetAudiences();
+    });
+
+    expect(result.current.audienceDescription).toBe("Keep this");
+    expect(result.current.isTargetAudiencesDirty).toBe(false);
+  });
 });

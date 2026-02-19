@@ -96,4 +96,78 @@ describe("createVideoThumbnailBlob", () => {
     expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:video");
     expect(videoEl!.remove).toHaveBeenCalled();
   });
+
+  it("returns null when canvas context is unavailable", async () => {
+    let videoEl: {
+      duration?: number;
+      videoWidth?: number;
+      videoHeight?: number;
+      onloadedmetadata?: () => void;
+      onseeked?: () => void;
+      onerror?: () => void;
+      remove: jest.Mock;
+      currentTime?: number;
+    };
+
+    const canvasEl = {
+      width: 0,
+      height: 0,
+      getContext: () => null,
+      toBlob: jest.fn()
+    };
+
+    document.createElement = jest.fn((tagName: string) => {
+      if (tagName === "video") {
+        videoEl = {
+          duration: 2,
+          videoWidth: 800,
+          videoHeight: 400,
+          remove: jest.fn()
+        };
+        return videoEl as unknown as HTMLVideoElement;
+      }
+      if (tagName === "canvas") {
+        return canvasEl as unknown as HTMLCanvasElement;
+      }
+      return originalCreateElement(tagName);
+    });
+
+    const promise = createVideoThumbnailBlob(
+      new File(["video"], "tour.mp4", { type: "video/mp4" })
+    );
+    videoEl!.onloadedmetadata?.();
+    videoEl!.onseeked?.();
+    const blob = await promise;
+
+    expect(blob).toBeNull();
+    expect(videoEl!.remove).toHaveBeenCalled();
+  });
+
+  it("returns null when generation times out", async () => {
+    jest.useFakeTimers();
+    let videoEl: {
+      onloadedmetadata?: () => void;
+      onseeked?: () => void;
+      onerror?: () => void;
+      remove: jest.Mock;
+    };
+
+    document.createElement = jest.fn((tagName: string) => {
+      if (tagName === "video") {
+        videoEl = { remove: jest.fn() };
+        return videoEl as unknown as HTMLVideoElement;
+      }
+      return originalCreateElement(tagName);
+    });
+
+    const promise = createVideoThumbnailBlob(
+      new File(["video"], "tour.mp4", { type: "video/mp4" })
+    );
+    jest.advanceTimersByTime(4001);
+    const blob = await promise;
+
+    expect(blob).toBeNull();
+    expect(videoEl!.remove).toHaveBeenCalled();
+    jest.useRealTimers();
+  });
 });

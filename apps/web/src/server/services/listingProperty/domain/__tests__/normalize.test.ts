@@ -108,4 +108,37 @@ describe("listingProperty/domain/normalize", () => {
       address: null
     });
   });
+
+  it("drops empty nested objects and preserves null example lists", () => {
+    const result = normalizeListingPropertyDetails(
+      {
+        interior_features: {
+          kitchen: {},
+          primary_suite: "invalid-shape"
+        },
+        exterior_features: {},
+        valuation_estimates: {
+          third_party_examples: null
+        },
+        sources: [{ site: null, notes: null, citation: null }]
+      },
+      undefined
+    );
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        address: null,
+        interior_features: {
+          kitchen: { features: undefined },
+          primary_suite: undefined
+        },
+        valuation_estimates: {
+          range_low_usd: undefined,
+          range_high_usd: undefined,
+          third_party_examples: null
+        },
+        sources: [{ site: null, notes: null, citation: null }]
+      })
+    );
+  });
 });

@@ -1,4 +1,3 @@
-import { AIVisionError } from "../errors";
 import { executeWithRetry } from "../retry";
 
 function createLogger() {
@@ -50,7 +49,7 @@ describe("vision/retry", () => {
         logger,
         sleep
       })
-    ).rejects.toMatchObject<AIVisionError>({ code: "RATE_LIMIT" });
+    ).rejects.toMatchObject({ code: "RATE_LIMIT" });
 
     expect(logger.warn).toHaveBeenCalled();
     expect(sleep).not.toHaveBeenCalled();
@@ -100,7 +99,7 @@ describe("vision/retry", () => {
         logger,
         sleep
       })
-    ).rejects.toMatchObject<AIVisionError>({ code: "API_ERROR" });
+    ).rejects.toMatchObject({ code: "API_ERROR" });
 
     expect(logger.error).toHaveBeenCalledTimes(1);
   });

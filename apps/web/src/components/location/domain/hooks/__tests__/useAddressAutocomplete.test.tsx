@@ -215,6 +215,43 @@ describe("useAddressAutocomplete", () => {
     );
   });
 
+  it("falls back to suggestion description when place details status is not OK", async () => {
+    const getDetails = jest.fn(
+      (
+        _request: unknown,
+        callback: (place: unknown, status: string) => void
+      ) => {
+        callback(null, "ERROR");
+      }
+    );
+
+    useGooglePlacesServices.mockReturnValue({
+      isScriptLoaded: true,
+      autocompleteService: { current: null },
+      placesService: { current: { getDetails } }
+    });
+
+    const onChange = jest.fn();
+    const { result } = renderHook(() =>
+      useAddressAutocomplete({
+        value: "",
+        onChange,
+        apiKey: "key",
+        country: "us"
+      })
+    );
+
+    await act(async () => {
+      result.current.handleSelectSuggestion({
+        place_id: "p1",
+        description: "Fallback Address"
+      } as never);
+    });
+
+    expect(onChange).toHaveBeenCalledWith("Fallback Address");
+    expect(result.current.shouldShowSuggestions).toBe(false);
+  });
+
   it("clears input and suggestion state", () => {
     useGooglePlacesServices.mockReturnValue({
       isScriptLoaded: true,

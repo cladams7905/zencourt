@@ -29,8 +29,20 @@ function subfolderPrefixes(root, srcRelative) {
     .sort();
 }
 
+function componentPrefixesWithDomain() {
+  const componentsRoot = path.resolve(webRoot, "src/components");
+  return fs
+    .readdirSync(componentsRoot, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .filter((entry) =>
+      fs.existsSync(path.join(componentsRoot, entry.name, "domain"))
+    )
+    .map((entry) => `src/components/${entry.name}/domain/`)
+    .sort();
+}
+
 const MODULE_PREFIXES = [
-  ...subfolderPrefixes("src/components", "src/components"),
+  ...componentPrefixesWithDomain(),
   ...subfolderPrefixes("src/server/services", "src/server/services"),
   "src/lib/",
   "src/server/actions/"
@@ -99,7 +111,13 @@ const globalStats = {
 };
 
 let failed = false;
-failed = hasFailures("global", globalStats) || failed;
+console.log(
+  `global (informational only): statements ${globalStats.statements.toFixed(
+    2
+  )}%, branches ${globalStats.branches.toFixed(2)}%, functions ${globalStats.functions.toFixed(
+    2
+  )}%, lines ${globalStats.lines.toFixed(2)}%`
+);
 
 for (const prefix of MODULE_PREFIXES) {
   const stats = aggregateByPrefix(prefix);

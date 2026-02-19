@@ -132,4 +132,49 @@ describe("videoStatus/service", () => {
     });
     expect(mockGetSignedDownloadUrlSafe).toHaveBeenCalledTimes(2);
   });
+
+  it("falls back to original urls and default fields when signing/settings are missing", async () => {
+    mockSelect
+      .mockReturnValueOnce(
+        makeLatestBatchBuilder([{ id: "batch-2", status: "failed", errorMessage: "oops" }])
+      )
+      .mockReturnValueOnce(
+        makeJobsBuilder([
+          {
+            id: "job-2",
+            status: "failed",
+            videoUrl: "raw-video",
+            thumbnailUrl: "raw-thumb",
+            metadata: null,
+            errorMessage: "failed",
+            generationSettings: null
+          }
+        ])
+      );
+
+    mockGetSignedDownloadUrlSafe.mockResolvedValueOnce(null).mockResolvedValueOnce(null);
+
+    const result = await getListingVideoStatus("listing-2");
+
+    expect(result).toEqual({
+      jobs: [
+        {
+          listingId: "listing-2",
+          jobId: "job-2",
+          status: "failed",
+          videoUrl: "raw-video",
+          thumbnailUrl: "raw-thumb",
+          generationModel: null,
+          orientation: null,
+          errorMessage: "failed",
+          roomId: undefined,
+          roomName: undefined,
+          category: null,
+          durationSeconds: null,
+          isPriorityCategory: false,
+          sortOrder: null
+        }
+      ]
+    });
+  });
 });

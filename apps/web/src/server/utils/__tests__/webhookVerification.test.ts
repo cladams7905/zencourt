@@ -1,8 +1,5 @@
 import { createHmac } from "crypto";
-import {
-  parseVerifiedWebhook,
-  WebhookVerificationError
-} from "@web/src/server/utils/webhookVerification";
+import { parseVerifiedWebhook } from "@web/src/server/utils/webhookVerification";
 
 type MockRequest = {
   headers: {
@@ -66,9 +63,7 @@ describe("webhookVerification", () => {
       body: "{}",
       timestamp: new Date().toISOString()
     });
-    await expect(parseVerifiedWebhook(withoutSignature as never)).rejects.toMatchObject<
-      WebhookVerificationError
-    >({
+    await expect(parseVerifiedWebhook(withoutSignature as never)).rejects.toMatchObject({
       message: "Missing webhook signature header",
       status: 401
     });
@@ -77,9 +72,7 @@ describe("webhookVerification", () => {
       body: "{}",
       signature: "abc"
     });
-    await expect(parseVerifiedWebhook(withoutTimestamp as never)).rejects.toMatchObject<
-      WebhookVerificationError
-    >({
+    await expect(parseVerifiedWebhook(withoutTimestamp as never)).rejects.toMatchObject({
       message: "Missing webhook timestamp header",
       status: 401
     });
@@ -97,9 +90,7 @@ describe("webhookVerification", () => {
       signature,
       timestamp: "not-a-date"
     });
-    await expect(parseVerifiedWebhook(invalidTimestamp as never)).rejects.toMatchObject<
-      WebhookVerificationError
-    >({
+    await expect(parseVerifiedWebhook(invalidTimestamp as never)).rejects.toMatchObject({
       message: "Invalid webhook timestamp format",
       status: 400
     });
@@ -126,7 +117,7 @@ describe("webhookVerification", () => {
     });
     await expect(
       parseVerifiedWebhook(missingSecretRequest as never)
-    ).rejects.toMatchObject<WebhookVerificationError>({
+    ).rejects.toMatchObject({
       message: "Webhook secret is not configured",
       status: 500
     });
@@ -155,9 +146,7 @@ describe("webhookVerification", () => {
       timestamp: new Date().toISOString()
     });
 
-    await expect(parseVerifiedWebhook(request as never)).rejects.toMatchObject<
-      WebhookVerificationError
-    >({
+    await expect(parseVerifiedWebhook(request as never)).rejects.toMatchObject({
       status: 400
     });
   });

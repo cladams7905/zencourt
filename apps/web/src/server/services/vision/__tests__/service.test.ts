@@ -1,4 +1,3 @@
-import { AIVisionError } from "../errors";
 import { VisionService } from "../service";
 
 function createLogger() {
@@ -53,9 +52,7 @@ describe("vision/service", () => {
       sleep: async () => undefined
     });
 
-    await expect(service.classifyRoom("https://example.com/image.jpg")).rejects.toMatchObject<
-      AIVisionError
-    >({
+    await expect(service.classifyRoom("https://example.com/image.jpg")).rejects.toMatchObject({
       code: "INVALID_RESPONSE"
     });
   });
@@ -95,7 +92,7 @@ describe("vision/service", () => {
       logger: createLogger()
     });
 
-    await expect(service.classifyRoomBatch([])).rejects.toMatchObject<AIVisionError>({
+    await expect(service.classifyRoomBatch([])).rejects.toMatchObject({
       code: "API_ERROR"
     });
   });
