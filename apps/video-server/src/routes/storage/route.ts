@@ -3,7 +3,6 @@ import multer from "multer";
 import { validateApiKey } from "@/middleware/auth";
 import { asyncHandler } from "@/middleware/errorHandler";
 import { storageService } from "@/services/storageService";
-import { sendOk } from "@/routes/_shared/http";
 import {
   parseBatchUploadRouteInput,
   parseDeleteRouteInput,
@@ -61,7 +60,7 @@ router.post(
   asyncHandler(async (req: Request, res: Response) => {
     const input = parseUploadRouteInput(req);
     const result = await handleSingleUpload(input, storageService);
-    sendOk(res, result);
+    res.status(200).json(result);
   })
 );
 
@@ -71,7 +70,7 @@ router.delete(
   asyncHandler(async (req: Request, res: Response) => {
     const { url } = parseDeleteRouteInput(req.body);
     const result = await handleDeleteByUrl(url, storageService);
-    sendOk(res, result);
+    res.status(200).json(result);
   })
 );
 
@@ -81,7 +80,7 @@ router.post(
   asyncHandler(async (req: Request, res: Response) => {
     const { key, expiresIn } = parseSignedUrlRouteInput(req.body);
     const result = await handleSignedUrlRequest(key, expiresIn, storageService);
-    sendOk(res, result);
+    res.status(200).json(result);
   })
 );
 
@@ -92,7 +91,7 @@ router.post(
   asyncHandler(async (req: Request, res: Response) => {
     const input = parseBatchUploadRouteInput(req);
     const result = await handleBatchUpload(input, storageService);
-    sendOk(res, result);
+    res.status(200).json(result);
   })
 );
 

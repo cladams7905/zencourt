@@ -12,7 +12,6 @@ import {
   cancelVideosByIds,
   cancelJobsByListingId
 } from "@/lib/utils/dbHelpers";
-import { sendAccepted, sendOk } from "@/routes/_shared/http";
 import {
   parseCancelVideoRequest,
   parseGenerateVideoRequest
@@ -39,7 +38,7 @@ router.post(
     const result = await handleGenerateVideo(requestData, {
       generationService: videoGenerationService
     });
-    sendAccepted(res, result.body);
+    res.status(202).json(result.body);
   })
 );
 
@@ -56,7 +55,7 @@ router.post(
       cancelVideosByIds,
       cancelJobsByListingId
     });
-    sendOk(res, result.body);
+    res.status(200).json(result.body);
   })
 );
 
