@@ -1,33 +1,47 @@
 /** @jest-environment node */
 
+class TestApiError extends Error {
+  status: number;
+  body: { message: string };
+  constructor(status: number, message: string) {
+    super(message);
+    this.status = status;
+    this.body = { message };
+  }
+}
+
 describe("video status route", () => {
-  async function loadRoute(options?: { statusError?: Error }) {
+  async function loadRoute(options?: {
+    statusError?: Error;
+    authError?: Error;
+    listingAccessError?: Error;
+  }) {
     jest.resetModules();
 
     const mockRequireAuthenticatedUser = jest
       .fn()
-      .mockResolvedValue({ id: "user-1" });
+      .mockImplementation(async () => {
+        if (options?.authError) {
+          throw options.authError;
+        }
+        return { id: "user-1" };
+      });
     const mockRequireListingAccess = jest
       .fn()
-      .mockResolvedValue({ id: "listing-1" });
+      .mockImplementation(async () => {
+        if (options?.listingAccessError) {
+          throw options.listingAccessError;
+        }
+        return { id: "listing-1" };
+      });
     const mockGetListingVideoStatus = jest.fn().mockImplementation(async () => {
       if (options?.statusError) {
         throw options.statusError;
       }
       return { jobs: [{ id: "job-1" }] };
     });
-    class MockApiError extends Error {
-      status: number;
-      body: { message: string };
-      constructor(status: number, message: string) {
-        super(message);
-        this.status = status;
-        this.body = { message };
-      }
-    }
-
     jest.doMock("@web/src/app/api/v1/_utils", () => ({
-      ApiError: MockApiError,
+      ApiError: TestApiError,
       requireAuthenticatedUser: (...args: unknown[]) =>
         mockRequireAuthenticatedUser(...args),
       requireListingAccess: (...args: unknown[]) =>
@@ -92,4 +106,31 @@ describe("video status route", () => {
     expect(response.status).toBe(500);
     expect(payload.message).toBe("Failed to load video status");
   });
+
+  it.each([
+    [401, "UNAUTHORIZED", "auth required"],
+    [403, "FORBIDDEN", "no access"],
+    [404, "NOT_FOUND", "listing missing"],
+    [400, "INVALID_REQUEST", "bad request"]
+  ])(
+    "maps ApiError status %s to %s",
+    async (status, code, message) => {
+      const { GET } = await loadRoute({
+        authError: new TestApiError(status, message)
+      });
+      const request = {} as unknown as Request;
+      const response = await GET(request as never, {
+        params: Promise.resolve({ listingId: "listing-1" })
+      });
+      const payload = await response.json();
+
+      expect(response.status).toBe(status);
+      expect(payload).toEqual({
+        success: false,
+        code,
+        error: message,
+        message
+      });
+    }
+  );
 });
