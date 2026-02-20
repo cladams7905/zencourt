@@ -1,0 +1,1 @@
+export { videoGenerationService } from "../videoGenerationService";
