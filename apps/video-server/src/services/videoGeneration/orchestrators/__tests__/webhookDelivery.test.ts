@@ -5,7 +5,6 @@ import {
 
 describe("webhookDelivery orchestrators", () => {
   beforeEach(() => {
-    process.env.VERCEL_API_URL = "https://api.example.com";
     process.env.VERCEL_WEBHOOK_SECRET = "secret";
   });
 
@@ -15,7 +14,10 @@ describe("webhookDelivery orchestrators", () => {
       { id: "job-1", videoGenBatchId: "video-1" } as never,
       { videoUrl: "https://cdn/video.mp4", duration: 4, fileSize: 1 },
       {
-        getVideoContext: jest.fn().mockResolvedValue({ listingId: "listing-1" }),
+        getVideoContext: jest.fn().mockResolvedValue({
+          listingId: "listing-1",
+          callbackUrl: "https://preview.example.com/api/v1/webhooks/video"
+        }),
         sendWebhook
       }
     );
@@ -31,7 +33,10 @@ describe("webhookDelivery orchestrators", () => {
       "PROVIDER_ERROR",
       false,
       {
-        getVideoContext: jest.fn().mockResolvedValue({ listingId: "listing-1" }),
+        getVideoContext: jest.fn().mockResolvedValue({
+          listingId: "listing-1",
+          callbackUrl: "https://preview.example.com/api/v1/webhooks/video"
+        }),
         sendWebhook
       }
     );

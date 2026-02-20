@@ -20,7 +20,9 @@ export function parseGenerateVideoRequest(
     typeof input.listingId !== "string" ||
     input.listingId.trim().length === 0 ||
     typeof input.userId !== "string" ||
-    input.userId.trim().length === 0
+    input.userId.trim().length === 0 ||
+    typeof input.callbackUrl !== "string" ||
+    input.callbackUrl.trim().length === 0
   ) {
     throw new VideoProcessingError(
       "Invalid request",
@@ -40,7 +42,8 @@ export function parseGenerateVideoRequest(
     videoId: input.videoId.trim(),
     jobIds,
     listingId: input.listingId.trim(),
-    userId: input.userId.trim()
+    userId: input.userId.trim(),
+    callbackUrl: input.callbackUrl.trim()
   };
 }
 

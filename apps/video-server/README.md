@@ -167,7 +167,6 @@ See `.env.example` for all required and optional environment variables.
 - `B2_BUCKET_NAME` - Backblaze bucket for media storage
 - `VIDEO_SERVER_URL` - Public URL for this service
 - `DATABASE_URL` - PostgreSQL database connection string
-- `VERCEL_API_URL` - Web app API URL for webhook callbacks
 - `VERCEL_WEBHOOK_SECRET` - Shared signing secret for callback validation
 - `VIDEO_SERVER_API_KEY` - API key for web <-> video-server auth
 - `FAL_KEY` - fal.ai API key
@@ -250,24 +249,24 @@ npm run test:coverage --workspace=@zencourt/video-server
 
 ### Video Generation
 
-| Endpoint               | Method | Description                     |
-| ---------------------- | ------ | ------------------------------- |
-| `POST /video/generate` | POST   | Start generation for job IDs    |
-| `POST /video/cancel`   | POST   | Cancel in-flight video jobs     |
+| Endpoint               | Method | Description                  |
+| ---------------------- | ------ | ---------------------------- |
+| `POST /video/generate` | POST   | Start generation for job IDs |
+| `POST /video/cancel`   | POST   | Cancel in-flight video jobs  |
 
 ### Render Jobs
 
-| Endpoint                 | Method | Description                 |
-| ------------------------ | ------ | --------------------------- |
-| `POST /renders`          | POST   | Queue a render job          |
-| `GET /renders/:jobId`    | GET    | Get render job status       |
-| `DELETE /renders/:jobId` | DELETE | Cancel a render job         |
+| Endpoint                 | Method | Description           |
+| ------------------------ | ------ | --------------------- |
+| `POST /renders`          | POST   | Queue a render job    |
+| `GET /renders/:jobId`    | GET    | Get render job status |
+| `DELETE /renders/:jobId` | DELETE | Cancel a render job   |
 
 ### Webhooks
 
-| Endpoint             | Method | Description                  |
-| -------------------- | ------ | ---------------------------- |
-| `POST /webhooks/fal` | POST   | fal.ai completion webhook    |
+| Endpoint             | Method | Description               |
+| -------------------- | ------ | ------------------------- |
+| `POST /webhooks/fal` | POST   | fal.ai completion webhook |
 
 ### Storage
 

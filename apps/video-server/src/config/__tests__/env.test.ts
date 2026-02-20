@@ -7,7 +7,6 @@ describe("env config", () => {
     B2_APPLICATION_KEY: "secret",
     B2_BUCKET_NAME: "bucket",
     VIDEO_SERVER_URL: "https://video.internal.local/",
-    VERCEL_API_URL: "https://web.internal.local",
     VERCEL_WEBHOOK_SECRET: "webhook-secret",
     DATABASE_URL: "postgres://db",
     FAL_KEY: "fal-key",

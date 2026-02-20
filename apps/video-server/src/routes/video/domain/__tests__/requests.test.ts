@@ -9,14 +9,16 @@ describe("video route request parsers", () => {
       videoId: "video-1",
       jobIds: ["job-1", "job-2"],
       listingId: "listing-1",
-      userId: "user-1"
+      userId: "user-1",
+      callbackUrl: "https://example.vercel.app/api/v1/webhooks/video"
     });
 
     expect(parsed).toEqual({
       videoId: "video-1",
       jobIds: ["job-1", "job-2"],
       listingId: "listing-1",
-      userId: "user-1"
+      userId: "user-1",
+      callbackUrl: "https://example.vercel.app/api/v1/webhooks/video"
     });
   });
 
@@ -27,6 +29,16 @@ describe("video route request parsers", () => {
         jobIds: []
       })
     ).toThrow("jobIds must be a non-empty array");
+
+    expect(() =>
+      parseGenerateVideoRequest({
+        videoId: "video-1",
+        jobIds: ["job-1"],
+        listingId: "listing-1",
+        userId: "user-1"
+        // callbackUrl missing
+      })
+    ).toThrow("Invalid request");
   });
 
   it("parses cancel request and normalizes reason", () => {

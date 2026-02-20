@@ -41,6 +41,7 @@ interface VideoContext {
   videoId: string;
   listingId: string;
   userId: string;
+  callbackUrl: string;
 }
 
 class VideoGenerationService {
@@ -71,10 +72,13 @@ class VideoGenerationService {
       );
     }
 
+    // callbackUrl is not stored in the DB — fall back to the env var if the
+    // cache was cold (e.g. after a server restart mid-job).
     const context: VideoContext = {
       videoId: record.videoId,
       listingId: record.listingId,
-      userId: record.userId
+      userId: record.userId,
+      callbackUrl: `${process.env.VERCEL_API_URL}/api/v1/webhooks/video`
     };
 
     this.videoContextCache.set(videoId, context);
@@ -105,6 +109,15 @@ class VideoGenerationService {
   async startGeneration(
     request: VideoServerGenerateRequest
   ): Promise<GenerationResult> {
+    // Seed the context cache with the per-request callbackUrl so webhook
+    // delivery uses the caller's URL rather than the VERCEL_API_URL env var.
+    this.videoContextCache.set(request.videoId, {
+      videoId: request.videoId,
+      listingId: request.listingId,
+      userId: request.userId,
+      callbackUrl: request.callbackUrl
+    });
+
     return startGenerationOrchestrator(request, {
       findJobsByIds: videoGenerationDb.findJobsByIds,
       markVideoProcessing: videoGenerationDb.markVideoProcessing,
