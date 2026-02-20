@@ -18,7 +18,10 @@ import {
 } from "@web/src/components/ui/select";
 import { Input } from "@web/src/components/ui/input";
 import { Button } from "@web/src/components/ui/button";
-import { ROOM_CATEGORIES, type RoomCategory } from "@web/src/lib/domain/listing/vision";
+import {
+  ROOM_CATEGORIES,
+  type RoomCategory
+} from "@web/src/lib/domain/listing/roomCategories";
 
 const MAX_CUSTOM_CATEGORY_LENGTH = 20;
 const CATEGORY_OPTIONS = Object.values(ROOM_CATEGORIES)

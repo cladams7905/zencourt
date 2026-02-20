@@ -3,15 +3,12 @@ import {
   type BatchClassificationResult,
   type BatchProgressCallback,
   type RoomClassification
-} from "@web/src/lib/domain/listing/vision";
+} from "@web/src/lib/domain/listing/roomCategories";
 import {
   createChildLogger,
   logger as baseLogger
 } from "@web/src/lib/core/logging/logger";
-import {
-  CLASSIFICATION_PROMPT,
-  CLASSIFICATION_PROMPT_VERSION
-} from "./prompt";
+import { CLASSIFICATION_PROMPT, CLASSIFICATION_PROMPT_VERSION } from "./prompt";
 import { CLASSIFICATION_SCHEMA } from "./schema";
 import { parseClassificationResponse, validateClassification } from "./parsing";
 import { AIVisionError } from "./errors";
@@ -54,7 +51,9 @@ export class VisionService {
         }
         return new OpenAI({ apiKey });
       });
-    this.sleep = deps.sleep ?? ((ms: number) => new Promise((resolve) => setTimeout(resolve, ms)));
+    this.sleep =
+      deps.sleep ??
+      ((ms: number) => new Promise((resolve) => setTimeout(resolve, ms)));
   }
 
   private getClient(): OpenAI {
@@ -101,7 +100,8 @@ export class VisionService {
             type: "json_schema",
             json_schema: {
               name: "room_classification",
-              description: "Room classification with confidence and primary image score.",
+              description:
+                "Room classification with confidence and primary image score.",
               strict: true,
               schema: CLASSIFICATION_SCHEMA
             }
@@ -121,7 +121,11 @@ export class VisionService {
 
     const content = response.choices[0]?.message?.content;
     if (!content) {
-      throw new AIVisionError("No content in API response", "INVALID_RESPONSE", response);
+      throw new AIVisionError(
+        "No content in API response",
+        "INVALID_RESPONSE",
+        response
+      );
     }
 
     const classification = parseClassificationResponse(content);
@@ -146,10 +150,15 @@ export class VisionService {
     } = options;
 
     if (!Array.isArray(imageUrls) || imageUrls.length === 0) {
-      throw new AIVisionError("imageUrls must be a non-empty array", "API_ERROR");
+      throw new AIVisionError(
+        "imageUrls must be a non-empty array",
+        "API_ERROR"
+      );
     }
 
-    const processor = async (imageUrl: string): Promise<BatchClassificationResult> => {
+    const processor = async (
+      imageUrl: string
+    ): Promise<BatchClassificationResult> => {
       const startTime = Date.now();
 
       try {

@@ -66,7 +66,6 @@ export async function getListingVideoStatus(
           roomId: job.generationSettings?.roomId,
           roomName: job.generationSettings?.roomName,
           category: job.generationSettings?.category ?? null,
-          durationSeconds: job.generationSettings?.durationSeconds ?? null,
           isPriorityCategory: job.generationSettings?.category
             ? isPriorityCategory(job.generationSettings.category)
             : false,

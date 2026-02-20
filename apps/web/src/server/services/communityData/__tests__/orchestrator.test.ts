@@ -2,7 +2,7 @@ const mockCreateRegistry = jest.fn();
 const mockSelectCommunityCategories = jest.fn();
 const mockPeekNextCommunityCategories = jest.fn();
 
-jest.mock("@web/src/server/services/communityData/providerRegistry", () => ({
+jest.mock("@web/src/server/services/communityData/registry", () => ({
   createCommunityDataProviderRegistry: (...args: unknown[]) =>
     mockCreateRegistry(...args)
 }));

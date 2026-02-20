@@ -34,14 +34,6 @@ export interface StorageUploadRequest {
 
 export interface VideoGenerateRequest {
   listingId: string;
-  orientation: VideoOrientation;
-  rooms: Array<{
-    id: string;
-    name: string;
-    category?: string;
-    roomNumber?: number;
-    imageCount?: number;
-  }>;
+  orientation?: VideoOrientation;
   aiDirections?: string;
-  duration?: "5" | "10";
 }

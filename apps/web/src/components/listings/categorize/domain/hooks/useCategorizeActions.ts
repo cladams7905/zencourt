@@ -1,6 +1,9 @@
 import * as React from "react";
 import { toast } from "sonner";
-import { ROOM_CATEGORIES, type RoomCategory } from "@web/src/lib/domain/listing/vision";
+import {
+  ROOM_CATEGORIES,
+  type RoomCategory
+} from "@web/src/lib/domain/listing/roomCategories";
 import { MAX_IMAGES_PER_ROOM } from "@shared/utils/mediaUpload";
 import { UNCATEGORIZED_CATEGORY_ID } from "@web/src/components/listings/categorize/shared";
 import type { ListingImageItem } from "@web/src/components/listings/categorize/shared";
@@ -28,7 +31,11 @@ type UseCategorizeActionsParams = {
   setIsDraggingImage: React.Dispatch<React.SetStateAction<boolean>>;
   setDragOverCategory: React.Dispatch<React.SetStateAction<string | null>>;
   persistImageAssignments: (
-    updates: Array<{ id: string; category: string | null; isPrimary?: boolean }>,
+    updates: Array<{
+      id: string;
+      category: string | null;
+      isPrimary?: boolean;
+    }>,
     deletions: string[],
     rollback?: () => void
   ) => Promise<boolean>;
@@ -302,7 +309,10 @@ export function useCategorizeActions(params: UseCategorizeActionsParams) {
         return;
       }
       if (previousImage?.category !== updatedImage.category) {
-        await ensurePrimaryForCategory(previousImage?.category ?? null, nextImages);
+        await ensurePrimaryForCategory(
+          previousImage?.category ?? null,
+          nextImages
+        );
       }
       await ensurePrimaryForCategory(updatedImage.category ?? null, nextImages);
       setMoveImageId(null);
@@ -445,7 +455,10 @@ export function useCategorizeActions(params: UseCategorizeActionsParams) {
         () => setImages(previousImages)
       );
       if (previousImage?.category !== updatedImage.category) {
-        await ensurePrimaryForCategory(previousImage?.category ?? null, nextImages);
+        await ensurePrimaryForCategory(
+          previousImage?.category ?? null,
+          nextImages
+        );
       }
       await ensurePrimaryForCategory(updatedImage.category ?? null, nextImages);
       setDragOverCategory(null);

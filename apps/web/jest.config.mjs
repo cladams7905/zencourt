@@ -7,6 +7,7 @@ const createJestConfig = nextJest({
 const customJestConfig = {
   testEnvironment: "jsdom",
   setupFilesAfterEnv: ["<rootDir>/src/test/setupTests.ts"],
+  coverageReporters: ["json-summary", "json", "lcov", "text", "clover"],
   collectCoverageFrom: [
     "src/**/*.{ts,tsx}",
     "!src/**/*.d.ts",
