@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { ApiError } from "../../../_utils";
+import { StatusCode } from "@web/src/app/api/v1/_statusCodes";
 import {
   encodeSseEvent,
   makeSseStreamHeaders
@@ -42,7 +43,7 @@ async function initializeAiStream(
       outputFormat: OUTPUT_FORMAT
     });
   } catch (error) {
-    throw new ApiError(500, {
+    throw new ApiError(StatusCode.INTERNAL_SERVER_ERROR, {
       error: "Missing configuration",
       message:
         error instanceof Error
@@ -65,7 +66,7 @@ async function initializeAiStream(
 
   const upstream = response.body;
   if (!upstream) {
-    throw new ApiError(502, {
+    throw new ApiError(StatusCode.BAD_GATEWAY, {
       error: "Invalid response",
       message: "AI provider response stream missing"
     });

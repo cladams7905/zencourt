@@ -5,7 +5,11 @@ import {
   requireListingAccess
 } from "@web/src/app/api/v1/_utils";
 import { getVideoServerConfig } from "@web/src/app/api/v1/video/_config";
-import { apiErrorResponse } from "@web/src/app/api/v1/_responses";
+import {
+  apiErrorCodeFromStatus,
+  apiErrorResponse
+} from "@web/src/app/api/v1/_responses";
+import { StatusCode } from "@web/src/app/api/v1/_statusCodes";
 import {
   readJsonBodySafe,
   requireNonEmptyParam
@@ -40,8 +44,8 @@ export async function POST(
   const listingId = requireNonEmptyParam((await params).listingId);
 
   if (!listingId) {
-    return apiErrorResponse(
-      400,
+      return apiErrorResponse(
+      StatusCode.BAD_REQUEST,
       "INVALID_REQUEST",
       "listingId is required"
     );
@@ -98,13 +102,7 @@ export async function POST(
     if (error instanceof ApiError) {
       return apiErrorResponse(
         error.status,
-        error.status === 401
-          ? "UNAUTHORIZED"
-          : error.status === 403
-            ? "FORBIDDEN"
-            : error.status === 404
-              ? "NOT_FOUND"
-              : "INVALID_REQUEST",
+        apiErrorCodeFromStatus(error.status),
         error.body.message,
         { message: error.body.message }
       );
@@ -114,7 +112,7 @@ export async function POST(
       "Unexpected error canceling generation"
     );
     return apiErrorResponse(
-      500,
+      StatusCode.INTERNAL_SERVER_ERROR,
       "INTERNAL_ERROR",
       "Unable to cancel generation",
       { message: "Unable to cancel generation" }

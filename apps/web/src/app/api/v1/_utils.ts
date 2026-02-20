@@ -3,6 +3,7 @@ import { stackServerApp } from "@web/src/lib/core/auth/stack/server";
 import type { CurrentServerUser } from "@stackframe/stack";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { StatusCode } from "@web/src/app/api/v1/_statusCodes";
 
 type Listing = typeof listings.$inferSelect;
 
@@ -20,7 +21,7 @@ export async function requireAuthenticatedUser(): Promise<CurrentServerUser> {
   const user = await stackServerApp.getUser();
 
   if (!user) {
-    throw new ApiError(401, {
+    throw new ApiError(StatusCode.UNAUTHORIZED, {
       error: "Unauthorized",
       message: "Please sign in to continue"
     });
@@ -34,7 +35,7 @@ export async function requireListingAccess(
   userId: string
 ): Promise<Listing> {
   if (!listingId) {
-    throw new ApiError(400, {
+    throw new ApiError(StatusCode.BAD_REQUEST, {
       error: "Invalid request",
       message: "Listing ID is required"
     });
@@ -49,14 +50,14 @@ export async function requireListingAccess(
   const listing = listingResult[0];
 
   if (!listing) {
-    throw new ApiError(404, {
+    throw new ApiError(StatusCode.NOT_FOUND, {
       error: "Not found",
       message: "Listing not found"
     });
   }
 
   if (listing.userId !== userId) {
-    throw new ApiError(403, {
+    throw new ApiError(StatusCode.FORBIDDEN, {
       error: "Forbidden",
       message: "You don't have access to this listing"
     });
@@ -84,7 +85,7 @@ export async function withApiErrorHandling<T>(
       return errorResponse(error.status, error.body.error, error.body.message);
     }
     return errorResponse(
-      500,
+      StatusCode.INTERNAL_SERVER_ERROR,
       "Internal server error",
       error instanceof Error ? error.message : fallbackMessage
     );

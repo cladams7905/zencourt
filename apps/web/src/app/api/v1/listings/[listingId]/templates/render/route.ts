@@ -4,7 +4,11 @@ import {
   requireAuthenticatedUser,
   requireListingAccess
 } from "../../../../_utils";
-import { apiErrorResponse } from "@web/src/app/api/v1/_responses";
+import {
+  apiErrorCodeFromStatus,
+  apiErrorResponse
+} from "@web/src/app/api/v1/_responses";
+import { StatusCode } from "@web/src/app/api/v1/_statusCodes";
 import {
   readJsonBodySafe,
   requireNonEmptyParam
@@ -92,7 +96,7 @@ export async function POST(
   try {
     const listingId = requireNonEmptyParam((await params).listingId);
     if (!listingId) {
-      throw new ApiError(400, {
+      throw new ApiError(StatusCode.BAD_REQUEST, {
         error: "Invalid request",
         message: "Listing ID is required"
       });
@@ -108,7 +112,7 @@ export async function POST(
 
     const subcategoryCandidate = body?.subcategory?.trim() ?? "";
     if (!isListingSubcategory(subcategoryCandidate)) {
-      throw new ApiError(400, {
+      throw new ApiError(StatusCode.BAD_REQUEST, {
         error: "Invalid request",
         message: "A valid listing subcategory is required"
       });
@@ -118,7 +122,7 @@ export async function POST(
     if (captionItems.length === 0) {
       return NextResponse.json<ListingTemplateRenderResult>(
         { items: [], failedTemplateIds: [] },
-        { status: 200 }
+        { status: StatusCode.OK }
       );
     }
 
@@ -141,20 +145,14 @@ export async function POST(
     });
 
     return NextResponse.json<ListingTemplateRenderResult>(result, {
-      status: 200,
+      status: StatusCode.OK,
       headers: { "Cache-Control": "no-store" }
     });
   } catch (error) {
     if (error instanceof ApiError) {
       return apiErrorResponse(
         error.status,
-        error.status === 401
-          ? "UNAUTHORIZED"
-          : error.status === 403
-            ? "FORBIDDEN"
-            : error.status === 404
-              ? "NOT_FOUND"
-              : "INVALID_REQUEST",
+        apiErrorCodeFromStatus(error.status),
         error.body.message,
         { message: error.body.message }
       );
@@ -170,7 +168,7 @@ export async function POST(
       "Failed rendering templates"
     );
     return apiErrorResponse(
-      500,
+      StatusCode.INTERNAL_SERVER_ERROR,
       "INTERNAL_ERROR",
       "Failed to render templates",
       { message: "Failed to render templates" }

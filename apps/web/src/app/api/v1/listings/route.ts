@@ -4,7 +4,11 @@ import {
   requireAuthenticatedUser
 } from "@web/src/app/api/v1/_utils";
 import { getUserListingSummariesPage } from "@web/src/server/actions/db/listings";
-import { apiErrorResponse } from "@web/src/app/api/v1/_responses";
+import {
+  apiErrorCodeFromStatus,
+  apiErrorResponse
+} from "@web/src/app/api/v1/_responses";
+import { StatusCode } from "@web/src/app/api/v1/_statusCodes";
 
 const clampNumber = (value: string | null, fallback: number) => {
   if (!value) return fallback;
@@ -29,18 +33,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     if (error instanceof ApiError) {
       return apiErrorResponse(
         error.status,
-        error.status === 401
-          ? "UNAUTHORIZED"
-          : error.status === 403
-            ? "FORBIDDEN"
-            : error.status === 404
-              ? "NOT_FOUND"
-              : "INVALID_REQUEST",
+        apiErrorCodeFromStatus(error.status),
         error.body.message
       );
     }
     return apiErrorResponse(
-      500,
+      StatusCode.INTERNAL_SERVER_ERROR,
       "INTERNAL_ERROR",
       error instanceof Error ? error.message : "An unexpected error occurred"
     );

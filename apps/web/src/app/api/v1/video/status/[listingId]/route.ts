@@ -7,7 +7,11 @@ import {
 import { getListingVideoStatus } from "@web/src/server/services/videoStatus";
 import { createChildLogger } from "@shared/utils";
 import { logger as baseLogger } from "@web/src/lib/core/logging/logger";
-import { apiErrorResponse } from "@web/src/app/api/v1/_responses";
+import {
+  apiErrorCodeFromStatus,
+  apiErrorResponse
+} from "@web/src/app/api/v1/_responses";
+import { StatusCode } from "@web/src/app/api/v1/_statusCodes";
 import { requireNonEmptyParam } from "@web/src/app/api/v1/_validation";
 
 export const runtime = "nodejs";
@@ -24,7 +28,7 @@ export async function GET(
     const listingId = requireNonEmptyParam((await params).listingId);
     if (!listingId) {
       return apiErrorResponse(
-        400,
+        StatusCode.BAD_REQUEST,
         "INVALID_REQUEST",
         "listingId path parameter is required",
         { message: "listingId path parameter is required" }
@@ -43,13 +47,7 @@ export async function GET(
     if (error instanceof ApiError) {
       return apiErrorResponse(
         error.status,
-        error.status === 401
-          ? "UNAUTHORIZED"
-          : error.status === 403
-            ? "FORBIDDEN"
-            : error.status === 404
-              ? "NOT_FOUND"
-              : "INVALID_REQUEST",
+        apiErrorCodeFromStatus(error.status),
         error.body.message,
         { message: error.body.message }
       );
@@ -57,7 +55,7 @@ export async function GET(
 
     logger.error(error, "Failed to load video status");
     return apiErrorResponse(
-      500,
+      StatusCode.INTERNAL_SERVER_ERROR,
       "VIDEO_STATUS_ERROR",
       error instanceof Error ? error.message : "Failed to load video status",
       {

@@ -12,7 +12,11 @@ import {
   requireListingAccess
 } from "../../_utils";
 import { VideoGenerateRequest, VideoGenerateResponse } from "@shared/types/api";
-import { apiErrorResponse } from "@web/src/app/api/v1/_responses";
+import {
+  apiErrorCodeFromStatus,
+  apiErrorResponse
+} from "@web/src/app/api/v1/_responses";
+import { StatusCode } from "@web/src/app/api/v1/_statusCodes";
 import { readJsonBodySafe } from "@web/src/app/api/v1/_validation";
 import {
   createChildLogger,
@@ -30,12 +34,17 @@ export async function POST(
   try {
     const body = (await readJsonBodySafe(request)) as VideoGenerateRequest | null;
     if (!body?.listingId) {
-      return apiErrorResponse(400, "INVALID_REQUEST", "listingId is required", {
-        listingId: "",
-        videoId: "",
-        jobIds: [],
-        jobCount: 0
-      }) as NextResponse<VideoGenerateResponse>;
+      return apiErrorResponse(
+        StatusCode.BAD_REQUEST,
+        "INVALID_REQUEST",
+        "listingId is required",
+        {
+          listingId: "",
+          videoId: "",
+          jobIds: [],
+          jobCount: 0
+        }
+      ) as NextResponse<VideoGenerateResponse>;
     }
     const user = await requireAuthenticatedUser();
     const listing = await requireListingAccess(body.listingId, user.id);
@@ -56,7 +65,7 @@ export async function POST(
         jobIds: result.jobIds,
         jobCount: result.jobCount
       },
-      { status: 202 }
+      { status: StatusCode.ACCEPTED }
     );
   } catch (error) {
     if (error instanceof ApiError) {
@@ -69,13 +78,7 @@ export async function POST(
       );
       return apiErrorResponse(
         error.status,
-        error.status === 401
-          ? "UNAUTHORIZED"
-          : error.status === 403
-            ? "FORBIDDEN"
-            : error.status === 404
-              ? "NOT_FOUND"
-              : "INVALID_REQUEST",
+        apiErrorCodeFromStatus(error.status),
         error.body.message,
         {
           listingId: "",
@@ -91,16 +94,21 @@ export async function POST(
         { err: error.message },
         "Video generation request failed with DrizzleQueryError"
       );
-      return apiErrorResponse(500, "DATABASE_ERROR", error.message, {
-        listingId: "",
-        videoId: "",
-        jobIds: [],
-        jobCount: 0
-      }) as NextResponse<VideoGenerateResponse>;
+      return apiErrorResponse(
+        StatusCode.INTERNAL_SERVER_ERROR,
+        "DATABASE_ERROR",
+        error.message,
+        {
+          listingId: "",
+          videoId: "",
+          jobIds: [],
+          jobCount: 0
+        }
+      ) as NextResponse<VideoGenerateResponse>;
     }
 
     return apiErrorResponse(
-      500,
+      StatusCode.INTERNAL_SERVER_ERROR,
       "INTERNAL_ERROR",
       error instanceof Error ? error.message : "Unable to start generation",
       {
