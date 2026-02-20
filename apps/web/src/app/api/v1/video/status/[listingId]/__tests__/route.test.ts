@@ -16,8 +16,18 @@ describe("video status route", () => {
       }
       return { jobs: [{ id: "job-1" }] };
     });
+    class MockApiError extends Error {
+      status: number;
+      body: { message: string };
+      constructor(status: number, message: string) {
+        super(message);
+        this.status = status;
+        this.body = { message };
+      }
+    }
 
     jest.doMock("@web/src/app/api/v1/_utils", () => ({
+      ApiError: MockApiError,
       requireAuthenticatedUser: (...args: unknown[]) =>
         mockRequireAuthenticatedUser(...args),
       requireListingAccess: (...args: unknown[]) =>

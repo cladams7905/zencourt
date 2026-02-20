@@ -108,6 +108,7 @@ describe("video generate route", () => {
 
     expect(response.status).toBe(400);
     expect(payload).toEqual({
+      code: "INVALID_REQUEST",
       error: "listing is missing images",
       success: false,
       listingId: "",
@@ -132,6 +133,7 @@ describe("video generate route", () => {
 
     expect(response.status).toBe(500);
     expect(payload).toEqual({
+      code: "DATABASE_ERROR",
       error: "db failed",
       success: false,
       listingId: "",
@@ -153,7 +155,8 @@ describe("video generate route", () => {
 
     expect(response.status).toBe(500);
     expect(payload).toEqual({
-      error: "Internal server error",
+      code: "INTERNAL_ERROR",
+      error: "boom",
       message: "boom",
       success: false,
       listingId: "",

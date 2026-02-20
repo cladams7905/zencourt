@@ -102,8 +102,9 @@ describe("content generate route", () => {
 
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toEqual({
-      error: "Invalid request",
-      message: "category is required"
+      success: false,
+      code: "INVALID_REQUEST",
+      error: "category is required"
     });
   });
 
@@ -115,8 +116,9 @@ describe("content generate route", () => {
 
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toEqual({
-      error: "Invalid request",
-      message: "agent_profile is required"
+      success: false,
+      code: "INVALID_REQUEST",
+      error: "agent_profile is required"
     });
   });
 
@@ -176,8 +178,9 @@ describe("content generate route", () => {
 
     expect(response.status).toBe(500);
     await expect(response.json()).resolves.toEqual({
-      error: "Server error",
-      message: "Failed to generate content"
+      success: false,
+      code: "INTERNAL_ERROR",
+      error: "Failed to generate content"
     });
   });
 });
