@@ -15,12 +15,10 @@ describe("env config", () => {
     VIDEO_SERVER_API_KEY: "server-key"
   };
 
-  it("throws when no API auth config is provided", () => {
+  it("throws when VIDEO_SERVER_API_KEY is missing", () => {
     const env = { ...BASE_ENV };
     delete env.VIDEO_SERVER_API_KEY;
-    expect(() => parseEnv(env)).toThrow(
-      "VIDEO_SERVER_API_KEY or VIDEO_SERVER_CLIENT_KEYS"
-    );
+    expect(() => parseEnv(env)).toThrow("VIDEO_SERVER_API_KEY");
   });
 
   it("normalizes urls and derives webhook url", () => {

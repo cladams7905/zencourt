@@ -9,11 +9,7 @@ import { buildStorageConfigFromEnv } from "@shared/utils";
  * - Custom endpoint for Backblaze B2
  * - Virtual-hosted-style URLs (not path-style)
  */
-export function createStorageConfig(env: NodeJS.ProcessEnv = process.env) {
-  return buildStorageConfigFromEnv(env);
-}
-
-export function createStorageClient(config = createStorageConfig()) {
+export function createStorageClient(config = buildStorageConfigFromEnv(process.env)) {
   return new S3Client({
     region: config.region,
     endpoint: config.endpoint,
@@ -26,7 +22,7 @@ export function createStorageClient(config = createStorageConfig()) {
   });
 }
 
-const storageConfig = createStorageConfig();
+const storageConfig = buildStorageConfigFromEnv(process.env);
 
 export const storageClient = createStorageClient(storageConfig);
 

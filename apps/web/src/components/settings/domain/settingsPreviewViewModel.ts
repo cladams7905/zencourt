@@ -1,30 +1,16 @@
 import type { DBUserAdditional } from "@db/types/models";
 
+const scaleLabels: Record<number, string> = {
+  1: "Very informal",
+  2: "Informal",
+  3: "Conversational",
+  4: "Formal",
+  5: "Very formal"
+};
+
 export const resolveWritingToneLabel = (
   writingTone: DBUserAdditional["writingToneLevel"]
-) => {
-  const numeric = Number(writingTone);
-  if (!Number.isNaN(numeric)) {
-    const scaleLabels: Record<number, string> = {
-      1: "Very informal",
-      2: "Informal",
-      3: "Conversational",
-      4: "Formal",
-      5: "Very formal"
-    };
-    return scaleLabels[numeric] ?? "Custom";
-  }
-
-  const legacyLabels: Record<string, string> = {
-    professional: "Professional",
-    casual: "Casual",
-    friendly: "Friendly",
-    enthusiastic: "Enthusiastic",
-    educational: "Educational"
-  };
-
-  return (writingTone && legacyLabels[String(writingTone)]) || "Custom";
-};
+) => scaleLabels[writingTone] ?? "Custom";
 
 export const buildBrandingPreviewModel = (input: {
   userAdditional: DBUserAdditional;

@@ -1,9 +1,5 @@
 import axios from "axios";
-import {
-  downloadBufferWithRetry,
-  downloadImageBufferWithRetry,
-  downloadVideoBufferWithRetry
-} from "@/services/videoGeneration/domain/downloadWithRetry";
+import { downloadBufferWithRetry } from "@/services/videoGeneration/domain/downloadWithRetry";
 
 jest.mock("axios");
 
@@ -65,22 +61,4 @@ describe("downloadWithRetry", () => {
     ).rejects.toThrow("Download size mismatch");
   });
 
-  it("video and image wrappers apply expected behavior", async () => {
-    mockedAxios.get
-      .mockResolvedValueOnce({
-        data: Buffer.from("video-bytes"),
-        headers: { "content-length": "11" }
-      } as never)
-      .mockResolvedValueOnce({
-        data: Buffer.from("img"),
-        headers: {}
-      } as never);
-
-    const video = await downloadVideoBufferWithRetry("https://example.com/v");
-    const image = await downloadImageBufferWithRetry("https://example.com/i");
-
-    expect(video.buffer.toString()).toBe("video-bytes");
-    expect(video.checksumSha256).toBeDefined();
-    expect(image.toString()).toBe("img");
-  });
 });

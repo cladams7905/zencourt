@@ -1,9 +1,6 @@
 import { S3Client } from "@aws-sdk/client-s3";
-import {
-  createStorageClient,
-  createStorageConfig,
-  STORAGE_CONFIG
-} from "@/config/storage";
+import { buildStorageConfigFromEnv } from "@shared/utils";
+import { createStorageClient, STORAGE_CONFIG } from "@/config/storage";
 
 describe("storage config", () => {
   const BASE_ENV: NodeJS.ProcessEnv = {
@@ -15,14 +12,14 @@ describe("storage config", () => {
   };
 
   it("builds normalized storage config", () => {
-    const config = createStorageConfig(BASE_ENV);
+    const config = buildStorageConfigFromEnv(BASE_ENV);
     expect(config.endpoint).toBe(BASE_ENV.B2_ENDPOINT);
     expect(config.bucket).toBe(BASE_ENV.B2_BUCKET_NAME);
     expect(config.region).toBe(BASE_ENV.B2_REGION);
   });
 
   it("creates an S3 client from config", () => {
-    const config = createStorageConfig(BASE_ENV);
+    const config = buildStorageConfigFromEnv(BASE_ENV);
     const client = createStorageClient(config);
     expect(client).toBeInstanceOf(S3Client);
   });
