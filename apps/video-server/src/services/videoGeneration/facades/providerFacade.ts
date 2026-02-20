@@ -1,5 +1,6 @@
 import logger from "@/config/logger";
 import type { VideoGenerationProviderStrategy } from "@/services/videoGeneration/ports";
+import type { DBVideoGenJob } from "@shared/types/models";
 
 export type ProviderDispatchInput = {
   jobId: string;
@@ -13,7 +14,7 @@ export type ProviderDispatchInput = {
 
 export type ProviderDispatchResult = {
   provider: string;
-  model: "veo3.1_fast" | "kling1.6";
+  model: NonNullable<DBVideoGenJob["generationSettings"]>["model"];
   requestId: string;
   waitForOutput?: () => Promise<{ outputUrl: string }>;
 };

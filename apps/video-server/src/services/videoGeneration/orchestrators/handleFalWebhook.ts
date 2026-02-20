@@ -92,7 +92,7 @@ async function handleFalErrorResponse(
   startTime: number
 ): Promise<void> {
   const errorMessage =
-    payload.error || "Kling reported an error during video generation";
+    payload.error || "Provider reported an error during video generation";
 
   await deps.markJobFailed(job.id, errorMessage);
   await deps.markVideoFailed(
@@ -111,7 +111,7 @@ async function handleFalErrorResponse(
     "[VideoGenerationService] Video job generation failed"
   );
 
-  await deps.sendJobFailureWebhook(job, errorMessage, "FAL_ERROR", false);
+  await deps.sendJobFailureWebhook(job, errorMessage, "PROVIDER_ERROR", false);
 }
 
 async function applyProviderSuccess(
