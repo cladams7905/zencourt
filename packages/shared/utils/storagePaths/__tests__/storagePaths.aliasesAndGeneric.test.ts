@@ -6,7 +6,7 @@ import {
   getListingImagePath,
   sanitizeFilename,
   sanitizePathSegment
-} from "../utils/storagePaths";
+} from "..";
 
 describe("storagePaths generic/sanitize", () => {
   const realDateNow = Date.now;
