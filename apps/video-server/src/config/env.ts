@@ -25,13 +25,9 @@ declare global {
       // Vercel Webhook
       VERCEL_API_URL?: string;
       VERCEL_WEBHOOK_SECRET?: string;
-      WEBHOOK_RETRY_ATTEMPTS?: string;
-      WEBHOOK_RETRY_BACKOFF_MS?: string;
       WEBHOOK_TIMEOUT_MS?: string;
 
       // Processing
-      MAX_CONCURRENT_JOBS?: string;
-      JOB_TIMEOUT_MS?: string;
       TEMP_DIR?: string;
       STORAGE_HEALTH_CACHE_MS?: string;
       RENDER_CONCURRENCY?: string;
@@ -40,7 +36,6 @@ declare global {
 
       // API Authentication
       VIDEO_SERVER_API_KEY?: string;
-      VIDEO_SERVER_CLIENT_KEYS?: string;
 
       // fal.ai
       FAL_KEY?: string;
@@ -72,7 +67,8 @@ const REQUIRED_ENV_VARS = [
   "VERCEL_WEBHOOK_SECRET",
   "DATABASE_URL",
   "FAL_KEY",
-  "RUNWAY_API_KEY"
+  "RUNWAY_API_KEY",
+  "VIDEO_SERVER_API_KEY"
 ] as const;
 
 function trimTrailingSlashes(value: string): string {
@@ -84,7 +80,7 @@ function parsePositiveInt(
   name: string,
   fallback: number
 ): number {
-  if (!value || value.length === 0) {
+  if (!value) {
     return fallback;
   }
   const parsed = Number(value);
@@ -98,12 +94,6 @@ export function parseEnv(rawEnv: NodeJS.ProcessEnv): ParsedEnv {
   const missingVars: string[] = REQUIRED_ENV_VARS.filter(
     (varName) => !rawEnv[varName] || rawEnv[varName]?.length === 0
   );
-
-  const hasLegacyKey = Boolean(rawEnv.VIDEO_SERVER_API_KEY?.length);
-  const hasClientKeys = Boolean(rawEnv.VIDEO_SERVER_CLIENT_KEYS?.length);
-  if (!hasLegacyKey && !hasClientKeys) {
-    missingVars.push("VIDEO_SERVER_API_KEY or VIDEO_SERVER_CLIENT_KEYS");
-  }
 
   if (missingVars.length > 0) {
     throw new Error(

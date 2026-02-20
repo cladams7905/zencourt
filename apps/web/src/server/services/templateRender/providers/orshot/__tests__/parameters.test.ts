@@ -1,7 +1,8 @@
 import { resolveTemplateParameters } from "../parameters";
 
 jest.mock("@shared/utils", () => ({
-  PREVIEW_TEXT_OVERLAY_ARROW_PATHS: ["/overlays/a.svg", "/overlays/b.svg"]
+  PREVIEW_TEXT_OVERLAY_ARROW_PATHS: ["/overlays/a.svg", "/overlays/b.svg"],
+  isPriorityCategory: jest.fn().mockReturnValue(false)
 }));
 
 describe("templateRender/providers/orshot/parameters", () => {

@@ -6,12 +6,8 @@ import {
 describe("settingsPreviewViewModel", () => {
   it("resolves numeric tone labels", () => {
     expect(resolveWritingToneLabel(1)).toBe("Very informal");
-    expect(resolveWritingToneLabel("5" as never)).toBe("Very formal");
-  });
-
-  it("resolves legacy tone labels and falls back to Custom", () => {
-    expect(resolveWritingToneLabel("professional" as never)).toBe("Professional");
-    expect(resolveWritingToneLabel("unknown" as never)).toBe("Custom");
+    expect(resolveWritingToneLabel(5)).toBe("Very formal");
+    expect(resolveWritingToneLabel(99 as never)).toBe("Custom");
     expect(resolveWritingToneLabel(null as never)).toBe("Custom");
   });
 

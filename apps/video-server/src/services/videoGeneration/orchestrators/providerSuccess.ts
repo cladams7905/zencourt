@@ -4,10 +4,7 @@ import {
   getVideoJobThumbnailPath,
   getVideoJobVideoPath
 } from "@shared/utils/storagePaths";
-import {
-  downloadImageBufferWithRetry,
-  downloadVideoBufferWithRetry
-} from "@/services/videoGeneration/domain/downloadWithRetry";
+import { downloadBufferWithRetry } from "@/services/videoGeneration/domain/downloadWithRetry";
 import type { VideoJobResult } from "@shared/types/api";
 
 type VideoContext = {
@@ -56,14 +53,19 @@ export async function handleProviderSuccessOrchestrator(
   );
 
   const { buffer: videoBuffer, checksumSha256 } =
-    await downloadVideoBufferWithRetry(sourceUrl, {
-      expectedSize: metadata.expectedFileSize
+    await downloadBufferWithRetry({
+      url: sourceUrl,
+      expectedSize: metadata.expectedFileSize,
+      timeout: 300000,
+      validateSize: true,
+      computeChecksum: true,
+      baseDelayMs: 500
     });
 
   let thumbnailBuffer: Buffer | null = null;
   if (metadata.thumbnailUrl) {
     try {
-      thumbnailBuffer = await downloadImageBufferWithRetry(metadata.thumbnailUrl);
+      thumbnailBuffer = (await downloadBufferWithRetry({ url: metadata.thumbnailUrl, timeout: 60000, validateSize: false, computeChecksum: false, baseDelayMs: 300 })).buffer;
     } catch (error) {
       logger.warn(
         { jobId: job.id, error: error instanceof Error ? error.message : String(error) },
@@ -76,7 +78,7 @@ export async function handleProviderSuccessOrchestrator(
     const listingImageUrl = job.generationSettings?.imageUrls?.[0];
     if (listingImageUrl) {
       try {
-        thumbnailBuffer = await downloadImageBufferWithRetry(listingImageUrl);
+        thumbnailBuffer = (await downloadBufferWithRetry({ url: listingImageUrl, timeout: 60000, validateSize: false, computeChecksum: false, baseDelayMs: 300 })).buffer;
       } catch (error) {
         logger.warn(
           { jobId: job.id, error: error instanceof Error ? error.message : String(error) },

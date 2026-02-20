@@ -1,11 +1,10 @@
 import { handleProviderSuccessOrchestrator } from "@/services/videoGeneration/orchestrators/providerSuccess";
 
 jest.mock("@/services/videoGeneration/domain/downloadWithRetry", () => ({
-  downloadVideoBufferWithRetry: jest.fn().mockResolvedValue({
+  downloadBufferWithRetry: jest.fn().mockResolvedValue({
     buffer: Buffer.from("video-bytes"),
     checksumSha256: "checksum"
-  }),
-  downloadImageBufferWithRetry: jest.fn().mockResolvedValue(Buffer.from("image-bytes"))
+  })
 }));
 
 describe("handleProviderSuccessOrchestrator", () => {
