@@ -1,6 +1,6 @@
 import logger from "@/config/logger";
 import type { DBVideoGenJob } from "@shared/types/models";
-import { filterAndSortCompletedJobs } from "@/lib/utils/compositionHelpers";
+import { filterAndSortCompletedJobs } from "@/services/render/domain/composition";
 
 type EvaluateCompletionDeps = {
   findJobsByVideoId: (videoId: string) => Promise<DBVideoGenJob[]>;

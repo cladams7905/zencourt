@@ -1,9 +1,9 @@
 import express from "express";
 import request from "supertest";
 import webhookRoutes from "@/routes/webhooks/route";
-import { verifyFalWebhookSignature } from "@/lib/utils/falWebhookVerification";
+import { verifyFalWebhookSignature } from "@/services/webhook/security/falWebhookVerification";
 
-jest.mock("@/lib/utils/falWebhookVerification", () => ({
+jest.mock("@/services/webhook/security/falWebhookVerification", () => ({
   verifyFalWebhookSignature: jest.fn()
 }));
 

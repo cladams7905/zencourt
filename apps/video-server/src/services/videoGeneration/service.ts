@@ -12,7 +12,7 @@ import type {
   VideoJobResult
 } from "@shared/types/api";
 import type { DBVideoGenJob } from "@shared/types/models";
-import { TTLCache } from "@/lib/utils/cache";
+import { TTLCache } from "@/services/videoGeneration/domain/cache";
 import { startGenerationOrchestrator } from "@/services/videoGeneration/orchestrators/startGeneration";
 import { handleFalWebhookOrchestrator } from "@/services/videoGeneration/orchestrators/handleFalWebhook";
 import {

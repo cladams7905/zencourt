@@ -18,6 +18,12 @@ const WEBHOOK_TOLERANCE_MS = 5 * 60 * 1000;
 
 let jwksCache: { keys: FalJwkKey[]; fetchedAt: number } | null = null;
 
+export function resetFalJwksCacheForTests(): void {
+  if (process.env.NODE_ENV === "test") {
+    jwksCache = null;
+  }
+}
+
 function parseTimestamp(timestamp: string): number | null {
   const numeric = Number(timestamp);
   if (!Number.isFinite(numeric)) {

@@ -11,16 +11,22 @@ import {
   type CancelSignal
 } from "@remotion/renderer";
 import logger from "@/config/logger";
-import type { ListingVideoInputProps } from "@/lib/remotion";
-import type { ListingClip } from "@/lib/remotion/ListingVideo";
+import type { ListingVideoInputProps } from "@/services/render/providers/remotion/composition/Root";
+import type { ListingClip } from "@/services/render/providers/remotion/composition/ListingVideo";
 import type { RenderProvider } from "@/services/render/ports";
 
 const COMPOSITION_ID = "ListingVideo";
 
 function resolveEntryPoint(): string {
   const candidates = [
-    path.join(process.cwd(), "apps/video-server/src/remotion/index.tsx"),
-    path.join(process.cwd(), "dist/apps/video-server/src/remotion/index.js")
+    path.join(
+      process.cwd(),
+      "apps/video-server/src/services/render/providers/remotion/composition/Root.tsx"
+    ),
+    path.join(
+      process.cwd(),
+      "dist/apps/video-server/src/services/render/providers/remotion/composition/Root.js"
+    )
   ];
 
   for (const candidate of candidates) {

@@ -1,4 +1,4 @@
-import type { ListingClip } from "@/lib/remotion/ListingVideo";
+import type { ListingClip } from "@/services/render/providers/remotion/composition/ListingVideo";
 
 export type RenderJobData = {
   videoId: string;
