@@ -6,6 +6,7 @@ const createJestConfig = nextJest({
 
 const customJestConfig = {
   testEnvironment: "jsdom",
+  watchman: false,
   setupFilesAfterEnv: ["<rootDir>/src/test/setupTests.ts"],
   coverageReporters: ["json-summary", "json", "lcov", "text", "clover"],
   collectCoverageFrom: [
@@ -28,6 +29,7 @@ const customJestConfig = {
     "^@web/(.*)$": "<rootDir>/src/$1",
     "^@shared/(.*)$": "<rootDir>/../../packages/shared/$1",
     "^@db/(.*)$": "<rootDir>/../../packages/db/$1",
+    "^nanoid$": "<rootDir>/__mocks__/nanoid.ts",
     "\\.(css|less|scss|sass)$": "<rootDir>/src/test/styleMock.js"
   }
 };
