@@ -1,6 +1,5 @@
 import { S3Client } from "@aws-sdk/client-s3";
 import { buildStorageConfigFromEnv } from "@shared/utils";
-import logger from "@/config/logger";
 
 /**
  * Create and configure Backblaze B2 client using the object storage SDK
@@ -10,18 +9,26 @@ import logger from "@/config/logger";
  * - Custom endpoint for Backblaze B2
  * - Virtual-hosted-style URLs (not path-style)
  */
-const storageConfig = buildStorageConfigFromEnv(process.env);
+export function createStorageConfig(env: NodeJS.ProcessEnv = process.env) {
+  return buildStorageConfigFromEnv(env);
+}
 
-export const storageClient = new S3Client({
-  region: storageConfig.region,
-  endpoint: storageConfig.endpoint,
-  credentials: {
-    accessKeyId: storageConfig.keyId,
-    secretAccessKey: storageConfig.applicationKey
-  },
-  // Backblaze B2 supports virtual-hosted-style URLs
-  forcePathStyle: false
-});
+export function createStorageClient(config = createStorageConfig()) {
+  return new S3Client({
+    region: config.region,
+    endpoint: config.endpoint,
+    credentials: {
+      accessKeyId: config.keyId,
+      secretAccessKey: config.applicationKey
+    },
+    // Backblaze B2 supports virtual-hosted-style URLs
+    forcePathStyle: false
+  });
+}
+
+const storageConfig = createStorageConfig();
+
+export const storageClient = createStorageClient(storageConfig);
 
 export const STORAGE_CONFIG = {
   region: storageConfig.region,
@@ -29,9 +36,3 @@ export const STORAGE_CONFIG = {
   endpoint: storageConfig.endpoint,
   publicBaseUrl: storageConfig.publicBaseUrl
 } as const;
-
-logger.info(
-  `[Storage] Backblaze client initialized for region: ${storageConfig.region}
-  On endpoint: ${storageConfig.endpoint}
-  For the default bucket: ${storageConfig.bucket}`
-);

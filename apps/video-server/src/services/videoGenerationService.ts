@@ -29,12 +29,12 @@ import {
   getVideoJobThumbnailPath,
   getVideoJobVideoPath
 } from "@shared/utils/storagePaths";
-import { TTLCache } from "@/utils/cache";
+import { TTLCache } from "@/lib/utils/cache";
 import {
   downloadVideoBufferWithRetry,
   downloadImageBufferWithRetry
-} from "@/utils/downloadWithRetry";
-import { filterAndSortCompletedJobs } from "@/utils/compositionHelpers";
+} from "@/lib/utils/downloadWithRetry";
+import { filterAndSortCompletedJobs } from "@/lib/utils/compositionHelpers";
 
 interface GenerationResult {
   jobsStarted: number;
@@ -60,7 +60,7 @@ class VideoGenerationService {
       return cached;
     }
 
-  const [record] = await db
+    const [record] = await db
       .select({
         videoId: videos.id,
         listingId: videos.listingId,
@@ -71,11 +71,7 @@ class VideoGenerationService {
       .where(eq(videos.id, videoId))
       .limit(1);
 
-    if (
-      !record?.videoId ||
-      !record?.listingId ||
-      !record?.userId
-    ) {
+    if (!record?.videoId || !record?.listingId || !record?.userId) {
       throw new Error(
         `Video context missing for video ${videoId} (ensure listing/user exists)`
       );
@@ -96,15 +92,14 @@ class VideoGenerationService {
    * Uses requestId instead of videoId for proper job matching
    */
   private buildWebhookUrl(requestId: string): string {
+    const baseWebhookUrl = process.env.FAL_WEBHOOK_URL || "";
     try {
-      const url = new URL(process.env.FAL_WEBHOOK_URL);
+      const url = new URL(baseWebhookUrl);
       url.searchParams.set("requestId", requestId);
       return url.toString();
     } catch {
-      const separator = process.env.FAL_WEBHOOK_URL.includes("?") ? "&" : "?";
-      return `${
-        process.env.FAL_WEBHOOK_URL
-      }${separator}requestId=${encodeURIComponent(requestId)}`;
+      const separator = baseWebhookUrl.includes("?") ? "&" : "?";
+      return `${baseWebhookUrl}${separator}requestId=${encodeURIComponent(requestId)}`;
     }
   }
 
@@ -406,7 +401,7 @@ class VideoGenerationService {
   }
 
   private getJobDurationSeconds(job: DBVideoGenJob): number {
-    return job.generationSettings?.durationSeconds ?? 4;
+    return job.metadata?.duration ?? 4;
   }
 
   private static normalizeRunwayDuration(_durationSeconds: number): 4 | 6 | 8 {
@@ -577,22 +572,22 @@ class VideoGenerationService {
       });
     }
 
-      await db
-        .update(videoJobs)
-        .set({
-          status: "completed",
-          videoUrl,
-          thumbnailUrl,
-          metadata: {
-            ...job.metadata,
-            duration: metadata.durationSeconds,
-            fileSize: videoBuffer.length,
-            checksumSha256,
-            orientation: job.generationSettings?.orientation || "vertical"
-          },
-          updatedAt: new Date()
-        })
-        .where(eq(videoJobs.id, job.id));
+    await db
+      .update(videoJobs)
+      .set({
+        status: "completed",
+        videoUrl,
+        thumbnailUrl,
+        metadata: {
+          ...job.metadata,
+          duration: metadata.durationSeconds,
+          fileSize: videoBuffer.length,
+          checksumSha256,
+          orientation: job.generationSettings?.orientation || "vertical"
+        },
+        updatedAt: new Date()
+      })
+      .where(eq(videoJobs.id, job.id));
 
     await this.sendJobCompletionWebhook(job, {
       videoUrl,
@@ -993,7 +988,6 @@ class VideoGenerationService {
 
     return { allCompleted: true, completedJobs, failedJobs };
   }
-
 }
 
 export const videoGenerationService = new VideoGenerationService();

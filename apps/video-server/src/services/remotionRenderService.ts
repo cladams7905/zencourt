@@ -11,8 +11,8 @@ import {
   type CancelSignal
 } from "@remotion/renderer";
 import logger from "@/config/logger";
-import type { ListingClip } from "@/remotion/ListingVideo";
-import type { ListingVideoInputProps } from "@/remotion";
+import type { ListingClip } from "@/lib/remotion/ListingVideo";
+import type { ListingVideoInputProps } from "@/lib/remotion";
 
 type RenderResult = {
   videoBuffer: Buffer;
@@ -97,8 +97,7 @@ class RemotionRenderService {
     const composition = await selectComposition({
       serveUrl: bundleLocation,
       id: COMPOSITION_ID,
-      inputProps,
-
+      inputProps
     });
 
     const outputPath = path.join(
@@ -125,7 +124,7 @@ class RemotionRenderService {
         codec: "h264",
         outputLocation: outputPath,
         inputProps,
-  
+
         cancelSignal: options.cancelSignal,
         onProgress: (progress) => {
           options.onProgress?.(progress.progress);
@@ -137,7 +136,7 @@ class RemotionRenderService {
         serveUrl: bundleLocation,
         output: thumbPath,
         inputProps,
-  
+
         imageFormat: "jpeg"
       });
 
@@ -176,8 +175,7 @@ class RemotionRenderService {
     const composition = await selectComposition({
       serveUrl: bundleLocation,
       id: COMPOSITION_ID,
-      inputProps,
-
+      inputProps
     });
 
     const outputPath = path.join(
@@ -191,7 +189,7 @@ class RemotionRenderService {
         serveUrl: bundleLocation,
         output: outputPath,
         inputProps,
-  
+
         imageFormat: "jpeg"
       });
 

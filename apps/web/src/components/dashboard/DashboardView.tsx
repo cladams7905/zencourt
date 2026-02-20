@@ -90,6 +90,7 @@ export function DashboardView({
   writingStyleCompleted = false,
   mediaUploaded = false
 }: DashboardViewProps) {
+  const handleNoopAction = React.useCallback(() => {}, []);
   const [existingContentItems, setExistingContentItems] = React.useState<
     ContentItem[]
   >([]);
@@ -162,7 +163,7 @@ export function DashboardView({
                 date={day.date}
                 dayLabel={day.dayLabel}
                 posts={day.posts}
-                onAddClick={() => console.log("Add clicked for", day.date)}
+                onAddClick={handleNoopAction}
               />
             ))}
           </div>
@@ -187,9 +188,9 @@ export function DashboardView({
             <ContentGrid
               items={existingContentItems}
               onFavoriteToggle={handleFavoriteToggle}
-              onEdit={(id) => console.log("Edit", id)}
-              onDownload={(id) => console.log("Download", id)}
-              onShare={(id) => console.log("Share", id)}
+              onEdit={handleNoopAction}
+              onDownload={handleNoopAction}
+              onShare={handleNoopAction}
             />
           )}
 
@@ -200,9 +201,9 @@ export function DashboardView({
                   items={activeGeneratedItems}
                   loadingCount={loadingCount}
                   onFavoriteToggle={handleFavoriteToggle}
-                  onEdit={(id) => console.log("Edit", id)}
-                  onDownload={(id) => console.log("Download", id)}
-                  onShare={(id) => console.log("Share", id)}
+                  onEdit={handleNoopAction}
+                  onDownload={handleNoopAction}
+                  onShare={handleNoopAction}
                   onDelete={handleDeleteGeneratedItem}
                 />
               </div>

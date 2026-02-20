@@ -409,14 +409,24 @@ describe("useLocationAutocomplete", () => {
       }
     );
 
-    const getCurrentPosition = jest.fn((success: (position: any) => void) => {
-      success({
-        coords: {
-          latitude: 47.6062,
-          longitude: -122.3321
-        }
-      });
-    });
+    const getCurrentPosition = jest.fn(
+      (success: (position: GeolocationPosition) => void) => {
+        success({
+          coords: {
+            latitude: 47.6062,
+            longitude: -122.3321,
+            accuracy: 5,
+            altitude: null,
+            altitudeAccuracy: null,
+            heading: null,
+            speed: null,
+            toJSON: () => ({})
+          },
+          timestamp: Date.now(),
+          toJSON: () => ({})
+        });
+      }
+    );
 
     Object.defineProperty(global.navigator, "geolocation", {
       configurable: true,
