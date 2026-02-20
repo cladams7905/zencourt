@@ -45,4 +45,41 @@ describe("TTLCache", () => {
     expect(cache.get("a")).toBeUndefined();
     expect(cache.get("b")).toBe("2");
   });
+
+  it("delete removes a specific entry", () => {
+    const cache = new TTLCache<string, string>({ ttlMs: 10_000 });
+    cache.set("a", "1");
+    cache.set("b", "2");
+
+    expect(cache.delete("a")).toBe(true);
+    expect(cache.get("a")).toBeUndefined();
+    expect(cache.get("b")).toBe("2");
+    expect(cache.delete("nonexistent")).toBe(false);
+  });
+
+  it("clear empties the cache", () => {
+    const cache = new TTLCache<string, string>({ ttlMs: 10_000 });
+    cache.set("a", "1");
+    cache.set("b", "2");
+
+    cache.clear();
+
+    expect(cache.size).toBe(0);
+    expect(cache.get("a")).toBeUndefined();
+  });
+
+  it("startAutoPrune fires prune on interval", () => {
+    const cache = new TTLCache<string, string>({ ttlMs: 400 });
+    cache.set("a", "1");
+
+    const stop = cache.startAutoPrune(500);
+
+    jest.advanceTimersByTime(499);
+    expect(cache.size).toBe(1); // not yet pruned — interval hasn't fired
+
+    jest.advanceTimersByTime(2); // total 501ms — interval fires, entry expired at 400ms
+    expect(cache.size).toBe(0);
+
+    stop();
+  });
 });

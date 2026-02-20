@@ -25,7 +25,8 @@ describe("videoGeneration service wiring", () => {
       videoId: "video-1",
       listingId: "listing-1",
       userId: "user-1",
-      jobIds: ["job-1"]
+      jobIds: ["job-1"],
+      callbackUrl: "https://example.vercel.app/api/v1/webhooks/video"
     });
 
     expect(result).toEqual({ jobsStarted: 1, failedJobs: [] });

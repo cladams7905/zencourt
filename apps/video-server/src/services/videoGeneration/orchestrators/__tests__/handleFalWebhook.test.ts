@@ -70,4 +70,74 @@ describe("handleFalWebhookOrchestrator", () => {
     expect(baseDeps.handleProviderSuccess).toHaveBeenCalled();
     expect(baseDeps.markJobFailed).not.toHaveBeenCalled();
   });
+
+  it("returns early for already-completed job (idempotency)", async () => {
+    baseDeps.findJobByRequestId.mockResolvedValue({
+      id: "job-1",
+      videoGenBatchId: "video-1",
+      status: "completed"
+    });
+
+    await handleFalWebhookOrchestrator(
+      { request_id: "req-1", status: "COMPLETED" } as never,
+      undefined,
+      baseDeps
+    );
+
+    expect(baseDeps.handleProviderSuccess).not.toHaveBeenCalled();
+    expect(baseDeps.markJobFailed).not.toHaveBeenCalled();
+  });
+
+  it("returns early for already-canceled job", async () => {
+    baseDeps.findJobByRequestId.mockResolvedValue({
+      id: "job-1",
+      videoGenBatchId: "video-1",
+      status: "canceled"
+    });
+
+    await handleFalWebhookOrchestrator(
+      { request_id: "req-1", status: "COMPLETED" } as never,
+      undefined,
+      baseDeps
+    );
+
+    expect(baseDeps.handleProviderSuccess).not.toHaveBeenCalled();
+  });
+
+  it("looks up by fallbackJobId and attaches requestId when not found by requestId", async () => {
+    baseDeps.findJobByRequestId.mockResolvedValue(null);
+    baseDeps.findJobById.mockResolvedValue({
+      id: "job-1",
+      videoGenBatchId: "video-1",
+      status: "processing",
+      requestId: null
+    });
+    baseDeps.attachRequestIdToJob.mockResolvedValue(undefined);
+
+    await handleFalWebhookOrchestrator(
+      {
+        request_id: "req-1",
+        status: "COMPLETED",
+        payload: { video: { url: "https://video.mp4", metadata: { duration: 4 } } }
+      } as never,
+      "job-1",
+      baseDeps
+    );
+
+    expect(baseDeps.attachRequestIdToJob).toHaveBeenCalledWith("job-1", "req-1");
+    expect(baseDeps.handleProviderSuccess).toHaveBeenCalled();
+  });
+
+  it("returns early when job not found by requestId or fallbackJobId", async () => {
+    baseDeps.findJobByRequestId.mockResolvedValue(null);
+    baseDeps.findJobById.mockResolvedValue(null);
+
+    await handleFalWebhookOrchestrator(
+      { request_id: "req-1", status: "COMPLETED" } as never,
+      "job-1",
+      baseDeps
+    );
+
+    expect(baseDeps.handleProviderSuccess).not.toHaveBeenCalled();
+  });
 });

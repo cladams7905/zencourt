@@ -64,4 +64,23 @@ describe("webhook orchestrators", () => {
       BASE_CONTEXT.jobId
     );
   });
+
+  it("logs error when async webhook processing throws", async () => {
+    const logger = jest.requireMock("@/config/logger").default;
+    const handleFalWebhook = jest.fn().mockRejectedValue(new Error("processing failed"));
+    enqueueWebhookProcessing(BASE_CONTEXT, { handleFalWebhook });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(logger.error).toHaveBeenCalled();
+  });
+
+  it("returns 400 when signature header is missing", async () => {
+    const result = await verifyWebhookRequest(
+      {
+        ...BASE_CONTEXT,
+        headers: { ...BASE_CONTEXT.headers, signature: "" }
+      },
+      { verifyFalWebhookSignature: jest.fn() }
+    );
+    expect(result.status).toBe(400);
+  });
 });

@@ -16,4 +16,17 @@ describe("renders request parsing", () => {
     }>;
     expect(parseRenderJobIdParam(req)).toBe("job-1");
   });
+
+  it("throws when videoId is missing", () => {
+    expect(() => parseCreateRenderRequest({})).toThrow("videoId required");
+  });
+
+  it("throws when videoId is whitespace", () => {
+    expect(() => parseCreateRenderRequest({ videoId: "  " })).toThrow("videoId required");
+  });
+
+  it("throws when jobId param is missing", () => {
+    const req = { params: {} } as unknown as Request<{ jobId: string }>;
+    expect(() => parseRenderJobIdParam(req)).toThrow();
+  });
 });
