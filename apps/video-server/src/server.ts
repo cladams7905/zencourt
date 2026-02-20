@@ -3,11 +3,11 @@ import express, { Express, Request, Response } from "express";
 import pinoHttp, { Options as PinoHttpOptions } from "pino-http";
 import InitializeEnv from "./config/env";
 import logger from "./config/logger";
-import videoRoutes from "./routes/video";
-import healthRoutes from "./routes/health";
-import storageRoutes from "./routes/storage";
-import webhookRoutes from "./routes/webhooks";
-import renderRoutes from "./routes/renders";
+import videoRoutes from "./routes/video/route";
+import healthRoutes from "./routes/health/route";
+import storageRoutes from "./routes/storage/route";
+import webhookRoutes from "./routes/webhooks/route";
+import renderRoutes from "./routes/renders/route";
 import { errorHandler } from "./middleware/errorHandler";
 
 /**

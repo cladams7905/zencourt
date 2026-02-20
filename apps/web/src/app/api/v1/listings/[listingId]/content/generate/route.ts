@@ -9,7 +9,6 @@ import {
   apiErrorResponse,
   StatusCode
 } from "@web/src/app/api/v1/_responses";
-import { readJsonBodySafe } from "@web/src/app/api/v1/_validation";
 import {
   createChildLogger,
   logger as baseLogger
@@ -29,6 +28,7 @@ import {
   buildUpstreamRequestBody,
   consumeUpstreamListingStream
 } from "./services/upstream";
+import { readJsonBodySafe } from "@shared/utils/api/validation";
 
 const logger = createChildLogger(baseLogger, {
   module: "listing-content-generate-route"

@@ -12,7 +12,7 @@ import {
   apiErrorResponse,
   StatusCode
 } from "@web/src/app/api/v1/_responses";
-import { requireNonEmptyParam } from "@web/src/app/api/v1/_validation";
+import { parseRequiredRouteParam } from "@shared/utils/api/parsers";
 
 export const runtime = "nodejs";
 
@@ -25,8 +25,13 @@ export async function GET(
   { params }: { params: Promise<{ listingId: string }> }
 ) {
   try {
-    const listingId = requireNonEmptyParam((await params).listingId);
-    if (!listingId) {
+    let listingId: string;
+    try {
+      listingId = parseRequiredRouteParam(
+        (await params).listingId,
+        "listingId"
+      );
+    } catch {
       return apiErrorResponse(
         StatusCode.BAD_REQUEST,
         "INVALID_REQUEST",

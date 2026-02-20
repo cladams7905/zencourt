@@ -17,25 +17,40 @@ import {
   apiErrorResponse,
   StatusCode
 } from "@web/src/app/api/v1/_responses";
-import { readJsonBodySafe } from "@web/src/app/api/v1/_validation";
 import {
   createChildLogger,
   logger as baseLogger
 } from "@web/src/lib/core/logging/logger";
 import { startListingVideoGeneration } from "@web/src/server/services/videoGeneration";
+import { readJsonBodySafe } from "@shared/utils/api/validation";
 
 const logger = createChildLogger(baseLogger, {
   module: "video-generate-route"
 });
 
+function parseVideoGenerateRequest(body: unknown): VideoGenerateRequest {
+  const input = (body || {}) as Partial<VideoGenerateRequest>;
+  if (!input.listingId || typeof input.listingId !== "string") {
+    throw new Error("listingId is required");
+  }
+
+  return {
+    listingId: input.listingId.trim(),
+    orientation: input.orientation,
+    aiDirections:
+      typeof input.aiDirections === "string" ? input.aiDirections : undefined
+  };
+}
+
 export async function POST(
   request: NextRequest
 ): Promise<NextResponse<VideoGenerateResponse>> {
   try {
-    const body = (await readJsonBodySafe(
-      request
-    )) as VideoGenerateRequest | null;
-    if (!body?.listingId) {
+    const rawBody = await readJsonBodySafe(request);
+    let body: VideoGenerateRequest;
+    try {
+      body = parseVideoGenerateRequest(rawBody);
+    } catch {
       return apiErrorResponse(
         StatusCode.BAD_REQUEST,
         "INVALID_REQUEST",
