@@ -118,6 +118,62 @@ describe("video generate route", () => {
     });
   });
 
+  it.each([
+    [401, "UNAUTHORIZED", "auth required"],
+    [403, "FORBIDDEN", "no access"],
+    [404, "NOT_FOUND", "listing missing"]
+  ])(
+    "maps ApiError status %s to %s",
+    async (status, code, message) => {
+      const { POST, MockApiError, mockStartListingVideoGeneration } =
+        await loadRoute();
+      mockStartListingVideoGeneration.mockRejectedValueOnce(
+        new MockApiError(status, {
+          error: "request failed",
+          message
+        })
+      );
+      const request = {
+        json: async () => ({ listingId: "listing-1" })
+      } as unknown as Request;
+
+      const response = await POST(request as never);
+      const payload = await response.json();
+
+      expect(response.status).toBe(status);
+      expect(payload).toEqual({
+        code,
+        error: message,
+        success: false,
+        listingId: "",
+        videoId: "",
+        jobIds: [],
+        jobCount: 0
+      });
+    }
+  );
+
+  it("returns 400 when listingId is missing from request body", async () => {
+    const { POST } = await loadRoute();
+    const request = {
+      json: async () => ({})
+    } as unknown as Request;
+
+    const response = await POST(request as never);
+    const payload = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(payload).toEqual({
+      code: "INVALID_REQUEST",
+      error: "listingId is required",
+      success: false,
+      listingId: "",
+      videoId: "",
+      jobIds: [],
+      jobCount: 0
+    });
+  });
+
   it("maps DrizzleQueryError to 500", async () => {
     const { POST, MockDrizzleQueryError, mockStartListingVideoGeneration } =
       await loadRoute();
