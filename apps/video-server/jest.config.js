@@ -14,6 +14,7 @@ module.exports = {
     '!src/**/*.test.ts',
     '!src/**/*.spec.ts',
   ],
+  coverageReporters: ['json', 'json-summary', 'lcov', 'text'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
     '^@db/(.*)$': '<rootDir>/../../packages/db/$1',
