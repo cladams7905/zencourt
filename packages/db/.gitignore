@@ -6,6 +6,7 @@
 
 # Keep config files
 !*.config.js
+!jest.setup.js
 
 # Dependencies
 node_modules/
