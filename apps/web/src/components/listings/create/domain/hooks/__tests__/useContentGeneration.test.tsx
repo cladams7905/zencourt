@@ -21,7 +21,7 @@ jest.mock(
   })
 );
 
-jest.mock("@web/src/lib/sse/extractJsonItemsFromStream", () => ({
+jest.mock("@web/src/lib/sse/contentExtractor", () => ({
   extractJsonItemsFromStream: (...args: unknown[]) => mockExtractJsonItems(...args)
 }));
 

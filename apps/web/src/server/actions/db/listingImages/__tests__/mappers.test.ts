@@ -8,7 +8,7 @@ function makeImage(overrides: Partial<DBListingImage> = {}): DBListingImage {
     userId: "user-1",
     url: "https://example.com/image.jpg",
     filename: "image.jpg",
-    category: "living_room",
+    category: "living-room",
     isPrimary: true,
     primaryScore: 0.95,
     uploadedAt: new Date("2024-01-15T12:00:00Z"),
@@ -26,7 +26,7 @@ describe("mapListingImageToDisplayItem", () => {
       id: "img-1",
       url: "https://example.com/image.jpg",
       filename: "image.jpg",
-      category: "living_room",
+      category: "living-room",
       isPrimary: true,
       primaryScore: 0.95,
       uploadedAtMs: new Date("2024-01-15T12:00:00Z").getTime()

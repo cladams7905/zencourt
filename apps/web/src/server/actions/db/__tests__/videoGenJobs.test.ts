@@ -21,6 +21,7 @@ jest.mock("@db/client", () => ({
 
 import {
   createVideoGenJob,
+  createVideoGenJobsBatch,
   getVideoGenJobById,
   updateVideoGenJob
 } from "@web/src/server/actions/db/videoGenJobs";
@@ -43,6 +44,12 @@ describe("videoGenJobs actions", () => {
     mockValues.mockResolvedValue(undefined);
     await createVideoGenJob({ id: "j1" } as never);
     expect(mockValues).toHaveBeenCalledWith({ id: "j1" });
+  });
+
+  it("creates jobs in batch", async () => {
+    mockValues.mockResolvedValue(undefined);
+    await createVideoGenJobsBatch([{ id: "j1" }, { id: "j2" }] as never);
+    expect(mockValues).toHaveBeenCalledWith([{ id: "j1" }, { id: "j2" }]);
   });
 
   it("updates and fetches job", async () => {

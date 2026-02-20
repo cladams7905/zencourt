@@ -1,4 +1,7 @@
-import { ROOM_CATEGORIES, type RoomCategory } from "@web/src/lib/domain/listing/vision";
+import {
+  ROOM_CATEGORIES,
+  type RoomCategory
+} from "@web/src/lib/domain/listing/roomCategories";
 import { UNCATEGORIZED_CATEGORY_ID } from "@web/src/components/listings/categorize/shared/constants";
 
 export const normalizeCategory = (value: string) => value.trim().toLowerCase();
@@ -9,7 +12,8 @@ export const MULTI_ROOM_CATEGORIES = new Set(
     .map((category) => category.id)
 );
 
-export const getCategoryBase = (category: string) => category.replace(/-\d+$/, "");
+export const getCategoryBase = (category: string) =>
+  category.replace(/-\d+$/, "");
 
 export const formatCategoryLabel = (
   category: string,

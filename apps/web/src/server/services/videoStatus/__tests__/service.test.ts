@@ -97,7 +97,6 @@ describe("videoStatus/service", () => {
               roomId: "room-1",
               roomName: "Kitchen",
               category: "kitchen",
-              durationSeconds: 8,
               sortOrder: 2
             }
           }
@@ -124,7 +123,6 @@ describe("videoStatus/service", () => {
           roomId: "room-1",
           roomName: "Kitchen",
           category: "kitchen",
-          durationSeconds: 8,
           isPriorityCategory: true,
           sortOrder: 2
         }
@@ -170,7 +168,6 @@ describe("videoStatus/service", () => {
           roomId: undefined,
           roomName: undefined,
           category: null,
-          durationSeconds: null,
           isPriorityCategory: false,
           sortOrder: null
         }

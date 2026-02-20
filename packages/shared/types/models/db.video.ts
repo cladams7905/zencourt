@@ -46,7 +46,6 @@ export type JobGenerationSettings = {
   prompt: string;
   category: string;
   sortOrder: number;
-  durationSeconds?: number;
   roomId?: string;
   roomName?: string;
   roomNumber?: number;

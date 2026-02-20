@@ -29,12 +29,17 @@ function parseSseEvents(raw: string): Array<Record<string, unknown>> {
 }
 
 describe("listing content generate route", () => {
-  async function loadRoute(options?: { cachedItems?: unknown[]; upstream?: Response }) {
+  async function loadRoute(options?: {
+    cachedItems?: unknown[];
+    upstream?: Response;
+  }) {
     jest.resetModules();
     process.env.KV_REST_API_URL = "https://example.upstash.io";
     process.env.KV_REST_API_TOKEN = "token";
 
-    const mockRequireAuthenticatedUser = jest.fn().mockResolvedValue({ id: "user-1" });
+    const mockRequireAuthenticatedUser = jest
+      .fn()
+      .mockResolvedValue({ id: "user-1" });
     const mockRequireListingAccess = jest.fn().mockResolvedValue({
       id: "listing-1",
       address: "123 Main St, Austin, TX 78701",
@@ -62,7 +67,15 @@ describe("listing content generate route", () => {
         makeSseResponse([
           {
             type: "done",
-            items: [{ hook: "A", broll_query: "q", body: null, cta: null, caption: "c" }]
+            items: [
+              {
+                hook: "A",
+                broll_query: "q",
+                body: null,
+                cta: null,
+                caption: "c"
+              }
+            ]
           }
         ])
     );
@@ -73,8 +86,10 @@ describe("listing content generate route", () => {
 
     jest.doMock("@web/src/app/api/v1/_utils", () => ({
       ApiError: MockApiError,
-      requireAuthenticatedUser: (...args: unknown[]) => mockRequireAuthenticatedUser(...args),
-      requireListingAccess: (...args: unknown[]) => mockRequireListingAccess(...args)
+      requireAuthenticatedUser: (...args: unknown[]) =>
+        mockRequireAuthenticatedUser(...args),
+      requireListingAccess: (...args: unknown[]) =>
+        mockRequireListingAccess(...args)
     }));
     jest.doMock("@upstash/redis", () => ({
       Redis: class {
@@ -84,12 +99,16 @@ describe("listing content generate route", () => {
     }));
     jest.doMock("@web/src/lib/core/logging/logger", () => ({
       logger: { error: jest.fn(), warn: jest.fn(), info: jest.fn() },
-      createChildLogger: () => ({ error: jest.fn(), warn: jest.fn(), info: jest.fn() })
+      createChildLogger: () => ({
+        error: jest.fn(),
+        warn: jest.fn(),
+        info: jest.fn()
+      })
     }));
 
-    const module = await import("../route");
+    const rootModule = await import("../route");
     return {
-      POST: module.POST,
+      POST: rootModule.POST,
       mockFetch,
       mockRedis,
       mockRequireListingAccess,
@@ -100,7 +119,10 @@ describe("listing content generate route", () => {
   it("returns 400 for invalid subcategory", async () => {
     const { POST } = await loadRoute();
     const request = {
-      json: async () => ({ subcategory: "bad-subcategory", media_type: "video" }),
+      json: async () => ({
+        subcategory: "bad-subcategory",
+        media_type: "video"
+      }),
       nextUrl: { origin: "http://localhost:3000" },
       headers: { get: () => null }
     } as unknown as Request;
@@ -114,7 +136,13 @@ describe("listing content generate route", () => {
 
   it("returns cached done event when redis has items", async () => {
     const cachedItems = [
-      { hook: "Cached", broll_query: "q", body: null, cta: null, caption: "cap" }
+      {
+        hook: "Cached",
+        broll_query: "q",
+        body: null,
+        cta: null,
+        caption: "cap"
+      }
     ];
     const { POST, mockFetch } = await loadRoute({ cachedItems });
     const request = {
@@ -136,9 +164,12 @@ describe("listing content generate route", () => {
   });
 
   it("proxies upstream errors as SSE error event", async () => {
-    const upstream = new Response(JSON.stringify({ message: "upstream failed" }), {
-      status: 500
-    });
+    const upstream = new Response(
+      JSON.stringify({ message: "upstream failed" }),
+      {
+        status: 500
+      }
+    );
     const { POST } = await loadRoute({ upstream });
     const request = {
       json: async () => ({ subcategory: "new_listing", media_type: "video" }),
@@ -155,12 +186,39 @@ describe("listing content generate route", () => {
     expect(events[0]).toEqual({ type: "error", message: "upstream failed" });
   });
 
+  it("uses default message when upstream error payload is invalid json", async () => {
+    const upstream = {
+      ok: false,
+      status: 500,
+      json: async () => {
+        throw new Error("bad json");
+      }
+    } as unknown as Response;
+    const { POST } = await loadRoute({ upstream });
+    const request = {
+      json: async () => ({ subcategory: "new_listing", media_type: "video" }),
+      nextUrl: { origin: "http://localhost:3000" },
+      headers: { get: () => null }
+    } as unknown as Request;
+
+    const response = await POST(request as never, {
+      params: Promise.resolve({ listingId: "listing-1" })
+    });
+    const events = parseSseEvents(await response.text());
+    expect(events[0]).toEqual({
+      type: "error",
+      message: "Failed to generate listing content"
+    });
+  });
+
   it("proxies upstream done and writes cache", async () => {
     const upstream = makeSseResponse([
       { type: "delta", text: "[" },
       {
         type: "done",
-        items: [{ hook: "A", broll_query: "q", body: null, cta: null, caption: "c" }]
+        items: [
+          { hook: "A", broll_query: "q", body: null, cta: null, caption: "c" }
+        ]
       }
     ]);
     const { POST, mockRedis } = await loadRoute({ upstream });
@@ -179,5 +237,112 @@ describe("listing content generate route", () => {
     expect(events.map((event) => event.type)).toEqual(["delta", "done"]);
     expect((events[1]?.meta as { model: string }).model).toBe("generated");
     expect(mockRedis.set).toHaveBeenCalled();
+  });
+
+  it("returns 400 for invalid media type", async () => {
+    const { POST } = await loadRoute();
+    const request = {
+      json: async () => ({ subcategory: "new_listing", media_type: "bad" }),
+      nextUrl: { origin: "http://localhost:3000" },
+      headers: { get: () => null }
+    } as unknown as Request;
+
+    const response = await POST(request as never, {
+      params: Promise.resolve({ listingId: "listing-1" })
+    });
+    expect(response.status).toBe(400);
+  });
+
+  it("returns error event when upstream stream body is missing", async () => {
+    const upstream = new Response(null, { status: 200 });
+    const { POST } = await loadRoute({ upstream });
+    const request = {
+      json: async () => ({ subcategory: "new_listing", media_type: "video" }),
+      nextUrl: { origin: "http://localhost:3000" },
+      headers: { get: () => null }
+    } as unknown as Request;
+
+    const response = await POST(request as never, {
+      params: Promise.resolve({ listingId: "listing-1" })
+    });
+    const events = parseSseEvents(await response.text());
+    expect(events[0]?.type).toBe("error");
+  });
+
+  it("returns error event when upstream done items are missing", async () => {
+    const upstream = makeSseResponse([{ type: "delta", text: "[]" }]);
+    const { POST } = await loadRoute({ upstream });
+    const request = {
+      json: async () => ({ subcategory: "new_listing", media_type: "video" }),
+      nextUrl: { origin: "http://localhost:3000" },
+      headers: { get: () => null }
+    } as unknown as Request;
+
+    const response = await POST(request as never, {
+      params: Promise.resolve({ listingId: "listing-1" })
+    });
+    const events = parseSseEvents(await response.text());
+    expect(events[1]).toEqual(
+      expect.objectContaining({
+        type: "error",
+        message: "Listing content generation did not return completed items"
+      })
+    );
+  });
+
+  it("proxies upstream error events", async () => {
+    const upstream = makeSseResponse([
+      { type: "error", message: "upstream event error" }
+    ]);
+    const { POST } = await loadRoute({ upstream });
+    const request = {
+      json: async () => ({ subcategory: "new_listing", media_type: "video" }),
+      nextUrl: { origin: "http://localhost:3000" },
+      headers: { get: () => null }
+    } as unknown as Request;
+
+    const response = await POST(request as never, {
+      params: Promise.resolve({ listingId: "listing-1" })
+    });
+    const events = parseSseEvents(await response.text());
+    expect(events[0]).toEqual({
+      type: "error",
+      message: "upstream event error"
+    });
+  });
+
+  it("emits stream error event when upstream fetch throws", async () => {
+    const { POST, mockFetch } = await loadRoute();
+    mockFetch.mockRejectedValueOnce(new Error("network down"));
+    const request = {
+      json: async () => ({ subcategory: "new_listing", media_type: "video" }),
+      nextUrl: { origin: "http://localhost:3000" },
+      headers: { get: () => null }
+    } as unknown as Request;
+
+    const response = await POST(request as never, {
+      params: Promise.resolve({ listingId: "listing-1" })
+    });
+    const events = parseSseEvents(await response.text());
+    expect(events[0]).toEqual(
+      expect.objectContaining({ type: "error", message: "network down" })
+    );
+  });
+
+  it("returns 500 when pre-stream setup throws unexpected error", async () => {
+    const { POST } = await loadRoute();
+    const request = {
+      json: async () => {
+        throw new Error("invalid body");
+      },
+      nextUrl: { origin: "http://localhost:3000" },
+      headers: { get: () => null }
+    } as unknown as Request;
+
+    const response = await POST(request as never, {
+      params: Promise.resolve({ listingId: "listing-1" })
+    });
+
+    expect(response.status).toBe(500);
   });
 });

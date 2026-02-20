@@ -7,8 +7,28 @@ const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const webRoot = path.resolve(scriptDir, "..");
 
 const summaryPath = path.resolve(webRoot, "coverage/coverage-summary.json");
+const finalPath = path.resolve(webRoot, "coverage/coverage-final.json");
 if (!fs.existsSync(summaryPath)) {
   console.error(`Coverage summary not found at ${summaryPath}`);
+  process.exit(1);
+}
+if (!fs.existsSync(finalPath)) {
+  console.error(`Coverage final report not found at ${finalPath}`);
+  process.exit(1);
+}
+
+const summaryMtimeMs = fs.statSync(summaryPath).mtimeMs;
+const finalMtimeMs = fs.statSync(finalPath).mtimeMs;
+const STALE_TOLERANCE_MS = 2000;
+if (summaryMtimeMs + STALE_TOLERANCE_MS < finalMtimeMs) {
+  console.error(
+    [
+      "Coverage summary appears stale.",
+      `coverage-summary.json (${new Date(summaryMtimeMs).toISOString()})`,
+      `is older than coverage-final.json (${new Date(finalMtimeMs).toISOString()}).`,
+      "Re-run coverage so json-summary is regenerated before check-coverage."
+    ].join(" ")
+  );
   process.exit(1);
 }
 
@@ -41,9 +61,41 @@ function componentPrefixesWithDomain() {
     .sort();
 }
 
+function apiRoutePrefixes(root, srcRelative) {
+  const rootPath = path.resolve(webRoot, root);
+  const prefixes = new Set([`${srcRelative}/`]);
+
+  function walk(current) {
+    const entries = fs.readdirSync(current, { withFileTypes: true });
+    for (const entry of entries) {
+      const fullPath = path.join(current, entry.name);
+      if (entry.isDirectory()) {
+        walk(fullPath);
+        continue;
+      }
+      if (entry.isFile() && entry.name === "route.ts") {
+        const relativeDir = path
+          .relative(rootPath, path.dirname(fullPath))
+          .split(path.sep)
+          .join("/");
+        if (relativeDir) {
+          prefixes.add(`${srcRelative}/${relativeDir}/`);
+        }
+      }
+    }
+  }
+
+  if (fs.existsSync(rootPath)) {
+    walk(rootPath);
+  }
+
+  return [...prefixes].sort();
+}
+
 const MODULE_PREFIXES = [
   ...componentPrefixesWithDomain(),
   ...subfolderPrefixes("src/server/services", "src/server/services"),
+  ...apiRoutePrefixes("src/app/api/v1", "src/app/api/v1"),
   "src/lib/",
   "src/server/actions/"
 ].filter((value, index, arr) => arr.indexOf(value) === index);

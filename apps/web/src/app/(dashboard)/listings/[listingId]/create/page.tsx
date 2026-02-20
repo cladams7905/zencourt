@@ -61,7 +61,6 @@ export default async function ListingCreatePage({
       thumbnail: job.thumbnailUrl ?? undefined,
       videoUrl: job.videoUrl ?? undefined,
       category: job.category ?? undefined,
-      durationSeconds: job.durationSeconds ?? undefined,
       generationModel: job.generationModel ?? undefined,
       orientation: job.orientation ?? undefined,
       isPriorityCategory: job.isPriorityCategory ?? false,

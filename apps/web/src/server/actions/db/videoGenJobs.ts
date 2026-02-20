@@ -17,6 +17,19 @@ export async function createVideoGenJob(
 }
 
 /**
+ * Create multiple video generation job records in a single write
+ */
+export async function createVideoGenJobsBatch(
+  jobs: InsertDBVideoGenJob[]
+): Promise<void> {
+  if (jobs.length === 0) {
+    return;
+  }
+
+  await db.insert(videoGenJobs).values(jobs);
+}
+
+/**
  * Update an existing video generation job record
  */
 export async function updateVideoGenJob(
