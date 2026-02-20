@@ -2,10 +2,10 @@ import express from "express";
 import request from "supertest";
 import storageRoutes from "@/routes/storage/route";
 import { errorHandler } from "@/middleware/errorHandler";
-import { storageService } from "@/services/storageService";
+import { storageService } from "@/services/storage";
 import { VideoProcessingErrorType } from "@shared/types/api";
 
-jest.mock("@/services/storageService", () => ({
+jest.mock("@/services/storage", () => ({
   storageService: {
     uploadFile: jest.fn().mockResolvedValue("https://cdn.local/file.jpg"),
     getSignedDownloadUrl: jest

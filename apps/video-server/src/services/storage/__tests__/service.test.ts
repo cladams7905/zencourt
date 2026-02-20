@@ -3,7 +3,7 @@ import {
   StorageService,
   StorageServiceError,
   StorageErrorType
-} from "../storageService";
+} from "@/services/storage";
 
 // Mock storage config to prevent initialization logs
 jest.mock("@/config/storage", () => ({

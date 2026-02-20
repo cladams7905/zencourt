@@ -3,7 +3,7 @@
  * videoGenerationService and renders.ts
  */
 
-import type { RenderJobData } from "@/services/remotionRenderQueue";
+import type { RenderJobData } from "@/services/render";
 import type { PreviewTextOverlay } from "@shared/types/video";
 
 export interface CompletedJobLike {

@@ -2,7 +2,7 @@ import express, { Request, Response, Router } from "express";
 import multer from "multer";
 import { validateApiKey } from "@/middleware/auth";
 import { asyncHandler } from "@/middleware/errorHandler";
-import { storageService } from "@/services/storageService";
+import { storageService } from "@/services/storage";
 import {
   parseBatchUploadRouteInput,
   parseDeleteRouteInput,

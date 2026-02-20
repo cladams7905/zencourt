@@ -1,4 +1,4 @@
-import { runwayService } from "@/services/runwayService";
+import { runwayService } from "@/services/providers/runway";
 import type { VideoGenerationProviderStrategy } from "@/services/videoGeneration/ports";
 import type {
   ProviderDispatchInput,

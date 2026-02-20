@@ -1,41 +1,8 @@
 import { makeCancelSignal } from "@remotion/renderer";
 import { nanoid } from "nanoid";
 import logger from "@/config/logger";
-import { remotionRenderService } from "./remotionRenderService";
-import type { ListingClip } from "@/lib/remotion/ListingVideo";
-
-export type RenderJobData = {
-  videoId: string;
-  listingId: string;
-  userId: string;
-  clips: ListingClip[];
-  orientation: "vertical" | "landscape";
-  transitionDurationSeconds?: number;
-};
-
-export type RenderJobState =
-  | {
-      status: "queued";
-      data: RenderJobData;
-      cancel: () => void;
-    }
-  | {
-      status: "in-progress";
-      progress: number;
-      data: RenderJobData;
-      cancel: () => void;
-    }
-  | {
-      status: "completed";
-      data: RenderJobData;
-      videoUrl?: string;
-      thumbnailUrl?: string;
-    }
-  | {
-      status: "failed";
-      data: RenderJobData;
-      error: string;
-    };
+import type { RenderJobData, RenderJobState } from "./types";
+import type { RenderProvider } from "./ports";
 
 type RenderCompletion = {
   videoUrl?: string;
@@ -57,14 +24,13 @@ type RenderHandlers = {
   onError?: (error: Error, data: RenderJobData) => Promise<void>;
 };
 
-class RemotionRenderQueue {
+class RenderQueue {
   private jobs = new Map<string, RenderJobState>();
-  private pending: Array<{
-    jobId: string;
-    handlers?: RenderHandlers;
-  }> = [];
+  private pending: Array<{ jobId: string; handlers?: RenderHandlers }> = [];
   private activeCount = 0;
   private maxConcurrent = Number(process.env.RENDER_CONCURRENCY) || 3;
+
+  constructor(private provider: RenderProvider) {}
 
   getJob(jobId: string): RenderJobState | undefined {
     return this.jobs.get(jobId);
@@ -72,9 +38,7 @@ class RemotionRenderQueue {
 
   cancelJob(jobId: string): boolean {
     const job = this.jobs.get(jobId);
-    if (!job) {
-      return false;
-    }
+    if (!job) return false;
     if (job.status !== "queued" && job.status !== "in-progress") {
       return false;
     }
@@ -103,32 +67,21 @@ class RemotionRenderQueue {
   }
 
   private processNext(): void {
-    if (this.activeCount >= this.maxConcurrent) {
-      return;
-    }
+    if (this.activeCount >= this.maxConcurrent) return;
     const next = this.pending.shift();
-    if (!next) {
-      return;
-    }
+    if (!next) return;
     this.activeCount += 1;
     this.processRender(next.jobId, next.handlers)
-      .catch(() => {
-        // errors handled in processRender
-      })
+      .catch(() => {})
       .finally(() => {
         this.activeCount = Math.max(0, this.activeCount - 1);
         this.processNext();
       });
   }
 
-  private async processRender(
-    jobId: string,
-    handlers?: RenderHandlers
-  ): Promise<void> {
+  private async processRender(jobId: string, handlers?: RenderHandlers): Promise<void> {
     const job = this.jobs.get(jobId);
-    if (!job || job.status !== "queued") {
-      return;
-    }
+    if (!job || job.status !== "queued") return;
 
     const { cancel, cancelSignal } = makeCancelSignal();
     this.jobs.set(jobId, {
@@ -143,7 +96,7 @@ class RemotionRenderQueue {
     }
 
     try {
-      const result = await remotionRenderService.renderListingVideo({
+      const result = await this.provider.renderListingVideo({
         clips: job.data.clips,
         orientation: job.data.orientation,
         transitionDurationSeconds: job.data.transitionDurationSeconds,
@@ -159,11 +112,8 @@ class RemotionRenderQueue {
           if (handlers?.onProgress) {
             handlers.onProgress(progress, job.data).catch((error) => {
               logger.warn(
-                {
-                  jobId,
-                  error: error instanceof Error ? error.message : String(error)
-                },
-                "[RemotionRenderQueue] Failed to update progress handler"
+                { jobId, error: error instanceof Error ? error.message : String(error) },
+                "[RenderQueue] Failed to update progress handler"
               );
             });
           }
@@ -182,11 +132,8 @@ class RemotionRenderQueue {
       });
     } catch (error) {
       logger.error(
-        {
-          jobId,
-          error: error instanceof Error ? error.message : String(error)
-        },
-        "[RemotionRenderQueue] Render failed"
+        { jobId, error: error instanceof Error ? error.message : String(error) },
+        "[RenderQueue] Render failed"
       );
 
       if (handlers?.onError) {
@@ -205,4 +152,6 @@ class RemotionRenderQueue {
   }
 }
 
-export const remotionRenderQueue = new RemotionRenderQueue();
+export function createRenderQueue(provider: RenderProvider): RenderQueue {
+  return new RenderQueue(provider);
+}
