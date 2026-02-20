@@ -20,7 +20,9 @@ router.post("/fal", async (req: Request, res: Response) => {
     });
 
     if (verification.status !== 200) {
-      res.status(verification.status).json(verification.body);
+      // Explicit policy: always return 200 to avoid provider retries.
+      // Verification failures are handled via logging and dropped processing.
+      res.status(200).json({ success: true });
       return;
     }
 

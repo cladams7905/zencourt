@@ -32,60 +32,47 @@ router.post(
   "/",
   asyncHandler(async (req: Request, res: Response) => {
     const input = parseCreateRenderRequest(req.body);
-    try {
-      const result = await handleCreateRender(input, {
-        fetchVideoContext: async (videoId: string) => {
-          const [videoContext] = await db
-            .select({
-              videoId: videos.id,
-              listingId: videos.listingId,
-              userId: listings.userId
-            })
-            .from(videos)
-            .innerJoin(listings, eq(videos.listingId, listings.id))
-            .where(eq(videos.id, videoId))
-            .limit(1);
+    const result = await handleCreateRender(input, {
+      fetchVideoContext: async (videoId: string) => {
+        const [videoContext] = await db
+          .select({
+            videoId: videos.id,
+            listingId: videos.listingId,
+            userId: listings.userId
+          })
+          .from(videos)
+          .innerJoin(listings, eq(videos.listingId, listings.id))
+          .where(eq(videos.id, videoId))
+          .limit(1);
 
-          if (!videoContext?.listingId || !videoContext?.userId) {
-            return null;
-          }
+        if (!videoContext?.listingId || !videoContext?.userId) {
+          return null;
+        }
 
-          return {
-            videoId: videoContext.videoId,
-            listingId: videoContext.listingId,
-            userId: videoContext.userId
-          };
-        },
-        fetchVideoJobs: async (videoId: string) =>
-          db.select().from(videoJobs).where(eq(videoJobs.videoGenBatchId, videoId)),
-        filterAndSortCompletedJobs,
-        buildRenderJobData: (
+        return {
+          videoId: videoContext.videoId,
+          listingId: videoContext.listingId,
+          userId: videoContext.userId
+        };
+      },
+      fetchVideoJobs: async (videoId: string) =>
+        db.select().from(videoJobs).where(eq(videoJobs.videoGenBatchId, videoId)),
+      filterAndSortCompletedJobs,
+      buildRenderJobData: (
+        context,
+        completedJobs,
+        watermarkOpacity,
+        textOverlaysByJobId
+      ) =>
+        buildRenderJobData(
           context,
           completedJobs,
           watermarkOpacity,
-          textOverlaysByJobId
-        ) =>
-          buildRenderJobData(
-            context,
-            completedJobs,
-            watermarkOpacity,
-            textOverlaysByJobId as Record<string, PreviewTextOverlay>
-          ),
-        renderQueue: remotionRenderQueue
-      });
-      res.status(200).json(result);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Render creation failed";
-      if (message === "Video context not found") {
-        res.status(404).json({ success: false, error: message });
-        return;
-      }
-      if (message === "No completed jobs to compose") {
-        res.status(400).json({ success: false, error: message });
-        return;
-      }
-      throw error;
-    }
+          textOverlaysByJobId as Record<string, PreviewTextOverlay>
+        ),
+      renderQueue: remotionRenderQueue
+    });
+    res.status(200).json(result);
   })
 );
 

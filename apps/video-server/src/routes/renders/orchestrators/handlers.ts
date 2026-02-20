@@ -1,5 +1,9 @@
 import type { DBVideoGenJob } from "@shared/types/models/db.video";
 import type { RenderJobData } from "@/services/remotionRenderQueue";
+import {
+  VideoProcessingError,
+  VideoProcessingErrorType
+} from "@/middleware/errorHandler";
 
 type RenderContext = {
   videoId: string;
@@ -51,13 +55,27 @@ export async function handleCreateRender(
 ): Promise<{ success: true; jobId: string }> {
   const videoContext = await deps.fetchVideoContext(input.videoId);
   if (!videoContext?.listingId || !videoContext?.userId) {
-    throw new Error("Video context not found");
+    throw new VideoProcessingError(
+      "Render request referenced a video without context",
+      VideoProcessingErrorType.JOB_NOT_FOUND,
+      {
+        statusCode: 404,
+        context: { videoId: input.videoId }
+      }
+    );
   }
 
   const jobs = await deps.fetchVideoJobs(input.videoId);
   const completedJobs = deps.filterAndSortCompletedJobs(jobs);
   if (completedJobs.length === 0) {
-    throw new Error("No completed jobs to compose");
+    throw new VideoProcessingError(
+      "Render request has no completed jobs",
+      VideoProcessingErrorType.INVALID_INPUT,
+      {
+        statusCode: 400,
+        context: { videoId: input.videoId }
+      }
+    );
   }
 
   const renderData = deps.buildRenderJobData(
