@@ -6,7 +6,6 @@
 import { Router, Request, Response } from "express";
 import { validateApiKey } from "@/middleware/auth";
 import { asyncHandler } from "@/middleware/errorHandler";
-import { videoGenerationService } from "@/services/videoGenerationService";
 import {
   cancelVideosByListing,
   cancelVideosByIds,
@@ -20,6 +19,7 @@ import {
   handleCancelVideo,
   handleGenerateVideo
 } from "@/routes/video/orchestrators/handlers";
+import { videoGenerationService } from "@/services/videoGeneration";
 
 const router = Router();
 
