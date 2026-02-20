@@ -1,14 +1,53 @@
 import { ApiError } from "@web/src/app/api/v1/_utils";
 import { StatusCode } from "@web/src/app/api/v1/_responses";
-import { requireNonEmptyParam } from "@web/src/app/api/v1/_validation";
-import {
-  isListingMediaType,
-  isListingSubcategory
-} from "@web/src/lib/domain/listing";
+import { parseRequiredRouteParam } from "@shared/utils/api/parsers";
+import { LISTING_CONTENT_SUBCATEGORIES } from "@shared/types/models";
 import type {
   GenerateListingContentBody,
   ValidatedGenerateParams
 } from "./types";
+
+function parseListingSubcategory(
+  value: unknown
+): ValidatedGenerateParams["subcategory"] {
+  if (typeof value !== "string") {
+    throw new Error("A valid listing subcategory is required");
+  }
+  const normalized = value.trim();
+  if (
+    !(LISTING_CONTENT_SUBCATEGORIES as readonly string[]).includes(normalized)
+  ) {
+    throw new Error("A valid listing subcategory is required");
+  }
+  return normalized as ValidatedGenerateParams["subcategory"];
+}
+
+function parseListingMediaType(
+  value: unknown
+): ValidatedGenerateParams["mediaType"] {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    return "video";
+  }
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "video" || normalized === "image") {
+    return normalized;
+  }
+  throw new Error("media_type must be either 'video' or 'image'");
+}
+
+function parseListingContentGenerateParams(
+  body: GenerateListingContentBody | null,
+  listingId: string
+): ValidatedGenerateParams {
+  return {
+    listingId,
+    subcategory: parseListingSubcategory(body?.subcategory),
+    mediaType: parseListingMediaType(body?.media_type),
+    focus: body?.focus?.trim() ?? "",
+    notes: body?.notes?.trim() ?? "",
+    generationNonce: body?.generation_nonce?.trim() ?? ""
+  };
+}
 
 /**
  * Validates listingId (must be non-empty) and request body (subcategory, media_type, etc.).
@@ -18,36 +57,15 @@ export function parseAndValidateParams(
   body: GenerateListingContentBody | null,
   listingIdRaw: string | undefined
 ): ValidatedGenerateParams {
-  const listingId = requireNonEmptyParam(listingIdRaw) ?? "";
-  if (!listingId) {
+  try {
+    const listingId = parseRequiredRouteParam(listingIdRaw, "listingId");
+    return parseListingContentGenerateParams(body, listingId);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Invalid request";
     throw new ApiError(StatusCode.BAD_REQUEST, {
       error: "Invalid request",
-      message: "Listing ID is required"
+      message:
+        message === "listingId is required" ? "Listing ID is required" : message
     });
   }
-
-  const subcategoryCandidate = body?.subcategory?.trim() ?? "";
-  if (!subcategoryCandidate || !isListingSubcategory(subcategoryCandidate)) {
-    throw new ApiError(StatusCode.BAD_REQUEST, {
-      error: "Invalid request",
-      message: "A valid listing subcategory is required"
-    });
-  }
-
-  const mediaTypeCandidate = body?.media_type?.trim().toLowerCase() ?? "video";
-  if (!isListingMediaType(mediaTypeCandidate)) {
-    throw new ApiError(StatusCode.BAD_REQUEST, {
-      error: "Invalid request",
-      message: "media_type must be either 'video' or 'image'"
-    });
-  }
-
-  return {
-    listingId,
-    subcategory: subcategoryCandidate,
-    mediaType: mediaTypeCandidate,
-    focus: body?.focus?.trim() ?? "",
-    notes: body?.notes?.trim() ?? "",
-    generationNonce: body?.generation_nonce?.trim() ?? ""
-  };
 }

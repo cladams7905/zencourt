@@ -10,14 +10,12 @@ import {
   apiErrorResponse,
   StatusCode
 } from "@web/src/app/api/v1/_responses";
-import {
-  readJsonBodySafe,
-  requireNonEmptyParam
-} from "@web/src/app/api/v1/_validation";
+import { parseRequiredRouteParam } from "@shared/utils/api/parsers";
 import {
   createChildLogger,
   logger as baseLogger
 } from "@web/src/lib/core/logging/logger";
+import { readJsonBodySafe } from "@shared/utils/api/validation";
 
 const logger = createChildLogger(baseLogger, {
   module: "generation-cancel-route"
@@ -43,9 +41,10 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ listingId: string }> }
 ) {
-  const listingId = requireNonEmptyParam((await params).listingId);
-
-  if (!listingId) {
+  let listingId: string;
+  try {
+    listingId = parseRequiredRouteParam((await params).listingId, "listingId");
+  } catch {
     return apiErrorResponse(
       StatusCode.BAD_REQUEST,
       "INVALID_REQUEST",

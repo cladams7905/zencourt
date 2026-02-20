@@ -4,50 +4,13 @@
 
 import { Request, Response, NextFunction } from 'express';
 import logger from '@/config/logger';
+import { VideoProcessingErrorType } from "@shared/types/api";
 
 // ============================================================================
 // Error Types and Classification
 // ============================================================================
 
-export enum VideoProcessingErrorType {
-  // Storage Errors
-  STORAGE_UPLOAD_FAILED = 'STORAGE_UPLOAD_FAILED',
-  STORAGE_DOWNLOAD_FAILED = 'STORAGE_DOWNLOAD_FAILED',
-  STORAGE_DELETE_FAILED = 'STORAGE_DELETE_FAILED',
-  STORAGE_ACCESS_DENIED = 'STORAGE_ACCESS_DENIED',
-  STORAGE_NOT_FOUND = 'STORAGE_NOT_FOUND',
-
-  // FFmpeg Errors
-  FFMPEG_NOT_FOUND = 'FFMPEG_NOT_FOUND',
-  FFMPEG_PROCESS_FAILED = 'FFMPEG_PROCESS_FAILED',
-  FFMPEG_TIMEOUT = 'FFMPEG_TIMEOUT',
-  FFMPEG_INVALID_INPUT = 'FFMPEG_INVALID_INPUT',
-
-  // fal.ai Errors
-  FAL_SUBMISSION_FAILED = 'FAL_SUBMISSION_FAILED',
-  FAL_GENERATION_FAILED = 'FAL_GENERATION_FAILED',
-
-  // Job Errors
-  JOB_TIMEOUT = 'JOB_TIMEOUT',
-  JOB_NOT_FOUND = 'JOB_NOT_FOUND',
-
-  // Webhook Errors
-  WEBHOOK_DELIVERY_FAILED = 'WEBHOOK_DELIVERY_FAILED',
-  WEBHOOK_INVALID_SIGNATURE = 'WEBHOOK_INVALID_SIGNATURE',
-
-  // Validation Errors
-  INVALID_INPUT = 'INVALID_INPUT',
-  MISSING_REQUIRED_FIELD = 'MISSING_REQUIRED_FIELD',
-  INVALID_FILE_FORMAT = 'INVALID_FILE_FORMAT',
-
-  // Authentication Errors
-  UNAUTHORIZED = 'UNAUTHORIZED',
-  INVALID_API_KEY = 'INVALID_API_KEY',
-
-  // General Errors
-  UNKNOWN_ERROR = 'UNKNOWN_ERROR',
-  INTERNAL_ERROR = 'INTERNAL_ERROR',
-}
+export { VideoProcessingErrorType };
 
 const retryableErrors: VideoProcessingErrorType[] = [
   VideoProcessingErrorType.STORAGE_UPLOAD_FAILED,

@@ -9,14 +9,7 @@ import {
   apiErrorResponse,
   StatusCode
 } from "@web/src/app/api/v1/_responses";
-import {
-  readJsonBodySafe,
-  requireNonEmptyParam
-} from "@web/src/app/api/v1/_validation";
-import {
-  LISTING_CONTENT_SUBCATEGORIES,
-  type ListingContentSubcategory
-} from "@shared/types/models";
+import { parseRequiredRouteParam } from "@shared/utils/api/parsers";
 import type {
   ListingTemplateRenderResult,
   TemplateRenderCaptionItemInput
@@ -28,15 +21,46 @@ import {
   logger as baseLogger
 } from "@web/src/lib/core/logging/logger";
 import { renderListingTemplateBatch } from "@web/src/server/services/templateRender";
+import { readJsonBodySafe } from "@shared/utils/api/validation";
 
 const logger = createChildLogger(baseLogger, {
   module: "listing-template-render-route"
 });
 
-function isListingSubcategory(
-  value: string
-): value is ListingContentSubcategory {
-  return (LISTING_CONTENT_SUBCATEGORIES as readonly string[]).includes(value);
+function parseListingSubcategory(
+  value: unknown,
+  field: string = "subcategory"
+) {
+  if (typeof value !== "string") {
+    throw new Error(`A valid listing ${field} is required`);
+  }
+  const normalized = value.trim();
+  if (
+    !(
+      [
+        "new_listing",
+        "open_house",
+        "price_change",
+        "status_update",
+        "property_features"
+      ] as const
+    ).includes(
+      normalized as
+        | "new_listing"
+        | "open_house"
+        | "price_change"
+        | "status_update"
+        | "property_features"
+    )
+  ) {
+    throw new Error(`A valid listing ${field} is required`);
+  }
+  return normalized as
+    | "new_listing"
+    | "open_house"
+    | "price_change"
+    | "status_update"
+    | "property_features";
 }
 
 function sanitizeCaptionItems(
@@ -94,8 +118,13 @@ export async function POST(
   { params }: { params: Promise<{ listingId: string }> }
 ) {
   try {
-    const listingId = requireNonEmptyParam((await params).listingId);
-    if (!listingId) {
+    let listingId: string;
+    try {
+      listingId = parseRequiredRouteParam(
+        (await params).listingId,
+        "listingId"
+      );
+    } catch {
       throw new ApiError(StatusCode.BAD_REQUEST, {
         error: "Invalid request",
         message: "Listing ID is required"
@@ -110,8 +139,10 @@ export async function POST(
       templateCount?: number;
     } | null;
 
-    const subcategoryCandidate = body?.subcategory?.trim() ?? "";
-    if (!isListingSubcategory(subcategoryCandidate)) {
+    let subcategoryCandidate: ReturnType<typeof parseListingSubcategory>;
+    try {
+      subcategoryCandidate = parseListingSubcategory(body?.subcategory);
+    } catch {
       throw new ApiError(StatusCode.BAD_REQUEST, {
         error: "Invalid request",
         message: "A valid listing subcategory is required"

@@ -11,7 +11,6 @@ import {
   apiErrorResponse,
   StatusCode
 } from "@web/src/app/api/v1/_responses";
-import { readJsonBodySafe } from "@web/src/app/api/v1/_validation";
 import {
   buildSystemPrompt,
   buildUserPrompt,
@@ -35,6 +34,7 @@ import { resolveContentContext } from "./services/context";
 import { writePromptLog } from "./services/promptLog";
 import { createSseResponse } from "./services/aiStream";
 import { getUserAdditionalSnapshot } from "./services/userAdditional";
+import { readJsonBodySafe } from "@shared/utils";
 
 const logger = createChildLogger(baseLogger, {
   module: "content-generate-route"
