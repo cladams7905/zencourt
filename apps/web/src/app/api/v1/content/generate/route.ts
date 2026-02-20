@@ -4,8 +4,10 @@
  * POST /api/v1/content/generate
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { ApiError, requireAuthenticatedUser } from "../../_utils";
+import { apiErrorResponse } from "@web/src/app/api/v1/_responses";
+import { readJsonBodySafe } from "@web/src/app/api/v1/_validation";
 import {
   buildSystemPrompt,
   buildUserPrompt,
@@ -39,19 +41,19 @@ export async function POST(request: NextRequest) {
     logger.info("Received content generation request");
     const user = await requireAuthenticatedUser();
 
-    const body = (await request.json()) as PromptAssemblyInput;
+    const body = (await readJsonBodySafe(
+      request
+    )) as PromptAssemblyInput | null;
     if (!body?.category) {
-      throw new ApiError(400, {
-        error: "Invalid request",
-        message: "category is required"
-      });
+      return apiErrorResponse(400, "INVALID_REQUEST", "category is required");
     }
 
     if (!body.agent_profile) {
-      throw new ApiError(400, {
-        error: "Invalid request",
-        message: "agent_profile is required"
-      });
+      return apiErrorResponse(
+        400,
+        "INVALID_REQUEST",
+        "agent_profile is required"
+      );
     }
 
     const redis = getSharedRedisClient();
@@ -106,7 +108,17 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     if (error instanceof ApiError) {
-      return NextResponse.json(error.body, { status: error.status });
+      return apiErrorResponse(
+        error.status,
+        error.status === 401
+          ? "UNAUTHORIZED"
+          : error.status === 403
+            ? "FORBIDDEN"
+            : error.status === 404
+              ? "NOT_FOUND"
+              : "INVALID_REQUEST",
+        error.body.message
+      );
     }
 
     const errorDetails =
@@ -115,9 +127,10 @@ export async function POST(request: NextRequest) {
         : { error };
 
     logger.error(errorDetails, "Unhandled error generating content");
-    return NextResponse.json(
-      { error: "Server error", message: "Failed to generate content" },
-      { status: 500 }
+    return apiErrorResponse(
+      500,
+      "INTERNAL_ERROR",
+      "Failed to generate content"
     );
   }
 }

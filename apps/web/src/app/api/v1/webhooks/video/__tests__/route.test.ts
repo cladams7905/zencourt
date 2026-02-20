@@ -67,6 +67,13 @@ describe("video webhook route", () => {
         metadata: { orientation: "vertical" }
       }
     });
+    mockGetVideoGenJobById.mockResolvedValue({
+      id: "job-1",
+      status: "processing",
+      videoUrl: null,
+      thumbnailUrl: null,
+      errorMessage: null
+    });
     mockUpdateVideoGenJob.mockResolvedValue({ id: "job-1" });
 
     const response = await POST({} as never);
@@ -86,7 +93,9 @@ describe("video webhook route", () => {
       status: "failed"
     });
     mockUpdateVideoGenJob.mockRejectedValue(new Error("db fail"));
-    mockGetVideoGenJobById.mockResolvedValue(null);
+    mockGetVideoGenJobById
+      .mockResolvedValueOnce({ id: "job-1", status: "processing" })
+      .mockResolvedValueOnce(null);
 
     const response = await POST({} as never);
     const payload = await response.json();
@@ -96,6 +105,71 @@ describe("video webhook route", () => {
       success: false,
       message: "Video job webhook processed without DB update"
     });
+  });
+
+  it("returns 404 when job is not found", async () => {
+    mockParseVerifiedWebhook.mockResolvedValue({
+      listingId: "listing-1",
+      jobId: "missing-job",
+      status: "completed"
+    });
+    mockGetVideoGenJobById.mockResolvedValue(null);
+
+    const response = await POST({} as never);
+    const payload = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(payload).toEqual({
+      success: false,
+      code: "NOT_FOUND",
+      error: "Video job not found for webhook update"
+    });
+    expect(mockUpdateVideoGenJob).not.toHaveBeenCalled();
+  });
+
+  it("ignores idempotent replay updates", async () => {
+    mockParseVerifiedWebhook.mockResolvedValue({
+      listingId: "listing-1",
+      jobId: "job-1",
+      status: "completed",
+      result: {
+        videoUrl: "https://video.mp4",
+        thumbnailUrl: "https://thumb.jpg"
+      }
+    });
+    mockGetVideoGenJobById.mockResolvedValue({
+      id: "job-1",
+      status: "completed",
+      videoUrl: "https://video.mp4",
+      thumbnailUrl: "https://thumb.jpg",
+      errorMessage: null
+    });
+
+    const response = await POST({} as never);
+
+    expect(response.status).toBe(200);
+    expect(mockUpdateVideoGenJob).not.toHaveBeenCalled();
+  });
+
+  it("ignores conflicting terminal status transitions", async () => {
+    mockParseVerifiedWebhook.mockResolvedValue({
+      listingId: "listing-1",
+      jobId: "job-1",
+      status: "failed",
+      error: { message: "late failure" }
+    });
+    mockGetVideoGenJobById.mockResolvedValue({
+      id: "job-1",
+      status: "completed",
+      videoUrl: "https://video.mp4",
+      thumbnailUrl: "https://thumb.jpg",
+      errorMessage: null
+    });
+
+    const response = await POST({} as never);
+
+    expect(response.status).toBe(200);
+    expect(mockUpdateVideoGenJob).not.toHaveBeenCalled();
   });
 
   it("returns verification error status", async () => {
@@ -109,6 +183,7 @@ describe("video webhook route", () => {
     expect(response.status).toBe(401);
     expect(payload).toEqual({
       success: false,
+      code: "WEBHOOK_VERIFICATION_ERROR",
       error: "invalid signature"
     });
   });

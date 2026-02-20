@@ -12,6 +12,8 @@ import {
   requireListingAccess
 } from "../../_utils";
 import { VideoGenerateRequest, VideoGenerateResponse } from "@shared/types/api";
+import { apiErrorResponse } from "@web/src/app/api/v1/_responses";
+import { readJsonBodySafe } from "@web/src/app/api/v1/_validation";
 import {
   createChildLogger,
   logger as baseLogger
@@ -26,7 +28,15 @@ export async function POST(
   request: NextRequest
 ): Promise<NextResponse<VideoGenerateResponse>> {
   try {
-    const body: VideoGenerateRequest = await request.json();
+    const body = (await readJsonBodySafe(request)) as VideoGenerateRequest | null;
+    if (!body?.listingId) {
+      return apiErrorResponse(400, "INVALID_REQUEST", "listingId is required", {
+        listingId: "",
+        videoId: "",
+        jobIds: [],
+        jobCount: 0
+      }) as NextResponse<VideoGenerateResponse>;
+    }
     const user = await requireAuthenticatedUser();
     const listing = await requireListingAccess(body.listingId, user.id);
 
@@ -57,17 +67,23 @@ export async function POST(
         },
         "Video generation request failed with ApiError"
       );
-      return NextResponse.json(
+      return apiErrorResponse(
+        error.status,
+        error.status === 401
+          ? "UNAUTHORIZED"
+          : error.status === 403
+            ? "FORBIDDEN"
+            : error.status === 404
+              ? "NOT_FOUND"
+              : "INVALID_REQUEST",
+        error.body.message,
         {
-          error: error.body.message,
-          success: false,
           listingId: "",
           videoId: "",
           jobIds: [],
           jobCount: 0
-        },
-        { status: error.status }
-      );
+        }
+      ) as NextResponse<VideoGenerateResponse>;
     }
 
     if (error instanceof DrizzleQueryError) {
@@ -75,31 +91,26 @@ export async function POST(
         { err: error.message },
         "Video generation request failed with DrizzleQueryError"
       );
-      return NextResponse.json(
-        {
-          error: error.message,
-          success: false,
-          listingId: "",
-          videoId: "",
-          jobIds: [],
-          jobCount: 0
-        },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json(
-      {
-        error: "Internal server error",
-        message:
-          error instanceof Error ? error.message : "Unable to start generation",
-        success: false,
+      return apiErrorResponse(500, "DATABASE_ERROR", error.message, {
         listingId: "",
         videoId: "",
         jobIds: [],
         jobCount: 0
-      },
-      { status: 500 }
-    );
+      }) as NextResponse<VideoGenerateResponse>;
+    }
+
+    return apiErrorResponse(
+      500,
+      "INTERNAL_ERROR",
+      error instanceof Error ? error.message : "Unable to start generation",
+      {
+        message:
+          error instanceof Error ? error.message : "Unable to start generation",
+        listingId: "",
+        videoId: "",
+        jobIds: [],
+        jobCount: 0
+      }
+    ) as NextResponse<VideoGenerateResponse>;
   }
 }

@@ -5,6 +5,11 @@ import {
   requireListingAccess
 } from "@web/src/app/api/v1/_utils";
 import { getVideoServerConfig } from "@web/src/app/api/v1/video/_config";
+import { apiErrorResponse } from "@web/src/app/api/v1/_responses";
+import {
+  readJsonBodySafe,
+  requireNonEmptyParam
+} from "@web/src/app/api/v1/_validation";
 import {
   createChildLogger,
   logger as baseLogger
@@ -20,13 +25,9 @@ async function extractReason(request: NextRequest): Promise<string | undefined> 
     return undefined;
   }
 
-  try {
-    const body = await request.json();
-    if (body && typeof body.reason === "string") {
-      return body.reason;
-    }
-  } catch {
-    // Ignore JSON parse errors; reason is optional
+  const body = await readJsonBodySafe(request);
+  if (body && typeof body.reason === "string") {
+    return body.reason;
   }
 
   return undefined;
@@ -36,12 +37,13 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ listingId: string }> }
 ) {
-  const { listingId } = await params;
+  const listingId = requireNonEmptyParam((await params).listingId);
 
   if (!listingId) {
-    return NextResponse.json(
-      { success: false, error: "Invalid request", message: "listingId is required" },
-      { status: 400 }
+    return apiErrorResponse(
+      400,
+      "INVALID_REQUEST",
+      "listingId is required"
     );
   }
 
@@ -69,9 +71,11 @@ export async function POST(
     if (!response.ok) {
       const message =
         payload?.error || payload?.message || "Failed to cancel generation";
-      return NextResponse.json(
-        { success: false, error: "Video server cancel error", message },
-        { status: response.status }
+      return apiErrorResponse(
+        response.status,
+        "VIDEO_SERVER_ERROR",
+        "Video server cancel error",
+        { message }
       );
     }
 
@@ -92,18 +96,28 @@ export async function POST(
     });
   } catch (error) {
     if (error instanceof ApiError) {
-      return NextResponse.json(
-        { success: false, error: error.body.error, message: error.body.message },
-        { status: error.status }
+      return apiErrorResponse(
+        error.status,
+        error.status === 401
+          ? "UNAUTHORIZED"
+          : error.status === 403
+            ? "FORBIDDEN"
+            : error.status === 404
+              ? "NOT_FOUND"
+              : "INVALID_REQUEST",
+        error.body.message,
+        { message: error.body.message }
       );
     }
     logger.error(
       { err: error instanceof Error ? error.message : String(error) },
       "Unexpected error canceling generation"
     );
-    return NextResponse.json(
-      { success: false, error: "InternalError", message: "Unable to cancel generation" },
-      { status: 500 }
+    return apiErrorResponse(
+      500,
+      "INTERNAL_ERROR",
+      "Unable to cancel generation",
+      { message: "Unable to cancel generation" }
     );
   }
 }

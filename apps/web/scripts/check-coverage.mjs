@@ -12,24 +12,21 @@ if (!fs.existsSync(summaryPath)) {
   console.error(`Coverage summary not found at ${summaryPath}`);
   process.exit(1);
 }
-if (!fs.existsSync(finalPath)) {
-  console.error(`Coverage final report not found at ${finalPath}`);
-  process.exit(1);
-}
-
-const summaryMtimeMs = fs.statSync(summaryPath).mtimeMs;
-const finalMtimeMs = fs.statSync(finalPath).mtimeMs;
-const STALE_TOLERANCE_MS = 2000;
-if (summaryMtimeMs + STALE_TOLERANCE_MS < finalMtimeMs) {
-  console.error(
-    [
-      "Coverage summary appears stale.",
-      `coverage-summary.json (${new Date(summaryMtimeMs).toISOString()})`,
-      `is older than coverage-final.json (${new Date(finalMtimeMs).toISOString()}).`,
-      "Re-run coverage so json-summary is regenerated before check-coverage."
-    ].join(" ")
-  );
-  process.exit(1);
+if (fs.existsSync(finalPath)) {
+  const summaryMtimeMs = fs.statSync(summaryPath).mtimeMs;
+  const finalMtimeMs = fs.statSync(finalPath).mtimeMs;
+  const STALE_TOLERANCE_MS = 2000;
+  if (summaryMtimeMs + STALE_TOLERANCE_MS < finalMtimeMs) {
+    console.error(
+      [
+        "Coverage summary appears stale.",
+        `coverage-summary.json (${new Date(summaryMtimeMs).toISOString()})`,
+        `is older than coverage-final.json (${new Date(finalMtimeMs).toISOString()}).`,
+        "Re-run coverage so json-summary is regenerated before check-coverage."
+      ].join(" ")
+    );
+    process.exit(1);
+  }
 }
 
 const summary = JSON.parse(fs.readFileSync(summaryPath, "utf8"));

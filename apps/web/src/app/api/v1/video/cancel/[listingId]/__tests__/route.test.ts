@@ -133,6 +133,7 @@ describe("video cancel route", () => {
     expect(response.status).toBe(502);
     expect(payload).toEqual({
       success: false,
+      code: "VIDEO_SERVER_ERROR",
       error: "Video server cancel error",
       message: "upstream down"
     });

@@ -4,6 +4,11 @@ import {
   requireAuthenticatedUser,
   requireListingAccess
 } from "../../../../_utils";
+import { apiErrorResponse } from "@web/src/app/api/v1/_responses";
+import {
+  readJsonBodySafe,
+  requireNonEmptyParam
+} from "@web/src/app/api/v1/_validation";
 import { createChildLogger, logger as baseLogger } from "@web/src/lib/core/logging/logger";
 import type {
   ListingContentSubcategory,
@@ -74,20 +79,26 @@ export async function POST(
   let generatedItems: ListingGeneratedItem[] | null;
 
   try {
-    ({ listingId } = await params);
+    listingId = requireNonEmptyParam((await params).listingId) ?? "";
+    if (!listingId) {
+      throw new ApiError(400, {
+        error: "Invalid request",
+        message: "Listing ID is required"
+      });
+    }
     const user = await requireAuthenticatedUser();
     userId = user.id;
     listing = await requireListingAccess(listingId, userId);
 
-    const body = (await request.json()) as {
+    const body = (await readJsonBodySafe(request)) as {
       subcategory?: string;
       media_type?: string;
       focus?: string;
       notes?: string;
       generation_nonce?: string;
-    };
+    } | null;
 
-    const subcategoryCandidate = body.subcategory?.trim() ?? "";
+    const subcategoryCandidate = body?.subcategory?.trim() ?? "";
     if (!subcategoryCandidate || !isListingSubcategory(subcategoryCandidate)) {
       throw new ApiError(400, {
         error: "Invalid request",
@@ -96,7 +107,7 @@ export async function POST(
     }
     subcategory = subcategoryCandidate;
 
-    const mediaTypeCandidate = body.media_type?.trim().toLowerCase() ?? "video";
+    const mediaTypeCandidate = body?.media_type?.trim().toLowerCase() ?? "video";
     if (!isListingMediaType(mediaTypeCandidate)) {
       throw new ApiError(400, {
         error: "Invalid request",
@@ -112,9 +123,9 @@ export async function POST(
     addressParts = parseListingAddressParts(address);
     const locationState = listingDetails?.location_context?.state?.trim() ?? "";
     resolvedState = locationState || addressParts.state;
-    focus = body.focus?.trim() ?? "";
-    notes = body.notes?.trim() ?? "";
-    generationNonce = body.generation_nonce?.trim() ?? "";
+    focus = body?.focus?.trim() ?? "";
+    notes = body?.notes?.trim() ?? "";
+    generationNonce = body?.generation_nonce?.trim() ?? "";
     propertyFingerprint = buildListingPropertyFingerprint(listingDetails);
     cacheKey = buildListingContentCacheKey({
       userId,
@@ -142,12 +153,25 @@ export async function POST(
         : null;
   } catch (error) {
     if (error instanceof ApiError) {
-      return NextResponse.json(error.body, { status: error.status });
+      return apiErrorResponse(
+        error.status,
+        error.status === 401
+          ? "UNAUTHORIZED"
+          : error.status === 403
+            ? "FORBIDDEN"
+            : error.status === 404
+              ? "NOT_FOUND"
+              : "INVALID_REQUEST",
+        error.body.message,
+        { message: error.body.message }
+      );
     }
     logger.error({ error }, "Failed to generate listing content (pre-stream)");
-    return NextResponse.json(
-      { error: "Server error", message: "Failed to generate listing content" },
-      { status: 500 }
+    return apiErrorResponse(
+      500,
+      "INTERNAL_ERROR",
+      "Failed to generate listing content",
+      { message: "Failed to generate listing content" }
     );
   }
 

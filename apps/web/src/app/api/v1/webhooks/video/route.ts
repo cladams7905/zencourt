@@ -21,10 +21,93 @@ import {
   parseVerifiedWebhook,
   WebhookVerificationError
 } from "@web/src/server/utils/webhookVerification";
+import type { VideoStatus } from "@shared/types/models";
+import { apiErrorResponse } from "@web/src/app/api/v1/_responses";
 
 const logger = createChildLogger(baseLogger, {
   module: "video-job-webhook"
 });
+
+const TERMINAL_VIDEO_STATUSES: ReadonlySet<VideoStatus> = new Set([
+  "completed",
+  "failed",
+  "canceled"
+]);
+
+type ParsedWebhookPayload = VideoJobWebhookPayload & {
+  generation?: {
+    roomId?: string;
+    roomName?: string;
+    sortOrder?: number;
+  };
+};
+
+type NormalizedWebhookResult = {
+  videoUrl: string | null;
+  thumbnailUrl: string | null;
+  errorMessage: string | null;
+  metadata:
+    | (NonNullable<DBVideoGenJob["metadata"]> & {
+        duration?: number;
+        fileSize?: number;
+      })
+    | undefined;
+};
+
+function normalizeWebhookResult(payload: ParsedWebhookPayload): NormalizedWebhookResult {
+  const result = payload.result;
+  const metadata = result?.metadata;
+
+  return {
+    videoUrl: result?.videoUrl ?? null,
+    thumbnailUrl: result?.thumbnailUrl ?? null,
+    errorMessage: payload.error?.message ?? null,
+    metadata: metadata
+      ? {
+          ...metadata,
+          duration: result?.duration ?? undefined,
+          fileSize: result?.fileSize ?? undefined
+        }
+      : undefined
+  };
+}
+
+function shouldIgnoreWebhookUpdate(args: {
+  currentJob: DBVideoGenJob;
+  incomingStatus: VideoStatus;
+  incomingVideoUrl: string | null;
+  incomingThumbnailUrl: string | null;
+  incomingErrorMessage: string | null;
+}): { ignore: boolean; reason?: string } {
+  const {
+    currentJob,
+    incomingStatus,
+    incomingVideoUrl,
+    incomingThumbnailUrl,
+    incomingErrorMessage
+  } = args;
+
+  const currentStatus = currentJob.status as VideoStatus;
+  const currentTerminal = TERMINAL_VIDEO_STATUSES.has(currentStatus);
+  const incomingTerminal = TERMINAL_VIDEO_STATUSES.has(incomingStatus);
+
+  // Preserve terminal state integrity: once terminal, ignore conflicting terminal updates.
+  if (currentTerminal && incomingTerminal && currentStatus !== incomingStatus) {
+    return { ignore: true, reason: "conflicting_terminal_status" };
+  }
+
+  // Idempotent replay: same status + same persisted payload.
+  if (
+    currentStatus === incomingStatus &&
+    (currentJob.videoUrl ?? null) === incomingVideoUrl &&
+    (currentJob.thumbnailUrl ?? null) === incomingThumbnailUrl &&
+    (currentJob.errorMessage ?? null) === incomingErrorMessage
+  ) {
+    return { ignore: true, reason: "idempotent_replay" };
+  }
+
+  return { ignore: false };
+}
 
 function scheduleListingRevalidation(listingId: string): void {
   setImmediate(() => {
@@ -42,22 +125,68 @@ function scheduleListingRevalidation(listingId: string): void {
   });
 }
 
+async function processWebhookUpdate(
+  payload: ParsedWebhookPayload,
+  normalized: NormalizedWebhookResult
+): Promise<DBVideoGenJob | null | "not_found"> {
+  try {
+    const currentJob = await getVideoGenJobById(payload.jobId);
+    if (!currentJob) {
+      logger.warn(
+        {
+          listingId: payload.listingId,
+          jobId: payload.jobId
+        },
+        "Video job not found for webhook update"
+      );
+      return "not_found";
+    }
+
+    const ignoreDecision = shouldIgnoreWebhookUpdate({
+      currentJob,
+      incomingStatus: payload.status,
+      incomingVideoUrl: normalized.videoUrl,
+      incomingThumbnailUrl: normalized.thumbnailUrl,
+      incomingErrorMessage: normalized.errorMessage
+    });
+
+    if (ignoreDecision.ignore) {
+      logger.info(
+        {
+          listingId: payload.listingId,
+          jobId: payload.jobId,
+          status: payload.status,
+          reason: ignoreDecision.reason
+        },
+        "Ignoring webhook update due to idempotency/transition guard"
+      );
+      return currentJob;
+    }
+
+    return await updateVideoGenJob(payload.jobId, {
+      status: payload.status,
+      videoUrl: normalized.videoUrl,
+      thumbnailUrl: normalized.thumbnailUrl,
+      errorMessage: normalized.errorMessage,
+      metadata: normalized.metadata
+    });
+  } catch (error) {
+    logger.error(
+      {
+        listingId: payload.listingId,
+        jobId: payload.jobId,
+        err: error instanceof Error ? error.message : String(error)
+      },
+      "Failed to persist video job update, using fallback data"
+    );
+    return await getVideoGenJobById(payload.jobId);
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const payload = await parseVerifiedWebhook<
-      VideoJobWebhookPayload & {
-        generation?: {
-          roomId?: string;
-          roomName?: string;
-          sortOrder?: number;
-        };
-      }
-    >(request);
-    const videoUrl = payload.result?.videoUrl ?? null;
-    const thumbnailUrl = payload.result?.thumbnailUrl ?? null;
-    const duration = payload.result?.duration ?? null;
-    const fileSize = payload.result?.fileSize ?? null;
-    const metadata = payload.result?.metadata;
+    const payload = await parseVerifiedWebhook<ParsedWebhookPayload>(request);
+    const normalized = normalizeWebhookResult(payload);
     logger.info(
       {
         listingId: payload.listingId,
@@ -67,32 +196,13 @@ export async function POST(request: NextRequest) {
       "Video job webhook received"
     );
 
-    let updatedJob: DBVideoGenJob | null = null;
-
-    try {
-      updatedJob = await updateVideoGenJob(payload.jobId, {
-        status: payload.status,
-        videoUrl,
-        thumbnailUrl,
-        errorMessage: payload.error?.message ?? null,
-        metadata: metadata
-          ? {
-              ...metadata,
-              duration: duration ?? undefined,
-              fileSize: fileSize ?? undefined
-            }
-          : undefined
-      });
-    } catch (error) {
-      logger.error(
-        {
-          listingId: payload.listingId,
-          jobId: payload.jobId,
-          err: error instanceof Error ? error.message : String(error)
-        },
-        "Failed to persist video job update, using fallback data"
+    const updatedJob = await processWebhookUpdate(payload, normalized);
+    if (updatedJob === "not_found") {
+      return apiErrorResponse(
+        404,
+        "NOT_FOUND",
+        "Video job not found for webhook update"
       );
-      updatedJob = await getVideoGenJobById(payload.jobId);
     }
 
     logger.info(
@@ -121,12 +231,10 @@ export async function POST(request: NextRequest) {
         },
         "Video job webhook failed verification"
       );
-      return NextResponse.json(
-        {
-          success: false,
-          error: error.message
-        },
-        { status: error.status }
+      return apiErrorResponse(
+        error.status,
+        "WEBHOOK_VERIFICATION_ERROR",
+        error.message
       );
     }
 
@@ -137,12 +245,10 @@ export async function POST(request: NextRequest) {
       "Error processing video job webhook"
     );
 
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error"
-      },
-      { status: 500 }
+    return apiErrorResponse(
+      500,
+      "INTERNAL_ERROR",
+      error instanceof Error ? error.message : "Unknown error"
     );
   }
 }

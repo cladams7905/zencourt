@@ -329,7 +329,7 @@ describe("listing content generate route", () => {
     );
   });
 
-  it("returns 500 when pre-stream setup throws unexpected error", async () => {
+  it("returns 400 when request body is invalid", async () => {
     const { POST } = await loadRoute();
     const request = {
       json: async () => {
@@ -343,6 +343,12 @@ describe("listing content generate route", () => {
       params: Promise.resolve({ listingId: "listing-1" })
     });
 
-    expect(response.status).toBe(500);
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({
+      success: false,
+      code: "INVALID_REQUEST",
+      error: "A valid listing subcategory is required",
+      message: "A valid listing subcategory is required"
+    });
   });
 });

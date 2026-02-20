@@ -4,6 +4,11 @@ import {
   requireAuthenticatedUser,
   requireListingAccess
 } from "../../../../_utils";
+import { apiErrorResponse } from "@web/src/app/api/v1/_responses";
+import {
+  readJsonBodySafe,
+  requireNonEmptyParam
+} from "@web/src/app/api/v1/_validation";
 import {
   LISTING_CONTENT_SUBCATEGORIES,
   type ListingContentSubcategory
@@ -85,17 +90,23 @@ export async function POST(
   { params }: { params: Promise<{ listingId: string }> }
 ) {
   try {
-    const { listingId } = await params;
+    const listingId = requireNonEmptyParam((await params).listingId);
+    if (!listingId) {
+      throw new ApiError(400, {
+        error: "Invalid request",
+        message: "Listing ID is required"
+      });
+    }
     const user = await requireAuthenticatedUser();
     const listing = await requireListingAccess(listingId, user.id);
 
-    const body = (await request.json()) as {
+    const body = (await readJsonBodySafe(request)) as {
       subcategory?: string;
       captionItems?: unknown;
       templateCount?: number;
-    };
+    } | null;
 
-    const subcategoryCandidate = body.subcategory?.trim() ?? "";
+    const subcategoryCandidate = body?.subcategory?.trim() ?? "";
     if (!isListingSubcategory(subcategoryCandidate)) {
       throw new ApiError(400, {
         error: "Invalid request",
@@ -103,7 +114,7 @@ export async function POST(
       });
     }
 
-    const captionItems = sanitizeCaptionItems(body.captionItems);
+    const captionItems = sanitizeCaptionItems(body?.captionItems);
     if (captionItems.length === 0) {
       return NextResponse.json<ListingTemplateRenderResult>(
         { items: [], failedTemplateIds: [] },
@@ -123,7 +134,7 @@ export async function POST(
       userAdditional,
       captionItems,
       templateCount:
-        typeof body.templateCount === "number" && body.templateCount > 0
+        typeof body?.templateCount === "number" && body.templateCount > 0
           ? body.templateCount
           : undefined,
       siteOrigin: request.nextUrl.origin
@@ -135,7 +146,18 @@ export async function POST(
     });
   } catch (error) {
     if (error instanceof ApiError) {
-      return NextResponse.json(error.body, { status: error.status });
+      return apiErrorResponse(
+        error.status,
+        error.status === 401
+          ? "UNAUTHORIZED"
+          : error.status === 403
+            ? "FORBIDDEN"
+            : error.status === 404
+              ? "NOT_FOUND"
+              : "INVALID_REQUEST",
+        error.body.message,
+        { message: error.body.message }
+      );
     }
 
     logger.error(
@@ -147,12 +169,11 @@ export async function POST(
       },
       "Failed rendering templates"
     );
-    return NextResponse.json(
-      {
-        error: "Server error",
-        message: "Failed to render templates"
-      },
-      { status: 500 }
+    return apiErrorResponse(
+      500,
+      "INTERNAL_ERROR",
+      "Failed to render templates",
+      { message: "Failed to render templates" }
     );
   }
 }
