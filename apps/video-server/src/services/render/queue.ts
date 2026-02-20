@@ -43,6 +43,14 @@ class RenderQueue {
       return false;
     }
     job.cancel();
+    const current = this.jobs.get(jobId);
+    if (current && (current.status === "queued" || current.status === "in-progress")) {
+      this.jobs.set(jobId, {
+        status: "canceled",
+        data: current.data,
+        reason: "User requested cancel"
+      });
+    }
     return true;
   }
 

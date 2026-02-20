@@ -4,6 +4,10 @@ import type {
   ProviderDispatchInput,
   ProviderDispatchResult
 } from "@/services/videoGeneration/facades/providerFacade";
+import {
+  ProviderErrorCode,
+  VideoGenerationServiceError
+} from "@/services/videoGeneration/errors";
 
 function normalizeRunwayDuration(_durationSeconds: number): 4 | 6 | 8 {
   return 4;
@@ -16,6 +20,14 @@ export const runwayStrategy: VideoGenerationProviderStrategy<
   name: "runway",
   canHandle: () => true,
   async dispatch(input) {
+    if (!input.imageUrls.length || !input.prompt) {
+      throw new VideoGenerationServiceError(
+        "Invalid provider dispatch input",
+        ProviderErrorCode.INVALID_PROVIDER_INPUT,
+        false,
+        { provider: "runway", jobId: input.jobId }
+      );
+    }
     const runwayDurationSeconds = normalizeRunwayDuration(input.durationSeconds);
     const runwayRatio = input.orientation === "vertical" ? "720:1280" : "1280:720";
 
@@ -34,7 +46,12 @@ export const runwayStrategy: VideoGenerationProviderStrategy<
         const result = await task.waitForTaskOutput();
         const outputUrl = result?.output?.[0]?.uri;
         if (!outputUrl) {
-          throw new Error("Runway task missing output URL");
+          throw new VideoGenerationServiceError(
+            "Provider output URL missing",
+            ProviderErrorCode.PROVIDER_OUTPUT_MISSING,
+            false,
+            { provider: "runway", jobId: input.jobId }
+          );
         }
         return { outputUrl };
       }

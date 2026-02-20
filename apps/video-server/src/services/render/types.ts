@@ -31,6 +31,11 @@ export type RenderJobState =
       status: "failed";
       data: RenderJobData;
       error: string;
+    }
+  | {
+      status: "canceled";
+      data: RenderJobData;
+      reason?: string;
     };
 
 export type RenderCreateRequest = RenderJobData;

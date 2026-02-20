@@ -12,7 +12,7 @@ type RenderContext = {
 };
 
 type RenderQueueJob = {
-  status: "queued" | "in-progress" | "completed" | "failed";
+  status: "queued" | "in-progress" | "completed" | "failed" | "canceled";
 };
 
 type RenderQueuePort = {

@@ -54,4 +54,26 @@ describe("ProviderDispatchFacade", () => {
     const result = await facade.dispatch(input);
     expect(result.requestId).toBe("r2");
   });
+
+  it("retries a failing strategy before succeeding", async () => {
+    const dispatch = jest
+      .fn()
+      .mockRejectedValueOnce(new Error("temp fail"))
+      .mockResolvedValueOnce({
+        provider: "one",
+        model: "veo3.1_fast",
+        requestId: "r3"
+      });
+    const facade = new ProviderDispatchFacade([
+      {
+        name: "one",
+        canHandle: () => true,
+        dispatch
+      }
+    ]);
+
+    const result = await facade.dispatch(input);
+    expect(result.requestId).toBe("r3");
+    expect(dispatch).toHaveBeenCalledTimes(2);
+  });
 });
