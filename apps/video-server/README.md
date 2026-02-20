@@ -4,26 +4,28 @@ Express server for AI-powered video generation and composition, designed to run 
 
 ## Overview
 
-This server handles video generation and composition for the Zencourt platform. It receives video processing requests from the Vercel Next.js frontend, generates videos using AI services (Runway ML, Kling/fal.ai), composes them using Remotion, stores results in Backblaze B2 object storage, and sends webhook notifications when complete.
+This server handles video generation and composition for the Zencourt platform. It receives video processing requests from the Vercel Next.js frontend, generates videos using AI services (Runway ML, Kling/fal.ai), composes them with Remotion, stores results in Backblaze B2 object storage, and sends webhook notifications when complete.
 
 ## Architecture
 
 - **Runtime**: Node.js 20+
 - **Framework**: Express 4.x with TypeScript
-- **AI Video Generation**: Runway ML (gen4_turbo) as primary, Kling/fal.ai as fallback
-- **Video Composition**: Remotion (React-based video rendering)
+- **AI Video Generation**: Provider-agnostic orchestration with Runway/Kling providers
+- **Video Composition**: Render service with Remotion provider
 - **Storage**: Backblaze B2 via AWS SDK v3
 - **Logging**: Pino (structured JSON logs)
 - **Deployment**: Docker container on Hetzner Cloud (or local Docker)
 
 ## Get Started
 
-The script `apps/video-server/scripts/start-dev-server.sh` automates spinning up an ngrok tunnel and launching Docker Compose with the correct `FAL_WEBHOOK_URL`. Requirements:
+The script `apps/video-server/scripts/start-dev-server.sh` automates spinning up an ngrok tunnel and launching Docker Compose with the correct `FAL_WEBHOOK_URL`.
+
+Requirements:
 
 - `ngrok` CLI installed and authenticated (`ngrok config add-authtoken ...`)
 - `curl` and `python3` available locally
 
-### Quick setup:
+### Quick setup
 
 1. Install the CLI (`brew install ngrok` or download from https://ngrok.com/download).
 2. Sign in at https://dashboard.ngrok.com/ to copy your authtoken.
@@ -46,91 +48,112 @@ Stop the compose stack (Ctrl+C) to tear everything down; the script cleans up th
 
 ## Project Structure
 
-```
-video-server/
+```text
+apps/video-server/
 ├── src/
-│   ├── server.ts              # Express app initialization & graceful shutdown
+│   ├── server.ts                      # Express initialization + graceful shutdown
 │   ├── config/
-│   │   ├── env.ts             # Environment configuration with fail-fast validation
-│   │   ├── storage.ts         # Backblaze B2 configuration
-│   │   └── logger.ts          # Pino logger setup
-│   ├── services/
-│   │   ├── storageService.ts        # Backblaze storage client
-│   │   ├── webhookService.ts        # Webhook delivery with retries
-│   │   ├── videoGenerationService.ts # Orchestrates AI video generation workflow
-│   │   ├── runwayService.ts         # Runway ML SDK integration (gen4_turbo)
-│   │   ├── klingService.ts          # Kling/fal.ai video generation
-│   │   ├── remotionRenderService.ts # Remotion video rendering
-│   │   └── remotionRenderQueue.ts   # Render job queue management
-│   ├── remotion/
-│   │   ├── index.tsx          # Remotion root and composition registration
-│   │   └── ListingVideo.tsx   # Listing video composition component
-│   ├── routes/
-│   │   ├── health.ts          # Health check endpoint
-│   │   ├── video.ts           # Video generation endpoints
-│   │   ├── renders.ts         # Remotion render job endpoints
-│   │   ├── webhooks.ts        # fal.ai webhook handler
-│   │   └── storage.ts         # Storage proxy endpoints
+│   │   ├── env.ts
+│   │   ├── logger.ts
+│   │   └── storage.ts
 │   ├── middleware/
-│   │   ├── auth.ts            # API key authentication
-│   │   └── errorHandler.ts    # Global error handler with classification
-│   └── utils/
-│       ├── cache.ts           # TTL cache with automatic expiration
-│       ├── compositionHelpers.ts # Video composition utilities
-│       ├── dbHelpers.ts       # Centralized database operations
-│       └── downloadWithRetry.ts # Download utilities with retry logic
-├── Dockerfile                 # Multi-stage Docker build
-├── docker-compose.yml         # Local development environment
-├── .dockerignore              # Docker build exclusions
-├── package.json
-└── tsconfig.json
+│   │   ├── auth.ts
+│   │   └── errorHandler.ts
+│   ├── routes/
+│   │   ├── _shared/
+│   │   ├── health/
+│   │   │   ├── route.ts
+│   │   │   ├── domain/
+│   │   │   └── orchestrators/
+│   │   ├── renders/
+│   │   │   ├── route.ts
+│   │   │   ├── domain/
+│   │   │   └── orchestrators/
+│   │   ├── storage/
+│   │   │   ├── route.ts
+│   │   │   ├── domain/
+│   │   │   └── orchestrators/
+│   │   ├── video/
+│   │   │   ├── route.ts
+│   │   │   ├── domain/
+│   │   │   └── orchestrators/
+│   │   └── webhooks/
+│   │       ├── route.ts
+│   │       ├── domain/
+│   │       └── orchestrators/
+│   └── services/
+│       ├── providers/
+│       │   ├── kling/
+│       │   └── runway/
+│       ├── render/
+│       │   ├── service.ts
+│       │   ├── queue.ts
+│       │   ├── domain/composition.ts
+│       │   └── providers/remotion/
+│       │       ├── index.ts
+│       │       ├── provider.ts
+│       │       └── composition/
+│       │           ├── Root.tsx
+│       │           └── ListingVideo.tsx
+│       ├── storage/
+│       ├── videoGeneration/
+│       │   ├── service.ts
+│       │   ├── adapters/
+│       │   ├── domain/
+│       │   ├── facades/
+│       │   ├── orchestrators/
+│       │   └── strategies/
+│       └── webhook/
+├── Dockerfile
+├── docker-compose.yml
+├── scripts/
+│   └── start-dev-server.sh
+└── package.json
 ```
 
-## Key Services
+## Key Modules
 
-### Video Generation Service (`videoGenerationService.ts`)
+### Video Generation (`src/services/videoGeneration`)
 
-Orchestrates the entire video generation workflow:
+Orchestrates the full generation lifecycle:
 
-- Receives job requests from the Next.js web app
-- Dispatches to Runway ML (primary) or Kling/fal.ai (fallback)
-- Handles webhook callbacks from AI services
-- Downloads and normalizes generated videos
-- Sends completion webhooks to the web app
+- Receives generation requests from routes
+- Dispatches provider jobs via facade + strategies
+- Handles provider webhook completion events
+- Downloads provider outputs and persists artifacts
+- Triggers downstream composition when all jobs settle
 
 **Video batch workflow note:** the parent `video_gen_batch` record is treated as a run/batch only. Final asset URLs live on the `content` row when a user saves a draft/favorite. Individual clip URLs and thumbnails are stored on `video_gen_jobs`.
 
-### Runway Service (`runwayService.ts`)
+### Providers (`src/services/providers`)
 
-Integrates with Runway ML's gen4_turbo model:
+Provider-specific integrations are isolated here:
 
-- Image-to-video generation
-- Supports various aspect ratios: `1280:720`, `720:1280`, `1104:832`, `832:1104`, `960:960`, `1584:672`
-- Built-in task polling via SDK's `waitForTaskOutput()`
+- `runway/` - Runway ML SDK integration
+- `kling/` - Kling/fal.ai integration
 
-### Remotion Render Service (`remotionRenderService.ts`)
+Only these modules should contain provider-specific semantics.
 
-Handles video composition using Remotion:
+### Render (`src/services/render`)
 
-- Combines individual room videos into final listing video
-- Supports vertical (720x1280) and landscape (1280x720) orientations
-- Generates thumbnails from video frames
-- Progress tracking and cancellation support
+Handles composition and render job lifecycle:
 
-### Database Helpers (`utils/dbHelpers.ts`)
+- Queue orchestration (`queue.ts`)
+- Provider abstraction (`ports.ts`)
+- Remotion provider implementation (`providers/remotion/provider.ts`)
+- Composition React root/component (`providers/remotion/composition/*`)
 
-Centralized database operations:
+### Storage (`src/services/storage`)
 
-- Render job CRUD: `createRenderJobRecord`, `markRenderJobProcessing`, `updateRenderJobProgress`, `markRenderJobCompleted`, `markRenderJobFailed`
-- Cancel operations: `cancelVideosByListing`, `cancelVideosByIds`, `cancelJobsByListingId`
+Backblaze B2 operations:
 
-### TTL Cache (`utils/cache.ts`)
+- Upload, delete, and URL operations
+- Signed URL generation
+- Health checks and storage URL handling
 
-Memory-safe caching with automatic expiration:
+### Webhook (`src/services/webhook`)
 
-- Configurable max size and TTL
-- Automatic pruning of expired entries
-- Used for video context caching during generation
+Outbound webhook delivery with retry/backoff and structured logging.
 
 ## Environment Variables
 
@@ -144,41 +167,28 @@ See `.env.example` for all required and optional environment variables.
 - `B2_BUCKET_NAME` - Backblaze bucket for media storage
 - `VIDEO_SERVER_URL` - Public URL for this service
 - `DATABASE_URL` - PostgreSQL database connection string
-- `VERCEL_API_URL` - Vercel API URL for webhook callbacks
-- `VERCEL_WEBHOOK_SECRET` - HMAC secret shared with Vercel webhooks
-- `VIDEO_SERVER_API_KEY` - API key for Vercel <-> video-server authentication
-- `FAL_KEY` - fal.ai API key for Kling video generation
-- `RUNWAY_API_KEY` - Runway ML API key for gen4_turbo video generation
+- `VERCEL_API_URL` - Web app API URL for webhook callbacks
+- `VERCEL_WEBHOOK_SECRET` - Shared signing secret for callback validation
+- `VIDEO_SERVER_API_KEY` - API key for web <-> video-server auth
+- `FAL_KEY` - fal.ai API key
+- `RUNWAY_API_KEY` - Runway ML API key
 
 ### Optional Variables
 
 - `B2_REGION` - Backblaze region (default: `us-west-002`)
 - `PORT` - Server port (default: 3001)
 - `NODE_ENV` - Environment (development/production)
-- `LOG_LEVEL` - Logging level (debug/info/warn/error, default: info)
-- `FAL_WEBHOOK_URL` - Override fal.ai webhook target (defaults to `${VIDEO_SERVER_URL}/webhooks/fal`)
-- `RUNWAY_API_URL` - Override Runway API base URL (default: `https://api.dev.runwayml.com`)
-- `RUNWAY_API_VERSION` - Override Runway API version (default: `2024-11-06`)
-- `STORAGE_HEALTH_CACHE_MS` - Cache duration for storage health checks (default: 300000 = 5 min)
-
-### Backblaze B2 Configuration
-
-Create an application key with read/write permissions for your media bucket, then add:
-
-- `B2_KEY_ID`
-- `B2_APPLICATION_KEY`
-- `B2_BUCKET_NAME`
-- `B2_ENDPOINT`
-- `B2_REGION` (optional if using `us-west-002`)
-
-All uploads use the AWS SDK v3 pointed at the Backblaze endpoint.
-Reference `.env.hetzner.example` for a production-ready template.
+- `LOG_LEVEL` - Logging level (default: `info`)
+- `FAL_WEBHOOK_URL` - Override fal.ai webhook target
+- `RUNWAY_API_URL` - Override Runway API base URL
+- `RUNWAY_API_VERSION` - Override Runway API version
+- `STORAGE_HEALTH_CACHE_MS` - Storage health cache duration (ms)
 
 ### fal.ai webhook routing
 
-- **Production** – Point `FAL_WEBHOOK_URL` to the public hostname that fronts this service (typically your ALB DNS name plus `/webhooks/fal`).
-- **Local development** – Keep `VIDEO_SERVER_URL=http://localhost:3001` for internal requests, but set `FAL_WEBHOOK_URL` to a public tunnel (ngrok, Cloudflare Tunnel, etc.).
-- **Docker Compose** – Export `FAL_WEBHOOK_URL` before running `docker compose` to override the default.
+- **Production**: Point `FAL_WEBHOOK_URL` to the public hostname fronting this service (`.../webhooks/fal`).
+- **Local development**: Keep `VIDEO_SERVER_URL=http://localhost:3001`, set `FAL_WEBHOOK_URL` to a public tunnel.
+- **Docker Compose**: Export `FAL_WEBHOOK_URL` before running compose to override defaults.
 
 ## Development
 
@@ -195,88 +205,69 @@ Reference `.env.hetzner.example` for a production-ready template.
 npm install
 ```
 
-2. Copy environment variables:
+2. Configure environment variables (`.env.local` / `.env` as used in your workflow).
+
+3. Start local development with tunnel + Docker:
 
 ```bash
-cp .env.example .env
-# Edit .env with your configuration
+apps/video-server/scripts/start-dev-server.sh up --build
 ```
 
-3. Start the local development environment:
+4. Or run service directly:
 
 ```bash
-docker compose -f apps/video-server/docker-compose.yml up --build
+npm run dev --workspace=@zencourt/video-server
 ```
-
-4. Or run without Docker:
-
-```bash
-npm run dev
-```
-
-The server will start on `http://localhost:3001` with hot reload enabled.
 
 ### Build
 
-Compile TypeScript to JavaScript:
-
 ```bash
-npm run build
+npm run build --workspace=@zencourt/video-server
 ```
 
-### Type Checking
-
-Run TypeScript type checking:
+### Type checking
 
 ```bash
-npm run type-check
-```
-
-### Linting
-
-Run ESLint on source files:
-
-```bash
-npm run lint
+npm run type-check --workspace=@zencourt/video-server
 ```
 
 ### Testing
 
 ```bash
-npm test              # Run tests
-npm run test:watch    # Watch mode
-npm run test:coverage # Coverage report
+npm run test --workspace=@zencourt/video-server
+npm run test:watch --workspace=@zencourt/video-server
+npm run test:coverage --workspace=@zencourt/video-server
 ```
 
 ## API Endpoints
 
 ### Health & Status
 
-| Endpoint      | Method | Description                    |
-| ------------- | ------ | ------------------------------ |
-| `GET /`       | GET    | Server information and status  |
-| `GET /health` | GET    | Health check for orchestration |
+| Endpoint      | Method | Description                   |
+| ------------- | ------ | ----------------------------- |
+| `GET /`       | GET    | Server information and status |
+| `GET /health` | GET    | Health check                  |
 
 ### Video Generation
 
-| Endpoint               | Method | Description                       |
-| ---------------------- | ------ | --------------------------------- |
-| `POST /video/generate` | POST   | Start video generation for jobs   |
-| `POST /video/cancel`   | POST   | Cancel in-flight video generation |
+| Endpoint               | Method | Description                     |
+| ---------------------- | ------ | ------------------------------- |
+| `POST /video/generate` | POST   | Start generation for job IDs    |
+| `POST /video/cancel`   | POST   | Cancel in-flight video jobs     |
 
 ### Render Jobs
 
 | Endpoint                 | Method | Description                 |
 | ------------------------ | ------ | --------------------------- |
-| `POST /renders`          | POST   | Queue a Remotion render job |
+| `POST /renders`          | POST   | Queue a render job          |
 | `GET /renders/:jobId`    | GET    | Get render job status       |
 | `DELETE /renders/:jobId` | DELETE | Cancel a render job         |
 
 ### Webhooks
 
-| Endpoint             | Method | Description               |
-| -------------------- | ------ | ------------------------- |
-| `POST /webhooks/fal` | POST   | fal.ai completion webhook |
+| Endpoint             | Method | Description                  |
+| -------------------- | ------ | ---------------------------- |
+| `POST /webhooks/fal` | POST   | fal.ai completion webhook    |
 
 ### Storage
 
@@ -288,69 +279,37 @@ npm run test:coverage # Coverage report
 
 ## Video Generation Flow
 
-1. **Web app** creates `video_gen_batch` and `video_gen_jobs` records in the database
-2. **Web app** calls `POST /video/generate` with job IDs
-3. **Video server** reads job details from DB, dispatches to Runway ML (or Kling fallback)
-4. **AI service** generates video, calls webhook on completion
-5. **Video server** downloads video, uploads to B2, updates job record
-6. When all jobs complete, **video server** triggers Remotion composition
-7. **Remotion** combines videos into final listing video with transitions
-8. **Video server** uploads final video + thumbnail, sends webhook to web app
-
-## Error Handling
-
-### Error Types
-
-- **Storage Errors**: STORAGE_UPLOAD_FAILED, STORAGE_DOWNLOAD_FAILED, STORAGE_DELETE_FAILED
-- **AI Generation Errors**: RUNWAY_GENERATION_FAILED, FAL_GENERATION_FAILED
-- **Render Errors**: REMOTION_RENDER_FAILED, COMPOSITION_FAILED
-- **Webhook Errors**: WEBHOOK_DELIVERY_FAILED
-- **Validation Errors**: INVALID_INPUT, MISSING_REQUIRED_FIELD
-- **Auth Errors**: UNAUTHORIZED, INVALID_API_KEY
-
-### Error Response Format
-
-```json
-{
-  "success": false,
-  "error": "Error Type",
-  "code": "ERROR_CODE",
-  "details": { "field": "additionalInfo" }
-}
-```
+1. Web app creates `video_gen_batch` + `video_gen_jobs` records.
+2. Web app calls `POST /video/generate` with job IDs.
+3. Video server dispatches jobs to provider strategies.
+4. Provider sends completion webhook (`/webhooks/fal`).
+5. Video server downloads output, uploads artifacts to B2, updates job rows.
+6. When jobs complete, video server queues a render.
+7. Remotion provider composes final listing video + thumbnail.
+8. Video server notifies web app via webhook.
 
 ## Troubleshooting
 
 ### Runway API errors
 
-- Verify `RUNWAY_API_KEY` is set correctly
+- Verify `RUNWAY_API_KEY`
 - Check API version compatibility (default: `2024-11-06`)
-- Ensure image URLs are publicly accessible HTTPS URLs
+- Ensure source image URLs are publicly accessible HTTPS URLs
 
 ### fal.ai webhook not received
 
-- Verify `FAL_WEBHOOK_URL` is publicly accessible
-- Check ngrok tunnel is running for local development
-- Verify fal.ai webhook signature validation
+- Verify `FAL_WEBHOOK_URL` is publicly reachable
+- For local development, ensure tunnel is active
+- Verify webhook signature validation settings
 
 ### Remotion render failures
 
-- Check clip URLs are accessible from the server
-- Verify sufficient memory for video rendering
-- Check for orientation mismatches in input videos
+- Check clip URLs are reachable from the server
+- Verify sufficient memory/CPU for rendering
+- Check orientation input consistency
 
 ### Backblaze access denied
 
-- Verify `B2_KEY_ID`/`B2_APPLICATION_KEY` pair has read/write access to the configured bucket
-- Confirm the bucket exists inside the account and matches `B2_BUCKET_NAME`
-- Double-check `B2_ENDPOINT` and `B2_REGION` match the bucket's region
-
-### High memory usage
-
-- TTL cache automatically prunes expired entries
-- Reduce concurrent render jobs if needed
-- Monitor Docker container limits
-
-## License
-
-MIT
+- Verify `B2_KEY_ID`/`B2_APPLICATION_KEY` permissions
+- Confirm bucket name and region match configuration
+- Validate endpoint/region env values
