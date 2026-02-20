@@ -1,6 +1,6 @@
 import * as React from "react";
 import { toast } from "sonner";
-import type { DBUserMedia, UserMediaType } from "@shared/types/models";
+import type { DBUserMedia, UserMediaType } from "@db/types/models";
 import {
   createUserMediaRecords,
   deleteUserMedia

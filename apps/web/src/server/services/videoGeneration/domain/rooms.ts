@@ -3,7 +3,7 @@ import {
   ROOM_CATEGORIES,
   RoomCategory
 } from "@web/src/lib/domain/listing/roomCategories";
-import type { DBListingImage } from "@shared/types/models";
+import type { DBListingImage } from "@db/types/models";
 
 export type DerivedRoom = {
   id: string;

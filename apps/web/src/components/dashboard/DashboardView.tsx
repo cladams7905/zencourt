@@ -23,7 +23,7 @@ import {
   useDashboardFilters,
   useDashboardSessionCache
 } from "@web/src/components/dashboard/domain";
-import type { DBListing } from "@shared/types/models";
+import type { DBListing } from "@db/types/models";
 
 interface DashboardViewProps {
   initialListings?: DBListing[];

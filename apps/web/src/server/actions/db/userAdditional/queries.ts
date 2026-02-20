@@ -1,7 +1,7 @@
 "use server";
 
 import { db, eq, userAdditional } from "@db/client";
-import type { DBUserAdditional } from "@shared/types/models";
+import type { DBUserAdditional } from "@db/types/models";
 import { withDbErrorHandling } from "@web/src/server/actions/shared/dbErrorHandling";
 import { requireUserId } from "@web/src/server/actions/shared/validation";
 

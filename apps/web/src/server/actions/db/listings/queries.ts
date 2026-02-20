@@ -1,7 +1,7 @@
 "use server";
 
 import { and, db, eq, like, listings } from "@db/client";
-import type { DBListing } from "@shared/types/models";
+import type { DBListing } from "@db/types/models";
 import { withDbErrorHandling } from "@web/src/server/actions/shared/dbErrorHandling";
 import { requireListingId, requireUserId } from "@web/src/server/actions/shared/validation";
 

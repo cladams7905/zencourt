@@ -6,7 +6,7 @@ import {
   videoGenBatch,
   videoGenJobs
 } from "@db/client";
-import type { VideoStatus } from "@shared/types/models";
+import type { VideoStatus } from "@db/types/models";
 
 const CANCELABLE_STATUSES: VideoStatus[] = ["pending", "processing"];
 

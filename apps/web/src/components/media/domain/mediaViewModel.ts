@@ -1,4 +1,4 @@
-import type { DBUserMedia, UserMediaType } from "@shared/types/models";
+import type { DBUserMedia, UserMediaType } from "@db/types/models";
 import type { MediaUsageSort } from "@web/src/components/media/shared";
 
 export const formatUploadDate = (value: Date | string) => {

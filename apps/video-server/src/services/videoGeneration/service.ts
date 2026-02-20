@@ -11,7 +11,7 @@ import type {
   FalWebhookPayload,
   VideoJobResult
 } from "@shared/types/api";
-import type { DBVideoGenJob } from "@shared/types/models";
+import type { DBVideoGenJob } from "@db/types/models";
 import { TTLCache } from "@/services/videoGeneration/domain/cache";
 import { startGenerationOrchestrator } from "@/services/videoGeneration/orchestrators/startGeneration";
 import { handleFalWebhookOrchestrator } from "@/services/videoGeneration/orchestrators/handleFalWebhook";

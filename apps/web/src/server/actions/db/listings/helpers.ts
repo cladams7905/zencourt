@@ -1,4 +1,4 @@
-import type { DBContent } from "@shared/types/models";
+import type { DBContent } from "@db/types/models";
 import {
   DEFAULT_THUMBNAIL_TTL_SECONDS,
   resolveSignedDownloadUrl

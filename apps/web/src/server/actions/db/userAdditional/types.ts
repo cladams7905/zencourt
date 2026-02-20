@@ -1,4 +1,4 @@
-import type { InsertDBUserAdditional } from "@shared/types/models";
+import type { InsertDBUserAdditional } from "@db/types/models";
 
 export type LocationDetailsInput = Pick<
   InsertDBUserAdditional,

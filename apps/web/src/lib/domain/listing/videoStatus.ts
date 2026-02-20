@@ -1,8 +1,7 @@
 import type {
-  GENERATION_MODELS,
-  VideoOrientation,
   VideoStatus
-} from "@shared/types/models";
+} from "@db/types/models";
+import type { GENERATION_MODELS, VideoOrientation } from "@shared/types/models";
 
 export interface VideoJobUpdateEvent {
   listingId: string;

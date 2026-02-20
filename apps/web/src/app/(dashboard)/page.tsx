@@ -1,6 +1,6 @@
 import { getUserListings } from "@web/src/server/actions/db/listings";
 import { DashboardView } from "@web/src/components/dashboard/DashboardView";
-import { DBListing } from "@shared/types/models";
+import { DBListing } from "@db/types/models";
 import { getUser } from "@web/src/server/actions/db/users";
 import { getOrCreateUserAdditional, getUserProfileCompletion } from "@web/src/server/actions/db/userAdditional";
 import { LandingPage } from "@web/src/components/landing/LandingPage";

@@ -1,7 +1,7 @@
 "use server";
 
 import { db, desc, eq, userMedia } from "@db/client";
-import type { DBUserMedia } from "@shared/types/models";
+import type { DBUserMedia } from "@db/types/models";
 import { withDbErrorHandling } from "@web/src/server/actions/shared/dbErrorHandling";
 import { requireUserId } from "@web/src/server/actions/shared/validation";
 

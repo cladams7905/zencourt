@@ -1,4 +1,4 @@
-import { DBListingImage, InsertDBListingImage } from "@shared/types/models";
+import { DBListingImage, InsertDBListingImage } from "@db/types/models";
 
 /**
  * Data Flow Through Image Types

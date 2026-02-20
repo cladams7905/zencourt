@@ -4,7 +4,7 @@ import { db, eq, videoGenBatch } from "@db/client";
 import type {
   DBVideoGenBatch,
   InsertDBVideoGenBatch
-} from "@shared/types/models";
+} from "@db/types/models";
 import { requireNonEmptyString } from "../shared/validation";
 
 /**

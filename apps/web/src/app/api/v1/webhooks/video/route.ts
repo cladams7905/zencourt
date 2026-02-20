@@ -16,12 +16,12 @@ import {
   logger as baseLogger
 } from "@web/src/lib/core/logging/logger";
 import type { VideoJobWebhookPayload } from "@shared/types/api";
-import type { DBVideoGenJob } from "@shared/types/models";
+import type { DBVideoGenJob } from "@db/types/models";
 import {
   parseVerifiedWebhook,
   WebhookVerificationError
 } from "@web/src/server/utils/webhookVerification";
-import type { VideoStatus } from "@shared/types/models";
+import type { VideoStatus } from "@db/types/models";
 import { apiErrorResponse, StatusCode } from "@web/src/app/api/v1/_responses";
 
 const logger = createChildLogger(baseLogger, {

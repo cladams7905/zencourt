@@ -1,6 +1,6 @@
 import logger from "@/config/logger";
 import type { VideoGenerationStrategy } from "@/services/videoGeneration/ports";
-import type { DBVideoGenJob } from "@shared/types/models";
+import type { DBVideoGenJob } from "@db/types/models";
 import {
   ProviderErrorCode,
   VideoGenerationServiceError

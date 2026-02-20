@@ -1,4 +1,4 @@
-import type { UserMediaType } from "@shared/types/models";
+import type { UserMediaType } from "@db/types/models";
 
 export type UserMediaUploadRequest = {
   id: string;

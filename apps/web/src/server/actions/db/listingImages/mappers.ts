@@ -1,4 +1,4 @@
-import type { DBListingImage } from "@shared/types/models";
+import type { DBListingImage } from "@db/types/models";
 
 export type ListingImageDisplayItem = {
   id: string;

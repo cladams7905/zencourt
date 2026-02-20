@@ -21,6 +21,17 @@ zencourt/
 - `packages` hosts shared libraries consumed by the apps.
 - `scripts` contains operational helpers (e.g., Hetzner deploy script).
 
+## Architecture Boundaries
+
+- `packages/shared` is app-agnostic and DB-agnostic.
+  - Must not import from `@db/*` or `apps/*`.
+- `packages/db` is app-agnostic.
+  - Must not import from `@web/*`, `@video-server/*`, or `apps/*`.
+- DB-inferred model types (`DB*`, `InsertDB*`) live in `@db/types/models`.
+- Shared non-DB domain contracts live in `@shared/types/*`.
+
+These boundaries are enforced with package-local ESLint rules and CI checks.
+
 ## Getting Started
 
 ### Prerequisites

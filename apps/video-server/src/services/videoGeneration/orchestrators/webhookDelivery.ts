@@ -1,6 +1,6 @@
 import logger from "@/config/logger";
 import type { VideoJobResult, VideoJobWebhookPayload } from "@shared/types/api";
-import type { DBVideoGenJob } from "@shared/types/models";
+import type { DBVideoGenJob } from "@db/types/models";
 
 type VideoContext = {
   listingId: string;

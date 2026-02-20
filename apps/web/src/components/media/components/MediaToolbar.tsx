@@ -2,7 +2,7 @@ import {
   ChevronDown,
   Upload
 } from "lucide-react";
-import type { UserMediaType } from "@shared/types/models";
+import type { UserMediaType } from "@db/types/models";
 import type { MediaUsageSort } from "@web/src/components/media/shared";
 import { Badge } from "@web/src/components/ui/badge";
 import { Button } from "@web/src/components/ui/button";

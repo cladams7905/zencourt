@@ -5,6 +5,6 @@
     "module": "commonjs",
     "outDir": "./dist"
   },
-  "include": ["**/*.ts", "../db/**/*.ts"],
+  "include": ["**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }

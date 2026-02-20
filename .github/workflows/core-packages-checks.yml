@@ -38,11 +38,23 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Lint shared package boundaries
+        run: npm run lint:shared
+
+      - name: Lint db package boundaries
+        run: npm run lint:db
+
       - name: Type-check shared package
         run: npm run type-check:shared
 
       - name: Type-check db package
         run: npm run type-check:db
+
+      - name: Type-check web workspace
+        run: npm run type-check:web
+
+      - name: Type-check video-server workspace
+        run: npm run type-check:video
 
       - name: Test shared package
         run: npm run test:shared

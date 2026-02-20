@@ -1,4 +1,4 @@
-import type { UserMediaType } from "@shared/types/models";
+import type { UserMediaType } from "@db/types/models";
 import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES } from "@shared/utils/mediaUpload";
 import { formatBytes } from "@web/src/lib/core/formatting/bytes";
 
