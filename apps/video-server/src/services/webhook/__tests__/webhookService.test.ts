@@ -132,9 +132,40 @@ describe("WebhookService", () => {
       expect(mockAxios.post).toHaveBeenCalledTimes(2);
     });
 
+
     it("should retry on retryable errors (429 rate limit)", async () => {
       mockAxios.post
         .mockRejectedValueOnce(createAxiosError(429, "Too Many Requests"))
+        .mockResolvedValueOnce({
+          status: 200,
+          data: { success: true }
+        });
+
+      await webhookService.sendWebhook(baseOptions);
+
+      expect(mockAxios.post).toHaveBeenCalledTimes(2);
+    });
+
+    it("should retry on retryable errors (408 request timeout)", async () => {
+      mockAxios.post
+        .mockRejectedValueOnce(createAxiosError(408, "Request Timeout"))
+        .mockResolvedValueOnce({
+          status: 200,
+          data: { success: true }
+        });
+
+      await webhookService.sendWebhook(baseOptions);
+
+      expect(mockAxios.post).toHaveBeenCalledTimes(2);
+    });
+
+    it("should handle error with isAxiosError property but not instanceof AxiosError", async () => {
+      const fakeAxiosError = {
+        isAxiosError: true,
+        response: { status: 500, statusText: "Internal Server Error" }
+      };
+      mockAxios.post
+        .mockRejectedValueOnce(fakeAxiosError)
         .mockResolvedValueOnce({
           status: 200,
           data: { success: true }
@@ -185,6 +216,26 @@ describe("WebhookService", () => {
         WebhookError
       );
       expect(mockAxios.post).toHaveBeenCalledTimes(3); // maxRetries
+    });
+
+    it("should run calculateBackoff and sleep when retrying", async () => {
+      sleepSpy.mockRestore();
+      backoffSpy.mockRestore();
+      jest.useFakeTimers();
+
+      mockAxios.post
+        .mockRejectedValueOnce(createAxiosError(500, "Internal Server Error"))
+        .mockResolvedValueOnce({
+          status: 200,
+          data: { success: true }
+        });
+
+      const sendPromise = webhookService.sendWebhook(baseOptions);
+      await jest.runAllTimersAsync();
+      await sendPromise;
+
+      expect(mockAxios.post).toHaveBeenCalledTimes(2);
+      jest.useRealTimers();
     });
 
     it("should send failure webhook with error details", async () => {
@@ -255,6 +306,24 @@ describe("WebhookService", () => {
 
       const result = webhookService.verifySignature(payload, signature, secret);
       expect(result).toBe(false);
+    });
+
+    it("should return false when HMAC throws inside try block", () => {
+      const crypto = require("crypto");
+      const originalCreateHmac = crypto.createHmac.bind(crypto);
+      let callCount = 0;
+      const createHmacSpy = jest
+        .spyOn(crypto, "createHmac")
+        .mockImplementation((...args: unknown[]) => {
+          callCount++;
+          if (callCount > 1) throw new Error("HMAC error");
+          return originalCreateHmac(...args);
+        });
+
+      const result = webhookService.verifySignature(payload, "sig", secret);
+
+      expect(result).toBe(false);
+      createHmacSpy.mockRestore();
     });
   });
 

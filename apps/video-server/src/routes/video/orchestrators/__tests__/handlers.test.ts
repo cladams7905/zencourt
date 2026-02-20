@@ -10,7 +10,8 @@ describe("video route orchestrators", () => {
         videoId: "video-1",
         jobIds: ["job-1"],
         listingId: "listing-1",
-        userId: "user-1"
+        userId: "user-1",
+        callbackUrl: "https://example.vercel.app/api/v1/webhooks/video"
       },
       {
         generationService: {
@@ -56,5 +57,20 @@ describe("video route orchestrators", () => {
       canceledVideos: 2,
       canceledJobs: 3
     });
+  });
+
+  it("falls back to listing cancel when videoIds is empty", async () => {
+    const cancelVideosByIds = jest.fn();
+    const cancelVideosByListing = jest.fn().mockResolvedValue(5);
+    const cancelJobsByListingId = jest.fn().mockResolvedValue(2);
+
+    const result = await handleCancelVideo(
+      { listingId: "listing-1", videoIds: [], reason: "Canceled by user" },
+      { cancelVideosByIds, cancelVideosByListing, cancelJobsByListingId }
+    );
+
+    expect(cancelVideosByListing).toHaveBeenCalledWith("listing-1", "Canceled by user");
+    expect(cancelVideosByIds).not.toHaveBeenCalled();
+    expect(result.body.canceledVideos).toBe(5);
   });
 });

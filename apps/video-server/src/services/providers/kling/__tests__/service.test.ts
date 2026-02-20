@@ -74,4 +74,54 @@ describe("kling provider service", () => {
       })
     ).rejects.toThrow("At least one image URL is required for Kling job");
   });
+
+  it("uses default duration and aspect ratio when not specified", async () => {
+    submitMock.mockResolvedValue({ request_id: "req-defaults" });
+    const { klingService } = await import("@/services/providers/kling");
+
+    await klingService.submitRoomVideo({
+      prompt: "test",
+      imageUrls: ["https://cdn/1.jpg"]
+    });
+
+    expect(submitMock).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        input: expect.objectContaining({
+          duration: "5",
+          aspect_ratio: "16:9"
+        })
+      })
+    );
+  });
+
+  it("falls back to FAL_WEBHOOK_URL env var when webhookUrl not provided", async () => {
+    process.env.FAL_WEBHOOK_URL = "https://fallback.webhook";
+    submitMock.mockResolvedValue({ request_id: "req-env" });
+    const { klingService } = await import("@/services/providers/kling");
+
+    await klingService.submitRoomVideo({
+      prompt: "test",
+      imageUrls: ["https://cdn/1.jpg"]
+    });
+
+    expect(submitMock).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ webhookUrl: "https://fallback.webhook" })
+    );
+    delete process.env.FAL_WEBHOOK_URL;
+  });
+
+  it("rethrows fal submission errors", async () => {
+    submitMock.mockRejectedValue(new Error("fal API down"));
+    const { klingService } = await import("@/services/providers/kling");
+
+    await expect(
+      klingService.submitRoomVideo({
+        prompt: "test",
+        imageUrls: ["https://cdn/1.jpg"],
+        webhookUrl: "https://webhook.local"
+      })
+    ).rejects.toThrow("fal API down");
+  });
 });

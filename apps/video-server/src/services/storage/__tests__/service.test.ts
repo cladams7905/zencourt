@@ -5,7 +5,12 @@ import {
   StorageErrorType
 } from "@/services/storage";
 
-// Mock storage config to prevent initialization logs
+const mockGetSignedUrl = jest.fn();
+
+jest.mock("@aws-sdk/s3-request-presigner", () => ({
+  getSignedUrl: (...args: unknown[]) => mockGetSignedUrl(...args)
+}));
+
 jest.mock("@/config/storage", () => ({
   storageClient: new (require("@aws-sdk/client-s3").S3Client)({
     region: "us-east-1"
@@ -13,11 +18,11 @@ jest.mock("@/config/storage", () => ({
   STORAGE_CONFIG: {
     region: "us-west-002",
     bucket: "test-bucket",
-    endpoint: "https://s3.us-west-002.backblazeb2.com"
+    endpoint: "https://s3.us-west-002.backblazeb2.com",
+    publicBaseUrl: "https://cdn.example.com"
   }
 }));
 
-// Mock logger to avoid console output during tests
 jest.mock("@/config/logger", () => ({
   __esModule: true,
   default: {
@@ -28,15 +33,26 @@ jest.mock("@/config/logger", () => ({
   }
 }));
 
+type MockS3Client = {
+  send: jest.Mock;
+};
+
+function createMockS3Client(): MockS3Client {
+  return { send: jest.fn() };
+}
+
 describe("StorageService", () => {
   let storage: StorageService;
+  let mockClient: MockS3Client;
   const testBucket = "test-bucket";
 
   beforeEach(() => {
+    mockClient = createMockS3Client();
+    mockGetSignedUrl.mockResolvedValue("https://signed.example.com/key");
     storage = new StorageService(
-      new S3Client({ region: "us-east-1" }),
+      mockClient as unknown as S3Client,
       testBucket,
-      { maxAttempts: 2, baseDelayMs: 10, maxDelayMs: 50 } // Fast retries for tests
+      { maxAttempts: 2, baseDelayMs: 10, maxDelayMs: 50 }
     );
   });
 
@@ -148,6 +164,248 @@ describe("StorageService", () => {
       expect(typeof storage.deleteFile).toBe("function");
       expect(typeof storage.getSignedDownloadUrl).toBe("function");
       expect(typeof storage.checkBucketAccess).toBe("function");
+    });
+  });
+
+  describe("uploadFile", () => {
+    it("uploads file and returns public URL", async () => {
+      mockClient.send.mockResolvedValue({});
+
+      const url = await storage.uploadFile({
+        key: "user_1/file.txt",
+        body: Buffer.from("content"),
+        contentType: "text/plain",
+        metadata: { userId: "user1" }
+      });
+
+      expect(mockClient.send).toHaveBeenCalledTimes(1);
+      const sendCall = mockClient.send.mock.calls[0][0];
+      expect(sendCall.input).toMatchObject({
+        Bucket: testBucket,
+        Key: "user_1/file.txt",
+        Body: Buffer.from("content"),
+        ContentType: "text/plain",
+        Metadata: { userId: "user1" }
+      });
+      expect(url).toContain("cdn.example.com");
+      expect(url).toContain(testBucket);
+      expect(url).toContain("user_1");
+      expect(url).toContain("file.txt");
+    });
+
+    it("uses custom bucket when provided", async () => {
+      mockClient.send.mockResolvedValue({});
+
+      await storage.uploadFile({
+        bucket: "custom-bucket",
+        key: "key",
+        body: Buffer.from("x")
+      });
+
+      const sendCall = mockClient.send.mock.calls[0][0];
+      expect(sendCall.input.Bucket).toBe("custom-bucket");
+    });
+
+    it("throws StorageServiceError on S3 failure", async () => {
+      mockClient.send.mockRejectedValue(
+        Object.assign(new Error("S3 unavailable"), { name: "NetworkingError" })
+      );
+
+      await expect(
+        storage.uploadFile({
+          key: "key",
+          body: Buffer.from("x")
+        })
+      ).rejects.toMatchObject({
+        message: "S3 unavailable",
+        code: StorageErrorType.NETWORK_ERROR,
+        retryable: true
+      });
+    });
+
+    it("does not retry on non-retryable errors", async () => {
+      mockClient.send.mockRejectedValue(
+        Object.assign(new Error("Not found"), { Code: "NoSuchKey" })
+      );
+
+      await expect(
+        storage.uploadFile({ key: "key", body: Buffer.from("x") })
+      ).rejects.toMatchObject({
+        code: StorageErrorType.NOT_FOUND,
+        retryable: false
+      });
+      expect(mockClient.send).toHaveBeenCalledTimes(1);
+    });
+
+    it("retries on retryable errors then succeeds", async () => {
+      mockClient.send
+        .mockRejectedValueOnce(
+          Object.assign(new Error("Timeout"), { name: "TimeoutError" })
+        )
+        .mockResolvedValueOnce({});
+
+      jest.useFakeTimers();
+      const uploadPromise = storage.uploadFile({
+        key: "key",
+        body: Buffer.from("x")
+      });
+      await jest.runAllTimersAsync();
+      const url = await uploadPromise;
+
+      expect(mockClient.send).toHaveBeenCalledTimes(2);
+      expect(url).toBeDefined();
+      jest.useRealTimers();
+    });
+  });
+
+  describe("deleteFile", () => {
+    it("deletes file via S3", async () => {
+      mockClient.send.mockResolvedValue({});
+
+      await storage.deleteFile("", "user_1/file.txt");
+
+      const sendCall = mockClient.send.mock.calls[0][0];
+      expect(sendCall.input).toMatchObject({
+        Bucket: testBucket,
+        Key: "user_1/file.txt"
+      });
+    });
+
+    it("uses custom bucket when provided", async () => {
+      mockClient.send.mockResolvedValue({});
+
+      await storage.deleteFile("custom-bucket", "key");
+
+      const sendCall = mockClient.send.mock.calls[0][0];
+      expect(sendCall.input.Bucket).toBe("custom-bucket");
+      expect(sendCall.input.Key).toBe("key");
+    });
+
+    it("throws on delete failure", async () => {
+      mockClient.send.mockRejectedValue(
+        Object.assign(new Error("Access denied"), { Code: "AccessDenied" })
+      );
+
+      await expect(storage.deleteFile("", "key")).rejects.toMatchObject({
+        code: StorageErrorType.ACCESS_DENIED,
+        retryable: false
+      });
+    });
+  });
+
+  describe("getSignedDownloadUrl", () => {
+    it("returns signed URL from presigner", async () => {
+      mockGetSignedUrl.mockResolvedValue("https://signed.url/object");
+
+      const url = await storage.getSignedDownloadUrl({
+        key: "user_1/file.txt",
+        expiresIn: 120
+      });
+
+      expect(mockGetSignedUrl).toHaveBeenCalledTimes(1);
+      expect(url).toBe("https://signed.url/object");
+    });
+
+    it("throws on presigner failure", async () => {
+      mockGetSignedUrl.mockRejectedValue(
+        Object.assign(new Error("Presigner failed"), { Code: "InvalidArgument" })
+      );
+
+      await expect(
+        storage.getSignedDownloadUrl({ key: "key" })
+      ).rejects.toMatchObject({
+        message: "Presigner failed",
+        code: StorageErrorType.UNKNOWN_ERROR
+      });
+    });
+  });
+
+  describe("checkBucketAccess", () => {
+    it("returns true when bucket is accessible", async () => {
+      mockClient.send.mockResolvedValue({});
+
+      const result = await storage.checkBucketAccess();
+
+      expect(result).toBe(true);
+      const sendCall = mockClient.send.mock.calls[0][0];
+      expect(sendCall.input.Bucket).toBe(testBucket);
+    });
+
+    it("returns false when bucket access fails", async () => {
+      mockClient.send.mockRejectedValue(new Error("Bucket not found"));
+
+      const result = await storage.checkBucketAccess();
+
+      expect(result).toBe(false);
+    });
+  });
+
+  describe("extractKeyFromUrl", () => {
+    it("extracts key from https URL", () => {
+      const url =
+        "https://s3.us-west-002.backblazeb2.com/test-bucket/user_1/file.png";
+      const key = storage.extractKeyFromUrl(url);
+
+      expect(key).toBe("user_1/file.png");
+    });
+
+    it("strips bucket prefix when key starts with bucket name", () => {
+      const storageWithBucket = new StorageService(
+        mockClient as unknown as S3Client,
+        "test-bucket"
+      );
+      const url = "https://cdn.example.com/test-bucket/user_1/file.png";
+      const key = storageWithBucket.extractKeyFromUrl(url);
+
+      expect(key).toBe("user_1/file.png");
+    });
+
+    it("throws StorageServiceError for invalid URL", () => {
+      expect(() => storage.extractKeyFromUrl("not-a-valid-url!!!")).toThrow(
+        StorageServiceError
+      );
+    });
+  });
+
+  describe("handleStorageError mapping", () => {
+    it("maps NoSuchBucket to INVALID_BUCKET", async () => {
+      mockClient.send.mockRejectedValue(
+        Object.assign(new Error("Bucket missing"), { Code: "NoSuchBucket" })
+      );
+
+      await expect(
+        storage.uploadFile({ key: "key", body: Buffer.from("x") })
+      ).rejects.toMatchObject({
+        code: StorageErrorType.INVALID_BUCKET,
+        retryable: false
+      });
+    });
+
+    it("maps Forbidden to ACCESS_DENIED", async () => {
+      mockClient.send.mockRejectedValue(
+        Object.assign(new Error("Forbidden"), { name: "Forbidden" })
+      );
+
+      await expect(
+        storage.uploadFile({ key: "key", body: Buffer.from("x") })
+      ).rejects.toMatchObject({
+        code: StorageErrorType.ACCESS_DENIED,
+        retryable: false
+      });
+    });
+
+    it("rethrows StorageServiceError unchanged", async () => {
+      const original = new StorageServiceError(
+        "Custom error",
+        StorageErrorType.NOT_FOUND,
+        {},
+        false
+      );
+      mockClient.send.mockRejectedValue(original);
+
+      await expect(
+        storage.uploadFile({ key: "key", body: Buffer.from("x") })
+      ).rejects.toBe(original);
     });
   });
 });

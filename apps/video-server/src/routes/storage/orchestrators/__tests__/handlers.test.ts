@@ -1,4 +1,8 @@
 import {
+  VideoProcessingError,
+  VideoProcessingErrorType
+} from "@/middleware/errorHandler";
+import {
   handleBatchUpload,
   handleDeleteByUrl,
   handleSignedUrlRequest,
@@ -71,5 +75,138 @@ describe("storage orchestrators", () => {
     );
     expect(result.success).toBe(true);
     expect(result.totalFiles).toBe(2);
+  });
+
+  it("wraps upload error in VideoProcessingError", async () => {
+    const failingStorage = {
+      ...storage,
+      uploadFile: jest.fn().mockRejectedValue(new Error("S3 unavailable")),
+      getSignedDownloadUrl: jest.fn()
+    };
+
+    await expect(
+      handleSingleUpload({ file: makeFile("a.jpg"), folder: "uploads" }, failingStorage)
+    ).rejects.toThrow("Failed to upload file to storage");
+  });
+
+  it("wraps delete error in VideoProcessingError", async () => {
+    const failingStorage = {
+      ...storage,
+      deleteFile: jest.fn().mockRejectedValue(new Error("S3 unavailable"))
+    };
+
+    await expect(
+      handleDeleteByUrl("https://cdn/key/file.jpg", failingStorage)
+    ).rejects.toThrow("Failed to delete file from storage");
+  });
+
+  it("wraps signed URL error in VideoProcessingError", async () => {
+    const failingStorage = {
+      ...storage,
+      getSignedDownloadUrl: jest.fn().mockRejectedValue(new Error("S3 unavailable"))
+    };
+
+    await expect(
+      handleSignedUrlRequest("key/a.jpg", 120, failingStorage)
+    ).rejects.toThrow("Failed to generate signed URL");
+  });
+
+  it("handles batch upload with partial failure", async () => {
+    const partialStorage = {
+      ...storage,
+      uploadFile: jest
+        .fn()
+        .mockResolvedValueOnce("https://cdn/a.jpg")
+        .mockRejectedValueOnce(new Error("upload failed"))
+    };
+
+    const result = await handleBatchUpload(
+      { files: [makeFile("a.jpg"), makeFile("b.jpg")], folder: "uploads" },
+      partialStorage
+    );
+
+    expect(result.success).toBe(true);
+    expect(result.successCount).toBe(1);
+    expect(result.failureCount).toBe(1);
+  });
+
+  it("uses userId/listingId key path when provided in upload", async () => {
+    await handleSingleUpload(
+      { file: makeFile("a.jpg"), folder: "uploads", userId: "u1", listingId: "l1" },
+      storage
+    );
+
+    const uploadCall = storage.uploadFile.mock.calls[0][0];
+    expect(uploadCall.key).toContain("user_u1");
+  });
+
+  it("rethrows VideoProcessingError when single upload storage throws it", async () => {
+    const vpe = new VideoProcessingError(
+      "Storage quota exceeded",
+      VideoProcessingErrorType.STORAGE_UPLOAD_FAILED
+    );
+    const failingStorage = {
+      ...storage,
+      uploadFile: jest.fn().mockRejectedValue(vpe),
+      getSignedDownloadUrl: jest.fn()
+    };
+
+    await expect(
+      handleSingleUpload({ file: makeFile("a.jpg"), folder: "uploads" }, failingStorage)
+    ).rejects.toThrow(vpe);
+  });
+
+  it("rethrows VideoProcessingError when delete storage throws it", async () => {
+    const vpe = new VideoProcessingError(
+      "File not found",
+      VideoProcessingErrorType.STORAGE_NOT_FOUND
+    );
+    const failingStorage = {
+      ...storage,
+      extractKeyFromUrl: jest.fn().mockReturnValue("key/file.jpg"),
+      deleteFile: jest.fn().mockRejectedValue(vpe)
+    };
+
+    await expect(
+      handleDeleteByUrl("https://cdn/key/file.jpg", failingStorage)
+    ).rejects.toThrow(vpe);
+  });
+
+  it("rethrows VideoProcessingError when signed URL storage throws it", async () => {
+    const vpe = new VideoProcessingError(
+      "Key not found",
+      VideoProcessingErrorType.STORAGE_DOWNLOAD_FAILED
+    );
+    const failingStorage = {
+      ...storage,
+      getSignedDownloadUrl: jest.fn().mockRejectedValue(vpe)
+    };
+
+    await expect(
+      handleSignedUrlRequest("key/a.jpg", 120, failingStorage)
+    ).rejects.toThrow(vpe);
+  });
+
+  it("wraps batch upload error when input.files is invalid", async () => {
+    const invalidInput = { files: null, folder: "uploads" } as never;
+
+    await expect(handleBatchUpload(invalidInput, storage)).rejects.toThrow(
+      "Failed to batch upload files to storage"
+    );
+  });
+
+  it("uses generic key path when batch upload has folder only", async () => {
+    const result = await handleBatchUpload(
+      {
+        files: [makeFile("a.jpg")],
+        folder: "generic-uploads"
+      },
+      storage
+    );
+
+    expect(result.success).toBe(true);
+    const uploadCall = storage.uploadFile.mock.calls[0][0];
+    expect(uploadCall.key).not.toContain("user_");
+    expect(uploadCall.key).toContain("generic-uploads");
   });
 });
