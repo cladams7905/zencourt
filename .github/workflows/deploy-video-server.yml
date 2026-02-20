@@ -42,6 +42,12 @@ jobs:
       - name: Test video server
         run: npm run test --workspace=@zencourt/video-server
 
+      - name: Coverage report (video server)
+        run: npm run test:coverage:ci --workspace=@zencourt/video-server
+
+      - name: Coverage gate (video server)
+        run: npm run check-coverage --workspace=@zencourt/video-server
+
       - name: Build video server
         run: npm run build --workspace=@zencourt/video-server
 
