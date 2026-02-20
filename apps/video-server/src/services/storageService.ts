@@ -4,11 +4,8 @@ import {
   GetObjectCommand,
   DeleteObjectCommand,
   HeadBucketCommand,
-  ListObjectsV2Command,
-  CopyObjectCommand
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { Readable } from "stream";
 import logger from "@/config/logger";
 import { storageClient, STORAGE_CONFIG } from "@/config/storage";
 import { buildStoragePublicUrl, extractStorageKeyFromUrl } from "@shared/utils";
@@ -48,7 +45,7 @@ export class StorageServiceError extends Error {
 export interface StorageUploadOptions {
   bucket?: string;
   key: string;
-  body: Buffer | Readable | string;
+  body: Buffer | string;
   contentType?: string;
   metadata?: Record<string, string>;
 }
@@ -145,50 +142,6 @@ export class StorageService {
   }
 
   /**
-   * Download a file
-   */
-  async downloadFile(bucket: string, key: string): Promise<Buffer> {
-    const bucketName = bucket || this.defaultBucket;
-
-    logger.info(
-      { bucket: bucketName, key },
-      "[StorageService] Downloading file"
-    );
-
-    return this.executeWithRetry(async () => {
-      try {
-        const command = new GetObjectCommand({
-          Bucket: bucketName,
-          Key: key
-        });
-
-        const response = await this.client.send(command);
-
-        if (!response.Body) {
-          throw new StorageServiceError(
-            "No body in storage response",
-            StorageErrorType.DOWNLOAD_FAILED,
-            { bucket: bucketName, key }
-          );
-        }
-
-        const buffer = await this.streamToBuffer(response.Body as Readable);
-        logger.info(
-          { bucket: bucketName, key, size: buffer.length },
-          "[StorageService] ✅ File downloaded successfully"
-        );
-
-        return buffer;
-      } catch (error) {
-        throw this.handleStorageError(error, StorageErrorType.DOWNLOAD_FAILED, {
-          bucket: bucketName,
-          key
-        });
-      }
-    }, "downloadFile");
-  }
-
-  /**
    * Delete a file
    */
   async deleteFile(bucket: string, key: string): Promise<void> {
@@ -246,84 +199,6 @@ export class StorageService {
       throw this.handleStorageError(error, StorageErrorType.UNKNOWN_ERROR, {
         bucket,
         key
-      });
-    }
-  }
-
-  /**
-   * Copy a file within the same bucket or between buckets
-   */
-  async copyFile(
-    sourceBucket: string,
-    sourceKey: string,
-    destBucket: string,
-    destKey: string
-  ): Promise<void> {
-    logger.info(
-      {
-        source: { bucket: sourceBucket, key: sourceKey },
-        destination: { bucket: destBucket, key: destKey }
-      },
-      "[StorageService] Copying file"
-    );
-
-    return this.executeWithRetry(async () => {
-      try {
-        const command = new CopyObjectCommand({
-          Bucket: destBucket,
-          CopySource: `${sourceBucket}/${sourceKey}`,
-          Key: destKey
-        });
-
-        await this.client.send(command);
-        logger.info(
-          {
-            source: { bucket: sourceBucket, key: sourceKey },
-            destination: { bucket: destBucket, key: destKey }
-          },
-          "[StorageService] ✅ File copied successfully"
-        );
-      } catch (error) {
-        throw this.handleStorageError(error, StorageErrorType.UNKNOWN_ERROR, {
-          sourceBucket,
-          sourceKey,
-          destBucket,
-          destKey
-        });
-      }
-    }, "copyFile");
-  }
-
-  /**
-   * List files in a bucket with a prefix
-   */
-  async listFiles(bucket: string, prefix: string): Promise<string[]> {
-    const bucketName = bucket || this.defaultBucket;
-
-    logger.info(
-      { bucket: bucketName, prefix },
-      "[StorageService] Listing files"
-    );
-
-    try {
-      const command = new ListObjectsV2Command({
-        Bucket: bucketName,
-        Prefix: prefix
-      });
-
-      const response = await this.client.send(command);
-      const keys = response.Contents?.map((obj) => obj.Key || "") || [];
-
-      logger.info(
-        { bucket: bucketName, prefix, count: keys.length },
-        "[StorageService] ✅ Files listed successfully"
-      );
-
-      return keys;
-    } catch (error) {
-      throw this.handleStorageError(error, StorageErrorType.UNKNOWN_ERROR, {
-        bucket: bucketName,
-        prefix
       });
     }
   }
@@ -427,18 +302,6 @@ export class StorageService {
    */
   private sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
-  }
-
-  /**
-   * Convert a readable stream to a buffer
-   */
-  private async streamToBuffer(stream: Readable): Promise<Buffer> {
-    return new Promise((resolve, reject) => {
-      const chunks: Buffer[] = [];
-      stream.on("data", (chunk) => chunks.push(chunk));
-      stream.on("error", reject);
-      stream.on("end", () => resolve(Buffer.concat(chunks)));
-    });
   }
 
   /**
