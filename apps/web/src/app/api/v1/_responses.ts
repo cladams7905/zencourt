@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { StatusCode } from "@web/src/app/api/v1/_statusCodes";
 
 export type ApiErrorCode =
   | "INVALID_REQUEST"
@@ -26,4 +27,11 @@ export function apiErrorResponse(
     },
     { status }
   );
+}
+
+export function apiErrorCodeFromStatus(status: number): ApiErrorCode {
+  if (status === StatusCode.UNAUTHORIZED) return "UNAUTHORIZED";
+  if (status === StatusCode.FORBIDDEN) return "FORBIDDEN";
+  if (status === StatusCode.NOT_FOUND) return "NOT_FOUND";
+  return "INVALID_REQUEST";
 }

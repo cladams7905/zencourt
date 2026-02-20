@@ -1,4 +1,5 @@
 import { ApiError } from "../../../_utils";
+import { StatusCode } from "@web/src/app/api/v1/_statusCodes";
 import type { PromptAssemblyInput } from "@web/src/lib/ai/prompts/engine/assemble";
 import { parseMarketLocation } from "@web/src/lib/domain/location/marketLocation";
 import { getMarketData } from "@web/src/server/services/marketData";
@@ -32,7 +33,7 @@ export async function resolveContentContext(args: {
 
   if (body.category === "market_insights") {
     if (!marketLocation) {
-      throw new ApiError(400, {
+      throw new ApiError(StatusCode.BAD_REQUEST, {
         error: "Missing market location",
         message: "Please add a valid US location and zip code to your profile."
       });
@@ -40,7 +41,7 @@ export async function resolveContentContext(args: {
 
     marketData = await getMarketData(marketLocation);
     if (!marketData) {
-      throw new ApiError(500, {
+      throw new ApiError(StatusCode.INTERNAL_SERVER_ERROR, {
         error: "Market data unavailable",
         message: "Market data is not configured. Please try again later."
       });

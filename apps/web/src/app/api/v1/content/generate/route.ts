@@ -6,7 +6,11 @@
 
 import { NextRequest } from "next/server";
 import { ApiError, requireAuthenticatedUser } from "../../_utils";
-import { apiErrorResponse } from "@web/src/app/api/v1/_responses";
+import {
+  apiErrorCodeFromStatus,
+  apiErrorResponse
+} from "@web/src/app/api/v1/_responses";
+import { StatusCode } from "@web/src/app/api/v1/_statusCodes";
 import { readJsonBodySafe } from "@web/src/app/api/v1/_validation";
 import {
   buildSystemPrompt,
@@ -45,12 +49,16 @@ export async function POST(request: NextRequest) {
       request
     )) as PromptAssemblyInput | null;
     if (!body?.category) {
-      return apiErrorResponse(400, "INVALID_REQUEST", "category is required");
+      return apiErrorResponse(
+        StatusCode.BAD_REQUEST,
+        "INVALID_REQUEST",
+        "category is required"
+      );
     }
 
     if (!body.agent_profile) {
       return apiErrorResponse(
-        400,
+        StatusCode.BAD_REQUEST,
         "INVALID_REQUEST",
         "agent_profile is required"
       );
@@ -110,13 +118,7 @@ export async function POST(request: NextRequest) {
     if (error instanceof ApiError) {
       return apiErrorResponse(
         error.status,
-        error.status === 401
-          ? "UNAUTHORIZED"
-          : error.status === 403
-            ? "FORBIDDEN"
-            : error.status === 404
-              ? "NOT_FOUND"
-              : "INVALID_REQUEST",
+        apiErrorCodeFromStatus(error.status),
         error.body.message
       );
     }
@@ -128,7 +130,7 @@ export async function POST(request: NextRequest) {
 
     logger.error(errorDetails, "Unhandled error generating content");
     return apiErrorResponse(
-      500,
+      StatusCode.INTERNAL_SERVER_ERROR,
       "INTERNAL_ERROR",
       "Failed to generate content"
     );

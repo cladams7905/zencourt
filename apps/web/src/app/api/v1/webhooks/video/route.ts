@@ -23,6 +23,7 @@ import {
 } from "@web/src/server/utils/webhookVerification";
 import type { VideoStatus } from "@shared/types/models";
 import { apiErrorResponse } from "@web/src/app/api/v1/_responses";
+import { StatusCode } from "@web/src/app/api/v1/_statusCodes";
 
 const logger = createChildLogger(baseLogger, {
   module: "video-job-webhook"
@@ -199,7 +200,7 @@ export async function POST(request: NextRequest) {
     const updatedJob = await processWebhookUpdate(payload, normalized);
     if (updatedJob === "not_found") {
       return apiErrorResponse(
-        404,
+        StatusCode.NOT_FOUND,
         "NOT_FOUND",
         "Video job not found for webhook update"
       );
@@ -246,7 +247,7 @@ export async function POST(request: NextRequest) {
     );
 
     return apiErrorResponse(
-      500,
+      StatusCode.INTERNAL_SERVER_ERROR,
       "INTERNAL_ERROR",
       error instanceof Error ? error.message : "Unknown error"
     );
