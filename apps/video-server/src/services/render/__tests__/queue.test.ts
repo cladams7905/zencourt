@@ -92,7 +92,7 @@ describe("render queue", () => {
     const cancelled = queue.cancelJob("job-3");
     expect(cancelled).toBe(true);
     expect(queue.getJob("job-3")).toMatchObject({
-      status: "in-progress"
+      status: "canceled"
     });
   });
 });
