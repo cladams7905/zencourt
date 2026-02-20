@@ -1,0 +1,51 @@
+name: Core Packages Checks
+
+on:
+  pull_request:
+    paths:
+      - "packages/shared/**"
+      - "packages/db/**"
+      - "package.json"
+      - "package-lock.json"
+      - "tsconfig.base.json"
+      - ".github/workflows/core-packages-checks.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "packages/shared/**"
+      - "packages/db/**"
+      - "package.json"
+      - "package-lock.json"
+      - "tsconfig.base.json"
+      - ".github/workflows/core-packages-checks.yml"
+
+jobs:
+  core-packages:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type-check shared package
+        run: npm run type-check:shared
+
+      - name: Type-check db package
+        run: npm run type-check:db
+
+      - name: Test shared package
+        run: npm run test:shared
+
+      - name: Test db package
+        run: npm run test:db
