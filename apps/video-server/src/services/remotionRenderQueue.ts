@@ -2,7 +2,7 @@ import { makeCancelSignal } from "@remotion/renderer";
 import { nanoid } from "nanoid";
 import logger from "@/config/logger";
 import { remotionRenderService } from "./remotionRenderService";
-import type { ListingClip } from "@/remotion/ListingVideo";
+import type { ListingClip } from "@/lib/remotion/ListingVideo";
 
 export type RenderJobData = {
   videoId: string;

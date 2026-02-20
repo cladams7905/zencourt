@@ -1,7 +1,6 @@
-import { db, listings } from "@db/client";
+import { db, eq, listings } from "@db/client";
 import { stackServerApp } from "@web/src/lib/core/auth/stack/server";
 import type { CurrentServerUser } from "@stackframe/stack";
-import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { StatusCode } from "@web/src/app/api/v1/_statusCodes";
 
@@ -87,7 +86,7 @@ export async function withApiErrorHandling<T>(
     return errorResponse(
       StatusCode.INTERNAL_SERVER_ERROR,
       "Internal server error",
-      error instanceof Error ? error.message : fallbackMessage
+      fallbackMessage
     );
   }
 }

@@ -17,7 +17,7 @@ import {
   cancelVideosByListing,
   cancelVideosByIds,
   cancelJobsByListingId
-} from "@/utils/dbHelpers";
+} from "@/lib/utils/dbHelpers";
 
 const router = Router();
 

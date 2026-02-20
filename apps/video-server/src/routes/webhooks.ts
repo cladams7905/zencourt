@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
 import logger from "@/config/logger";
 import { videoGenerationService } from "@/services/videoGenerationService";
-import { verifyFalWebhookSignature } from "@/utils/falWebhookVerification";
+import { verifyFalWebhookSignature } from "@/lib/utils/falWebhookVerification";
 import type { FalWebhookPayload } from "@shared/types/api";
 
 const router = Router();
@@ -19,9 +19,7 @@ router.post("/fal", async (req: Request, res: Response) => {
     | string
     | string[]
     | undefined;
-  const jobId = Array.isArray(rawRequestId)
-    ? rawRequestId[0]
-    : rawRequestId;
+  const jobId = Array.isArray(rawRequestId) ? rawRequestId[0] : rawRequestId;
 
   try {
     const rawBody = (req as Request & { rawBody?: Buffer }).rawBody;
@@ -83,19 +81,17 @@ router.post("/fal", async (req: Request, res: Response) => {
 
     // Process webhook asynchronously (don't wait for completion)
     // This ensures we return 200 OK quickly to fal.ai
-    videoGenerationService
-      .handleFalWebhook(payload, jobId)
-      .catch((error) => {
-        logger.error(
-          {
-            requestId: payload.request_id,
-            jobId,
-            error: error instanceof Error ? error.message : String(error),
-            stack: error instanceof Error ? error.stack : undefined
-          },
-          "[WebhookRoute] Async webhook processing failed"
-        );
-      });
+    videoGenerationService.handleFalWebhook(payload, jobId).catch((error) => {
+      logger.error(
+        {
+          requestId: payload.request_id,
+          jobId,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        },
+        "[WebhookRoute] Async webhook processing failed"
+      );
+    });
 
     // Always return 200 OK to prevent fal.ai retries
     // Internal failures are logged and handled in videoGenerationService

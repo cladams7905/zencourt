@@ -107,11 +107,9 @@ export class VideoProcessingError extends Error {
   toJSON() {
     return {
       success: false,
-      error: this.message,
+      error: this.statusCode >= 500 ? "Internal server error" : "Request failed",
       code: this.type,
       retryable: this.retryable,
-      details: this.details,
-      ...(process.env.NODE_ENV === 'development' && { stack: this.stack }),
     };
   }
 }
@@ -136,6 +134,8 @@ export function errorHandler(
   const errorType = isVideoProcessingError ? err.type : VideoProcessingErrorType.UNKNOWN_ERROR;
   const retryable = isVideoProcessingError ? err.retryable : false;
 
+  const isDevelopment = process.env.NODE_ENV === "development";
+
   // Log error with full context
   logger.error(
     {
@@ -144,7 +144,7 @@ export function errorHandler(
         message: err.message,
         type: errorType,
         retryable,
-        stack: err.stack,
+        stack: isDevelopment ? err.stack : undefined,
         details: isVideoProcessingError ? err.details : undefined,
         context: isVideoProcessingError ? err.context : undefined,
       },
@@ -161,19 +161,25 @@ export function errorHandler(
         query: req.query,
       },
     },
-    'Request error occurred'
+    "Request error occurred"
   );
+
+  const publicMessage = statusCode >= 500 ? "Internal server error" : "Request failed";
 
   // Send error response
   if (isVideoProcessingError) {
-    res.status(statusCode).json(err.toJSON());
+    res.status(statusCode).json({
+      success: false,
+      error: publicMessage,
+      code: err.type,
+      retryable: err.retryable
+    });
   } else {
     res.status(statusCode).json({
       success: false,
-      error: process.env.NODE_ENV === 'development' ? err.message : 'An unexpected error occurred',
+      error: publicMessage,
       code: VideoProcessingErrorType.INTERNAL_ERROR,
       retryable: false,
-      ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
     });
   }
 }
