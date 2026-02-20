@@ -1,7 +1,5 @@
-import type { VideoCompositionSettings } from "../video/composition";
 import type { PreviewTextOverlay } from "../video";
 
-export type { VideoCompositionSettings };
 export type KlingAspectRatio = "16:9" | "9:16" | "1:1";
 
 export interface VideoJobResult {
@@ -70,32 +68,12 @@ export interface HealthCheckResponse {
   };
 }
 
-export interface JobStatusResponse {
-  jobId: string;
-  status: "queued" | "processing" | "completed" | "failed";
-  progress: number; // 0-100
-  error?: VideoJobError | string;
-  result?: VideoJobResult;
-}
-
 export type WebhookPayload = VideoJobWebhookPayload;
 
 export interface CancelVideoRequest {
   listingId: string;
   videoIds?: string[];
   reason?: string;
-}
-
-export interface ErrorResponse {
-  success: false;
-  error: string;
-  code?: string;
-  details?: unknown;
-}
-
-export interface SuccessResponse<T = unknown> {
-  success: true;
-  data?: T;
 }
 
 export interface FalWebhookPayload {

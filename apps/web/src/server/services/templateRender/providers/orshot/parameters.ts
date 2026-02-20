@@ -1,7 +1,7 @@
 import type { DBListing, DBListingImage, DBUserAdditional } from "@db/types/models";
 import type { ListingContentSubcategory, ListingPropertyDetails } from "@shared/types/models";
 import { PREVIEW_TEXT_OVERLAY_ARROW_PATHS } from "@shared/utils";
-import { isPriorityCategory } from "@shared/types/video/priorityCategories";
+import { isPriorityCategory } from "@shared/utils";
 import type {
   TemplateRenderCaptionItemInput,
   TemplateRenderParameterKey
