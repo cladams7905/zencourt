@@ -27,7 +27,7 @@ import { ProviderDispatchFacade } from "@/services/videoGeneration/facades/provi
 import {
   fallbackProviderStrategies,
   primaryProviderStrategies
-} from "@/services/videoGeneration/providers";
+} from "@/services/videoGeneration/strategies";
 import { storageService } from "@/services/storage";
 import { webhookService } from "@/services/webhook";
 import { runWithConcurrency } from "@/services/videoGeneration/domain/concurrency";
@@ -126,7 +126,8 @@ class VideoGenerationService {
       onProviderOutputFailure: (jobId, errorMessage) =>
         this.handleProviderDispatchFailure(jobId, errorMessage),
       buildWebhookUrl: (jobId) => this.buildWebhookUrl(jobId),
-      getJobDurationSeconds: (currentJob) => this.getJobDurationSeconds(currentJob)
+      getJobDurationSeconds: (currentJob) =>
+        this.getJobDurationSeconds(currentJob)
     });
   }
 
@@ -152,9 +153,13 @@ class VideoGenerationService {
         onProviderOutputReady: (currentJob, outputUrl, metadata) =>
           this.handleProviderSuccess(currentJob, outputUrl, metadata),
         onProviderOutputFailure: (currentJobId, providerErrorMessage) =>
-          this.handleProviderDispatchFailure(currentJobId, providerErrorMessage),
+          this.handleProviderDispatchFailure(
+            currentJobId,
+            providerErrorMessage
+          ),
         buildWebhookUrl: (jobIdValue) => this.buildWebhookUrl(jobIdValue),
-        getJobDurationSeconds: (currentJob) => this.getJobDurationSeconds(currentJob)
+        getJobDurationSeconds: (currentJob) =>
+          this.getJobDurationSeconds(currentJob)
       });
     } catch (error) {
       const message =
@@ -194,7 +199,8 @@ class VideoGenerationService {
         this.sendJobCompletionWebhook(currentJob, result),
       evaluateJobCompletion: (videoId) => this.evaluateJobCompletion(videoId),
       markVideoCompleted: videoGenerationDb.markVideoCompleted,
-      getJobDurationSeconds: (currentJob) => this.getJobDurationSeconds(currentJob)
+      getJobDurationSeconds: (currentJob) =>
+        this.getJobDurationSeconds(currentJob)
     });
   }
 

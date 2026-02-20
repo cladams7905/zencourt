@@ -1,5 +1,5 @@
 import logger from "@/config/logger";
-import type { VideoGenerationProviderStrategy } from "@/services/videoGeneration/ports";
+import type { VideoGenerationStrategy } from "@/services/videoGeneration/ports";
 import type { DBVideoGenJob } from "@shared/types/models";
 import {
   ProviderErrorCode,
@@ -34,7 +34,7 @@ export class ProviderDispatchFacade {
   private circuitOpenUntil = new Map<string, number>();
 
   constructor(
-    private readonly strategies: VideoGenerationProviderStrategy<
+    private readonly strategies: VideoGenerationStrategy<
       ProviderDispatchInput,
       ProviderDispatchResult
     >[]
@@ -61,7 +61,10 @@ export class ProviderDispatchFacade {
     const next = (this.consecutiveFailures.get(provider) ?? 0) + 1;
     this.consecutiveFailures.set(provider, next);
     if (next >= this.getCircuitFailureThreshold()) {
-      this.circuitOpenUntil.set(provider, Date.now() + this.getCircuitCooldownMs());
+      this.circuitOpenUntil.set(
+        provider,
+        Date.now() + this.getCircuitCooldownMs()
+      );
     }
   }
 
@@ -70,8 +73,12 @@ export class ProviderDispatchFacade {
     this.circuitOpenUntil.delete(provider);
   }
 
-  async dispatch(input: ProviderDispatchInput): Promise<ProviderDispatchResult> {
-    const eligible = this.strategies.filter((strategy) => strategy.canHandle(input));
+  async dispatch(
+    input: ProviderDispatchInput
+  ): Promise<ProviderDispatchResult> {
+    const eligible = this.strategies.filter((strategy) =>
+      strategy.canHandle(input)
+    );
     let lastError: Error | null = null;
 
     for (const strategy of eligible) {
@@ -102,7 +109,10 @@ export class ProviderDispatchFacade {
             },
             "[VideoGenerationService] Provider dispatch succeeded"
           );
-          logProviderMetricsSnapshot({ jobId: input.jobId, provider: strategy.name });
+          logProviderMetricsSnapshot({
+            jobId: input.jobId,
+            provider: strategy.name
+          });
           return result;
         } catch (error) {
           lastError = error instanceof Error ? error : new Error(String(error));
@@ -122,7 +132,10 @@ export class ProviderDispatchFacade {
         }
       }
 
-      logProviderMetricsSnapshot({ jobId: input.jobId, provider: strategy.name });
+      logProviderMetricsSnapshot({
+        jobId: input.jobId,
+        provider: strategy.name
+      });
     }
 
     throw (

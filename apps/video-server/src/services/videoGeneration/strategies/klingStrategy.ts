@@ -1,5 +1,5 @@
 import { klingService } from "@/services/providers/kling";
-import type { VideoGenerationProviderStrategy } from "@/services/videoGeneration/ports";
+import type { VideoGenerationStrategy } from "@/services/videoGeneration/ports";
 import type {
   ProviderDispatchInput,
   ProviderDispatchResult
@@ -9,7 +9,7 @@ import {
   VideoGenerationServiceError
 } from "@/services/videoGeneration/errors";
 
-export const klingStrategy: VideoGenerationProviderStrategy<
+export const klingStrategy: VideoGenerationStrategy<
   ProviderDispatchInput,
   ProviderDispatchResult
 > = {
@@ -25,7 +25,9 @@ export const klingStrategy: VideoGenerationProviderStrategy<
       );
     }
     const aspectRatio = input.orientation === "vertical" ? "9:16" : "16:9";
-    const klingDuration = (input.durationSeconds >= 8 ? "10" : "5") as "5" | "10";
+    const klingDuration = (input.durationSeconds >= 8 ? "10" : "5") as
+      | "5"
+      | "10";
 
     const requestId = await klingService.submitRoomVideo({
       prompt: input.prompt,
