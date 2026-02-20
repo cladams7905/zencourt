@@ -29,6 +29,10 @@
     "test:video": "npm run test --workspace=@zencourt/video-server",
     "test:video:watch": "npm run test:watch --workspace=@zencourt/video-server",
     "test:video:coverage": "npm run test:coverage --workspace=@zencourt/video-server",
+    "test:shared": "npm run test --workspace=@zencourt/shared",
+    "test:db": "npm run test --workspace=@zencourt/db",
+    "type-check:shared": "npm run type-check --workspace=@zencourt/shared",
+    "type-check:db": "npm run type-check --workspace=@zencourt/db",
     "type-check:web": "npm run type-check --workspace=@zencourt/web",
     "type-check:video": "npm run type-check --workspace=@zencourt/video-server"
   },
