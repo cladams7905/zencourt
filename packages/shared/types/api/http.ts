@@ -51,9 +51,3 @@ export interface ApiErrorBody {
   code: ApiErrorCode;
   error: string;
 }
-
-export interface ApiSuccessBody<T = unknown> {
-  success: true;
-  data?: T;
-  message?: string;
-}

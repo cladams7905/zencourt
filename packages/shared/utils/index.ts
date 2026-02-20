@@ -98,3 +98,9 @@ export {
   apiErrorCodeFromStatus
 } from "./api/responses";
 export { parseRequiredRouteParam } from "./api/parsers";
+
+export {
+  normalizeRoomCategory,
+  isPriorityCategory,
+  getDurationSecondsForCategory
+} from "./priorityCategories";

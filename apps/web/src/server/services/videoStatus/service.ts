@@ -4,7 +4,7 @@ import type {
   InitialVideoStatusPayload,
   VideoJobUpdateEvent
 } from "@web/src/lib/domain/listing/videoStatus";
-import { isPriorityCategory } from "@shared/types/video";
+import { isPriorityCategory } from "@shared/utils";
 import { getSignedDownloadUrlSafe } from "../../utils/storageUrls";
 
 const VIDEO_STATUS_URL_TTL_SECONDS = 6 * 60 * 60; // 6 hours

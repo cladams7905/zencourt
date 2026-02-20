@@ -8,7 +8,7 @@ import {
 import { createVideoGenBatch } from "@web/src/server/actions/db/videoGenBatch";
 import { createVideoGenJobsBatch } from "@web/src/server/actions/db/videoGenJobs";
 import { getSignedDownloadUrls } from "@web/src/server/utils/storageUrls";
-import { isPriorityCategory } from "@shared/types/video";
+import { isPriorityCategory } from "@shared/utils";
 import type {
   DBListingImage,
   InsertDBVideoGenBatch,

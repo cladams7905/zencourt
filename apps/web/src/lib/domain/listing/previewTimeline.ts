@@ -1,10 +1,12 @@
 import {
   isPriorityCategory,
-  normalizeRoomCategory,
-  type PreviewTextOverlay,
-  type PreviewTextOverlayBackground,
-  type PreviewTextOverlayFont,
-  type PreviewTextOverlayPosition
+  normalizeRoomCategory
+} from "@shared/utils";
+import type {
+  PreviewTextOverlay,
+  PreviewTextOverlayBackground,
+  PreviewTextOverlayFont,
+  PreviewTextOverlayPosition
 } from "@shared/types/video";
 
 export type PreviewTransition =
