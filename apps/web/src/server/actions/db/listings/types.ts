@@ -1,6 +1,6 @@
 import type {
   InsertDBListing
-} from "@shared/types/models";
+} from "@db/types/models";
 
 export type UpdateListingInput = Partial<
   Omit<InsertDBListing, "id" | "userId" | "createdAt">

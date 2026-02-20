@@ -1,4 +1,4 @@
-import { buildStorageConfigFromEnv } from "../utils/storageConfig";
+import { buildStorageConfigFromEnv } from "..";
 
 describe("buildStorageConfigFromEnv", () => {
   it("builds normalized storage config", () => {

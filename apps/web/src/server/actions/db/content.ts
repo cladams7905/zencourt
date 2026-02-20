@@ -2,7 +2,7 @@
 
 import { nanoid } from "nanoid";
 import { db, content, eq } from "@db/client";
-import type { DBContent, InsertDBContent } from "@shared/types/models";
+import type { DBContent, InsertDBContent } from "@db/types/models";
 import { withDbErrorHandling } from "../shared/dbErrorHandling";
 import {
   requireContentId,

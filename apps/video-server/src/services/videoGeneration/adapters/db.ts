@@ -6,7 +6,7 @@ import {
   videoGenBatch as videos,
   videoGenJobs as videoJobs
 } from "@db/client";
-import type { DBVideoGenJob } from "@shared/types/models";
+import type { DBVideoGenJob } from "@db/types/models";
 
 export type VideoContextRecord = {
   videoId: string;

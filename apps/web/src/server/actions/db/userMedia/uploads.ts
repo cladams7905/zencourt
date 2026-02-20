@@ -2,7 +2,7 @@
 
 import { nanoid } from "nanoid";
 import { db, userAdditional, userMedia } from "@db/client";
-import type { DBUserMedia } from "@shared/types/models";
+import type { DBUserMedia } from "@db/types/models";
 import {
   getUserMediaFolder,
   getUserMediaPath,

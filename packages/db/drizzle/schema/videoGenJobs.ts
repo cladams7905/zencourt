@@ -10,13 +10,14 @@ import { authenticatedRole, crudPolicy } from "drizzle-orm/neon";
 
 import type {
   JobGenerationSettings,
-  VideoMetadata,
-  VideoStatus
+  VideoMetadata
 } from "@shared/types/models";
 
 import { videoGenBatch } from "./videoGenBatch";
 import { videoStatusEnum } from "./enums";
 import { listings } from "./listings";
+
+type VideoStatus = (typeof videoStatusEnum.enumValues)[number];
 
 export const videoGenJobs = pgTable(
   "video_gen_jobs",

@@ -1,13 +1,19 @@
-import type { PreviewTextOverlay } from "../types/video";
+import type { PreviewTextOverlay } from "../../../types/video";
 import {
   OVERLAY_FONT_PAIRINGS,
-  OVERLAY_ITALIANA_FONT_FAMILY,
   getOverlayTemplate,
   PREVIEW_TEXT_OVERLAY_FONT_FAMILY,
   PREVIEW_TEXT_OVERLAY_LINE_HEIGHT,
   PREVIEW_TEXT_OVERLAY_LETTER_SPACING,
   PREVIEW_TEXT_OVERLAY_NO_BACKGROUND_TEXT_SHADOW
-} from "./textOverlay";
+} from "../assets/index";
+import {
+  isItalianaFont,
+  isRougeFont,
+  resolveDisplayText,
+  normalizeOverlayLineText,
+  isTikTokFont
+} from "./helpers";
 
 export interface ComputedOverlayLineStyle {
   text: string;
@@ -21,38 +27,6 @@ export interface ComputedOverlayLineStyle {
   textShadow: string;
   marginTop: number | string;
   marginBottom: number | string;
-}
-
-function normalizeOverlayLineText(text: string): string {
-  const trimmed = text.trim();
-  if (!trimmed) return text;
-
-  const lettersOnly = trimmed.replace(/[^A-Za-z]/g, "");
-  if (lettersOnly.length < 3) return text;
-
-  const hasLowercase = /[a-z]/.test(lettersOnly);
-  const hasUppercase = /[A-Z]/.test(lettersOnly);
-  if (!hasUppercase || hasLowercase) return text;
-
-  // Convert all-caps generated lines to title case at render time.
-  return trimmed
-    .toLowerCase()
-    .replace(/\b([a-z])/g, (match) => match.toUpperCase());
-}
-
-function isTikTokFont(fontFamily: string): boolean {
-  return (
-    fontFamily.includes("var(--font-tiktok") ||
-    fontFamily.includes("TikTok Sans")
-  );
-}
-
-function isItalianaFont(fontFamily: string): boolean {
-  return (
-    fontFamily.includes("var(--font-italiana") ||
-    fontFamily.includes("Italiana") ||
-    fontFamily.includes(OVERLAY_ITALIANA_FONT_FAMILY)
-  );
 }
 
 /**
@@ -109,9 +83,7 @@ export function computeOverlayLineStyles(
     const scale = templateLine?.fontSizeScale ?? 1.0;
     const resolvedFontFamily =
       roleStyle?.fontFamily ?? PREVIEW_TEXT_OVERLAY_FONT_FAMILY[overlay.font];
-    const isRougeScript =
-      resolvedFontFamily.includes("var(--font-rouge") ||
-      resolvedFontFamily.includes("Rouge Script");
+    const isRougeScript = isRougeFont(resolvedFontFamily);
     const useTikTokUppercase = isTikTokFont(resolvedFontFamily);
     const baseWeight = roleStyle?.fontWeight ?? 400;
     const fontSize =
@@ -133,11 +105,7 @@ export function computeOverlayLineStyles(
       : (roleLetterSpacing ?? PREVIEW_TEXT_OVERLAY_LETTER_SPACING);
 
     return {
-      text: useTikTokUppercase
-        ? line.text.toUpperCase()
-        : isRougeScript
-          ? line.text.toLowerCase()
-          : normalizeOverlayLineText(line.text),
+      text: resolveDisplayText(line.text, resolvedFontFamily),
       fontFamily: resolvedFontFamily,
       fontWeight: isRougeScript ? Math.max(baseWeight, 700) : baseWeight,
       fontSize,

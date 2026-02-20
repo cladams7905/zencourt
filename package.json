@@ -31,6 +31,8 @@
     "test:video:coverage": "npm run test:coverage --workspace=@zencourt/video-server",
     "test:shared": "npm run test --workspace=@zencourt/shared",
     "test:db": "npm run test --workspace=@zencourt/db",
+    "lint:shared": "npm run lint --workspace=@zencourt/shared",
+    "lint:db": "npm run lint --workspace=@zencourt/db",
     "type-check:shared": "npm run type-check --workspace=@zencourt/shared",
     "type-check:db": "npm run type-check --workspace=@zencourt/db",
     "type-check:web": "npm run type-check --workspace=@zencourt/web",

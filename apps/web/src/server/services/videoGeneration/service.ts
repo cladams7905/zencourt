@@ -13,9 +13,8 @@ import type {
   DBListingImage,
   InsertDBVideoGenBatch,
   InsertDBVideoGenJob,
-  JobGenerationSettings,
-  VideoOrientation
-} from "@shared/types/models";
+} from "@db/types/models";
+import type { JobGenerationSettings, VideoOrientation } from "@shared/types/models";
 import { buildPrompt } from "./domain/prompt";
 import {
   buildRoomsFromImages,

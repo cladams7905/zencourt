@@ -1,4 +1,4 @@
-import type { DBUserMedia, UserMediaType } from "@shared/types/models";
+import type { DBUserMedia, UserMediaType } from "@db/types/models";
 
 export interface MediaViewProps {
   userId: string;

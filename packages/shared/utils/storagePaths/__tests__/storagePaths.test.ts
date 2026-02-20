@@ -3,7 +3,7 @@ import {
   getListingImagePath,
   getUserMediaPath,
   sanitizeFilename
-} from "../utils/storagePaths";
+} from "..";
 
 describe("storagePaths", () => {
   const realDateNow = Date.now;

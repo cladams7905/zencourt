@@ -10,7 +10,7 @@ import {
   listings,
   sql
 } from "@db/client";
-import type { DBContent, DBListing } from "@shared/types/models";
+import type { DBContent, DBListing } from "@db/types/models";
 import { withDbErrorHandling } from "@web/src/server/actions/shared/dbErrorHandling";
 import { requireUserId } from "@web/src/server/actions/shared/validation";
 import { signUrlArray } from "@web/src/server/actions/shared/urlSigning";

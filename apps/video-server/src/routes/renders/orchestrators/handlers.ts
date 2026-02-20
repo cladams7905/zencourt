@@ -1,4 +1,4 @@
-import type { DBVideoGenJob } from "@shared/types/models/db.video";
+import type { DBVideoGenJob } from "@db/types/models";
 import type { RenderJobData } from "@/services/render";
 import {
   VideoProcessingError,

@@ -1,6 +1,6 @@
 import logger from "@/config/logger";
 import type { VideoServerGenerateRequest } from "@shared/types/api";
-import type { DBVideoGenJob } from "@shared/types/models";
+import type { DBVideoGenJob } from "@db/types/models";
 
 export type GenerationResult = {
   jobsStarted: number;

@@ -1,5 +1,5 @@
 import { and, db, eq, listings } from "@db/client";
-import type { DBListing } from "@shared/types/models";
+import type { DBListing } from "@db/types/models";
 import { requireListingId, requireUserId } from "@web/src/server/actions/shared/validation";
 
 async function assertListingOwnership(

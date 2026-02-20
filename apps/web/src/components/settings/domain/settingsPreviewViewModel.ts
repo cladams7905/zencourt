@@ -1,4 +1,4 @@
-import type { DBUserAdditional } from "@shared/types/models";
+import type { DBUserAdditional } from "@db/types/models";
 
 export const resolveWritingToneLabel = (
   writingTone: DBUserAdditional["writingToneLevel"]

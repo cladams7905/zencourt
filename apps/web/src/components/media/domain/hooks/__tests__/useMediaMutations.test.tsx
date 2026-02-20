@@ -1,7 +1,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { toast } from "sonner";
 import { useMediaMutations } from "@web/src/components/media/domain/hooks/useMediaMutations";
-import type { DBUserMedia } from "@shared/types/models";
+import type { DBUserMedia } from "@db/types/models";
 
 jest.mock("@web/src/server/actions/db/userMedia", () => ({
   createUserMediaRecords: jest.fn(),

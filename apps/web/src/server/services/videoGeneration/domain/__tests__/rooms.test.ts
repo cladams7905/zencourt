@@ -1,4 +1,4 @@
-import type { DBListingImage } from "@shared/types/models";
+import type { DBListingImage } from "@db/types/models";
 
 jest.mock("@web/src/app/api/v1/_utils", () => {
   class MockApiError extends Error {

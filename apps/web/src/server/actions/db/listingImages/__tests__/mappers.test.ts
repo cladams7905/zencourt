@@ -1,5 +1,5 @@
 import { mapListingImageToDisplayItem } from "../mappers";
-import type { DBListingImage } from "@shared/types/models";
+import type { DBListingImage } from "@db/types/models";
 
 function makeImage(overrides: Partial<DBListingImage> = {}): DBListingImage {
   return {

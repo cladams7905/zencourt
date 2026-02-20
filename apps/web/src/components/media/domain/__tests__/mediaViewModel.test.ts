@@ -3,7 +3,7 @@ import {
   filterAndSortMedia,
   formatUploadDate
 } from "@web/src/components/media/domain/mediaViewModel";
-import type { DBUserMedia } from "@shared/types/models";
+import type { DBUserMedia } from "@db/types/models";
 
 const mediaItems: DBUserMedia[] = [
   {

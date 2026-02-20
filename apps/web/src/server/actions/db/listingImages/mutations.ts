@@ -9,7 +9,7 @@ import {
   listingImages,
   ne
 } from "@db/client";
-import type { DBListingImage } from "@shared/types/models";
+import type { DBListingImage } from "@db/types/models";
 import { getListingFolder } from "@shared/utils/storagePaths";
 import { withDbErrorHandling } from "@web/src/server/actions/shared/dbErrorHandling";
 import { deleteStorageUrlsOrThrow } from "@web/src/server/actions/shared/storageCleanup";

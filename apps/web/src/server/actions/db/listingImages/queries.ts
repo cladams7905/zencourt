@@ -1,7 +1,7 @@
 "use server";
 
 import { db, desc, eq, listingImages } from "@db/client";
-import type { DBListingImage } from "@shared/types/models";
+import type { DBListingImage } from "@db/types/models";
 import { withDbErrorHandling } from "@web/src/server/actions/shared/dbErrorHandling";
 import { mapWithSignedUrl } from "@web/src/server/actions/shared/urlSigning";
 import {

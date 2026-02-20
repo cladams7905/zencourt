@@ -4,7 +4,7 @@ import { db, eq, videoGenJobs } from "@db/client";
 import type {
   DBVideoGenJob,
   InsertDBVideoGenJob
-} from "@shared/types/models";
+} from "@db/types/models";
 import { requireNonEmptyString } from "../shared/validation";
 
 /**

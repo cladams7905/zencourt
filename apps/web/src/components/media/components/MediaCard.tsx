@@ -3,7 +3,7 @@ import { Badge } from "@web/src/components/ui/badge";
 import { Button } from "@web/src/components/ui/button";
 import { LoadingImage } from "@web/src/components/ui/loading-image";
 import { LoadingVideo } from "@web/src/components/ui/loading-video";
-import type { DBUserMedia } from "@shared/types/models";
+import type { DBUserMedia } from "@db/types/models";
 import { formatUploadDate } from "@web/src/components/media/domain";
 
 interface MediaCardProps {

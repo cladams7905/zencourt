@@ -2,7 +2,7 @@ import type {
   DBListing,
   DBListingImage,
   DBUserAdditional
-} from "@shared/types/models";
+} from "@db/types/models";
 import type {
   ListingTemplateRenderResult,
   TemplateRenderCaptionItemInput,

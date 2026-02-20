@@ -1,5 +1,5 @@
 import logger from "@/config/logger";
-import type { DBVideoGenJob } from "@shared/types/models";
+import type { DBVideoGenJob } from "@db/types/models";
 import type {
   ProviderDispatchFacade,
   ProviderDispatchInput,

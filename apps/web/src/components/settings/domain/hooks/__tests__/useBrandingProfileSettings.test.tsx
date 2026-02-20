@@ -1,6 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
 import { useBrandingProfileSettings } from "@web/src/components/settings/domain/hooks/useBrandingProfileSettings";
-import type { DBUserAdditional } from "@shared/types/models";
+import type { DBUserAdditional } from "@db/types/models";
 
 const mockRefresh = jest.fn();
 const mockToastSuccess = jest.fn();
