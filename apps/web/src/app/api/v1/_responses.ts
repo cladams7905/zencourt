@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { StatusCode } from "@web/src/app/api/v1/_statusCodes";
 
 export type ApiErrorCode =
   | "INVALID_REQUEST"
@@ -11,6 +10,17 @@ export type ApiErrorCode =
   | "WEBHOOK_VERIFICATION_ERROR"
   | "INTERNAL_ERROR"
   | "DATABASE_ERROR";
+
+export enum StatusCode {
+  OK = 200,
+  ACCEPTED = 202,
+  BAD_REQUEST = 400,
+  UNAUTHORIZED = 401,
+  FORBIDDEN = 403,
+  NOT_FOUND = 404,
+  INTERNAL_SERVER_ERROR = 500,
+  BAD_GATEWAY = 502
+}
 
 export function apiErrorResponse(
   status: number,

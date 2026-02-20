@@ -8,9 +8,9 @@ import { NextRequest } from "next/server";
 import { ApiError, requireAuthenticatedUser } from "../../_utils";
 import {
   apiErrorCodeFromStatus,
-  apiErrorResponse
+  apiErrorResponse,
+  StatusCode
 } from "@web/src/app/api/v1/_responses";
-import { StatusCode } from "@web/src/app/api/v1/_statusCodes";
 import { readJsonBodySafe } from "@web/src/app/api/v1/_validation";
 import {
   buildSystemPrompt,

@@ -6,9 +6,9 @@ import {
 } from "../../../../_utils";
 import {
   apiErrorCodeFromStatus,
-  apiErrorResponse
+  apiErrorResponse,
+  StatusCode
 } from "@web/src/app/api/v1/_responses";
-import { StatusCode } from "@web/src/app/api/v1/_statusCodes";
 import { readJsonBodySafe } from "@web/src/app/api/v1/_validation";
 import {
   createChildLogger,
@@ -43,7 +43,9 @@ export async function POST(
 
   try {
     const resolvedParams = await params;
-    const body = (await readJsonBodySafe(request)) as GenerateListingContentBody | null;
+    const body = (await readJsonBodySafe(
+      request
+    )) as GenerateListingContentBody | null;
     const validated = parseAndValidateParams(body, resolvedParams.listingId);
 
     const user = await requireAuthenticatedUser();

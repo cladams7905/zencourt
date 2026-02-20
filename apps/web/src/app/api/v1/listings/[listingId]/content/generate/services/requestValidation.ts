@@ -1,7 +1,10 @@
 import { ApiError } from "@web/src/app/api/v1/_utils";
-import { StatusCode } from "@web/src/app/api/v1/_statusCodes";
+import { StatusCode } from "@web/src/app/api/v1/_responses";
 import { requireNonEmptyParam } from "@web/src/app/api/v1/_validation";
-import { isListingMediaType, isListingSubcategory } from "@web/src/lib/domain/listing";
+import {
+  isListingMediaType,
+  isListingSubcategory
+} from "@web/src/lib/domain/listing";
 import type {
   GenerateListingContentBody,
   ValidatedGenerateParams
@@ -31,8 +34,7 @@ export function parseAndValidateParams(
     });
   }
 
-  const mediaTypeCandidate =
-    body?.media_type?.trim().toLowerCase() ?? "video";
+  const mediaTypeCandidate = body?.media_type?.trim().toLowerCase() ?? "video";
   if (!isListingMediaType(mediaTypeCandidate)) {
     throw new ApiError(StatusCode.BAD_REQUEST, {
       error: "Invalid request",

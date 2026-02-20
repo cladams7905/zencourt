@@ -9,9 +9,9 @@ import { createChildLogger } from "@shared/utils";
 import { logger as baseLogger } from "@web/src/lib/core/logging/logger";
 import {
   apiErrorCodeFromStatus,
-  apiErrorResponse
+  apiErrorResponse,
+  StatusCode
 } from "@web/src/app/api/v1/_responses";
-import { StatusCode } from "@web/src/app/api/v1/_statusCodes";
 import { requireNonEmptyParam } from "@web/src/app/api/v1/_validation";
 
 export const runtime = "nodejs";
@@ -60,9 +60,7 @@ export async function GET(
       error instanceof Error ? error.message : "Failed to load video status",
       {
         message:
-          error instanceof Error
-            ? error.message
-            : "Failed to load video status"
+          error instanceof Error ? error.message : "Failed to load video status"
       }
     );
   }
