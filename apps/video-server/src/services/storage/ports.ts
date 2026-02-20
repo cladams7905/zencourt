@@ -1,4 +1,4 @@
-import type { StorageUploadOptions, StorageSignedUrlOptions } from "../storageService";
+import type { StorageSignedUrlOptions, StorageUploadOptions } from "./types";
 
 export interface StorageFacade {
   uploadFile(options: StorageUploadOptions): Promise<string>;

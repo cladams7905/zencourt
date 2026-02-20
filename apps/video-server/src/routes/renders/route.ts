@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
 import { validateApiKey } from "@/middleware/auth";
 import { asyncHandler } from "@/middleware/errorHandler";
-import { remotionRenderQueue } from "@/services/remotionRenderQueue";
+import { renderQueue } from "@/services/render";
 import {
   db,
   videoGenJobs as videoJobs,
@@ -70,7 +70,7 @@ router.post(
           watermarkOpacity,
           textOverlaysByJobId as Record<string, PreviewTextOverlay>
         ),
-      renderQueue: remotionRenderQueue
+      renderQueue
     });
     res.status(200).json(result);
   })
@@ -80,7 +80,7 @@ router.get(
   "/:jobId",
   asyncHandler(async (req: Request, res: Response) => {
     const jobId = parseRenderJobIdParam(req);
-    const result = handleGetRenderJob(jobId, remotionRenderQueue);
+    const result = handleGetRenderJob(jobId, renderQueue);
     res.status(result.status).json(result.body);
   })
 );
@@ -89,7 +89,7 @@ router.delete(
   "/:jobId",
   asyncHandler(async (req: Request, res: Response) => {
     const jobId = parseRenderJobIdParam(req);
-    const result = handleCancelRenderJob(jobId, remotionRenderQueue);
+    const result = handleCancelRenderJob(jobId, renderQueue);
     res.status(result.status).json(result.body);
   })
 );

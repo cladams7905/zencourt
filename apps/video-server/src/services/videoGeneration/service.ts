@@ -28,8 +28,8 @@ import {
   fallbackProviderStrategies,
   primaryProviderStrategies
 } from "@/services/videoGeneration/providers";
-import { storageService } from "../storageService";
-import { webhookService } from "../webhookService";
+import { storageService } from "@/services/storage";
+import { webhookService } from "@/services/webhook";
 import { runWithConcurrency } from "@/services/videoGeneration/domain/concurrency";
 
 interface GenerationResult {

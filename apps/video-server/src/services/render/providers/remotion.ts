@@ -11,15 +11,9 @@ import {
   type CancelSignal
 } from "@remotion/renderer";
 import logger from "@/config/logger";
-import type { ListingClip } from "@/lib/remotion/ListingVideo";
 import type { ListingVideoInputProps } from "@/lib/remotion";
-
-type RenderResult = {
-  videoBuffer: Buffer;
-  thumbnailBuffer: Buffer;
-  durationSeconds: number;
-  fileSize: number;
-};
+import type { ListingClip } from "@/lib/remotion/ListingVideo";
+import type { RenderProvider } from "@/services/render/ports";
 
 const COMPOSITION_ID = "ListingVideo";
 
@@ -38,15 +32,13 @@ function resolveEntryPoint(): string {
   throw new Error("Remotion entry point not found");
 }
 
-class RemotionRenderService {
+class RemotionProvider implements RenderProvider {
   private bundleLocation: string | null = null;
   private browserReady = false;
   private cacheReady = false;
 
   private async ensureRemotionCacheDir(): Promise<void> {
-    if (this.cacheReady) {
-      return;
-    }
+    if (this.cacheReady) return;
 
     const cacheDir =
       process.env.REMOTION_CACHE_DIR ||
@@ -64,14 +56,13 @@ class RemotionRenderService {
     }
 
     await this.ensureRemotionCacheDir();
-
     if (!this.browserReady) {
       await ensureBrowser();
       this.browserReady = true;
     }
 
     const entryPoint = resolveEntryPoint();
-    logger.info({ entryPoint }, "[RemotionRender] Bundling Remotion project");
+    logger.info({ entryPoint }, "[RenderProvider] Bundling Remotion project");
     this.bundleLocation = await bundle({ entryPoint, enableCaching: true });
     return this.bundleLocation;
   }
@@ -83,7 +74,12 @@ class RemotionRenderService {
     videoId: string;
     onProgress?: (progress: number) => void;
     cancelSignal?: CancelSignal;
-  }): Promise<RenderResult> {
+  }): Promise<{
+    videoBuffer: Buffer;
+    thumbnailBuffer: Buffer;
+    durationSeconds: number;
+    fileSize: number;
+  }> {
     const { clips, orientation, videoId } = options;
     const transitionDurationSeconds = options.transitionDurationSeconds ?? 0;
 
@@ -110,25 +106,14 @@ class RemotionRenderService {
     );
 
     try {
-      logger.info(
-        {
-          videoId,
-          durationInFrames: composition.durationInFrames
-        },
-        "[RemotionRender] Starting render"
-      );
-
       await renderMedia({
         composition,
         serveUrl: bundleLocation,
         codec: "h264",
         outputLocation: outputPath,
         inputProps,
-
         cancelSignal: options.cancelSignal,
-        onProgress: (progress) => {
-          options.onProgress?.(progress.progress);
-        }
+        onProgress: (progress) => options.onProgress?.(progress.progress)
       });
 
       await renderStill({
@@ -136,7 +121,6 @@ class RemotionRenderService {
         serveUrl: bundleLocation,
         output: thumbPath,
         inputProps,
-
         imageFormat: "jpeg"
       });
 
@@ -158,46 +142,6 @@ class RemotionRenderService {
       ]);
     }
   }
-
-  async renderThumbnailFromVideo(options: {
-    videoUrl: string;
-    orientation: "vertical" | "landscape";
-    videoId: string;
-    jobId: string;
-  }): Promise<Buffer> {
-    const bundleLocation = await this.getBundleLocation();
-    const inputProps: ListingVideoInputProps = {
-      clips: [{ src: options.videoUrl, durationSeconds: 1 }],
-      transitionDurationSeconds: 0,
-      orientation: options.orientation
-    };
-
-    const composition = await selectComposition({
-      serveUrl: bundleLocation,
-      id: COMPOSITION_ID,
-      inputProps
-    });
-
-    const outputPath = path.join(
-      tmpdir(),
-      `remotion-thumb-${options.videoId}-${options.jobId}-${Date.now()}.jpg`
-    );
-
-    try {
-      await renderStill({
-        composition,
-        serveUrl: bundleLocation,
-        output: outputPath,
-        inputProps,
-
-        imageFormat: "jpeg"
-      });
-
-      return await readFile(outputPath);
-    } finally {
-      await rm(outputPath, { force: true });
-    }
-  }
 }
 
-export const remotionRenderService = new RemotionRenderService();
+export const remotionProvider = new RemotionProvider();

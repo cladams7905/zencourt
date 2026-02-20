@@ -2,7 +2,7 @@
  * Webhook Service Tests
  */
 
-import { webhookService } from "../webhookService";
+import { webhookService } from "@/services/webhook";
 import axios from "axios";
 import type { AxiosError, AxiosRequestConfig, AxiosResponse } from "axios";
 import { WebhookError } from "@shared/types/video";

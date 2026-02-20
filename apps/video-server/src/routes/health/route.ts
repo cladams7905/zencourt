@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import logger from "@/config/logger";
-import { storageService } from "@/services/storageService";
+import { storageService } from "@/services/storage";
 import type { StorageHealthCache } from "@/routes/health/domain/healthCache";
 import {
   buildHealthResponse,

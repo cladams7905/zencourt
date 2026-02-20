@@ -1,4 +1,4 @@
-import { klingService } from "@/services/klingService";
+import { klingService } from "@/services/providers/kling";
 import type { VideoGenerationProviderStrategy } from "@/services/videoGeneration/ports";
 import type {
   ProviderDispatchInput,

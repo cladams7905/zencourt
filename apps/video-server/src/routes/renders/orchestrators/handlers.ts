@@ -1,5 +1,5 @@
 import type { DBVideoGenJob } from "@shared/types/models/db.video";
-import type { RenderJobData } from "@/services/remotionRenderQueue";
+import type { RenderJobData } from "@/services/render";
 import {
   VideoProcessingError,
   VideoProcessingErrorType
