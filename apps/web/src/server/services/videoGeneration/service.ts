@@ -38,11 +38,19 @@ function buildVideoServerRequestBody(args: {
   listingId: string;
   userId: string;
 }): string {
+  // VERCEL_URL is injected by Vercel at runtime (without https:// prefix).
+  // Fall back to VERCEL_API_URL for local dev (e.g. http://host.docker.internal:3000).
+  const host = process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL}`
+    : process.env.VERCEL_API_URL;
+  const callbackUrl = `${host}/api/v1/webhooks/video`;
+
   return JSON.stringify({
     videoId: args.parentVideoId,
     jobIds: args.jobIds,
     listingId: args.listingId,
-    userId: args.userId
+    userId: args.userId,
+    callbackUrl
   });
 }
 

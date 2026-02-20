@@ -23,7 +23,6 @@ declare global {
       VIDEO_SERVER_URL?: string;
 
       // Vercel Webhook
-      VERCEL_API_URL?: string;
       VERCEL_WEBHOOK_SECRET?: string;
       WEBHOOK_TIMEOUT_MS?: string;
 
@@ -63,7 +62,6 @@ const REQUIRED_ENV_VARS = [
   "B2_APPLICATION_KEY",
   "B2_BUCKET_NAME",
   "VIDEO_SERVER_URL",
-  "VERCEL_API_URL",
   "VERCEL_WEBHOOK_SECRET",
   "DATABASE_URL",
   "FAL_KEY",

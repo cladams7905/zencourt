@@ -4,6 +4,7 @@ import type { DBVideoGenJob } from "@db/types/models";
 
 type VideoContext = {
   listingId: string;
+  callbackUrl: string;
 };
 
 type WebhookDeliveryDeps = {
@@ -23,7 +24,7 @@ export async function sendJobCompletionWebhookOrchestrator(
   deps: WebhookDeliveryDeps
 ): Promise<void> {
   const videoContext = await deps.getVideoContext(job.videoGenBatchId);
-  const webhookUrl = `${process.env.VERCEL_API_URL}/api/v1/webhooks/video`;
+  const webhookUrl = videoContext.callbackUrl;
   const webhookSecret = process.env.VERCEL_WEBHOOK_SECRET;
 
   if (!webhookSecret) {
@@ -70,7 +71,7 @@ export async function sendJobFailureWebhookOrchestrator(
   deps: WebhookDeliveryDeps
 ): Promise<void> {
   const videoContext = await deps.getVideoContext(job.videoGenBatchId);
-  const webhookUrl = `${process.env.VERCEL_API_URL}/api/v1/webhooks/video`;
+  const webhookUrl = videoContext.callbackUrl;
   const webhookSecret = process.env.VERCEL_WEBHOOK_SECRET;
 
   if (!webhookUrl || !webhookSecret) {

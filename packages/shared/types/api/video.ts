@@ -43,6 +43,7 @@ export interface VideoServerGenerateRequest {
   jobIds: string[]; // Array of video_asset_jobs IDs to process
   listingId: string;
   userId: string;
+  callbackUrl: string; // Full URL the video server POSTs job results to
 }
 
 export interface VideoServerRenderRequest {
