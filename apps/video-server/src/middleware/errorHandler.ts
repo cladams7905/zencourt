@@ -91,10 +91,16 @@ export function errorHandler(
   res: Response,
   _next: NextFunction
 ): void {
+  const isMulterError = (err as { name?: string }).name === "MulterError";
+
   // Extract error information
   const isVideoProcessingError = err instanceof VideoProcessingError;
-  const statusCode = isVideoProcessingError ? err.statusCode : 500;
-  const errorType = isVideoProcessingError ? err.type : VideoProcessingErrorType.UNKNOWN_ERROR;
+  const statusCode = isVideoProcessingError ? err.statusCode : isMulterError ? 400 : 500;
+  const errorType = isVideoProcessingError
+    ? err.type
+    : isMulterError
+      ? VideoProcessingErrorType.INVALID_INPUT
+      : VideoProcessingErrorType.UNKNOWN_ERROR;
   const retryable = isVideoProcessingError ? err.retryable : false;
 
   const isDevelopment = process.env.NODE_ENV === "development";
@@ -141,7 +147,9 @@ export function errorHandler(
     res.status(statusCode).json({
       success: false,
       error: publicMessage,
-      code: VideoProcessingErrorType.INTERNAL_ERROR,
+      code: isMulterError
+        ? VideoProcessingErrorType.INVALID_INPUT
+        : VideoProcessingErrorType.INTERNAL_ERROR,
       retryable: false,
     });
   }
