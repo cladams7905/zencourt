@@ -1,5 +1,5 @@
 import { runwayService } from "@/services/providers/runway";
-import type { VideoGenerationProviderStrategy } from "@/services/videoGeneration/ports";
+import type { VideoGenerationStrategy } from "@/services/videoGeneration/ports";
 import type {
   ProviderDispatchInput,
   ProviderDispatchResult
@@ -13,7 +13,7 @@ function normalizeRunwayDuration(_durationSeconds: number): 4 | 6 | 8 {
   return 4;
 }
 
-export const runwayStrategy: VideoGenerationProviderStrategy<
+export const runwayStrategy: VideoGenerationStrategy<
   ProviderDispatchInput,
   ProviderDispatchResult
 > = {
@@ -28,8 +28,11 @@ export const runwayStrategy: VideoGenerationProviderStrategy<
         { provider: "runway", jobId: input.jobId }
       );
     }
-    const runwayDurationSeconds = normalizeRunwayDuration(input.durationSeconds);
-    const runwayRatio = input.orientation === "vertical" ? "720:1280" : "1280:720";
+    const runwayDurationSeconds = normalizeRunwayDuration(
+      input.durationSeconds
+    );
+    const runwayRatio =
+      input.orientation === "vertical" ? "720:1280" : "1280:720";
 
     const task = await runwayService.submitImageToVideo({
       promptImage: input.imageUrls[0],

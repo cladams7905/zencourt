@@ -1,4 +1,4 @@
-export interface VideoGenerationProviderStrategy<
+export interface VideoGenerationStrategy<
   TJobInput = unknown,
   TDispatchResult = unknown
 > {
@@ -7,7 +7,7 @@ export interface VideoGenerationProviderStrategy<
   dispatch(job: TJobInput): Promise<TDispatchResult>;
 }
 
-export interface VideoGenerationProviderFacade<
+export interface VideoGenerationFacade<
   TJobInput = unknown,
   TDispatchResult = unknown
 > {
