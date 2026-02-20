@@ -1,21 +1,12 @@
-/**
- * Centralized database utilities for video server.
- * Provides CRUD operations for videoGenBatch and videoGenJobs tables.
- */
-
 import {
-  db,
-  videoGenBatch,
-  videoGenJobs,
-  eq,
   and,
-  inArray
+  db,
+  eq,
+  inArray,
+  videoGenBatch,
+  videoGenJobs
 } from "@db/client";
 import type { VideoStatus } from "@shared/types/models";
-
-// ============================================
-// Video Generation Cancel Operations
-// ============================================
 
 const CANCELABLE_STATUSES: VideoStatus[] = ["pending", "processing"];
 
@@ -23,10 +14,6 @@ function resolveCancelReason(reason?: string): string {
   return reason?.trim() || "Canceled by user request";
 }
 
-/**
- * Cancel video generation batches by listing ID.
- * Returns the number of batches canceled.
- */
 export async function cancelVideosByListing(
   listingId: string,
   reason?: string
@@ -49,10 +36,6 @@ export async function cancelVideosByListing(
   return canceled.length;
 }
 
-/**
- * Cancel video generation batches by batch IDs.
- * Returns the number of batches canceled.
- */
 export async function cancelVideosByIds(
   videoIds: string[],
   reason?: string
@@ -77,15 +60,10 @@ export async function cancelVideosByIds(
   return canceled.length;
 }
 
-/**
- * Cancel video generation jobs by listing ID.
- * Returns the number of jobs canceled.
- */
 export async function cancelJobsByListingId(
   listingId: string,
   reason?: string
 ): Promise<number> {
-  // First, find all video batches belonging to this listing
   const listingVideos = await db
     .select({ id: videoGenBatch.id })
     .from(videoGenBatch)
@@ -93,9 +71,8 @@ export async function cancelJobsByListingId(
 
   if (listingVideos.length === 0) return 0;
 
-  const videoIds = listingVideos.map((v) => v.id);
+  const videoIds = listingVideos.map((video) => video.id);
 
-  // Cancel all jobs for those batches
   const canceled = await db
     .update(videoGenJobs)
     .set({

@@ -10,7 +10,7 @@ import {
   cancelVideosByListing,
   cancelVideosByIds,
   cancelJobsByListingId
-} from "@/lib/utils/dbHelpers";
+} from "@/services/videoGeneration/adapters/cancel";
 import {
   parseCancelVideoRequest,
   parseGenerateVideoRequest

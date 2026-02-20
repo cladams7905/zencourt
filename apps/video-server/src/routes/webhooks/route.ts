@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import logger from "@/config/logger";
-import { verifyFalWebhookSignature } from "@/lib/utils/falWebhookVerification";
+import { verifyFalWebhookSignature } from "@/services/webhook/security/falWebhookVerification";
 import { videoGenerationService } from "@/services/videoGeneration";
 import { parseFalWebhookRequest } from "@/routes/webhooks/domain/requests";
 import {

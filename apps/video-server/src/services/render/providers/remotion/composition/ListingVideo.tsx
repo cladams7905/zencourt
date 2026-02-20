@@ -1,7 +1,9 @@
 import React from "react";
 import {
   AbsoluteFill,
+  interpolate,
   Sequence,
+  useCurrentFrame,
   useVideoConfig,
   Video
 } from "remotion";
@@ -39,8 +41,7 @@ export type ListingClip = {
 export type ListingVideoProps = {
   clips: ListingClip[];
   transitionDurationSeconds: number;
-  // orientation is used by calculateMetadata in index.tsx for dimension calculation
-  orientation?: "vertical" | "landscape";
+  orientation: "vertical" | "landscape";
 };
 
 function TextOverlay({ overlay }: { overlay: PreviewTextOverlay }) {
@@ -104,8 +105,55 @@ function TextOverlay({ overlay }: { overlay: PreviewTextOverlay }) {
   );
 }
 
-export const ListingVideo: React.FC<ListingVideoProps> = ({ clips }) => {
+function ClipSequence({
+  clip,
+  index,
+  startFrame,
+  clipFrames,
+  transitionFrames
+}: {
+  clip: ListingClip;
+  index: number;
+  startFrame: number;
+  clipFrames: number;
+  transitionFrames: number;
+}) {
+  const frame = useCurrentFrame();
+  const relativeFrame = frame - startFrame;
+  const opacity =
+    index > 0 && transitionFrames > 0
+      ? interpolate(relativeFrame, [0, transitionFrames], [0, 1], {
+          extrapolateLeft: "clamp",
+          extrapolateRight: "clamp"
+        })
+      : 1;
+
+  return (
+    <Sequence
+      key={`${clip.src}-${index}`}
+      from={startFrame}
+      durationInFrames={clipFrames}
+    >
+      <AbsoluteFill style={{ opacity }}>
+        <Video
+          src={clip.src}
+          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+        />
+        {clip.textOverlay ? <TextOverlay overlay={clip.textOverlay} /> : null}
+      </AbsoluteFill>
+    </Sequence>
+  );
+}
+
+export const ListingVideo: React.FC<ListingVideoProps> = ({
+  clips,
+  transitionDurationSeconds
+}) => {
   const { fps } = useVideoConfig();
+  const transitionFrames = Math.max(
+    0,
+    Math.round(transitionDurationSeconds * fps)
+  );
 
   let cursor = 0;
 
@@ -117,21 +165,14 @@ export const ListingVideo: React.FC<ListingVideoProps> = ({ clips }) => {
         cursor += clipFrames;
 
         return (
-          <Sequence
+          <ClipSequence
             key={`${clip.src}-${index}`}
-            from={startFrame}
-            durationInFrames={clipFrames}
-          >
-            <AbsoluteFill>
-              <Video
-                src={clip.src}
-                style={{ width: "100%", height: "100%", objectFit: "cover" }}
-              />
-              {clip.textOverlay ? (
-                <TextOverlay overlay={clip.textOverlay} />
-              ) : null}
-            </AbsoluteFill>
-          </Sequence>
+            clip={clip}
+            index={index}
+            startFrame={startFrame}
+            clipFrames={clipFrames}
+            transitionFrames={transitionFrames}
+          />
         );
       })}
     </AbsoluteFill>

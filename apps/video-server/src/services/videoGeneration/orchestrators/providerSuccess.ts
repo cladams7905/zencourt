@@ -7,7 +7,7 @@ import {
 import {
   downloadImageBufferWithRetry,
   downloadVideoBufferWithRetry
-} from "@/lib/utils/downloadWithRetry";
+} from "@/services/videoGeneration/domain/downloadWithRetry";
 import type { VideoJobResult } from "@shared/types/api";
 
 type VideoContext = {

@@ -2,8 +2,7 @@ import React from "react";
 import { Composition, registerRoot } from "remotion";
 import { ListingVideo, type ListingVideoProps } from "./ListingVideo";
 
-// Re-export for external use with required orientation
-export type ListingVideoInputProps = Required<ListingVideoProps>;
+export type ListingVideoInputProps = ListingVideoProps;
 
 const FPS = 30;
 export const RemotionRoot: React.FC = () => {

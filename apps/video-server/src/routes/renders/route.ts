@@ -12,7 +12,7 @@ import {
 import {
   filterAndSortCompletedJobs,
   buildRenderJobData
-} from "@/lib/utils/compositionHelpers";
+} from "@/services/render/domain/composition";
 import type { PreviewTextOverlay } from "@shared/types/video";
 import {
   handleCancelRenderJob,
