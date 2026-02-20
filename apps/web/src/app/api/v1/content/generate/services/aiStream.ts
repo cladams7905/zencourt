@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { ApiError } from "../../../_utils";
-import { StatusCode } from "@web/src/app/api/v1/_statusCodes";
+import { StatusCode } from "@web/src/app/api/v1/_responses";
 import {
   encodeSseEvent,
   makeSseStreamHeaders
@@ -155,10 +155,7 @@ function parseAndValidateResponse(
   try {
     parsed = parseJsonArray(fullText);
   } catch (error) {
-    logger.error(
-      { error, text: fullText },
-      "Failed to parse AI response"
-    );
+    logger.error({ error, text: fullText }, "Failed to parse AI response");
     controller.enqueue(
       encodeSseEvent({
         type: "error",

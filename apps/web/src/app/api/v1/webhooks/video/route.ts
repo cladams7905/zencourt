@@ -22,8 +22,7 @@ import {
   WebhookVerificationError
 } from "@web/src/server/utils/webhookVerification";
 import type { VideoStatus } from "@shared/types/models";
-import { apiErrorResponse } from "@web/src/app/api/v1/_responses";
-import { StatusCode } from "@web/src/app/api/v1/_statusCodes";
+import { apiErrorResponse, StatusCode } from "@web/src/app/api/v1/_responses";
 
 const logger = createChildLogger(baseLogger, {
   module: "video-job-webhook"
@@ -55,7 +54,9 @@ type NormalizedWebhookResult = {
     | undefined;
 };
 
-function normalizeWebhookResult(payload: ParsedWebhookPayload): NormalizedWebhookResult {
+function normalizeWebhookResult(
+  payload: ParsedWebhookPayload
+): NormalizedWebhookResult {
   const result = payload.result;
   const metadata = result?.metadata;
 

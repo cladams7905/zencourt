@@ -1,5 +1,5 @@
 import { ApiError } from "../../../_utils";
-import { StatusCode } from "@web/src/app/api/v1/_statusCodes";
+import { StatusCode } from "@web/src/app/api/v1/_responses";
 import type { PromptAssemblyInput } from "@web/src/lib/ai/prompts/engine/assemble";
 import { parseMarketLocation } from "@web/src/lib/domain/location/marketLocation";
 import { getMarketData } from "@web/src/server/services/marketData";
@@ -19,7 +19,9 @@ export async function resolveContentContext(args: {
   body: PromptAssemblyInput;
   snapshot: UserAdditionalSnapshot;
   userId: string;
-  redis: ReturnType<typeof import("@web/src/lib/cache/redisClient").getSharedRedisClient>;
+  redis: ReturnType<
+    typeof import("@web/src/lib/cache/redisClient").getSharedRedisClient
+  >;
   activeAudience: string | null;
 }): Promise<ResolvedContentContext> {
   const { body, snapshot, userId, redis, activeAudience } = args;

@@ -7,9 +7,9 @@ import {
 import { getVideoServerConfig } from "@web/src/app/api/v1/video/_config";
 import {
   apiErrorCodeFromStatus,
-  apiErrorResponse
+  apiErrorResponse,
+  StatusCode
 } from "@web/src/app/api/v1/_responses";
-import { StatusCode } from "@web/src/app/api/v1/_statusCodes";
 import {
   readJsonBodySafe,
   requireNonEmptyParam
@@ -23,7 +23,9 @@ const logger = createChildLogger(baseLogger, {
   module: "generation-cancel-route"
 });
 
-async function extractReason(request: NextRequest): Promise<string | undefined> {
+async function extractReason(
+  request: NextRequest
+): Promise<string | undefined> {
   const contentType = request.headers.get("content-type") || "";
   if (!contentType.includes("application/json")) {
     return undefined;
@@ -44,7 +46,7 @@ export async function POST(
   const listingId = requireNonEmptyParam((await params).listingId);
 
   if (!listingId) {
-      return apiErrorResponse(
+    return apiErrorResponse(
       StatusCode.BAD_REQUEST,
       "INVALID_REQUEST",
       "listingId is required"

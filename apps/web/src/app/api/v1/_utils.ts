@@ -2,7 +2,7 @@ import { db, eq, listings } from "@db/client";
 import { stackServerApp } from "@web/src/lib/core/auth/stack/server";
 import type { CurrentServerUser } from "@stackframe/stack";
 import { NextResponse } from "next/server";
-import { StatusCode } from "@web/src/app/api/v1/_statusCodes";
+import { StatusCode } from "@web/src/app/api/v1/_responses";
 
 type Listing = typeof listings.$inferSelect;
 

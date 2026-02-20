@@ -14,9 +14,9 @@ import {
 import { VideoGenerateRequest, VideoGenerateResponse } from "@shared/types/api";
 import {
   apiErrorCodeFromStatus,
-  apiErrorResponse
+  apiErrorResponse,
+  StatusCode
 } from "@web/src/app/api/v1/_responses";
-import { StatusCode } from "@web/src/app/api/v1/_statusCodes";
 import { readJsonBodySafe } from "@web/src/app/api/v1/_validation";
 import {
   createChildLogger,
@@ -32,7 +32,9 @@ export async function POST(
   request: NextRequest
 ): Promise<NextResponse<VideoGenerateResponse>> {
   try {
-    const body = (await readJsonBodySafe(request)) as VideoGenerateRequest | null;
+    const body = (await readJsonBodySafe(
+      request
+    )) as VideoGenerateRequest | null;
     if (!body?.listingId) {
       return apiErrorResponse(
         StatusCode.BAD_REQUEST,
