@@ -33,6 +33,11 @@ export async function sendJobCompletionWebhookOrchestrator(
         { jobId: job.id },
         "[VideoGenerationService] VERCEL_WEBHOOK_SECRET not configured, skipping webhook delivery"
       );
+    } else if (!webhookUrl) {
+      logger.warn(
+        { jobId: job.id, videoId: job.videoGenBatchId },
+        "[VideoGenerationService] callbackUrl empty (cache cold or server restart), skipping webhook delivery"
+      );
     }
     return;
   }
@@ -77,6 +82,17 @@ export async function sendJobFailureWebhookOrchestrator(
   const webhookSecret = process.env.VERCEL_WEBHOOK_SECRET;
 
   if (!webhookUrl || !webhookSecret) {
+    if (!webhookSecret) {
+      logger.warn(
+        { jobId: job.id },
+        "[VideoGenerationService] VERCEL_WEBHOOK_SECRET not configured, skipping failure webhook delivery"
+      );
+    } else if (!webhookUrl) {
+      logger.warn(
+        { jobId: job.id, videoId: job.videoGenBatchId },
+        "[VideoGenerationService] callbackUrl empty (cache cold or server restart), skipping failure webhook delivery"
+      );
+    }
     return;
   }
 

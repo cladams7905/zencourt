@@ -3,6 +3,14 @@ import {
   sendJobFailureWebhookOrchestrator
 } from "@/services/videoGeneration/orchestrators/webhookDelivery";
 
+jest.mock("@/config/logger", () => ({
+  __esModule: true,
+  default: {
+    warn: jest.fn(),
+    error: jest.fn()
+  }
+}));
+
 describe("webhookDelivery orchestrators", () => {
   beforeEach(() => {
     process.env.VERCEL_WEBHOOK_SECRET = "secret";
@@ -101,8 +109,9 @@ describe("webhookDelivery orchestrators", () => {
     ).resolves.toBeUndefined();
   });
 
-  it("skips failure webhook when callbackUrl is empty", async () => {
+  it("skips failure webhook when callbackUrl is empty and logs warning", async () => {
     const sendWebhook = jest.fn();
+    const logger = jest.requireMock("@/config/logger").default;
 
     await sendJobFailureWebhookOrchestrator(
       { id: "job-1", videoGenBatchId: "video-1" } as never,
@@ -119,10 +128,15 @@ describe("webhookDelivery orchestrators", () => {
     );
 
     expect(sendWebhook).not.toHaveBeenCalled();
+    expect(logger.warn).toHaveBeenCalledWith(
+      { jobId: "job-1", videoId: "video-1" },
+      expect.stringContaining("callbackUrl empty")
+    );
   });
 
-  it("skips completion webhook when callbackUrl is empty (e.g. cache cold)", async () => {
+  it("skips completion webhook when callbackUrl is empty (e.g. cache cold) and logs warning", async () => {
     const sendWebhook = jest.fn();
+    const logger = jest.requireMock("@/config/logger").default;
 
     await sendJobCompletionWebhookOrchestrator(
       { id: "job-1", videoGenBatchId: "video-1" } as never,
@@ -137,6 +151,10 @@ describe("webhookDelivery orchestrators", () => {
     );
 
     expect(sendWebhook).not.toHaveBeenCalled();
+    expect(logger.warn).toHaveBeenCalledWith(
+      { jobId: "job-1", videoId: "video-1" },
+      expect.stringContaining("callbackUrl empty")
+    );
   });
 
   it("skips failure webhook when VERCEL_WEBHOOK_SECRET is missing", async () => {
