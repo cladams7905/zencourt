@@ -20,8 +20,6 @@ services:
       # Vercel Webhook Configuration
       VERCEL_WEBHOOK_SECRET: ${VERCEL_WEBHOOK_SECRET}
       VIDEO_SERVER_API_KEY: ${VIDEO_SERVER_API_KEY}
-      WEBHOOK_RETRY_ATTEMPTS: 5
-      WEBHOOK_RETRY_BACKOFF_MS: 1000
 
       # Processing Configuration
       MAX_CONCURRENT_JOBS: 1

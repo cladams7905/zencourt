@@ -20,7 +20,8 @@ jest.mock("nanoid", () => ({
 
 jest.mock("@db/client", () => ({
   db: {
-    select: (...args: unknown[]) => (mockSelect as (...a: unknown[]) => unknown)(...args)
+    select: (...args: unknown[]) =>
+      (mockSelect as (...a: unknown[]) => unknown)(...args)
   },
   listingImages: {
     listingId: "listingId",
@@ -35,18 +36,22 @@ jest.mock("@web/src/server/actions/db/videoGenBatch", () => ({
 }));
 
 jest.mock("@web/src/server/actions/db/videoGenJobs", () => ({
-  createVideoGenJobsBatch: (...args: unknown[]) => mockCreateVideoGenJobsBatch(...args)
+  createVideoGenJobsBatch: (...args: unknown[]) =>
+    mockCreateVideoGenJobsBatch(...args)
 }));
 
 jest.mock("@web/src/server/utils/storageUrls", () => ({
-  getSignedDownloadUrls: (...args: unknown[]) => mockGetSignedDownloadUrls(...args)
+  getSignedDownloadUrls: (...args: unknown[]) =>
+    mockGetSignedDownloadUrls(...args)
 }));
 
 jest.mock("../domain/rooms", () => ({
-  groupImagesByCategory: (...args: unknown[]) => mockGroupImagesByCategory(...args),
+  groupImagesByCategory: (...args: unknown[]) =>
+    mockGroupImagesByCategory(...args),
   selectListingPrimaryImage: (...args: unknown[]) =>
     mockSelectListingPrimaryImage(...args),
-  buildRoomsFromImages: (...args: unknown[]) => mockBuildRoomsFromImages(...args),
+  buildRoomsFromImages: (...args: unknown[]) =>
+    mockBuildRoomsFromImages(...args),
   getCategoryForRoom: (...args: unknown[]) => mockGetCategoryForRoom(...args),
   selectPrimaryImageForRoom: (...args: unknown[]) =>
     mockSelectPrimaryImageForRoom(...args),
@@ -112,21 +117,37 @@ describe("videoGeneration/service", () => {
       defaultOrientation: "vertical",
       enablePrioritySecondary: true,
       videoServerBaseUrl: "http://video-server",
-      videoServerApiKey: "secret"
+      videoServerApiKey: "secret",
+      appUrl: "https://example.vercel.app"
     });
   });
 
   it("creates jobs in batch and enqueues video server request", async () => {
-    mockSelect.mockReturnValue(makeSelectBuilder([{ id: "img-1", url: "raw-1" }]));
+    mockSelect.mockReturnValue(
+      makeSelectBuilder([{ id: "img-1", url: "raw-1" }])
+    );
     mockNanoid.mockReturnValueOnce("video-1").mockReturnValueOnce("job-1");
-    mockGroupImagesByCategory.mockReturnValue(new Map([["kitchen", [{ id: "img-1" }]]]));
-    mockSelectListingPrimaryImage.mockReturnValue({ url: "https://img/primary.jpg" });
+    mockGroupImagesByCategory.mockReturnValue(
+      new Map([["kitchen", [{ id: "img-1" }]]])
+    );
+    mockSelectListingPrimaryImage.mockReturnValue({
+      url: "https://img/primary.jpg"
+    });
     mockBuildRoomsFromImages.mockReturnValue([
-      { id: "kitchen", name: "Kitchen", category: "kitchen", roomNumber: undefined }
+      {
+        id: "kitchen",
+        name: "Kitchen",
+        category: "kitchen",
+        roomNumber: undefined
+      }
     ]);
     mockGetCategoryForRoom.mockReturnValue("kitchen");
-    mockSelectPrimaryImageForRoom.mockReturnValue("https://img/kitchen-primary.jpg");
-    mockGetSignedDownloadUrls.mockResolvedValue(["https://signed/kitchen-primary.jpg"]);
+    mockSelectPrimaryImageForRoom.mockReturnValue(
+      "https://img/kitchen-primary.jpg"
+    );
+    mockGetSignedDownloadUrls.mockResolvedValue([
+      "https://signed/kitchen-primary.jpg"
+    ]);
     mockBuildPrompt.mockReturnValue({
       prompt: "Forward pan through the Kitchen.",
       templateKey: "interior-forward-pan"
@@ -172,16 +193,26 @@ describe("videoGeneration/service", () => {
   });
 
   it("throws ApiError when video server enqueue fails", async () => {
-    mockSelect.mockReturnValue(makeSelectBuilder([{ id: "img-1", url: "raw-1" }]));
+    mockSelect.mockReturnValue(
+      makeSelectBuilder([{ id: "img-1", url: "raw-1" }])
+    );
     mockNanoid.mockReturnValueOnce("video-1").mockReturnValueOnce("job-1");
-    mockGroupImagesByCategory.mockReturnValue(new Map([["kitchen", [{ id: "img-1" }]]]));
-    mockSelectListingPrimaryImage.mockReturnValue({ url: "https://img/primary.jpg" });
+    mockGroupImagesByCategory.mockReturnValue(
+      new Map([["kitchen", [{ id: "img-1" }]]])
+    );
+    mockSelectListingPrimaryImage.mockReturnValue({
+      url: "https://img/primary.jpg"
+    });
     mockBuildRoomsFromImages.mockReturnValue([
       { id: "kitchen", name: "Kitchen", category: "kitchen" }
     ]);
     mockGetCategoryForRoom.mockReturnValue("kitchen");
-    mockSelectPrimaryImageForRoom.mockReturnValue("https://img/kitchen-primary.jpg");
-    mockGetSignedDownloadUrls.mockResolvedValue(["https://signed/kitchen-primary.jpg"]);
+    mockSelectPrimaryImageForRoom.mockReturnValue(
+      "https://img/kitchen-primary.jpg"
+    );
+    mockGetSignedDownloadUrls.mockResolvedValue([
+      "https://signed/kitchen-primary.jpg"
+    ]);
     mockBuildPrompt.mockReturnValue({
       prompt: "Forward pan through the Kitchen.",
       templateKey: "interior-forward-pan"
@@ -220,20 +251,74 @@ describe("videoGeneration/service", () => {
     );
   });
 
+  it("throws when app URL cannot be determined", async () => {
+    mockGetVideoGenerationConfig.mockImplementation(() => {
+      throw new Error(
+        "APP_URL must be configured when not on Vercel (e.g. http://localhost:3000 or http://host.docker.internal:3000)"
+      );
+    });
+    mockSelect.mockReturnValue(
+      makeSelectBuilder([{ id: "img-1", url: "raw-1" }])
+    );
+    mockNanoid.mockReturnValueOnce("video-1").mockReturnValueOnce("job-1");
+    mockGroupImagesByCategory.mockReturnValue(
+      new Map([["kitchen", [{ id: "img-1" }]]])
+    );
+    mockSelectListingPrimaryImage.mockReturnValue({
+      url: "https://img/primary.jpg"
+    });
+    mockBuildRoomsFromImages.mockReturnValue([
+      { id: "kitchen", name: "Kitchen", category: "kitchen" }
+    ]);
+    mockGetCategoryForRoom.mockReturnValue("kitchen");
+    mockSelectPrimaryImageForRoom.mockReturnValue(
+      "https://img/kitchen-primary.jpg"
+    );
+    mockGetSignedDownloadUrls.mockResolvedValue([
+      "https://signed/kitchen-primary.jpg"
+    ]);
+    mockBuildPrompt.mockReturnValue({
+      prompt: "Forward pan through the Kitchen.",
+      templateKey: "interior-forward-pan"
+    });
+    mockIsPriorityCategory.mockReturnValue(false);
+    mockCreateVideoGenBatch.mockResolvedValue(undefined);
+    mockCreateVideoGenJobsBatch.mockResolvedValue(undefined);
+
+    await expect(
+      startListingVideoGeneration({ listingId: "listing-1", userId: "user-1" })
+    ).rejects.toThrow("APP_URL must be configured");
+  });
+
   it("creates secondary clip for priority categories when enabled", async () => {
-    mockSelect.mockReturnValue(makeSelectBuilder([{ id: "img-1", url: "raw-1" }]));
+    mockSelect.mockReturnValue(
+      makeSelectBuilder([{ id: "img-1", url: "raw-1" }])
+    );
     mockNanoid
       .mockReturnValueOnce("video-1")
       .mockReturnValueOnce("job-1")
       .mockReturnValueOnce("job-2");
-    mockGroupImagesByCategory.mockReturnValue(new Map([["kitchen", [{ id: "img-1" }]]]));
-    mockSelectListingPrimaryImage.mockReturnValue({ url: "https://img/primary.jpg" });
+    mockGroupImagesByCategory.mockReturnValue(
+      new Map([["kitchen", [{ id: "img-1" }]]])
+    );
+    mockSelectListingPrimaryImage.mockReturnValue({
+      url: "https://img/primary.jpg"
+    });
     mockBuildRoomsFromImages.mockReturnValue([
-      { id: "kitchen", name: "Kitchen", category: "kitchen", roomNumber: undefined }
+      {
+        id: "kitchen",
+        name: "Kitchen",
+        category: "kitchen",
+        roomNumber: undefined
+      }
     ]);
     mockGetCategoryForRoom.mockReturnValue("kitchen");
-    mockSelectPrimaryImageForRoom.mockReturnValue("https://img/kitchen-primary.jpg");
-    mockSelectSecondaryImageForRoom.mockReturnValue("https://img/kitchen-secondary.jpg");
+    mockSelectPrimaryImageForRoom.mockReturnValue(
+      "https://img/kitchen-primary.jpg"
+    );
+    mockSelectSecondaryImageForRoom.mockReturnValue(
+      "https://img/kitchen-secondary.jpg"
+    );
     mockGetSignedDownloadUrls
       .mockResolvedValueOnce(["https://signed/kitchen-primary.jpg"])
       .mockResolvedValueOnce(["https://signed/kitchen-secondary.jpg"]);

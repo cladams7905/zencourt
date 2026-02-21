@@ -121,6 +121,25 @@ describe("webhookDelivery orchestrators", () => {
     expect(sendWebhook).not.toHaveBeenCalled();
   });
 
+  it("throws when getVideoContext throws (e.g. cache cold)", async () => {
+    const sendWebhook = jest.fn();
+    const getVideoContext = jest.fn().mockRejectedValue(
+      new Error(
+        "callbackUrl unavailable for video video-1 (cache cold; video server may have restarted mid-job)"
+      )
+    );
+
+    await expect(
+      sendJobCompletionWebhookOrchestrator(
+        { id: "job-1", videoGenBatchId: "video-1" } as never,
+        { videoUrl: "https://cdn/video.mp4", duration: 4, fileSize: 1 },
+        { getVideoContext, sendWebhook }
+      )
+    ).rejects.toThrow("callbackUrl unavailable for video video-1");
+
+    expect(sendWebhook).not.toHaveBeenCalled();
+  });
+
   it("skips failure webhook when VERCEL_WEBHOOK_SECRET is missing", async () => {
     delete process.env.VERCEL_WEBHOOK_SECRET;
     const sendWebhook = jest.fn();
