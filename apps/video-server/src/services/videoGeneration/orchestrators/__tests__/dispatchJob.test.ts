@@ -101,7 +101,7 @@ describe("dispatchJobOrchestrator", () => {
 
   it("throws when job is missing imageUrls", async () => {
     const jobWithoutImages = {
-      ...baseJob,
+      ...(baseJob as object),
       generationSettings: {
         prompt: "prompt",
         imageUrls: [],
@@ -124,7 +124,7 @@ describe("dispatchJobOrchestrator", () => {
 
   it("throws when job is missing generationSettings", async () => {
     const jobWithoutSettings = {
-      ...baseJob,
+      ...(baseJob as object),
       generationSettings: null
     } as never;
 
@@ -143,7 +143,7 @@ describe("dispatchJobOrchestrator", () => {
 
   it("throws when job is missing prompt", async () => {
     const jobWithoutPrompt = {
-      ...baseJob,
+      ...(baseJob as object),
       generationSettings: {
         prompt: "",
         imageUrls: ["https://image.jpg"],
