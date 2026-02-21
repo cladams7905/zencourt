@@ -68,12 +68,10 @@ describe("compositionHelpers", () => {
 
     const renderJob = buildRenderJobData(
       { videoId: "v1", listingId: "l1", userId: "u1" },
-      jobs,
-      0.5
+      jobs
     );
 
     expect(renderJob.orientation).toBe("vertical");
-    expect(renderJob.transitionDurationSeconds).toBe(0.5);
     expect(renderJob.clips).toHaveLength(1);
   });
 });

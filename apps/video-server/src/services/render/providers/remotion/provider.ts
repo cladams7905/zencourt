@@ -76,7 +76,6 @@ class RemotionProvider implements RenderProvider {
   async renderListingVideo(options: {
     clips: ListingClip[];
     orientation: "vertical" | "landscape";
-    transitionDurationSeconds?: number;
     videoId: string;
     onProgress?: (progress: number) => void;
     cancelSignal?: CancelSignal;
@@ -87,11 +86,9 @@ class RemotionProvider implements RenderProvider {
     fileSize: number;
   }> {
     const { clips, orientation, videoId } = options;
-    const transitionDurationSeconds = options.transitionDurationSeconds ?? 0;
 
     const inputProps: ListingVideoInputProps = {
       clips,
-      transitionDurationSeconds,
       orientation
     };
 

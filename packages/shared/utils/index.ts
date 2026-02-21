@@ -87,6 +87,9 @@ export type {
   ComputedOverlayLineStyle
 } from "./textOverlay/renderer/index";
 
+export { PreviewTextOverlayRenderer } from "./textOverlay/index";
+export type { PreviewTextOverlayRendererProps } from "./textOverlay/index";
+
 export {
   requireNonEmptyParam,
   requireNonEmptyString,

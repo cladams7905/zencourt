@@ -47,7 +47,6 @@ export async function handleCreateRender(
     buildRenderJobData: (
       context: RenderContext,
       completedJobs: DBVideoGenJob[],
-      watermarkOpacity: number,
       textOverlaysByJobId?: Record<string, unknown>
     ) => RenderJobData;
     renderQueue: RenderQueuePort;
@@ -81,7 +80,6 @@ export async function handleCreateRender(
   const renderData = deps.buildRenderJobData(
     videoContext,
     completedJobs,
-    0,
     input.textOverlaysByJobId
   );
 

@@ -5,7 +5,7 @@ import type {
 import type {
   PreviewTextOverlay,
   PreviewTimelinePlan
-} from "@web/src/lib/domain/listing/previewTimeline";
+} from "@web/src/components/listings/create/domain/previewTimeline";
 import type { ListingContentSubcategory } from "@shared/types/models";
 import {
   hashTextOverlaySeed,
@@ -216,7 +216,6 @@ export function buildPlayablePreviews(params: {
   listingAddress: string | null;
   forceSimpleOverlayTemplate?: boolean;
   previewFps: number;
-  previewTransitionSeconds: number;
 }): PlayablePreview[] {
   const itemById = new Map(
     params.items.map((item) => [
@@ -305,8 +304,7 @@ export function buildPlayablePreviews(params: {
       firstSegmentWithOverlay?.supplementalAddressOverlay ?? null;
     const durationInFrames = getTimelineDurationInFrames(
       segmentsWithOverlays,
-      params.previewFps,
-      params.previewTransitionSeconds
+      params.previewFps
     );
 
     return {

@@ -1,21 +1,10 @@
-import {
-  isPriorityCategory,
-  normalizeRoomCategory
-} from "@shared/utils";
+import { isPriorityCategory } from "@shared/utils";
 import type {
   PreviewTextOverlay,
   PreviewTextOverlayBackground,
   PreviewTextOverlayFont,
   PreviewTextOverlayPosition
 } from "@shared/types/video";
-
-export type PreviewTransition =
-  | "crossfade"
-  | "slide-left"
-  | "push"
-  | "light-flash"
-  | "zoom-settle"
-  | "wipe";
 
 export type {
   PreviewTextOverlay,
@@ -36,7 +25,6 @@ export interface PreviewTimelineSegment {
   clipId: string;
   category: string | null;
   durationSeconds: number;
-  transitionToNext?: PreviewTransition;
   textOverlay?: PreviewTextOverlay;
 }
 
@@ -49,12 +37,10 @@ export interface PreviewTimelinePlan {
 export interface BuildPreviewTimelineOptions {
   clips: PreviewTimelineClip[];
   listingId: string;
-  transitionDurationSeconds?: number;
   seedKey?: string;
 }
 
 const DEFAULT_CLIP_DURATION_SECONDS = 3;
-const DEFAULT_TRANSITION_DURATION_SECONDS = 0;
 const MIN_CLIP_DURATION_SECONDS = 2;
 const PRIORITY_DURATION_MIN_RATIO = 0.75;
 const PRIORITY_DURATION_MAX_RATIO = 1;
@@ -116,80 +102,22 @@ function orderClips(
   return ordered;
 }
 
-function pickTransition(
-  current: PreviewTimelineClip,
-  next: PreviewTimelineClip,
-  rng: () => number,
-  previousTransition?: PreviewTransition
-): PreviewTransition {
-  const currentCategory = normalizeRoomCategory(current.category ?? "");
-  const nextCategory = normalizeRoomCategory(next.category ?? "");
-  const currentPriority =
-    current.isPriorityCategory ?? isPriorityCategory(current.category ?? "");
-  const nextPriority =
-    next.isPriorityCategory ?? isPriorityCategory(next.category ?? "");
-
-  const currentExterior = currentCategory.startsWith("exterior");
-  const nextExterior = nextCategory.startsWith("exterior");
-
-  let pool: PreviewTransition[];
-  if (currentCategory && nextCategory && currentCategory === nextCategory) {
-    pool = ["wipe", "crossfade"];
-  } else if (currentPriority && nextPriority) {
-    pool = ["push", "slide-left", "crossfade"];
-  } else if (!currentExterior && nextExterior) {
-    pool = ["light-flash", "slide-left", "crossfade"];
-  } else if (currentExterior && !nextExterior) {
-    pool = ["zoom-settle", "crossfade"];
-  } else {
-    pool = ["crossfade", "slide-left", "push", "wipe"];
-  }
-
-  if (previousTransition && pool.length > 1) {
-    const deduped = pool.filter((item) => item !== previousTransition);
-    if (deduped.length > 0) {
-      pool = deduped;
-    }
-  }
-
-  const index = Math.floor(rng() * pool.length);
-  return pool[index] ?? "crossfade";
-}
-
 export function buildPreviewTimelinePlan(
   options: BuildPreviewTimelineOptions
 ): PreviewTimelinePlan {
-  const { clips, listingId, transitionDurationSeconds, seedKey } = options;
+  const { clips, listingId, seedKey } = options;
   const resolvedSeedKey = seedKey?.trim() ? seedKey.trim() : "base";
   const rng = createSeededRng(`${listingId}:${resolvedSeedKey}`);
   const ordered = orderClips(clips, rng);
 
-  const segments: PreviewTimelineSegment[] = [];
-  let previousTransition: PreviewTransition | undefined;
-  for (let i = 0; i < ordered.length; i += 1) {
-    const clip = ordered[i];
-    const next = ordered[i + 1];
-    const transitionToNext = next
-      ? pickTransition(clip, next, rng, previousTransition)
-      : undefined;
-    if (transitionToNext) {
-      previousTransition = transitionToNext;
-    }
-    segments.push({
-      clipId: clip.id,
-      category: clip.category ?? null,
-      durationSeconds: getEffectiveDurationSeconds(clip, rng),
-      transitionToNext
-    });
-  }
+  const segments: PreviewTimelineSegment[] = ordered.map((clip) => ({
+    clipId: clip.id,
+    category: clip.category ?? null,
+    durationSeconds: getEffectiveDurationSeconds(clip, rng)
+  }));
 
-  const transitionsCount = Math.max(0, segments.length - 1);
   const totalDurationSeconds = Number(
-    (
-      segments.reduce((acc, segment) => acc + segment.durationSeconds, 0) +
-      transitionsCount *
-        (transitionDurationSeconds ?? DEFAULT_TRANSITION_DURATION_SECONDS)
-    ).toFixed(2)
+    segments.reduce((acc, segment) => acc + segment.durationSeconds, 0).toFixed(2)
   );
 
   return {

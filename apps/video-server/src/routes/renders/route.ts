@@ -56,18 +56,15 @@ router.post(
         };
       },
       fetchVideoJobs: async (videoId: string) =>
-        db.select().from(videoJobs).where(eq(videoJobs.videoGenBatchId, videoId)),
+        db
+          .select()
+          .from(videoJobs)
+          .where(eq(videoJobs.videoGenBatchId, videoId)),
       filterAndSortCompletedJobs,
-      buildRenderJobData: (
-        context,
-        completedJobs,
-        watermarkOpacity,
-        textOverlaysByJobId
-      ) =>
+      buildRenderJobData: (context, completedJobs, textOverlaysByJobId) =>
         buildRenderJobData(
           context,
           completedJobs,
-          watermarkOpacity,
           textOverlaysByJobId as Record<string, PreviewTextOverlay>
         ),
       renderQueue

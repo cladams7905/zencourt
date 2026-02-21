@@ -75,7 +75,6 @@ export function getOrientationFromJobs(
 export function buildRenderJobData(
   videoContext: VideoContextLike,
   completedJobs: CompletedJobLike[],
-  transitionDurationSeconds: number = 0,
   textOverlaysByJobId?: Record<string, PreviewTextOverlay>
 ): RenderJobData {
   const clips = buildClipsFromJobs(completedJobs, textOverlaysByJobId);
@@ -86,7 +85,6 @@ export function buildRenderJobData(
     listingId: videoContext.listingId,
     userId: videoContext.userId,
     clips,
-    orientation,
-    transitionDurationSeconds
+    orientation
   };
 }
