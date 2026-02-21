@@ -27,11 +27,13 @@ export async function sendJobCompletionWebhookOrchestrator(
   const webhookUrl = videoContext.callbackUrl;
   const webhookSecret = process.env.VERCEL_WEBHOOK_SECRET;
 
-  if (!webhookSecret) {
-    logger.warn(
-      { jobId: job.id },
-      "[VideoGenerationService] VERCEL_WEBHOOK_SECRET not configured, skipping webhook delivery"
-    );
+  if (!webhookUrl || !webhookSecret) {
+    if (!webhookSecret) {
+      logger.warn(
+        { jobId: job.id },
+        "[VideoGenerationService] VERCEL_WEBHOOK_SECRET not configured, skipping webhook delivery"
+      );
+    }
     return;
   }
 
