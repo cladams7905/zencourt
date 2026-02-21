@@ -1,5 +1,5 @@
 import type { ContentItem } from "@web/src/components/dashboard/components/ContentGrid";
-import type { PreviewTimelinePlan } from "@web/src/lib/domain/listing/previewTimeline";
+import type { PreviewTimelinePlan } from "@web/src/components/listings/create/domain/previewTimeline";
 import { buildPlayablePreviews } from "@web/src/components/listings/create/media/video/videoPreviewViewModel";
 
 jest.mock(
@@ -121,8 +121,7 @@ describe("videoPreviewViewModel", () => {
       captionItems: [{ id: "cap-1", hook: "Nice home" } as ContentItem],
       listingSubcategory: "status_update",
       listingAddress: null,
-      previewFps: 30,
-      previewTransitionSeconds: 0
+      previewFps: 30
     });
 
     expect(result).toEqual([]);
@@ -143,8 +142,7 @@ describe("videoPreviewViewModel", () => {
       ],
       listingSubcategory: "status_update",
       listingAddress: "123 Main St, Austin, TX 78701",
-      previewFps: 30,
-      previewTransitionSeconds: 0
+      previewFps: 30
     });
 
     expect(result).toHaveLength(1);
@@ -167,8 +165,7 @@ describe("videoPreviewViewModel", () => {
       ],
       listingSubcategory: "new_listing",
       listingAddress: "123 Main St, Austin, TX 78701",
-      previewFps: 30,
-      previewTransitionSeconds: 0
+      previewFps: 30
     });
 
     expect(
@@ -191,8 +188,7 @@ describe("videoPreviewViewModel", () => {
       ],
       listingSubcategory: "new_listing",
       listingAddress: "123 Main St, Austin, TX 78701",
-      previewFps: 30,
-      previewTransitionSeconds: 0
+      previewFps: 30
     });
 
     expect(
@@ -225,8 +221,7 @@ describe("videoPreviewViewModel", () => {
       listingSubcategory: "status_update",
       listingAddress: null,
       forceSimpleOverlayTemplate: true,
-      previewFps: 30,
-      previewTransitionSeconds: 0
+      previewFps: 30
     });
 
     expect(result[0]?.resolvedSegments[0]?.textOverlay?.templatePattern).toBe(

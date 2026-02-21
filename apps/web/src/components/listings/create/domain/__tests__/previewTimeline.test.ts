@@ -3,7 +3,7 @@ import {
   buildPreviewTimelinePlans,
   buildPreviewTimelineVariants,
   type PreviewTimelineClip
-} from "@web/src/lib/domain/listing/previewTimeline";
+} from "@web/src/components/listings/create/domain/previewTimeline";
 
 const clips: PreviewTimelineClip[] = [
   { id: "a", category: "kitchen", durationSeconds: 4, isPriorityCategory: true, sortOrder: 1 },
@@ -21,7 +21,7 @@ describe("previewTimeline", () => {
     expect(first.id).toBe("plan-seed-1");
   });
 
-  it("applies minimum duration and includes transition duration in total", () => {
+  it("applies minimum duration and total equals sum of segment durations", () => {
     const minDurationClips: PreviewTimelineClip[] = [
       { id: "x", durationSeconds: 1, isPriorityCategory: false },
       { id: "y", durationSeconds: 1, isPriorityCategory: false }
@@ -30,7 +30,6 @@ describe("previewTimeline", () => {
     const plan = buildPreviewTimelinePlan({
       clips: minDurationClips,
       listingId: "listing-2",
-      transitionDurationSeconds: 0.5,
       seedKey: "seed-min"
     });
 
@@ -40,7 +39,7 @@ describe("previewTimeline", () => {
     }
 
     const baseDuration = plan.segments.reduce((acc, segment) => acc + segment.durationSeconds, 0);
-    expect(plan.totalDurationSeconds).toBe(Number((baseDuration + 0.5).toFixed(2)));
+    expect(plan.totalDurationSeconds).toBe(Number(baseDuration.toFixed(2)));
   });
 
   it("builds series and variants with stable ids", () => {

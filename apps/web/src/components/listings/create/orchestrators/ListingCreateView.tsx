@@ -8,7 +8,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   buildPreviewTimelinePlan,
   type PreviewTimelinePlan
-} from "@web/src/lib/domain/listing/previewTimeline";
+} from "@web/src/components/listings/create/domain/previewTimeline";
 import { ListingVideoPreviewGrid } from "@web/src/components/listings/create/orchestrators/ListingVideoPreviewGrid";
 import { ListingImagePreviewGrid } from "@web/src/components/listings/create/orchestrators/ListingImagePreviewGrid";
 import {

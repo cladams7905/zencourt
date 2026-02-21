@@ -2,13 +2,10 @@
 
 import * as React from "react";
 import type { ContentItem } from "@web/src/components/dashboard/components/ContentGrid";
-import type { PreviewTimelinePlan } from "@web/src/lib/domain/listing/previewTimeline";
+import type { PreviewTimelinePlan } from "@web/src/components/listings/create/domain/previewTimeline";
 import type { ListingContentSubcategory } from "@shared/types/models";
 import { buildPlayablePreviews } from "@web/src/components/listings/create/media/video/videoPreviewViewModel";
-import {
-  PREVIEW_FPS,
-  PREVIEW_TRANSITION_SECONDS
-} from "@web/src/components/listings/create/media/video/previewConstants";
+import { PREVIEW_FPS } from "@web/src/components/listings/create/media/video/previewConstants";
 import { useHoverReveal } from "@web/src/components/listings/create/media/video/useHoverReveal";
 import { VideoPreviewCard } from "@web/src/components/listings/create/media/video/components/VideoPreviewCard";
 import { VideoPreviewModal } from "@web/src/components/listings/create/media/video/components/VideoPreviewModal";
@@ -52,8 +49,7 @@ export function ListingVideoPreviewGrid({
         listingSubcategory,
         listingAddress,
         forceSimpleOverlayTemplate,
-        previewFps: PREVIEW_FPS,
-        previewTransitionSeconds: PREVIEW_TRANSITION_SECONDS
+        previewFps: PREVIEW_FPS
       }),
     [
       captionItems,
@@ -85,7 +81,6 @@ export function ListingVideoPreviewGrid({
             isRevealed={revealedId === preview.id}
             isFavorite={favoritePlanIds.has(preview.id)}
             previewFps={PREVIEW_FPS}
-            previewTransitionSeconds={PREVIEW_TRANSITION_SECONDS}
             onEnter={() => handleEnter(preview.id)}
             onLeave={handleLeave}
             onSelect={() => setSelectedPlanId(preview.id)}
@@ -111,7 +106,6 @@ export function ListingVideoPreviewGrid({
         selectedPreview={selectedPreview}
         captionSubcategoryLabel={captionSubcategoryLabel}
         previewFps={PREVIEW_FPS}
-        previewTransitionSeconds={PREVIEW_TRANSITION_SECONDS}
         onOpenChange={(open) => {
           if (!open) {
             setSelectedPlanId(null);

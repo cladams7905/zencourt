@@ -15,7 +15,6 @@ export const RemotionRoot: React.FC = () => {
       height={1280}
       defaultProps={{
         clips: [],
-        transitionDurationSeconds: 0,
         orientation: "vertical"
       }}
       calculateMetadata={({ props }) => {

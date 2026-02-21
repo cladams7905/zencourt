@@ -11,8 +11,7 @@ function makeJobData(): RenderJobData {
     listingId: "listing-1",
     userId: "user-1",
     clips: [{ src: "https://cdn/clip.mp4", durationSeconds: 2 }],
-    orientation: "vertical",
-    transitionDurationSeconds: 0
+    orientation: "vertical"
   };
 }
 

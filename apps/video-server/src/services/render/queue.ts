@@ -107,7 +107,6 @@ class RenderQueue {
       const result = await this.provider.renderListingVideo({
         clips: job.data.clips,
         orientation: job.data.orientation,
-        transitionDurationSeconds: job.data.transitionDurationSeconds,
         videoId: job.data.videoId,
         cancelSignal,
         onProgress: (progress) => {

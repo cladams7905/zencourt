@@ -9,7 +9,6 @@ type VideoPreviewModalProps = {
   selectedPreview: PlayablePreview | null;
   captionSubcategoryLabel: string;
   previewFps: number;
-  previewTransitionSeconds: number;
   onOpenChange: (open: boolean) => void;
 };
 
@@ -17,7 +16,6 @@ export function VideoPreviewModal({
   selectedPreview,
   captionSubcategoryLabel,
   previewFps,
-  previewTransitionSeconds,
   onOpenChange
 }: VideoPreviewModalProps) {
   return (
@@ -33,8 +31,7 @@ export function VideoPreviewModal({
                 <Player
                   component={ListingTimelinePreviewComposition}
                   inputProps={{
-                    segments: selectedPreview.resolvedSegments,
-                    transitionDurationSeconds: previewTransitionSeconds
+                    segments: selectedPreview.resolvedSegments
                   }}
                   durationInFrames={selectedPreview.durationInFrames}
                   compositionWidth={1080}

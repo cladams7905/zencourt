@@ -22,7 +22,9 @@ describe("renders request parsing", () => {
   });
 
   it("throws when videoId is whitespace", () => {
-    expect(() => parseCreateRenderRequest({ videoId: "  " })).toThrow("videoId required");
+    expect(() => parseCreateRenderRequest({ videoId: "  " })).toThrow(
+      "videoId required"
+    );
   });
 
   it("throws when jobId param is missing", () => {

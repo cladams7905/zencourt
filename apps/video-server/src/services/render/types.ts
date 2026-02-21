@@ -6,7 +6,6 @@ export type RenderJobData = {
   userId: string;
   clips: ListingClip[];
   orientation: "vertical" | "landscape";
-  transitionDurationSeconds?: number;
 };
 
 export type RenderJobState =

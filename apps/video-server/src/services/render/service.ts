@@ -26,7 +26,6 @@ export type RenderServiceProviderFacade = {
   renderListingVideo: (options: {
     clips: RenderJobData["clips"];
     orientation: RenderJobData["orientation"];
-    transitionDurationSeconds?: number;
     videoId: string;
     onProgress?: (progress: number) => void;
     cancelSignal?: CancelSignal;

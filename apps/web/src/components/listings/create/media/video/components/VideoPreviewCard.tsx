@@ -16,7 +16,6 @@ type VideoPreviewCardProps = {
   isRevealed: boolean;
   isFavorite: boolean;
   previewFps: number;
-  previewTransitionSeconds: number;
   onEnter: () => void;
   onLeave: () => void;
   onSelect: () => void;
@@ -29,7 +28,6 @@ export function VideoPreviewCard({
   isRevealed,
   isFavorite,
   previewFps,
-  previewTransitionSeconds,
   onEnter,
   onLeave,
   onSelect,
@@ -126,8 +124,7 @@ export function VideoPreviewCard({
             <Player
               component={ListingTimelinePreviewComposition}
               inputProps={{
-                segments: preview.resolvedSegments,
-                transitionDurationSeconds: previewTransitionSeconds
+                segments: preview.resolvedSegments
               }}
               durationInFrames={preview.durationInFrames}
               compositionWidth={1080}

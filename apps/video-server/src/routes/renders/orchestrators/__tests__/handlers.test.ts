@@ -61,7 +61,11 @@ describe("renders orchestrators", () => {
           fetchVideoJobs: jest.fn(),
           filterAndSortCompletedJobs: jest.fn(),
           buildRenderJobData: jest.fn(),
-          renderQueue: { createJob: jest.fn(), getJob: jest.fn(), cancelJob: jest.fn() }
+          renderQueue: {
+            createJob: jest.fn(),
+            getJob: jest.fn(),
+            cancelJob: jest.fn()
+          }
         }
       )
     ).rejects.toThrow("video without context");
@@ -80,7 +84,11 @@ describe("renders orchestrators", () => {
           fetchVideoJobs: jest.fn().mockResolvedValue([]),
           filterAndSortCompletedJobs: jest.fn().mockReturnValue([]),
           buildRenderJobData: jest.fn(),
-          renderQueue: { createJob: jest.fn(), getJob: jest.fn(), cancelJob: jest.fn() }
+          renderQueue: {
+            createJob: jest.fn(),
+            getJob: jest.fn(),
+            cancelJob: jest.fn()
+          }
         }
       )
     ).rejects.toThrow("no completed jobs");
@@ -110,8 +118,7 @@ describe("renders orchestrators", () => {
       listingId: "listing-1",
       userId: "user-1",
       clips: [{ src: "https://cdn/clip.mp4", durationSeconds: 2 }],
-      orientation: "vertical",
-      transitionDurationSeconds: 0
+      orientation: "vertical"
     };
 
     const provider = {
