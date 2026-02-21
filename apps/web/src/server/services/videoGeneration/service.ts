@@ -12,9 +12,12 @@ import { isPriorityCategory } from "@shared/utils";
 import type {
   DBListingImage,
   InsertDBVideoGenBatch,
-  InsertDBVideoGenJob,
+  InsertDBVideoGenJob
 } from "@db/types/models";
-import type { JobGenerationSettings, VideoOrientation } from "@shared/types/models";
+import type {
+  JobGenerationSettings,
+  VideoOrientation
+} from "@shared/types/models";
 import { buildPrompt } from "./domain/prompt";
 import {
   buildRoomsFromImages,
@@ -24,9 +27,7 @@ import {
   selectPrimaryImageForRoom,
   selectSecondaryImageForRoom
 } from "./domain/rooms";
-import {
-  getVideoGenerationConfig
-} from "./config";
+import { getVideoGenerationConfig } from "./config";
 
 const logger = createChildLogger(baseLogger, {
   module: "video-generation-service"
@@ -38,12 +39,8 @@ function buildVideoServerRequestBody(args: {
   listingId: string;
   userId: string;
 }): string {
-  // VERCEL_URL is injected by Vercel at runtime (without https:// prefix).
-  // Fall back to VERCEL_API_URL for local dev (e.g. http://host.docker.internal:3000).
-  const host = process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : process.env.VERCEL_API_URL;
-  const callbackUrl = `${host}/api/v1/webhooks/video`;
+  const config = getVideoGenerationConfig();
+  const callbackUrl = `${config.appUrl}/api/v1/webhooks/video`;
 
   return JSON.stringify({
     videoId: args.parentVideoId,
@@ -54,9 +51,7 @@ function buildVideoServerRequestBody(args: {
   });
 }
 
-async function handleVideoServerError(
-  response: Response
-): Promise<never> {
+async function handleVideoServerError(response: Response): Promise<never> {
   const errorData = await response.json().catch(() => ({}));
   const message =
     errorData.error || errorData.message || "Video server request failed";
@@ -104,7 +99,9 @@ function findImageByUrl(
   category: string,
   imageUrl: string
 ): DBListingImage | undefined {
-  return (groupedImages.get(category) || []).find((img) => img.url === imageUrl);
+  return (groupedImages.get(category) || []).find(
+    (img) => img.url === imageUrl
+  );
 }
 
 async function buildPrimaryJobRecord(args: {
@@ -220,7 +217,11 @@ async function buildSecondaryJobRecord(args: {
     return null;
   }
 
-  const secondaryImage = findImageByUrl(groupedImages, category, secondaryImageUrl);
+  const secondaryImage = findImageByUrl(
+    groupedImages,
+    category,
+    secondaryImageUrl
+  );
   const publicSecondaryUrls = await getSignedDownloadUrls([secondaryImageUrl]);
 
   const secondaryPrompt = buildPrompt({
@@ -396,9 +397,10 @@ function validateImagesExist(listingImageRows: DBListingImage[]): void {
   }
 }
 
-function createParentVideoBatchRecord(
-  listingId: string
-): { id: string; record: InsertDBVideoGenBatch } {
+function createParentVideoBatchRecord(listingId: string): {
+  id: string;
+  record: InsertDBVideoGenBatch;
+} {
   const parentVideoId = nanoid();
   const record: InsertDBVideoGenBatch = {
     id: parentVideoId,

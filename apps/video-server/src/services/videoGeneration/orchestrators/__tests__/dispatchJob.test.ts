@@ -101,8 +101,12 @@ describe("dispatchJobOrchestrator", () => {
 
   it("throws when job is missing imageUrls", async () => {
     const jobWithoutImages = {
-      ...(baseJob as object),
-      generationSettings: { prompt: "prompt", imageUrls: [], orientation: "vertical" }
+      ...baseJob,
+      generationSettings: {
+        prompt: "prompt",
+        imageUrls: [],
+        orientation: "vertical"
+      }
     } as never;
 
     await expect(
@@ -120,7 +124,7 @@ describe("dispatchJobOrchestrator", () => {
 
   it("throws when job is missing generationSettings", async () => {
     const jobWithoutSettings = {
-      ...(baseJob as object),
+      ...baseJob,
       generationSettings: null
     } as never;
 
@@ -139,8 +143,12 @@ describe("dispatchJobOrchestrator", () => {
 
   it("throws when job is missing prompt", async () => {
     const jobWithoutPrompt = {
-      ...(baseJob as object),
-      generationSettings: { prompt: "", imageUrls: ["https://image.jpg"], orientation: "vertical" }
+      ...baseJob,
+      generationSettings: {
+        prompt: "",
+        imageUrls: ["https://image.jpg"],
+        orientation: "vertical"
+      }
     } as never;
 
     await expect(
@@ -212,11 +220,16 @@ describe("dispatchJobOrchestrator", () => {
     await tick();
     await tick();
 
-    expect(onProviderOutputFailure).toHaveBeenCalledWith("job-1", "provider task failed");
+    expect(onProviderOutputFailure).toHaveBeenCalledWith(
+      "job-1",
+      "provider task failed"
+    );
   });
 
   it("logs when onProviderOutputFailure rejects", async () => {
-    const onProviderOutputFailure = jest.fn().mockRejectedValue(new Error("handler failed"));
+    const onProviderOutputFailure = jest
+      .fn()
+      .mockRejectedValue(new Error("handler failed"));
     const primaryProviderFacade: any = {
       dispatch: jest.fn().mockResolvedValue({
         provider: "primary",
@@ -239,6 +252,9 @@ describe("dispatchJobOrchestrator", () => {
     await tick();
     await tick();
 
-    expect(onProviderOutputFailure).toHaveBeenCalledWith("job-1", "provider task failed");
+    expect(onProviderOutputFailure).toHaveBeenCalledWith(
+      "job-1",
+      "provider task failed"
+    );
   });
 });

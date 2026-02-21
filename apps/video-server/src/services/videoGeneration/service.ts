@@ -72,17 +72,11 @@ class VideoGenerationService {
       );
     }
 
-    // callbackUrl is not stored in the DB — fall back to the env var if the
-    // cache was cold (e.g. after a server restart mid-job).
-    const context: VideoContext = {
-      videoId: record.videoId,
-      listingId: record.listingId,
-      userId: record.userId,
-      callbackUrl: `${process.env.VERCEL_API_URL}/api/v1/webhooks/video`
-    };
-
-    this.videoContextCache.set(videoId, context);
-    return context;
+    // callbackUrl is not stored in the DB. When cache is cold (e.g. after a
+    // server restart mid-job), we cannot recover it — throw.
+    throw new Error(
+      `callbackUrl unavailable for video ${videoId} (cache cold; video server may have restarted mid-job)`
+    );
   }
 
   // Build webhook callback URL with requestId for provider job correlation.
@@ -110,7 +104,7 @@ class VideoGenerationService {
     request: VideoServerGenerateRequest
   ): Promise<GenerationResult> {
     // Seed the context cache with the per-request callbackUrl so webhook
-    // delivery uses the caller's URL rather than the VERCEL_API_URL env var.
+    // delivery uses the caller's URL.
     this.videoContextCache.set(request.videoId, {
       videoId: request.videoId,
       listingId: request.listingId,
