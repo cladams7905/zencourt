@@ -1,4 +1,4 @@
-import { parseMarketLocation } from "@web/src/lib/domain/location/marketLocation";
+import { parseMarketLocation } from "../marketLocation";
 
 describe("parseMarketLocation", () => {
   it("parses city/state/zip from a valid location string", () => {

@@ -15,7 +15,7 @@ jest.mock("../../../../_utils", () => ({
     }
   }
 }));
-jest.mock("@web/src/lib/domain/location/marketLocation", () => ({
+jest.mock("../marketLocation", () => ({
   parseMarketLocation: (...args: unknown[]) => mockParseMarketLocation(...args)
 }));
 jest.mock("@web/src/server/services/marketData", () => ({

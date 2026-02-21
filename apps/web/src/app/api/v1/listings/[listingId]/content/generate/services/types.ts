@@ -2,7 +2,8 @@ import type {
   ListingContentSubcategory,
   ListingPropertyDetails
 } from "@shared/types/models";
-import type { ListingMediaType } from "@web/src/lib/domain/listing";
+
+export type ListingMediaType = "video" | "image";
 
 export type ListingGeneratedItem = {
   hook: string;

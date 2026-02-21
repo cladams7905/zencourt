@@ -1,7 +1,7 @@
 import { ApiError } from "../../../_utils";
 import { StatusCode } from "@web/src/app/api/v1/_responses";
 import type { PromptAssemblyInput } from "@web/src/lib/ai/prompts/engine/assemble";
-import { parseMarketLocation } from "@web/src/lib/domain/location/marketLocation";
+import { parseMarketLocation } from "./marketLocation";
 import { getMarketData } from "@web/src/server/services/marketData";
 import { getCommunityContentContext } from "@web/src/server/services/communityData/service";
 import type { CommunityCategoryKey } from "@web/src/server/services/contentRotation";
