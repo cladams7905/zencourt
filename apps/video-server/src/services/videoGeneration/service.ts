@@ -73,10 +73,16 @@ class VideoGenerationService {
     }
 
     // callbackUrl is not stored in the DB. When cache is cold (e.g. after a
-    // server restart mid-job), we cannot recover it — throw.
-    throw new Error(
-      `callbackUrl unavailable for video ${videoId} (cache cold; video server may have restarted mid-job)`
-    );
+    // server restart or 30-min TTL expiry), return context with empty callbackUrl.
+    // Webhook delivery will skip, but job completion and video upload continue.
+    const context: VideoContext = {
+      videoId: record.videoId,
+      listingId: record.listingId,
+      userId: record.userId,
+      callbackUrl: ""
+    };
+    this.videoContextCache.set(videoId, context);
+    return context;
   }
 
   // Build webhook callback URL with requestId for provider job correlation.
