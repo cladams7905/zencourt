@@ -11,6 +11,7 @@ type LoadingVideoProps = Omit<
   videoSrc: string;
   thumbnailSrc?: string | null;
   thumbnailAlt?: string;
+  thumbnailUnoptimized?: boolean;
   className?: string;
   imageClassName?: string;
   videoClassName?: string;
@@ -20,6 +21,7 @@ export function LoadingVideo({
   videoSrc,
   thumbnailSrc,
   thumbnailAlt = "Video preview",
+  thumbnailUnoptimized = false,
   className,
   imageClassName,
   videoClassName,
@@ -80,6 +82,7 @@ export function LoadingVideo({
             src={thumbnailSrc}
             alt={thumbnailAlt}
             fill
+            unoptimized={thumbnailUnoptimized}
             sizes="(min-width: 1536px) 22vw, (min-width: 1280px) 26vw, (min-width: 1024px) 32vw, (min-width: 768px) 48vw, 100vw"
             className={cn("object-cover", imageClassName)}
           />

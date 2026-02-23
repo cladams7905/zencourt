@@ -24,6 +24,7 @@ export const MediaCard = ({ item, onDelete }: MediaCardProps) => {
               videoSrc={item.url}
               thumbnailSrc={item.thumbnailUrl ?? undefined}
               thumbnailAlt="Video preview"
+              thumbnailUnoptimized
               className="h-full w-full"
               imageClassName="object-cover"
               videoClassName="object-cover"
@@ -37,6 +38,7 @@ export const MediaCard = ({ item, onDelete }: MediaCardProps) => {
               src={item.url}
               alt="Uploaded media"
               fill
+              unoptimized
               sizes="(min-width: 1536px) 22vw, (min-width: 1280px) 26vw, (min-width: 1024px) 32vw, (min-width: 768px) 48vw, 100vw"
               className="object-cover"
             />
