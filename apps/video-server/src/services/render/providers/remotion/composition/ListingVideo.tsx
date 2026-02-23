@@ -29,18 +29,15 @@ export type ListingVideoProps = {
 
 function ClipSequence({
   clip,
-  index,
   startFrame,
   clipFrames
 }: {
   clip: ListingClip;
-  index: number;
   startFrame: number;
   clipFrames: number;
 }) {
   return (
     <Sequence
-      key={`${clip.src}-${index}`}
       from={startFrame}
       durationInFrames={clipFrames}
     >
@@ -71,9 +68,8 @@ export const ListingVideo: React.FC<ListingVideoProps> = ({ clips }) => {
 
         return (
           <ClipSequence
-            key={`${clip.src}-${index}`}
+            key={clip.src}
             clip={clip}
-            index={index}
             startFrame={startFrame}
             clipFrames={clipFrames}
           />
