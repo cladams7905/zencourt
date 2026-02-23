@@ -97,8 +97,8 @@ export function ListingVideoPreviewGrid({
             }
           />
         ))}
-        {Array.from({ length: skeletonCount }, (_, i) => (
-          <VideoPreviewSkeletonCard key={`skeleton-video-${i}`} />
+        {[...Array(skeletonCount).keys()].map((n) => (
+          <VideoPreviewSkeletonCard key={`skeleton-video-${n}`} />
         ))}
       </div>
 

@@ -99,7 +99,7 @@ export function VideoPreviewModal({
                     <div className="mt-2 space-y-2">
                       {selectedPreview.captionItem.body.map((slide, index) => (
                         <p
-                          key={`${selectedPreview.captionItem?.id}-slide-${index}`}
+                          key={`${selectedPreview.captionItem?.id}-${slide.header}`}
                           className="text-xs text-muted-foreground"
                         >
                           {index + 1}. {slide.header}: {slide.content}

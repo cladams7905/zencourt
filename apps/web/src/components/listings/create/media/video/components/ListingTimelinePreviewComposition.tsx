@@ -48,7 +48,7 @@ export const ListingTimelinePreviewComposition: React.FC<
 
   return (
     <AbsoluteFill style={{ backgroundColor: "black" }}>
-      {segments.map((segment, index) => {
+      {segments.map((segment) => {
         const clipFrames = Math.max(
           1,
           Math.round(segment.durationSeconds * fps)
@@ -58,7 +58,7 @@ export const ListingTimelinePreviewComposition: React.FC<
 
         return (
           <Sequence
-            key={`${segment.clipId}-${index}`}
+            key={segment.clipId}
             from={startFrame}
             durationInFrames={clipFrames}
             premountFor={PREMOUNT_FRAMES}

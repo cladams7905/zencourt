@@ -9,7 +9,7 @@ import {
   PREVIEW_TEXT_OVERLAY_BORDER_RADIUS,
   PREVIEW_TEXT_OVERLAY_TEXT_COLOR
 } from "../assets/layout";
-import { computeOverlayLineStyles } from "../renderer/index";
+import { computeOverlayLineStyles } from "../renderer";
 import { pickSandwichOverlayArrowPath } from "../assets/arrows";
 
 export interface PreviewTextOverlayRendererProps {
@@ -70,9 +70,9 @@ export function PreviewTextOverlayRenderer({
           textAlign: "center"
         }}
       >
-        {lineStyles.map((line, i) => (
+        {lineStyles.map((line) => (
           <div
-            key={i}
+            key={line.text}
             style={{
               fontFamily: line.fontFamily,
               fontWeight: line.fontWeight,

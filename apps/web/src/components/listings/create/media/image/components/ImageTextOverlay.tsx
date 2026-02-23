@@ -59,9 +59,9 @@ export function ImageTextOverlay({ overlay }: { overlay: PreviewTextOverlay }) {
             textAlign: "center"
           }}
         >
-          {lineStyles.map((line, i) => (
+          {lineStyles.map((line) => (
             <div
-              key={i}
+              key={line.text}
               style={{
                 fontFamily: line.fontFamily,
                 fontWeight: line.fontWeight,

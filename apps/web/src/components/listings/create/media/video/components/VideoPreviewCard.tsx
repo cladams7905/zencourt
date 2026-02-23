@@ -35,10 +35,15 @@ export function VideoPreviewCard({
 }: VideoPreviewCardProps) {
   return (
     <div
-      className="group overflow-hidden rounded-xl bg-card shadow-sm"
+      role="button"
+      tabIndex={0}
+      className="group cursor-pointer overflow-hidden rounded-xl bg-card shadow-sm"
       onMouseEnter={onEnter}
       onMouseLeave={onLeave}
       onClick={onSelect}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") onSelect();
+      }}
     >
       <div className="relative overflow-hidden">
         <div className="absolute right-3 top-3 z-10 flex gap-2 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
