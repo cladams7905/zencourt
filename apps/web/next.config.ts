@@ -74,6 +74,12 @@ const nextConfig: NextConfig = {
         hostname: "f005.backblazeb2.com",
         pathname: "/**"
       },
+      // CDN (Cloudflare Worker proxy to B2); always allow so next/image works when STORAGE_PUBLIC_BASE_URL is set
+      {
+        protocol: "https",
+        hostname: "cdn.zencourt.ai",
+        pathname: "/**"
+      },
       ...(storagePublicPattern ? [storagePublicPattern] : [])
     ]
   }
