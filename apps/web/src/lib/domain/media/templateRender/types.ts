@@ -56,6 +56,9 @@ export type TemplateRenderCaptionItemInput = {
   hook: string | null;
   caption: string | null;
   body: TemplateRenderCaptionSlideInput[];
+  /** When present, template render API can read/update the unified content cache for this item. */
+  cacheKeyTimestamp?: number;
+  cacheKeyId?: number;
 };
 
 export type ListingTemplateRenderRequest = {

@@ -17,11 +17,10 @@ import {
 } from "@web/src/lib/core/logging/logger";
 import storageService from "@web/src/server/services/storage";
 import {
-  buildTemplateRenderCacheKey,
-  cachedToRenderedItem,
-  getCachedTemplateRender,
-  setCachedTemplateRender
-} from "./cache";
+  getCachedListingContentItem,
+  updateRenderedPreviewForItem
+} from "@web/src/app/api/v1/listings/[listingId]/content/generate/services/cache";
+import type { ListingMediaType } from "@web/src/app/api/v1/listings/[listingId]/content/generate/services/types";
 import { buildFallbackRenderedItem } from "./providers/fallback";
 import {
   renderTemplate,
@@ -282,13 +281,20 @@ export async function renderListingTemplateBatch(params: {
   };
 }
 
+export type TemplateRenderCaptionItemWithCacheKey = TemplateRenderCaptionItemInput & {
+  cacheKeyTimestamp?: number;
+  cacheKeyId?: number;
+};
+
 export type RenderListingTemplateBatchStreamParams = {
+  userId: string;
   listingId: string;
   subcategory: ListingContentSubcategory;
+  mediaType: ListingMediaType;
   listing: DBListing;
   listingImages: DBListingImage[];
   userAdditional: DBUserAdditional;
-  captionItems: TemplateRenderCaptionItemInput[];
+  captionItems: TemplateRenderCaptionItemWithCacheKey[];
   templateCount?: number;
   siteOrigin?: string | null;
   random?: () => number;
@@ -329,7 +335,39 @@ export async function renderListingTemplateBatchStream(
 
   for (let index = 0; index < selectedTemplates.length; index += 1) {
     const template = selectedTemplates[index] as TemplateRenderConfig;
-    const captionItem = selectCaptionItem(params.captionItems, index);
+    const captionItem = selectCaptionItem(
+      params.captionItems,
+      index
+    ) as TemplateRenderCaptionItemWithCacheKey;
+
+    const cacheKeyTimestamp = captionItem.cacheKeyTimestamp;
+    const cacheKeyId = captionItem.cacheKeyId;
+    const hasCacheKey =
+      typeof cacheKeyTimestamp === "number" && typeof cacheKeyId === "number";
+
+    if (hasCacheKey) {
+      const cachedItem = await getCachedListingContentItem({
+        userId: params.userId,
+        listingId: params.listingId,
+        subcategory: params.subcategory,
+        mediaType: params.mediaType,
+        timestamp: cacheKeyTimestamp,
+        id: cacheKeyId
+      });
+      if (
+        cachedItem?.renderedImageUrl &&
+        typeof cachedItem.renderedImageUrl === "string" &&
+        cachedItem.renderedImageUrl.length > 0
+      ) {
+        await callbacks.onItem({
+          templateId: cachedItem.renderedTemplateId ?? template.id,
+          imageUrl: cachedItem.renderedImageUrl,
+          captionItemId: captionItem.id,
+          parametersUsed: {}
+        });
+        continue;
+      }
+    }
 
     const resolvedParameters = resolveTemplateParameters({
       subcategory: params.subcategory,
@@ -347,32 +385,25 @@ export async function renderListingTemplateBatchStream(
       template
     });
 
-    const cacheKey = buildTemplateRenderCacheKey({
-      listingId: params.listingId,
-      subcategory: params.subcategory,
-      captionItemId: captionItem.id,
-      templateId: template.id,
-      modifications
-    });
-
-    const cached = await getCachedTemplateRender(cacheKey);
-    if (cached) {
-      await callbacks.onItem(cachedToRenderedItem(cached));
-      continue;
-    }
-
     try {
       const imageUrl = await renderTemplate({
         templateId: template.id,
         modifications
       });
 
-      await setCachedTemplateRender(cacheKey, {
-        imageUrl,
-        templateId: template.id,
-        captionItemId: captionItem.id,
-        modifications
-      });
+      if (hasCacheKey) {
+        await updateRenderedPreviewForItem({
+          userId: params.userId,
+          listingId: params.listingId,
+          subcategory: params.subcategory,
+          mediaType: params.mediaType,
+          timestamp: cacheKeyTimestamp!,
+          id: cacheKeyId!,
+          imageUrl,
+          templateId: template.id,
+          modifications
+        });
+      }
 
       await callbacks.onItem({
         templateId: template.id,

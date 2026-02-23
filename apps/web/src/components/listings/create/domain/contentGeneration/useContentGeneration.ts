@@ -21,8 +21,6 @@ import {
 } from "./stream";
 import type { StreamedContentItem } from "./types";
 
-const INITIAL_SKELETON_HOLD_MS = 350;
-
 const generateUUID = () => {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return crypto.randomUUID();
@@ -51,9 +49,6 @@ export function useContentGeneration(params: {
   const [localPostItems, setLocalPostItems] =
     React.useState<ContentItem[]>(listingPostItems);
   const [isGenerating, setIsGenerating] = React.useState(false);
-  const [activeBatchStreamedCount, setActiveBatchStreamedCount] =
-    React.useState(0);
-  const [holdInitialSkeletons, setHoldInitialSkeletons] = React.useState(false);
   const [incompleteBatchSkeletonCount, setIncompleteBatchSkeletonCount] =
     React.useState(0);
   const [generationError, setGenerationError] = React.useState<string | null>(
@@ -63,13 +58,16 @@ export function useContentGeneration(params: {
   const streamBufferRef = React.useRef("");
   const parsedItemsRef = React.useRef<StreamedContentItem[]>([]);
   const activeControllerRef = React.useRef<AbortController | null>(null);
-  const initialSkeletonHoldTimeoutRef = React.useRef<number | null>(null);
   const activeBatchIdRef = React.useRef<string>("");
   const activeBatchItemIdsRef = React.useRef<string[]>([]);
 
   React.useEffect(() => {
     setIncompleteBatchSkeletonCount(0);
   }, [activeSubcategory, activeMediaTab]);
+
+  React.useEffect(() => {
+    setLocalPostItems(listingPostItems);
+  }, [listingId]); // eslint-disable-line react-hooks/exhaustive-deps -- only sync when listing changes so we show that listing's cache; listingPostItems omitted to avoid loop when parent passes new array ref
 
   const generateSubcategoryContent = React.useCallback(
     async (
@@ -84,16 +82,7 @@ export function useContentGeneration(params: {
       activeBatchIdRef.current = generateUUID();
       activeBatchItemIdsRef.current = [];
       setIsGenerating(true);
-      setActiveBatchStreamedCount(0);
       setIncompleteBatchSkeletonCount(0);
-      setHoldInitialSkeletons(true);
-      if (initialSkeletonHoldTimeoutRef.current !== null) {
-        window.clearTimeout(initialSkeletonHoldTimeoutRef.current);
-      }
-      initialSkeletonHoldTimeoutRef.current = window.setTimeout(() => {
-        setHoldInitialSkeletons(false);
-        initialSkeletonHoldTimeoutRef.current = null;
-      }, INITIAL_SKELETON_HOLD_MS);
       setGenerationError(null);
       streamBufferRef.current = "";
       parsedItemsRef.current = [];
@@ -139,9 +128,6 @@ export function useContentGeneration(params: {
                 ...removeCurrentBatchItems(prev, activeBatchItemIdsRef.current),
                 ...streamedContentItems
               ]);
-              setActiveBatchStreamedCount(
-                Math.min(GENERATED_BATCH_SIZE, parsedItems.length)
-              );
             }
           }
 
@@ -151,9 +137,6 @@ export function useContentGeneration(params: {
 
           if (event.type === "done") {
             didReceiveDone = true;
-            setActiveBatchStreamedCount(
-              Math.min(GENERATED_BATCH_SIZE, event.items.length)
-            );
 
             const missingCount = Math.max(
               0,
@@ -175,7 +158,8 @@ export function useContentGeneration(params: {
               items: event.items,
               batchItemIds: activeBatchItemIdsRef.current,
               subcategory,
-              mediaType: resolvedMediaType
+              mediaType: resolvedMediaType,
+              cacheKeyTimestamp: event.meta?.cache_key_timestamp
             });
 
             setLocalPostItems((prev) =>
@@ -213,13 +197,7 @@ export function useContentGeneration(params: {
         if (activeControllerRef.current === controller) {
           activeControllerRef.current = null;
         }
-        if (initialSkeletonHoldTimeoutRef.current !== null) {
-          window.clearTimeout(initialSkeletonHoldTimeoutRef.current);
-          initialSkeletonHoldTimeoutRef.current = null;
-        }
-        setHoldInitialSkeletons(false);
         setIsGenerating(false);
-        setActiveBatchStreamedCount(0);
         activeBatchIdRef.current = "";
         activeBatchItemIdsRef.current = [];
       }
@@ -227,18 +205,8 @@ export function useContentGeneration(params: {
     [activeMediaTab, listingId]
   );
 
-  React.useEffect(() => {
-    return () => {
-      if (initialSkeletonHoldTimeoutRef.current !== null) {
-        window.clearTimeout(initialSkeletonHoldTimeoutRef.current);
-      }
-    };
-  }, []);
-
   const loadingCount = isGenerating
-    ? holdInitialSkeletons
-      ? GENERATED_BATCH_SIZE
-      : Math.max(0, GENERATED_BATCH_SIZE - activeBatchStreamedCount)
+    ? GENERATED_BATCH_SIZE
     : incompleteBatchSkeletonCount;
 
   return {

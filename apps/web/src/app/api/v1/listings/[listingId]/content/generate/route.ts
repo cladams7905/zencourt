@@ -20,7 +20,8 @@ import {
 import type { GenerateListingContentBody } from "./services/types";
 import {
   getCachedListingContent,
-  setCachedListingContent
+  setCachedListingContent,
+  setCachedListingContentItem
 } from "./services/cache";
 import { resolveListingContext } from "./services/listingContext";
 import { parseAndValidateParams } from "./services/requestValidation";
@@ -151,11 +152,35 @@ export async function POST(
 
         await setCachedListingContent(context.cacheKey, doneItems);
 
+        const timestamp = Date.now();
+        for (let id = 0; id < doneItems.length; id += 1) {
+          const item = doneItems[id];
+          if (!item) continue;
+          await setCachedListingContentItem({
+            userId: context.userId,
+            listingId: context.listingId,
+            subcategory: context.subcategory,
+            mediaType: context.mediaType,
+            timestamp,
+            id,
+            item: {
+              ...item,
+              renderedImageUrl: null,
+              renderedTemplateId: undefined,
+              renderedModifications: undefined
+            }
+          });
+        }
+
         controller.enqueue(
           encodeSseEvent({
             type: "done",
             items: doneItems,
-            meta: { model: "generated", batch_size: doneItems.length }
+            meta: {
+              model: "generated",
+              batch_size: doneItems.length,
+              cache_key_timestamp: timestamp
+            }
           })
         );
         controller.close();

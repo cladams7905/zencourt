@@ -8,6 +8,7 @@ const mockStreamEvents: Array<{ type: "item"; item: unknown } | { type: "done"; 
 jest.mock("@web/src/components/listings/create/domain/listingCreateUtils", () => ({
   buildTemplateRenderCaptionItems: (...args: unknown[]) =>
     mockBuildTemplateRenderCaptionItems(...args),
+  getCachedPreviewsFromCaptionItems: () => [],
   mapSingleTemplateRenderItemToPreviewItem: (...args: unknown[]) =>
     mockMapSingleTemplateRenderItemToPreviewItem(...args)
 }));

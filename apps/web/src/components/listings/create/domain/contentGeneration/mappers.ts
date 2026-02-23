@@ -49,20 +49,35 @@ export function mapStreamedItemsToContentItems(params: {
   );
 }
 
+export type ContentItemWithCacheKey = ContentItem & {
+  cacheKeyTimestamp?: number;
+  cacheKeyId?: number;
+};
+
 export function mapFinalItemsToContentItems(params: {
   items: FinalContentItem[];
   batchItemIds: string[];
   subcategory: ListingContentSubcategory;
   mediaType: "video" | "image";
-}): ContentItem[] {
-  return params.items.map((item, index) =>
-    buildGeneratedContentItem({
+  cacheKeyTimestamp?: number;
+}): ContentItemWithCacheKey[] {
+  const { cacheKeyTimestamp } = params;
+  return params.items.map((item, index) => {
+    const base = buildGeneratedContentItem({
       id: params.batchItemIds[index]!,
       item,
       subcategory: params.subcategory,
       mediaType: params.mediaType
-    })
-  );
+    });
+    if (typeof cacheKeyTimestamp === "number") {
+      return {
+        ...base,
+        cacheKeyTimestamp,
+        cacheKeyId: index
+      };
+    }
+    return base as ContentItemWithCacheKey;
+  });
 }
 
 export function removeCurrentBatchItems(

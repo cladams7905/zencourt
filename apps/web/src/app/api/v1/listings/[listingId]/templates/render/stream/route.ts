@@ -97,8 +97,10 @@ export async function POST(
       try {
         const { failedTemplateIds } = await renderListingTemplateBatchStream(
           {
+            userId,
             listingId,
             subcategory,
+            mediaType: "image",
             listing,
             listingImages,
             userAdditional,

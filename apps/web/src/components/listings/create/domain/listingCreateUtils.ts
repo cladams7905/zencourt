@@ -170,21 +170,40 @@ export function buildVariedImageSequence(
   return sequence;
 }
 
+/** Content item with optional cache key identity for template render API. */
+export type CaptionItemWithCacheKey = ContentItem & {
+  cacheKeyTimestamp?: number;
+  cacheKeyId?: number;
+};
+
 export function buildTemplateRenderCaptionItems(
-  items: ContentItem[]
+  items: CaptionItemWithCacheKey[]
 ): TemplateRenderCaptionItemInput[] {
   return items
-    .map((item) => ({
-      id: item.id,
-      hook: item.hook?.trim() || null,
-      caption: item.caption?.trim() || null,
-      body: (item.body ?? [])
-        .map((slide) => ({
-          header: slide.header?.trim() ?? "",
-          content: slide.content?.trim() ?? ""
-        }))
-        .filter((slide) => slide.header || slide.content)
-    }))
+    .map((item) => {
+      const base = {
+        id: item.id,
+        hook: item.hook?.trim() || null,
+        caption: item.caption?.trim() || null,
+        body: (item.body ?? [])
+          .map((slide) => ({
+            header: slide.header?.trim() ?? "",
+            content: slide.content?.trim() ?? ""
+          }))
+          .filter((slide) => slide.header || slide.content)
+      };
+      if (
+        typeof item.cacheKeyTimestamp === "number" &&
+        typeof item.cacheKeyId === "number"
+      ) {
+        return {
+          ...base,
+          cacheKeyTimestamp: item.cacheKeyTimestamp,
+          cacheKeyId: item.cacheKeyId
+        };
+      }
+      return base;
+    })
     .filter((item) => item.hook || item.caption || item.body.length > 0);
 }
 
@@ -219,6 +238,59 @@ export function mapTemplateRenderItemsToPreviewItems(params: {
       captionItemId: renderedItem.captionItemId
     };
   });
+}
+
+/**
+ * Maps a content item with cached rendered preview to a ListingImagePreviewItem (for cache-seeded previews).
+ */
+export function mapCachedRenderedPreviewToPreviewItem(
+  item: ContentItem & {
+    cachedRenderedPreview: {
+      imageUrl: string;
+      templateId: string;
+      modifications: Record<string, string>;
+    };
+  },
+  variationNumber: number
+): ListingImagePreviewItem {
+  const { cachedRenderedPreview } = item;
+  return {
+    id: `cached-preview-${item.id}-${cachedRenderedPreview.templateId}`,
+    variationNumber,
+    hook: item.hook ?? null,
+    caption: item.caption ?? null,
+    slides: [
+      {
+        id: `${cachedRenderedPreview.templateId}-cached`,
+        imageUrl: cachedRenderedPreview.imageUrl,
+        header: item.hook?.trim() ?? "",
+        content: item.caption?.trim() ?? "",
+        textOverlay: null
+      }
+    ],
+    coverImageUrl: cachedRenderedPreview.imageUrl,
+    isTemplateRender: true,
+    captionItemId: item.id
+  };
+}
+
+/**
+ * Builds preview items from caption items that already have a cached rendered preview.
+ * Used to seed the template-render grid without a request.
+ */
+export function getCachedPreviewsFromCaptionItems(
+  captionItems: ContentItem[]
+): ListingImagePreviewItem[] {
+  type ItemWithCached = ContentItem & {
+    cachedRenderedPreview: {
+      imageUrl: string;
+      templateId: string;
+      modifications: Record<string, string>;
+    };
+  };
+  return captionItems
+    .filter((c): c is ItemWithCached => !!(c && "cachedRenderedPreview" in c && c.cachedRenderedPreview))
+    .map((item, i) => mapCachedRenderedPreviewToPreviewItem(item, i + 1));
 }
 
 /**

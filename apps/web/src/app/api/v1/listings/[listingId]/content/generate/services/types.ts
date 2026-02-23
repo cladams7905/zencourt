@@ -17,12 +17,26 @@ export type ListingGeneratedItem = {
   caption: string;
 };
 
+/**
+ * One cache entry per item: content plus optional template render.
+ * Used for listing-content:{userId}:{listingId}:{subcategory}:{mediaType}:{timestamp}:{id}.
+ */
+export type ListingContentItem = ListingGeneratedItem & {
+  renderedImageUrl: string | null;
+  renderedTemplateId?: string;
+  renderedModifications?: Record<string, string>;
+};
+
 export type ContentStreamEvent =
   | { type: "delta"; text: string }
   | {
       type: "done";
       items: ListingGeneratedItem[];
-      meta: { model: string; batch_size: number };
+      meta: {
+        model: string;
+        batch_size: number;
+        cache_key_timestamp?: number;
+      };
     }
   | { type: "error"; message: string };
 

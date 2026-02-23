@@ -3,6 +3,14 @@ import type { ListingContentSubcategory } from "@shared/types/models";
 import type { TemplateRenderCaptionItemInput } from "@web/src/lib/domain/media/templateRender/types";
 
 /**
+ * Caption item with optional cache key identity for reading/updating the unified listing content cache.
+ */
+export type TemplateRenderCaptionItemWithCacheKey = TemplateRenderCaptionItemInput & {
+  cacheKeyTimestamp?: number;
+  cacheKeyId?: number;
+};
+
+/**
  * Parses and validates a listing subcategory from request body.
  * @throws Error when value is missing or not a valid subcategory
  */
@@ -18,12 +26,12 @@ export function parseListingSubcategory(value: unknown): ListingContentSubcatego
 }
 
 /**
- * Sanitizes raw caption items from request body into TemplateRenderCaptionItemInput[].
+ * Sanitizes raw caption items from request body. Includes cacheKeyTimestamp and cacheKeyId when present.
  * Invalid or empty items are dropped; returns empty array for non-array input.
  */
 export function sanitizeCaptionItems(
   input: unknown
-): TemplateRenderCaptionItemInput[] {
+): TemplateRenderCaptionItemWithCacheKey[] {
   if (!Array.isArray(input)) {
     return [];
   }
@@ -38,6 +46,8 @@ export function sanitizeCaptionItems(
         hook?: string | null;
         caption?: string | null;
         body?: Array<{ header?: string; content?: string }>;
+        cacheKeyTimestamp?: number;
+        cacheKeyId?: number;
       };
       const id = candidate.id?.trim();
       if (!id) {
@@ -51,12 +61,16 @@ export function sanitizeCaptionItems(
         }))
         .filter((slide) => slide.header || slide.content);
 
-      const sanitized = {
+      const sanitized: TemplateRenderCaptionItemWithCacheKey = {
         id,
         hook: candidate.hook?.trim() || null,
         caption: candidate.caption?.trim() || null,
         body
       };
+      if (typeof candidate.cacheKeyTimestamp === "number" && typeof candidate.cacheKeyId === "number") {
+        sanitized.cacheKeyTimestamp = candidate.cacheKeyTimestamp;
+        sanitized.cacheKeyId = candidate.cacheKeyId;
+      }
 
       if (
         !sanitized.hook &&
@@ -68,5 +82,5 @@ export function sanitizeCaptionItems(
 
       return sanitized;
     })
-    .filter((item): item is TemplateRenderCaptionItemInput => Boolean(item));
+    .filter((item): item is TemplateRenderCaptionItemWithCacheKey => Boolean(item));
 }
