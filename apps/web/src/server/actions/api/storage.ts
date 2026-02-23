@@ -8,8 +8,10 @@
 import { StorageUploadRequest } from "@shared/types/api/requests";
 import { StorageUploadBatchResponse } from "@shared/types/api/responses";
 import storageService from "../../services/storage";
-import { createChildLogger, logger as baseLogger } from "@web/src/lib/core/logging/logger";
-import { getSignedDownloadUrl as getSignedDownloadUrlInternal } from "../../utils/storageUrls";
+import {
+  createChildLogger,
+  logger as baseLogger
+} from "@web/src/lib/core/logging/logger";
 
 const logger = createChildLogger(baseLogger, { module: "storage-actions" });
 
@@ -110,11 +112,4 @@ export async function deleteFile(url: string): Promise<void> {
       }`
     );
   }
-}
-
-/**
- * Generate a signed download URL for private storage assets.
- */
-export async function getSignedDownloadUrl(url: string): Promise<string> {
-  return getSignedDownloadUrlInternal(url);
 }

@@ -1,11 +1,7 @@
 {
   "CORSRules": [
     {
-      "AllowedOrigins": [
-        "https://zencourt.ai",
-        "https://studio.zencourt.ai",
-        "https://api.zencourt.ai"
-      ],
+      "AllowedOrigins": ["https://zencourt.ai"],
       "AllowedMethods": ["PUT", "GET", "HEAD"],
       "AllowedHeaders": ["*"],
       "ExposeHeaders": ["ETag"],

@@ -96,17 +96,14 @@ function selectCaptionItem(
 
 function resolveListingImagesToPublicUrls(listingImages: DBListingImage[]): {
   images: DBListingImage[];
-  resolutionSummary: { publicUrlCount: number; signedUrlCount: number };
+  resolutionSummary: { publicUrlCount: number };
 } {
   let publicUrlCount = 0;
-  let signedUrlCount = 0;
   const images = listingImages.map((img) => {
     const publicUrl = storageService.getPublicUrlForStorageUrl(img.url);
     const resolvedUrl = publicUrl ?? img.url;
     if (publicUrl) {
       publicUrlCount += 1;
-    } else {
-      signedUrlCount += 1;
     }
     return {
       ...img,
@@ -115,7 +112,7 @@ function resolveListingImagesToPublicUrls(listingImages: DBListingImage[]): {
   });
   return {
     images,
-    resolutionSummary: { publicUrlCount, signedUrlCount }
+    resolutionSummary: { publicUrlCount }
   };
 }
 
@@ -192,11 +189,8 @@ export async function renderListingTemplateBatch(params: {
       usingPublicBaseUrl,
       urlSource: usingPublicBaseUrl
         ? "STORAGE_PUBLIC_BASE_URL (CDN)"
-        : "signed URLs",
-      resolutionSummary: {
-        publicUrlCount: resolutionSummary.publicUrlCount,
-        signedUrlCount: resolutionSummary.signedUrlCount
-      },
+        : "fallback (no public base URL)",
+      resolutionSummary,
       imageUrls: listingImagesWithPublicUrls.map((img) => ({
         id: img.id,
         url: img.url,

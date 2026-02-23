@@ -1,7 +1,7 @@
 const mockNanoid = jest.fn();
 const mockCreateVideoGenBatch = jest.fn();
 const mockCreateVideoGenJobsBatch = jest.fn();
-const mockGetSignedDownloadUrls = jest.fn();
+const mockGetPublicDownloadUrls = jest.fn();
 const mockGroupImagesByCategory = jest.fn();
 const mockSelectListingPrimaryImage = jest.fn();
 const mockBuildRoomsFromImages = jest.fn();
@@ -41,8 +41,8 @@ jest.mock("@web/src/server/actions/db/videoGenJobs", () => ({
 }));
 
 jest.mock("@web/src/server/utils/storageUrls", () => ({
-  getSignedDownloadUrls: (...args: unknown[]) =>
-    mockGetSignedDownloadUrls(...args)
+  getPublicDownloadUrls: (...args: unknown[]) =>
+    mockGetPublicDownloadUrls(...args)
 }));
 
 jest.mock("../domain/rooms", () => ({
@@ -145,7 +145,7 @@ describe("videoGeneration/service", () => {
     mockSelectPrimaryImageForRoom.mockReturnValue(
       "https://img/kitchen-primary.jpg"
     );
-    mockGetSignedDownloadUrls.mockResolvedValue([
+    mockGetPublicDownloadUrls.mockReturnValue([
       "https://signed/kitchen-primary.jpg"
     ]);
     mockBuildPrompt.mockReturnValue({
@@ -210,7 +210,7 @@ describe("videoGeneration/service", () => {
     mockSelectPrimaryImageForRoom.mockReturnValue(
       "https://img/kitchen-primary.jpg"
     );
-    mockGetSignedDownloadUrls.mockResolvedValue([
+    mockGetPublicDownloadUrls.mockReturnValue([
       "https://signed/kitchen-primary.jpg"
     ]);
     mockBuildPrompt.mockReturnValue({
@@ -274,7 +274,7 @@ describe("videoGeneration/service", () => {
     mockSelectPrimaryImageForRoom.mockReturnValue(
       "https://img/kitchen-primary.jpg"
     );
-    mockGetSignedDownloadUrls.mockResolvedValue([
+    mockGetPublicDownloadUrls.mockReturnValue([
       "https://signed/kitchen-primary.jpg"
     ]);
     mockBuildPrompt.mockReturnValue({
@@ -319,9 +319,9 @@ describe("videoGeneration/service", () => {
     mockSelectSecondaryImageForRoom.mockReturnValue(
       "https://img/kitchen-secondary.jpg"
     );
-    mockGetSignedDownloadUrls
-      .mockResolvedValueOnce(["https://signed/kitchen-primary.jpg"])
-      .mockResolvedValueOnce(["https://signed/kitchen-secondary.jpg"]);
+    mockGetPublicDownloadUrls
+      .mockReturnValueOnce(["https://signed/kitchen-primary.jpg"])
+      .mockReturnValueOnce(["https://signed/kitchen-secondary.jpg"]);
     mockBuildPrompt
       .mockReturnValueOnce({
         prompt: "Primary prompt",

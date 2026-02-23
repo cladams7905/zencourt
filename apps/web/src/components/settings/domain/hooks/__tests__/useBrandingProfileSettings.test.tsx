@@ -7,7 +7,7 @@ const mockToastSuccess = jest.fn();
 const mockToastError = jest.fn();
 const mockEnsureGoogleHeadshot = jest.fn();
 const mockUpdateUserProfile = jest.fn();
-const mockGetSignedDownloadUrl = jest.fn();
+const mockGetPublicDownloadUrl = jest.fn();
 const mockUploadFile = jest.fn();
 
 jest.mock("next/navigation", () => ({
@@ -29,7 +29,7 @@ jest.mock("@web/src/server/actions/db/userAdditional", () => ({
 }));
 
 jest.mock("@web/src/server/actions/api/storage", () => ({
-  getSignedDownloadUrl: (...args: unknown[]) => mockGetSignedDownloadUrl(...args),
+  getPublicDownloadUrl: (...args: unknown[]) => mockGetPublicDownloadUrl(...args),
   uploadFile: (...args: unknown[]) => mockUploadFile(...args)
 }));
 
@@ -54,7 +54,7 @@ describe("useBrandingProfileSettings", () => {
     jest.clearAllMocks();
     mockEnsureGoogleHeadshot.mockResolvedValue(null);
     mockUpdateUserProfile.mockResolvedValue({});
-    mockGetSignedDownloadUrl.mockImplementation(async (url: string) => `signed:${url}`);
+    mockGetPublicDownloadUrl.mockImplementation(async (url: string) => `public:${url}`);
     mockUploadFile.mockResolvedValue("https://cdn.example/new.png");
   });
 

@@ -1,29 +1,21 @@
 import { MediaView } from "@web/src/components/media";
 import { requireUserOrRedirect } from "@web/src/app/(dashboard)/_utils/requireUserOrRedirect";
 import { getUserMedia } from "@web/src/server/actions/db/userMedia";
-import { getSignedDownloadUrlSafe } from "@web/src/server/utils/storageUrls";
+import { getPublicDownloadUrlSafe } from "@web/src/server/utils/storageUrls";
 
 export default async function MediaPage() {
   const user = await requireUserOrRedirect();
 
   const userMedia = await getUserMedia(user.id);
-  const signedUserMediaUrls = await Promise.all(
-    userMedia.map((media) =>
-      Promise.all([
-        getSignedDownloadUrlSafe(media.url),
-        getSignedDownloadUrlSafe(media.thumbnailUrl ?? undefined)
-      ])
-    )
-  );
-  const signedUserMedia = userMedia.map((media, index) => ({
+  const mediaWithPublicUrls = userMedia.map((media) => ({
     ...media,
-    url: signedUserMediaUrls[index]?.[0] ?? media.url,
-    thumbnailUrl: signedUserMediaUrls[index]?.[1] ?? media.thumbnailUrl
+    url: getPublicDownloadUrlSafe(media.url) ?? media.url,
+    thumbnailUrl: getPublicDownloadUrlSafe(media.thumbnailUrl) ?? media.thumbnailUrl
   }));
   return (
     <MediaView
       userId={user.id}
-      initialMedia={signedUserMedia}
+      initialMedia={mediaWithPublicUrls}
     />
   );
 }

@@ -1,7 +1,7 @@
 jest.mock("../../storage", () => ({
   __esModule: true,
   default: {
-    getSignedDownloadUrl: jest.fn()
+    getPublicUrlForStorageUrl: jest.fn()
   }
 }));
 
@@ -78,13 +78,13 @@ describe("imageProcessor/service", () => {
         return [];
       }
     );
-    const getSignedDownloadUrl = jest
+    const getPublicUrlForStorageUrl = jest
       .fn()
-      .mockResolvedValueOnce({ success: true, url: "https://signed/1" })
-      .mockResolvedValueOnce({ success: true, url: "https://signed/2" });
+      .mockReturnValueOnce("https://signed/1")
+      .mockReturnValueOnce("https://signed/2");
     const service = new ImageProcessorService({
       vision: { classifyRoomBatch },
-      storage: { getSignedDownloadUrl }
+      storage: { getPublicUrlForStorageUrl }
     });
     const onProgress = jest.fn();
 
@@ -109,7 +109,7 @@ describe("imageProcessor/service", () => {
       { onProgress, aiConcurrency: 2 }
     );
 
-    expect(getSignedDownloadUrl).toHaveBeenCalledTimes(2);
+    expect(getPublicUrlForStorageUrl).toHaveBeenCalledTimes(2);
     expect(classifyRoomBatch).toHaveBeenCalledWith(
       ["https://signed/1", "https://signed/2"],
       expect.objectContaining({ concurrency: 2, onProgress: expect.any(Function) })
@@ -142,32 +142,11 @@ describe("imageProcessor/service", () => {
   it("fails when there are no uploaded images for analysis", async () => {
     const service = new ImageProcessorService({
       vision: { classifyRoomBatch: jest.fn() },
-      storage: { getSignedDownloadUrl: jest.fn() }
+      storage: { getPublicUrlForStorageUrl: jest.fn() }
     });
 
     await expect(
       service.analyzeImagesWorkflow([buildImage({ status: "pending", url: undefined })])
-    ).rejects.toBeInstanceOf(ImageProcessingError);
-  });
-
-  it("fails when signed URLs cannot be generated", async () => {
-    const service = new ImageProcessorService({
-      vision: { classifyRoomBatch: jest.fn() },
-      storage: {
-        getSignedDownloadUrl: jest
-          .fn()
-          .mockResolvedValue({ success: false, error: "sign failed" })
-      }
-    });
-
-    await expect(
-      service.analyzeImagesWorkflow([
-        buildImage({
-          id: "img-1",
-          url: "https://cdn.example.com/1.jpg",
-          status: "uploaded"
-        })
-      ])
     ).rejects.toBeInstanceOf(ImageProcessingError);
   });
 });
