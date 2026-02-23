@@ -27,7 +27,7 @@ function makeFile(name: string): Express.Multer.File {
 describe("storage orchestrators", () => {
   const storage = {
     uploadFile: jest.fn().mockResolvedValue("https://cdn/file.jpg"),
-    getSignedDownloadUrl: jest.fn().mockResolvedValue("https://signed/file.jpg"),
+    getPublicUrlForKey: jest.fn().mockReturnValue("https://cdn/file.jpg"),
     extractKeyFromUrl: jest.fn().mockReturnValue("key/file.jpg"),
     deleteFile: jest.fn().mockResolvedValue(undefined)
   };
@@ -46,7 +46,7 @@ describe("storage orchestrators", () => {
     );
     expect(result.success).toBe(true);
     expect(storage.uploadFile).toHaveBeenCalled();
-    expect(storage.getSignedDownloadUrl).toHaveBeenCalled();
+    expect(storage.getPublicUrlForKey).toHaveBeenCalled();
   });
 
   it("handles delete by url", async () => {
@@ -60,7 +60,7 @@ describe("storage orchestrators", () => {
     const result = await handleSignedUrlRequest("key/a.jpg", 120, storage);
     expect(result).toEqual({
       success: true,
-      signedUrl: "https://signed/file.jpg",
+      signedUrl: "https://cdn/file.jpg",
       expiresIn: 120
     });
   });
@@ -81,7 +81,7 @@ describe("storage orchestrators", () => {
     const failingStorage = {
       ...storage,
       uploadFile: jest.fn().mockRejectedValue(new Error("S3 unavailable")),
-      getSignedDownloadUrl: jest.fn()
+      getPublicUrlForKey: jest.fn()
     };
 
     await expect(
@@ -103,7 +103,9 @@ describe("storage orchestrators", () => {
   it("wraps signed URL error in VideoProcessingError", async () => {
     const failingStorage = {
       ...storage,
-      getSignedDownloadUrl: jest.fn().mockRejectedValue(new Error("S3 unavailable"))
+      getPublicUrlForKey: jest.fn().mockImplementation(() => {
+        throw new Error("S3 unavailable");
+      })
     };
 
     await expect(
@@ -148,7 +150,7 @@ describe("storage orchestrators", () => {
     const failingStorage = {
       ...storage,
       uploadFile: jest.fn().mockRejectedValue(vpe),
-      getSignedDownloadUrl: jest.fn()
+      getPublicUrlForKey: jest.fn()
     };
 
     await expect(
@@ -179,7 +181,9 @@ describe("storage orchestrators", () => {
     );
     const failingStorage = {
       ...storage,
-      getSignedDownloadUrl: jest.fn().mockRejectedValue(vpe)
+      getPublicUrlForKey: jest.fn().mockImplementation(() => {
+        throw vpe;
+      })
     };
 
     await expect(

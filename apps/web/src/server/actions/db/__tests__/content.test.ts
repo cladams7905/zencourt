@@ -15,7 +15,7 @@ const mockSelect = jest.fn(() => ({ from: mockSelectFrom }));
 const mockDeleteWhere = jest.fn();
 const mockDelete = jest.fn(() => ({ where: mockDeleteWhere }));
 
-const mockResolveSignedDownloadUrl = jest.fn();
+const mockResolvePublicDownloadUrl = jest.fn();
 const mockWithDbErrorHandling = jest.fn(
   async (fn: () => Promise<unknown>) => await fn()
 );
@@ -39,8 +39,8 @@ jest.mock("@web/src/server/actions/shared/dbErrorHandling", () => ({
 }));
 
 jest.mock("@web/src/server/utils/storageUrls", () => ({
-  DEFAULT_THUMBNAIL_TTL_SECONDS: 3600,
-  resolveSignedDownloadUrl: (...args: unknown[]) => ((mockResolveSignedDownloadUrl as (...a: unknown[]) => unknown)(...args))
+  resolvePublicDownloadUrl: (...args: unknown[]) =>
+    ((mockResolvePublicDownloadUrl as (...a: unknown[]) => unknown)(...args))
 }));
 
 import {
@@ -65,7 +65,7 @@ describe("content actions", () => {
     mockSelect.mockClear();
     mockDeleteWhere.mockReset();
     mockDelete.mockClear();
-    mockResolveSignedDownloadUrl.mockReset();
+    mockResolvePublicDownloadUrl.mockReset();
     mockWithDbErrorHandling.mockClear();
     mockNanoid.mockClear();
   });
@@ -86,7 +86,7 @@ describe("content actions", () => {
 
   it("creates and signs content", async () => {
     mockInsertReturning.mockResolvedValue([{ id: "c1", thumbnailUrl: "raw" }]);
-    mockResolveSignedDownloadUrl.mockResolvedValue("signed");
+    mockResolvePublicDownloadUrl.mockReturnValue("signed");
 
     const result = await createContent("u1", { listingId: "l1" } as never);
 

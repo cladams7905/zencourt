@@ -162,7 +162,7 @@ describe("StorageService", () => {
     it("should have correct method signatures", () => {
       expect(typeof storage.uploadFile).toBe("function");
       expect(typeof storage.deleteFile).toBe("function");
-      expect(typeof storage.getSignedDownloadUrl).toBe("function");
+      expect(typeof storage.getPublicUrlForKey).toBe("function");
       expect(typeof storage.checkBucketAccess).toBe("function");
     });
   });
@@ -293,30 +293,20 @@ describe("StorageService", () => {
     });
   });
 
-  describe("getSignedDownloadUrl", () => {
-    it("returns signed URL from presigner", async () => {
-      mockGetSignedUrl.mockResolvedValue("https://signed.url/object");
+  describe("getPublicUrlForKey", () => {
+    it("returns public URL for key", () => {
+      const url = storage.getPublicUrlForKey("user_1/file.txt");
 
-      const url = await storage.getSignedDownloadUrl({
-        key: "user_1/file.txt",
-        expiresIn: 120
-      });
-
-      expect(mockGetSignedUrl).toHaveBeenCalledTimes(1);
-      expect(url).toBe("https://signed.url/object");
+      expect(url).toContain("cdn.example.com");
+      expect(url).toContain(testBucket);
+      expect(url).toContain("user_1/file.txt");
     });
 
-    it("throws on presigner failure", async () => {
-      mockGetSignedUrl.mockRejectedValue(
-        Object.assign(new Error("Presigner failed"), { Code: "InvalidArgument" })
-      );
+    it("uses custom bucket when provided", () => {
+      const url = storage.getPublicUrlForKey("key", "custom-bucket");
 
-      await expect(
-        storage.getSignedDownloadUrl({ key: "key" })
-      ).rejects.toMatchObject({
-        message: "Presigner failed",
-        code: StorageErrorType.UNKNOWN_ERROR
-      });
+      expect(url).toContain("custom-bucket");
+      expect(url).toContain("key");
     });
   });
 

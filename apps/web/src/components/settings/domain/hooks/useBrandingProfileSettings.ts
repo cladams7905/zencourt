@@ -11,10 +11,8 @@ import {
   ensureGoogleHeadshot,
   updateUserProfile
 } from "@web/src/server/actions/db/userAdditional";
-import {
-  getSignedDownloadUrl,
-  uploadFile
-} from "@web/src/server/actions/api/storage";
+import { uploadFile } from "@web/src/server/actions/api/storage";
+import { getPublicDownloadUrl } from "@web/src/server/utils/storageUrls";
 
 interface UseBrandingProfileSettingsArgs {
   userId: string;
@@ -103,9 +101,9 @@ export const useBrandingProfileSettings = ({
         return;
       }
       try {
-        const signed = await getSignedDownloadUrl(headshotUrl);
+        const readUrl = await getPublicDownloadUrl(headshotUrl);
         if (isMounted) {
-          setAvatarPreviewUrl(signed);
+          setAvatarPreviewUrl(readUrl);
         }
       } catch (error) {
         if (isMounted) {
@@ -143,9 +141,9 @@ export const useBrandingProfileSettings = ({
         return;
       }
       try {
-        const signed = await getSignedDownloadUrl(personalLogoUrl);
+        const readUrl = await getPublicDownloadUrl(personalLogoUrl);
         if (isMounted) {
-          setBrokerLogoPreviewUrl(signed);
+          setBrokerLogoPreviewUrl(readUrl);
         }
       } catch (error) {
         if (isMounted) {

@@ -19,7 +19,7 @@ import {
   isVideoMimeType,
   toMegabytes
 } from "@web/src/server/actions/shared/uploadValidation";
-import { getSignedDownloadUrlSafe } from "@web/src/server/utils/storageUrls";
+import { getPublicDownloadUrlSafe } from "@web/src/server/utils/storageUrls";
 import type {
   UserMediaSignedUpload,
   UserMediaRecordInput,
@@ -221,19 +221,11 @@ export async function createUserMediaRecords(
       });
 
       const created = await db.insert(userMedia).values(rows).returning();
-      const signedUrls = await Promise.all(
-        created.map((media) =>
-          Promise.all([
-            getSignedDownloadUrlSafe(media.url),
-            getSignedDownloadUrlSafe(media.thumbnailUrl ?? undefined)
-          ])
-        )
-      );
-
-      const signedMedia = created.map((media, index) => ({
+      const mediaWithPublicUrls = created.map((media) => ({
         ...media,
-        url: signedUrls[index]?.[0] ?? media.url,
-        thumbnailUrl: signedUrls[index]?.[1] ?? media.thumbnailUrl
+        url: getPublicDownloadUrlSafe(media.url) ?? media.url,
+        thumbnailUrl:
+          getPublicDownloadUrlSafe(media.thumbnailUrl) ?? media.thumbnailUrl
       }));
 
       await db
@@ -251,7 +243,7 @@ export async function createUserMediaRecords(
           }
         });
 
-      return signedMedia;
+      return mediaWithPublicUrls;
     },
     {
       actionName: "createUserMediaRecords",

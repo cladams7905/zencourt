@@ -5,7 +5,6 @@ const mockBuildStoragePublicUrl = jest.fn();
 
 const mockPutObjectCommand = jest.fn();
 const mockDeleteObjectCommand = jest.fn();
-const mockGetObjectCommand = jest.fn();
 const mockListObjectVersionsCommand = jest.fn();
 
 jest.mock("@aws-sdk/client-s3", () => ({
@@ -19,12 +18,6 @@ jest.mock("@aws-sdk/client-s3", () => ({
     public readonly __type = "DeleteObjectCommand";
     constructor(public readonly input: unknown) {
       mockDeleteObjectCommand(input);
-    }
-  },
-  GetObjectCommand: class GetObjectCommandMock {
-    public readonly __type = "GetObjectCommand";
-    constructor(public readonly input: unknown) {
-      mockGetObjectCommand(input);
     }
   },
   ListObjectVersionsCommand: class ListObjectVersionsCommandMock {
@@ -174,34 +167,18 @@ describe("storage/service", () => {
     expect(result.results).toHaveLength(2);
   });
 
-  it("generates signed upload and download URLs", async () => {
-    mockGetSignedUrl
-      .mockResolvedValueOnce("https://signed-upload")
-      .mockResolvedValueOnce("https://signed-download");
+  it("generates signed upload URL", async () => {
+    mockGetSignedUrl.mockResolvedValueOnce("https://signed-upload");
     const service = createService();
 
     await expect(service.getSignedUploadUrl("folder/file.jpg", "image/jpeg")).resolves.toEqual({
       success: true,
       url: "https://signed-upload"
     });
-
-    mockExtractStorageKeyFromUrl.mockReturnValue("bucket/folder/file.jpg");
-    await expect(
-      service.getSignedDownloadUrl("https://cdn.example.com/bucket/folder/file.jpg")
-    ).resolves.toEqual({
-      success: true,
-      url: "https://signed-download"
-    });
-
-    expect(mockGetObjectCommand).toHaveBeenCalledWith(
-      expect.objectContaining({ Key: "folder/file.jpg" })
-    );
   });
 
-  it("returns errors when signed URL generation fails", async () => {
-    mockGetSignedUrl
-      .mockRejectedValueOnce(new Error("upload sign failed"))
-      .mockRejectedValueOnce(new Error("download sign failed"));
+  it("returns error when signed upload URL generation fails", async () => {
+    mockGetSignedUrl.mockRejectedValueOnce(new Error("upload sign failed"));
     const service = createService();
 
     await expect(
@@ -210,13 +187,6 @@ describe("storage/service", () => {
       success: false,
       error: "upload sign failed"
     });
-
-    await expect(service.getSignedDownloadUrl("folder/file.jpg")).resolves.toEqual(
-      {
-        success: false,
-        error: "download sign failed"
-      }
-    );
   });
 
   it("deletes bare object when there are no version entries", async () => {

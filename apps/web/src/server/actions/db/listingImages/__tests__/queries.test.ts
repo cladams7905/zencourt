@@ -4,8 +4,7 @@ const mockFrom = jest.fn(() => ({ where: mockWhere }));
 const mockSelect = jest.fn(() => ({ from: mockFrom }));
 
 const mockEnsureListingImageAccess = jest.fn();
-const mockMapWithSignedUrl = jest.fn();
-const mockResolveSignedDownloadUrl = jest.fn();
+const mockResolvePublicDownloadUrl = jest.fn();
 const mockWithDbErrorHandling = jest.fn(
   async (fn: () => Promise<unknown>) => await fn()
 );
@@ -23,13 +22,9 @@ jest.mock("@web/src/server/actions/db/listingImages/helpers", () => ({
   ensureListingImageAccess: (...args: unknown[]) => ((mockEnsureListingImageAccess as (...a: unknown[]) => unknown)(...args))
 }));
 
-jest.mock("@web/src/server/actions/shared/urlSigning", () => ({
-  mapWithSignedUrl: (...args: unknown[]) => ((mockMapWithSignedUrl as (...a: unknown[]) => unknown)(...args))
-}));
-
 jest.mock("@web/src/server/utils/storageUrls", () => ({
-  DEFAULT_THUMBNAIL_TTL_SECONDS: 3600,
-  resolveSignedDownloadUrl: (...args: unknown[]) => ((mockResolveSignedDownloadUrl as (...a: unknown[]) => unknown)(...args))
+  resolvePublicDownloadUrl: (...args: unknown[]) =>
+    ((mockResolvePublicDownloadUrl as (...a: unknown[]) => unknown)(...args))
 }));
 
 jest.mock("@web/src/server/actions/shared/dbErrorHandling", () => ({
@@ -45,14 +40,13 @@ describe("listingImages queries", () => {
     mockFrom.mockClear();
     mockSelect.mockClear();
     mockEnsureListingImageAccess.mockReset();
-    mockMapWithSignedUrl.mockReset();
-    mockResolveSignedDownloadUrl.mockReset();
+    mockResolvePublicDownloadUrl.mockReset();
     mockWithDbErrorHandling.mockClear();
   });
 
-  it("fetches and signs listing images", async () => {
+  it("fetches and resolves listing image URLs to public", async () => {
     mockOrderBy.mockResolvedValueOnce([{ id: "img1", url: "raw" }]);
-    mockMapWithSignedUrl.mockResolvedValueOnce([{ id: "img1", url: "signed" }]);
+    mockResolvePublicDownloadUrl.mockReturnValue("public-url");
 
     const result = await getListingImages("u1", "l1");
 
@@ -61,11 +55,7 @@ describe("listingImages queries", () => {
       "l1",
       expect.any(Object)
     );
-    expect(result).toEqual([{ id: "img1", url: "signed" }]);
-    expect(mockMapWithSignedUrl).toHaveBeenCalledWith(
-      [{ id: "img1", url: "raw" }],
-      expect.any(Function),
-      { fallbackToOriginal: true }
-    );
+    expect(result).toEqual([{ id: "img1", url: "public-url" }]);
+    expect(mockResolvePublicDownloadUrl).toHaveBeenCalledWith("raw");
   });
 });

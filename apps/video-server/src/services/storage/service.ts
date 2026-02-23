@@ -1,16 +1,14 @@
 import {
   DeleteObjectCommand,
-  GetObjectCommand,
   HeadBucketCommand,
   PutObjectCommand,
   S3Client
 } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import logger from "@/config/logger";
 import { storageClient, STORAGE_CONFIG } from "@/config/storage";
 import { buildStoragePublicUrl, extractStorageKeyFromUrl } from "@shared/utils";
 import { StorageErrorType, StorageServiceError } from "./errors";
-import type { StorageSignedUrlOptions, StorageUploadOptions } from "./types";
+import type { StorageUploadOptions } from "./types";
 
 interface RetryConfig {
   maxAttempts: number;
@@ -82,22 +80,9 @@ export class StorageService {
     }, "deleteFile");
   }
 
-  async getSignedDownloadUrl(options: StorageSignedUrlOptions): Promise<string> {
-    const bucket = options.bucket || this.defaultBucket;
-    const { key, expiresIn = 3600 } = options;
-
-    try {
-      const command = new GetObjectCommand({
-        Bucket: bucket,
-        Key: key
-      });
-      return await getSignedUrl(this.client, command, { expiresIn });
-    } catch (error) {
-      throw this.handleStorageError(error, StorageErrorType.UNKNOWN_ERROR, {
-        bucket,
-        key
-      });
-    }
+  getPublicUrlForKey(key: string, bucket?: string): string {
+    const bucketName = bucket || this.defaultBucket;
+    return this.buildObjectUrl(bucketName, key);
   }
 
   async checkBucketAccess(bucket?: string): Promise<boolean> {
@@ -131,7 +116,7 @@ export class StorageService {
     }
   }
 
-  private buildObjectUrl(bucket: string, key: string): string {
+  buildObjectUrl(bucket: string, key: string): string {
     return buildStoragePublicUrl(
       STORAGE_CONFIG.publicBaseUrl ?? STORAGE_CONFIG.endpoint,
       bucket,

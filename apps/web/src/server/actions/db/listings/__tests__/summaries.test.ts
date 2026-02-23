@@ -4,7 +4,7 @@ const mockWithDbErrorHandling = jest.fn(
 );
 const mockWithSignedContentThumbnails = jest.fn();
 const mockSignUrlArray = jest.fn();
-const mockResolveSignedDownloadUrl = jest.fn();
+const mockResolvePublicDownloadUrl = jest.fn();
 
 jest.mock("@db/client", () => ({
   db: {
@@ -51,8 +51,8 @@ jest.mock("@web/src/server/actions/shared/urlSigning", () => ({
 }));
 
 jest.mock("@web/src/server/utils/storageUrls", () => ({
-  DEFAULT_THUMBNAIL_TTL_SECONDS: 3600,
-  resolveSignedDownloadUrl: (...args: unknown[]) => ((mockResolveSignedDownloadUrl as (...a: unknown[]) => unknown)(...args))
+  resolvePublicDownloadUrl: (...args: unknown[]) =>
+    ((mockResolvePublicDownloadUrl as (...a: unknown[]) => unknown)(...args))
 }));
 
 import {
@@ -104,7 +104,7 @@ describe("listings summaries", () => {
     mockWithDbErrorHandling.mockClear();
     mockWithSignedContentThumbnails.mockReset();
     mockSignUrlArray.mockReset();
-    mockResolveSignedDownloadUrl.mockReset();
+    mockResolvePublicDownloadUrl.mockReset();
   });
 
   it("validates user id", async () => {
@@ -130,7 +130,7 @@ describe("listings summaries", () => {
 
     mockSelect.mockReturnValueOnce(makeOrderByResolvingBuilder(rows));
     mockWithSignedContentThumbnails.mockResolvedValueOnce([{ id: "c1" }, { id: "c2" }]);
-    mockResolveSignedDownloadUrl.mockResolvedValueOnce("signed-thumbnail");
+    mockResolvePublicDownloadUrl.mockReturnValueOnce("public-thumbnail");
 
     const result = await getUserListings("u1");
 
@@ -142,7 +142,7 @@ describe("listings summaries", () => {
       expect.objectContaining({
         id: "l1",
         primaryContentId: "c2",
-        thumbnailUrl: "signed-thumbnail",
+        thumbnailUrl: "public-thumbnail",
         contents: [{ id: "c1" }, { id: "c2" }]
       })
     ]);
@@ -187,7 +187,9 @@ describe("listings summaries", () => {
         ])
       );
 
-    mockSignUrlArray.mockResolvedValueOnce(["signed-1", "signed-2"]);
+    mockResolvePublicDownloadUrl
+      .mockReturnValueOnce("signed-1")
+      .mockReturnValueOnce("signed-2");
 
     const result = await getUserListingSummariesPage("u1", { limit: 2, offset: 0 });
 

@@ -13,10 +13,8 @@ import {
 import type { DBContent, DBListing } from "@db/types/models";
 import { withDbErrorHandling } from "@web/src/server/actions/shared/dbErrorHandling";
 import { requireUserId } from "@web/src/server/actions/shared/validation";
-import { signUrlArray } from "@web/src/server/actions/shared/urlSigning";
 import {
-  resolveSignedDownloadUrl,
-  DEFAULT_THUMBNAIL_TTL_SECONDS
+  resolvePublicDownloadUrl
 } from "@web/src/server/utils/storageUrls";
 import { withSignedContentThumbnails } from "./helpers";
 import type { ListingSummaryPreview } from "./types";
@@ -114,10 +112,8 @@ async function signListings(
       return {
         ...listing,
         contents: signedContent,
-        thumbnailUrl: await resolveSignedDownloadUrl(
-          listing.thumbnailUrl,
-          DEFAULT_THUMBNAIL_TTL_SECONDS
-        )
+        thumbnailUrl:
+          resolvePublicDownloadUrl(listing.thumbnailUrl) ?? listing.thumbnailUrl
       };
     })
   );
@@ -201,17 +197,19 @@ export async function getUserListingSummariesPage(
         }
       }
 
-      const signedPreviewImagesMap = new Map<string, string[]>();
+      const publicPreviewImagesMap = new Map<string, string[]>();
       for (const [listingId, urls] of previewImagesMap.entries()) {
-        const signedUrls = await signUrlArray(urls, resolveSignedDownloadUrl);
-        signedPreviewImagesMap.set(listingId, signedUrls);
+        const publicUrls = urls
+          .map((url) => resolvePublicDownloadUrl(url))
+          .filter((u): u is string => Boolean(u));
+        publicPreviewImagesMap.set(listingId, publicUrls);
       }
 
       return {
         items: pageRows.map((row) => ({
           ...row,
           imageCount: normalizeImageCount(row.imageCount),
-          previewImages: signedPreviewImagesMap.get(row.id) ?? []
+          previewImages: publicPreviewImagesMap.get(row.id) ?? []
         })),
         hasMore
       };

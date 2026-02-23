@@ -12,7 +12,7 @@ const mockInsert = jest.fn((table: { userId?: string }) => {
 
 const mockGetSignedUploadUrl = jest.fn();
 const mockBuildPublicUrlForKey = jest.fn((key: string) => `https://public/${key}`);
-const mockGetSignedDownloadUrlSafe = jest.fn();
+const mockGetPublicDownloadUrlSafe = jest.fn();
 const mockNanoid = jest.fn(() => "media-generated");
 const mockWithDbErrorHandling = jest.fn(async (fn: () => Promise<unknown>) => await fn());
 
@@ -44,7 +44,8 @@ jest.mock("@shared/utils/storagePaths", () => ({
 }));
 
 jest.mock("@web/src/server/utils/storageUrls", () => ({
-  getSignedDownloadUrlSafe: (...args: unknown[]) => ((mockGetSignedDownloadUrlSafe as (...a: unknown[]) => unknown)(...args))
+  getPublicDownloadUrlSafe: (...args: unknown[]) =>
+    ((mockGetPublicDownloadUrlSafe as (...a: unknown[]) => unknown)(...args))
 }));
 
 jest.mock("@web/src/server/actions/shared/dbErrorHandling", () => ({
@@ -65,7 +66,7 @@ describe("userMedia uploads", () => {
     mockUserAdditionalValues.mockClear();
     mockGetSignedUploadUrl.mockReset();
     mockBuildPublicUrlForKey.mockClear();
-    mockGetSignedDownloadUrlSafe.mockReset();
+    mockGetPublicDownloadUrlSafe.mockReset();
     mockNanoid.mockClear();
     mockWithDbErrorHandling.mockClear();
   });
@@ -150,9 +151,9 @@ describe("userMedia uploads", () => {
     mockInsertReturning.mockResolvedValueOnce([
       { id: "media-generated", url: "https://public/user_u1/media/image/a.jpg", thumbnailUrl: null }
     ]);
-    mockGetSignedDownloadUrlSafe
-      .mockResolvedValueOnce("https://signed/user_u1/media/image/a.jpg")
-      .mockResolvedValueOnce(null);
+    mockGetPublicDownloadUrlSafe
+      .mockReturnValueOnce("https://signed/user_u1/media/image/a.jpg")
+      .mockReturnValueOnce(null);
 
     const result = await createUserMediaRecords("u1", [
       {

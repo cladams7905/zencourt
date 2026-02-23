@@ -19,7 +19,7 @@ type StoragePort = {
     contentType: string;
     metadata: Record<string, string>;
   }) => Promise<string>;
-  getSignedDownloadUrl: (args: { key: string; expiresIn: number }) => Promise<string>;
+  getPublicUrlForKey: (key: string, bucket?: string) => string;
   extractKeyFromUrl: (url: string) => string;
   deleteFile: (bucket: string, key: string) => Promise<void>;
 };
@@ -74,15 +74,12 @@ export async function handleSingleUpload(
       }
     });
 
-    const signedUrl = await storage.getSignedDownloadUrl({
-      key,
-      expiresIn: 3600
-    });
+    const readUrl = storage.getPublicUrlForKey(key);
 
     return {
       success: true,
       url,
-      signedUrl,
+      signedUrl: readUrl,
       key,
       size: input.file.size,
       contentType: input.file.mimetype
@@ -137,7 +134,7 @@ export async function handleSignedUrlRequest(
   storage: StoragePort
 ): Promise<{ success: true; signedUrl: string; expiresIn: number }> {
   try {
-    const signedUrl = await storage.getSignedDownloadUrl({ key, expiresIn });
+    const signedUrl = storage.getPublicUrlForKey(key);
     return { success: true, signedUrl, expiresIn };
   } catch (error) {
     if (error instanceof VideoProcessingError) {

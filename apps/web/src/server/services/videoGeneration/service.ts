@@ -7,7 +7,7 @@ import {
 } from "@web/src/lib/core/logging/logger";
 import { createVideoGenBatch } from "@web/src/server/actions/db/videoGenBatch";
 import { createVideoGenJobsBatch } from "@web/src/server/actions/db/videoGenJobs";
-import { getSignedDownloadUrls } from "@web/src/server/utils/storageUrls";
+import { getPublicDownloadUrls } from "@web/src/server/utils/storageUrls";
 import { isPriorityCategory } from "@shared/utils";
 import type {
   DBListingImage,
@@ -139,7 +139,7 @@ async function buildPrimaryJobRecord(args: {
     listingPrimaryImageUrl
   );
   const primaryImage = findImageByUrl(groupedImages, category, primaryImageUrl);
-  const publicPrimaryUrls = await getSignedDownloadUrls([primaryImageUrl]);
+  const publicPrimaryUrls = getPublicDownloadUrls([primaryImageUrl]);
 
   const primaryPrompt = buildPrompt({
     roomName: room.name,
@@ -222,7 +222,7 @@ async function buildSecondaryJobRecord(args: {
     category,
     secondaryImageUrl
   );
-  const publicSecondaryUrls = await getSignedDownloadUrls([secondaryImageUrl]);
+  const publicSecondaryUrls = getPublicDownloadUrls([secondaryImageUrl]);
 
   const secondaryPrompt = buildPrompt({
     roomName: room.name,

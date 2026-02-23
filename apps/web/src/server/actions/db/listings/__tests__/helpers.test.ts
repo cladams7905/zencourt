@@ -1,26 +1,26 @@
-const mockResolveSignedDownloadUrl = jest.fn();
+const mockResolvePublicDownloadUrl = jest.fn();
 
 jest.mock("@web/src/server/utils/storageUrls", () => ({
-  DEFAULT_THUMBNAIL_TTL_SECONDS: 3600,
-  resolveSignedDownloadUrl: (...args: unknown[]) => ((mockResolveSignedDownloadUrl as (...a: unknown[]) => unknown)(...args))
+  resolvePublicDownloadUrl: (...args: unknown[]) =>
+    ((mockResolvePublicDownloadUrl as (...a: unknown[]) => unknown)(...args))
 }));
 
 import { withSignedContentThumbnails } from "@web/src/server/actions/db/listings/helpers";
 
 describe("listings helpers", () => {
   beforeEach(() => {
-    mockResolveSignedDownloadUrl.mockReset();
+    mockResolvePublicDownloadUrl.mockReset();
   });
 
   it("returns early for empty lists", async () => {
     await expect(withSignedContentThumbnails([])).resolves.toEqual([]);
-    expect(mockResolveSignedDownloadUrl).not.toHaveBeenCalled();
+    expect(mockResolvePublicDownloadUrl).not.toHaveBeenCalled();
   });
 
-  it("signs each thumbnail url", async () => {
-    mockResolveSignedDownloadUrl
-      .mockResolvedValueOnce("signed-1")
-      .mockResolvedValueOnce("signed-2");
+  it("resolves each thumbnail url to public URL", async () => {
+    mockResolvePublicDownloadUrl
+      .mockReturnValueOnce("public-1")
+      .mockReturnValueOnce("public-2");
 
     const result = await withSignedContentThumbnails([
       { id: "c1", thumbnailUrl: "raw-1" },
@@ -28,8 +28,8 @@ describe("listings helpers", () => {
     ] as never);
 
     expect(result).toEqual([
-      { id: "c1", thumbnailUrl: "signed-1" },
-      { id: "c2", thumbnailUrl: "signed-2" }
+      { id: "c1", thumbnailUrl: "public-1" },
+      { id: "c2", thumbnailUrl: "public-2" }
     ]);
   });
 });

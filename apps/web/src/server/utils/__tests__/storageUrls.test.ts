@@ -1,34 +1,30 @@
-const mockGetSignedDownloadUrl = jest.fn();
+const mockGetPublicUrlForStorageUrl = jest.fn();
 const mockIsUrlFromStorageEndpoint = jest.fn();
-const mockExtractStorageKeyFromUrl = jest.fn();
 
 jest.mock("@web/src/server/services/storage", () => ({
   __esModule: true,
   default: {
-    getSignedDownloadUrl: (...args: unknown[]) => mockGetSignedDownloadUrl(...args)
+    getPublicUrlForStorageUrl: (...args: unknown[]) =>
+      mockGetPublicUrlForStorageUrl(...args)
   }
 }));
 
 jest.mock("@shared/utils/storagePaths", () => ({
-  isUrlFromStorageEndpoint: (...args: unknown[]) => mockIsUrlFromStorageEndpoint(...args),
-  extractStorageKeyFromUrl: (...args: unknown[]) => mockExtractStorageKeyFromUrl(...args)
+  isUrlFromStorageEndpoint: (...args: unknown[]) =>
+    mockIsUrlFromStorageEndpoint(...args)
 }));
 
 import {
-  getSignedDownloadUrl,
-  getSignedDownloadUrlSafe,
-  getSignedDownloadUrls,
+  getPublicDownloadUrl,
+  getPublicDownloadUrlSafe,
+  getPublicDownloadUrls,
   isManagedStorageUrl,
-  resolveSignedDownloadUrl
+  resolvePublicDownloadUrl
 } from "@web/src/server/utils/storageUrls";
 
 describe("storageUrls utils", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockIsUrlFromStorageEndpoint.mockReturnValue(true);
-    mockExtractStorageKeyFromUrl.mockImplementation((url: string) =>
-      url.replace("https://storage.example.com/bucket/", "")
-    );
   });
 
   it("detects managed URLs through shared helper", () => {
@@ -38,129 +34,83 @@ describe("storageUrls utils", () => {
     expect(isManagedStorageUrl("https://other.example.com/a")).toBe(false);
   });
 
-  it("returns non-managed URLs unchanged", async () => {
-    mockIsUrlFromStorageEndpoint.mockReturnValue(false);
-
-    await expect(getSignedDownloadUrl("https://other.example.com/file.jpg")).resolves.toBe(
-      "https://other.example.com/file.jpg"
-    );
-    expect(mockGetSignedDownloadUrl).not.toHaveBeenCalled();
-  });
-
-  it("generates and caches signed download URLs for managed URLs", async () => {
-    mockGetSignedDownloadUrl.mockResolvedValue({
-      success: true,
-      url: "https://signed.example.com/file.jpg?sig=abc"
-    });
-
-    const first = await getSignedDownloadUrl(
-      "https://storage.example.com/bucket/folder/file.jpg",
-      900
-    );
-    const second = await getSignedDownloadUrl(
-      "https://storage.example.com/bucket/folder/file.jpg",
-      900
+  it("returns public CDN URL when storage resolves", () => {
+    mockGetPublicUrlForStorageUrl.mockReturnValue(
+      "https://cdn.example.com/bucket/folder/file.jpg"
     );
 
-    expect(first).toBe("https://signed.example.com/file.jpg?sig=abc");
-    expect(second).toBe("https://signed.example.com/file.jpg?sig=abc");
-    expect(mockGetSignedDownloadUrl).toHaveBeenCalledTimes(1);
-  });
-
-  it("expires cache entries based on ttl safety window", async () => {
-    const nowSpy = jest.spyOn(Date, "now");
-    nowSpy.mockReturnValueOnce(1_000);
-    mockGetSignedDownloadUrl.mockResolvedValueOnce({
-      success: true,
-      url: "https://signed.example.com/file.jpg?sig=first"
-    });
-
-    const first = await getSignedDownloadUrl(
-      "https://storage.example.com/bucket/expiring/file.jpg",
-      61
-    );
-    expect(first).toBe("https://signed.example.com/file.jpg?sig=first");
-
-    // effective ttl is 45s, so this should force cache expiration.
-    nowSpy.mockReturnValueOnce(50_000);
-    mockGetSignedDownloadUrl.mockResolvedValueOnce({
-      success: true,
-      url: "https://signed.example.com/file.jpg?sig=second"
-    });
-    const second = await getSignedDownloadUrl(
-      "https://storage.example.com/bucket/expiring/file.jpg",
-      61
-    );
-
-    expect(second).toBe("https://signed.example.com/file.jpg?sig=second");
-    expect(mockGetSignedDownloadUrl).toHaveBeenCalledTimes(2);
-  });
-
-  it("throws when URL is missing", async () => {
-    await expect(getSignedDownloadUrl("")).rejects.toThrow(
-      "URL is required to ensure public access"
+    expect(
+      getPublicDownloadUrl("https://storage.example.com/bucket/folder/file.jpg")
+    ).toBe("https://cdn.example.com/bucket/folder/file.jpg");
+    expect(mockGetPublicUrlForStorageUrl).toHaveBeenCalledWith(
+      "https://storage.example.com/bucket/folder/file.jpg"
     );
   });
 
-  it("throws when storage service cannot sign URL", async () => {
-    mockGetSignedDownloadUrl.mockResolvedValue({
-      success: false,
-      error: "failed to sign"
-    });
+  it("returns original URL when storage returns null", () => {
+    mockGetPublicUrlForStorageUrl.mockReturnValue(null);
 
-    await expect(
-      getSignedDownloadUrl("https://storage.example.com/bucket/folder/file.jpg")
-    ).rejects.toThrow("failed to sign");
+    expect(
+      getPublicDownloadUrl("https://other.example.com/file.jpg")
+    ).toBe("https://other.example.com/file.jpg");
   });
 
-  it("handles cache key extraction failures without caching", async () => {
-    mockExtractStorageKeyFromUrl.mockImplementation(() => {
-      throw new Error("extract failed");
-    });
-    mockGetSignedDownloadUrl.mockResolvedValue({
-      success: true,
-      url: "https://signed.example.com/no-cache.jpg"
-    });
-
-    await getSignedDownloadUrl("https://storage.example.com/bucket/folder/file.jpg");
-    await getSignedDownloadUrl("https://storage.example.com/bucket/folder/file.jpg");
-
-    expect(mockGetSignedDownloadUrl).toHaveBeenCalledTimes(2);
+  it("returns empty string for empty input", () => {
+    expect(getPublicDownloadUrl("")).toBe("");
   });
 
-  it("uses fallback error message when signer returns no explicit error", async () => {
-    mockGetSignedDownloadUrl.mockResolvedValue({
-      success: false
-    });
-
-    await expect(
-      getSignedDownloadUrl("https://storage.example.com/bucket/no-message.jpg")
-    ).rejects.toThrow("Failed to generate signed download URL");
+  it("getPublicDownloadUrlSafe returns undefined for empty input", () => {
+    expect(getPublicDownloadUrlSafe(undefined)).toBeUndefined();
+    expect(getPublicDownloadUrlSafe(null)).toBeUndefined();
+    expect(getPublicDownloadUrlSafe("")).toBeUndefined();
   });
 
-  it("safe helpers fall back gracefully", async () => {
-    mockGetSignedDownloadUrl.mockResolvedValue({
-      success: false,
-      error: "failed to sign"
-    });
+  it("getPublicDownloadUrlSafe returns public or original URL", () => {
+    mockGetPublicUrlForStorageUrl.mockReturnValue("https://cdn.example.com/a.jpg");
+    expect(getPublicDownloadUrlSafe("https://storage.example.com/a.jpg")).toBe(
+      "https://cdn.example.com/a.jpg"
+    );
 
-    await expect(
-      getSignedDownloadUrlSafe("https://storage.example.com/bucket/folder/file.jpg")
-    ).resolves.toBe("https://storage.example.com/bucket/folder/file.jpg");
-    await expect(getSignedDownloadUrlSafe(null)).resolves.toBeUndefined();
-    await expect(resolveSignedDownloadUrl(undefined)).resolves.toBeNull();
+    mockGetPublicUrlForStorageUrl.mockReturnValue(null);
+    expect(getPublicDownloadUrlSafe("https://external.com/b.jpg")).toBe(
+      "https://external.com/b.jpg"
+    );
   });
 
-  it("batch signs URL arrays", async () => {
-    mockGetSignedDownloadUrl
-      .mockResolvedValueOnce({ success: true, url: "https://signed/1" })
-      .mockResolvedValueOnce({ success: true, url: "https://signed/2" });
+  it("resolvePublicDownloadUrl returns null for empty input", () => {
+    expect(resolvePublicDownloadUrl(undefined)).toBeNull();
+    expect(resolvePublicDownloadUrl(null)).toBeNull();
+    expect(resolvePublicDownloadUrl("")).toBeNull();
+  });
 
-    await expect(
-      getSignedDownloadUrls([
-        "https://storage.example.com/bucket/a.jpg",
-        "https://storage.example.com/bucket/b.jpg"
+  it("resolvePublicDownloadUrl returns public or original URL", () => {
+    mockGetPublicUrlForStorageUrl.mockReturnValue("https://cdn.example.com/c.jpg");
+    expect(resolvePublicDownloadUrl("https://storage.example.com/c.jpg")).toBe(
+      "https://cdn.example.com/c.jpg"
+    );
+
+    mockGetPublicUrlForStorageUrl.mockReturnValue(null);
+    expect(resolvePublicDownloadUrl("https://external.com/d.jpg")).toBe(
+      "https://external.com/d.jpg"
+    );
+  });
+
+  it("getPublicDownloadUrls resolves multiple URLs", () => {
+    mockGetPublicUrlForStorageUrl
+      .mockReturnValueOnce("https://cdn.example.com/1.jpg")
+      .mockReturnValueOnce(null)
+      .mockReturnValueOnce("https://cdn.example.com/3.jpg");
+
+    expect(
+      getPublicDownloadUrls([
+        "https://storage.example.com/1.jpg",
+        "https://external.com/2.jpg",
+        "https://storage.example.com/3.jpg"
       ])
-    ).resolves.toEqual(["https://signed/1", "https://signed/2"]);
+    ).toEqual([
+      "https://cdn.example.com/1.jpg",
+      "https://external.com/2.jpg",
+      "https://cdn.example.com/3.jpg"
+    ]);
   });
 });

@@ -1,7 +1,7 @@
 const mockUploadFile = jest.fn();
 const mockUploadFilesBatch = jest.fn();
 const mockDeleteFile = jest.fn();
-const mockGetSignedDownloadUrl = jest.fn();
+const mockGetPublicDownloadUrl = jest.fn();
 const mockLoggerInfo = jest.fn();
 const mockLoggerError = jest.fn();
 
@@ -15,7 +15,7 @@ jest.mock("@web/src/server/services/storage", () => ({
 }));
 
 jest.mock("@web/src/server/utils/storageUrls", () => ({
-  getSignedDownloadUrl: (...args: unknown[]) => ((mockGetSignedDownloadUrl as (...a: unknown[]) => unknown)(...args))
+  getPublicDownloadUrl: (...args: unknown[]) => ((mockGetPublicDownloadUrl as (...a: unknown[]) => unknown)(...args))
 }));
 
 jest.mock("@web/src/lib/core/logging/logger", () => ({
@@ -28,7 +28,7 @@ jest.mock("@web/src/lib/core/logging/logger", () => ({
 
 import {
   deleteFile,
-  getSignedDownloadUrl,
+  getPublicDownloadUrl,
   uploadFile,
   uploadFilesBatch
 } from "@web/src/server/actions/api/storage";
@@ -46,7 +46,7 @@ describe("storage actions", () => {
     mockUploadFile.mockReset();
     mockUploadFilesBatch.mockReset();
     mockDeleteFile.mockReset();
-    mockGetSignedDownloadUrl.mockReset();
+    mockGetPublicDownloadUrl.mockReset();
     mockLoggerInfo.mockReset();
     mockLoggerError.mockReset();
   });
@@ -79,8 +79,8 @@ describe("storage actions", () => {
     await expect(deleteFile("https://x")).rejects.toThrow("Failed to delete file");
   });
 
-  it("delegates signed URL generation", async () => {
-    mockGetSignedDownloadUrl.mockResolvedValue("signed");
-    await expect(getSignedDownloadUrl("u")).resolves.toBe("signed");
+  it("delegates public URL resolution", async () => {
+    mockGetPublicDownloadUrl.mockReturnValue("https://cdn.example.com/u");
+    await expect(getPublicDownloadUrl("u")).resolves.toBe("https://cdn.example.com/u");
   });
 });

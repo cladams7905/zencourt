@@ -1,5 +1,5 @@
 const mockSelect = jest.fn();
-const mockGetSignedDownloadUrlSafe = jest.fn();
+const mockGetPublicDownloadUrlSafe = jest.fn();
 
 jest.mock("@db/client", () => ({
   db: {
@@ -29,8 +29,8 @@ jest.mock("@db/client", () => ({
 }));
 
 jest.mock("../../../utils/storageUrls", () => ({
-  getSignedDownloadUrlSafe: (...args: unknown[]) =>
-    mockGetSignedDownloadUrlSafe(...args)
+  getPublicDownloadUrlSafe: (...args: unknown[]) =>
+    mockGetPublicDownloadUrlSafe(...args)
 }));
 
 import { getListingVideoStatus } from "../service";
@@ -103,9 +103,9 @@ describe("videoStatus/service", () => {
         ])
       );
 
-    mockGetSignedDownloadUrlSafe
-      .mockResolvedValueOnce("signed-video")
-      .mockResolvedValueOnce("signed-thumb");
+    mockGetPublicDownloadUrlSafe
+      .mockReturnValueOnce("signed-video")
+      .mockReturnValueOnce("signed-thumb");
 
     const result = await getListingVideoStatus("listing-1");
 
@@ -128,7 +128,7 @@ describe("videoStatus/service", () => {
         }
       ]
     });
-    expect(mockGetSignedDownloadUrlSafe).toHaveBeenCalledTimes(2);
+    expect(mockGetPublicDownloadUrlSafe).toHaveBeenCalledTimes(2);
   });
 
   it("falls back to original urls and default fields when signing/settings are missing", async () => {
@@ -150,7 +150,7 @@ describe("videoStatus/service", () => {
         ])
       );
 
-    mockGetSignedDownloadUrlSafe.mockResolvedValueOnce(null).mockResolvedValueOnce(null);
+    mockGetPublicDownloadUrlSafe.mockReturnValueOnce(undefined).mockReturnValueOnce(undefined);
 
     const result = await getListingVideoStatus("listing-2");
 

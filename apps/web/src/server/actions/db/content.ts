@@ -9,10 +9,7 @@ import {
   requireListingId,
   requireUserId
 } from "../shared/validation";
-import {
-  DEFAULT_THUMBNAIL_TTL_SECONDS,
-  resolveSignedDownloadUrl
-} from "../../utils/storageUrls";
+import { resolvePublicDownloadUrl } from "../../utils/storageUrls";
 
 type CreateContentInput = Omit<
   InsertDBContent,
@@ -43,10 +40,9 @@ export async function createContent(
 
       return {
         ...newContent,
-        thumbnailUrl: await resolveSignedDownloadUrl(
-          newContent.thumbnailUrl,
-          DEFAULT_THUMBNAIL_TTL_SECONDS
-        )
+        thumbnailUrl:
+          resolvePublicDownloadUrl(newContent.thumbnailUrl) ??
+          newContent.thumbnailUrl
       };
     },
     {
@@ -85,10 +81,9 @@ export async function updateContent(
 
       return {
         ...updatedContent,
-        thumbnailUrl: await resolveSignedDownloadUrl(
-          updatedContent.thumbnailUrl,
-          DEFAULT_THUMBNAIL_TTL_SECONDS
-        )
+        thumbnailUrl:
+          resolvePublicDownloadUrl(updatedContent.thumbnailUrl) ??
+          updatedContent.thumbnailUrl
       };
     },
     {
@@ -115,15 +110,11 @@ export async function getContentByListingId(
         .select()
         .from(content)
         .where(eq(content.listingId, listingId));
-      return Promise.all(
-        contentRows.map(async (item) => ({
-          ...item,
-          thumbnailUrl: await resolveSignedDownloadUrl(
-            item.thumbnailUrl,
-            DEFAULT_THUMBNAIL_TTL_SECONDS
-          )
-        }))
-      );
+      return contentRows.map((item) => ({
+        ...item,
+        thumbnailUrl:
+          resolvePublicDownloadUrl(item.thumbnailUrl) ?? item.thumbnailUrl
+      }));
     },
     {
       actionName: "getContentByListingId",
@@ -155,10 +146,9 @@ export async function getContentById(
       }
       return {
         ...contentRecord,
-        thumbnailUrl: await resolveSignedDownloadUrl(
-          contentRecord.thumbnailUrl,
-          DEFAULT_THUMBNAIL_TTL_SECONDS
-        )
+        thumbnailUrl:
+          resolvePublicDownloadUrl(contentRecord.thumbnailUrl) ??
+          contentRecord.thumbnailUrl
       };
     },
     {

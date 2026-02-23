@@ -5,9 +5,7 @@ import type {
   VideoJobUpdateEvent
 } from "@web/src/lib/domain/listing/videoStatus";
 import { isPriorityCategory } from "@shared/utils";
-import { getSignedDownloadUrlSafe } from "../../utils/storageUrls";
-
-const VIDEO_STATUS_URL_TTL_SECONDS = 6 * 60 * 60; // 6 hours
+import { getPublicDownloadUrlSafe } from "../../utils/storageUrls";
 
 export async function getListingVideoStatus(
   listingId: string
@@ -42,24 +40,16 @@ export async function getListingVideoStatus(
       .where(eq(videoGenJobs.videoGenBatchId, latestVideo.id))
       .orderBy(asc(videoGenJobs.createdAt));
 
-    jobs = await Promise.all(
-      jobRows.map(async (job) => {
-        const [signedVideoUrl, signedThumbnailUrl] = await Promise.all([
-          getSignedDownloadUrlSafe(
-            job.videoUrl,
-            VIDEO_STATUS_URL_TTL_SECONDS
-          ),
-          getSignedDownloadUrlSafe(
-            job.thumbnailUrl,
-            VIDEO_STATUS_URL_TTL_SECONDS
-          )
-        ]);
-        return {
-          listingId,
-          jobId: job.id,
-          status: job.status,
-          videoUrl: signedVideoUrl ?? job.videoUrl,
-          thumbnailUrl: signedThumbnailUrl ?? job.thumbnailUrl,
+    jobs = jobRows.map((job) => {
+      const videoUrl = getPublicDownloadUrlSafe(job.videoUrl) ?? job.videoUrl;
+      const thumbnailUrl =
+        getPublicDownloadUrlSafe(job.thumbnailUrl) ?? job.thumbnailUrl;
+      return {
+        listingId,
+        jobId: job.id,
+        status: job.status,
+        videoUrl,
+        thumbnailUrl,
           generationModel: job.generationSettings?.model ?? null,
           orientation: job.metadata?.orientation ?? null,
           errorMessage: job.errorMessage,
@@ -71,8 +61,7 @@ export async function getListingVideoStatus(
             : false,
           sortOrder: job.generationSettings?.sortOrder ?? null
         };
-      })
-    );
+    });
   }
 
   return {

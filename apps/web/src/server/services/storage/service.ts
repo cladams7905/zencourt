@@ -8,7 +8,6 @@ import {
   S3Client,
   PutObjectCommand,
   DeleteObjectCommand,
-  GetObjectCommand,
   ListObjectVersionsCommand
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
@@ -336,46 +335,6 @@ export class StorageService {
     } catch (error) {
       const message = error instanceof Error ? error.message : "Delete failed";
       this.logger.error({ err: error, url }, "Delete error");
-
-      return {
-        success: false,
-        error: message
-      };
-    }
-  }
-
-  /**
-   * Generate a signed download URL for an existing object.
-   * Accepts either a full storage URL or a raw object key.
-   */
-  async getSignedDownloadUrl(
-    urlOrKey: string,
-    expiresIn: number = 900
-  ): Promise<
-    { success: true; url: string } | { success: false; error: string }
-  > {
-    try {
-      const key = urlOrKey.startsWith("http")
-        ? this.normalizeKeyFromUrl(urlOrKey)
-        : this.normalizeKey(urlOrKey);
-
-      const command = new GetObjectCommand({
-        Bucket: this.getConfig().bucket,
-        Key: key
-      });
-
-      const signedUrl = await getSignedUrl(this.getClient(), command, {
-        expiresIn
-      });
-      this.logger.info({ key, expiresIn }, "Generated signed download URL");
-
-      return { success: true, url: signedUrl };
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Failed to generate signed download URL";
-      this.logger.error({ err: error, urlOrKey }, "Signed download URL error");
 
       return {
         success: false,

@@ -68,12 +68,7 @@ type VisionServiceLike = {
 };
 
 type StorageServiceLike = {
-  getSignedDownloadUrl: (
-    urlOrKey: string,
-    expiresIn?: number
-  ) => Promise<
-    { success: true; url: string } | { success: false; error: string }
-  >;
+  getPublicUrlForStorageUrl: (url: string) => string | null;
 };
 
 type ImageProcessorDeps = {
@@ -207,7 +202,7 @@ export class ImageProcessorService {
     }
 
     const imageById = new Map(uploadedImages.map((img) => [img.id, img]));
-    const analyzableTargets = await this.buildAnalyzableTargets(
+    const analyzableTargets = this.buildAnalyzableTargets(
       uploadedImages,
       imageById
     );
@@ -248,33 +243,19 @@ export class ImageProcessorService {
     return uploadedImages.map((image) => imageById.get(image.id) ?? image);
   }
 
-  private async getSignedImageUrl(
+  private getPublicImageUrl(
     image: SerializableImageData,
-    purpose: "classification",
-    expiresInSeconds = 600
-  ): Promise<string | null> {
+    _purpose: "classification"
+  ): string | null {
     if (!image.url) {
       this.logger.error(
-        { imageId: image.id, purpose },
-        "Missing image URL for signed access"
+        { imageId: image.id },
+        "Missing image URL for vision access"
       );
       return null;
     }
-
-    const result = await this.storage.getSignedDownloadUrl(
-      image.url,
-      expiresInSeconds
-    );
-
-    if (!result.success) {
-      this.logger.error(
-        { imageId: image.id, purpose, error: result.error },
-        "Failed to generate signed download URL"
-      );
-      return null;
-    }
-
-    return result.url;
+    const publicUrl = this.storage.getPublicUrlForStorageUrl(image.url);
+    return publicUrl ?? image.url;
   }
 
   private emitProgress(
@@ -329,24 +310,22 @@ export class ImageProcessorService {
       }));
   }
 
-  private async buildAnalyzableTargets(
+  private buildAnalyzableTargets(
     uploadedImages: SerializableImageData[],
     imageById: Map<string, SerializableImageData>
-  ): Promise<AnalyzableTarget[]> {
-    const targets = await Promise.all(
-      uploadedImages.map(async (image) => {
-        const signedUrl = await this.getSignedImageUrl(image, "classification");
-        if (!signedUrl) {
-          imageById.set(image.id, {
-            ...image,
-            status: "error",
-            error: image.error || "Unable to access image for analysis"
-          });
-          return null;
-        }
-        return { imageId: image.id, signedUrl };
-      })
-    );
+  ): AnalyzableTarget[] {
+    const targets = uploadedImages.map((image) => {
+      const imageUrl = this.getPublicImageUrl(image, "classification");
+      if (!imageUrl) {
+        imageById.set(image.id, {
+          ...image,
+          status: "error",
+          error: image.error || "Unable to access image for analysis"
+        });
+        return null;
+      }
+      return { imageId: image.id, signedUrl: imageUrl };
+    });
 
     return targets.filter((target): target is AnalyzableTarget =>
       Boolean(target)

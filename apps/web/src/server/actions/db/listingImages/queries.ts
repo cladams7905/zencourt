@@ -3,11 +3,7 @@
 import { db, desc, eq, listingImages } from "@db/client";
 import type { DBListingImage } from "@db/types/models";
 import { withDbErrorHandling } from "@web/src/server/actions/shared/dbErrorHandling";
-import { mapWithSignedUrl } from "@web/src/server/actions/shared/urlSigning";
-import {
-  DEFAULT_THUMBNAIL_TTL_SECONDS,
-  resolveSignedDownloadUrl
-} from "@web/src/server/utils/storageUrls";
+import { resolvePublicDownloadUrl } from "@web/src/server/utils/storageUrls";
 import { ensureListingImageAccess } from "./helpers";
 
 export async function getListingImages(
@@ -27,11 +23,10 @@ export async function getListingImages(
         .where(eq(listingImages.listingId, listingId))
         .orderBy(desc(listingImages.uploadedAt));
 
-      return mapWithSignedUrl(
-        images,
-        (url) => resolveSignedDownloadUrl(url, DEFAULT_THUMBNAIL_TTL_SECONDS),
-        { fallbackToOriginal: true }
-      );
+      return images.map((row) => ({
+        ...row,
+        url: resolvePublicDownloadUrl(row.url) ?? row.url
+      }));
     },
     {
       actionName: "getListingImages",
