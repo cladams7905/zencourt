@@ -14,6 +14,7 @@ import {
   createChildLogger,
   logger as baseLogger
 } from "@web/src/lib/core/logging/logger";
+import storageService from "@web/src/server/services/storage";
 import {
   renderTemplate,
   resolveTemplateParameters,
@@ -93,6 +94,31 @@ function selectCaptionItem(
   ] as TemplateRenderCaptionItemInput;
 }
 
+function resolveListingImagesToPublicUrls(listingImages: DBListingImage[]): {
+  images: DBListingImage[];
+  resolutionSummary: { publicUrlCount: number; signedUrlCount: number };
+} {
+  let publicUrlCount = 0;
+  let signedUrlCount = 0;
+  const images = listingImages.map((img) => {
+    const publicUrl = storageService.getPublicUrlForStorageUrl(img.url);
+    const resolvedUrl = publicUrl ?? img.url;
+    if (publicUrl) {
+      publicUrlCount += 1;
+    } else {
+      signedUrlCount += 1;
+    }
+    return {
+      ...img,
+      url: resolvedUrl
+    };
+  });
+  return {
+    images,
+    resolutionSummary: { publicUrlCount, signedUrlCount }
+  };
+}
+
 function buildModifications(params: {
   resolvedParameters: Partial<Record<TemplateRenderParameterKey, string>>;
   template: TemplateRenderConfig;
@@ -155,13 +181,38 @@ export async function renderListingTemplateBatch(params: {
     return { items: [], failedTemplateIds: [] };
   }
 
+  const { images: listingImagesWithPublicUrls, resolutionSummary } =
+    resolveListingImagesToPublicUrls(params.listingImages);
+
+  const usingPublicBaseUrl = storageService.hasPublicBaseUrl();
+  logger.debug(
+    {
+      subcategory: params.subcategory,
+      listingId: params.listing.id,
+      usingPublicBaseUrl,
+      urlSource: usingPublicBaseUrl
+        ? "STORAGE_PUBLIC_BASE_URL (CDN)"
+        : "signed URLs",
+      resolutionSummary: {
+        publicUrlCount: resolutionSummary.publicUrlCount,
+        signedUrlCount: resolutionSummary.signedUrlCount
+      },
+      imageUrls: listingImagesWithPublicUrls.map((img) => ({
+        id: img.id,
+        url: img.url,
+        category: img.category
+      }))
+    },
+    "Template render: listing image URLs (after public URL resolution)"
+  );
+
   const renders = await Promise.all(
     selectedTemplates.map(async (template, index) => {
       const captionItem = selectCaptionItem(params.captionItems, index);
       const resolvedParameters = resolveTemplateParameters({
         subcategory: params.subcategory,
         listing: params.listing,
-        listingImages: params.listingImages,
+        listingImages: listingImagesWithPublicUrls,
         userAdditional: params.userAdditional,
         captionItem,
         siteOrigin: params.siteOrigin,

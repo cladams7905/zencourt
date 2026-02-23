@@ -7,6 +7,16 @@ import type {
 const mockRenderTemplate = jest.fn();
 const mockResolveTemplateParameters = jest.fn();
 const mockPickRandomTemplatesForSubcategory = jest.fn();
+const mockGetPublicUrlForStorageUrl = jest.fn();
+
+jest.mock("@web/src/server/services/storage", () => ({
+  __esModule: true,
+  default: {
+    getPublicUrlForStorageUrl: (...args: unknown[]) =>
+      mockGetPublicUrlForStorageUrl(...args),
+    hasPublicBaseUrl: () => true
+  }
+}));
 
 jest.mock("../providers/orshot", () => ({
   renderTemplate: (...args: unknown[]) => mockRenderTemplate(...args),
@@ -38,6 +48,9 @@ function buildParams() {
 describe("templateRender/service", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockGetPublicUrlForStorageUrl.mockImplementation((url: string) =>
+      url.includes("signed") ? url.replace("signed", "cdn-public") : null
+    );
   });
 
   it("returns empty result when caption items are empty", async () => {
@@ -205,5 +218,55 @@ describe("templateRender/service", () => {
 
     expect(result.items).toEqual([]);
     expect(result.failedTemplateIds).toEqual(["template-non-error"]);
+  });
+
+  it("transforms listing image URLs to public CDN URLs when storage service returns them", async () => {
+    const signedUrl = "https://storage.example.com/bucket/user_1/signed-photo.jpg?X-Amz-Signature=abc";
+    const publicUrl = "https://cdn.example.com/bucket/user_1/photo.jpg";
+    mockGetPublicUrlForStorageUrl.mockReturnValue(publicUrl);
+    mockPickRandomTemplatesForSubcategory.mockReturnValue([
+      {
+        id: "template-public",
+        subcategories: ["new_listing"],
+        requiredParams: ["headerText", "backgroundImage1"]
+      }
+    ]);
+    mockResolveTemplateParameters.mockReturnValue({
+      headerText: "Dream Home",
+      backgroundImage1: publicUrl
+    });
+    mockRenderTemplate.mockResolvedValueOnce("https://cdn.example.com/render.jpg");
+
+    const listingImages: DBListingImage[] = [
+      {
+        id: "img-1",
+        listingId: "listing-1",
+        filename: "photo.jpg",
+        url: signedUrl,
+        category: "kitchen",
+        confidence: null,
+        primaryScore: null,
+        isPrimary: true,
+        metadata: null,
+        uploadedAt: new Date()
+      } as DBListingImage
+    ];
+
+    await renderListingTemplateBatch({
+      ...buildParams(),
+      listingImages
+    });
+
+    expect(mockGetPublicUrlForStorageUrl).toHaveBeenCalledWith(signedUrl);
+    expect(mockResolveTemplateParameters).toHaveBeenCalledWith(
+      expect.objectContaining({
+        listingImages: [
+          expect.objectContaining({
+            ...listingImages[0],
+            url: publicUrl
+          })
+        ]
+      })
+    );
   });
 });
