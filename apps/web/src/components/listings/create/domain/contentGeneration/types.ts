@@ -20,5 +20,9 @@ export type FinalContentItem = {
 
 export type ContentGenerationEvent =
   | { type: "delta"; text: string }
-  | { type: "done"; items: FinalContentItem[] }
+  | {
+      type: "done";
+      items: FinalContentItem[];
+      meta?: { cache_key_timestamp?: number };
+    }
   | { type: "error"; message: string };

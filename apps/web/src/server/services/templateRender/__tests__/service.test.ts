@@ -18,17 +18,13 @@ jest.mock("@web/src/server/services/storage", () => ({
   }
 }));
 
-jest.mock("../cache", () => ({
-  buildTemplateRenderCacheKey: jest.fn().mockReturnValue("mock-key"),
-  getCachedTemplateRender: jest.fn().mockResolvedValue(null),
-  setCachedTemplateRender: jest.fn().mockResolvedValue(undefined),
-  cachedToRenderedItem: jest.fn().mockImplementation((c: { templateId: string; imageUrl: string; captionItemId: string }) => ({
-    templateId: c.templateId,
-    imageUrl: c.imageUrl,
-    captionItemId: c.captionItemId,
-    parametersUsed: {}
-  }))
-}));
+jest.mock(
+  "@web/src/app/api/v1/listings/[listingId]/content/generate/services/cache",
+  () => ({
+    getCachedListingContentItem: jest.fn().mockResolvedValue(null),
+    updateRenderedPreviewForItem: jest.fn().mockResolvedValue(undefined)
+  })
+);
 
 jest.mock("../providers/orshot", () => ({
   renderTemplate: (...args: unknown[]) => mockRenderTemplate(...args),
@@ -45,7 +41,10 @@ import {
 
 function buildParams() {
   return {
+    userId: "user-1",
+    listingId: "listing-1",
     subcategory: "new_listing" as const,
+    mediaType: "image" as const,
     listing: { id: "listing-1" } as unknown as DBListing,
     listingImages: [] as DBListingImage[],
     userAdditional: { id: "user-additional-1" } as unknown as DBUserAdditional,
@@ -329,7 +328,6 @@ describe("templateRender/service", () => {
     const result = await renderListingTemplateBatchStream(
       {
         ...buildParams(),
-        listingId: "listing-1",
         listingImages,
         captionItems: [
           { id: "cap-1", hook: "H1", caption: "C1", body: [] },
