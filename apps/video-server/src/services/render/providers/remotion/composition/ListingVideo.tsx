@@ -61,7 +61,7 @@ export const ListingVideo: React.FC<ListingVideoProps> = ({ clips }) => {
 
   return (
     <AbsoluteFill style={{ backgroundColor: "black" }}>
-      {clips.map((clip, index) => {
+      {clips.map((clip) => {
         const clipFrames = Math.max(1, Math.round(clip.durationSeconds * fps));
         const startFrame = cursor;
         cursor += clipFrames;

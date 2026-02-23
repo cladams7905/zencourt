@@ -4,6 +4,7 @@ import type {
   DBUserAdditional
 } from "@db/types/models";
 import type {
+  ListingTemplateRenderedItem,
   ListingTemplateRenderResult,
   TemplateRenderCaptionItemInput,
   TemplateRenderConfig,
@@ -15,6 +16,13 @@ import {
   logger as baseLogger
 } from "@web/src/lib/core/logging/logger";
 import storageService from "@web/src/server/services/storage";
+import {
+  buildTemplateRenderCacheKey,
+  cachedToRenderedItem,
+  getCachedTemplateRender,
+  setCachedTemplateRender
+} from "./cache";
+import { buildFallbackRenderedItem } from "./providers/fallback";
 import {
   renderTemplate,
   resolveTemplateParameters,
@@ -247,16 +255,149 @@ export async function renderListingTemplateBatch(params: {
     })
   );
 
-  const items = renders
-    .filter((result) => result.ok)
-    .map((result) => result.value);
-
   const failedTemplateIds = renders
     .filter((result) => !result.ok)
     .map((result) => result.templateId);
+
+  const items: ListingTemplateRenderedItem[] = [];
+  for (let index = 0; index < renders.length; index += 1) {
+    const result = renders[index];
+    const captionItem = selectCaptionItem(params.captionItems, index);
+    if (result?.ok && result.value) {
+      items.push(result.value);
+    } else {
+      const fallback = buildFallbackRenderedItem(
+        captionItem,
+        listingImagesWithPublicUrls
+      );
+      if (fallback) {
+        items.push(fallback);
+      }
+    }
+  }
 
   return {
     items,
     failedTemplateIds
   };
+}
+
+export type RenderListingTemplateBatchStreamParams = {
+  listingId: string;
+  subcategory: ListingContentSubcategory;
+  listing: DBListing;
+  listingImages: DBListingImage[];
+  userAdditional: DBUserAdditional;
+  captionItems: TemplateRenderCaptionItemInput[];
+  templateCount?: number;
+  siteOrigin?: string | null;
+  random?: () => number;
+  now?: () => Date;
+};
+
+export type RenderListingTemplateBatchStreamCallbacks = {
+  onItem: (item: ListingTemplateRenderedItem) => Promise<void>;
+};
+
+/**
+ * Renders templates one-by-one, checking Redis first and calling onItem for each
+ * (cache hit or after Orshot render). Caller can push SSE from onItem.
+ */
+export async function renderListingTemplateBatchStream(
+  params: RenderListingTemplateBatchStreamParams,
+  callbacks: RenderListingTemplateBatchStreamCallbacks
+): Promise<{ failedTemplateIds: string[] }> {
+  const failedTemplateIds: string[] = [];
+
+  if (!params.captionItems.length) {
+    return { failedTemplateIds };
+  }
+
+  const selectedTemplates = pickRandomTemplatesForSubcategory({
+    subcategory: params.subcategory,
+    count: params.templateCount ?? DEFAULT_TEMPLATE_COUNT,
+    random: params.random
+  });
+
+  if (!selectedTemplates.length) {
+    return { failedTemplateIds };
+  }
+
+  const { images: listingImagesWithPublicUrls } = resolveListingImagesToPublicUrls(
+    params.listingImages
+  );
+
+  for (let index = 0; index < selectedTemplates.length; index += 1) {
+    const template = selectedTemplates[index] as TemplateRenderConfig;
+    const captionItem = selectCaptionItem(params.captionItems, index);
+
+    const resolvedParameters = resolveTemplateParameters({
+      subcategory: params.subcategory,
+      listing: params.listing,
+      listingImages: listingImagesWithPublicUrls,
+      userAdditional: params.userAdditional,
+      captionItem,
+      siteOrigin: params.siteOrigin,
+      random: params.random,
+      now: params.now?.()
+    });
+
+    const modifications = buildModifications({
+      resolvedParameters,
+      template
+    });
+
+    const cacheKey = buildTemplateRenderCacheKey({
+      listingId: params.listingId,
+      subcategory: params.subcategory,
+      captionItemId: captionItem.id,
+      templateId: template.id,
+      modifications
+    });
+
+    const cached = await getCachedTemplateRender(cacheKey);
+    if (cached) {
+      await callbacks.onItem(cachedToRenderedItem(cached));
+      continue;
+    }
+
+    try {
+      const imageUrl = await renderTemplate({
+        templateId: template.id,
+        modifications
+      });
+
+      await setCachedTemplateRender(cacheKey, {
+        imageUrl,
+        templateId: template.id,
+        captionItemId: captionItem.id,
+        modifications
+      });
+
+      await callbacks.onItem({
+        templateId: template.id,
+        imageUrl,
+        captionItemId: captionItem.id,
+        parametersUsed: resolvedParameters
+      });
+    } catch (error) {
+      logger.error(
+        {
+          templateId: template.id,
+          error: error instanceof Error ? error.message : error
+        },
+        "Template render failed"
+      );
+      failedTemplateIds.push(template.id);
+      const fallback = buildFallbackRenderedItem(
+        captionItem,
+        listingImagesWithPublicUrls
+      );
+      if (fallback) {
+        await callbacks.onItem(fallback);
+      }
+    }
+  }
+
+  return { failedTemplateIds };
 }

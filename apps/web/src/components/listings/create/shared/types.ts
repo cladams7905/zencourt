@@ -20,6 +20,8 @@ export type ListingImagePreviewItem = {
   caption: string | null;
   slides: ListingImagePreviewSlide[];
   coverImageUrl: string | null;
+  isTemplateRender?: boolean;
+  captionItemId?: string;
 };
 
 export type PlayablePreview = {

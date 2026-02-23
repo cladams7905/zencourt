@@ -1,5 +1,5 @@
 import type { ListingContentSubcategory } from "@shared/types/models";
-import type { ContentGenerationEvent } from "@web/src/components/listings/create/domain/contentGenerationTypes";
+import type { ContentGenerationEvent } from "./types";
 
 export async function requestContentGenerationStream(params: {
   listingId: string;

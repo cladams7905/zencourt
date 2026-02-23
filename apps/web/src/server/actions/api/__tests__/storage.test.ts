@@ -1,7 +1,6 @@
 const mockUploadFile = jest.fn();
 const mockUploadFilesBatch = jest.fn();
 const mockDeleteFile = jest.fn();
-const mockGetPublicDownloadUrl = jest.fn();
 const mockLoggerInfo = jest.fn();
 const mockLoggerError = jest.fn();
 
@@ -14,10 +13,6 @@ jest.mock("@web/src/server/services/storage", () => ({
   }
 }));
 
-jest.mock("@web/src/server/utils/storageUrls", () => ({
-  getPublicDownloadUrl: (...args: unknown[]) => ((mockGetPublicDownloadUrl as (...a: unknown[]) => unknown)(...args))
-}));
-
 jest.mock("@web/src/lib/core/logging/logger", () => ({
   logger: {},
   createChildLogger: () => ({
@@ -28,7 +23,6 @@ jest.mock("@web/src/lib/core/logging/logger", () => ({
 
 import {
   deleteFile,
-  getPublicDownloadUrl,
   uploadFile,
   uploadFilesBatch
 } from "@web/src/server/actions/api/storage";
@@ -46,7 +40,6 @@ describe("storage actions", () => {
     mockUploadFile.mockReset();
     mockUploadFilesBatch.mockReset();
     mockDeleteFile.mockReset();
-    mockGetPublicDownloadUrl.mockReset();
     mockLoggerInfo.mockReset();
     mockLoggerError.mockReset();
   });
@@ -79,8 +72,4 @@ describe("storage actions", () => {
     await expect(deleteFile("https://x")).rejects.toThrow("Failed to delete file");
   });
 
-  it("delegates public URL resolution", async () => {
-    mockGetPublicDownloadUrl.mockReturnValue("https://cdn.example.com/u");
-    await expect(getPublicDownloadUrl("u")).resolves.toBe("https://cdn.example.com/u");
-  });
 });

@@ -214,7 +214,31 @@ export function mapTemplateRenderItemsToPreviewItems(params: {
           textOverlay: null
         }
       ],
-      coverImageUrl: renderedItem.imageUrl
+      coverImageUrl: renderedItem.imageUrl,
+      isTemplateRender: renderedItem.isFallback !== true,
+      captionItemId: renderedItem.captionItemId
     };
   });
+}
+
+/**
+ * Maps a single rendered item to a preview item (for streamed results).
+ */
+export function mapSingleTemplateRenderItemToPreviewItem(params: {
+  renderedItem: ListingTemplateRenderedItem;
+  captionItems: TemplateRenderCaptionItemInput[];
+  variationNumber: number;
+}): ListingImagePreviewItem {
+  const mapped = mapTemplateRenderItemsToPreviewItems({
+    renderedItems: [params.renderedItem],
+    captionItems: params.captionItems
+  });
+  const one = mapped[0];
+  if (!one) {
+    throw new Error("mapTemplateRenderItemsToPreviewItems returned empty");
+  }
+  return {
+    ...one,
+    variationNumber: params.variationNumber
+  };
 }

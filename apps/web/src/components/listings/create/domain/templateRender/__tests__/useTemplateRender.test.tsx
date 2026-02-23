@@ -1,14 +1,23 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { useTemplateRender } from "@web/src/components/listings/create/domain/hooks/useTemplateRender";
+import { useTemplateRender } from "@web/src/components/listings/create/domain/templateRender/useTemplateRender";
 
 const mockBuildTemplateRenderCaptionItems = jest.fn();
-const mockMapTemplateRenderItemsToPreviewItems = jest.fn();
+const mockMapSingleTemplateRenderItemToPreviewItem = jest.fn();
+const mockStreamEvents: Array<{ type: "item"; item: unknown } | { type: "done"; failedTemplateIds: string[] } | { type: "error"; message: string }> = [];
 
 jest.mock("@web/src/components/listings/create/domain/listingCreateUtils", () => ({
   buildTemplateRenderCaptionItems: (...args: unknown[]) =>
     mockBuildTemplateRenderCaptionItems(...args),
-  mapTemplateRenderItemsToPreviewItems: (...args: unknown[]) =>
-    mockMapTemplateRenderItemsToPreviewItems(...args)
+  mapSingleTemplateRenderItemToPreviewItem: (...args: unknown[]) =>
+    mockMapSingleTemplateRenderItemToPreviewItem(...args)
+}));
+
+jest.mock("@web/src/components/listings/create/domain/templateRender/streamEvents", () => ({
+  streamTemplateRenderEvents: async function* () {
+    for (const event of mockStreamEvents) {
+      yield event;
+    }
+  }
 }));
 
 describe("useTemplateRender", () => {
@@ -16,6 +25,8 @@ describe("useTemplateRender", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockStreamEvents.length = 0;
+    mockBuildTemplateRenderCaptionItems.mockReturnValue([]);
     Object.defineProperty(globalThis, "fetch", {
       writable: true,
       value: jest.fn()
@@ -58,20 +69,27 @@ describe("useTemplateRender", () => {
   });
 
   it("maps successful render result", async () => {
-    mockBuildTemplateRenderCaptionItems.mockReturnValue([{ id: "cap-1", hook: "h", caption: null, body: [] }]);
-    mockMapTemplateRenderItemsToPreviewItems.mockReturnValue([
-      {
-        id: "preview-1",
-        variationNumber: 1,
-        hook: "h",
-        caption: null,
-        slides: [],
-        coverImageUrl: "u1"
-      }
+    mockBuildTemplateRenderCaptionItems.mockReturnValue([
+      { id: "cap-1", hook: "h", caption: null, body: [] }
     ]);
+    mockMapSingleTemplateRenderItemToPreviewItem.mockReturnValue({
+      id: "preview-1",
+      variationNumber: 1,
+      hook: "h",
+      caption: null,
+      slides: [],
+      coverImageUrl: "u1",
+      captionItemId: "cap-1"
+    });
+    mockStreamEvents.length = 0;
+    mockStreamEvents.push({
+      type: "item",
+      item: { templateId: "t1", imageUrl: "u1", captionItemId: "cap-1", parametersUsed: {} }
+    });
+    mockStreamEvents.push({ type: "done", failedTemplateIds: [] });
     (global.fetch as jest.Mock).mockResolvedValue({
       ok: true,
-      json: async () => ({ items: [{ templateId: "t1" }], failedTemplateIds: [] })
+      body: { getReader: () => ({ read: () => Promise.resolve({ done: true, value: undefined }) }) }
     });
 
     const { result } = renderHook(() =>
@@ -92,11 +110,14 @@ describe("useTemplateRender", () => {
   });
 
   it("surfaces fallback error when templates fail", async () => {
-    mockBuildTemplateRenderCaptionItems.mockReturnValue([{ id: "cap-1", hook: "h", caption: null, body: [] }]);
-    mockMapTemplateRenderItemsToPreviewItems.mockReturnValue([]);
+    mockBuildTemplateRenderCaptionItems.mockReturnValue([
+      { id: "cap-1", hook: "h", caption: null, body: [] }
+    ]);
+    mockStreamEvents.length = 0;
+    mockStreamEvents.push({ type: "done", failedTemplateIds: ["tpl-1"] });
     (global.fetch as jest.Mock).mockResolvedValue({
       ok: true,
-      json: async () => ({ items: [], failedTemplateIds: ["tpl-1"] })
+      body: { getReader: () => ({ read: () => Promise.resolve({ done: true, value: undefined }) }) }
     });
 
     const { result } = renderHook(() =>
@@ -118,7 +139,9 @@ describe("useTemplateRender", () => {
   });
 
   it("disables template rendering after provider configuration error", async () => {
-    mockBuildTemplateRenderCaptionItems.mockReturnValue([{ id: "cap-1", hook: "h", caption: null, body: [] }]);
+    mockBuildTemplateRenderCaptionItems.mockReturnValue([
+      { id: "cap-1", hook: "h", caption: null, body: [] }
+    ]);
     (global.fetch as jest.Mock).mockResolvedValue({
       ok: false,
       json: async () => ({ message: "API key must be configured" })
@@ -148,7 +171,9 @@ describe("useTemplateRender", () => {
   });
 
   it("ignores aborted request errors", async () => {
-    mockBuildTemplateRenderCaptionItems.mockReturnValue([{ id: "cap-1", hook: "h", caption: null, body: [] }]);
+    mockBuildTemplateRenderCaptionItems.mockReturnValue([
+      { id: "cap-1", hook: "h", caption: null, body: [] }
+    ]);
     const abortError = new Error("aborted");
     abortError.name = "AbortError";
     (global.fetch as jest.Mock).mockRejectedValue(abortError);

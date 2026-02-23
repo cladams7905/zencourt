@@ -1,2 +1,5 @@
-export { renderListingTemplateBatch } from "./service";
+export {
+  renderListingTemplateBatch,
+  renderListingTemplateBatchStream
+} from "./service";
 export * as orshotProvider from "./providers/orshot";

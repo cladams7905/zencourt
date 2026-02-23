@@ -21,8 +21,10 @@ import {
 } from "@web/src/components/listings/create/domain/listingCreateUtils";
 import { useStickyHeader } from "@web/src/components/listings/create/shared/hooks/useStickyHeader";
 import { useScrollFade } from "@web/src/components/listings/create/shared/hooks/useScrollFade";
-import { useTemplateRender } from "@web/src/components/listings/create/domain/hooks/useTemplateRender";
-import { useContentGeneration } from "@web/src/components/listings/create/domain/hooks/useContentGeneration";
+import {
+  useTemplateRender,
+  useContentGeneration
+} from "@web/src/components/listings/create/domain";
 import type { ListingImagePreviewItem } from "@web/src/components/listings/create/shared/types";
 import {
   GENERATED_BATCH_SIZE,
@@ -50,6 +52,7 @@ import {
   TooltipContent,
   TooltipTrigger
 } from "@web/src/components/ui/tooltip";
+import { toast } from "sonner";
 import {
   LISTING_CONTENT_SUBCATEGORIES,
   type ListingContentSubcategory
@@ -205,7 +208,8 @@ export function ListingCreateView({
   const {
     previewItems: templatePreviewItems,
     isRendering: isTemplateRendering,
-    renderError: templateRenderError
+    renderError: templateRenderError,
+    isTemplateRenderingUnavailable
   } = useTemplateRender({
     listingId,
     activeSubcategory,
@@ -214,20 +218,45 @@ export function ListingCreateView({
     isGenerating
   });
 
-  const activeImagePreviewItems = React.useMemo(
-    () =>
-      templatePreviewItems.length > 0
-        ? templatePreviewItems
-        : fallbackImagePreviewItems,
-    [fallbackImagePreviewItems, templatePreviewItems]
-  );
+  const activeImagePreviewItems = React.useMemo(() => {
+    if (isTemplateRenderingUnavailable) {
+      return fallbackImagePreviewItems;
+    }
+    return templatePreviewItems;
+  }, [
+    fallbackImagePreviewItems,
+    templatePreviewItems,
+    isTemplateRenderingUnavailable
+  ]);
 
-  const imageLoadingCount =
-    loadingCount > 0
-      ? loadingCount
-      : activeMediaTab === "images" && isTemplateRendering
-        ? GENERATED_BATCH_SIZE
-        : 0;
+  const imageLoadingCount = React.useMemo(() => {
+    if (activeMediaTab !== "images") {
+      return 0;
+    }
+    if (isTemplateRenderingUnavailable) {
+      return 0;
+    }
+    if (isGenerating) {
+      return GENERATED_BATCH_SIZE;
+    }
+    const expectingTemplateResults =
+      activeMediaItems.length > 0 &&
+      (isTemplateRendering || templatePreviewItems.length === 0);
+    if (!expectingTemplateResults) {
+      return 0;
+    }
+    return Math.max(
+      0,
+      activeMediaItems.length - templatePreviewItems.length
+    );
+  }, [
+    activeMediaTab,
+    activeMediaItems.length,
+    isGenerating,
+    isTemplateRendering,
+    templatePreviewItems.length,
+    isTemplateRenderingUnavailable
+  ]);
   const activePreviewPlans = React.useMemo(() => {
     if (activeMediaTab !== "videos") {
       return [];
@@ -280,6 +309,10 @@ export function ListingCreateView({
     ) {
       return;
     }
+    if (process.env.NODE_ENV === "development") {
+      hasHandledInitialAutoGenerateRef.current = true;
+      return;
+    }
 
     hasHandledInitialAutoGenerateRef.current = true;
     if (activeMediaItems.length === 0) {
@@ -294,6 +327,18 @@ export function ListingCreateView({
     initialSubcategory,
     isGenerating
   ]);
+
+  const lastToastedErrorRef = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    const message = generationError ?? templateRenderError ?? null;
+    if (message && message !== lastToastedErrorRef.current) {
+      lastToastedErrorRef.current = message;
+      toast.error(message);
+    }
+    if (!message) {
+      lastToastedErrorRef.current = null;
+    }
+  }, [generationError, templateRenderError]);
 
   return (
     <>
@@ -397,11 +442,6 @@ export function ListingCreateView({
               </Tooltip>
             </div>
           </div>
-          {generationError || templateRenderError ? (
-            <p className="mt-3 text-sm text-red-500">
-              {generationError ?? templateRenderError}
-            </p>
-          ) : null}
         </div>
       </div>
       <div className="mx-auto w-full max-w-[1600px] px-4 md:px-8 pb-8 pt-8 md:pt-0">
