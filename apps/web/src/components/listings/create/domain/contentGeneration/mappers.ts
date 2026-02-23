@@ -1,9 +1,6 @@
 import type { ContentItem } from "@web/src/components/dashboard/components/ContentGrid";
 import type { ListingContentSubcategory } from "@shared/types/models";
-import type {
-  FinalContentItem,
-  StreamedContentItem
-} from "@web/src/components/listings/create/domain/contentGenerationTypes";
+import type { FinalContentItem, StreamedContentItem } from "./types";
 
 function buildGeneratedContentItem(params: {
   id: string;

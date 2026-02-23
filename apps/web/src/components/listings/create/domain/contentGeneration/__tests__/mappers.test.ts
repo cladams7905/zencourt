@@ -5,9 +5,9 @@ import {
   mapStreamedItemsToContentItems,
   mergeBatchItems,
   removeCurrentBatchItems
-} from "@web/src/components/listings/create/domain/contentGenerationMappers";
+} from "@web/src/components/listings/create/domain/contentGeneration/mappers";
 
-describe("contentGenerationMappers", () => {
+describe("contentGeneration/mappers", () => {
   it("ensures batch ids for the required count", () => {
     expect(
       ensureBatchItemIds({

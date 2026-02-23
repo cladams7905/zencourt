@@ -71,6 +71,8 @@ export type ListingTemplateRenderedItem = {
   imageUrl: string;
   captionItemId: string;
   parametersUsed: Partial<Record<TemplateRenderParameterKey, string>>;
+  /** When true, client shows text overlay; when false/absent, template-only display. */
+  isFallback?: boolean;
 };
 
 export type ListingTemplateRenderResult = {

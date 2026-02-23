@@ -1,5 +1,5 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { useContentGeneration } from "@web/src/components/listings/create/domain/hooks/useContentGeneration";
+import { useContentGeneration } from "@web/src/components/listings/create/domain/contentGeneration/useContentGeneration";
 import { GENERATED_BATCH_SIZE } from "@web/src/components/listings/create/shared/constants";
 
 const mockToastError = jest.fn();
@@ -14,7 +14,7 @@ jest.mock("sonner", () => ({
 }));
 
 jest.mock(
-  "@web/src/components/listings/create/domain/contentGenerationStream",
+  "@web/src/components/listings/create/domain/contentGeneration/stream",
   () => ({
     requestContentGenerationStream: (...args: unknown[]) => mockRequestStream(...args),
     streamContentGenerationEvents: (...args: unknown[]) => mockStreamEvents(...args)

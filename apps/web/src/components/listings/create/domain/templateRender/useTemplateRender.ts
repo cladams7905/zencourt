@@ -1,12 +1,12 @@
 import * as React from "react";
 import type { ContentItem } from "@web/src/components/dashboard/components/ContentGrid";
-import type { ListingTemplateRenderResult } from "@web/src/lib/domain/media/templateRender/types";
 import type { ListingContentSubcategory } from "@shared/types/models";
 import {
   buildTemplateRenderCaptionItems,
-  mapTemplateRenderItemsToPreviewItems
+  mapSingleTemplateRenderItemToPreviewItem
 } from "@web/src/components/listings/create/domain/listingCreateUtils";
 import type { ListingImagePreviewItem } from "@web/src/components/listings/create/shared/types";
+import { streamTemplateRenderEvents } from "./streamEvents";
 import {
   GENERATED_BATCH_SIZE,
   type ListingCreateMediaTab
@@ -24,7 +24,19 @@ type UseTemplateRenderResult = {
   previewItems: ListingImagePreviewItem[];
   isRendering: boolean;
   renderError: string | null;
+  isTemplateRenderingUnavailable: boolean;
 };
+
+/**
+ * Stable key for the first N caption item ids we consider for template render.
+ * Used so the effect does not re-run on captionItems ref change alone.
+ */
+function captionItemIdsKey(captionItems: { id: string }[], max: number): string {
+  return captionItems
+    .slice(0, max)
+    .map((c) => c.id)
+    .join(",");
+}
 
 export function useTemplateRender(
   params: UseTemplateRenderParams
@@ -51,6 +63,30 @@ export function useTemplateRender(
   }, [listingId]);
 
   React.useEffect(() => {
+    setPreviewItems([]);
+  }, [listingId, activeSubcategory]);
+
+  const templateCaptionItems = React.useMemo(
+    () => buildTemplateRenderCaptionItems(captionItems),
+    [captionItems]
+  );
+
+  const consideredIdsKey = captionItemIdsKey(
+    templateCaptionItems,
+    Math.max(GENERATED_BATCH_SIZE, templateCaptionItems?.length ?? 0)
+  );
+
+  React.useEffect(() => {
+    const consideredIds = consideredIdsKey
+      ? consideredIdsKey.split(",").filter(Boolean)
+      : [];
+    const idsWeHave = new Set(
+      previewItems.map((p) => p.captionItemId).filter(Boolean)
+    );
+    const captionItemsNeedingRender = templateCaptionItems.filter((c) =>
+      consideredIds.includes(c.id)
+    ).filter((c) => !idsWeHave.has(c.id));
+
     if (activeMediaTab !== "images") {
       setIsRendering(false);
       setRenderError(null);
@@ -60,8 +96,6 @@ export function useTemplateRender(
     if (isGenerating) {
       return;
     }
-
-    const templateCaptionItems = buildTemplateRenderCaptionItems(captionItems);
     if (templateCaptionItems.length === 0) {
       setPreviewItems([]);
       setRenderError(null);
@@ -74,24 +108,34 @@ export function useTemplateRender(
       return;
     }
 
+    if (captionItemsNeedingRender.length === 0) {
+      setIsRendering(false);
+      return;
+    }
+
     const requestId = requestRef.current + 1;
     requestRef.current = requestId;
     setIsRendering(true);
     setRenderError(null);
     const controller = new AbortController();
 
-    void fetch(`/api/v1/listings/${listingId}/templates/render`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        subcategory: activeSubcategory,
-        captionItems: templateCaptionItems.slice(0, GENERATED_BATCH_SIZE),
-        templateCount: GENERATED_BATCH_SIZE
-      }),
-      cache: "no-store",
-      signal: controller.signal
-    })
-      .then(async (response) => {
+    void (async () => {
+      try {
+        const response = await fetch(
+          `/api/v1/listings/${listingId}/templates/render/stream`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              subcategory: activeSubcategory,
+              captionItems: captionItemsNeedingRender,
+              templateCount: captionItemsNeedingRender.length
+            }),
+            cache: "no-store",
+            signal: controller.signal
+          }
+        );
+
         if (!response.ok) {
           const payload = await response.json().catch(() => ({}));
           throw new Error(
@@ -99,23 +143,47 @@ export function useTemplateRender(
               "Failed to render templates"
           );
         }
-        return response.json() as Promise<ListingTemplateRenderResult>;
-      })
-      .then((result) => {
-        if (requestRef.current !== requestId) {
-          return;
-        }
-        const mapped = mapTemplateRenderItemsToPreviewItems({
-          renderedItems: result.items,
-          captionItems: templateCaptionItems
-        });
-        setPreviewItems(mapped);
 
-        if (mapped.length === 0 && result.failedTemplateIds.length > 0) {
-          setRenderError("Failed to render templates. Showing fallback.");
+        const reader = response.body?.getReader();
+        if (!reader) {
+          throw new Error("Streaming response not available");
         }
-      })
-      .catch((error) => {
+
+        let appendedCount = 0;
+
+        for await (const event of streamTemplateRenderEvents(reader)) {
+          if (requestRef.current !== requestId) {
+            return;
+          }
+
+          if (event.type === "item") {
+            const variationNumber = previewItems.length + appendedCount + 1;
+            const newItem = mapSingleTemplateRenderItemToPreviewItem({
+              renderedItem: event.item,
+              captionItems: templateCaptionItems,
+              variationNumber
+            });
+            appendedCount += 1;
+            setPreviewItems((prev) => [...prev, newItem]);
+          }
+
+          if (event.type === "error") {
+            setRenderError(event.message);
+            break;
+          }
+
+          if (event.type === "done") {
+            if (
+              appendedCount === 0 &&
+              event.failedTemplateIds &&
+              event.failedTemplateIds.length > 0
+            ) {
+              setRenderError("Failed to render templates. Showing fallback.");
+            }
+            break;
+          }
+        }
+      } catch (error) {
         if (requestRef.current !== requestId) {
           return;
         }
@@ -134,25 +202,30 @@ export function useTemplateRender(
           setIsTemplateRenderingUnavailable(true);
         }
         setRenderError(message);
-        setPreviewItems([]);
-      })
-      .finally(() => {
+      } finally {
         if (requestRef.current === requestId) {
           setIsRendering(false);
         }
-      });
+      }
+    })();
 
     return () => {
       controller.abort();
     };
   }, [
-    captionItems,
-    activeMediaTab,
+    listingId,
     activeSubcategory,
+    activeMediaTab,
     isTemplateRenderingUnavailable,
     isGenerating,
-    listingId
+    consideredIdsKey,
+    templateCaptionItems
   ]);
 
-  return { previewItems, isRendering, renderError };
+  return {
+    previewItems,
+    isRendering,
+    renderError,
+    isTemplateRenderingUnavailable
+  };
 }

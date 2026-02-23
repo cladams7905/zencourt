@@ -27,23 +27,27 @@ export function ImagePreviewCard({
   onNextSlide,
   onSelectSlide
 }: ImagePreviewCardProps) {
-  const itemTemplatePattern = resolveItemTemplatePattern(item);
+  const isTemplateRender = Boolean(item.isTemplateRender);
+  const itemTemplatePattern = isTemplateRender
+    ? undefined
+    : resolveItemTemplatePattern(item);
   const normalizedCardSlideIndex =
     item.slides.length > 0
       ? ((cardSlideIndex % item.slides.length) + item.slides.length) %
         item.slides.length
       : 0;
   const coverSlide = item.slides[normalizedCardSlideIndex] ?? null;
-  const coverOverlay = coverSlide
-    ? buildImagePreviewOverlay(
-        item.id,
-        coverSlide,
-        item.variationNumber,
-        itemTemplatePattern
-      )
-    : null;
+  const coverOverlay =
+    isTemplateRender || !coverSlide
+      ? null
+      : buildImagePreviewOverlay(
+          item.id,
+          coverSlide,
+          item.variationNumber,
+          itemTemplatePattern
+        );
   const coverImage = coverSlide?.imageUrl ?? item.coverImageUrl ?? null;
-  const hasOverlay = Boolean(coverOverlay);
+  const hasOverlay = !isTemplateRender && Boolean(coverOverlay);
 
   return (
     <div

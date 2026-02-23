@@ -1,0 +1,72 @@
+import { LISTING_CONTENT_SUBCATEGORIES } from "@shared/types/models";
+import type { ListingContentSubcategory } from "@shared/types/models";
+import type { TemplateRenderCaptionItemInput } from "@web/src/lib/domain/media/templateRender/types";
+
+/**
+ * Parses and validates a listing subcategory from request body.
+ * @throws Error when value is missing or not a valid subcategory
+ */
+export function parseListingSubcategory(value: unknown): ListingContentSubcategory {
+  if (typeof value !== "string") {
+    throw new Error("A valid listing subcategory is required");
+  }
+  const normalized = value.trim();
+  if (!(LISTING_CONTENT_SUBCATEGORIES as readonly string[]).includes(normalized)) {
+    throw new Error("A valid listing subcategory is required");
+  }
+  return normalized as ListingContentSubcategory;
+}
+
+/**
+ * Sanitizes raw caption items from request body into TemplateRenderCaptionItemInput[].
+ * Invalid or empty items are dropped; returns empty array for non-array input.
+ */
+export function sanitizeCaptionItems(
+  input: unknown
+): TemplateRenderCaptionItemInput[] {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+
+  return input
+    .map((item) => {
+      if (!item || typeof item !== "object") {
+        return null;
+      }
+      const candidate = item as {
+        id?: string;
+        hook?: string | null;
+        caption?: string | null;
+        body?: Array<{ header?: string; content?: string }>;
+      };
+      const id = candidate.id?.trim();
+      if (!id) {
+        return null;
+      }
+
+      const body = (candidate.body ?? [])
+        .map((slide) => ({
+          header: slide.header?.trim() ?? "",
+          content: slide.content?.trim() ?? ""
+        }))
+        .filter((slide) => slide.header || slide.content);
+
+      const sanitized = {
+        id,
+        hook: candidate.hook?.trim() || null,
+        caption: candidate.caption?.trim() || null,
+        body
+      };
+
+      if (
+        !sanitized.hook &&
+        !sanitized.caption &&
+        sanitized.body.length === 0
+      ) {
+        return null;
+      }
+
+      return sanitized;
+    })
+    .filter((item): item is TemplateRenderCaptionItemInput => Boolean(item));
+}

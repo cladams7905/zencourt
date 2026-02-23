@@ -14,12 +14,12 @@ import {
   mapStreamedItemsToContentItems,
   mergeBatchItems,
   removeCurrentBatchItems
-} from "@web/src/components/listings/create/domain/contentGenerationMappers";
+} from "./mappers";
 import {
   requestContentGenerationStream,
   streamContentGenerationEvents
-} from "@web/src/components/listings/create/domain/contentGenerationStream";
-import type { StreamedContentItem } from "@web/src/components/listings/create/domain/contentGenerationTypes";
+} from "./stream";
+import type { StreamedContentItem } from "./types";
 
 const INITIAL_SKELETON_HOLD_MS = 350;
 
