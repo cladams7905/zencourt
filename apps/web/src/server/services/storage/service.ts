@@ -22,7 +22,8 @@ import {
   getGenericUploadPath,
   extractStorageKeyFromUrl,
   buildStorageConfigFromEnv,
-  buildStoragePublicUrl
+  buildStoragePublicUrl,
+  isUrlFromStorageEndpoint
 } from "@shared/utils";
 import { createChildLogger, logger as baseLogger } from "@web/src/lib/core/logging/logger";
 
@@ -61,7 +62,8 @@ function buildRuntimeStorageConfig(
       B2_REGION: env.B2_REGION,
       B2_BUCKET_NAME: env.B2_BUCKET_NAME,
       B2_KEY_ID: env.B2_KEY_ID,
-      B2_APPLICATION_KEY: env.B2_APPLICATION_KEY
+      B2_APPLICATION_KEY: env.B2_APPLICATION_KEY,
+      STORAGE_PUBLIC_BASE_URL: env.STORAGE_PUBLIC_BASE_URL
     },
     {
       defaultRegion: "us-west-002"
@@ -267,6 +269,37 @@ export class StorageService {
       this.getConfig().bucket,
       key
     );
+  }
+
+  hasPublicBaseUrl(): boolean {
+    return Boolean(this.getConfig().publicBaseUrl);
+  }
+
+  /**
+   * Resolve a storage URL (signed, raw B2, or CDN) to a public CDN URL when
+   * STORAGE_PUBLIC_BASE_URL is configured. Returns null if public base URL is
+   * not set, the URL is not from our storage, or key extraction fails.
+   */
+  getPublicUrlForStorageUrl(url: string): string | null {
+    const config = this.getConfig();
+    if (!config.publicBaseUrl) {
+      return null;
+    }
+    const isFromB2 = isUrlFromStorageEndpoint(url, config.endpoint);
+    const isFromCdn =
+      config.publicBaseUrl &&
+      isUrlFromStorageEndpoint(url, config.publicBaseUrl);
+    if (!isFromB2 && !isFromCdn) {
+      return null;
+    }
+    try {
+      const key = url.startsWith("http")
+        ? this.normalizeKeyFromUrl(url)
+        : this.normalizeKey(url);
+      return this.buildPublicUrlForKey(key);
+    } catch {
+      return null;
+    }
   }
 
   /**

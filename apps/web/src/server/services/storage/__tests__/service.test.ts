@@ -40,6 +40,8 @@ jest.mock("@aws-sdk/s3-request-presigner", () => ({
   getSignedUrl: (...args: unknown[]) => mockGetSignedUrl(...args)
 }));
 
+const mockIsUrlFromStorageEndpoint = jest.fn();
+
 jest.mock("@shared/utils", () => ({
   getListingImagePath: jest.fn(
     (userId: string, listingId: string, fileName: string) =>
@@ -49,6 +51,7 @@ jest.mock("@shared/utils", () => ({
     (folder: string, fileName: string) => `${folder}/${fileName}`
   ),
   extractStorageKeyFromUrl: (...args: unknown[]) => mockExtractStorageKeyFromUrl(...args),
+  isUrlFromStorageEndpoint: (...args: unknown[]) => mockIsUrlFromStorageEndpoint(...args),
   buildStorageConfigFromEnv: jest.fn(() => ({
     region: "us-west-002",
     bucket: "bucket",
@@ -88,6 +91,7 @@ function toArrayBuffer(value: string): ArrayBuffer {
 describe("storage/service", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockIsUrlFromStorageEndpoint.mockReturnValue(true);
     mockBuildStoragePublicUrl.mockImplementation(
       (_base: string, bucket: string, key: string) => `https://cdn.example.com/${bucket}/${key}`
     );
@@ -275,6 +279,61 @@ describe("storage/service", () => {
     await expect(service.deleteFile("not-a-url")).resolves.toEqual({
       success: false,
       error: "bad url"
+    });
+  });
+
+  describe("getPublicUrlForStorageUrl", () => {
+    it("returns public CDN URL when publicBaseUrl is set and URL is from storage", () => {
+      mockExtractStorageKeyFromUrl.mockReturnValue("bucket/user_1/photo.jpg");
+      mockBuildStoragePublicUrl.mockReturnValue(
+        "https://cdn.example.com/bucket/user_1/photo.jpg"
+      );
+      const service = createService();
+
+      expect(
+        service.getPublicUrlForStorageUrl(
+          "https://storage.example.com/bucket/user_1/photo.jpg?X-Amz-Signature=abc"
+        )
+      ).toBe("https://cdn.example.com/bucket/user_1/photo.jpg");
+    });
+
+    it("returns null when publicBaseUrl is not set", () => {
+      const service = new StorageService({
+        config: {
+          region: "us-west-002",
+          bucket: "bucket",
+          endpoint: "https://storage.example.com",
+          publicBaseUrl: null,
+          keyId: "key",
+          applicationKey: "secret"
+        }
+      });
+      mockIsUrlFromStorageEndpoint.mockReturnValue(true);
+
+      expect(
+        service.getPublicUrlForStorageUrl("https://storage.example.com/bucket/key")
+      ).toBeNull();
+    });
+
+    it("returns null when URL is not from our storage", () => {
+      mockIsUrlFromStorageEndpoint.mockReturnValue(false);
+      const service = createService();
+
+      expect(
+        service.getPublicUrlForStorageUrl("https://external.com/image.jpg")
+      ).toBeNull();
+    });
+
+    it("returns null when key extraction fails", () => {
+      mockIsUrlFromStorageEndpoint.mockReturnValue(true);
+      mockExtractStorageKeyFromUrl.mockImplementation(() => {
+        throw new Error("invalid url");
+      });
+      const service = createService();
+
+      expect(
+        service.getPublicUrlForStorageUrl("https://storage.example.com/invalid")
+      ).toBeNull();
     });
   });
 });
