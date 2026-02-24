@@ -3,6 +3,7 @@ const mockUploadFilesBatch = jest.fn();
 const mockDeleteFile = jest.fn();
 const mockLoggerInfo = jest.fn();
 const mockLoggerError = jest.fn();
+const mockRequireAuthenticatedUser = jest.fn();
 
 jest.mock("@web/src/server/services/storage", () => ({
   __esModule: true,
@@ -19,6 +20,11 @@ jest.mock("@web/src/lib/core/logging/logger", () => ({
     info: (...args: unknown[]) => ((mockLoggerInfo as (...a: unknown[]) => unknown)(...args)),
     error: (...args: unknown[]) => ((mockLoggerError as (...a: unknown[]) => unknown)(...args))
   })
+}));
+
+jest.mock("@web/src/server/utils/apiAuth", () => ({
+  requireAuthenticatedUser: (...args: unknown[]) =>
+    (mockRequireAuthenticatedUser as (...a: unknown[]) => unknown)(...args)
 }));
 
 import {
@@ -42,6 +48,8 @@ describe("storage actions", () => {
     mockDeleteFile.mockReset();
     mockLoggerInfo.mockReset();
     mockLoggerError.mockReset();
+    mockRequireAuthenticatedUser.mockReset();
+    mockRequireAuthenticatedUser.mockResolvedValue({ id: "user-1" });
   });
 
   it("uploads a single file", async () => {
@@ -54,14 +62,11 @@ describe("storage actions", () => {
     expect(mockUploadFile).toHaveBeenCalled();
   });
 
-  it("returns failed batch payload on error", async () => {
+  it("throws on batch upload failure", async () => {
     mockUploadFilesBatch.mockResolvedValue({ success: false, error: "bad" });
 
     const file = makeMockFile();
-    const result = await uploadFilesBatch([file], "folder");
-
-    expect(result.success).toBe(false);
-    expect(result.error).toContain("bad");
+    await expect(uploadFilesBatch([file], "folder")).rejects.toThrow("bad");
   });
 
   it("deletes file or throws", async () => {

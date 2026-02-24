@@ -20,12 +20,10 @@ type UploadRequest = {
 };
 
 type UseSyncUploadFlowParams = {
-  userId: string;
   navigate: (path: string) => void;
 };
 
 export const useSyncUploadFlow = ({
-  userId,
   navigate
 }: UseSyncUploadFlowParams) => {
   const [listingId, setListingIdState] = React.useState<string | null>(null);
@@ -70,7 +68,7 @@ export const useSyncUploadFlow = ({
     } finally {
       inFlightListingPromiseRef.current = null;
     }
-  }, [setListingId, userId]);
+  }, [setListingId]);
 
   const getUploadUrls = React.useCallback(
     async (requests: UploadRequest[]) => {

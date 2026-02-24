@@ -23,11 +23,7 @@ import { validateImageFile } from "@web/src/components/listings/sync/domain";
 import { useSyncUploadFlow } from "@web/src/components/listings/sync/domain/hooks";
 import { formatBytes } from "@web/src/lib/core/formatting/bytes";
 
-interface ListingSyncViewProps {
-  userId: string;
-}
-
-export function ListingSyncView({ userId }: ListingSyncViewProps) {
+export function ListingSyncView() {
   const router = useRouter();
   const [isUploadOpen, setIsUploadOpen] = React.useState(false);
   const {
@@ -36,7 +32,6 @@ export function ListingSyncView({ userId }: ListingSyncViewProps) {
     onCreateRecords,
     onUploadsComplete
   } = useSyncUploadFlow({
-    userId,
     navigate: router.push
   });
 

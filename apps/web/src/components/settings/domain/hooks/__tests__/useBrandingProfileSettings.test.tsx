@@ -29,7 +29,8 @@ jest.mock("@web/src/server/actions/user/commands", () => ({
 }));
 
 jest.mock("@web/src/server/actions/storage/commands", () => ({
-  uploadFileFromBuffer: (...args: unknown[]) => mockUploadFile(...args)
+  uploadCurrentUserBrandingAssetFromBuffer: (...args: unknown[]) =>
+    mockUploadFile(...args)
 }));
 
 describe("useBrandingProfileSettings", () => {
@@ -43,7 +44,6 @@ describe("useBrandingProfileSettings", () => {
   } as unknown as DBUserAdditional;
 
   const baseArgs = {
-    userId: "u1",
     userAdditional: baseUserAdditional,
     defaultAgentName: "Default Agent",
     defaultHeadshotUrl: undefined
@@ -125,8 +125,7 @@ describe("useBrandingProfileSettings", () => {
     expect(mockUploadFile).toHaveBeenCalledWith(
       expect.objectContaining({
         fileName: "avatar.png",
-        contentType: "image/png",
-        folder: "user_u1/branding"
+        contentType: "image/png"
       })
     );
     expect(mockUpdateUserProfile).toHaveBeenCalled();

@@ -11,10 +11,9 @@ import {
   ensureCurrentUserGoogleHeadshot,
   updateCurrentUserProfile
 } from "@web/src/server/actions/user/commands";
-import { uploadFileFromBuffer } from "@web/src/server/actions/storage/commands";
+import { uploadCurrentUserBrandingAssetFromBuffer } from "@web/src/server/actions/storage/commands";
 
 interface UseBrandingProfileSettingsArgs {
-  userId: string;
   userAdditional: BrandingTabProps["userAdditional"];
   defaultAgentName?: string;
   defaultHeadshotUrl?: string;
@@ -24,7 +23,6 @@ const normalizeText = (value: string | null | undefined) =>
   (value ?? "").trim();
 
 export const useBrandingProfileSettings = ({
-  userId,
   userAdditional,
   defaultAgentName,
   defaultHeadshotUrl
@@ -84,78 +82,11 @@ export const useBrandingProfileSettings = ({
   }, []);
 
   React.useEffect(() => {
-    let isMounted = true;
-
-    const resolveSignedUrl = async () => {
-      if (!headshotUrl) {
-        if (isMounted) {
-          setAvatarPreviewUrl("");
-        }
-        return;
-      }
-      if (headshotUrl.startsWith("blob:") || headshotUrl.startsWith("data:")) {
-        if (isMounted) {
-          setAvatarPreviewUrl(headshotUrl);
-        }
-        return;
-      }
-      try {
-        const readUrl = headshotUrl;
-        if (isMounted) {
-          setAvatarPreviewUrl(readUrl);
-        }
-      } catch (error) {
-        if (isMounted) {
-          setAvatarPreviewUrl(headshotUrl);
-        }
-        toast.error(
-          (error as Error).message || "Failed to load headshot preview"
-        );
-      }
-    };
-
-    void resolveSignedUrl();
-    return () => {
-      isMounted = false;
-    };
+    setAvatarPreviewUrl(headshotUrl || "");
   }, [headshotUrl]);
 
   React.useEffect(() => {
-    let isMounted = true;
-
-    const resolveSignedUrl = async () => {
-      if (!personalLogoUrl) {
-        if (isMounted) {
-          setBrokerLogoPreviewUrl("");
-        }
-        return;
-      }
-      if (
-        personalLogoUrl.startsWith("blob:") ||
-        personalLogoUrl.startsWith("data:")
-      ) {
-        if (isMounted) {
-          setBrokerLogoPreviewUrl(personalLogoUrl);
-        }
-        return;
-      }
-      try {
-        const readUrl = personalLogoUrl;
-        if (isMounted) {
-          setBrokerLogoPreviewUrl(readUrl);
-        }
-      } catch (error) {
-        if (isMounted) {
-          setBrokerLogoPreviewUrl(personalLogoUrl);
-        }
-        toast.error((error as Error).message || "Failed to load logo preview");
-      }
-    };
-
-    void resolveSignedUrl();
-    return () => {
-      isMounted = false;
-    };
+    setBrokerLogoPreviewUrl(personalLogoUrl || "");
   }, [personalLogoUrl]);
 
   React.useEffect(() => {
@@ -325,11 +256,10 @@ export const useBrandingProfileSettings = ({
     }
 
     try {
-      const uploadedUrl = await uploadFileFromBuffer({
+      const uploadedUrl = await uploadCurrentUserBrandingAssetFromBuffer({
         fileBuffer: await file.arrayBuffer(),
         fileName: file.name,
-        contentType: file.type,
-        folder: `user_${userId}/branding`
+        contentType: file.type
       });
       if (fieldKey === "headshotUrl") {
         setHeadshotUrl(uploadedUrl);

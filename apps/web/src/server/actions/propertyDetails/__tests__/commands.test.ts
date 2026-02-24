@@ -1,9 +1,8 @@
 const mockGetListingById = jest.fn();
 const mockUpdateListing = jest.fn();
 const mockFetchPropertyDetailsFromService = jest.fn();
+const mockFetchAndPersistPropertyDetails = jest.fn();
 const mockBuildPropertyDetailsRevision = jest.fn();
-const mockGetDefaultPropertyDetailsProvider = jest.fn();
-const mockLoggerInfo = jest.fn();
 const mockRequireAuthenticatedUser = jest.fn();
 
 jest.mock("@web/src/server/models/listings", () => ({
@@ -14,22 +13,12 @@ jest.mock("@web/src/server/models/listings", () => ({
 }));
 
 jest.mock("@web/src/server/services/propertyDetails", () => ({
+  fetchAndPersistPropertyDetails: (...args: unknown[]) =>
+    (mockFetchAndPersistPropertyDetails as (...a: unknown[]) => unknown)(...args),
   fetchPropertyDetails: (...args: unknown[]) =>
-    (mockFetchPropertyDetailsFromService as (...a: unknown[]) => unknown)(
-      ...args
-    ),
+    (mockFetchPropertyDetailsFromService as (...a: unknown[]) => unknown)(...args),
   buildPropertyDetailsRevision: (...args: unknown[]) =>
-    (mockBuildPropertyDetailsRevision as (...a: unknown[]) => unknown)(...args),
-  getDefaultPropertyDetailsProvider: () =>
-    mockGetDefaultPropertyDetailsProvider()
-}));
-
-jest.mock("@web/src/lib/core/logging/logger", () => ({
-  logger: {},
-  createChildLogger: () => ({
-    info: (...args: unknown[]) =>
-      (mockLoggerInfo as (...a: unknown[]) => unknown)(...args)
-  })
+    (mockBuildPropertyDetailsRevision as (...a: unknown[]) => unknown)(...args)
 }));
 
 jest.mock("@web/src/server/utils/apiAuth", () => ({
@@ -49,9 +38,8 @@ describe("listingProperty actions", () => {
     mockGetListingById.mockReset();
     mockUpdateListing.mockReset();
     mockFetchPropertyDetailsFromService.mockReset();
+    mockFetchAndPersistPropertyDetails.mockReset();
     mockBuildPropertyDetailsRevision.mockReset();
-    mockGetDefaultPropertyDetailsProvider.mockReset();
-    mockLoggerInfo.mockReset();
     mockRequireAuthenticatedUser.mockReset();
   });
 
@@ -65,27 +53,25 @@ describe("listingProperty actions", () => {
   });
 
   it("throws when listing does not exist", async () => {
-    mockGetListingById.mockResolvedValueOnce(null);
+    mockFetchAndPersistPropertyDetails.mockRejectedValueOnce(
+      new Error("Listing not found")
+    );
     await expect(fetchPropertyDetails("u1", "l1")).rejects.toThrow(
       "Listing not found"
     );
   });
 
   it("throws when address is missing", async () => {
-    mockGetListingById.mockResolvedValueOnce({ id: "l1", address: " " });
+    mockFetchAndPersistPropertyDetails.mockRejectedValueOnce(
+      new Error("Listing address is required to fetch property details")
+    );
     await expect(fetchPropertyDetails("u1", "l1")).rejects.toThrow(
       "Listing address is required to fetch property details"
     );
   });
 
   it("fetches and saves property details", async () => {
-    const details = { address: "123 Main" };
-    const mockProvider = { name: "perplexity" };
-    mockGetListingById.mockResolvedValueOnce({ id: "l1", address: "123 Main" });
-    mockGetDefaultPropertyDetailsProvider.mockReturnValue(mockProvider);
-    mockFetchPropertyDetailsFromService.mockResolvedValueOnce(details);
-    mockBuildPropertyDetailsRevision.mockReturnValueOnce("rev-1");
-    mockUpdateListing.mockResolvedValueOnce({
+    mockFetchAndPersistPropertyDetails.mockResolvedValueOnce({
       id: "l1",
       listingStage: "review"
     });
@@ -93,20 +79,11 @@ describe("listingProperty actions", () => {
     const result = await fetchPropertyDetails("u1", "l1");
 
     expect(result).toEqual({ id: "l1", listingStage: "review" });
-    expect(mockFetchPropertyDetailsFromService).toHaveBeenCalledWith(
-      "123 Main",
-      mockProvider
-    );
-    expect(mockUpdateListing).toHaveBeenCalledWith(
-      "u1",
-      "l1",
-      expect.objectContaining({
-        propertyDetails: details,
-        propertyDetailsSource: "perplexity",
-        propertyDetailsRevision: "rev-1",
-        listingStage: "review"
-      })
-    );
+    expect(mockFetchAndPersistPropertyDetails).toHaveBeenCalledWith({
+      userId: "u1",
+      listingId: "l1",
+      addressOverride: undefined
+    });
   });
 
   it("saves provided property details", async () => {
@@ -123,26 +100,16 @@ describe("listingProperty actions", () => {
     it("fetchPropertyDetailsForCurrentUser delegates with current user id", async () => {
       const mockUser = { id: "current-user" } as never;
       mockRequireAuthenticatedUser.mockResolvedValueOnce(mockUser);
-      mockGetListingById.mockResolvedValueOnce({
-        id: "l1",
-        address: "456 Oak"
-      });
-      mockGetDefaultPropertyDetailsProvider.mockReturnValue({ name: "p" });
-      mockFetchPropertyDetailsFromService.mockResolvedValueOnce({
-        address: "456 Oak"
-      });
-      mockBuildPropertyDetailsRevision.mockReturnValueOnce("rev-cur");
-      mockUpdateListing.mockResolvedValueOnce({ id: "l1" });
+      mockFetchAndPersistPropertyDetails.mockResolvedValueOnce({ id: "l1" });
 
       await fetchPropertyDetailsForCurrentUser("l1");
 
       expect(mockRequireAuthenticatedUser).toHaveBeenCalled();
-      expect(mockGetListingById).toHaveBeenCalledWith("current-user", "l1");
-      expect(mockUpdateListing).toHaveBeenCalledWith(
-        "current-user",
-        "l1",
-        expect.any(Object)
-      );
+      expect(mockFetchAndPersistPropertyDetails).toHaveBeenCalledWith({
+        userId: "current-user",
+        listingId: "l1",
+        addressOverride: undefined
+      });
     });
 
     it("saveListingPropertyDetailsForCurrentUser delegates with current user id", async () => {
