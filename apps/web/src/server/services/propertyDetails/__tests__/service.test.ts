@@ -15,6 +15,11 @@ jest.mock("../providers", () => ({
   getDefaultPropertyDetailsProvider: () => mockProvider
 }));
 
+jest.mock("@web/src/server/models/listings", () => ({
+  getListingById: jest.fn(),
+  updateListing: jest.fn()
+}));
+
 import {
   buildPropertyDetailsRevision,
   fetchPropertyDetails

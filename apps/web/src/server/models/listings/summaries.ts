@@ -13,7 +13,6 @@ import {
 import type { DBContent, DBListing } from "@db/types/models";
 import { withDbErrorHandling } from "@web/src/server/models/shared/dbErrorHandling";
 import { requireUserId } from "@web/src/server/models/shared/validation";
-import { resolvePublicDownloadUrl } from "@web/src/server/services/storage/urlResolution";
 import { withSignedContentThumbnails } from "./helpers";
 import type { ListingSummaryPreview } from "./types";
 
@@ -195,9 +194,7 @@ export async function getUserListingSummariesPage(
           if (list.length >= 3) {
             continue;
           }
-          const resolvedUrl =
-            resolvePublicDownloadUrl(image.url ?? null) ?? image.url ?? "";
-          list.push(resolvedUrl);
+          list.push(image.url ?? "");
           previewImagesMap.set(image.listingId, list);
         }
       }

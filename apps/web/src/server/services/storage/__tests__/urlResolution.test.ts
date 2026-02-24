@@ -6,7 +6,7 @@ jest.mock("@shared/utils/storagePaths", () => ({
     mockIsUrlFromStorageEndpoint(...args)
 }));
 
-jest.mock("@web/src/server/services/storage/service", () => ({
+jest.mock("../service", () => ({
   __esModule: true,
   default: {
     getPublicUrlForStorageUrl: (...args: unknown[]) =>

@@ -4,7 +4,6 @@ const mockFrom = jest.fn(() => ({ where: mockWhere }));
 const mockSelect = jest.fn(() => ({ from: mockFrom }));
 
 const mockEnsureListingImageAccess = jest.fn();
-const mockResolvePublicDownloadUrl = jest.fn();
 const mockWithDbErrorHandling = jest.fn(
   async (fn: () => Promise<unknown>) => await fn()
 );
@@ -22,11 +21,6 @@ jest.mock("@web/src/server/models/listingImages/helpers", () => ({
   ensureListingImageAccess: (...args: unknown[]) => ((mockEnsureListingImageAccess as (...a: unknown[]) => unknown)(...args))
 }));
 
-jest.mock("@web/src/server/services/storage/urlResolution", () => ({
-  resolvePublicDownloadUrl: (...args: unknown[]) =>
-    ((mockResolvePublicDownloadUrl as (...a: unknown[]) => unknown)(...args))
-}));
-
 jest.mock("@web/src/server/models/shared/dbErrorHandling", () => ({
   withDbErrorHandling: (...args: unknown[]) => ((mockWithDbErrorHandling as (...a: unknown[]) => unknown)(...args))
 }));
@@ -40,13 +34,11 @@ describe("listingImages queries", () => {
     mockFrom.mockClear();
     mockSelect.mockClear();
     mockEnsureListingImageAccess.mockReset();
-    mockResolvePublicDownloadUrl.mockReset();
     mockWithDbErrorHandling.mockClear();
   });
 
-  it("fetches and resolves listing image URLs to public", async () => {
+  it("fetches listing images", async () => {
     mockOrderBy.mockResolvedValueOnce([{ id: "img1", url: "raw" }]);
-    mockResolvePublicDownloadUrl.mockReturnValue("public-url");
 
     const result = await getListingImages("u1", "l1");
 
@@ -55,7 +47,6 @@ describe("listingImages queries", () => {
       "l1",
       expect.any(Object)
     );
-    expect(result).toEqual([{ id: "img1", url: "public-url" }]);
-    expect(mockResolvePublicDownloadUrl).toHaveBeenCalledWith("raw");
+    expect(result).toEqual([{ id: "img1", url: "raw" }]);
   });
 });
