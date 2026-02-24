@@ -3,8 +3,8 @@
 import { LISTING_CONTENT_SUBCATEGORIES } from "@shared/types/models";
 import { deleteCachedListingContentItem as deleteCachedListingContentItemService } from "@web/src/server/services/cache/listingContent";
 import { DomainValidationError } from "@web/src/server/errors/domain";
-import { requireAuthenticatedUser } from "@web/src/server/utils/apiAuth";
-import { requireListingAccess } from "@web/src/server/utils/listingAccess";
+import { requireAuthenticatedUser } from "@web/src/server/auth/apiAuth";
+import { requireListingAccess } from "@web/src/server/models/listings/access";
 
 const MEDIA_TYPE_IMAGE = "image" as const;
 

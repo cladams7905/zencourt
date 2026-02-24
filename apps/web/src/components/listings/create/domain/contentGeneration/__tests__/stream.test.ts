@@ -2,7 +2,6 @@ import {
   requestContentGenerationStream,
   streamContentGenerationEvents
 } from "@web/src/components/listings/create/domain/contentGeneration/stream";
-import { TextDecoder } from "util";
 
 function buildReaderFromChunks(chunks: string[]) {
   let index = 0;
@@ -21,10 +20,6 @@ function buildReaderFromChunks(chunks: string[]) {
 describe("contentGeneration/stream", () => {
   beforeEach(() => {
     jest.resetAllMocks();
-    Object.defineProperty(globalThis, "TextDecoder", {
-      writable: true,
-      value: TextDecoder
-    });
   });
 
   it("requests generation stream with expected payload and returns reader", async () => {

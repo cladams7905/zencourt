@@ -50,7 +50,7 @@ jest.mock("@web/src/server/models/shared/urlSigning", () => ({
   signUrlArray: (...args: unknown[]) => ((mockSignUrlArray as (...a: unknown[]) => unknown)(...args))
 }));
 
-jest.mock("@web/src/server/utils/storageUrls", () => ({
+jest.mock("@web/src/server/services/storage/urlResolution", () => ({
   resolvePublicDownloadUrl: (...args: unknown[]) =>
     ((mockResolvePublicDownloadUrl as (...a: unknown[]) => unknown)(...args))
 }));
@@ -129,8 +129,10 @@ describe("listings summaries", () => {
     ];
 
     mockSelect.mockReturnValueOnce(makeOrderByResolvingBuilder(rows));
-    mockWithSignedContentThumbnails.mockResolvedValueOnce([{ id: "c1" }, { id: "c2" }]);
-    mockResolvePublicDownloadUrl.mockReturnValueOnce("public-thumbnail");
+    mockWithSignedContentThumbnails.mockResolvedValueOnce([
+      { id: "c1" },
+      { id: "c2", thumbnailUrl: "public-thumbnail" }
+    ]);
 
     const result = await getUserListings("u1");
 
@@ -143,7 +145,7 @@ describe("listings summaries", () => {
         id: "l1",
         primaryContentId: "c2",
         thumbnailUrl: "public-thumbnail",
-        contents: [{ id: "c1" }, { id: "c2" }]
+        contents: [{ id: "c1" }, { id: "c2", thumbnailUrl: "public-thumbnail" }]
       })
     ]);
   });

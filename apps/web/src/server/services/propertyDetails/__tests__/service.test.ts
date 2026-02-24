@@ -5,6 +5,12 @@ const mockProvider = {
   fetch: mockFetch
 };
 
+jest.mock("@db/client", () => ({
+  db: { select: () => ({ from: () => ({ where: () => Promise.resolve([]) }) }) },
+  eq: (...args: unknown[]) => args,
+  listings: {}
+}));
+
 jest.mock("../providers", () => ({
   getDefaultPropertyDetailsProvider: () => mockProvider
 }));

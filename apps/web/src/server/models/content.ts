@@ -9,7 +9,6 @@ import {
   requireListingId,
   requireUserId
 } from "./shared/validation";
-import { resolvePublicDownloadUrl } from "../utils/storageUrls";
 
 type CreateContentInput = Omit<
   InsertDBContent,
@@ -38,12 +37,7 @@ export async function createContent(
         })
         .returning();
 
-      return {
-        ...newContent,
-        thumbnailUrl:
-          resolvePublicDownloadUrl(newContent.thumbnailUrl) ??
-          newContent.thumbnailUrl
-      };
+      return newContent;
     },
     {
       actionName: "createContent",
@@ -79,12 +73,7 @@ export async function updateContent(
         throw new Error("Content not found");
       }
 
-      return {
-        ...updatedContent,
-        thumbnailUrl:
-          resolvePublicDownloadUrl(updatedContent.thumbnailUrl) ??
-          updatedContent.thumbnailUrl
-      };
+      return updatedContent;
     },
     {
       actionName: "updateContent",
@@ -110,11 +99,7 @@ export async function getContentByListingId(
         .select()
         .from(content)
         .where(and(eq(content.listingId, listingId), eq(content.userId, userId)));
-      return contentRows.map((item) => ({
-        ...item,
-        thumbnailUrl:
-          resolvePublicDownloadUrl(item.thumbnailUrl) ?? item.thumbnailUrl
-      }));
+      return contentRows;
     },
     {
       actionName: "getContentByListingId",
@@ -144,12 +129,7 @@ export async function getContentById(
       if (!contentRecord) {
         return null;
       }
-      return {
-        ...contentRecord,
-        thumbnailUrl:
-          resolvePublicDownloadUrl(contentRecord.thumbnailUrl) ??
-          contentRecord.thumbnailUrl
-      };
+      return contentRecord;
     },
     {
       actionName: "getContentById",

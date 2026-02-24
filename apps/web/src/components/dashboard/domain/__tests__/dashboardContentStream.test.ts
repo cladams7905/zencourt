@@ -2,7 +2,7 @@ import {
   requestDashboardContentStream,
   streamDashboardContentEvents
 } from "@web/src/components/dashboard/domain/dashboardContentStream";
-import { TextDecoder, TextEncoder } from "util";
+import { TextEncoder } from "util";
 
 function createReaderFromChunks(chunks: string[]) {
   let index = 0;
@@ -21,14 +21,6 @@ function createReaderFromChunks(chunks: string[]) {
 describe("dashboardContentStream", () => {
   beforeEach(() => {
     jest.restoreAllMocks();
-    Object.defineProperty(global, "TextDecoder", {
-      writable: true,
-      value: TextDecoder
-    });
-    Object.defineProperty(global, "TextEncoder", {
-      writable: true,
-      value: TextEncoder
-    });
   });
 
   it("streams SSE events", async () => {

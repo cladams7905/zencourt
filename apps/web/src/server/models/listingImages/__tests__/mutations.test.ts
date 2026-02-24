@@ -14,11 +14,9 @@ const mockInsertValues = jest.fn(() => ({ returning: mockInsertReturning }));
 const mockInsert = jest.fn(() => ({ values: mockInsertValues }));
 
 const mockEnsureListingImageAccess = jest.fn();
-const mockDeleteStorageUrlsOrThrow = jest.fn();
 const mockGetListingFolder = jest.fn(
   (listingId: string, userId: string) => `user_${userId}/listings/listing_${listingId}`
 );
-const mockIsManagedStorageUrl = jest.fn(() => true);
 const mockNanoid = jest.fn(() => "img-generated");
 const mockWithDbErrorHandling = jest.fn(
   async (fn: () => Promise<unknown>) => await fn()
@@ -52,16 +50,8 @@ jest.mock("@web/src/server/models/listingImages/helpers", () => ({
   ensureListingImageAccess: (...args: unknown[]) => ((mockEnsureListingImageAccess as (...a: unknown[]) => unknown)(...args))
 }));
 
-jest.mock("@web/src/server/models/shared/storageCleanup", () => ({
-  deleteStorageUrlsOrThrow: (...args: unknown[]) => ((mockDeleteStorageUrlsOrThrow as (...a: unknown[]) => unknown)(...args))
-}));
-
 jest.mock("@shared/utils/storagePaths", () => ({
   getListingFolder: (...args: unknown[]) => ((mockGetListingFolder as (...a: unknown[]) => unknown)(...args))
-}));
-
-jest.mock("@web/src/server/utils/storageUrls", () => ({
-  isManagedStorageUrl: (...args: unknown[]) => ((mockIsManagedStorageUrl as (...a: unknown[]) => unknown)(...args))
 }));
 
 jest.mock("@web/src/server/models/shared/dbErrorHandling", () => ({
@@ -71,7 +61,6 @@ jest.mock("@web/src/server/models/shared/dbErrorHandling", () => ({
 import {
   assignPrimaryListingImageForCategory,
   createListingImageRecords,
-  deleteListingImageUploads,
   updateListingImageAssignments
 } from "@web/src/server/models/listingImages/mutations";
 
@@ -89,10 +78,7 @@ describe("listingImages mutations", () => {
     mockInsertValues.mockClear();
     mockInsert.mockClear();
     mockEnsureListingImageAccess.mockReset();
-    mockDeleteStorageUrlsOrThrow.mockReset();
     mockGetListingFolder.mockClear();
-    mockIsManagedStorageUrl.mockReset();
-    mockIsManagedStorageUrl.mockReturnValue(true);
     mockNanoid.mockClear();
     mockWithDbErrorHandling.mockClear();
   });
@@ -141,7 +127,6 @@ describe("listingImages mutations", () => {
   });
 
   it("updates assignments and deletes selected rows", async () => {
-    mockSelectWhere.mockResolvedValueOnce([{ id: "d1", url: "https://managed/key" }]);
     mockDeleteWhere.mockResolvedValueOnce(undefined);
     mockUpdateWhere.mockResolvedValue(undefined);
 
@@ -153,10 +138,6 @@ describe("listingImages mutations", () => {
     );
 
     expect(result).toEqual({ updated: 1, deleted: 1 });
-    expect(mockDeleteStorageUrlsOrThrow).toHaveBeenCalledWith(
-      ["https://managed/key"],
-      "Failed to delete listing image"
-    );
     expect(mockDelete).toHaveBeenCalled();
     expect(mockUpdate).toHaveBeenCalled();
   });
@@ -176,24 +157,4 @@ describe("listingImages mutations", () => {
     expect(mockInsert).toHaveBeenCalled();
   });
 
-  it("skips delete cleanup when urls array is empty", async () => {
-    await expect(deleteListingImageUploads("u1", "l1", [])).resolves.toBeUndefined();
-    expect(mockDeleteStorageUrlsOrThrow).not.toHaveBeenCalled();
-  });
-
-  it("deletes uploaded urls when provided", async () => {
-    await expect(
-      deleteListingImageUploads("u1", "l1", ["https://managed/key"])
-    ).resolves.toBeUndefined();
-
-    expect(mockEnsureListingImageAccess).toHaveBeenCalledWith(
-      "u1",
-      "l1",
-      expect.any(Object)
-    );
-    expect(mockDeleteStorageUrlsOrThrow).toHaveBeenCalledWith(
-      ["https://managed/key"],
-      "Failed to clean up listing uploads."
-    );
-  });
 });

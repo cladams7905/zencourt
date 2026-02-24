@@ -4,8 +4,8 @@ import type { VideoGenerateRequest } from "@shared/types/api";
 import {
   DomainValidationError
 } from "@web/src/server/errors/domain";
-import { requireAuthenticatedUser } from "@web/src/server/utils/apiAuth";
-import { requireListingAccess } from "@web/src/server/utils/listingAccess";
+import { requireAuthenticatedUser } from "@web/src/server/auth/apiAuth";
+import { requireListingAccess } from "@web/src/server/models/listings/access";
 import {
   cancelListingVideoGeneration as cancelListingVideoGenerationService,
   startListingVideoGeneration as startListingVideoGenerationService

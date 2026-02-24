@@ -29,7 +29,7 @@ jest.mock("@db/client", () => ({
   eq: (...args: unknown[]) => args
 }));
 
-jest.mock("../../../utils/storageUrls", () => ({
+jest.mock("@web/src/server/services/storage/urlResolution", () => ({
   getPublicDownloadUrlSafe: (...args: unknown[]) =>
     mockGetPublicDownloadUrlSafe(...args)
 }));

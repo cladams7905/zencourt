@@ -13,9 +13,7 @@ import {
 import type { DBContent, DBListing } from "@db/types/models";
 import { withDbErrorHandling } from "@web/src/server/models/shared/dbErrorHandling";
 import { requireUserId } from "@web/src/server/models/shared/validation";
-import {
-  resolvePublicDownloadUrl
-} from "@web/src/server/utils/storageUrls";
+import { resolvePublicDownloadUrl } from "@web/src/server/services/storage/urlResolution";
 import { withSignedContentThumbnails } from "./helpers";
 import type { ListingSummaryPreview } from "./types";
 
@@ -109,11 +107,16 @@ async function signListings(
       const signedContent = await withSignedContentThumbnails(
         listing.contents ?? []
       );
+      const primaryContent =
+        listing.primaryContentId != null
+          ? signedContent.find((c) => c.id === listing.primaryContentId)
+          : null;
+      const thumbnailUrl =
+        primaryContent?.thumbnailUrl ?? listing.thumbnailUrl ?? null;
       return {
         ...listing,
         contents: signedContent,
-        thumbnailUrl:
-          resolvePublicDownloadUrl(listing.thumbnailUrl) ?? listing.thumbnailUrl
+        thumbnailUrl
       };
     })
   );
@@ -192,24 +195,18 @@ export async function getUserListingSummariesPage(
           if (list.length >= 3) {
             continue;
           }
-          list.push(image.url);
+          const resolvedUrl =
+            resolvePublicDownloadUrl(image.url ?? null) ?? image.url ?? "";
+          list.push(resolvedUrl);
           previewImagesMap.set(image.listingId, list);
         }
-      }
-
-      const publicPreviewImagesMap = new Map<string, string[]>();
-      for (const [listingId, urls] of previewImagesMap.entries()) {
-        const publicUrls = urls
-          .map((url) => resolvePublicDownloadUrl(url))
-          .filter((u): u is string => Boolean(u));
-        publicPreviewImagesMap.set(listingId, publicUrls);
       }
 
       return {
         items: pageRows.map((row) => ({
           ...row,
           imageCount: normalizeImageCount(row.imageCount),
-          previewImages: publicPreviewImagesMap.get(row.id) ?? []
+          previewImages: previewImagesMap.get(row.id) ?? []
         })),
         hasMore
       };

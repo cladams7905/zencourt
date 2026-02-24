@@ -1,4 +1,4 @@
-import storageService from "../services/storage";
+import storageService from "./service";
 import { isUrlFromStorageEndpoint } from "@shared/utils/storagePaths";
 
 const storageEndpoint = process.env.B2_ENDPOINT || null;

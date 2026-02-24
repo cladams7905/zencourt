@@ -1,317 +1,133 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Project guidance for coding agents in this monorepo.
 
-## Project Overview
+## Monorepo Overview
 
-Zencourt is an npm workspaces monorepo for a social media generation platform serving real estate marketing. The architecture separates frontend (Vercel-deployed Next.js) from backend video processing (Hetzner-deployed Express + Remotion rendering).
+- `apps/web`: Next.js App Router frontend (primary focus for most tasks)
+- `apps/video-server`: Express + Remotion backend
+- `packages/db`: Drizzle schema/client
+- `packages/shared`: shared types/utils
 
-**Structure:**
-
-```
-apps/web/              # Next.js 15 frontend with Stack Auth + server actions
-apps/video-server/     # Express backend with Runway/Kling orchestration + Remotion rendering
-packages/db/           # Drizzle ORM + Neon PostgreSQL schema + client
-packages/shared/       # Shared types, enums, utilities
-```
-
-**Tech Stack:**
-
-- Frontend: Next.js 16, React 19, Tailwind CSS 4, Radix UI, TanStack Query, fal.ai
-- Backend: Express, Remotion (server-side rendering), Runway SDK, fal.ai (Kling fallback), Pino logging, AWS SDK (S3-compatible)
-- Database: Drizzle ORM, Neon PostgreSQL with Row-Level Security
-- Auth: Stack Auth (@stackframe/stack)
-
-## Common Development Commands
+## High-Value Commands
 
 ```bash
-# First-time setup
 npm install
-npm run env:pull              # Pull environment variables from Vercel
-
-# Daily development
-npm run dev                   # Start Next.js web app (port 3000)
-npm run dev:video             # Start video server (port 3001 via scripts/start-dev-server.sh)
-
-# Database operations
-npm run db:push               # Quick schema sync for development
-npm run db:generate           # Generate migration from schema changes
-npm run db:migrate            # Apply migrations (production-safe)
-npm run db:studio             # Open Drizzle Studio visual DB browser
-
-# Testing (video-server only)
-npm run test --workspace=@zencourt/video-server
-npm run test:watch --workspace=@zencourt/video-server
-npm run test:coverage --workspace=@zencourt/video-server
-
-# Building
-npm run build:local           # Build Next.js app with local .env
-npm run build:video           # Compile TypeScript for video server
-npm run build                 # Build all workspaces
-
-# Docker (video-server)
-npm run docker:rebuild        # Rebuild and restart container
-npm run docker:logs           # View container logs
-npm run docker:up             # Start container
-npm run docker:down           # Stop container
-
-# Type checking
+npm run dev --workspace=@zencourt/web
 npm run type-check --workspace=@zencourt/web
-npm run type-check --workspace=@zencourt/video-server
+npm run test --workspace=@zencourt/web
+npm run test:coverage --workspace=@zencourt/web
 ```
 
-## Code Architecture
+Database:
 
-### Web App (apps/web)
-
-**Structure:**
-
-- `app/` - Next.js App Router with API routes at `api/v1/`
-  - `app/(dashboard)/` - Authenticated dashboard routes (listings, content, settings)
-  - `app/(auth)/` - Auth screens (Stack Auth handlers)
-  - `app/api/v1/content/` - Content generation endpoints (prompts + AI)
-  - `app/api/v1/video/` - Video generation endpoints + config helpers
-  - `app/api/v1/webhooks/` - Webhook handlers from video-server
-- `components/` - Product UI by domain
-  - `components/listings/` - Listing workflow views (sync, categorize, review, generate)
-  - `components/dashboard/` - Content dashboard and grids
-  - `components/uploads/` - Upload dialogs + external connectors
-  - `components/ui/` - Radix UI component primitives
-- `lib/prompts/` - Prompt templates, hooks, and assembly logic
-- `server/actions/` - Server actions for DB and API wrappers
-- `server/services/` - Business logic for server-level operations
-- `server/utils/` - Webhook verification + storage URL helpers
-- `middleware.ts` - Stack Auth session validation
-
-**Authentication Flow:**
-
-- Middleware checks `stack-access` and `stack-refresh` cookies
-- Bypasses: `/handler/*` (auth pages), `/api/v1/webhooks/*`, Next.js internals
-- Redirects unauthenticated users to `/handler/sign-in`
-
-**Critical Web App Folders:**
-
-- `app/api/v1/content/generate/` - Content generation flow (prompt assembly + AI response parsing)
-- `lib/prompts/` - Base prompts, hooks, compliance, and assembly helpers
-- `server/services/communityData/` - Perplexity-powered community data + caching
-- `server/services/marketDataService.ts` - Market insights lookup
-- `server/services/listingPropertyService.ts` - Listing metadata + Perplexity enrichment
-- `components/listings/` - Core listing workflow UI and steps
-
-### Video Server (apps/video-server)
-
-Details for the video server are maintained in `apps/video-server/README.md`. Refer to that file when you need routing, pipeline, or environment specifics. Keep this CLAUDE file focused on web app usage unless a task is explicitly about the video server.
-
-### Database (packages/db)
-
-**Schema Highlights (`drizzle/schema.ts` via `@db/client`):**
-
-- `listings` – Primary entity for listing workflows.
-- `content` – Record storing social media content assets with metadata.
-- `video_gen_batch` – Parent video generation batch/run state.
-- `video_gen_jobs` – Per-room generation jobs (Runway/Kling outputs).
-
-> **Important:** Always import Drizzle helpers (`eq`, `and`, `inArray`, etc.) from `@db/client` rather than `drizzle-orm` directly so every workspace shares the same Drizzle instance/schema.
-
-> **Migration Policy:** Schema migrations must be generated and applied by the user using "npm run db:generate" (do not manually create migration files).
-
-**Row-Level Security:**
-All tables enforce user isolation via RLS policies. Stack Auth provides authentication, RLS provides defense-in-depth at the database level.
-
-### Shared Package (packages/shared)
-
-**Critical Utilities:**
-
-- `utils/storagePaths.ts` - **Centralized storage key generation**. Both web and video-server MUST use these functions to maintain consistent file organization.
-- `utils/storageConfig.ts` - Shared Backblaze env parsing/validation for web + video-server.
-- `utils/storagePaths.ts` also exports `buildStoragePublicUrl` and `extractStorageKeyFromUrl` for consistent URL building/parsing.
-- `utils/logger.ts` - Pino logger configuration
-- `types/` - Shared TypeScript types for API contracts
-
-**Storage Path Pattern:**
-
-```
-user_{userId}/listings/listing_{listingId}/videos/video_{videoAssetId}/...
+```bash
+npm run db:generate
+npm run db:migrate
+npm run db:push
 ```
 
-## Critical Architectural Patterns
+## Non-Negotiable Architecture Rules (Web)
 
-### 1. TypeScript Path Mappings
+### Layering
 
-Centralized in `tsconfig.base.json` with workspace aliases:
+- `app/api/v1/*/route.ts`
+  - Parse HTTP input/params
+  - Call `server/actions/*`
+  - Shape HTTP responses + error mapping
+  - No model imports in routes
+- `server/actions/*`
+  - Auth/access checks
+  - Request/domain validation
+  - Lightweight orchestration
+  - Call services/models
+  - No HTTP response objects/status handling
+- `server/services/*`
+  - Main business orchestration
+- `server/models/*`
+  - DB access only
+- `components/*`
+  - No DB/model imports
+  - No server/service imports
 
-- `@db/*` → `packages/db/src/*`
-- `@shared/*` → `packages/shared/src/*`
-- `@web/*` → `apps/web/src/*`
-- `@video-server/*` → `apps/video-server/src/*`
+### API Route vs Server Action
 
-**Important:** Path mappings must be duplicated in Jest config and tsconfig-paths for runtime resolution.
+Use this decision order:
 
-### 2. Storage Consistency
+1. Server Component reads (default): read via server actions/services/models.
+2. Client mutations (default): call server actions.
+3. Create API routes only for:
+   - Webhooks/external callbacks
+   - Client polling/long-running status
+   - SSE/streaming/protocol-specific HTTP behavior
+   - Explicit public/cross-app HTTP contracts
 
-**Always use `@shared/utils/storagePaths.ts` functions** for generating storage keys. This ensures both web and video-server maintain identical file organization. Never construct storage paths manually.
-Also use shared helpers for storage URL parsing/building (`extractStorageKeyFromUrl`, `buildStoragePublicUrl`) and env config normalization (`buildStorageConfigFromEnv`) to avoid drift across runtimes.
+Do not add API routes for internal reads/mutations that fit server components/actions.
 
-**Signed URL naming:** server-side helpers use `getSignedDownloadUrl*` (see `apps/web/src/server/utils/storageUrls.ts` and `apps/video-server/src/services/storageService.ts`).
+### Route Dependency Policy
 
-**Optional CDN:** set `STORAGE_PUBLIC_BASE_URL` to a CDN origin (e.g., `https://cdn.yourdomain.com`) to have storage services generate public URLs against the CDN instead of the raw B2 endpoint. Add the same env var to Vercel + video-server, and allow the hostname in `apps/web/next.config.ts` for `next/image`.
+- Default: `route -> action -> service/model`
+- Exception: edge/integration endpoints may use `route -> service` when transport behavior is the core concern (e.g. webhook verification).
+- Avoid `route -> model`.
 
-### 3. Video Job Architecture
+## Import/Dependency Guardrails
 
-Video job details live in `apps/video-server/README.md`. Keep this file focused on web app usage unless the task is video-server specific.
+- Always use `@db/client` for Drizzle helpers (`eq`, `and`, etc.).
+- Do not import Drizzle helpers directly from `drizzle-orm` in app code.
+- Use shared storage path/url helpers from `@shared/utils/storagePaths`.
 
-### 4. Large Component Organizational Standard (Web)
+## Naming and Organization
 
-For large/monolithic frontend components (typically >200-300 LOC or files mixing orchestration + async + mapping + rendering), use this standard structure so domains are consistent across the app:
+### `server/actions` module naming
+
+Preferred files by module:
+
+- `commands.ts`: mutations/side effects
+- `queries.ts`: reads
+- `index.ts`: boundary exports
+- `types.ts`: module-local types
+- `helpers.ts`: shared internal helpers (only when needed)
+
+Rules:
+
+- Keep unrelated table/domain concerns in separate modules.
+- Prefer module-boundary imports over deep internal paths.
+
+### Large frontend feature structure (when warranted)
 
 ```
 feature/
-  orchestrators/      # container wiring and cross-subdomain state (only needed if more than one orchestrator component)
-  shared/             # shared constants/types/hooks for that feature
-  domain/             # business logic and feature behavior
+  orchestrators/
+  components/
+  domain/
     hooks/
-    ...               # keep supporting files flat unless multiple files justify a subfolder
-  media/              # optional subdomains (e.g. image/video)
-    image/
-      components/
-      ...             # only create subfolders when they contain multiple files
-    video/
-      components/
-      ...
+  shared/
 ```
 
-Rules:
+- `orchestrators`: composition only
+- `components`: presentational UI
+- `domain/hooks`: behavior/state transitions
+- `shared`: feature-local constants/types
 
-- Keep `orchestrators/` thin; no heavy business logic.
-- Keep rendering in `components/`, behavior in `hooks/`, pure transforms in `view-models/`.
-- Put API/protocol code in `services/`; model conversion in `mappers/`.
-- Avoid top-level catch-all `utils/` unless scoped under a domain.
-- Centralize shared feature contracts in `shared/types.ts` rather than importing types from presentation components.
-- Use `index.ts` barrel files at major boundaries (`feature`, `orchestrators`, `shared`, `domain`, `media/*`) for stable imports.
-- Prefer this pattern only for complex domains; keep small/simple components flat.
-- **Single-file folder rule:** if a folder only contains one non-index file, flatten it (do not keep a dedicated subfolder for one file).
-- **Anti-drift rule for feature folders:** keep responsibilities strict and consistent.
-  - `orchestrators/`: compose hooks + pass props only; no domain logic.
-  - `components/`: presentation/UI only; no server-action calls.
-  - `domain/hooks/`: feature behavior and state transitions.
-  - `shared/`: feature-local constants/types/shared hooks.
-  - External callers should import from the feature boundary (`feature/index.ts`) rather than deep internal files.
+Keep component files exclusively presentational UI. Extract all other logic to domain/hooks or shared (see existing component modules for reference).
 
-### 5. Database Access Consistency
+## Testing Expectations
 
-- Use `@db/client` for **all** DB access (web + video-server) to guarantee a single source of schema and Drizzle helpers.
-- Refrain from importing `drizzle-orm` helpers directly from node_modules—schema types will mismatch across packages.
-- Server actions (web) and services (video-server) must respect project ownership checks already encoded in RLS/policies.
+- Add/update behavior tests for route/action/service changes.
+- Keep route tests focused on route concerns (input parsing, action calls, response shaping).
+- Do not add tests that only verify barrel exports.
 
-### 5a. Server Action Subfolder Naming (Web)
+## Coverage Policy (Web)
 
-When refactoring `apps/web/src/server/actions` into subfolders, use consistent file names.
+Coverage checks are enforced per-module via `apps/web/scripts/check-coverage.mjs`.
+When moving or adding modules, keep coverage prefixes in sync.
 
-Required boundary files:
+## Deployment/Infra Notes
 
-- `index.ts` - module export boundary
-- `types.ts` - module-local contracts
-- `helpers.ts` - shared internal helpers (only when needed)
+- Web deploys via Vercel.
+- Video server deploy details: `apps/video-server/README.md`.
 
-Standard operation file names:
+## Refactor Philosophy
 
-- `queries.ts` - read-only DB lookups/selects
-- `mutations.ts` - inserts/updates/deletes
-- `uploads.ts` - signed upload URL prep + upload-oriented orchestration
-- Domain-specific orchestration files should use concise nouns/verbs (e.g., `analyze.ts`, `categorize.ts`) and avoid `*Actions.ts`.
-
-Rules:
-
-- Do not mix unrelated table concerns in one module boundary (e.g., keep `db/listings` separate from `db/listingImages`).
-- Prefer importing from folder boundaries (`.../db/listings`, `.../db/listingImages`) instead of deep file paths.
-- Extract shared action utilities to `apps/web/src/server/actions/shared/*` when reused across modules.
-
-### 5b. API Route vs Server Action Decision Rule (Web)
-
-Use this exact decision order for `apps/web`:
-
-1. **Server Component reads (default):**
-   - Read data directly in Server Components via server actions/services/models.
-   - Do **not** call internal `/api/v1/*` for normal page data loading.
-
-2. **Client mutations (default):**
-   - Use **Server Actions** for internal app mutations triggered by client components/forms.
-   - Keep auth/access checks in the server action layer; keep HTTP concerns out of actions.
-
-3. **Create an API route only when at least one of these is true:**
-   - Webhook or external system callback endpoint.
-   - Client-side polling / long-running status checks.
-   - Streaming/SSE or protocol-level HTTP behavior that requires route handler control.
-   - Public or cross-application HTTP contract is explicitly required.
-   - Infinite scrolling / client-side fetching pattern where an HTTP endpoint is intentionally the boundary.
-
-4. **Do not create API routes for:**
-   - Internal one-off mutations that can be Server Actions.
-   - Internal reads that can be done in Server Components.
-
-5. **If a route is no longer needed by rule #3:**
-   - Migrate callers to Server Actions or Server Component reads.
-   - Delete the route and its route-specific tests in the same refactor.
-
-### 6. Type Placement
-
-Types should be placed at the appropriate scope — never higher than necessary:
-
-- **Cross-workspace types** (`packages/shared/types/`) — types shared between `apps/web` and `apps/video-server` (e.g., API contracts, shared enums, DB model types). Use the `@shared/types/*` alias to import.
-- **Web app workspace-level types** (`apps/web/src/lib/domain/`) — types shared between client and server code within the web app (e.g., domain models used by both server actions and React components).
-- **Module-level types** (`types.ts` at the module root) — types scoped to a single module or feature; keep them co-located rather than hoisting to a broader scope.
-
-### 7. Docker Build Context
-
-See `apps/video-server/README.md` for video-server deployment and Docker details.
-
-### 8. Next.js Monorepo Configuration
-
-Non-standard config in `next.config.ts`:
-
-- Transpiles workspace packages (`@zencourt/db`, `@zencourt/shared`)
-- Externalizes Pino to prevent bundling issues
-- Output file tracing includes monorepo root
-
-### 9. Video Server Details
-
-Refer to `apps/video-server/README.md` for video-server specific rendering and queueing behavior.
-
-## Key Files for Understanding the System
-
-1. `packages/db/drizzle/schema.ts` - Complete data model with RLS policies
-2. `packages/shared/utils/storagePaths.ts` - Storage architecture (critical!)
-3. `packages/shared/types/models/db.asset.ts` - Asset + stage enums shared with frontend.
-4. `packages/shared/types/models/db.video.ts` - Video + job type definitions.
-5. `apps/video-server/src/services/videoGenerationService.ts` - Core orchestration logic.
-6. `apps/web/src/server/actions/db/*.ts` - Server actions wrapping DB access.
-7. `apps/web/src/proxy.ts` - Stack Auth validation logic.
-8. `tsconfig.base.json` - Monorepo path mappings
-
-## Deployment
-
-- **Web App:** Vercel (automatic on push to `main`)
-- **Video Server:** Hetzner via GitHub Actions
-  - Builds Docker image → GHCR
-  - SSH deploys to Hetzner VPS
-  - Manual deployment: `scripts/deploy-hetzner.sh`
-
-## Testing
-
-Video-server has Jest configuration with:
-
-- **Coverage threshold:** 70% (branches, functions, lines, statements)
-- **Test patterns:** `**/__tests__/**/*.ts`, `**/*.{spec,test}.ts`
-- **Module mapping:** Supports workspace aliases
-
-Web app has a Jest configuration with per-module coverage enforcement via `apps/web/scripts/check-coverage.mjs`:
-
-- **Coverage thresholds:** 80% statements/lines/functions, 70% branches — applied to each module prefix individually (not just the global total)
-- **Covered modules:** every subfolder under `src/components/` and `src/server/services/` (discovered dynamically), plus `src/lib/` and `src/server/actions/` — adding a new service folder automatically enrolls it in coverage checks
-- **Maintenance rule:** when adding new unit-tested modules (especially after moving files between `src/server/services` and `src/lib`), update `apps/web/scripts/check-coverage.mjs` module prefixes if needed so coverage checks keep enforcing the new location.
-- **Do not write tests for barrel re-exports:** never add tests whose only assertion is that `index.ts` re-exports symbols. Coverage should come from behavior tests in concrete modules (`service.ts`, `helpers.ts`, domain files, routes), not re-export wiring.
-- Run: `npm run test:coverage --workspace=@zencourt/web`
-
-## Code Change Philosophy
-
-**Do not optimize for backwards compatibility** unless the user prompt explicitly requests it. When refactoring, renaming, or reorganizing code, make clean breaks — remove old exports, delete deprecated aliases, and update all call sites rather than preserving shims or dual exports. Backwards-compatibility hacks add maintenance burden and obscure intent.
+- Prefer clean breaks over backward-compat shims unless explicitly requested.
+- Remove deprecated aliases/exports in the same refactor.

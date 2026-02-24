@@ -1,6 +1,5 @@
-export { getUserMedia } from "./queries";
-export { getUserMediaUploadUrls, createUserMediaRecords } from "./uploads";
-export { deleteUserMedia } from "./mutations";
+export { getUserMedia, getUserMediaById } from "./queries";
+export { createUserMediaRecords, deleteUserMedia } from "./mutations";
 
 export type {
   UserMediaUploadRequest,

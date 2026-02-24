@@ -14,8 +14,6 @@ export {
   markWritingStyleCompleted
 } from "./mutations";
 
-export { ensureGoogleHeadshot } from "./media";
-
 export type {
   LocationDetailsInput,
   UserAdditionalSnapshot,

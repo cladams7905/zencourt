@@ -16,39 +16,25 @@ describe("listing images route", () => {
   async function loadRoute() {
     jest.resetModules();
 
-    const mockRequireAuthenticatedUser = jest
-      .fn()
-      .mockResolvedValue({ id: "user-1" });
-    const mockRequireListingAccess = jest.fn().mockResolvedValue({
-      id: "listing-1",
-      userId: "user-1"
-    });
-    const mockGetListingImages = jest.fn();
+    const mockGetListingImagesForCurrentUser = jest.fn();
     jest.doMock("@web/src/app/api/v1/_utils", () => ({
       ApiError: TestApiError
     }));
-    jest.doMock("@web/src/server/utils/apiAuth", () => ({
-      requireAuthenticatedUser: (...args: unknown[]) =>
-        mockRequireAuthenticatedUser(...args)
-    }));
-    jest.doMock("@web/src/server/utils/listingAccess", () => ({
-      requireListingAccess: (...args: unknown[]) =>
-        mockRequireListingAccess(...args)
-    }));
-    jest.doMock("@web/src/server/models/listingImages", () => ({
-      getListingImages: (...args: unknown[]) => mockGetListingImages(...args)
+    jest.doMock("@web/src/server/actions/listings/commands", () => ({
+      getListingImagesForCurrentUser: (...args: unknown[]) =>
+        mockGetListingImagesForCurrentUser(...args)
     }));
 
     const mod = await import("../route");
     return {
       GET: mod.GET,
-      mockGetListingImages
+      mockGetListingImagesForCurrentUser
     };
   }
 
   it("returns images on success", async () => {
-    const { GET, mockGetListingImages } = await loadRoute();
-    mockGetListingImages.mockResolvedValueOnce([{ id: "img-1" }]);
+    const { GET, mockGetListingImagesForCurrentUser } = await loadRoute();
+    mockGetListingImagesForCurrentUser.mockResolvedValueOnce([{ id: "img-1" }]);
 
     const response = await GET({} as Request, {
       params: Promise.resolve({ listingId: "listing-1" })
@@ -59,12 +45,12 @@ describe("listing images route", () => {
       success: true,
       data: [{ id: "img-1" }]
     });
-    expect(mockGetListingImages).toHaveBeenCalledWith("user-1", "listing-1");
+    expect(mockGetListingImagesForCurrentUser).toHaveBeenCalledWith("listing-1");
   });
 
   it("maps ApiError responses", async () => {
-    const { GET, mockGetListingImages } = await loadRoute();
-    mockGetListingImages.mockRejectedValueOnce(
+    const { GET, mockGetListingImagesForCurrentUser } = await loadRoute();
+    mockGetListingImagesForCurrentUser.mockRejectedValueOnce(
       new TestApiError(403, "Forbidden")
     );
 
@@ -82,8 +68,8 @@ describe("listing images route", () => {
   });
 
   it("returns 500 for unexpected errors", async () => {
-    const { GET, mockGetListingImages } = await loadRoute();
-    mockGetListingImages.mockRejectedValueOnce(new Error("boom"));
+    const { GET, mockGetListingImagesForCurrentUser } = await loadRoute();
+    mockGetListingImagesForCurrentUser.mockRejectedValueOnce(new Error("boom"));
 
     const response = await GET({} as Request, {
       params: Promise.resolve({ listingId: "listing-1" })

@@ -16,8 +16,8 @@ import {
 } from "@web/src/server/services/templateRender/validation";
 import type { ListingTemplateRenderResult } from "@web/src/lib/domain/media/templateRender/types";
 import { DomainValidationError } from "@web/src/server/errors/domain";
-import { requireAuthenticatedUser } from "@web/src/server/utils/apiAuth";
-import { requireListingAccess } from "@web/src/server/utils/listingAccess";
+import { requireAuthenticatedUser } from "@web/src/server/auth/apiAuth";
+import { requireListingAccess } from "@web/src/server/models/listings/access";
 import { encodeSseEvent } from "@web/src/lib/sse/sseEncoder";
 
 const logger = createChildLogger(baseLogger, {

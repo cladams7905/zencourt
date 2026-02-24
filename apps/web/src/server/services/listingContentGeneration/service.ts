@@ -6,7 +6,7 @@ import {
   createChildLogger,
   logger as baseLogger
 } from "@web/src/lib/core/logging/logger";
-import { requireListingAccess } from "@web/src/server/utils/listingAccess";
+import { requireListingAccess } from "@web/src/server/models/listings/access";
 import {
   getCachedListingContent,
   setCachedListingContent,

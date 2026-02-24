@@ -2,14 +2,14 @@ import { NextResponse } from "next/server";
 import {
   requireAuthenticatedUser,
   requireListingAccess
-} from "@web/src/server/utils/apiAuth";
+} from "@web/src/server/auth/apiAuth";
 import { ApiError } from "@web/src/server/utils/apiError";
-import { StatusCode } from "@web/src/server/utils/apiResponses";
+import { StatusCode } from "@shared/types/api";
 import {
   DomainError,
   isDomainError
 } from "@web/src/server/errors/domain";
-import { apiErrorCodeFromStatus } from "@web/src/server/utils/apiResponses";
+import { apiErrorCodeFromStatus } from "@shared/utils/api/responses";
 
 export { ApiError, requireAuthenticatedUser, requireListingAccess, DomainError };
 

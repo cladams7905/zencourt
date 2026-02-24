@@ -10,7 +10,7 @@ import {
   requireListingId,
   requireUserId
 } from "@web/src/server/actions/shared/validation";
-import { requireAuthenticatedUser } from "@web/src/server/utils/apiAuth";
+import { requireAuthenticatedUser } from "@web/src/server/auth/apiAuth";
 
 export async function fetchPropertyDetails(
   userId: string,

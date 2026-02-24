@@ -5,18 +5,13 @@ describe("content generate route", () => {
   async function loadRoute() {
     jest.resetModules();
 
-    const mockRequireAuthenticatedUser = jest
-      .fn()
-      .mockResolvedValue({ id: "user-1" });
-    const mockRunContentGeneration = jest.fn();
-
-    jest.doMock("@web/src/server/utils/apiAuth", () => ({
-      requireAuthenticatedUser: (...args: unknown[]) =>
-        mockRequireAuthenticatedUser(...args)
+    const mockGenerateContentForCurrentUser = jest.fn();
+    jest.doMock("@web/src/server/auth/apiAuth", () => ({
+      requireAuthenticatedUser: jest.fn()
     }));
-    jest.doMock("@web/src/server/services/contentGeneration", () => ({
-      runContentGeneration: (...args: unknown[]) =>
-        mockRunContentGeneration(...args)
+    jest.doMock("@web/src/server/actions/content/commands", () => ({
+      generateContentForCurrentUser: (...args: unknown[]) =>
+        mockGenerateContentForCurrentUser(...args)
     }));
     jest.doMock("@web/src/lib/core/logging/logger", () => ({
       logger: { info: jest.fn(), error: jest.fn() },
@@ -26,41 +21,12 @@ describe("content generate route", () => {
     const mod = await import("../route");
     return {
       POST: mod.POST,
-      mockRequireAuthenticatedUser,
-      mockRunContentGeneration
+      mockGenerateContentForCurrentUser
     };
   }
 
-  it("returns 400 when category is missing", async () => {
-    const { POST } = await loadRoute();
-    const request = { json: async () => ({ agent_profile: {} }) } as Request;
-
-    const response = await POST(request as never);
-
-    expect(response.status).toBe(400);
-    await expect(response.json()).resolves.toEqual({
-      success: false,
-      code: "INVALID_REQUEST",
-      error: "category is required"
-    });
-  });
-
-  it("returns 400 when agent_profile is missing", async () => {
-    const { POST } = await loadRoute();
-    const request = { json: async () => ({ category: "general" }) } as Request;
-
-    const response = await POST(request as never);
-
-    expect(response.status).toBe(400);
-    await expect(response.json()).resolves.toEqual({
-      success: false,
-      code: "INVALID_REQUEST",
-      error: "agent_profile is required"
-    });
-  });
-
   it("calls service and returns SSE response", async () => {
-    const { POST, mockRequireAuthenticatedUser, mockRunContentGeneration } =
+    const { POST, mockGenerateContentForCurrentUser } =
       await loadRoute();
     const stream = new ReadableStream<Uint8Array>({
       start(controller) {
@@ -68,7 +34,7 @@ describe("content generate route", () => {
         controller.close();
       }
     });
-    mockRunContentGeneration.mockResolvedValueOnce({ stream, status: 200 });
+    mockGenerateContentForCurrentUser.mockResolvedValueOnce({ stream, status: 200 });
 
     const body = {
       category: "general",
@@ -88,13 +54,12 @@ describe("content generate route", () => {
     const response = await POST(request as never);
 
     expect(response.status).toBe(200);
-    expect(mockRequireAuthenticatedUser).toHaveBeenCalledTimes(1);
-    expect(mockRunContentGeneration).toHaveBeenCalledWith("user-1", body);
+    expect(mockGenerateContentForCurrentUser).toHaveBeenCalledWith(body);
   });
 
   it("returns 500 for unexpected errors", async () => {
-    const { POST, mockRunContentGeneration } = await loadRoute();
-    mockRunContentGeneration.mockRejectedValueOnce(new Error("boom"));
+    const { POST, mockGenerateContentForCurrentUser } = await loadRoute();
+    mockGenerateContentForCurrentUser.mockRejectedValueOnce(new Error("boom"));
 
     const request = {
       json: async () => ({

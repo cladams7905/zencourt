@@ -40,7 +40,7 @@ jest.mock("@web/src/server/models/videoGenJobs", () => ({
     mockCreateVideoGenJobsBatch(...args)
 }));
 
-jest.mock("@web/src/server/utils/storageUrls", () => ({
+jest.mock("@web/src/server/services/storage/urlResolution", () => ({
   getPublicDownloadUrls: (...args: unknown[]) =>
     mockGetPublicDownloadUrls(...args)
 }));

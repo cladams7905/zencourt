@@ -15,7 +15,6 @@ const mockSelect = jest.fn(() => ({ from: mockSelectFrom }));
 const mockDeleteWhere = jest.fn();
 const mockDelete = jest.fn(() => ({ where: mockDeleteWhere }));
 
-const mockResolvePublicDownloadUrl = jest.fn();
 const mockWithDbErrorHandling = jest.fn(
   async (fn: () => Promise<unknown>) => await fn()
 );
@@ -37,11 +36,6 @@ jest.mock("@db/client", () => ({
 
 jest.mock("@web/src/server/models/shared/dbErrorHandling", () => ({
   withDbErrorHandling: (...args: unknown[]) => ((mockWithDbErrorHandling as (...a: unknown[]) => unknown)(...args))
-}));
-
-jest.mock("@web/src/server/utils/storageUrls", () => ({
-  resolvePublicDownloadUrl: (...args: unknown[]) =>
-    ((mockResolvePublicDownloadUrl as (...a: unknown[]) => unknown)(...args))
 }));
 
 import {
@@ -66,7 +60,6 @@ describe("content actions", () => {
     mockSelect.mockClear();
     mockDeleteWhere.mockReset();
     mockDelete.mockClear();
-    mockResolvePublicDownloadUrl.mockReset();
     mockWithDbErrorHandling.mockClear();
     mockNanoid.mockClear();
   });
@@ -85,14 +78,13 @@ describe("content actions", () => {
     await expect(deleteContent("u1", "")).rejects.toThrow("Content ID is required");
   });
 
-  it("creates and signs content", async () => {
+  it("creates content", async () => {
     mockInsertReturning.mockResolvedValue([{ id: "c1", thumbnailUrl: "raw" }]);
-    mockResolvePublicDownloadUrl.mockReturnValue("signed");
 
     const result = await createContent("u1", { listingId: "l1" } as never);
 
     expect(mockNanoid).toHaveBeenCalled();
-    expect(result).toEqual({ id: "c1", thumbnailUrl: "signed" });
+    expect(result).toEqual({ id: "c1", thumbnailUrl: "raw" });
   });
 
   it("throws when update target not found", async () => {

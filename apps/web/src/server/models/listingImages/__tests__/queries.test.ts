@@ -22,7 +22,7 @@ jest.mock("@web/src/server/models/listingImages/helpers", () => ({
   ensureListingImageAccess: (...args: unknown[]) => ((mockEnsureListingImageAccess as (...a: unknown[]) => unknown)(...args))
 }));
 
-jest.mock("@web/src/server/utils/storageUrls", () => ({
+jest.mock("@web/src/server/services/storage/urlResolution", () => ({
   resolvePublicDownloadUrl: (...args: unknown[]) =>
     ((mockResolvePublicDownloadUrl as (...a: unknown[]) => unknown)(...args))
 }));
