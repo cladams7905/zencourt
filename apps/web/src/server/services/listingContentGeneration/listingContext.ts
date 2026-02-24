@@ -51,9 +51,6 @@ type ListingRow = {
   propertyDetails?: unknown;
 };
 
-/**
- * Resolves listing-derived context: address parts, state, property fingerprint, and cache key.
- */
 export function resolveListingContext(
   listing: ListingRow,
   params: ValidatedGenerateParams

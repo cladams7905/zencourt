@@ -3,25 +3,11 @@ import type {
   ListingPropertyDetails
 } from "@shared/types/models";
 import type {
-  ListingContentItem,
   ListingGeneratedItem,
   ListingMediaType
 } from "@web/src/server/services/cache/listingContent";
 
-export type { ListingContentItem, ListingGeneratedItem, ListingMediaType };
-
-export type ContentStreamEvent =
-  | { type: "delta"; text: string }
-  | {
-      type: "done";
-      items: ListingGeneratedItem[];
-      meta: {
-        model: string;
-        batch_size: number;
-        cache_key_timestamp?: number;
-      };
-    }
-  | { type: "error"; message: string };
+export type { ListingGeneratedItem, ListingMediaType };
 
 export type GenerateListingContentBody = {
   subcategory?: string;

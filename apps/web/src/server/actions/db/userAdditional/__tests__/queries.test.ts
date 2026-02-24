@@ -23,7 +23,8 @@ jest.mock("@web/src/server/actions/shared/dbErrorHandling", () => ({
 
 import {
   getOrCreateUserAdditional,
-  getUserProfileCompletion
+  getUserProfileCompletion,
+  getUserAdditionalSnapshot
 } from "@web/src/server/actions/db/userAdditional/queries";
 
 describe("userAdditional queries", () => {
@@ -43,6 +44,9 @@ describe("userAdditional queries", () => {
     );
     await expect(getUserProfileCompletion("")).rejects.toThrow(
       "User ID is required to check profile completion"
+    );
+    await expect(getUserAdditionalSnapshot("")).rejects.toThrow(
+      "User ID is required to fetch user additional snapshot"
     );
   });
 
@@ -85,6 +89,55 @@ describe("userAdditional queries", () => {
       profileCompleted: true,
       writingStyleCompleted: false,
       mediaUploaded: true
+    });
+  });
+
+  describe("getUserAdditionalSnapshot", () => {
+    it("maps db row to snapshot payload", async () => {
+      mockSelectWhere.mockResolvedValueOnce([
+        {
+          targetAudiences: ["buyers"],
+          location: "Austin, TX",
+          writingToneLevel: 4,
+          writingStyleCustom: "No fluff",
+          agentName: "Agent",
+          brokerageName: "Broker",
+          agentBio: "Bio",
+          audienceDescription: "Audience",
+          county: "Travis",
+          serviceAreas: ["Austin"]
+        }
+      ]);
+
+      await expect(getUserAdditionalSnapshot("user-1")).resolves.toEqual({
+        targetAudiences: ["buyers"],
+        location: "Austin, TX",
+        writingToneLevel: 4,
+        writingStyleCustom: "No fluff",
+        agentName: "Agent",
+        brokerageName: "Broker",
+        agentBio: "Bio",
+        audienceDescription: "Audience",
+        county: "Travis",
+        serviceAreas: ["Austin"]
+      });
+    });
+
+    it("returns safe defaults when user row is missing", async () => {
+      mockSelectWhere.mockResolvedValueOnce([]);
+
+      await expect(getUserAdditionalSnapshot("user-1")).resolves.toEqual({
+        targetAudiences: null,
+        location: null,
+        writingToneLevel: null,
+        writingStyleCustom: null,
+        agentName: "",
+        brokerageName: "",
+        agentBio: null,
+        audienceDescription: null,
+        county: null,
+        serviceAreas: null
+      });
     });
   });
 });

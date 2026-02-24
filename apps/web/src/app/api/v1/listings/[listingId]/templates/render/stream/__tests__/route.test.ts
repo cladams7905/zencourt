@@ -1,5 +1,7 @@
 /** @jest-environment node */
 
+import { LISTING_CONTENT_SUBCATEGORIES } from "@shared/types/models";
+
 function parseSseEvents(raw: string): Array<Record<string, unknown>> {
   return raw
     .split("\n\n")
@@ -14,19 +16,6 @@ let streamBehavior: {
   reject?: Error | string;
   resolve?: { failedTemplateIds: string[] };
 } = {};
-
-const defaultStreamImpl = async (
-  _params: unknown,
-  opts: { onItem: (item: unknown) => Promise<void> }
-) => {
-  await opts.onItem({
-    templateId: "tpl-1",
-    imageUrl: "https://img/1.jpg",
-    captionItemId: "cap-1",
-    parametersUsed: {}
-  });
-  return { failedTemplateIds: [] as string[] };
-};
 
 class MockApiError extends Error {
   status: number;
@@ -46,10 +35,6 @@ const mockRequireListingAccess = jest.fn().mockResolvedValue({
   id: "listing-1",
   title: "Listing"
 });
-const mockGetListingImages = jest.fn().mockResolvedValue([]);
-const mockGetOrCreateUserAdditional = jest.fn().mockResolvedValue({
-  socialHandle: null
-});
 
 jest.mock("@web/src/app/api/v1/_utils", () => ({
   ApiError: MockApiError,
@@ -58,28 +43,76 @@ jest.mock("@web/src/app/api/v1/_utils", () => ({
   requireListingAccess: (...args: unknown[]) =>
     mockRequireListingAccess(...args)
 }));
-jest.mock("@web/src/server/actions/db/listingImages", () => ({
-  getListingImages: (...args: unknown[]) => mockGetListingImages(...args)
-}));
-jest.mock("@web/src/server/actions/db/userAdditional", () => ({
-  getOrCreateUserAdditional: (...args: unknown[]) =>
-    mockGetOrCreateUserAdditional(...args)
-}));
+
+const { encodeSseEvent, makeSseStreamHeaders } = jest.requireActual(
+  "@web/src/lib/sse/sseEncoder"
+) as typeof import("@web/src/lib/sse/sseEncoder");
+
 const mockRenderListingTemplateBatchStream = jest.fn().mockImplementation(
   async (
-    params: unknown,
-    opts: { onItem: (item: unknown) => Promise<void> }
+    _listingId: string,
+    body: { captionItems?: unknown[]; subcategory?: string; templateCount?: number; templateId?: string },
+    _siteOrigin: string
   ) => {
+    const { ApiError } = jest.requireMock("@web/src/app/api/v1/_utils");
+    const sub = body?.subcategory;
+    if (!sub || typeof sub !== "string" || !sub.trim()) {
+      throw new ApiError(400, {
+        error: "Invalid request",
+        message: "A valid listing subcategory is required"
+      });
+    }
+    if (!(LISTING_CONTENT_SUBCATEGORIES as readonly string[]).includes(sub.trim())) {
+      throw new ApiError(400, {
+        error: "Invalid request",
+        message: "A valid listing subcategory is required"
+      });
+    }
     if (streamBehavior.reject !== undefined) {
       throw streamBehavior.reject;
     }
-    if (streamBehavior.resolve !== undefined) {
-      return streamBehavior.resolve;
-    }
-    return defaultStreamImpl(params, opts);
+    const failedTemplateIds = streamBehavior.resolve?.failedTemplateIds ?? [];
+    const hasItems =
+      Array.isArray(body?.captionItems) &&
+      body.captionItems.length > 0 &&
+      body.captionItems.some((c: unknown) => {
+        if (!c || typeof c !== "object") return false;
+        const o = c as { hook?: string; caption?: string; body?: unknown[] };
+        return (
+          Boolean(o.hook?.trim()) ||
+          Boolean(o.caption?.trim()) ||
+          (Array.isArray(o.body) && o.body.length > 0)
+        );
+      });
+    const stream = new ReadableStream({
+      start(controller) {
+        if (hasItems) {
+          controller.enqueue(
+            encodeSseEvent({
+              type: "item",
+              item: {
+                templateId: "tpl-1",
+                imageUrl: "https://img/1.jpg",
+                captionItemId: "cap-1",
+                parametersUsed: {}
+              }
+            })
+          );
+        }
+        controller.enqueue(
+          encodeSseEvent({
+            type: "done",
+            ...(hasItems ? {} : { items: [] }),
+            failedTemplateIds
+          })
+        );
+        controller.close();
+      }
+    });
+    return new Response(stream, { headers: makeSseStreamHeaders() });
   }
 );
-jest.mock("@web/src/server/services/templateRender", () => ({
+jest.mock("@web/src/server/actions/api/listings/templates", () => ({
   renderListingTemplateBatchStream: (...args: unknown[]) =>
     mockRenderListingTemplateBatchStream(...args)
 }));
@@ -97,27 +130,20 @@ describe("listing templates render stream route", () => {
       reject: options?.streamRejects,
       resolve: options?.streamResolves
     };
-    mockGetListingImages.mockResolvedValue([]);
-    mockGetOrCreateUserAdditional.mockResolvedValue({
-      socialHandle: null
-    });
     jest.resetModules();
-    // Restore real validation so route gets real readJsonBodySafe (previous test may have doMock'd it)
     jest.doMock("@shared/utils/api/validation", () =>
       jest.requireActual("@shared/utils/api/validation")
     );
-    // Re-apply templateRender mock so route uses our streamBehavior (previous test may have doMock'd it)
-    jest.doMock("@web/src/server/services/templateRender", () => ({
+    jest.doMock("@web/src/server/actions/api/listings/templates", () => ({
       renderListingTemplateBatchStream: (...args: unknown[]) =>
         mockRenderListingTemplateBatchStream(...args)
     }));
 
     const routeModule = await import("../route");
+    mockRenderListingTemplateBatchStream.mockClear();
     return {
       POST: routeModule.POST,
-      mockRenderListingTemplateBatchStream,
-      mockGetListingImages,
-      mockGetOrCreateUserAdditional
+      mockRenderListingTemplateBatchStream
     };
   }
 
@@ -188,7 +214,7 @@ describe("listing templates render stream route", () => {
       items: [],
       failedTemplateIds: []
     });
-    expect(mockRenderListingTemplateBatchStream).not.toHaveBeenCalled();
+    expect(mockRenderListingTemplateBatchStream).toHaveBeenCalledTimes(1);
   });
 
   it("returns empty done stream when captionItems is not an array", async () => {
@@ -210,7 +236,7 @@ describe("listing templates render stream route", () => {
       items: [],
       failedTemplateIds: []
     });
-    expect(mockRenderListingTemplateBatchStream).not.toHaveBeenCalled();
+    expect(mockRenderListingTemplateBatchStream).toHaveBeenCalledTimes(1);
   });
 
   it("streams item events and done with failedTemplateIds", async () => {
@@ -249,24 +275,12 @@ describe("listing templates render stream route", () => {
       failedTemplateIds: []
     });
     expect(mockRenderListingTemplateBatchStream).toHaveBeenCalledWith(
+      "listing-1",
       expect.objectContaining({
-        userId: "user-1",
-        listingId: "listing-1",
         subcategory: "new_listing",
-        mediaType: "image",
-        captionItems: [
-          {
-            id: "cap-1",
-            hook: "Hook",
-            caption: "Caption",
-            body: [{ header: "Header", content: "Content" }]
-          }
-        ],
-        siteOrigin: "http://localhost:3000"
+        captionItems: expect.any(Array)
       }),
-      expect.objectContaining({
-        onItem: expect.any(Function)
-      })
+      "http://localhost:3000"
     );
   });
 
@@ -285,10 +299,13 @@ describe("listing templates render stream route", () => {
     });
 
     expect(mockRenderListingTemplateBatchStream).toHaveBeenCalledWith(
+      "listing-1",
       expect.objectContaining({
-        templateCount: undefined
+        subcategory: "new_listing",
+        templateCount: 0,
+        captionItems: expect.any(Array)
       }),
-      expect.any(Object)
+      "http://localhost:3000"
     );
   });
 
@@ -307,110 +324,54 @@ describe("listing templates render stream route", () => {
     });
 
     expect(mockRenderListingTemplateBatchStream).toHaveBeenCalledWith(
+      "listing-1",
       expect.objectContaining({
-        templateCount: 3
+        subcategory: "new_listing",
+        templateCount: 3,
+        captionItems: expect.any(Array)
       }),
-      expect.any(Object)
+      "http://localhost:3000"
     );
   });
 
   it("maps ApiError to status code response", async () => {
-    jest.resetModules();
-
-    class MockApiError extends Error {
-      status: number;
-      body: { error: string; message: string };
-      constructor(status: number, body: { error: string; message: string }) {
-        super(body.message);
-        this.status = status;
-        this.body = body;
-      }
-    }
-
-    jest.doMock("@web/src/app/api/v1/_utils", () => ({
-      ApiError: MockApiError,
-      requireAuthenticatedUser: jest.fn().mockResolvedValue({ id: "user-1" }),
-      requireListingAccess: jest.fn().mockRejectedValue(
-        new MockApiError(403, { error: "Forbidden", message: "no access" })
-      )
-    }));
-    jest.doMock("@web/src/server/actions/db/listingImages", () => ({
-      getListingImages: jest.fn()
-    }));
-    jest.doMock("@web/src/server/actions/db/userAdditional", () => ({
-      getOrCreateUserAdditional: jest.fn()
-    }));
-    jest.doMock("@web/src/server/services/templateRender", () => ({
-      renderListingTemplateBatchStream: jest.fn()
-    }));
-    jest.doMock("@web/src/lib/core/logging/logger", () => ({
-      logger: { error: jest.fn(), warn: jest.fn() },
-      createChildLogger: () => ({ error: jest.fn(), warn: jest.fn() })
-    }));
-
-    const routeModule = await import("../route");
+    const { POST, mockRenderListingTemplateBatchStream } = await loadRoute();
+    const { ApiError: MockApiErrorForThrow } = jest.requireMock(
+      "@web/src/app/api/v1/_utils"
+    );
+    mockRenderListingTemplateBatchStream.mockRejectedValueOnce(
+      new MockApiErrorForThrow(403, {
+        error: "Forbidden",
+        message: "no access"
+      })
+    );
     const request = requestWithBody({
       subcategory: "new_listing",
       captionItems: [{ id: "a", hook: "h", caption: "c", body: [] }]
     });
 
-    const response = await routeModule.POST(request as never, {
+    const response = await POST(request as never, {
       params: Promise.resolve({ listingId: "listing-1" })
     });
     expect(response.status).toBe(403);
   });
 
-  it("returns 500 for unexpected setup errors", async () => {
-    jest.resetModules();
-
-    class MockApiError extends Error {
-      status: number;
-      body: { error: string; message: string };
-      constructor(status: number, body: { error: string; message: string }) {
-        super(body.message);
-        this.status = status;
-        this.body = body;
-      }
-    }
-
-    jest.doMock("@web/src/app/api/v1/_utils", () => ({
-      ApiError: MockApiError,
-      requireAuthenticatedUser: jest.fn().mockResolvedValue({ id: "user-1" }),
-      requireListingAccess: jest.fn().mockResolvedValue({
-        id: "listing-1",
-        title: "Listing"
-      })
-    }));
-    jest.doMock("@web/src/server/actions/db/listingImages", () => ({
-      getListingImages: jest.fn()
-    }));
-    jest.doMock("@web/src/server/actions/db/userAdditional", () => ({
-      getOrCreateUserAdditional: jest.fn()
-    }));
-    jest.doMock("@web/src/server/services/templateRender", () => ({
-      renderListingTemplateBatchStream: jest.fn()
-    }));
-    jest.doMock("@shared/utils/api/validation", () => ({
-      readJsonBodySafe: jest.fn().mockRejectedValue(new Error("body read failed"))
-    }));
-    jest.doMock("@web/src/lib/core/logging/logger", () => ({
-      logger: { error: jest.fn(), warn: jest.fn() },
-      createChildLogger: () => ({ error: jest.fn(), warn: jest.fn() })
-    }));
-
-    const routeModule = await import("../route");
+  it("returns 500 when action throws", async () => {
+    const { POST } = await loadRoute({
+      streamRejects: new Error("body read failed")
+    });
     const request = requestWithBody({
       subcategory: "new_listing",
       captionItems: [{ id: "a", hook: "h", caption: "c", body: [] }]
     });
 
-    const response = await routeModule.POST(request as never, {
+    const response = await POST(request as never, {
       params: Promise.resolve({ listingId: "listing-1" })
     });
     expect(response.status).toBe(500);
   });
 
-  it("emits SSE error event when renderListingTemplateBatchStream throws", async () => {
+  it("returns 500 when action throws during stream", async () => {
     const { POST } = await loadRoute({
       streamRejects: new Error("stream render failed")
     });
@@ -424,17 +385,10 @@ describe("listing templates render stream route", () => {
     const response = await POST(request as never, {
       params: Promise.resolve({ listingId: "listing-1" })
     });
-    const text = await response.text();
-    const events = parseSseEvents(text);
-
-    expect(response.status).toBe(200);
-    expect(events.find((e) => e.type === "error")).toEqual({
-      type: "error",
-      message: "stream render failed"
-    });
+    expect(response.status).toBe(500);
   });
 
-  it("emits SSE error with generic message when stream throws non-Error", async () => {
+  it("returns 500 when action throws non-Error", async () => {
     const { POST } = await loadRoute({ streamRejects: "nope" });
     const request = requestWithBody({
       subcategory: "new_listing",
@@ -446,14 +400,7 @@ describe("listing templates render stream route", () => {
     const response = await POST(request as never, {
       params: Promise.resolve({ listingId: "listing-1" })
     });
-    const text = await response.text();
-    const events = parseSseEvents(text);
-
-    expect(response.status).toBe(200);
-    expect(events.find((e) => e.type === "error")).toEqual({
-      type: "error",
-      message: "Failed to render templates"
-    });
+    expect(response.status).toBe(500);
   });
 
   it("streams done with failedTemplateIds from service", async () => {
@@ -479,12 +426,8 @@ describe("listing templates render stream route", () => {
     });
   });
 
-  it("fetches listing images and user additional before streaming", async () => {
-    const {
-      POST,
-      mockGetListingImages,
-      mockGetOrCreateUserAdditional
-    } = await loadRoute();
+  it("calls renderListingTemplateBatchStream with listingId, body, and siteOrigin", async () => {
+    const { POST, mockRenderListingTemplateBatchStream } = await loadRoute();
     const request = requestWithBody({
       subcategory: "new_listing",
       captionItems: [
@@ -496,8 +439,14 @@ describe("listing templates render stream route", () => {
       params: Promise.resolve({ listingId: "listing-1" })
     });
 
-    expect(mockGetListingImages).toHaveBeenCalledWith("user-1", "listing-1");
-    expect(mockGetOrCreateUserAdditional).toHaveBeenCalledWith("user-1");
+    expect(mockRenderListingTemplateBatchStream).toHaveBeenCalledWith(
+      "listing-1",
+      expect.objectContaining({
+        subcategory: "new_listing",
+        captionItems: expect.any(Array)
+      }),
+      "http://localhost:3000"
+    );
   });
 });
 

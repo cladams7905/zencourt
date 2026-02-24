@@ -1,6 +1,6 @@
 import type { PromptAssemblyInput } from "@web/src/lib/ai/prompts/engine/assemble";
 import type { CommunityCategoryKey } from "@web/src/server/services/contentRotation";
-import type { UserAdditionalSnapshot } from "../services/userAdditional";
+import type { UserAdditionalSnapshot } from "@web/src/server/actions/db/userAdditional";
 import {
   buildWritingStyleDescription,
   getWritingToneLabel,

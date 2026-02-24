@@ -42,6 +42,7 @@ describe("listing content generate route", () => {
       .mockResolvedValue({ id: "user-1" });
     const mockRequireListingAccess = jest.fn().mockResolvedValue({
       id: "listing-1",
+      userId: "user-1",
       address: "123 Main St, Austin, TX 78701",
       propertyDetails: null
     });
@@ -62,34 +63,45 @@ describe("listing content generate route", () => {
       set: jest.fn().mockResolvedValue(undefined)
     };
 
-    const mockFetch = jest.fn().mockResolvedValue(
+    const defaultUpstreamResponse =
       options?.upstream ??
-        makeSseResponse([
-          {
-            type: "done",
-            items: [
-              {
-                hook: "A",
-                broll_query: "q",
-                body: null,
-                cta: null,
-                caption: "c"
-              }
-            ]
-          }
-        ])
-    );
-    Object.defineProperty(globalThis, "fetch", {
-      writable: true,
-      value: mockFetch
-    });
+      makeSseResponse([
+        {
+          type: "done",
+          items: [
+            {
+              hook: "A",
+              broll_query: "q",
+              body: null,
+              cta: null,
+              caption: "c"
+            }
+          ]
+        }
+      ]);
 
-    jest.doMock("@web/src/app/api/v1/_utils", () => ({
+    jest.doMock("@web/src/server/utils/apiAuth", () => ({
       ApiError: MockApiError,
       requireAuthenticatedUser: (...args: unknown[]) =>
-        mockRequireAuthenticatedUser(...args),
+        mockRequireAuthenticatedUser(...args)
+    }));
+    jest.doMock("@web/src/server/utils/listingAccess", () => ({
       requireListingAccess: (...args: unknown[]) =>
         mockRequireListingAccess(...args)
+    }));
+    const mockGetCachedListingContent = jest
+      .fn()
+      .mockResolvedValue(options?.cachedItems ?? null);
+    const mockSetCachedListingContent = jest.fn().mockResolvedValue(undefined);
+    const mockSetCachedListingContentItem = jest.fn().mockResolvedValue(undefined);
+    jest.doMock("@web/src/server/services/cache/listingContent", () => ({
+      getCachedListingContent: mockGetCachedListingContent,
+      setCachedListingContent: mockSetCachedListingContent,
+      setCachedListingContentItem: mockSetCachedListingContentItem,
+      buildListingContentCacheKey: jest.fn().mockReturnValue("cache-key")
+    }));
+    jest.doMock("@web/src/server/services/contentGeneration", () => ({
+      runContentGeneration: jest.fn().mockResolvedValue(defaultUpstreamResponse)
     }));
     jest.doMock("@upstash/redis", () => ({
       Redis: class {
@@ -107,12 +119,17 @@ describe("listing content generate route", () => {
     }));
 
     const rootModule = await import("../route");
+    const contentGeneration = await import(
+      "@web/src/server/services/contentGeneration"
+    );
     return {
       POST: rootModule.POST,
-      mockFetch,
       mockRedis,
       mockRequireListingAccess,
-      mockRequireAuthenticatedUser
+      mockRequireAuthenticatedUser,
+      mockRunContentGeneration: contentGeneration.runContentGeneration as jest.Mock,
+      mockGetCachedListingContent,
+      mockSetCachedListingContent
     };
   }
 
@@ -134,7 +151,7 @@ describe("listing content generate route", () => {
     expect(response.status).toBe(400);
   });
 
-  it("returns cached done event when redis has items", async () => {
+  it("returns cached done event when cache has items", async () => {
     const cachedItems = [
       {
         hook: "Cached",
@@ -144,7 +161,7 @@ describe("listing content generate route", () => {
         caption: "cap"
       }
     ];
-    const { POST, mockFetch } = await loadRoute({ cachedItems });
+    const { POST, mockRunContentGeneration } = await loadRoute({ cachedItems });
     const request = {
       json: async () => ({ subcategory: "new_listing", media_type: "video" }),
       nextUrl: { origin: "http://localhost:3000" },
@@ -160,17 +177,17 @@ describe("listing content generate route", () => {
     expect(response.status).toBe(200);
     expect(events[0]?.type).toBe("done");
     expect((events[0]?.meta as { model: string }).model).toBe("cache");
-    expect(mockFetch).not.toHaveBeenCalled();
+    expect(mockRunContentGeneration).not.toHaveBeenCalled();
   });
 
   it("proxies upstream errors as SSE error event", async () => {
     const upstream = new Response(
       JSON.stringify({ message: "upstream failed" }),
-      {
-        status: 500
-      }
+      { status: 500 }
     );
-    const { POST } = await loadRoute({ upstream });
+    const { POST } = await loadRoute({
+      upstream: upstream as unknown as Response
+    });
     const request = {
       json: async () => ({ subcategory: "new_listing", media_type: "video" }),
       nextUrl: { origin: "http://localhost:3000" },
@@ -194,7 +211,9 @@ describe("listing content generate route", () => {
         throw new Error("bad json");
       }
     } as unknown as Response;
-    const { POST } = await loadRoute({ upstream });
+    const { POST } = await loadRoute({
+      upstream: upstream as unknown as Response
+    });
     const request = {
       json: async () => ({ subcategory: "new_listing", media_type: "video" }),
       nextUrl: { origin: "http://localhost:3000" },
@@ -221,7 +240,9 @@ describe("listing content generate route", () => {
         ]
       }
     ]);
-    const { POST, mockRedis } = await loadRoute({ upstream });
+    const { POST, mockSetCachedListingContent } = await loadRoute({
+      upstream: upstream as unknown as Response
+    });
     const request = {
       json: async () => ({ subcategory: "new_listing", media_type: "video" }),
       nextUrl: { origin: "http://localhost:3000" },
@@ -236,7 +257,7 @@ describe("listing content generate route", () => {
 
     expect(events.map((event) => event.type)).toEqual(["delta", "done"]);
     expect((events[1]?.meta as { model: string }).model).toBe("generated");
-    expect(mockRedis.set).toHaveBeenCalled();
+    expect(mockSetCachedListingContent).toHaveBeenCalled();
   });
 
   it("returns 400 for invalid media type", async () => {
@@ -255,7 +276,9 @@ describe("listing content generate route", () => {
 
   it("returns error event when upstream stream body is missing", async () => {
     const upstream = new Response(null, { status: 200 });
-    const { POST } = await loadRoute({ upstream });
+    const { POST } = await loadRoute({
+      upstream: upstream as unknown as Response
+    });
     const request = {
       json: async () => ({ subcategory: "new_listing", media_type: "video" }),
       nextUrl: { origin: "http://localhost:3000" },
@@ -271,7 +294,9 @@ describe("listing content generate route", () => {
 
   it("returns error event when upstream done items are missing", async () => {
     const upstream = makeSseResponse([{ type: "delta", text: "[]" }]);
-    const { POST } = await loadRoute({ upstream });
+    const { POST } = await loadRoute({
+      upstream: upstream as unknown as Response
+    });
     const request = {
       json: async () => ({ subcategory: "new_listing", media_type: "video" }),
       nextUrl: { origin: "http://localhost:3000" },
@@ -294,7 +319,9 @@ describe("listing content generate route", () => {
     const upstream = makeSseResponse([
       { type: "error", message: "upstream event error" }
     ]);
-    const { POST } = await loadRoute({ upstream });
+    const { POST } = await loadRoute({
+      upstream: upstream as unknown as Response
+    });
     const request = {
       json: async () => ({ subcategory: "new_listing", media_type: "video" }),
       nextUrl: { origin: "http://localhost:3000" },
@@ -311,9 +338,9 @@ describe("listing content generate route", () => {
     });
   });
 
-  it("emits stream error event when upstream fetch throws", async () => {
-    const { POST, mockFetch } = await loadRoute();
-    mockFetch.mockRejectedValueOnce(new Error("network down"));
+  it("returns 500 when content generation throws", async () => {
+    const { POST, mockRunContentGeneration } = await loadRoute();
+    mockRunContentGeneration.mockRejectedValueOnce(new Error("network down"));
     const request = {
       json: async () => ({ subcategory: "new_listing", media_type: "video" }),
       nextUrl: { origin: "http://localhost:3000" },
@@ -323,10 +350,12 @@ describe("listing content generate route", () => {
     const response = await POST(request as never, {
       params: Promise.resolve({ listingId: "listing-1" })
     });
-    const events = parseSseEvents(await response.text());
-    expect(events[0]).toEqual(
-      expect.objectContaining({ type: "error", message: "network down" })
-    );
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toMatchObject({
+      success: false,
+      code: "INTERNAL_ERROR",
+      message: "Failed to generate listing content"
+    });
   });
 
   it("returns 400 when request body is invalid", async () => {

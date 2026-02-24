@@ -18,44 +18,28 @@ describe("video status route", () => {
   }) {
     jest.resetModules();
 
-    const mockRequireAuthenticatedUser = jest
-      .fn()
-      .mockImplementation(async () => {
-        if (options?.authError) {
-          throw options.authError;
-        }
-        return { id: "user-1" };
-      });
-    const mockRequireListingAccess = jest
-      .fn()
-      .mockImplementation(async () => {
-        if (options?.listingAccessError) {
-          throw options.listingAccessError;
-        }
-        return { id: "listing-1" };
-      });
     const mockGetListingVideoStatus = jest.fn().mockImplementation(async () => {
       if (options?.statusError) {
         throw options.statusError;
       }
+      if (options?.authError) {
+        throw options.authError;
+      }
+      if (options?.listingAccessError) {
+        throw options.listingAccessError;
+      }
       return { jobs: [{ id: "job-1" }] };
     });
     jest.doMock("@web/src/app/api/v1/_utils", () => ({
-      ApiError: TestApiError,
-      requireAuthenticatedUser: (...args: unknown[]) =>
-        mockRequireAuthenticatedUser(...args),
-      requireListingAccess: (...args: unknown[]) =>
-        mockRequireListingAccess(...args)
+      ApiError: TestApiError
     }));
-    jest.doMock("@web/src/server/services/videoGeneration", () => ({
+    jest.doMock("@web/src/server/actions/api/video", () => ({
       getListingVideoStatus: (...args: unknown[]) =>
         mockGetListingVideoStatus(...args)
     }));
-    jest.doMock("@shared/utils", () => ({
-      createChildLogger: () => ({ error: jest.fn() })
-    }));
     jest.doMock("@web/src/lib/core/logging/logger", () => ({
-      logger: { error: jest.fn() }
+      logger: { error: jest.fn() },
+      createChildLogger: () => ({ error: jest.fn() })
     }));
 
     const routeModule = await import("../route");

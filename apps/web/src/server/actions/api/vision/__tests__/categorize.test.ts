@@ -1,22 +1,10 @@
-const mockAnalyzeImagesWorkflow = jest.fn();
-const mockAssertListingExists = jest.fn();
-const mockLoadListingImages = jest.fn();
-const mockPersistListingImageAnalysis = jest.fn();
-const mockAssignPrimaryImagesByCategory = jest.fn();
+const mockRunListingImagesCategorizationWorkflow = jest.fn();
 
 jest.mock("@web/src/server/services/imageCategorization", () => ({
-  __esModule: true,
-  default: {
-    analyzeImagesWorkflow: (...args: unknown[]) => ((mockAnalyzeImagesWorkflow as (...a: unknown[]) => unknown)(...args))
-  }
-}));
-
-jest.mock("@web/src/server/actions/api/vision/helpers", () => ({
-  assertListingExists: (...args: unknown[]) => ((mockAssertListingExists as (...a: unknown[]) => unknown)(...args)),
-  loadListingImages: (...args: unknown[]) => ((mockLoadListingImages as (...a: unknown[]) => unknown)(...args)),
-  persistListingImageAnalysis: (...args: unknown[]) => ((mockPersistListingImageAnalysis as (...a: unknown[]) => unknown)(...args)),
-  assignPrimaryImagesByCategory: (...args: unknown[]) => ((mockAssignPrimaryImagesByCategory as (...a: unknown[]) => unknown)(...args)),
-  toSerializableImageData: (image: unknown) => image
+  runListingImagesCategorizationWorkflow: (...args: unknown[]) =>
+    (mockRunListingImagesCategorizationWorkflow as (...a: unknown[]) => unknown)(
+      ...args
+    )
 }));
 
 import {
@@ -26,11 +14,7 @@ import {
 
 describe("vision categorize action", () => {
   beforeEach(() => {
-    mockAnalyzeImagesWorkflow.mockReset();
-    mockAssertListingExists.mockReset();
-    mockLoadListingImages.mockReset();
-    mockPersistListingImageAnalysis.mockReset();
-    mockAssignPrimaryImagesByCategory.mockReset();
+    mockRunListingImagesCategorizationWorkflow.mockReset();
   });
 
   it("validates required params", async () => {
@@ -42,8 +26,16 @@ describe("vision categorize action", () => {
     );
   });
 
-  it("returns noop stats when no images need analysis", async () => {
-    mockLoadListingImages.mockResolvedValueOnce([{ id: "img-1", category: "kitchen" }]);
+  it("returns noop stats when workflow returns noop", async () => {
+    mockRunListingImagesCategorizationWorkflow.mockResolvedValueOnce({
+      total: 0,
+      uploaded: 1,
+      analyzed: 1,
+      failed: 0,
+      successRate: 100,
+      avgConfidence: 0,
+      totalDuration: 0
+    });
 
     const result = await categorizeListingImages("u1", "l1");
 
@@ -56,11 +48,17 @@ describe("vision categorize action", () => {
       avgConfidence: 0,
       totalDuration: 0
     });
-    expect(mockAnalyzeImagesWorkflow).not.toHaveBeenCalled();
+    expect(mockRunListingImagesCategorizationWorkflow).toHaveBeenCalledWith(
+      "u1",
+      "l1",
+      { aiConcurrency: undefined }
+    );
   });
 
   it("returns noop stats for empty imageIds input", async () => {
-    await expect(categorizeListingImagesByIds("u1", "l1", [])).resolves.toEqual({
+    const result = await categorizeListingImagesByIds("u1", "l1", []);
+
+    expect(result).toEqual({
       total: 0,
       uploaded: 0,
       analyzed: 0,
@@ -69,48 +67,60 @@ describe("vision categorize action", () => {
       avgConfidence: 0,
       totalDuration: 0
     });
+    expect(mockRunListingImagesCategorizationWorkflow).not.toHaveBeenCalled();
   });
 
-  it("analyzes, persists, and assigns categories", async () => {
-    mockLoadListingImages.mockResolvedValueOnce([
-      { id: "img-1", category: null },
-      { id: "img-2", category: null }
-    ]);
+  it("calls workflow with options and imageIds when provided", async () => {
+    mockRunListingImagesCategorizationWorkflow.mockResolvedValueOnce({
+      total: 2,
+      uploaded: 2,
+      analyzed: 2,
+      failed: 0,
+      successRate: 100,
+      avgConfidence: 0.8,
+      totalDuration: 10
+    });
 
-    mockAnalyzeImagesWorkflow.mockImplementationOnce(
-      async (
-        _images: unknown[],
-        options: { onProgress?: (progress: { currentImage?: unknown }) => void }
-      ) => {
-        options.onProgress?.({ currentImage: { id: "img-1", category: "kitchen" } });
-        return {
-          images: [
-            { id: "img-1", category: "kitchen" },
-            { id: "img-2", category: "bathroom" }
-          ],
-          stats: {
-            total: 2,
-            uploaded: 2,
-            analyzed: 2,
-            failed: 0,
-            successRate: 100,
-            avgConfidence: 0.8,
-            totalDuration: 10
-          }
-        };
-      }
+    const result = await categorizeListingImagesByIds(
+      "u1",
+      "l1",
+      ["img-1", "img-2"],
+      { aiConcurrency: 2 }
     );
-
-    const result = await categorizeListingImages("u1", "l1", { aiConcurrency: 2 });
 
     expect(result).toEqual(
       expect.objectContaining({ total: 2, analyzed: 2, failed: 0 })
     );
-    expect(mockPersistListingImageAnalysis).toHaveBeenCalled();
-    expect(mockAssignPrimaryImagesByCategory).toHaveBeenCalledWith(
+    expect(mockRunListingImagesCategorizationWorkflow).toHaveBeenCalledWith(
       "u1",
       "l1",
-      ["kitchen", "bathroom"]
+      { aiConcurrency: 2 },
+      ["img-1", "img-2"]
+    );
+  });
+
+  it("delegates to workflow and returns stats", async () => {
+    mockRunListingImagesCategorizationWorkflow.mockResolvedValueOnce({
+      total: 2,
+      uploaded: 2,
+      analyzed: 2,
+      failed: 0,
+      successRate: 100,
+      avgConfidence: 0.8,
+      totalDuration: 10
+    });
+
+    const result = await categorizeListingImages("u1", "l1", {
+      aiConcurrency: 2
+    });
+
+    expect(result).toEqual(
+      expect.objectContaining({ total: 2, analyzed: 2, failed: 0 })
+    );
+    expect(mockRunListingImagesCategorizationWorkflow).toHaveBeenCalledWith(
+      "u1",
+      "l1",
+      { aiConcurrency: 2 }
     );
   });
 });

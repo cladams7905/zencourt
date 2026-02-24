@@ -1,6 +1,7 @@
 "use server";
 
-import imageCategorizationService, {
+import {
+  analyzeImagesWorkflow as runAnalyzeImagesWorkflow,
   type CategorizationResult
 } from "@web/src/server/services/imageCategorization";
 import type { SerializableImageData } from "@web/src/lib/domain/listing/images";
@@ -19,10 +20,7 @@ export async function analyzeImagesWorkflow(
   try {
     logger.info({ total: images.length }, "Starting image analysis workflow");
 
-    const result = await imageCategorizationService.analyzeImagesWorkflow(
-      images,
-      options
-    );
+    const result = await runAnalyzeImagesWorkflow(images, options);
 
     logger.info(
       {

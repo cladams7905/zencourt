@@ -1,4 +1,8 @@
 export * from "./status";
 export * from "./config";
 export { getListingVideoStatus } from "./status";
-export { startListingVideoGeneration } from "./service";
+export {
+  startListingVideoGeneration,
+  cancelListingVideoGeneration,
+  type CancelListingVideoGenerationResult
+} from "./service";

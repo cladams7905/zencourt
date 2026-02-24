@@ -33,7 +33,6 @@ jest.mock("@web/src/server/actions/db/listingImages", () => ({
 
 import {
   assertListingExists,
-  assignPrimaryImagesByCategory,
   loadListingImages,
   persistListingImageAnalysis,
   toSerializableImageData
@@ -97,15 +96,5 @@ describe("vision helper actions", () => {
       } as never)
     ).resolves.toBeUndefined();
     expect(mockUpdate).toHaveBeenCalled();
-  });
-
-  it("assigns primary images by unique category", async () => {
-    mockAssignPrimaryListingImageForCategory.mockResolvedValue({ primaryImageId: "img-1" });
-
-    await expect(
-      assignPrimaryImagesByCategory("u1", "l1", ["kitchen", "", "kitchen", "bathroom"])
-    ).resolves.toBeUndefined();
-
-    expect(mockAssignPrimaryListingImageForCategory).toHaveBeenCalledTimes(2);
   });
 });

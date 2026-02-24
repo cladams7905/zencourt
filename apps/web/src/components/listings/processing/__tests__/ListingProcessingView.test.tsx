@@ -23,7 +23,7 @@ const categorizeMock = mockedCategorizeListingImages as (
 jest.mock("@web/src/server/actions/api/vision", () => ({
   categorizeListingImages: (...args: unknown[]) => categorizeMock(...args)
 }));
-jest.mock("@web/src/server/actions/api/listingProperty", () => ({
+jest.mock("@web/src/server/actions/api/propertyDetails", () => ({
   fetchPropertyDetails: (...args: unknown[]) =>
     mockedFetchListingPropertyDetails(...args)
 }));

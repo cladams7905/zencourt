@@ -1,4 +1,8 @@
-export { getOrCreateUserAdditional, getUserProfileCompletion } from "./queries";
+export {
+  getOrCreateUserAdditional,
+  getUserProfileCompletion,
+  getUserAdditionalSnapshot
+} from "./queries";
 
 export {
   completeWelcomeSurvey,
@@ -14,6 +18,7 @@ export { ensureGoogleHeadshot } from "./media";
 
 export type {
   LocationDetailsInput,
+  UserAdditionalSnapshot,
   WelcomeSurveyUpdates,
   TargetAudienceUpdates,
   UserProfileUpdates,

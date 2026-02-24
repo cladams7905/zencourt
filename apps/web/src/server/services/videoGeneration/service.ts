@@ -1,6 +1,6 @@
 import { nanoid } from "nanoid";
 import { db, listingImages, eq, asc } from "@db/client";
-import { ApiError } from "@web/src/app/api/v1/_utils";
+import { ApiError } from "@web/src/server/utils/apiError";
 import {
   createChildLogger,
   logger as baseLogger
@@ -28,10 +28,18 @@ import {
   selectSecondaryImageForRoom
 } from "./domain/rooms";
 import { getVideoGenerationConfig } from "./config";
+import { requireListingAccess } from "@web/src/server/utils/listingAccess";
 
 const logger = createChildLogger(baseLogger, {
   module: "video-generation-service"
 });
+
+export type CancelListingVideoGenerationResult = {
+  success: true;
+  listingId: string;
+  canceledVideos: number;
+  canceledJobs: number;
+};
 
 function buildVideoServerRequestBody(args: {
   parentVideoId: string;
@@ -470,5 +478,54 @@ export async function startListingVideoGeneration(args: {
     videoId: parentVideoId,
     jobIds,
     jobCount: records.length
+  };
+}
+
+export async function cancelListingVideoGeneration(args: {
+  listingId: string;
+  userId: string;
+  reason?: string;
+}): Promise<CancelListingVideoGenerationResult> {
+  const { listingId, userId, reason } = args;
+  await requireListingAccess(listingId, userId);
+
+  const config = getVideoGenerationConfig();
+  const response = await fetch(`${config.videoServerBaseUrl}/video/cancel`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-API-Key": config.videoServerApiKey
+    },
+    body: JSON.stringify({
+      listingId,
+      reason: reason ?? "Canceled via workflow"
+    })
+  });
+
+  const payload = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const message =
+      payload?.error ?? payload?.message ?? "Failed to cancel generation";
+    throw new ApiError(response.status, {
+      error: "Video server error",
+      message
+    });
+  }
+
+  logger.info(
+    {
+      listingId,
+      canceledVideos: payload?.canceledVideos,
+      canceledJobs: payload?.canceledJobs
+    },
+    "Canceled generation via video server"
+  );
+
+  return {
+    success: true,
+    listingId,
+    canceledVideos: payload?.canceledVideos ?? 0,
+    canceledJobs: payload?.canceledJobs ?? 0
   };
 }
