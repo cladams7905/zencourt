@@ -1,41 +1,48 @@
 "use server";
 
-import { createChildLogger, logger as baseLogger } from "@web/src/lib/core/logging/logger";
+import {
+  createChildLogger,
+  logger as baseLogger
+} from "@web/src/lib/core/logging/logger";
 import { getListingById, updateListing } from "../db/listings";
 import {
   buildPropertyDetailsRevision,
-  fetchPropertyDetailsFromPerplexity
-} from "../../services/listingProperty";
+  fetchPropertyDetails as fetchPropertyDetailsFromProvider,
+  getDefaultPropertyDetailsProvider
+} from "../../services/propertyDetails";
 import type { ListingPropertyDetails } from "@shared/types/models";
-import {
-  requireListingId,
-  requireUserId
-} from "../shared/validation";
+import { requireListingId, requireUserId } from "../shared/validation";
 
 const logger = createChildLogger(baseLogger, {
-  module: "listing-property-actions"
+  module: "property-details-actions"
 });
 
-export async function fetchListingPropertyDetails(
+export async function fetchPropertyDetails(
   userId: string,
   listingId: string,
   addressOverride?: string | null
 ) {
   requireUserId(userId, "User ID is required to fetch listing details");
-  requireListingId(listingId, "Listing ID is required to fetch listing details");
+  requireListingId(
+    listingId,
+    "Listing ID is required to fetch listing details"
+  );
 
   const listing = await getListingById(userId, listingId);
   if (!listing) {
     throw new Error("Listing not found");
   }
 
-  const address =
-    (addressOverride ?? listing.address ?? "").trim();
+  const address = (addressOverride ?? listing.address ?? "").trim();
   if (!address) {
     throw new Error("Listing address is required to fetch property details");
   }
 
-  const propertyDetails = await fetchPropertyDetailsFromPerplexity(address);
+  const provider = getDefaultPropertyDetailsProvider();
+  const propertyDetails = await fetchPropertyDetailsFromProvider(
+    address,
+    provider
+  );
   if (!propertyDetails) {
     throw new Error("Failed to fetch property details");
   }
@@ -44,16 +51,13 @@ export async function fetchListingPropertyDetails(
 
   const updated = await updateListing(userId, listingId, {
     propertyDetails,
-    propertyDetailsSource: "perplexity",
+    propertyDetailsSource: provider.name,
     propertyDetailsFetchedAt: new Date(),
     propertyDetailsRevision: revision,
     listingStage: "review"
   });
 
-  logger.info(
-    { listingId, revision },
-    "Listing property details updated"
-  );
+  logger.info({ listingId, revision }, "Listing property details updated");
 
   return updated;
 }

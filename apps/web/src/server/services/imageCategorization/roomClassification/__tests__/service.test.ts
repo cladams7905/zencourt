@@ -1,4 +1,4 @@
-import { VisionService } from "../service";
+import { RoomClassification } from "../service";
 
 function createLogger() {
   return {
@@ -9,23 +9,25 @@ function createLogger() {
   };
 }
 
-describe("vision/service", () => {
+describe("roomClassification/service", () => {
   it("classifies a room and reuses a cached OpenAI client", async () => {
-    const createCompletion = jest
-      .fn()
-      .mockResolvedValue({
-        choices: [{ message: { content: '{"category":"kitchen","confidence":0.9}' } }]
-      });
+    const createCompletion = jest.fn().mockResolvedValue({
+      choices: [
+        { message: { content: '{"category":"kitchen","confidence":0.9}' } }
+      ]
+    });
     const clientFactory = jest.fn(() => ({
       chat: { completions: { create: createCompletion } }
     }));
-    const service = new VisionService({
+    const service = new RoomClassification({
       clientFactory: clientFactory as never,
       logger: createLogger(),
       sleep: async () => undefined
     });
 
-    await expect(service.classifyRoom("https://example.com/image-1.jpg")).resolves.toEqual({
+    await expect(
+      service.classifyRoom("https://example.com/image-1.jpg")
+    ).resolves.toEqual({
       category: "kitchen",
       confidence: 0.9,
       primaryScore: undefined,
@@ -39,27 +41,29 @@ describe("vision/service", () => {
   });
 
   it("throws INVALID_RESPONSE when completion content is missing", async () => {
-    const service = new VisionService({
-      clientFactory: (() =>
+    const service = new RoomClassification({
+      clientFactory: () =>
         ({
           chat: {
             completions: {
               create: async () => ({ choices: [{ message: {} }] })
             }
           }
-        }) as never),
+        }) as never,
       logger: createLogger(),
       sleep: async () => undefined
     });
 
-    await expect(service.classifyRoom("https://example.com/image.jpg")).rejects.toMatchObject({
+    await expect(
+      service.classifyRoom("https://example.com/image.jpg")
+    ).rejects.toMatchObject({
       code: "INVALID_RESPONSE"
     });
   });
 
   it("returns batch results and progress for mixed outcomes", async () => {
-    const service = new VisionService({
-      clientFactory: (() => ({}) as never),
+    const service = new RoomClassification({
+      clientFactory: () => ({}) as never,
       logger: createLogger()
     });
     const progress = jest.fn();
@@ -87,8 +91,8 @@ describe("vision/service", () => {
   });
 
   it("rejects empty batch inputs", async () => {
-    const service = new VisionService({
-      clientFactory: (() => ({}) as never),
+    const service = new RoomClassification({
+      clientFactory: () => ({}) as never,
       logger: createLogger()
     });
 

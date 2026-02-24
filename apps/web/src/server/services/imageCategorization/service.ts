@@ -1,33 +1,33 @@
 /**
- * Image Processor Service
+ * Image Categorization Service
  *
  * Coordinates the AI analysis workflow for property images:
- * - Analyze via AI vision
+ * - Analyze via Room Classification Service
  * - Categorize results
  * - Generate statistics
  */
 
-import visionService from "../vision";
+import roomClassificationService from "./roomClassification";
 import storageService from "../storage";
 import type {
   SerializableImageData,
-  ProcessingPhase,
-  ProcessingProgress
+  CategorizationPhase,
+  CategorizationProgress
 } from "@web/src/lib/domain/listing/images";
 import {
   createChildLogger,
   logger as baseLogger
 } from "@web/src/lib/core/logging/logger";
-import type { ProcessingResult } from "./types";
+import type { CategorizationResult } from "./types";
 import {
   calculateProcessingStats,
   categorizeAnalyzedImages,
   cloneSerializableImages
 } from "./domain/results";
 
-type ProgressCallback = (progress: ProcessingProgress) => void;
+type ProgressCallback = (progress: CategorizationProgress) => void;
 
-type VisionServiceLike = {
+type RoomClassificationLike = {
   classifyRoomBatch: (
     imageUrls: string[],
     options?: {
@@ -71,8 +71,8 @@ type StorageServiceLike = {
   getPublicUrlForStorageUrl: (url: string) => string | null;
 };
 
-type ImageProcessorDeps = {
-  vision?: VisionServiceLike;
+type ImageCategorizationDeps = {
+  roomClassification?: RoomClassificationLike;
   storage?: StorageServiceLike;
 };
 
@@ -87,28 +87,29 @@ type AnalyzableTarget = {
   signedUrl: string;
 };
 
-const processorLogger = createChildLogger(baseLogger, {
-  module: "image-processor-service"
+const categorizationLogger = createChildLogger(baseLogger, {
+  module: "image-categorization-service"
 });
 
-export class ImageProcessingError extends Error {
+export class ImageCategorizationError extends Error {
   constructor(
     message: string,
-    public phase: ProcessingPhase,
+    public phase: CategorizationPhase,
     public details?: unknown
   ) {
     super(message);
-    this.name = "ImageProcessingError";
+    this.name = "ImageCategorizationError";
   }
 }
 
-export class ImageProcessorService {
-  private readonly logger = processorLogger;
-  private readonly vision: VisionServiceLike;
+export class ImageCategorizationService {
+  private readonly logger = categorizationLogger;
+  private readonly roomClassification: RoomClassificationLike;
   private readonly storage: StorageServiceLike;
 
-  constructor(deps: ImageProcessorDeps = {}) {
-    this.vision = deps.vision ?? visionService;
+  constructor(deps: ImageCategorizationDeps = {}) {
+    this.roomClassification =
+      deps.roomClassification ?? roomClassificationService;
     this.storage = deps.storage ?? storageService;
   }
 
@@ -123,7 +124,7 @@ export class ImageProcessorService {
       onProgress?: ProgressCallback;
       aiConcurrency?: number;
     } = {}
-  ): Promise<ProcessingResult> {
+  ): Promise<CategorizationResult> {
     const { onProgress, aiConcurrency = 10 } = options;
     const startTime = Date.now();
 
@@ -177,7 +178,7 @@ export class ImageProcessorService {
         "Image analysis workflow failed"
       );
 
-      throw new ImageProcessingError(
+      throw new ImageCategorizationError(
         `Image analysis failed: ${
           error instanceof Error ? error.message : "Unknown error"
         }`,
@@ -195,7 +196,7 @@ export class ImageProcessorService {
     const uploadedImages = this.getUploadedImagesForAnalysis(images);
 
     if (uploadedImages.length === 0) {
-      throw new ImageProcessingError(
+      throw new ImageCategorizationError(
         "No images successfully uploaded for analysis",
         "analyzing"
       );
@@ -208,7 +209,7 @@ export class ImageProcessorService {
     );
 
     if (analyzableTargets.length === 0) {
-      throw new ImageProcessingError(
+      throw new ImageCategorizationError(
         "No accessible images available for analysis",
         "analyzing"
       );
@@ -219,7 +220,7 @@ export class ImageProcessorService {
     );
     const signedImageUrls = analyzableTargets.map((target) => target.signedUrl);
 
-    await this.vision.classifyRoomBatch(signedImageUrls, {
+    await this.roomClassification.classifyRoomBatch(signedImageUrls, {
       concurrency,
       onProgress: (completed, total, batchResult) => {
         const imageId = urlToImageId.get(batchResult.imageUrl);
@@ -243,14 +244,11 @@ export class ImageProcessorService {
     return uploadedImages.map((image) => imageById.get(image.id) ?? image);
   }
 
-  private getPublicImageUrl(
-    image: SerializableImageData,
-    _purpose: "classification"
-  ): string | null {
+  private getPublicImageUrl(image: SerializableImageData): string | null {
     if (!image.url) {
       this.logger.error(
         { imageId: image.id },
-        "Missing image URL for vision access"
+        "Missing image URL for room classification"
       );
       return null;
     }
@@ -260,7 +258,7 @@ export class ImageProcessorService {
 
   private emitProgress(
     callback: ProgressCallback | undefined,
-    phase: ProcessingPhase,
+    phase: CategorizationPhase,
     completed: number,
     total: number,
     overallProgress: number,
@@ -315,7 +313,7 @@ export class ImageProcessorService {
     imageById: Map<string, SerializableImageData>
   ): AnalyzableTarget[] {
     const targets = uploadedImages.map((image) => {
-      const imageUrl = this.getPublicImageUrl(image, "classification");
+      const imageUrl = this.getPublicImageUrl(image);
       if (!imageUrl) {
         imageById.set(image.id, {
           ...image,
@@ -384,5 +382,5 @@ export class ImageProcessorService {
   }
 }
 
-const imageProcessorServiceInstance = new ImageProcessorService();
-export default imageProcessorServiceInstance;
+const imageCategorizationService = new ImageCategorizationService();
+export default imageCategorizationService;

@@ -2,7 +2,7 @@ const mockAnalyzeImagesWorkflow = jest.fn();
 const mockLoggerInfo = jest.fn();
 const mockLoggerError = jest.fn();
 
-jest.mock("@web/src/server/services/imageProcessor", () => ({
+jest.mock("@web/src/server/services/imageCategorization", () => ({
   __esModule: true,
   default: {
     analyzeImagesWorkflow: (...args: unknown[]) => ((mockAnalyzeImagesWorkflow as (...a: unknown[]) => unknown)(...args))

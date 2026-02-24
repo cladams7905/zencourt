@@ -47,7 +47,7 @@ describe("video status route", () => {
       requireListingAccess: (...args: unknown[]) =>
         mockRequireListingAccess(...args)
     }));
-    jest.doMock("@web/src/server/services/videoStatus", () => ({
+    jest.doMock("@web/src/server/services/videoGeneration", () => ({
       getListingVideoStatus: (...args: unknown[]) =>
         mockGetListingVideoStatus(...args)
     }));

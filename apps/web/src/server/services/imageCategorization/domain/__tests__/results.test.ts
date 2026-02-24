@@ -22,7 +22,7 @@ function buildImage(partial: Partial<SerializableImageData>): SerializableImageD
   };
 }
 
-describe("imageProcessor/domain/results", () => {
+describe("imageCategorization/domain/results", () => {
   it("clones serializable images and defaults primaryScore to null", () => {
     const images = [buildImage({ id: "a", primaryScore: undefined })];
 

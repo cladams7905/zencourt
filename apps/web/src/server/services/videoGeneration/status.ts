@@ -5,7 +5,7 @@ import type {
   VideoJobUpdateEvent
 } from "@web/src/lib/domain/listing/videoStatus";
 import { isPriorityCategory } from "@shared/utils";
-import { getPublicDownloadUrlSafe } from "../../utils/storageUrls";
+import { getPublicDownloadUrlSafe } from "@web/src/server/utils/storageUrls";
 
 export async function getListingVideoStatus(
   listingId: string

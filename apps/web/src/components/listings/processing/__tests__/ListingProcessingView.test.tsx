@@ -24,7 +24,7 @@ jest.mock("@web/src/server/actions/api/vision", () => ({
   categorizeListingImages: (...args: unknown[]) => categorizeMock(...args)
 }));
 jest.mock("@web/src/server/actions/api/listingProperty", () => ({
-  fetchListingPropertyDetails: (...args: unknown[]) =>
+  fetchPropertyDetails: (...args: unknown[]) =>
     mockedFetchListingPropertyDetails(...args)
 }));
 
@@ -133,7 +133,9 @@ describe("ListingProcessingView", () => {
     });
 
     await waitFor(() => {
-      expect(mockReplace).toHaveBeenCalledWith("/listings/listing-1/categorize");
+      expect(mockReplace).toHaveBeenCalledWith(
+        "/listings/listing-1/categorize"
+      );
     });
 
     unmount();
@@ -190,7 +192,9 @@ describe("ListingProcessingView", () => {
     });
 
     await waitFor(() => {
-      expect(mockReplace).toHaveBeenCalledWith("/listings/listing-1/categorize");
+      expect(mockReplace).toHaveBeenCalledWith(
+        "/listings/listing-1/categorize"
+      );
     });
 
     unmount();
@@ -215,7 +219,9 @@ describe("ListingProcessingView", () => {
       await new Promise((resolve) => setTimeout(resolve, 1100));
     });
 
-    expect(mockReplace).not.toHaveBeenCalledWith("/listings/listing-1/categorize");
+    expect(mockReplace).not.toHaveBeenCalledWith(
+      "/listings/listing-1/categorize"
+    );
     unmount();
   });
 

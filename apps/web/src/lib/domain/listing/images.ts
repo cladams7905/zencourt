@@ -49,7 +49,7 @@ export type ProcessedImage = Partial<Omit<DBListingImage, "uploadedAt">> & {
   /** Preview URL (data URL or object URL) - for immediate display */
   previewUrl: string;
   /** Processing status - tracks image through workflow */
-  status: ImageProcessingStatus;
+  status: ImageCategorizationStatus;
   /** Error message if processing failed */
   error?: string;
   /** Direct storage URL once uploaded (alias for DB url) */
@@ -64,9 +64,9 @@ export type ProcessedImage = Partial<Omit<DBListingImage, "uploadedAt">> & {
 export type SerializableImageData = Omit<ProcessedImage, "file" | "previewUrl">;
 
 /**
- * Processing status for images throughout the workflow
+ * Categorization status for images throughout the workflow
  */
-type ImageProcessingStatus =
+type ImageCategorizationStatus =
   | "pending"
   | "uploading"
   | "uploaded"
@@ -75,11 +75,11 @@ type ImageProcessingStatus =
   | "error";
 
 /**
- * Progress update during image processing
+ * Progress update during image categorization
  */
-export type ProcessingProgress = {
-  /** Current processing phase */
-  phase: ProcessingPhase;
+export type CategorizationProgress = {
+  /** Current categorization phase */
+  phase: CategorizationPhase;
   /** Number of completed items in current phase */
   completed: number;
   /** Total items in current phase */
@@ -91,9 +91,9 @@ export type ProcessingProgress = {
 };
 
 /**
- * Processing phase for tracking overall progress
+ * Categorization phase for tracking overall progress
  */
-export type ProcessingPhase =
+export type CategorizationPhase =
   | "uploading"
   | "analyzing"
   | "categorizing"

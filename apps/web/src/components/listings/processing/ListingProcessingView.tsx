@@ -4,10 +4,8 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { ListingViewHeader } from "@web/src/components/listings/shared";
 import { categorizeListingImages } from "@web/src/server/actions/api/vision";
-import { fetchListingPropertyDetails } from "@web/src/server/actions/api/listingProperty";
-import {
-  updateListing
-} from "@web/src/server/actions/db/listings";
+import { fetchPropertyDetails } from "@web/src/server/actions/api/propertyDetails";
+import { updateListing } from "@web/src/server/actions/db/listings";
 import { getListingImages } from "@web/src/server/actions/db/listingImages";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import { Button } from "../../ui/button";
@@ -150,7 +148,7 @@ export function ListingProcessingView({
     setStatus("loading");
     setErrorMessage(null);
     try {
-      await fetchListingPropertyDetails(userId, listingId, address ?? null);
+      await fetchPropertyDetails(userId, listingId, address ?? null);
       setStatus("success");
       router.replace(`/listings/${listingId}/review`);
     } catch (error) {
@@ -342,10 +340,10 @@ export function ListingProcessingView({
         };
         return Boolean(
           candidate.category &&
-            candidate.confidence !== null &&
-            candidate.confidence !== undefined &&
-            candidate.primaryScore !== null &&
-            candidate.primaryScore !== undefined
+          candidate.confidence !== null &&
+          candidate.confidence !== undefined &&
+          candidate.primaryScore !== null &&
+          candidate.primaryScore !== undefined
         );
       };
       const batchFiltered = batchStartedAt
