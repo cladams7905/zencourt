@@ -1,4 +1,4 @@
-import { buildNoopStats } from "@web/src/server/actions/vision/types";
+import { buildNoopStats } from "@web/src/server/actions/imageCategorization/types";
 
 describe("vision types helpers", () => {
   it("builds noop stats with expected defaults", () => {

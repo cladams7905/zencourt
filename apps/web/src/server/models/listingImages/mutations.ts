@@ -193,52 +193,7 @@ export async function assignPrimaryListingImageForCategory(
         userIdError: "User ID is required to update listing images",
         listingIdError: "Listing ID is required to update listing images"
       });
-
-      const rows = await db
-        .select({
-          id: listingImages.id,
-          primaryScore: listingImages.primaryScore,
-          uploadedAt: listingImages.uploadedAt,
-          isPrimary: listingImages.isPrimary
-        })
-        .from(listingImages)
-        .where(
-          and(
-            eq(listingImages.listingId, listingId),
-            eq(listingImages.category, category)
-          )
-        );
-
-      const { best, currentPrimary } = selectPrimaryCandidate(rows);
-
-      if (currentPrimary && best && best.score <= currentPrimary.score) {
-        return { primaryImageId: currentPrimary.id };
-      }
-
-      await db
-        .update(listingImages)
-        .set({ isPrimary: false })
-        .where(
-          and(
-            eq(listingImages.listingId, listingId),
-            eq(listingImages.category, category)
-          )
-        );
-
-      if (best) {
-        await db
-          .update(listingImages)
-          .set({ isPrimary: true })
-          .where(
-            and(
-              eq(listingImages.listingId, listingId),
-              eq(listingImages.category, category),
-              eq(listingImages.id, best.id)
-            )
-          );
-      }
-
-      return { primaryImageId: best?.id ?? null };
+      return assignPrimaryListingImageForCategoryTrusted(listingId, category);
     },
     {
       actionName: "assignPrimaryListingImageForCategory",
@@ -246,6 +201,57 @@ export async function assignPrimaryListingImageForCategory(
       errorMessage: "Failed to update primary image. Please try again."
     }
   );
+}
+
+export async function assignPrimaryListingImageForCategoryTrusted(
+  listingId: string,
+  category: string
+): Promise<{ primaryImageId: string | null }> {
+  const rows = await db
+    .select({
+      id: listingImages.id,
+      primaryScore: listingImages.primaryScore,
+      uploadedAt: listingImages.uploadedAt,
+      isPrimary: listingImages.isPrimary
+    })
+    .from(listingImages)
+    .where(
+      and(
+        eq(listingImages.listingId, listingId),
+        eq(listingImages.category, category)
+      )
+    );
+
+  const { best, currentPrimary } = selectPrimaryCandidate(rows);
+
+  if (currentPrimary && best && best.score <= currentPrimary.score) {
+    return { primaryImageId: currentPrimary.id };
+  }
+
+  await db
+    .update(listingImages)
+    .set({ isPrimary: false })
+    .where(
+      and(
+        eq(listingImages.listingId, listingId),
+        eq(listingImages.category, category)
+      )
+    );
+
+  if (best) {
+    await db
+      .update(listingImages)
+      .set({ isPrimary: true })
+      .where(
+        and(
+          eq(listingImages.listingId, listingId),
+          eq(listingImages.category, category),
+          eq(listingImages.id, best.id)
+        )
+      );
+  }
+
+  return { primaryImageId: best?.id ?? null };
 }
 
 export async function createListingImageRecords(

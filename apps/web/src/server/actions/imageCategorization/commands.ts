@@ -11,10 +11,8 @@ import {
   logger as baseLogger
 } from "@web/src/lib/core/logging/logger";
 import {
-  requireListingId,
-  requireUserId
-} from "@web/src/server/actions/shared/validation";
-import { requireAuthenticatedUser } from "@web/src/server/utils/apiAuth";
+  requireAuthenticatedUser
+} from "@web/src/server/utils/apiAuth";
 import type { VisionActionOptions, VisionStats } from "./types";
 import { buildNoopStats } from "./types";
 
@@ -63,12 +61,6 @@ export async function categorizeListingImages(
   listingId: string,
   options: VisionActionOptions = {}
 ): Promise<VisionStats> {
-  requireUserId(userId, "User ID is required to categorize listing images");
-  requireListingId(
-    listingId,
-    "Listing ID is required to categorize listing images"
-  );
-
   return runListingImagesCategorizationWorkflow(userId, listingId, {
     aiConcurrency: options.aiConcurrency
   });
@@ -80,12 +72,6 @@ export async function categorizeListingImagesByIds(
   imageIds: string[],
   options: VisionActionOptions = {}
 ): Promise<VisionStats> {
-  requireUserId(userId, "User ID is required to categorize listing images");
-  requireListingId(
-    listingId,
-    "Listing ID is required to categorize listing images"
-  );
-
   if (!imageIds || imageIds.length === 0) {
     return buildNoopStats(0, 0);
   }

@@ -10,6 +10,10 @@ import type {
   WelcomeSurveyUpdates,
   WritingStyleUpdates
 } from "./types";
+import {
+  ensureUserAdditionalExists,
+  upsertUserAdditional
+} from "./helpers";
 
 export async function completeWelcomeSurvey(
   userId: string,
@@ -27,23 +31,7 @@ export async function completeWelcomeSurvey(
         updatedAt: new Date()
       };
 
-      const [record] = await db
-        .insert(userAdditional)
-        .values({
-          userId,
-          ...surveyUpdates
-        })
-        .onConflictDoUpdate({
-          target: userAdditional.userId,
-          set: surveyUpdates
-        })
-        .returning();
-
-      if (!record) {
-        throw new Error("Survey could not be saved");
-      }
-
-      return record;
+      return upsertUserAdditional(userId, surveyUpdates, "Survey could not be saved");
     },
     {
       actionName: "completeWelcomeSurvey",
@@ -62,7 +50,7 @@ export async function updateTargetAudiences(
 
   return withDbErrorHandling(
     async () => {
-      await db.insert(userAdditional).values({ userId }).onConflictDoNothing();
+      await ensureUserAdditionalExists(userId);
       const [record] = await db
         .update(userAdditional)
         .set({
@@ -104,23 +92,7 @@ export async function updateUserProfile(
         Object.assign(profileUpdates, { profileCompletedAt: new Date() });
       }
 
-      const [record] = await db
-        .insert(userAdditional)
-        .values({
-          userId,
-          ...profileUpdates
-        })
-        .onConflictDoUpdate({
-          target: userAdditional.userId,
-          set: profileUpdates
-        })
-        .returning();
-
-      if (!record) {
-        throw new Error("Profile could not be saved");
-      }
-
-      return record;
+      return upsertUserAdditional(userId, profileUpdates, "Profile could not be saved");
     },
     {
       actionName: "updateUserProfile",
@@ -139,31 +111,16 @@ export async function updateUserLocation(
 
   return withDbErrorHandling(
     async () => {
-      const [record] = await db
-        .insert(userAdditional)
-        .values({
-          userId,
+      return upsertUserAdditional(
+        userId,
+        {
           location,
           county: details?.county ?? null,
           serviceAreas: details?.serviceAreas ?? null,
           updatedAt: new Date()
-        })
-        .onConflictDoUpdate({
-          target: userAdditional.userId,
-          set: {
-            location,
-            county: details?.county ?? null,
-            serviceAreas: details?.serviceAreas ?? null,
-            updatedAt: new Date()
-          }
-        })
-        .returning();
-
-      if (!record) {
-        throw new Error("Location could not be saved");
-      }
-
-      return record;
+        },
+        "Location could not be saved"
+      );
     },
     {
       actionName: "updateUserLocation",
@@ -187,23 +144,11 @@ export async function updateWritingStyle(
         updatedAt: new Date()
       };
 
-      const [record] = await db
-        .insert(userAdditional)
-        .values({
-          userId,
-          ...styleUpdates
-        })
-        .onConflictDoUpdate({
-          target: userAdditional.userId,
-          set: styleUpdates
-        })
-        .returning();
-
-      if (!record) {
-        throw new Error("Writing style could not be saved");
-      }
-
-      return record;
+      return upsertUserAdditional(
+        userId,
+        styleUpdates,
+        "Writing style could not be saved"
+      );
     },
     {
       actionName: "updateWritingStyle",
@@ -220,6 +165,7 @@ export async function markProfileCompleted(
 
   return withDbErrorHandling(
     async () => {
+      await ensureUserAdditionalExists(userId);
       const [record] = await db
         .update(userAdditional)
         .set({
@@ -250,6 +196,7 @@ export async function markWritingStyleCompleted(
 
   return withDbErrorHandling(
     async () => {
+      await ensureUserAdditionalExists(userId);
       const [record] = await db
         .update(userAdditional)
         .set({

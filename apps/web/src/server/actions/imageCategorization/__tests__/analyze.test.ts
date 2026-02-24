@@ -12,8 +12,10 @@ jest.mock("@web/src/server/services/imageCategorization", () => ({
 jest.mock("@web/src/lib/core/logging/logger", () => ({
   logger: {},
   createChildLogger: () => ({
-    info: (...args: unknown[]) => ((mockLoggerInfo as (...a: unknown[]) => unknown)(...args)),
-    error: (...args: unknown[]) => ((mockLoggerError as (...a: unknown[]) => unknown)(...args))
+    info: (...args: unknown[]) =>
+      (mockLoggerInfo as (...a: unknown[]) => unknown)(...args),
+    error: (...args: unknown[]) =>
+      (mockLoggerError as (...a: unknown[]) => unknown)(...args)
   })
 }));
 
@@ -22,7 +24,7 @@ jest.mock("@web/src/server/utils/apiAuth", () => ({
     (mockRequireAuthenticatedUser as (...a: unknown[]) => unknown)(...args)
 }));
 
-import { analyzeImagesWorkflow } from "@web/src/server/actions/vision/commands";
+import { analyzeImagesWorkflow } from "@web/src/server/actions/imageCategorization/commands";
 
 describe("vision analyze action", () => {
   beforeEach(() => {
@@ -39,7 +41,9 @@ describe("vision analyze action", () => {
     };
     mockAnalyzeImagesWorkflow.mockResolvedValueOnce(result);
 
-    await expect(analyzeImagesWorkflow([{ id: "img-1" } as never])).resolves.toEqual(result);
+    await expect(
+      analyzeImagesWorkflow([{ id: "img-1" } as never])
+    ).resolves.toEqual(result);
     expect(mockLoggerInfo).toHaveBeenCalled();
   });
 

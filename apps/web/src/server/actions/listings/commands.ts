@@ -71,7 +71,6 @@ export async function updateListingForCurrentUser(
   updates: UpdateListingInput
 ) {
   const user = await requireAuthenticatedUser();
-  await requireListingAccess(listingId, user.id);
   return updateListing(user.id, listingId, updates);
 }
 
@@ -114,7 +113,6 @@ export async function getListingImageUploadUrlsForCurrentUser(
   files: ListingImageUploadRequest[]
 ) {
   const user = await requireAuthenticatedUser();
-  await requireListingAccess(listingId, user.id);
   return getListingImageUploadUrls(user.id, listingId, files);
 }
 
@@ -123,7 +121,6 @@ export async function createListingImageRecordsForCurrentUser(
   uploads: ListingImageRecordInput[]
 ) {
   const user = await requireAuthenticatedUser();
-  await requireListingAccess(listingId, user.id);
   return createListingImageRecords(user.id, listingId, uploads);
 }
 
@@ -133,7 +130,6 @@ export async function updateListingImageAssignmentsForCurrentUser(
   deletions: string[]
 ) {
   const user = await requireAuthenticatedUser();
-  await requireListingAccess(listingId, user.id);
   return updateListingImageAssignments(user.id, listingId, updates, deletions);
 }
 
@@ -142,7 +138,6 @@ export async function assignPrimaryListingImageForCategoryForCurrentUser(
   category: string
 ) {
   const user = await requireAuthenticatedUser();
-  await requireListingAccess(listingId, user.id);
   return assignPrimaryListingImageForCategory(user.id, listingId, category);
 }
 
@@ -151,13 +146,11 @@ export async function deleteListingImageUploadsForCurrentUser(
   urls: string[]
 ) {
   const user = await requireAuthenticatedUser();
-  await requireListingAccess(listingId, user.id);
   return deleteListingImageUploads(user.id, listingId, urls);
 }
 
 export async function getListingImagesForCurrentUser(listingId: string) {
   const user = await requireAuthenticatedUser();
-  await requireListingAccess(listingId, user.id);
   return getListingImages(user.id, listingId);
 }
 

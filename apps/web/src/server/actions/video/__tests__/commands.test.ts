@@ -1,0 +1,132 @@
+const mockStartListingVideoGenerationService = jest.fn();
+const mockCancelListingVideoGenerationService = jest.fn();
+const mockRequireAuthenticatedUser = jest.fn();
+const mockRequireListingAccess = jest.fn();
+
+jest.mock("@web/src/server/services/videoGeneration", () => ({
+  startListingVideoGeneration: (...args: unknown[]) =>
+    (mockStartListingVideoGenerationService as (...a: unknown[]) => unknown)(
+      ...args
+    ),
+  cancelListingVideoGeneration: (...args: unknown[]) =>
+    (mockCancelListingVideoGenerationService as (...a: unknown[]) => unknown)(
+      ...args
+    )
+}));
+
+jest.mock("@web/src/server/utils/apiAuth", () => ({
+  requireAuthenticatedUser: (...args: unknown[]) =>
+    (mockRequireAuthenticatedUser as (...a: unknown[]) => unknown)(...args)
+}));
+
+jest.mock("@web/src/server/utils/listingAccess", () => ({
+  requireListingAccess: (...args: unknown[]) =>
+    (mockRequireListingAccess as (...a: unknown[]) => unknown)(...args)
+}));
+
+import {
+  startListingVideoGeneration,
+  cancelListingVideoGeneration
+} from "@web/src/server/actions/video/commands";
+
+describe("video commands", () => {
+  const mockUser = { id: "user-1" } as never;
+  const mockListing = { id: "listing-1" } as never;
+
+  beforeEach(() => {
+    mockStartListingVideoGenerationService.mockReset();
+    mockCancelListingVideoGenerationService.mockReset();
+    mockRequireAuthenticatedUser.mockReset();
+    mockRequireAuthenticatedUser.mockResolvedValue(mockUser);
+    mockRequireListingAccess.mockReset();
+    mockRequireListingAccess.mockResolvedValue(mockListing);
+  });
+
+  describe("startListingVideoGeneration", () => {
+    it("throws when body has no listingId", async () => {
+      await expect(startListingVideoGeneration({})).rejects.toThrow(
+        "listingId is required"
+      );
+      await expect(startListingVideoGeneration({ listingId: "" })).rejects.toThrow(
+        "listingId is required"
+      );
+      await expect(
+        startListingVideoGeneration({ listingId: 123 })
+      ).rejects.toThrow("listingId is required");
+    });
+
+    it("trims listingId and passes through to service", async () => {
+      mockStartListingVideoGenerationService.mockResolvedValueOnce({
+        batchId: "b1",
+        jobIds: ["j1"]
+      });
+
+      const result = await startListingVideoGeneration({
+        listingId: "  listing-1  "
+      });
+
+      expect(mockRequireListingAccess).toHaveBeenCalledWith(
+        "listing-1",
+        "user-1"
+      );
+      expect(mockStartListingVideoGenerationService).toHaveBeenCalledWith({
+        listingId: "listing-1",
+        userId: "user-1",
+        orientation: undefined,
+        aiDirections: undefined
+      });
+      expect(result).toEqual({
+        batchId: "b1",
+        jobIds: ["j1"],
+        listingId: "listing-1"
+      });
+    });
+
+    it("passes orientation and aiDirections when provided", async () => {
+      mockStartListingVideoGenerationService.mockResolvedValueOnce({
+        batchId: "b1",
+        jobIds: []
+      });
+
+      await startListingVideoGeneration({
+        listingId: "l1",
+        orientation: "portrait",
+        aiDirections: "sunny day"
+      });
+
+      expect(mockStartListingVideoGenerationService).toHaveBeenCalledWith({
+        listingId: "listing-1",
+        userId: "user-1",
+        orientation: "portrait",
+        aiDirections: "sunny day"
+      });
+    });
+  });
+
+  describe("cancelListingVideoGeneration", () => {
+    it("delegates to service with userId and optional reason", async () => {
+      mockCancelListingVideoGenerationService.mockResolvedValueOnce(undefined);
+
+      await cancelListingVideoGeneration("listing-1", "user cancelled");
+
+      expect(mockRequireAuthenticatedUser).toHaveBeenCalled();
+      expect(mockCancelListingVideoGenerationService).toHaveBeenCalledWith({
+        listingId: "listing-1",
+        userId: "user-1",
+        reason: "user cancelled"
+      });
+    });
+
+    it("calls service without reason when not provided", async () => {
+      mockCancelListingVideoGenerationService.mockResolvedValueOnce(undefined);
+
+      await cancelListingVideoGeneration("listing-1");
+
+      expect(mockCancelListingVideoGenerationService).toHaveBeenCalledWith({
+        listingId: "listing-1",
+        userId: "user-1",
+        reason: undefined
+      });
+    });
+  });
+});
