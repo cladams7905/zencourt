@@ -4,6 +4,7 @@ import { db, eq, userAdditional } from "@db/client";
 import storageService from "@web/src/server/services/storage";
 import { withDbErrorHandling } from "@web/src/server/models/shared/dbErrorHandling";
 import { requireUserId } from "@web/src/server/models/shared/validation";
+import { upsertUserAdditional } from "./helpers";
 
 export async function ensureGoogleHeadshot(
   userId: string,
@@ -53,21 +54,14 @@ export async function ensureGoogleHeadshot(
         throw new Error(uploadResult.error || "Headshot upload failed");
       }
 
-      const [record] = await db
-        .insert(userAdditional)
-        .values({
-          userId,
+      const record = await upsertUserAdditional(
+        userId,
+        {
           headshotUrl: uploadResult.url,
           updatedAt: new Date()
-        })
-        .onConflictDoUpdate({
-          target: userAdditional.userId,
-          set: {
-            headshotUrl: uploadResult.url,
-            updatedAt: new Date()
-          }
-        })
-        .returning();
+        },
+        "Headshot could not be saved"
+      );
 
       return record?.headshotUrl ?? uploadResult.url;
     },

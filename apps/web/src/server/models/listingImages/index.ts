@@ -3,6 +3,7 @@ export { getListingImageUploadUrls } from "./uploads";
 export {
   updateListingImageAssignments,
   assignPrimaryListingImageForCategory,
+  assignPrimaryListingImageForCategoryTrusted,
   createListingImageRecords,
   deleteListingImageUploads
 } from "./mutations";

@@ -5,6 +5,7 @@ import type { DBUserAdditional } from "@db/types/models";
 import { withDbErrorHandling } from "@web/src/server/models/shared/dbErrorHandling";
 import { requireUserId } from "@web/src/server/models/shared/validation";
 import type { UserAdditionalSnapshot } from "./types";
+import { ensureUserAdditionalExists } from "./helpers";
 
 export async function getOrCreateUserAdditional(
   userId: string
@@ -13,7 +14,7 @@ export async function getOrCreateUserAdditional(
 
   return withDbErrorHandling(
     async () => {
-      await db.insert(userAdditional).values({ userId }).onConflictDoNothing();
+      await ensureUserAdditionalExists(userId);
 
       const [record] = await db
         .select()

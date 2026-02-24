@@ -1,7 +1,7 @@
 "use server";
 
 import { nanoid } from "nanoid";
-import { db, content, eq } from "@db/client";
+import { and, db, content, eq } from "@db/client";
 import type { DBContent, InsertDBContent } from "@db/types/models";
 import { withDbErrorHandling } from "./shared/dbErrorHandling";
 import {
@@ -72,7 +72,7 @@ export async function updateContent(
           ...updates,
           updatedAt: new Date()
         })
-        .where(eq(content.id, contentId))
+        .where(and(eq(content.id, contentId), eq(content.userId, userId)))
         .returning();
 
       if (!updatedContent) {
@@ -109,7 +109,7 @@ export async function getContentByListingId(
       const contentRows = await db
         .select()
         .from(content)
-        .where(eq(content.listingId, listingId));
+        .where(and(eq(content.listingId, listingId), eq(content.userId, userId)));
       return contentRows.map((item) => ({
         ...item,
         thumbnailUrl:
@@ -139,7 +139,7 @@ export async function getContentById(
       const [contentRecord] = await db
         .select()
         .from(content)
-        .where(eq(content.id, contentId))
+        .where(and(eq(content.id, contentId), eq(content.userId, userId)))
         .limit(1);
       if (!contentRecord) {
         return null;
@@ -171,7 +171,9 @@ export async function deleteContent(
 
   return withDbErrorHandling(
     async () => {
-      await db.delete(content).where(eq(content.id, contentId));
+      await db
+        .delete(content)
+        .where(and(eq(content.id, contentId), eq(content.userId, userId)));
     },
     {
       actionName: "deleteContent",

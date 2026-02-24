@@ -30,8 +30,9 @@ jest.mock("@db/client", () => ({
     select: (...args: unknown[]) => ((mockSelect as (...a: unknown[]) => unknown)(...args)),
     delete: (...args: unknown[]) => ((mockDelete as (...a: unknown[]) => unknown)(...args))
   },
-  content: { id: "id", listingId: "listingId" },
-  eq: (...args: unknown[]) => args
+  content: { id: "id", listingId: "listingId", userId: "userId" },
+  eq: (...args: unknown[]) => args,
+  and: (...args: unknown[]) => args
 }));
 
 jest.mock("@web/src/server/models/shared/dbErrorHandling", () => ({

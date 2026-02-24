@@ -1,4 +1,4 @@
-import { db, eq, listings } from "@db/client";
+import { and, db, eq, listings } from "@db/client";
 import { StatusCode } from "@shared/types/api";
 import { ApiError } from "@web/src/server/utils/apiError";
 
@@ -23,24 +23,31 @@ export async function requireListingAccess(
   const listingResult = await db
     .select()
     .from(listings)
-    .where(eq(listings.id, listingId))
+    .where(and(eq(listings.id, listingId), eq(listings.userId, userId)))
     .limit(1);
 
   const listing = listingResult[0];
 
-  if (!listing) {
+  if (listing) {
+    return listing;
+  }
+
+  // Preserve existing 404 vs 403 behavior while keeping a fast path for valid ownership.
+  const existsResult = await db
+    .select({ id: listings.id })
+    .from(listings)
+    .where(eq(listings.id, listingId))
+    .limit(1);
+
+  if (existsResult.length === 0) {
     throw new ApiError(StatusCode.NOT_FOUND, {
       error: "Not found",
       message: "Listing not found"
     });
   }
 
-  if (listing.userId !== userId) {
-    throw new ApiError(StatusCode.FORBIDDEN, {
-      error: "Forbidden",
-      message: "You don't have access to this listing"
-    });
-  }
-
-  return listing;
+  throw new ApiError(StatusCode.FORBIDDEN, {
+    error: "Forbidden",
+    message: "You don't have access to this listing"
+  });
 }

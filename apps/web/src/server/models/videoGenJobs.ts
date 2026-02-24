@@ -6,6 +6,7 @@ import type {
   InsertDBVideoGenJob
 } from "@db/types/models";
 import { requireNonEmptyString } from "./shared/validation";
+import { withDbErrorHandling } from "./shared/dbErrorHandling";
 
 /**
  * Create a new video generation job record
@@ -13,7 +14,16 @@ import { requireNonEmptyString } from "./shared/validation";
 export async function createVideoGenJob(
   job: InsertDBVideoGenJob
 ): Promise<void> {
-  await db.insert(videoGenJobs).values(job);
+  return withDbErrorHandling(
+    async () => {
+      await db.insert(videoGenJobs).values(job);
+    },
+    {
+      actionName: "createVideoGenJob",
+      context: { jobId: job.id, videoGenBatchId: job.videoGenBatchId },
+      errorMessage: "Failed to create video generation job. Please try again."
+    }
+  );
 }
 
 /**
@@ -26,7 +36,17 @@ export async function createVideoGenJobsBatch(
     return;
   }
 
-  await db.insert(videoGenJobs).values(jobs);
+  return withDbErrorHandling(
+    async () => {
+      await db.insert(videoGenJobs).values(jobs);
+    },
+    {
+      actionName: "createVideoGenJobsBatch",
+      context: { count: jobs.length },
+      errorMessage:
+        "Failed to create video generation jobs. Please try again."
+    }
+  );
 }
 
 /**
@@ -43,20 +63,29 @@ export async function updateVideoGenJob(
 ): Promise<DBVideoGenJob> {
   requireNonEmptyString(jobId, "jobId is required");
 
-  const [updated] = await db
-    .update(videoGenJobs)
-    .set({
-      ...updates,
-      updatedAt: new Date()
-    })
-    .where(eq(videoGenJobs.id, jobId))
-    .returning();
+  return withDbErrorHandling(
+    async () => {
+      const [updated] = await db
+        .update(videoGenJobs)
+        .set({
+          ...updates,
+          updatedAt: new Date()
+        })
+        .where(eq(videoGenJobs.id, jobId))
+        .returning();
 
-  if (!updated) {
-    throw new Error(`Video generation job ${jobId} not found`);
-  }
+      if (!updated) {
+        throw new Error(`Video generation job ${jobId} not found`);
+      }
 
-  return updated;
+      return updated;
+    },
+    {
+      actionName: "updateVideoGenJob",
+      context: { jobId },
+      errorMessage: "Failed to update video generation job. Please try again."
+    }
+  );
 }
 
 /**
@@ -67,11 +96,20 @@ export async function getVideoGenJobById(
 ): Promise<DBVideoGenJob | null> {
   requireNonEmptyString(jobId, "jobId is required");
 
-  const [job] = await db
-    .select()
-    .from(videoGenJobs)
-    .where(eq(videoGenJobs.id, jobId))
-    .limit(1);
+  return withDbErrorHandling(
+    async () => {
+      const [job] = await db
+        .select()
+        .from(videoGenJobs)
+        .where(eq(videoGenJobs.id, jobId))
+        .limit(1);
 
-  return job ?? null;
+      return job ?? null;
+    },
+    {
+      actionName: "getVideoGenJobById",
+      context: { jobId },
+      errorMessage: "Failed to load video generation job. Please try again."
+    }
+  );
 }

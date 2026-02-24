@@ -3,32 +3,23 @@
 import * as React from "react";
 import { ListingViewHeader } from "@web/src/components/listings/shared";
 import { type ContentItem } from "@web/src/components/dashboard/components/ContentGrid";
-import { emitListingSidebarUpdate } from "@web/src/lib/domain/listing/sidebarEvents";
 import { usePathname, useRouter } from "next/navigation";
-import {
-  buildPreviewTimelinePlan,
-  type PreviewTimelinePlan
-} from "@web/src/components/listings/create/domain/previewTimeline";
 import { ListingVideoPreviewGrid } from "@web/src/components/listings/create/orchestrators/ListingVideoPreviewGrid";
 import { ListingImagePreviewGrid } from "@web/src/components/listings/create/orchestrators/ListingImagePreviewGrid";
 import { DevSingleTemplateRender } from "@web/src/components/listings/create/orchestrators/DevSingleTemplateRender";
-import {
-  type PreviewClipCandidate,
-  type ListingCreateImage,
-  filterFeatureClips,
-  resolveContentMediaType,
-  rankListingImagesForItem,
-  buildVariedImageSequence
-} from "@web/src/components/listings/create/domain/listingCreateUtils";
+import { type ListingCreateImage } from "@web/src/components/listings/create/domain/listingCreateUtils";
 import { useStickyHeader } from "@web/src/components/listings/create/shared/hooks/useStickyHeader";
 import { useScrollFade } from "@web/src/components/listings/create/shared/hooks/useScrollFade";
 import {
+  useListingCreateEffects,
+  useListingCreateActiveMediaItems,
+  useListingCreateMediaItems,
+  useListingCreatePreviewPlans,
+  useDeleteCachedPreviewItem,
   useTemplateRender,
   useContentGeneration
 } from "@web/src/components/listings/create/domain";
-import type { ListingImagePreviewItem } from "@web/src/components/listings/create/shared/types";
 import {
-  GENERATED_BATCH_SIZE,
   MEDIA_TAB_LABELS,
   SUBCATEGORY_LABELS,
   type ListingCreateMediaTab
@@ -53,8 +44,6 @@ import {
   TooltipContent,
   TooltipTrigger
 } from "@web/src/components/ui/tooltip";
-import { toast } from "sonner";
-import { deleteCachedListingContentItem } from "@web/src/server/actions/listings/commands";
 import {
   LISTING_CONTENT_SUBCATEGORIES,
   type ListingContentSubcategory
@@ -106,143 +95,12 @@ export function ListingCreateView({
     activeMediaTab,
     activeSubcategory
   });
-  const hasHandledInitialAutoGenerateRef = React.useRef(false);
 
-  React.useEffect(() => {
-    emitListingSidebarUpdate({
-      id: listingId,
-      listingStage: "create",
-      lastOpenedAt: new Date().toISOString()
-    });
-  }, [listingId]);
-
-  React.useEffect(() => {
-    const next = new URLSearchParams(window.location.search);
-    const mediaTypeParam = activeMediaTab === "images" ? "photos" : "videos";
-    const filterParam = activeSubcategory;
-    const currentMediaType = next.get("mediaType");
-    const currentFilter = next.get("filter");
-
-    if (currentMediaType === mediaTypeParam && currentFilter === filterParam) {
-      return;
-    }
-
-    next.set("mediaType", mediaTypeParam);
-    next.set("filter", filterParam);
-
-    const query = next.toString();
-    router.replace(query ? `${pathname}?${query}` : pathname, {
-      scroll: false
-    });
-  }, [activeMediaTab, activeSubcategory, pathname, router]);
-
-  const activeMediaItems = React.useMemo(
-    () =>
-      localPostItems.filter(
-        (item) =>
-          item.listingSubcategory === activeSubcategory &&
-          resolveContentMediaType(item) ===
-            (activeMediaTab === "videos" ? "video" : "image")
-      ),
-    [activeMediaTab, activeSubcategory, localPostItems]
-  );
-
-  const handleDeleteImagePreviewItem = React.useCallback(
-    async (contentItemId: string) => {
-      const contentItem = activeMediaItems.find(
-        (item) => item.id === contentItemId
-      );
-      const withCacheKey = contentItem as
-        | (typeof contentItem & {
-            cacheKeyTimestamp?: number;
-            cacheKeyId?: number;
-          })
-        | undefined;
-      if (
-        withCacheKey &&
-        typeof withCacheKey.cacheKeyTimestamp === "number" &&
-        typeof withCacheKey.cacheKeyId === "number"
-      ) {
-        try {
-          await deleteCachedListingContentItem(listingId, {
-            cacheKeyTimestamp: withCacheKey.cacheKeyTimestamp,
-            cacheKeyId: withCacheKey.cacheKeyId,
-            subcategory: activeSubcategory
-          });
-        } catch {
-          // Remove from grid anyway so UI stays consistent
-        }
-      }
-      removeContentItem(contentItemId);
-    },
-    [
-      activeMediaItems,
-      activeSubcategory,
-      listingId,
-      removeContentItem
-    ]
-  );
-  const fallbackImagePreviewItems = React.useMemo<
-    ListingImagePreviewItem[]
-  >(() => {
-    if (activeMediaTab !== "images" || activeMediaItems.length === 0) {
-      return [];
-    }
-
-    const fallbackSortedImages = [...listingImages].sort((a, b) => {
-      if (a.isPrimary !== b.isPrimary) {
-        return (b.isPrimary ? 1 : 0) - (a.isPrimary ? 1 : 0);
-      }
-      const scoreDelta =
-        (b.primaryScore ?? -Infinity) - (a.primaryScore ?? -Infinity);
-      if (scoreDelta !== 0) {
-        return scoreDelta;
-      }
-      return b.uploadedAtMs - a.uploadedAtMs;
-    });
-
-    return activeMediaItems.map((item, index) => {
-      const rankedForItem = rankListingImagesForItem(
-        fallbackSortedImages,
-        item
-      );
-      const variedForItem = buildVariedImageSequence(
-        rankedForItem,
-        `${item.id}:${index}`
-      );
-      const fallbackSlides = [
-        {
-          id: `${item.id}-slide-fallback`,
-          imageUrl: variedForItem[0]?.url ?? null,
-          header: item.hook?.trim() || "Listing",
-          content: item.caption?.trim() || "",
-          textOverlay: null
-        }
-      ];
-      const slides =
-        item.body && item.body.length > 0
-          ? item.body.map((slide, slideIndex) => ({
-              id: `${item.id}-slide-${slideIndex}`,
-              imageUrl:
-                variedForItem[slideIndex % variedForItem.length]?.url ??
-                variedForItem[0]?.url ??
-                null,
-              header: slide.header?.trim() || item.hook?.trim() || "Listing",
-              content: slide.content?.trim() || "",
-              textOverlay: slide.text_overlay ?? null
-            }))
-          : fallbackSlides;
-
-      return {
-        id: item.id,
-        variationNumber: index + 1,
-        hook: item.hook?.trim() || null,
-        caption: item.caption?.trim() || null,
-        slides,
-        coverImageUrl: slides[0]?.imageUrl ?? null
-      };
-    });
-  }, [activeMediaItems, activeMediaTab, listingImages]);
+  const activeMediaItems = useListingCreateActiveMediaItems({
+    activeMediaTab,
+    activeSubcategory,
+    localPostItems
+  });
 
   const {
     previewItems: templatePreviewItems,
@@ -257,127 +115,45 @@ export function ListingCreateView({
     isGenerating
   });
 
-  const activeImagePreviewItems = React.useMemo(() => {
-    if (isTemplateRenderingUnavailable) {
-      return fallbackImagePreviewItems;
-    }
-    return templatePreviewItems;
-  }, [
-    fallbackImagePreviewItems,
-    templatePreviewItems,
-    isTemplateRenderingUnavailable
-  ]);
-
-  const imageLoadingCount = React.useMemo(() => {
-    if (activeMediaTab !== "images") {
-      return 0;
-    }
-    if (isTemplateRenderingUnavailable) {
-      return 0;
-    }
-    if (isGenerating) {
-      return GENERATED_BATCH_SIZE;
-    }
-    const expectingTemplateResults =
-      activeMediaItems.length > 0 &&
-      (isTemplateRendering || templatePreviewItems.length === 0);
-    if (!expectingTemplateResults) {
-      return 0;
-    }
-    return Math.max(
-      0,
-      activeMediaItems.length - templatePreviewItems.length
-    );
-  }, [
+  const { activeImagePreviewItems, imageLoadingCount } = useListingCreateMediaItems({
     activeMediaTab,
-    activeMediaItems.length,
+    activeMediaItems,
+    listingImages,
     isGenerating,
     isTemplateRendering,
-    templatePreviewItems.length,
-    isTemplateRenderingUnavailable
-  ]);
-  const activePreviewPlans = React.useMemo(() => {
-    if (activeMediaTab !== "videos") {
-      return [];
-    }
+    isTemplateRenderingUnavailable,
+    templatePreviewItems
+  });
 
-    const clips: PreviewClipCandidate[] = videoItems
-      .filter((item) => Boolean(item.videoUrl))
-      .map((item) => ({
-        id: item.id,
-        category: item.category ?? null,
-        durationSeconds: item.durationSeconds ?? null,
-        isPriorityCategory: item.isPriorityCategory ?? false,
-        searchableText: `${item.category ?? ""} ${item.alt ?? ""}`
-          .toLowerCase()
-          .replace(/[^\w\s]/g, " ")
-      }));
-    if (clips.length === 0 || activeMediaItems.length === 0) {
-      return [];
-    }
-
-    return activeMediaItems.map((captionItem): PreviewTimelinePlan => {
-      const scopedClips =
-        activeSubcategory === "property_features"
-          ? filterFeatureClips(clips, captionItem)
-          : clips;
-      return buildPreviewTimelinePlan({
-        clips: scopedClips,
-        listingId,
-        seedKey: `${activeSubcategory}-${captionItem.id}`
-      });
-    });
-  }, [
-    activeMediaItems,
-    activeMediaTab,
-    activeSubcategory,
+  const activePreviewPlans = useListingCreatePreviewPlans({
     listingId,
-    videoItems
-  ]);
-
-  React.useEffect(() => {
-    if (hasHandledInitialAutoGenerateRef.current) {
-      return;
-    }
-    if (isGenerating) {
-      return;
-    }
-    if (
-      activeMediaTab !== initialMediaTab ||
-      activeSubcategory !== initialSubcategory
-    ) {
-      return;
-    }
-    if (process.env.NODE_ENV === "development") {
-      hasHandledInitialAutoGenerateRef.current = true;
-      return;
-    }
-
-    hasHandledInitialAutoGenerateRef.current = true;
-    if (activeMediaItems.length === 0) {
-      void generateSubcategoryContent(activeSubcategory);
-    }
-  }, [
-    activeMediaItems.length,
     activeMediaTab,
     activeSubcategory,
-    generateSubcategoryContent,
+    activeMediaItems,
+    videoItems
+  });
+
+  const handleDeleteImagePreviewItem = useDeleteCachedPreviewItem({
+    listingId,
+    activeSubcategory,
+    activeMediaItems,
+    removeContentItem
+  });
+
+  useListingCreateEffects({
+    listingId,
+    pathname,
+    replaceUrl: (url) => router.replace(url, { scroll: false }),
+    activeMediaItemsLength: activeMediaItems.length,
+    activeMediaTab,
+    activeSubcategory,
     initialMediaTab,
     initialSubcategory,
-    isGenerating
-  ]);
-
-  const lastToastedErrorRef = React.useRef<string | null>(null);
-  React.useEffect(() => {
-    const message = generationError ?? templateRenderError ?? null;
-    if (message && message !== lastToastedErrorRef.current) {
-      lastToastedErrorRef.current = message;
-      toast.error(message);
-    }
-    if (!message) {
-      lastToastedErrorRef.current = null;
-    }
-  }, [generationError, templateRenderError]);
+    isGenerating,
+    generationError,
+    templateRenderError,
+    generateSubcategoryContent
+  });
 
   return (
     <>

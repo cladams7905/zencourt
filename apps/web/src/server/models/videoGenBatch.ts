@@ -6,6 +6,7 @@ import type {
   InsertDBVideoGenBatch
 } from "@db/types/models";
 import { requireNonEmptyString } from "./shared/validation";
+import { withDbErrorHandling } from "./shared/dbErrorHandling";
 
 /**
  * Create a new video generation batch record
@@ -13,7 +14,17 @@ import { requireNonEmptyString } from "./shared/validation";
 export async function createVideoGenBatch(
   video: InsertDBVideoGenBatch
 ): Promise<void> {
-  await db.insert(videoGenBatch).values(video);
+  return withDbErrorHandling(
+    async () => {
+      await db.insert(videoGenBatch).values(video);
+    },
+    {
+      actionName: "createVideoGenBatch",
+      context: { id: video.id, listingId: video.listingId },
+      errorMessage:
+        "Failed to create video generation batch. Please try again."
+    }
+  );
 }
 
 /**
@@ -27,18 +38,28 @@ export async function updateVideoGenBatch(
 ): Promise<DBVideoGenBatch> {
   requireNonEmptyString(videoId, "videoId is required");
 
-  const [updated] = await db
-    .update(videoGenBatch)
-    .set({
-      ...updates,
-      updatedAt: new Date()
-    })
-    .where(eq(videoGenBatch.id, videoId))
-    .returning();
+  return withDbErrorHandling(
+    async () => {
+      const [updated] = await db
+        .update(videoGenBatch)
+        .set({
+          ...updates,
+          updatedAt: new Date()
+        })
+        .where(eq(videoGenBatch.id, videoId))
+        .returning();
 
-  if (!updated) {
-    throw new Error(`Video generation batch ${videoId} not found`);
-  }
+      if (!updated) {
+        throw new Error(`Video generation batch ${videoId} not found`);
+      }
 
-  return updated;
+      return updated;
+    },
+    {
+      actionName: "updateVideoGenBatch",
+      context: { videoId },
+      errorMessage:
+        "Failed to update video generation batch. Please try again."
+    }
+  );
 }

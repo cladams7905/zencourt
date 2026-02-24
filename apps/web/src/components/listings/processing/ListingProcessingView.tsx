@@ -3,18 +3,8 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { ListingViewHeader } from "@web/src/components/listings/shared";
-import { updateListingForCurrentUser } from "@web/src/server/actions/listings/commands";
-import { fetchPropertyDetailsForCurrentUser } from "@web/src/server/actions/propertyDetails/commands";
-import { categorizeListingImagesForCurrentUser } from "@web/src/server/actions/vision";
-import {
-  cancelListingVideoGeneration,
-  startListingVideoGeneration
-} from "@web/src/server/actions/video";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import { Button } from "../../ui/button";
-import { toast } from "sonner";
-import { emitListingSidebarUpdate } from "@web/src/lib/domain/listing/sidebarEvents";
-import type { VideoJobUpdateEvent } from "@web/src/lib/domain/listing/videoStatus";
 import {
   Dialog,
   DialogContent,
@@ -23,6 +13,7 @@ import {
   DialogHeader,
   DialogTitle
 } from "../../ui/dialog";
+import { useListingProcessingWorkflow } from "@web/src/components/listings/processing/domain";
 
 type ListingProcessingViewProps = {
   mode: "categorize" | "review" | "generate";
@@ -42,536 +33,26 @@ export function ListingProcessingView({
   batchStartedAt
 }: ListingProcessingViewProps) {
   const router = useRouter();
-  const [isProcessing, setIsProcessing] = React.useState(true);
-  const [generationJobs, setGenerationJobs] = React.useState<
-    VideoJobUpdateEvent[]
-  >([]);
-  const hasTriggeredCategorizeRef = React.useRef(false);
-  const hasNavigatedRef = React.useRef(false);
-  const [status, setStatus] = React.useState<"loading" | "success" | "error">(
-    "loading"
-  );
-  const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
-  const [isCancelOpen, setIsCancelOpen] = React.useState(false);
-  const [isCanceling, setIsCanceling] = React.useState(false);
-  const [canPollGeneration, setCanPollGeneration] = React.useState(
-    mode !== "generate"
-  );
-  const [listingContentStatus, setListingContentStatus] = React.useState<
-    "idle" | "running" | "succeeded" | "failed"
-  >("idle");
-  const [remainingEstimateSeconds, setRemainingEstimateSeconds] =
-    React.useState(0);
-  const hasInitializedGenerationRef = React.useRef(false);
 
-  const updateListingStage = React.useCallback(
-    async (listingStage: "review" | "create") => {
-      await updateListingForCurrentUser(listingId, { listingStage });
-    },
-    [listingId]
-  );
-
-  const generationSummary = React.useMemo(() => {
-    if (mode !== "generate") {
-      return {
-        total: 0,
-        terminal: 0,
-        failed: 0,
-        canceled: 0,
-        isTerminal: false,
-        allSucceeded: false
-      };
-    }
-    const total = generationJobs.length;
-    const terminal = generationJobs.filter((job) =>
-      ["completed", "failed", "canceled"].includes(job.status)
-    ).length;
-    const failed = generationJobs.filter(
-      (job) => job.status === "failed"
-    ).length;
-    const canceled = generationJobs.filter(
-      (job) => job.status === "canceled"
-    ).length;
-    return {
-      total,
-      terminal,
-      failed,
-      canceled,
-      isTerminal: total > 0 && terminal >= total,
-      allSucceeded:
-        total > 0 && generationJobs.every((job) => job.status === "completed")
-    };
-  }, [generationJobs, mode]);
-
-  const estimatedTotalSeconds = React.useMemo(() => {
-    if (mode !== "generate") {
-      return 0;
-    }
-    return generationSummary.total > 0 ? generationSummary.total * 10 : 90;
-  }, [generationSummary.total, mode]);
-
-  const formattedEstimate = React.useMemo(() => {
-    const minutes = Math.floor(remainingEstimateSeconds / 60);
-    const seconds = remainingEstimateSeconds % 60;
-    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
-  }, [remainingEstimateSeconds]);
-  const copy = React.useMemo(() => {
-    if (mode === "review") {
-      return {
-        title:
-          status === "error"
-            ? "Property lookup failed"
-            : "Fetching property details",
-        subtitle:
-          status === "error"
-            ? "We could not fetch IDX details. You can retry or fill in details manually."
-            : "We’re pulling public IDX records for review.",
-        addressLine: address || "Address on file",
-        helperText:
-          "This usually takes a few moments. Please keep this tab open."
-      };
-    }
-    if (mode === "generate") {
-      return {
-        title: "Generating clips",
-        subtitle:
-          "We’re turning your listing photos into short b-roll clips for your reels.",
-        addressLine: null,
-        helperText:
-          "Keep this tab open. We’ll automatically take you to your clip board when ready."
-      };
-    }
-    return {
-      title: "Processing listing photos",
-      subtitle:
-        "We’re categorizing your photos so you can review each room quickly.",
-      addressLine: null,
-      helperText: "This usually takes a few moments. Please keep this tab open."
-    };
-  }, [address, mode, status]);
-
-  const fetchDetails = React.useCallback(async () => {
-    if (mode !== "review") {
-      return;
-    }
-    setStatus("loading");
-    setErrorMessage(null);
-    try {
-      await fetchPropertyDetailsForCurrentUser(listingId, address ?? null);
-      setStatus("success");
-      router.replace(`/listings/${listingId}/review`);
-    } catch (error) {
-      setStatus("error");
-      setErrorMessage(
-        error instanceof Error ? error.message : "Failed to fetch details."
-      );
-    }
-  }, [address, listingId, mode, router]);
-
-  const refreshGenerationStatus = React.useCallback(async () => {
-    if (mode !== "generate") {
-      return;
-    }
-    try {
-      const response = await fetch(`/api/v1/video/status/${listingId}`);
-      if (!response.ok) {
-        return;
-      }
-      const payload = (await response.json()) as {
-        success: boolean;
-        data?: { jobs?: VideoJobUpdateEvent[] };
-      };
-      if (!payload?.success || !payload.data?.jobs) {
-        return;
-      }
-      setGenerationJobs(payload.data.jobs);
-    } catch {
-      // Ignore polling errors to avoid disrupting the UI.
-    }
-  }, [listingId, mode]);
-
-  const initializeGeneration = React.useCallback(async () => {
-    if (mode !== "generate" || hasInitializedGenerationRef.current) {
-      return;
-    }
-    hasInitializedGenerationRef.current = true;
-
-    const startListingContentGeneration = async () => {
-      setListingContentStatus("running");
-      const response = await fetch(
-        `/api/v1/listings/${listingId}/content/generate`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ subcategory: "new_listing" })
-        }
-      );
-      if (!response.ok) {
-        const payload = await response.json().catch(() => ({}));
-        setListingContentStatus("failed");
-        throw new Error(
-          payload?.message ||
-            payload?.error ||
-            "Failed to generate listing content."
-        );
-      }
-      setListingContentStatus("succeeded");
-    };
-
-    const startVideoGeneration = async () => {
-      await startListingVideoGeneration({
-        listingId
-      });
-    };
-
-    try {
-      const statusResponse = await fetch(`/api/v1/video/status/${listingId}`);
-      if (statusResponse.ok) {
-        const statusPayload = (await statusResponse.json()) as {
-          success: boolean;
-          data?: { jobs?: VideoJobUpdateEvent[] };
-        };
-        const jobs = statusPayload.data?.jobs ?? [];
-        const hasFailedJob = jobs.some((job) => job.status === "failed");
-        const hasActiveJob = jobs.some((job) =>
-          ["pending", "processing"].includes(job.status)
-        );
-        const allCompleted =
-          jobs.length > 0 && jobs.every((job) => job.status === "completed");
-
-        if (hasFailedJob) {
-          await updateListingStage("review");
-          emitListingSidebarUpdate({
-            id: listingId,
-            listingStage: "review",
-            lastOpenedAt: new Date().toISOString()
-          });
-          router.replace(`/listings/${listingId}/review`);
-          return;
-        }
-
-        if (allCompleted) {
-          try {
-            await startListingContentGeneration();
-          } catch (error) {
-            toast.error(
-              error instanceof Error
-                ? error.message
-                : "Failed to generate listing content."
-            );
-            await updateListingStage("review");
-            emitListingSidebarUpdate({
-              id: listingId,
-              listingStage: "review",
-              lastOpenedAt: new Date().toISOString()
-            });
-            router.replace(`/listings/${listingId}/review`);
-            return;
-          }
-          await updateListingStage("create");
-          emitListingSidebarUpdate({
-            id: listingId,
-            listingStage: "create",
-            lastOpenedAt: new Date().toISOString()
-          });
-          router.replace(`/listings/${listingId}/create`);
-          return;
-        }
-
-        if (hasActiveJob) {
-          setGenerationJobs(jobs);
-          void startListingContentGeneration().catch((error) => {
-            toast.error(
-              error instanceof Error
-                ? error.message
-                : "Failed to generate listing content."
-            );
-          });
-          return;
-        }
-      }
-
-      const listingContentPromise = startListingContentGeneration().catch(
-        (error) => {
-          toast.error(
-            error instanceof Error
-              ? error.message
-              : "Failed to generate listing content."
-          );
-          setListingContentStatus("failed");
-        }
-      );
-
-      await startVideoGeneration();
-      void listingContentPromise;
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to start generation."
-      );
-      try {
-        await updateListingStage("review");
-        emitListingSidebarUpdate({
-          id: listingId,
-          listingStage: "review",
-          lastOpenedAt: new Date().toISOString()
-        });
-      } catch {
-        // Ignore stage update failures.
-      }
-      router.replace(`/listings/${listingId}/review`);
-    }
-  }, [listingId, mode, router, updateListingStage]);
-
-  const refreshStatus = React.useCallback(async () => {
-    if (mode !== "categorize") {
-      return;
-    }
-    try {
-      const imagesResponse = await fetch(`/api/v1/listings/${listingId}/images`);
-      if (!imagesResponse.ok) {
-        return;
-      }
-      const imagesPayload = (await imagesResponse.json()) as {
-        success: boolean;
-        data?: Array<{
-          category: string | null;
-          confidence?: number | null;
-          primaryScore?: number | null;
-          uploadedAt?: string | Date | null;
-        }>;
-      };
-      const updated = imagesPayload.data ?? [];
-      if (!hasTriggeredCategorizeRef.current && updated.length > 0) {
-        hasTriggeredCategorizeRef.current = true;
-        setIsProcessing(true);
-        categorizeListingImagesForCurrentUser(listingId).catch(() => null);
-      }
-      const isProcessed = (image: { category: string | null }) => {
-        const candidate = image as {
-          category: string | null;
-          confidence?: number | null;
-          primaryScore?: number | null;
-        };
-        return Boolean(
-          candidate.category &&
-          candidate.confidence !== null &&
-          candidate.confidence !== undefined &&
-          candidate.primaryScore !== null &&
-          candidate.primaryScore !== undefined
-        );
-      };
-      const batchFiltered = batchStartedAt
-        ? updated.filter((image) => {
-            const uploadedAt =
-              typeof image.uploadedAt === "string"
-                ? new Date(image.uploadedAt).getTime()
-                : (image.uploadedAt?.getTime?.() ?? 0);
-            return uploadedAt >= batchStartedAt;
-          })
-        : updated;
-      if (batchFiltered.length === 0) {
-        return;
-      }
-      const needsCategorization = batchFiltered.some(
-        (image) => !isProcessed(image)
-      );
-      if (!needsCategorization) {
-        setIsProcessing(false);
-        emitListingSidebarUpdate({
-          id: listingId,
-          lastOpenedAt: new Date().toISOString()
-        });
-        router.replace(`/listings/${listingId}/categorize`);
-      }
-    } catch {
-      // Ignore polling errors to avoid disrupting the UI.
-    }
-  }, [listingId, router, batchStartedAt, mode]);
-
-  React.useEffect(() => {
-    if (mode === "review") {
-      void fetchDetails();
-      return;
-    }
-    if (!isProcessing) {
-      return;
-    }
-
-    void refreshStatus();
-    const interval = setInterval(refreshStatus, 1000);
-    return () => clearInterval(interval);
-  }, [isProcessing, refreshStatus, mode, fetchDetails]);
-
-  React.useEffect(() => {
-    if (mode === "generate") {
-      void initializeGeneration();
-      const timeout = setTimeout(() => {
-        setCanPollGeneration(true);
-      }, 30000);
-      return () => clearTimeout(timeout);
-    }
-    setCanPollGeneration(true);
-  }, [initializeGeneration, mode]);
-
-  React.useEffect(() => {
-    if (mode !== "generate") {
-      setRemainingEstimateSeconds(0);
-      return;
-    }
-    setRemainingEstimateSeconds(estimatedTotalSeconds);
-  }, [estimatedTotalSeconds, listingId, mode]);
-
-  React.useEffect(() => {
-    if (mode !== "generate") {
-      return;
-    }
-    if (generationSummary.isTerminal) {
-      setRemainingEstimateSeconds(0);
-      return;
-    }
-    if (remainingEstimateSeconds <= 0) {
-      return;
-    }
-    const interval = setInterval(() => {
-      setRemainingEstimateSeconds((prev) => Math.max(prev - 1, 0));
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [generationSummary.isTerminal, mode, remainingEstimateSeconds]);
-
-  React.useEffect(() => {
-    if (mode === "generate" && canPollGeneration) {
-      void refreshGenerationStatus();
-      const interval = setInterval(refreshGenerationStatus, 2000);
-      return () => clearInterval(interval);
-    }
-    return;
-  }, [canPollGeneration, mode, refreshGenerationStatus]);
-
-  React.useEffect(() => {
-    if (mode !== "generate") {
-      return;
-    }
-    if (!generationSummary.total || !generationSummary.isTerminal) {
-      return;
-    }
-    if (hasNavigatedRef.current) {
-      return;
-    }
-    if (generationSummary.failed > 0 || generationSummary.canceled > 0) {
-      hasNavigatedRef.current = true;
-      const fallbackToReview = async () => {
-        try {
-          await updateListingStage("review");
-        } catch {
-          // Ignore transition failures; navigation will still proceed.
-        }
-        emitListingSidebarUpdate({
-          id: listingId,
-          listingStage: "review",
-          lastOpenedAt: new Date().toISOString()
-        });
-        router.replace(`/listings/${listingId}/review`);
-      };
-      void fallbackToReview();
-      return;
-    }
-    if (
-      !generationSummary.allSucceeded ||
-      listingContentStatus !== "succeeded"
-    ) {
-      if (listingContentStatus === "failed") {
-        hasNavigatedRef.current = true;
-        const fallbackToReview = async () => {
-          try {
-            await updateListingStage("review");
-          } catch {
-            // Ignore transition failures; navigation will still proceed.
-          }
-          emitListingSidebarUpdate({
-            id: listingId,
-            listingStage: "review",
-            lastOpenedAt: new Date().toISOString()
-          });
-          router.replace(`/listings/${listingId}/review`);
-        };
-        void fallbackToReview();
-      }
-      return;
-    }
-    hasNavigatedRef.current = true;
-    const finalize = async () => {
-      try {
-        await updateListingStage("create");
-      } catch {
-        // Ignore transition failures; navigation will still proceed.
-      }
-      emitListingSidebarUpdate({
-        id: listingId,
-        listingStage: "create",
-        lastOpenedAt: new Date().toISOString()
-      });
-      router.replace(`/listings/${listingId}/create`);
-    };
-    void finalize();
-  }, [
-    generationSummary.allSucceeded,
-    generationSummary.canceled,
-    generationSummary.failed,
-    generationSummary.isTerminal,
-    generationSummary.total,
-    listingId,
-    listingContentStatus,
+  const {
+    copy,
+    status,
+    errorMessage,
+    isCancelOpen,
+    setIsCancelOpen,
+    isCanceling,
+    formattedEstimate,
+    fetchDetails,
+    handleSkip,
+    handleCancelGeneration,
+    isGenerateMode
+  } = useListingProcessingWorkflow({
     mode,
-    router,
-    updateListingStage
-  ]);
-
-  React.useEffect(() => {
-    if (mode !== "generate") {
-      return;
-    }
-    emitListingSidebarUpdate({
-      id: listingId,
-      listingStage: "generate",
-      lastOpenedAt: new Date().toISOString()
-    });
-  }, [listingId, mode]);
-
-  const handleSkip = async () => {
-    try {
-      await updateListingStage("review");
-      router.replace(`/listings/${listingId}/review`);
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to skip fetch."
-      );
-    }
-  };
-
-  const handleCancelGeneration = async () => {
-    if (mode !== "generate") {
-      return;
-    }
-    setIsCanceling(true);
-    try {
-      await cancelListingVideoGeneration(listingId, "Canceled by user");
-      await updateListingStage("review");
-      emitListingSidebarUpdate({
-        id: listingId,
-        listingStage: "review",
-        lastOpenedAt: new Date().toISOString()
-      });
-      toast.success("Video generation canceled.");
-      router.replace(`/listings/${listingId}/review`);
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to cancel generation."
-      );
-    } finally {
-      setIsCanceling(false);
-      setIsCancelOpen(false);
-    }
-  };
+    listingId,
+    address,
+    batchStartedAt,
+    navigate: (url) => router.replace(url)
+  });
 
   return (
     <>
@@ -586,21 +67,17 @@ export function ListingProcessingView({
             )}
           </div>
           <div className="space-y-2">
-            <h2 className="text-2xl font-header text-foreground">
-              {copy.title}
-            </h2>
+            <h2 className="text-2xl font-header text-foreground">{copy.title}</h2>
             <div className="my-3 gap-3">
               <p className="text-sm text-muted-foreground">{copy.subtitle}</p>
               {copy.addressLine ? (
-                <p className="text-xs mt-1 text-muted-foreground">
-                  {copy.addressLine}
-                </p>
+                <p className="text-xs mt-1 text-muted-foreground">{copy.addressLine}</p>
               ) : null}
             </div>
           </div>
           <div className="h-px bg-border w-full" />
           <p className="text-xs text-muted-foreground">{copy.helperText}</p>
-          {mode === "generate" ? (
+          {isGenerateMode ? (
             <p className="text-xs text-muted-foreground font-semibold">
               Estimated time remaining: {formattedEstimate}
             </p>
@@ -618,7 +95,7 @@ export function ListingProcessingView({
               </Button>
             </div>
           ) : null}
-          {mode === "generate" ? (
+          {isGenerateMode ? (
             <div className="flex justify-center">
               <Button variant="outline" onClick={() => setIsCancelOpen(true)}>
                 Cancel generation

@@ -3,9 +3,9 @@ const mockRequireAuthenticatedUser = jest.fn();
 
 jest.mock("@web/src/server/services/imageCategorization", () => ({
   runListingImagesCategorizationWorkflow: (...args: unknown[]) =>
-    (mockRunListingImagesCategorizationWorkflow as (...a: unknown[]) => unknown)(
-      ...args
-    )
+    (
+      mockRunListingImagesCategorizationWorkflow as (...a: unknown[]) => unknown
+    )(...args)
 }));
 
 jest.mock("@web/src/server/utils/apiAuth", () => ({
@@ -16,7 +16,7 @@ jest.mock("@web/src/server/utils/apiAuth", () => ({
 import {
   categorizeListingImages,
   categorizeListingImagesByIds
-} from "@web/src/server/actions/vision/commands";
+} from "@web/src/server/actions/imageCategorization/commands";
 
 describe("vision categorize action", () => {
   beforeEach(() => {
@@ -24,12 +24,19 @@ describe("vision categorize action", () => {
     mockRequireAuthenticatedUser.mockReset();
   });
 
-  it("validates required params", async () => {
+  it("propagates validation errors from workflow", async () => {
+    mockRunListingImagesCategorizationWorkflow.mockRejectedValueOnce(
+      new Error("User ID is required to fetch a listing")
+    );
     await expect(categorizeListingImages("", "l1")).rejects.toThrow(
-      "User ID is required to categorize listing images"
+      "User ID is required to fetch a listing"
+    );
+
+    mockRunListingImagesCategorizationWorkflow.mockRejectedValueOnce(
+      new Error("Listing ID is required to fetch a listing")
     );
     await expect(categorizeListingImages("u1", "")).rejects.toThrow(
-      "Listing ID is required to categorize listing images"
+      "Listing ID is required to fetch a listing"
     );
   });
 

@@ -7,7 +7,7 @@
 import { and, db, eq, inArray, listingImages } from "@db/client";
 import type { SerializableImageData } from "@web/src/lib/domain/listing/images";
 import { getListingById } from "@web/src/server/models/listings";
-import { assignPrimaryListingImageForCategory } from "@web/src/server/models/listingImages";
+import { assignPrimaryListingImageForCategoryTrusted } from "@web/src/server/models/listingImages";
 import { analyzeImagesWorkflow } from "./service";
 import type { CategorizationResult } from "./types";
 
@@ -78,7 +78,6 @@ export async function persistListingImageAnalysis(
 }
 
 async function assignPrimaryImagesByCategory(
-  userId: string,
   listingId: string,
   categories: string[]
 ): Promise<void> {
@@ -88,7 +87,7 @@ async function assignPrimaryImagesByCategory(
   if (uniqueCategories.length === 0) return;
   await Promise.all(
     uniqueCategories.map((category) =>
-      assignPrimaryListingImageForCategory(userId, listingId, category)
+      assignPrimaryListingImageForCategoryTrusted(listingId, category)
     )
   );
 }
@@ -144,7 +143,6 @@ export async function runListingImagesCategorizationWorkflow(
   );
 
   await assignPrimaryImagesByCategory(
-    userId,
     listingId,
     result.images
       .map((image) => image.category ?? "")

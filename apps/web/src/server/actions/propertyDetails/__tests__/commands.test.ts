@@ -39,7 +39,9 @@ jest.mock("@web/src/server/utils/apiAuth", () => ({
 
 import {
   fetchPropertyDetails,
-  saveListingPropertyDetails
+  saveListingPropertyDetails,
+  fetchPropertyDetailsForCurrentUser,
+  saveListingPropertyDetailsForCurrentUser
 } from "@web/src/server/actions/propertyDetails/commands";
 
 describe("listingProperty actions", () => {
@@ -115,5 +117,53 @@ describe("listingProperty actions", () => {
     await expect(
       saveListingPropertyDetails("u1", "l1", details as never)
     ).resolves.toEqual({ id: "l1", address: "777 Pine" });
+  });
+
+  describe("ForCurrentUser variants", () => {
+    it("fetchPropertyDetailsForCurrentUser delegates with current user id", async () => {
+      const mockUser = { id: "current-user" } as never;
+      mockRequireAuthenticatedUser.mockResolvedValueOnce(mockUser);
+      mockGetListingById.mockResolvedValueOnce({
+        id: "l1",
+        address: "456 Oak"
+      });
+      mockGetDefaultPropertyDetailsProvider.mockReturnValue({ name: "p" });
+      mockFetchPropertyDetailsFromService.mockResolvedValueOnce({
+        address: "456 Oak"
+      });
+      mockBuildPropertyDetailsRevision.mockReturnValueOnce("rev-cur");
+      mockUpdateListing.mockResolvedValueOnce({ id: "l1" });
+
+      await fetchPropertyDetailsForCurrentUser("l1");
+
+      expect(mockRequireAuthenticatedUser).toHaveBeenCalled();
+      expect(mockGetListingById).toHaveBeenCalledWith("current-user", "l1");
+      expect(mockUpdateListing).toHaveBeenCalledWith(
+        "current-user",
+        "l1",
+        expect.any(Object)
+      );
+    });
+
+    it("saveListingPropertyDetailsForCurrentUser delegates with current user id", async () => {
+      const mockUser = { id: "current-user" } as never;
+      const details = { address: "999 Elm" } as never;
+      mockRequireAuthenticatedUser.mockResolvedValueOnce(mockUser);
+      mockBuildPropertyDetailsRevision.mockReturnValueOnce("rev-save");
+      mockUpdateListing.mockResolvedValueOnce({ id: "l1" });
+
+      await saveListingPropertyDetailsForCurrentUser("l1", details);
+
+      expect(mockRequireAuthenticatedUser).toHaveBeenCalled();
+      expect(mockUpdateListing).toHaveBeenCalledWith(
+        "current-user",
+        "l1",
+        expect.objectContaining({
+          propertyDetails: details,
+          propertyDetailsRevision: "rev-save",
+          listingStage: "review"
+        })
+      );
+    });
   });
 });
