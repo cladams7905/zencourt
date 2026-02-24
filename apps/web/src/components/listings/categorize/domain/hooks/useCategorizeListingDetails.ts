@@ -25,7 +25,6 @@ type UseCategorizeListingDetailsParams = {
   initialAddress: string;
   hasPropertyDetails: boolean;
   listingId: string;
-  userId: string;
   runDraftSave: RunDraftSave;
 };
 

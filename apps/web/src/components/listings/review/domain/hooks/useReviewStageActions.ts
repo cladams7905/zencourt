@@ -5,7 +5,6 @@ import { updateListingForCurrentUser } from "@web/src/server/actions/listings/co
 
 type UseReviewStageActionsParams = {
   listingId: string;
-  userId: string;
   navigate: (path: string) => void;
   handleSave: (options?: { silent?: boolean }) => Promise<void>;
 };

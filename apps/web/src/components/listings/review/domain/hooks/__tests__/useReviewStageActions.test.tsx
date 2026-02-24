@@ -9,8 +9,8 @@ afterEach(() => {
   jest.clearAllMocks();
 });
 
-jest.mock("@web/src/server/models/listings", () => ({
-  updateListing: (...args: unknown[]) => mockUpdateListing(...args)
+jest.mock("@web/src/server/actions/listings/commands", () => ({
+  updateListingForCurrentUser: (...args: unknown[]) => mockUpdateListing(...args)
 }));
 
 jest.mock("@web/src/lib/domain/listing/sidebarEvents", () => ({
@@ -33,7 +33,6 @@ describe("useReviewStageActions", () => {
     const { result } = renderHook(() =>
       useReviewStageActions({
         listingId: "listing-1",
-        userId: "user-1",
         navigate,
         handleSave
       })
@@ -44,7 +43,7 @@ describe("useReviewStageActions", () => {
     });
 
     expect(handleSave).toHaveBeenCalledWith({ silent: true });
-    expect(mockUpdateListing).toHaveBeenCalledWith("user-1", "listing-1", {
+    expect(mockUpdateListing).toHaveBeenCalledWith("listing-1", {
       listingStage: "generate"
     });
     expect(navigate).toHaveBeenCalledWith("/listings/listing-1/generate");
@@ -57,7 +56,6 @@ describe("useReviewStageActions", () => {
     const { result } = renderHook(() =>
       useReviewStageActions({
         listingId: "listing-1",
-        userId: "user-1",
         navigate,
         handleSave: jest.fn()
       })
@@ -76,7 +74,6 @@ describe("useReviewStageActions", () => {
     renderHook(() =>
       useReviewStageActions({
         listingId: "listing-1",
-        userId: "user-1",
         navigate: jest.fn(),
         handleSave: jest.fn()
       })
@@ -97,7 +94,6 @@ describe("useReviewStageActions", () => {
     const { result } = renderHook(() =>
       useReviewStageActions({
         listingId: "listing-1",
-        userId: "user-1",
         navigate,
         handleSave
       })
@@ -118,7 +114,6 @@ describe("useReviewStageActions", () => {
     const { result } = renderHook(() =>
       useReviewStageActions({
         listingId: "listing-1",
-        userId: "user-1",
         navigate,
         handleSave: jest.fn()
       })
@@ -128,7 +123,7 @@ describe("useReviewStageActions", () => {
       await result.current.handleGoBack();
     });
 
-    expect(mockUpdateListing).toHaveBeenCalledWith("user-1", "listing-1", {
+    expect(mockUpdateListing).toHaveBeenCalledWith("listing-1", {
       listingStage: "categorize"
     });
     expect(navigate).toHaveBeenCalledWith("/listings/listing-1/categorize");
@@ -141,7 +136,6 @@ describe("useReviewStageActions", () => {
     const { result } = renderHook(() =>
       useReviewStageActions({
         listingId: "listing-1",
-        userId: "user-1",
         navigate,
         handleSave
       })

@@ -8,7 +8,7 @@ const mockToastError = jest.fn();
 const mockToastMessage = jest.fn();
 
 jest.mock("@web/src/server/actions/propertyDetails/commands", () => ({
-  saveListingPropertyDetails: (...args: unknown[]) =>
+  saveListingPropertyDetailsForCurrentUser: (...args: unknown[]) =>
     mockSaveListingPropertyDetails(...args)
 }));
 
@@ -39,7 +39,6 @@ describe("useReviewAutoSave", () => {
 
     const { result } = renderHook(() =>
       useReviewAutoSave({
-        userId: "user-1",
         listingId: "listing-1",
         detailsRef,
         dirtyRef,
@@ -52,7 +51,6 @@ describe("useReviewAutoSave", () => {
     });
 
     expect(mockSaveListingPropertyDetails).toHaveBeenCalledWith(
-      "user-1",
       "listing-1",
       detailsRef.current
     );
@@ -68,7 +66,6 @@ describe("useReviewAutoSave", () => {
 
     const { result } = renderHook(() =>
       useReviewAutoSave({
-        userId: "user-1",
         listingId: "listing-1",
         detailsRef,
         dirtyRef,
@@ -96,7 +93,6 @@ describe("useReviewAutoSave", () => {
 
     const { result } = renderHook(() =>
       useReviewAutoSave({
-        userId: "user-1",
         listingId: "listing-1",
         detailsRef,
         dirtyRef,
@@ -125,7 +121,6 @@ describe("useReviewAutoSave", () => {
 
     const { result } = renderHook(() =>
       useReviewAutoSave({
-        userId: "user-1",
         listingId: "listing-1",
         detailsRef,
         dirtyRef,
@@ -150,7 +145,6 @@ describe("useReviewAutoSave", () => {
 
     const { result } = renderHook(() =>
       useReviewAutoSave({
-        userId: "user-1",
         listingId: "listing-1",
         detailsRef,
         dirtyRef,
@@ -180,7 +174,6 @@ describe("useReviewAutoSave", () => {
 
     const { result } = renderHook(() =>
       useReviewAutoSave({
-        userId: "user-1",
         listingId: "listing-1",
         detailsRef,
         dirtyRef,
@@ -218,7 +211,6 @@ describe("useReviewAutoSave", () => {
 
     const { result } = renderHook(() =>
       useReviewAutoSave({
-        userId: "user-1",
         listingId: "listing-1",
         detailsRef,
         dirtyRef,

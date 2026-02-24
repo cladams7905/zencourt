@@ -44,7 +44,6 @@ export function ListingCategorizeView({
   title,
   initialAddress,
   listingId,
-  userId,
   initialImages,
   googleMapsApiKey,
   hasPropertyDetails
@@ -98,7 +97,6 @@ export function ListingCategorizeView({
     persistImageAssignments,
     ensurePrimaryForCategory
   } = useCategorizeMutations({
-    userId,
     listingId,
     setImages
   });
@@ -113,12 +111,10 @@ export function ListingCategorizeView({
     initialAddress,
     hasPropertyDetails,
     listingId,
-    userId,
     runDraftSave
   });
-  const { getUploadUrls, onCreateRecords, onUploadsComplete } =
+  const { getUploadUrls, onCreateRecords } =
     useCategorizeUploads({
-      userId,
       listingId,
       runDraftSave,
       setImages
@@ -379,7 +375,6 @@ export function ListingCategorizeView({
           };
         }}
         onCreateRecords={onCreateRecords}
-        onUploadsComplete={onUploadsComplete}
       />
       <ListingCategoryDialog
         open={isCategoryDialogOpen}
