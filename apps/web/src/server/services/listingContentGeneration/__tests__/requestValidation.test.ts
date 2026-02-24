@@ -36,7 +36,9 @@ describe("requestValidation", () => {
         mediaType: "image",
         focus: "backyard",
         notes: "pool",
-        generationNonce: "abc"
+        generationNonce: "abc",
+        generationCount: 4,
+        templateId: ""
       });
     });
 
@@ -52,8 +54,25 @@ describe("requestValidation", () => {
         mediaType: "video",
         focus: "",
         notes: "",
-        generationNonce: ""
+        generationNonce: "",
+        generationCount: 4,
+        templateId: ""
       });
+    });
+
+    it("parses generation_count and template_id", () => {
+      const result = parseAndValidateParams(
+        {
+          subcategory: "new_listing",
+          media_type: "image",
+          generation_count: 1.9,
+          template_id: " template-42 "
+        },
+        "listing-3"
+      );
+
+      expect(result.generationCount).toBe(1);
+      expect(result.templateId).toBe("template-42");
     });
 
     it("defaults media_type to video when empty string", () => {

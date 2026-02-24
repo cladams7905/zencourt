@@ -6,6 +6,8 @@ import type {
   ValidatedGenerateParams
 } from "./types";
 
+const DEFAULT_GENERATION_COUNT = 4;
+
 function parseListingSubcategory(
   value: unknown
 ): ValidatedGenerateParams["subcategory"] {
@@ -38,13 +40,23 @@ function parseListingContentGenerateParams(
   body: GenerateListingContentBody | null,
   listingId: string
 ): ValidatedGenerateParams {
+  const rawGenerationCount = body?.generation_count;
+  const generationCount =
+    typeof rawGenerationCount === "number" && Number.isFinite(rawGenerationCount)
+      ? Math.max(1, Math.floor(rawGenerationCount))
+      : DEFAULT_GENERATION_COUNT;
+  const templateId =
+    typeof body?.template_id === "string" ? body.template_id.trim() : "";
+
   return {
     listingId,
     subcategory: parseListingSubcategory(body?.subcategory),
     mediaType: parseListingMediaType(body?.media_type),
     focus: body?.focus?.trim() ?? "",
     notes: body?.notes?.trim() ?? "",
-    generationNonce: body?.generation_nonce?.trim() ?? ""
+    generationNonce: body?.generation_nonce?.trim() ?? "",
+    generationCount,
+    templateId
   };
 }
 

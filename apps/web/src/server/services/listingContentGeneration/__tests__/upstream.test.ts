@@ -17,7 +17,9 @@ describe("upstream", () => {
         subcategory: "new_listing",
         mediaType: "image",
         focus: "pool",
-        notes: "spacious"
+        notes: "spacious",
+        generationCount: 4,
+        templateId: ""
       };
 
       const body = buildUpstreamRequestBody(context);
@@ -43,7 +45,9 @@ describe("upstream", () => {
           content_type: "social_post",
           media_type: "image",
           focus: "pool",
-          notes: "spacious"
+          notes: "spacious",
+          generation_count: 4,
+          template_id: ""
         }
       });
     });
@@ -60,7 +64,9 @@ describe("upstream", () => {
         subcategory: "open_house",
         mediaType: "video",
         focus: "",
-        notes: ""
+        notes: "",
+        generationCount: 1,
+        templateId: "template-123"
       };
 
       const body = buildUpstreamRequestBody(context);
@@ -70,7 +76,9 @@ describe("upstream", () => {
         content_type: "listing_reel",
         media_type: "video",
         focus: "",
-        notes: ""
+        notes: "",
+        generation_count: 1,
+        template_id: "template-123"
       });
       expect(body.listing_property_details).toEqual({ bedrooms: 3, bathrooms: 2 });
     });

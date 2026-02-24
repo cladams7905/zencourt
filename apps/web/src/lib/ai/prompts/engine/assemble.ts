@@ -171,6 +171,11 @@ export function buildUserPrompt(input: PromptAssemblyInput): string {
   const mediaType = resolveContentMediaType(content_request);
   const focus = content_request?.focus ?? "";
   const notes = content_request?.notes ?? "";
+  const generationCount =
+    typeof content_request?.generation_count === "number"
+      ? Math.max(1, Math.floor(content_request.generation_count))
+      : 4;
+  const templateId = content_request?.template_id?.trim() ?? "";
   const audienceLine =
     category === "listing"
       ? ""
@@ -183,7 +188,15 @@ ${audienceLine}- **Platform:** ${platform}
 - **Media Type:** ${mediaType}
 - **Focus:** ${focus || "No additional focus"}
 - **Notes:** ${notes || "None"}
+- **Requested Item Count:** ${generationCount}
+- **Template ID:** ${templateId || "None"}
 - **Listing Subcategory:** ${input.listing_subcategory ?? "None"}
 </content_request>
+
+<generation_rules>
+- Return a JSON array of exactly ${generationCount} item(s).
+- Treat this item count as mandatory.
+${templateId ? `- Use template_id "${templateId}" for every generated item.` : ""}
+</generation_rules>
 `.trim();
 }

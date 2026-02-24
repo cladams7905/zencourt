@@ -18,7 +18,7 @@ export function useListingCreateEffects(params: {
   templateRenderError: string | null;
   generateSubcategoryContent: (
     subcategory: ListingContentSubcategory,
-    options?: { forceNewBatch?: boolean }
+    options?: { forceNewBatch?: boolean; generationCount?: number; templateId?: string }
   ) => Promise<void>;
 }) {
   const {
@@ -108,4 +108,3 @@ export function useListingCreateEffects(params: {
     }
   }, [generationError, templateRenderError]);
 }
-

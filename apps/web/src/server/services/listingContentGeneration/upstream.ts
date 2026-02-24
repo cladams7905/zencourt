@@ -30,7 +30,9 @@ export function buildUpstreamRequestBody(
       content_type: mediaType === "video" ? "listing_reel" : "social_post",
       media_type: mediaType,
       focus,
-      notes
+      notes,
+      generation_count: context.generationCount,
+      template_id: context.templateId
     }
   };
 }
