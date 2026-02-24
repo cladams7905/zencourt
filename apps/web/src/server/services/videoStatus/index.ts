@@ -1,1 +1,0 @@
-export { getListingVideoStatus } from "./service";

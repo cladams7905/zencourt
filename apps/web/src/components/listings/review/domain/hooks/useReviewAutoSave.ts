@@ -1,6 +1,6 @@
 import * as React from "react";
 import { toast } from "sonner";
-import { saveListingPropertyDetails } from "@web/src/server/actions/api/listingProperty";
+import { saveListingPropertyDetails } from "@web/src/server/actions/api/propertyDetails";
 import { roundBathroomsToHalfStep } from "@web/src/components/listings/review/shared/formatters";
 import type { ListingPropertyDetails } from "@shared/types/models";
 
@@ -9,7 +9,9 @@ type UseReviewAutoSaveParams = {
   listingId: string;
   detailsRef: React.MutableRefObject<ListingPropertyDetails>;
   dirtyRef: React.MutableRefObject<boolean>;
-  updateDetails: (updater: (prev: ListingPropertyDetails) => ListingPropertyDetails) => void;
+  updateDetails: (
+    updater: (prev: ListingPropertyDetails) => ListingPropertyDetails
+  ) => void;
 };
 
 export const useReviewAutoSave = ({

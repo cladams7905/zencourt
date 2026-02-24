@@ -12,7 +12,7 @@ import {
   getAllCachedListingContentForFilter
 } from "@web/src/server/services/cache/listingContent";
 import type { ListingMediaType } from "@web/src/server/services/cache/listingContent";
-import { getListingVideoStatus } from "@web/src/server/services/videoStatus";
+import { getListingVideoStatus } from "@web/src/server/services/videoGeneration";
 import {
   ListingCreateView
 } from "@web/src/components/listings/create/orchestrators";

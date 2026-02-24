@@ -1,7 +1,10 @@
 "use server";
 
-import imageProcessorService from "@web/src/server/services/imageProcessor";
-import { requireListingId, requireUserId } from "@web/src/server/actions/shared/validation";
+import imageCategorizationService from "@web/src/server/services/imageCategorization";
+import {
+  requireListingId,
+  requireUserId
+} from "@web/src/server/actions/shared/validation";
 import type { VisionActionOptions, VisionStats } from "./types";
 import { buildNoopStats } from "./types";
 import {
@@ -28,7 +31,7 @@ async function categorizeListingImagesCore(
   }
 
   const serializableImages = needsAnalysis.map(toSerializableImageData);
-  const result = await imageProcessorService.analyzeImagesWorkflow(
+  const result = await imageCategorizationService.analyzeImagesWorkflow(
     serializableImages,
     {
       aiConcurrency: options.aiConcurrency,
@@ -62,7 +65,10 @@ export async function categorizeListingImages(
   options: VisionActionOptions = {}
 ): Promise<VisionStats> {
   requireUserId(userId, "User ID is required to categorize listing images");
-  requireListingId(listingId, "Listing ID is required to categorize listing images");
+  requireListingId(
+    listingId,
+    "Listing ID is required to categorize listing images"
+  );
 
   return categorizeListingImagesCore(userId, listingId, options);
 }
@@ -74,7 +80,10 @@ export async function categorizeListingImagesByIds(
   options: VisionActionOptions = {}
 ): Promise<VisionStats> {
   requireUserId(userId, "User ID is required to categorize listing images");
-  requireListingId(listingId, "Listing ID is required to categorize listing images");
+  requireListingId(
+    listingId,
+    "Listing ID is required to categorize listing images"
+  );
 
   if (!imageIds || imageIds.length === 0) {
     return buildNoopStats(0, 0);

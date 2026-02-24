@@ -4,7 +4,7 @@ export interface CategorizedImages {
   [category: string]: SerializableImageData[];
 }
 
-export interface ProcessingResult {
+export interface CategorizationResult {
   images: SerializableImageData[];
   stats: {
     total: number;

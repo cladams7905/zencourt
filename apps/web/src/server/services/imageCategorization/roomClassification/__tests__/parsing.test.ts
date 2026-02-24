@@ -4,7 +4,7 @@ import {
   validateClassification
 } from "../parsing";
 
-describe("vision/parsing", () => {
+describe("roomClassification/parsing", () => {
   it("parses classification content (including fenced JSON)", () => {
     const parsed = parseClassificationResponse(`
 \`\`\`json

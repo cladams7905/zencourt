@@ -1,10 +1,13 @@
 "use server";
 
-import imageProcessorService, {
-  type ProcessingResult
-} from "@web/src/server/services/imageProcessor";
+import imageCategorizationService, {
+  type CategorizationResult
+} from "@web/src/server/services/imageCategorization";
 import type { SerializableImageData } from "@web/src/lib/domain/listing/images";
-import { createChildLogger, logger as baseLogger } from "@web/src/lib/core/logging/logger";
+import {
+  createChildLogger,
+  logger as baseLogger
+} from "@web/src/lib/core/logging/logger";
 import type { VisionActionOptions } from "./types";
 
 const logger = createChildLogger(baseLogger, { module: "vision-actions" });
@@ -12,11 +15,14 @@ const logger = createChildLogger(baseLogger, { module: "vision-actions" });
 export async function analyzeImagesWorkflow(
   images: SerializableImageData[],
   options: VisionActionOptions = {}
-): Promise<ProcessingResult> {
+): Promise<CategorizationResult> {
   try {
     logger.info({ total: images.length }, "Starting image analysis workflow");
 
-    const result = await imageProcessorService.analyzeImagesWorkflow(images, options);
+    const result = await imageCategorizationService.analyzeImagesWorkflow(
+      images,
+      options
+    );
 
     logger.info(
       {

@@ -8,7 +8,7 @@ function createLogger() {
   };
 }
 
-describe("vision/retry", () => {
+describe("roomClassification/retry", () => {
   it("returns operation result on first successful attempt", async () => {
     const logger = createLogger();
     const sleep = jest.fn().mockResolvedValue(undefined);

@@ -2,7 +2,7 @@ import OpenAI from "openai";
 import {
   type BatchClassificationResult,
   type BatchProgressCallback,
-  type RoomClassification
+  type RoomClassification as RoomClassificationResult
 } from "@web/src/lib/domain/listing/roomCategories";
 import {
   createChildLogger,
@@ -21,23 +21,23 @@ type LoggerLike = {
   debug: (obj: unknown, msg?: string) => void;
 };
 
-export type VisionServiceDeps = {
+export type RoomClassificationDeps = {
   logger?: LoggerLike;
   clientFactory?: () => OpenAI;
   sleep?: (ms: number) => Promise<void>;
 };
 
-export class VisionService {
+export class RoomClassification {
   private client: OpenAI | null = null;
   private readonly logger: LoggerLike;
   private readonly clientFactory: () => OpenAI;
   private readonly sleep: (ms: number) => Promise<void>;
 
-  constructor(deps: VisionServiceDeps = {}) {
+  constructor(deps: RoomClassificationDeps = {}) {
     this.logger =
       deps.logger ??
       createChildLogger(baseLogger, {
-        module: "vision-service"
+        module: "room-classification-service"
       });
     this.clientFactory =
       deps.clientFactory ??
@@ -70,7 +70,7 @@ export class VisionService {
   public async classifyRoom(
     imageUrl: string,
     options: { timeout?: number; maxRetries?: number } = {}
-  ): Promise<RoomClassification> {
+  ): Promise<RoomClassificationResult> {
     const { timeout = 30000, maxRetries = 2 } = options;
     this.logger.debug(
       { promptVersion: CLASSIFICATION_PROMPT_VERSION },
@@ -112,7 +112,7 @@ export class VisionService {
       options: {
         timeout,
         maxRetries,
-        timeoutMessage: `AI vision request timed out after ${timeout}ms`,
+        timeoutMessage: `Room classification request timed out after ${timeout}ms`,
         failureContext: "classify room"
       },
       logger: this.logger,

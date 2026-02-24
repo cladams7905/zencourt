@@ -79,7 +79,7 @@ npm run type-check --workspace=@zencourt/video-server
   - `components/ui/` - Radix UI component primitives
 - `lib/prompts/` - Prompt templates, hooks, and assembly logic
 - `server/actions/` - Server actions for DB and API wrappers
-- `server/services/` - Market/communityData/property data, vision, and AI helpers
+- `server/services/` - Business logic for server-level operations
 - `server/utils/` - Webhook verification + storage URL helpers
 - `middleware.ts` - Stack Auth session validation
 

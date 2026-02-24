@@ -1,12 +1,15 @@
-import type { ProcessingResult } from "@web/src/server/services/imageProcessor";
+import type { CategorizationResult } from "@web/src/server/services/imageCategorization";
 
 export type VisionActionOptions = {
   aiConcurrency?: number;
 };
 
-export type VisionStats = ProcessingResult["stats"];
+export type VisionStats = CategorizationResult["stats"];
 
-export function buildNoopStats(uploaded: number, analyzed: number): VisionStats {
+export function buildNoopStats(
+  uploaded: number,
+  analyzed: number
+): VisionStats {
   return {
     total: 0,
     uploaded,

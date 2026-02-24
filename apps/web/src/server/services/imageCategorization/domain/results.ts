@@ -1,5 +1,5 @@
 import type { SerializableImageData } from "@web/src/lib/domain/listing/images";
-import type { CategorizedImages, ProcessingResult } from "../types";
+import type { CategorizedImages, CategorizationResult } from "../types";
 
 export function cloneSerializableImages(
   images: SerializableImageData[]
@@ -51,7 +51,7 @@ export function categorizeAnalyzedImages(
 export function calculateProcessingStats(
   images: SerializableImageData[],
   duration: number
-): ProcessingResult["stats"] {
+): CategorizationResult["stats"] {
   const uploaded = images.filter((img) => img.url).length;
   const analyzed = images.filter((img) => img.category).length;
   const failed = images.filter((img) => img.status === "error").length;

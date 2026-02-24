@@ -5,14 +5,14 @@ jest.mock("../../storage", () => ({
   }
 }));
 
-jest.mock("../../vision", () => ({
+jest.mock("../roomClassification", () => ({
   __esModule: true,
   default: {
     classifyRoomBatch: jest.fn()
   }
 }));
 
-import { ImageProcessingError, ImageProcessorService } from "../service";
+import { ImageCategorizationError, ImageCategorizationService } from "../service";
 import type { SerializableImageData } from "@web/src/lib/domain/listing/images";
 
 function buildImage(partial: Partial<SerializableImageData>): SerializableImageData {
@@ -32,7 +32,7 @@ function buildImage(partial: Partial<SerializableImageData>): SerializableImageD
   };
 }
 
-describe("imageProcessor/service", () => {
+describe("imageCategorization/service", () => {
   it("analyzes uploaded images and emits progress", async () => {
     const classifyRoomBatch = jest.fn(
       async (
@@ -82,8 +82,8 @@ describe("imageProcessor/service", () => {
       .fn()
       .mockReturnValueOnce("https://signed/1")
       .mockReturnValueOnce("https://signed/2");
-    const service = new ImageProcessorService({
-      vision: { classifyRoomBatch },
+    const service = new ImageCategorizationService({
+      roomClassification: { classifyRoomBatch },
       storage: { getPublicUrlForStorageUrl }
     });
     const onProgress = jest.fn();
@@ -140,13 +140,13 @@ describe("imageProcessor/service", () => {
   });
 
   it("fails when there are no uploaded images for analysis", async () => {
-    const service = new ImageProcessorService({
-      vision: { classifyRoomBatch: jest.fn() },
+    const service = new ImageCategorizationService({
+      roomClassification: { classifyRoomBatch: jest.fn() },
       storage: { getPublicUrlForStorageUrl: jest.fn() }
     });
 
     await expect(
       service.analyzeImagesWorkflow([buildImage({ status: "pending", url: undefined })])
-    ).rejects.toBeInstanceOf(ImageProcessingError);
+    ).rejects.toBeInstanceOf(ImageCategorizationError);
   });
 });

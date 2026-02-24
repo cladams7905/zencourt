@@ -3,7 +3,8 @@ const mockGetPublicDownloadUrlSafe = jest.fn();
 
 jest.mock("@db/client", () => ({
   db: {
-    select: (...args: unknown[]) => (mockSelect as (...a: unknown[]) => unknown)(...args)
+    select: (...args: unknown[]) =>
+      (mockSelect as (...a: unknown[]) => unknown)(...args)
   },
   videoGenBatch: {
     id: "id",
@@ -33,7 +34,7 @@ jest.mock("../../../utils/storageUrls", () => ({
     mockGetPublicDownloadUrlSafe(...args)
 }));
 
-import { getListingVideoStatus } from "../service";
+import { getListingVideoStatus } from "../status";
 
 function makeLatestBatchBuilder(rows: unknown[]) {
   const builder = {
@@ -65,7 +66,7 @@ function makeJobsBuilder(rows: unknown[]) {
   return builder;
 }
 
-describe("videoStatus/service", () => {
+describe("videoGeneration/status/service", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -81,7 +82,9 @@ describe("videoStatus/service", () => {
   it("maps job rows and signs URLs", async () => {
     mockSelect
       .mockReturnValueOnce(
-        makeLatestBatchBuilder([{ id: "batch-1", status: "complete", errorMessage: null }])
+        makeLatestBatchBuilder([
+          { id: "batch-1", status: "complete", errorMessage: null }
+        ])
       )
       .mockReturnValueOnce(
         makeJobsBuilder([
@@ -134,7 +137,9 @@ describe("videoStatus/service", () => {
   it("falls back to original urls and default fields when signing/settings are missing", async () => {
     mockSelect
       .mockReturnValueOnce(
-        makeLatestBatchBuilder([{ id: "batch-2", status: "failed", errorMessage: "oops" }])
+        makeLatestBatchBuilder([
+          { id: "batch-2", status: "failed", errorMessage: "oops" }
+        ])
       )
       .mockReturnValueOnce(
         makeJobsBuilder([
@@ -150,7 +155,9 @@ describe("videoStatus/service", () => {
         ])
       );
 
-    mockGetPublicDownloadUrlSafe.mockReturnValueOnce(undefined).mockReturnValueOnce(undefined);
+    mockGetPublicDownloadUrlSafe
+      .mockReturnValueOnce(undefined)
+      .mockReturnValueOnce(undefined);
 
     const result = await getListingVideoStatus("listing-2");
 
