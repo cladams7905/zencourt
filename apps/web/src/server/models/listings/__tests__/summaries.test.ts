@@ -3,8 +3,6 @@ const mockWithDbErrorHandling = jest.fn(
   async (fn: () => Promise<unknown>) => await fn()
 );
 const mockWithSignedContentThumbnails = jest.fn();
-const mockSignUrlArray = jest.fn();
-const mockResolvePublicDownloadUrl = jest.fn();
 
 jest.mock("@db/client", () => ({
   db: {
@@ -44,15 +42,6 @@ jest.mock("@web/src/server/models/shared/dbErrorHandling", () => ({
 
 jest.mock("@web/src/server/models/listings/helpers", () => ({
   withSignedContentThumbnails: (...args: unknown[]) => ((mockWithSignedContentThumbnails as (...a: unknown[]) => unknown)(...args))
-}));
-
-jest.mock("@web/src/server/models/shared/urlSigning", () => ({
-  signUrlArray: (...args: unknown[]) => ((mockSignUrlArray as (...a: unknown[]) => unknown)(...args))
-}));
-
-jest.mock("@web/src/server/services/storage/urlResolution", () => ({
-  resolvePublicDownloadUrl: (...args: unknown[]) =>
-    ((mockResolvePublicDownloadUrl as (...a: unknown[]) => unknown)(...args))
 }));
 
 import {
@@ -103,8 +92,6 @@ describe("listings summaries", () => {
     mockSelect.mockReset();
     mockWithDbErrorHandling.mockClear();
     mockWithSignedContentThumbnails.mockReset();
-    mockSignUrlArray.mockReset();
-    mockResolvePublicDownloadUrl.mockReset();
   });
 
   it("validates user id", async () => {
@@ -189,10 +176,6 @@ describe("listings summaries", () => {
         ])
       );
 
-    mockResolvePublicDownloadUrl
-      .mockReturnValueOnce("signed-1")
-      .mockReturnValueOnce("signed-2");
-
     const result = await getUserListingSummariesPage("u1", { limit: 2, offset: 0 });
 
     expect(result.hasMore).toBe(true);
@@ -200,7 +183,7 @@ describe("listings summaries", () => {
       expect.objectContaining({
         id: "l1",
         imageCount: 2,
-        previewImages: ["signed-1", "signed-2"]
+        previewImages: ["img-1", "img-2"]
       }),
       expect.objectContaining({
         id: "l2",

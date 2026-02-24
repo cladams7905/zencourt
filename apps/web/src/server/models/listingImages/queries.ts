@@ -3,7 +3,6 @@
 import { db, desc, eq, listingImages } from "@db/client";
 import type { DBListingImage } from "@db/types/models";
 import { withDbErrorHandling } from "@web/src/server/models/shared/dbErrorHandling";
-import { resolvePublicDownloadUrl } from "@web/src/server/services/storage/urlResolution";
 import { ensureListingImageAccess } from "./helpers";
 
 export async function getListingImages(
@@ -22,11 +21,7 @@ export async function getListingImages(
         .from(listingImages)
         .where(eq(listingImages.listingId, listingId))
         .orderBy(desc(listingImages.uploadedAt))) as DBListingImage[];
-
-      return images.map((img) => ({
-        ...img,
-        url: resolvePublicDownloadUrl(img.url ?? null) ?? img.url
-      }));
+      return images;
     },
     {
       actionName: "getListingImages",
