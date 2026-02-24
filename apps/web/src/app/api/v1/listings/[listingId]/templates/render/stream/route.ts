@@ -40,7 +40,17 @@ export async function POST(
   let templateCount: number | undefined;
 
   try {
-    listingId = parseRequiredRouteParam((await params).listingId, "listingId");
+    try {
+      listingId = parseRequiredRouteParam(
+        (await params).listingId,
+        "listingId"
+      );
+    } catch {
+      throw new ApiError(StatusCode.BAD_REQUEST, {
+        error: "Invalid request",
+        message: "Listing ID is required"
+      });
+    }
     const user = await requireAuthenticatedUser();
     userId = user.id;
     listing = await requireListingAccess(listingId, user.id);
@@ -51,7 +61,14 @@ export async function POST(
       templateCount?: number;
     } | null;
 
-    subcategory = parseListingSubcategory(body?.subcategory);
+    try {
+      subcategory = parseListingSubcategory(body?.subcategory);
+    } catch {
+      throw new ApiError(StatusCode.BAD_REQUEST, {
+        error: "Invalid request",
+        message: "A valid listing subcategory is required"
+      });
+    }
     captionItems = sanitizeCaptionItems(body?.captionItems);
     templateCount =
       typeof body?.templateCount === "number" && body.templateCount > 0
