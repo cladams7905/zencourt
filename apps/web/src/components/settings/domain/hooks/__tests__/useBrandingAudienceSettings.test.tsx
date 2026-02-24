@@ -19,7 +19,7 @@ jest.mock("sonner", () => ({
   }
 }));
 
-jest.mock("@web/src/server/actions/db/userAdditional", () => ({
+jest.mock("@web/src/server/models/userAdditional", () => ({
   updateTargetAudiences: (...args: unknown[]) => mockUpdateTargetAudiences(...args)
 }));
 

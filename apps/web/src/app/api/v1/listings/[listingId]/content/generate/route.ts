@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { ApiError } from "@web/src/server/utils/apiError";
+import { ApiError } from "@web/src/app/api/v1/_utils";
 import {
   apiErrorCodeFromStatus,
   apiErrorResponse,
@@ -9,8 +9,12 @@ import {
   createChildLogger,
   logger as baseLogger
 } from "@web/src/lib/core/logging/logger";
-import type { GenerateListingContentBody } from "@web/src/server/services/listingContentGeneration";
-import { generateListingContent } from "@web/src/server/actions/api/listings/content";
+import { requireAuthenticatedUser } from "@web/src/server/utils/apiAuth";
+import {
+  runListingContentGenerate,
+  type GenerateListingContentBody
+} from "@web/src/server/services/listingContentGeneration";
+import { makeSseStreamHeaders } from "@web/src/lib/sse/sseEncoder";
 import { readJsonBodySafe } from "@shared/utils/api/validation";
 
 const logger = createChildLogger(baseLogger, {
@@ -27,7 +31,16 @@ export async function POST(
       request
     )) as GenerateListingContentBody | null;
 
-    return await generateListingContent(resolvedParams.listingId, body);
+    const user = await requireAuthenticatedUser();
+    const result = await runListingContentGenerate(
+      resolvedParams.listingId,
+      user.id,
+      body
+    );
+    return new Response(result.stream, {
+      status: result.status,
+      headers: makeSseStreamHeaders()
+    });
   } catch (error) {
     if (error instanceof ApiError) {
       return apiErrorResponse(

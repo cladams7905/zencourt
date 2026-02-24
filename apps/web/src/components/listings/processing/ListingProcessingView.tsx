@@ -3,10 +3,13 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { ListingViewHeader } from "@web/src/components/listings/shared";
-import { categorizeListingImages } from "@web/src/server/actions/api/vision";
-import { fetchPropertyDetails } from "@web/src/server/actions/api/propertyDetails";
-import { updateListing } from "@web/src/server/actions/db/listings";
-import { getListingImages } from "@web/src/server/actions/db/listingImages";
+import { updateListingForCurrentUser } from "@web/src/server/actions/listings/commands";
+import { fetchPropertyDetailsForCurrentUser } from "@web/src/server/actions/propertyDetails/commands";
+import { categorizeListingImagesForCurrentUser } from "@web/src/server/actions/vision";
+import {
+  cancelListingVideoGeneration,
+  startListingVideoGeneration
+} from "@web/src/server/actions/video";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import { Button } from "../../ui/button";
 import { toast } from "sonner";
@@ -34,7 +37,6 @@ type ListingProcessingViewProps = {
 export function ListingProcessingView({
   mode,
   listingId,
-  userId,
   title,
   address,
   batchStartedAt
@@ -61,6 +63,13 @@ export function ListingProcessingView({
   const [remainingEstimateSeconds, setRemainingEstimateSeconds] =
     React.useState(0);
   const hasInitializedGenerationRef = React.useRef(false);
+
+  const updateListingStage = React.useCallback(
+    async (listingStage: "review" | "create") => {
+      await updateListingForCurrentUser(listingId, { listingStage });
+    },
+    [listingId]
+  );
 
   const generationSummary = React.useMemo(() => {
     if (mode !== "generate") {
@@ -148,7 +157,7 @@ export function ListingProcessingView({
     setStatus("loading");
     setErrorMessage(null);
     try {
-      await fetchPropertyDetails(userId, listingId, address ?? null);
+      await fetchPropertyDetailsForCurrentUser(listingId, address ?? null);
       setStatus("success");
       router.replace(`/listings/${listingId}/review`);
     } catch (error) {
@@ -157,7 +166,7 @@ export function ListingProcessingView({
         error instanceof Error ? error.message : "Failed to fetch details."
       );
     }
-  }, [address, listingId, mode, router, userId]);
+  }, [address, listingId, mode, router]);
 
   const refreshGenerationStatus = React.useCallback(async () => {
     if (mode !== "generate") {
@@ -210,17 +219,9 @@ export function ListingProcessingView({
     };
 
     const startVideoGeneration = async () => {
-      const response = await fetch(`/api/v1/video/generate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ listingId })
+      await startListingVideoGeneration({
+        listingId
       });
-      if (!response.ok) {
-        const payload = await response.json().catch(() => ({}));
-        throw new Error(
-          payload?.message || payload?.error || "Failed to start generation."
-        );
-      }
     };
 
     try {
@@ -239,7 +240,7 @@ export function ListingProcessingView({
           jobs.length > 0 && jobs.every((job) => job.status === "completed");
 
         if (hasFailedJob) {
-          await updateListing(userId, listingId, { listingStage: "review" });
+          await updateListingStage("review");
           emitListingSidebarUpdate({
             id: listingId,
             listingStage: "review",
@@ -258,7 +259,7 @@ export function ListingProcessingView({
                 ? error.message
                 : "Failed to generate listing content."
             );
-            await updateListing(userId, listingId, { listingStage: "review" });
+            await updateListingStage("review");
             emitListingSidebarUpdate({
               id: listingId,
               listingStage: "review",
@@ -267,7 +268,7 @@ export function ListingProcessingView({
             router.replace(`/listings/${listingId}/review`);
             return;
           }
-          await updateListing(userId, listingId, { listingStage: "create" });
+          await updateListingStage("create");
           emitListingSidebarUpdate({
             id: listingId,
             listingStage: "create",
@@ -308,7 +309,7 @@ export function ListingProcessingView({
         error instanceof Error ? error.message : "Failed to start generation."
       );
       try {
-        await updateListing(userId, listingId, { listingStage: "review" });
+        await updateListingStage("review");
         emitListingSidebarUpdate({
           id: listingId,
           listingStage: "review",
@@ -319,18 +320,31 @@ export function ListingProcessingView({
       }
       router.replace(`/listings/${listingId}/review`);
     }
-  }, [listingId, mode, router, userId]);
+  }, [listingId, mode, router, updateListingStage]);
 
   const refreshStatus = React.useCallback(async () => {
     if (mode !== "categorize") {
       return;
     }
     try {
-      const updated = await getListingImages(userId, listingId);
+      const imagesResponse = await fetch(`/api/v1/listings/${listingId}/images`);
+      if (!imagesResponse.ok) {
+        return;
+      }
+      const imagesPayload = (await imagesResponse.json()) as {
+        success: boolean;
+        data?: Array<{
+          category: string | null;
+          confidence?: number | null;
+          primaryScore?: number | null;
+          uploadedAt?: string | Date | null;
+        }>;
+      };
+      const updated = imagesPayload.data ?? [];
       if (!hasTriggeredCategorizeRef.current && updated.length > 0) {
         hasTriggeredCategorizeRef.current = true;
         setIsProcessing(true);
-        categorizeListingImages(userId, listingId).catch(() => null);
+        categorizeListingImagesForCurrentUser(listingId).catch(() => null);
       }
       const isProcessed = (image: { category: string | null }) => {
         const candidate = image as {
@@ -372,7 +386,7 @@ export function ListingProcessingView({
     } catch {
       // Ignore polling errors to avoid disrupting the UI.
     }
-  }, [listingId, router, batchStartedAt, userId, mode]);
+  }, [listingId, router, batchStartedAt, mode]);
 
   React.useEffect(() => {
     if (mode === "review") {
@@ -447,7 +461,7 @@ export function ListingProcessingView({
       hasNavigatedRef.current = true;
       const fallbackToReview = async () => {
         try {
-          await updateListing(userId, listingId, { listingStage: "review" });
+          await updateListingStage("review");
         } catch {
           // Ignore transition failures; navigation will still proceed.
         }
@@ -469,7 +483,7 @@ export function ListingProcessingView({
         hasNavigatedRef.current = true;
         const fallbackToReview = async () => {
           try {
-            await updateListing(userId, listingId, { listingStage: "review" });
+            await updateListingStage("review");
           } catch {
             // Ignore transition failures; navigation will still proceed.
           }
@@ -487,7 +501,7 @@ export function ListingProcessingView({
     hasNavigatedRef.current = true;
     const finalize = async () => {
       try {
-        await updateListing(userId, listingId, { listingStage: "create" });
+        await updateListingStage("create");
       } catch {
         // Ignore transition failures; navigation will still proceed.
       }
@@ -509,7 +523,7 @@ export function ListingProcessingView({
     listingContentStatus,
     mode,
     router,
-    userId
+    updateListingStage
   ]);
 
   React.useEffect(() => {
@@ -525,7 +539,7 @@ export function ListingProcessingView({
 
   const handleSkip = async () => {
     try {
-      await updateListing(userId, listingId, { listingStage: "review" });
+      await updateListingStage("review");
       router.replace(`/listings/${listingId}/review`);
     } catch (error) {
       toast.error(
@@ -540,18 +554,8 @@ export function ListingProcessingView({
     }
     setIsCanceling(true);
     try {
-      const response = await fetch(`/api/v1/video/cancel/${listingId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reason: "Canceled by user" })
-      });
-      if (!response.ok) {
-        const payload = await response.json().catch(() => ({}));
-        throw new Error(
-          payload?.message || payload?.error || "Failed to cancel generation."
-        );
-      }
-      await updateListing(userId, listingId, { listingStage: "review" });
+      await cancelListingVideoGeneration(listingId, "Canceled by user");
+      await updateListingStage("review");
       emitListingSidebarUpdate({
         id: listingId,
         listingStage: "review",

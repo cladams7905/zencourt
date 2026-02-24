@@ -28,6 +28,14 @@ class MockApiError extends Error {
   }
 }
 
+class MockDomainError extends Error {
+  kind: string;
+  constructor(kind: string, message: string) {
+    super(message);
+    this.kind = kind;
+  }
+}
+
 const mockRequireAuthenticatedUser = jest
   .fn()
   .mockResolvedValue({ id: "user-1" });
@@ -38,13 +46,15 @@ const mockRequireListingAccess = jest.fn().mockResolvedValue({
 
 jest.mock("@web/src/app/api/v1/_utils", () => ({
   ApiError: MockApiError,
+  DomainError: MockDomainError,
+  mapDomainError: () => ({ status: 400, code: "INVALID_REQUEST" as const }),
   requireAuthenticatedUser: (...args: unknown[]) =>
     mockRequireAuthenticatedUser(...args),
   requireListingAccess: (...args: unknown[]) =>
     mockRequireListingAccess(...args)
 }));
 
-const { encodeSseEvent, makeSseStreamHeaders } = jest.requireActual(
+const { encodeSseEvent } = jest.requireActual(
   "@web/src/lib/sse/sseEncoder"
 ) as typeof import("@web/src/lib/sse/sseEncoder");
 
@@ -109,10 +119,10 @@ const mockRenderListingTemplateBatchStream = jest.fn().mockImplementation(
         controller.close();
       }
     });
-    return new Response(stream, { headers: makeSseStreamHeaders() });
+    return { stream };
   }
 );
-jest.mock("@web/src/server/actions/api/listings/templates", () => ({
+jest.mock("@web/src/server/actions/listings/commands", () => ({
   renderListingTemplateBatchStream: (...args: unknown[]) =>
     mockRenderListingTemplateBatchStream(...args)
 }));
@@ -134,7 +144,7 @@ describe("listing templates render stream route", () => {
     jest.doMock("@shared/utils/api/validation", () =>
       jest.requireActual("@shared/utils/api/validation")
     );
-    jest.doMock("@web/src/server/actions/api/listings/templates", () => ({
+    jest.doMock("@web/src/server/actions/listings/commands", () => ({
       renderListingTemplateBatchStream: (...args: unknown[]) =>
         mockRenderListingTemplateBatchStream(...args)
     }));

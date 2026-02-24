@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import type { TargetAudience } from "@db/client";
 import type { BrandingTabProps } from "@web/src/components/settings/shared";
-import { updateTargetAudiences } from "@web/src/server/actions/db/userAdditional";
+import { updateCurrentUserTargetAudiences } from "@web/src/server/actions/user/commands";
 
 interface UseBrandingAudienceSettingsArgs {
   userId: string;
@@ -69,8 +69,7 @@ export const useBrandingAudienceSettings = ({
     setIsLoadingAudiences(true);
     try {
       const trimmedAudienceDescription = audienceDescription.trim();
-      const record = await updateTargetAudiences(
-        userId,
+      const record = await updateCurrentUserTargetAudiences(
         targetAudiences,
         trimmedAudienceDescription || null
       );
@@ -94,7 +93,7 @@ export const useBrandingAudienceSettings = ({
     } finally {
       setIsLoadingAudiences(false);
     }
-  }, [audienceDescription, router, targetAudiences, userId]);
+  }, [audienceDescription, router, targetAudiences]);
 
   return {
     targetAudiences,

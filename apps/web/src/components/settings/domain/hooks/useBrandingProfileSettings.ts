@@ -8,11 +8,10 @@ import type {
   BrandingTabProps
 } from "@web/src/components/settings/shared";
 import {
-  ensureGoogleHeadshot,
-  updateUserProfile
-} from "@web/src/server/actions/db/userAdditional";
-import { uploadFile } from "@web/src/server/actions/api/storage";
-import { getPublicDownloadUrl } from "@web/src/server/utils/storageUrls";
+  ensureCurrentUserGoogleHeadshot,
+  updateCurrentUserProfile
+} from "@web/src/server/actions/user/commands";
+import { uploadFileFromBuffer } from "@web/src/server/actions/storage/commands";
 
 interface UseBrandingProfileSettingsArgs {
   userId: string;
@@ -101,7 +100,7 @@ export const useBrandingProfileSettings = ({
         return;
       }
       try {
-        const readUrl = await getPublicDownloadUrl(headshotUrl);
+        const readUrl = headshotUrl;
         if (isMounted) {
           setAvatarPreviewUrl(readUrl);
         }
@@ -141,7 +140,7 @@ export const useBrandingProfileSettings = ({
         return;
       }
       try {
-        const readUrl = await getPublicDownloadUrl(personalLogoUrl);
+        const readUrl = personalLogoUrl;
         if (isMounted) {
           setBrokerLogoPreviewUrl(readUrl);
         }
@@ -169,7 +168,7 @@ export const useBrandingProfileSettings = ({
 
     hasSeededHeadshotRef.current = true;
     setIsUploadingAvatar(true);
-    ensureGoogleHeadshot(userId, defaultHeadshotUrl)
+    ensureCurrentUserGoogleHeadshot(defaultHeadshotUrl)
       .then((url) => {
         if (!url) {
           return;
@@ -182,14 +181,14 @@ export const useBrandingProfileSettings = ({
         };
       })
       .catch((error) => {
-        toast.error(
+        toast.error(                       
           (error as Error).message || "Failed to save Google headshot"
         );
       })
       .finally(() => {
         setIsUploadingAvatar(false);
       });
-  }, [defaultHeadshotUrl, headshotUrl, userId]);
+  }, [defaultHeadshotUrl, headshotUrl]);
 
   const isAgentInfoDirty = React.useMemo(() => {
     return (
@@ -248,7 +247,7 @@ export const useBrandingProfileSettings = ({
     const nextProfile = getProfileSnapshot(overrides);
 
     try {
-      await updateUserProfile(userId, {
+      await updateCurrentUserProfile({
         agentName: nextProfile.agentName,
         brokerageName: nextProfile.brokerageName,
         agentTitle: agentTitle || null,
@@ -269,7 +268,7 @@ export const useBrandingProfileSettings = ({
   const handleSaveAgentInfo = React.useCallback(async () => {
     setIsSavingProfile(true);
     try {
-      const record = await updateUserProfile(userId, {
+      const record = await updateCurrentUserProfile({
         agentName,
         brokerageName,
         agentTitle: agentTitle || null,
@@ -299,7 +298,7 @@ export const useBrandingProfileSettings = ({
     } finally {
       setIsSavingProfile(false);
     }
-  }, [agentName, brokerageName, agentTitle, agentBio, router, userId]);
+  }, [agentName, brokerageName, agentTitle, agentBio, router]);
 
   const handleImageUpload = async (
     file: File,
@@ -326,7 +325,12 @@ export const useBrandingProfileSettings = ({
     }
 
     try {
-      const uploadedUrl = await uploadFile(file, `user_${userId}/branding`);
+      const uploadedUrl = await uploadFileFromBuffer({
+        fileBuffer: await file.arrayBuffer(),
+        fileName: file.name,
+        contentType: file.type,
+        folder: `user_${userId}/branding`
+      });
       if (fieldKey === "headshotUrl") {
         setHeadshotUrl(uploadedUrl);
         setAvatarPreviewUrl(uploadedUrl);

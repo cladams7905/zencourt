@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ApiError } from "../../../_utils";
+import { ApiError } from "@web/src/app/api/v1/_utils";
 import {
   apiErrorCodeFromStatus,
   apiErrorResponse,
@@ -10,7 +10,7 @@ import {
   createChildLogger,
   logger as baseLogger
 } from "@web/src/lib/core/logging/logger";
-import { getListingVideoStatus } from "@web/src/server/actions/api/video";
+import { getListingVideoStatus } from "@web/src/server/actions/video";
 
 export const runtime = "nodejs";
 

@@ -1,13 +1,11 @@
 import * as React from "react";
-import {
-  createListing,
-} from "@web/src/server/actions/db/listings";
-import {
-  createListingImageRecords,
-  getListingImageUploadUrls
-} from "@web/src/server/actions/db/listingImages";
 import { emitListingSidebarUpdate } from "@web/src/lib/domain/listing/sidebarEvents";
 import { getImageMetadataFromFile } from "@web/src/lib/domain/media/imageMetadata";
+import { createListingForCurrentUser } from "@web/src/server/actions/listings/commands";
+import {
+  createListingImageRecordsForCurrentUser,
+  getListingImageUploadUrlsForCurrentUser
+} from "@web/src/server/actions/listings/commands";
 import {
   buildListingUploadRecordInput,
   buildProcessingRoute,
@@ -49,7 +47,7 @@ export const useSyncUploadFlow = ({
     }
 
     const pending = (async () => {
-      const listing = await createListing(userId);
+      const listing = await createListingForCurrentUser();
       if (!listing?.id) {
         throw new Error("Draft listing could not be created.");
       }
@@ -77,9 +75,9 @@ export const useSyncUploadFlow = ({
   const getUploadUrls = React.useCallback(
     async (requests: UploadRequest[]) => {
       const activeListingId = await ensureListingId();
-      return getListingImageUploadUrls(userId, activeListingId, requests);
+      return getListingImageUploadUrlsForCurrentUser(activeListingId, requests);
     },
-    [ensureListingId, userId]
+    [ensureListingId]
   );
 
   const buildRecordInput = React.useCallback(
@@ -108,9 +106,9 @@ export const useSyncUploadFlow = ({
       if (!activeListingId) {
         throw new Error("Listing is missing for upload.");
       }
-      await createListingImageRecords(userId, activeListingId, records);
+      await createListingImageRecordsForCurrentUser(activeListingId, records);
     },
-    [userId]
+    []
   );
 
   const onUploadsComplete = React.useCallback(

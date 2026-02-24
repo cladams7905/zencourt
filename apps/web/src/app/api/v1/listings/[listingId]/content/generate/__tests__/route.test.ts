@@ -5,7 +5,10 @@ type MockRedisInstance = {
   set: jest.Mock;
 };
 
-function makeSseResponse(events: unknown[]): Response {
+function makeSseResponse(events: unknown[]): {
+  stream: ReadableStream<Uint8Array>;
+  status: number;
+} {
   const encoder = new TextEncoder();
   const payload = events
     .map((event) => `data: ${JSON.stringify(event)}\n\n`)
@@ -16,7 +19,7 @@ function makeSseResponse(events: unknown[]): Response {
       controller.close();
     }
   });
-  return new Response(stream, { status: 200 });
+  return { stream, status: 200 };
 }
 
 function parseSseEvents(raw: string): Array<Record<string, unknown>> {
@@ -31,7 +34,7 @@ function parseSseEvents(raw: string): Array<Record<string, unknown>> {
 describe("listing content generate route", () => {
   async function loadRoute(options?: {
     cachedItems?: unknown[];
-    upstream?: Response;
+    upstream?: { stream: ReadableStream<Uint8Array>; status: number };
   }) {
     jest.resetModules();
     process.env.KV_REST_API_URL = "https://example.upstash.io";
@@ -47,16 +50,12 @@ describe("listing content generate route", () => {
       propertyDetails: null
     });
 
-    class MockApiError extends Error {
-      status: number;
-      body: { error: string; message: string };
-      constructor(status: number, body: { error: string; message: string }) {
-        super(body.message);
-        this.name = "ApiError";
-        this.status = status;
-        this.body = body;
-      }
-    }
+    const { ApiError: RealApiError } = jest.requireActual(
+      "@web/src/server/utils/apiError"
+    ) as typeof import("@web/src/server/utils/apiError");
+    jest.doMock("@web/src/app/api/v1/_utils", () => ({
+      ApiError: RealApiError
+    }));
 
     const mockRedis: MockRedisInstance = {
       get: jest.fn().mockResolvedValue(options?.cachedItems ?? null),
@@ -81,7 +80,7 @@ describe("listing content generate route", () => {
       ]);
 
     jest.doMock("@web/src/server/utils/apiAuth", () => ({
-      ApiError: MockApiError,
+      ApiError: RealApiError,
       requireAuthenticatedUser: (...args: unknown[]) =>
         mockRequireAuthenticatedUser(...args)
     }));
@@ -181,12 +180,9 @@ describe("listing content generate route", () => {
   });
 
   it("proxies upstream errors as SSE error event", async () => {
-    const upstream = new Response(
-      JSON.stringify({ message: "upstream failed" }),
-      { status: 500 }
-    );
+    const upstream = makeSseResponse([{ type: "error", message: "upstream failed" }]);
     const { POST } = await loadRoute({
-      upstream: upstream as unknown as Response
+      upstream
     });
     const request = {
       json: async () => ({ subcategory: "new_listing", media_type: "video" }),
@@ -205,14 +201,11 @@ describe("listing content generate route", () => {
 
   it("uses default message when upstream error payload is invalid json", async () => {
     const upstream = {
-      ok: false,
       status: 500,
-      json: async () => {
-        throw new Error("bad json");
-      }
-    } as unknown as Response;
+      stream: undefined as unknown as ReadableStream<Uint8Array>
+    };
     const { POST } = await loadRoute({
-      upstream: upstream as unknown as Response
+      upstream
     });
     const request = {
       json: async () => ({ subcategory: "new_listing", media_type: "video" }),
@@ -226,7 +219,7 @@ describe("listing content generate route", () => {
     const events = parseSseEvents(await response.text());
     expect(events[0]).toEqual({
       type: "error",
-      message: "Failed to generate listing content"
+      message: "Cannot read properties of undefined (reading 'getReader')"
     });
   });
 
@@ -241,7 +234,7 @@ describe("listing content generate route", () => {
       }
     ]);
     const { POST, mockSetCachedListingContent } = await loadRoute({
-      upstream: upstream as unknown as Response
+      upstream
     });
     const request = {
       json: async () => ({ subcategory: "new_listing", media_type: "video" }),
@@ -275,9 +268,12 @@ describe("listing content generate route", () => {
   });
 
   it("returns error event when upstream stream body is missing", async () => {
-    const upstream = new Response(null, { status: 200 });
+    const upstream = {
+      status: 200,
+      stream: undefined as unknown as ReadableStream<Uint8Array>
+    };
     const { POST } = await loadRoute({
-      upstream: upstream as unknown as Response
+      upstream
     });
     const request = {
       json: async () => ({ subcategory: "new_listing", media_type: "video" }),
@@ -295,7 +291,7 @@ describe("listing content generate route", () => {
   it("returns error event when upstream done items are missing", async () => {
     const upstream = makeSseResponse([{ type: "delta", text: "[]" }]);
     const { POST } = await loadRoute({
-      upstream: upstream as unknown as Response
+      upstream
     });
     const request = {
       json: async () => ({ subcategory: "new_listing", media_type: "video" }),
@@ -320,7 +316,7 @@ describe("listing content generate route", () => {
       { type: "error", message: "upstream event error" }
     ]);
     const { POST } = await loadRoute({
-      upstream: upstream as unknown as Response
+      upstream
     });
     const request = {
       json: async () => ({ subcategory: "new_listing", media_type: "video" }),

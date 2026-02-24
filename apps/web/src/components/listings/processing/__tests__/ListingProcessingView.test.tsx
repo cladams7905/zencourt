@@ -20,10 +20,10 @@ jest.mock("next/navigation", () => ({
 const categorizeMock = mockedCategorizeListingImages as (
   ...a: unknown[]
 ) => unknown;
-jest.mock("@web/src/server/actions/api/vision", () => ({
+jest.mock("@web/src/server/actions/vision", () => ({
   categorizeListingImages: (...args: unknown[]) => categorizeMock(...args)
 }));
-jest.mock("@web/src/server/actions/api/propertyDetails", () => ({
+jest.mock("@web/src/server/actions/propertyDetails/commands", () => ({
   fetchPropertyDetails: (...args: unknown[]) =>
     mockedFetchListingPropertyDetails(...args)
 }));
@@ -31,10 +31,10 @@ jest.mock("@web/src/server/actions/api/propertyDetails", () => ({
 const getListingImagesMock = mockedGetListingImages as (
   ...a: unknown[]
 ) => unknown;
-jest.mock("@web/src/server/actions/db/listings", () => ({
+jest.mock("@web/src/server/models/listings", () => ({
   updateListing: (...args: unknown[]) => mockedUpdateListing(...args)
 }));
-jest.mock("@web/src/server/actions/db/listingImages", () => ({
+jest.mock("@web/src/server/models/listingImages", () => ({
   getListingImages: (...args: unknown[]) => getListingImagesMock(...args)
 }));
 jest.mock("sonner", () => ({

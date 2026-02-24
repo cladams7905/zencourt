@@ -1,7 +1,7 @@
 import * as React from "react";
 import { toast } from "sonner";
-import { updateListing } from "@web/src/server/actions/db/listings";
 import { emitListingSidebarUpdate } from "@web/src/lib/domain/listing/sidebarEvents";
+import { updateListingForCurrentUser } from "@web/src/server/actions/listings/commands";
 
 type UseReviewStageActionsParams = {
   listingId: string;
@@ -12,7 +12,6 @@ type UseReviewStageActionsParams = {
 
 export const useReviewStageActions = ({
   listingId,
-  userId,
   navigate,
   handleSave
 }: UseReviewStageActionsParams) => {
@@ -21,7 +20,7 @@ export const useReviewStageActions = ({
   const handleConfirmContinue = React.useCallback(async () => {
     try {
       await handleSave({ silent: true });
-      await updateListing(userId, listingId, { listingStage: "generate" });
+      await updateListingForCurrentUser(listingId, { listingStage: "generate" });
       emitListingSidebarUpdate({
         id: listingId,
         listingStage: "generate",
@@ -35,12 +34,14 @@ export const useReviewStageActions = ({
           : "Failed to continue to generation."
       );
     }
-  }, [handleSave, listingId, navigate, userId]);
+  }, [handleSave, listingId, navigate]);
 
   const handleGoBack = React.useCallback(async () => {
     setIsGoingBack(true);
     try {
-      await updateListing(userId, listingId, { listingStage: "categorize" });
+      await updateListingForCurrentUser(listingId, {
+        listingStage: "categorize"
+      });
       emitListingSidebarUpdate({
         id: listingId,
         listingStage: "categorize",
@@ -55,7 +56,7 @@ export const useReviewStageActions = ({
       );
       setIsGoingBack(false);
     }
-  }, [listingId, navigate, userId]);
+  }, [listingId, navigate]);
 
   React.useEffect(() => {
     emitListingSidebarUpdate({

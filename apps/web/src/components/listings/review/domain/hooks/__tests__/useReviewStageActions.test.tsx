@@ -9,7 +9,7 @@ afterEach(() => {
   jest.clearAllMocks();
 });
 
-jest.mock("@web/src/server/actions/db/listings", () => ({
+jest.mock("@web/src/server/models/listings", () => ({
   updateListing: (...args: unknown[]) => mockUpdateListing(...args)
 }));
 

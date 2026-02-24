@@ -5,8 +5,8 @@ import {
   createChildLogger,
   logger as baseLogger
 } from "@web/src/lib/core/logging/logger";
-import { createVideoGenBatch } from "@web/src/server/actions/db/videoGenBatch";
-import { createVideoGenJobsBatch } from "@web/src/server/actions/db/videoGenJobs";
+import { createVideoGenBatch } from "@web/src/server/models/videoGenBatch";
+import { createVideoGenJobsBatch } from "@web/src/server/models/videoGenJobs";
 import { getPublicDownloadUrls } from "@web/src/server/utils/storageUrls";
 import { isPriorityCategory } from "@shared/utils";
 import type {

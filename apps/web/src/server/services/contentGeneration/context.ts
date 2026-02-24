@@ -1,11 +1,13 @@
-import { ApiError } from "@web/src/server/utils/apiError";
-import { StatusCode } from "@shared/types/api";
+import {
+  DomainDependencyError,
+  DomainValidationError
+} from "@web/src/server/errors/domain";
 import type { PromptAssemblyInput } from "@web/src/lib/ai/prompts/engine/assemble";
 import { parseMarketLocation } from "./domain/marketLocation";
 import { getMarketData } from "@web/src/server/services/marketData";
 import { getCommunityContentContext } from "@web/src/server/services/communityData/service";
 import type { CommunityCategoryKey } from "@web/src/server/services/contentRotation";
-import type { UserAdditionalSnapshot } from "@web/src/server/actions/db/userAdditional";
+import type { UserAdditionalSnapshot } from "@web/src/server/models/userAdditional";
 import type { Redis } from "@web/src/server/services/cache/redis";
 
 export type ResolvedContentContext = {
@@ -34,18 +36,16 @@ export async function resolveContentContext(args: {
 
   if (body.category === "market_insights") {
     if (!marketLocation) {
-      throw new ApiError(StatusCode.BAD_REQUEST, {
-        error: "Missing market location",
-        message: "Please add a valid US location and zip code to your profile."
-      });
+      throw new DomainValidationError(
+        "Please add a valid US location and zip code to your profile."
+      );
     }
 
     marketData = await getMarketData(marketLocation);
     if (!marketData) {
-      throw new ApiError(StatusCode.INTERNAL_SERVER_ERROR, {
-        error: "Market data unavailable",
-        message: "Market data is not configured. Please try again later."
-      });
+      throw new DomainDependencyError(
+        "Market data is not configured. Please try again later."
+      );
     }
   }
 

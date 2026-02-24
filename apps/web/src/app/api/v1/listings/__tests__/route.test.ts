@@ -12,12 +12,17 @@ describe("listings route", () => {
       total: 0
     });
 
+    const { ApiError: RealApiError } = jest.requireActual(
+      "@web/src/server/utils/apiError"
+    ) as typeof import("@web/src/server/utils/apiError");
     jest.doMock("@web/src/app/api/v1/_utils", () => ({
-      requireAuthenticatedUser: (...args: unknown[]) =>
-        mockRequireAuthenticatedUser(...args),
-      withApiErrorHandling: async (fn: () => Promise<Response>) => fn()
+      ApiError: RealApiError
     }));
-    jest.doMock("@web/src/server/actions/db/listings", () => ({
+    jest.doMock("@web/src/server/utils/apiAuth", () => ({
+      requireAuthenticatedUser: (...args: unknown[]) =>
+        mockRequireAuthenticatedUser(...args)
+    }));
+    jest.doMock("@web/src/server/models/listings", () => ({
       getUserListingSummariesPage: (...args: unknown[]) =>
         mockGetUserListingSummariesPage(...args)
     }));

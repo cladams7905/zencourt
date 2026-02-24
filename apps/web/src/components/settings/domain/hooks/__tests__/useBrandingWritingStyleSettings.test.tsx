@@ -20,7 +20,7 @@ jest.mock("sonner", () => ({
   }
 }));
 
-jest.mock("@web/src/server/actions/db/userAdditional", () => ({
+jest.mock("@web/src/server/models/userAdditional", () => ({
   markWritingStyleCompleted: (...args: unknown[]) =>
     mockMarkWritingStyleCompleted(...args),
   updateWritingStyle: (...args: unknown[]) => mockUpdateWritingStyle(...args)

@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { SurveyClient } from "@web/src/components/welcome";
-import { getUser } from "@web/src/server/actions/db/users";
-import { getOrCreateUserAdditional } from "@web/src/server/actions/db/userAdditional";
+import { getUser } from "@web/src/server/models/users";
+import { getOrCreateUserAdditional } from "@web/src/server/models/userAdditional";
 
 export const dynamic = "force-dynamic";
 
@@ -38,5 +38,5 @@ export default async function Survey() {
 
   const googleMapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
 
-  return <SurveyClient googleMapsApiKey={googleMapsApiKey} userId={user.id} />;
+  return <SurveyClient googleMapsApiKey={googleMapsApiKey} />;
 }

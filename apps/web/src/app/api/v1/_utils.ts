@@ -1,12 +1,17 @@
 import { NextResponse } from "next/server";
 import {
-  ApiError,
   requireAuthenticatedUser,
   requireListingAccess
 } from "@web/src/server/utils/apiAuth";
+import { ApiError } from "@web/src/server/utils/apiError";
 import { StatusCode } from "@web/src/server/utils/apiResponses";
+import {
+  DomainError,
+  isDomainError
+} from "@web/src/server/errors/domain";
+import { apiErrorCodeFromStatus } from "@web/src/server/utils/apiResponses";
 
-export { ApiError, requireAuthenticatedUser, requireListingAccess };
+export { ApiError, requireAuthenticatedUser, requireListingAccess, DomainError };
 
 export function errorResponse(
   status: number,
@@ -26,10 +31,58 @@ export async function withApiErrorHandling<T>(
     if (err instanceof ApiError) {
       return errorResponse(err.status, err.body.error, err.body.message);
     }
+    if (isDomainError(err)) {
+      const { status, code } = mapDomainError(err);
+      return NextResponse.json(
+        {
+          success: false,
+          code,
+          error: err.message,
+          message: err.message
+        },
+        { status }
+      );
+    }
     return errorResponse(
       StatusCode.INTERNAL_SERVER_ERROR,
       "Internal server error",
       fallbackMessage
     );
   }
+}
+
+export function mapDomainError(
+  error: DomainError
+): { status: number; code: ReturnType<typeof apiErrorCodeFromStatus> } {
+  let status = StatusCode.INTERNAL_SERVER_ERROR;
+
+  switch (error.kind) {
+    case "validation":
+      status = StatusCode.BAD_REQUEST;
+      break;
+    case "unauthorized":
+      status = StatusCode.UNAUTHORIZED;
+      break;
+    case "forbidden":
+      status = StatusCode.FORBIDDEN;
+      break;
+    case "not_found":
+      status = StatusCode.NOT_FOUND;
+      break;
+    case "conflict":
+      status = StatusCode.BAD_REQUEST;
+      break;
+    case "dependency":
+      status = StatusCode.BAD_GATEWAY;
+      break;
+    case "internal":
+    default:
+      status = StatusCode.INTERNAL_SERVER_ERROR;
+      break;
+  }
+
+  return {
+    status,
+    code: apiErrorCodeFromStatus(status)
+  };
 }

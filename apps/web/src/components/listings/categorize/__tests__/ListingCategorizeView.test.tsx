@@ -63,11 +63,11 @@ jest.mock("@web/src/lib/domain/media/imageMetadata", () => ({
 const mockCreateListingImageRecords = jest.fn();
 const mockDeleteListingImageUploads = jest.fn();
 
-jest.mock("@web/src/server/actions/db/listings", () => ({
+jest.mock("@web/src/server/models/listings", () => ({
   updateListing: jest.fn()
 }));
 
-jest.mock("@web/src/server/actions/db/listingImages", () => ({
+jest.mock("@web/src/server/models/listingImages", () => ({
   createListingImageRecords: (...args: unknown[]) =>
     mockCreateListingImageRecords(...args),
   deleteListingImageUploads: (...args: unknown[]) =>

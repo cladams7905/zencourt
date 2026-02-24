@@ -14,8 +14,10 @@ import {
   parseVerifiedWebhook,
   WebhookVerificationError
 } from "@web/src/server/utils/webhookVerification";
-import { processVideoWebhookPayload } from "@web/src/server/services/videoWebhook";
-import type { VideoWebhookPayload } from "@web/src/server/services/videoWebhook";
+import {
+  processVideoWebhookPayload,
+  type VideoWebhookPayload
+} from "@web/src/server/services/videoWebhook";
 import { apiErrorResponse, StatusCode } from "@web/src/app/api/v1/_responses";
 
 const logger = createChildLogger(baseLogger, {

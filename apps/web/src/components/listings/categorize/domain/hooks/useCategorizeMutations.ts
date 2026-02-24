@@ -2,9 +2,9 @@ import * as React from "react";
 import { toast } from "sonner";
 import type { ListingImageItem } from "@web/src/components/listings/categorize/shared";
 import {
-  assignPrimaryListingImageForCategory,
-  updateListingImageAssignments
-} from "@web/src/server/actions/db/listingImages";
+  assignPrimaryListingImageForCategoryForCurrentUser,
+  updateListingImageAssignmentsForCurrentUser
+} from "@web/src/server/actions/listings/commands";
 
 type UseCategorizeMutationsParams = {
   userId: string;
@@ -19,7 +19,6 @@ type ImageAssignmentUpdate = {
 };
 
 export function useCategorizeMutations({
-  userId,
   listingId,
   setImages
 }: UseCategorizeMutationsParams) {
@@ -42,7 +41,11 @@ export function useCategorizeMutations({
     ) => {
       try {
         await runDraftSave(() =>
-          updateListingImageAssignments(userId, listingId, updates, deletions)
+          updateListingImageAssignmentsForCurrentUser(
+            listingId,
+            updates,
+            deletions
+          )
         );
         return true;
       } catch (error) {
@@ -53,7 +56,7 @@ export function useCategorizeMutations({
         return false;
       }
     },
-    [listingId, runDraftSave, userId]
+    [listingId, runDraftSave]
   );
 
   const ensurePrimaryForCategory = React.useCallback(
@@ -73,7 +76,7 @@ export function useCategorizeMutations({
       }
       try {
         const { primaryImageId } = await runDraftSave(() =>
-          assignPrimaryListingImageForCategory(userId, listingId, category)
+          assignPrimaryListingImageForCategoryForCurrentUser(listingId, category)
         );
         if (primaryImageId) {
           setImages((prev) =>
@@ -90,7 +93,7 @@ export function useCategorizeMutations({
         );
       }
     },
-    [listingId, runDraftSave, setImages, userId]
+    [listingId, runDraftSave, setImages]
   );
 
   return {

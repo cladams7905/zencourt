@@ -2,12 +2,12 @@ import { redirect } from "next/navigation";
 import {
   getListingById,
   updateListing
-} from "@web/src/server/actions/db/listings";
+} from "@web/src/server/models/listings";
 import { requireUserOrRedirect } from "@web/src/app/(dashboard)/_utils/requireUserOrRedirect";
 import {
   getListingImages,
   mapListingImageToDisplayItem
-} from "@web/src/server/actions/db/listingImages";
+} from "@web/src/server/models/listingImages";
 import {
   getAllCachedListingContentForFilter
 } from "@web/src/server/services/cache/listingContent";

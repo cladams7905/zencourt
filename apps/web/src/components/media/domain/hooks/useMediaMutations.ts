@@ -2,9 +2,9 @@ import * as React from "react";
 import { toast } from "sonner";
 import type { DBUserMedia, UserMediaType } from "@db/types/models";
 import {
-  createUserMediaRecords,
-  deleteUserMedia
-} from "@web/src/server/actions/db/userMedia";
+  createUserMediaRecordsForCurrentUser,
+  deleteUserMediaForCurrentUser
+} from "@web/src/server/actions/media/commands";
 
 interface UseMediaMutationsArgs {
   userId: string;
@@ -12,7 +12,6 @@ interface UseMediaMutationsArgs {
 }
 
 export const useMediaMutations = ({
-  userId,
   initialMedia
 }: UseMediaMutationsArgs) => {
   const [mediaItems, setMediaItems] = React.useState<DBUserMedia[]>(initialMedia);
@@ -31,10 +30,10 @@ export const useMediaMutations = ({
     async (
       records: Array<{ key: string; type: UserMediaType; thumbnailKey?: string }>
     ) => {
-      const created = await createUserMediaRecords(userId, records);
+      const created = await createUserMediaRecordsForCurrentUser(records);
       setMediaItems((prev) => [...created, ...prev]);
     },
-    [userId]
+    []
   );
 
   const handleRequestDelete = React.useCallback((item: DBUserMedia) => {
@@ -56,7 +55,7 @@ export const useMediaMutations = ({
 
     setIsDeleting(true);
     try {
-      await deleteUserMedia(userId, mediaToDelete.id);
+      await deleteUserMediaForCurrentUser(mediaToDelete.id);
       setMediaItems((prev) => prev.filter((item) => item.id !== mediaToDelete.id));
       toast.success("Media deleted.");
       setIsDeleteOpen(false);
@@ -68,7 +67,7 @@ export const useMediaMutations = ({
     } finally {
       setIsDeleting(false);
     }
-  }, [isDeleting, mediaToDelete, userId]);
+  }, [isDeleting, mediaToDelete]);
 
   return {
     mediaItems,

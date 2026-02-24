@@ -13,7 +13,7 @@ import {
   getRecentHooksKey,
   selectRotatedAudienceSegment
 } from "@web/src/server/services/contentRotation";
-import { getUserAdditionalSnapshot } from "@web/src/server/actions/db/userAdditional";
+import { getUserAdditionalSnapshot } from "@web/src/server/models/userAdditional";
 import {
   buildPromptInput,
   parsePrimaryAudienceSegments,
@@ -22,7 +22,6 @@ import {
 import { resolveContentContext } from "./context";
 import { writePromptLog } from "./promptLog";
 import { createSseResponse } from "./stream";
-import type { NextResponse } from "next/server";
 
 const logger = createChildLogger(baseLogger, {
   module: "content-generation-service"
@@ -35,7 +34,10 @@ const logger = createChildLogger(baseLogger, {
 export async function runContentGeneration(
   userId: string,
   body: PromptAssemblyInput
-): Promise<NextResponse> {
+): Promise<{
+  stream: ReadableStream;
+  status: number;
+}> {
   const redis = getSharedRedisClient();
   const userAdditionalSnapshot = await getUserAdditionalSnapshot(userId);
   const allAudienceSegments = parsePrimaryAudienceSegments(
@@ -79,7 +81,7 @@ export async function runContentGeneration(
     userPrompt
   });
 
-  return await createSseResponse({
+  return createSseResponse({
     systemPrompt,
     userPrompt,
     redis,

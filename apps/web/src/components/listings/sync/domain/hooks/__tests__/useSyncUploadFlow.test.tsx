@@ -7,14 +7,11 @@ const mockGetListingImageUploadUrls = jest.fn();
 const mockEmitListingSidebarUpdate = jest.fn();
 const mockGetImageMetadataFromFile = jest.fn();
 
-jest.mock("@web/src/server/actions/db/listings", () => ({
-  createListing: (...args: unknown[]) => mockCreateListing(...args)
-}));
-
-jest.mock("@web/src/server/actions/db/listingImages", () => ({
-  createListingImageRecords: (...args: unknown[]) =>
+jest.mock("@web/src/server/actions/listings/commands", () => ({
+  createListingForCurrentUser: (...args: unknown[]) => mockCreateListing(...args),
+  createListingImageRecordsForCurrentUser: (...args: unknown[]) =>
     mockCreateListingImageRecords(...args),
-  getListingImageUploadUrls: (...args: unknown[]) =>
+  getListingImageUploadUrlsForCurrentUser: (...args: unknown[]) =>
     mockGetListingImageUploadUrls(...args)
 }));
 
@@ -99,11 +96,9 @@ describe("useSyncUploadFlow", () => {
       ]);
     });
 
-    expect(mockCreateListingImageRecords).toHaveBeenCalledWith(
-      "user-1",
-      "listing-1",
-      [{ key: "k", fileName: "a.jpg", publicUrl: "https://cdn/a.jpg" }]
-    );
+    expect(mockCreateListingImageRecords).toHaveBeenCalledWith("listing-1", [
+      { key: "k", fileName: "a.jpg", publicUrl: "https://cdn/a.jpg" }
+    ]);
 
     act(() => {
       result.current.onUploadsComplete({ count: 2, batchStartedAt: 123 });

@@ -6,8 +6,8 @@
 
 import { and, db, eq, inArray, listingImages } from "@db/client";
 import type { SerializableImageData } from "@web/src/lib/domain/listing/images";
-import { getListingById } from "@web/src/server/actions/db/listings";
-import { assignPrimaryListingImageForCategory } from "@web/src/server/actions/db/listingImages";
+import { getListingById } from "@web/src/server/models/listings";
+import { assignPrimaryListingImageForCategory } from "@web/src/server/models/listingImages";
 import { analyzeImagesWorkflow } from "./service";
 import type { CategorizationResult } from "./types";
 

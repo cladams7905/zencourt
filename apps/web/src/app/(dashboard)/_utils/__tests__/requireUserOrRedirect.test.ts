@@ -10,10 +10,10 @@ jest.mock("next/navigation", () => ({
 
 import { redirect } from "next/navigation";
 
-jest.mock("@web/src/server/actions/db/users", () => ({
+jest.mock("@web/src/server/models/users", () => ({
   getUser: jest.fn()
 }));
-import { getUser } from "@web/src/server/actions/db/users";
+import { getUser } from "@web/src/server/models/users";
 
 import { requireUserOrRedirect } from "../requireUserOrRedirect";
 

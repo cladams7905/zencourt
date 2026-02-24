@@ -2,7 +2,7 @@ import { revalidatePath } from "next/cache";
 import {
   updateVideoGenJob,
   getVideoGenJobById
-} from "@web/src/server/actions/db/videoGenJobs";
+} from "@web/src/server/models/videoGenJobs";
 import {
   createChildLogger,
   logger as baseLogger
