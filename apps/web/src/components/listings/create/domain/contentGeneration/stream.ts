@@ -9,6 +9,8 @@ export async function requestContentGenerationStream(params: {
   mediaType: "video" | "image";
   focus: string;
   generationNonce: string;
+  generationCount?: number;
+  templateId?: string;
   signal: AbortSignal;
 }): Promise<ReadableStreamDefaultReader<Uint8Array>> {
   const response = await fetchStreamResponse(
@@ -20,7 +22,9 @@ export async function requestContentGenerationStream(params: {
         subcategory: params.subcategory,
         media_type: params.mediaType,
         focus: params.focus,
-        generation_nonce: params.generationNonce
+        generation_nonce: params.generationNonce,
+        generation_count: params.generationCount,
+        template_id: params.templateId
       }),
       signal: params.signal
     },

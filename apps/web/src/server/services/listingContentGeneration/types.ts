@@ -15,6 +15,8 @@ export type GenerateListingContentBody = {
   focus?: string;
   notes?: string;
   generation_nonce?: string;
+  generation_count?: number;
+  template_id?: string;
 };
 
 export type ValidatedGenerateParams = {
@@ -24,6 +26,8 @@ export type ValidatedGenerateParams = {
   focus: string;
   notes: string;
   generationNonce: string;
+  generationCount: number;
+  templateId: string;
 };
 
 export type ListingGenerationContext = {
@@ -38,4 +42,6 @@ export type ListingGenerationContext = {
   mediaType: ListingMediaType;
   focus: string;
   notes: string;
+  generationCount: number;
+  templateId: string;
 };

@@ -31,6 +31,8 @@ export type ContentRequestInput = {
   media_type?: "image" | "video" | null;
   focus?: string | null;
   notes?: string | null;
+  generation_count?: number | null;
+  template_id?: string | null;
 };
 
 export type PromptAssemblyInput = {

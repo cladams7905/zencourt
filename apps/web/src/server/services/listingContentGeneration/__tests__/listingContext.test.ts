@@ -18,7 +18,9 @@ describe("listingContext", () => {
         mediaType: "video" as const,
         focus: "",
         notes: "",
-        generationNonce: ""
+        generationNonce: "",
+        generationCount: 4,
+        templateId: ""
       };
       const ctx = resolveListingContext(listing, params);
       expect(ctx.addressParts).toEqual({
@@ -43,7 +45,9 @@ describe("listingContext", () => {
       mediaType: "video" as const,
       focus: "",
       notes: "",
-      generationNonce: ""
+      generationNonce: "",
+      generationCount: 4,
+      templateId: ""
     };
     const ctx1 = resolveListingContext(listing, params);
     const ctx2 = resolveListingContext(listing, params);

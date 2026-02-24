@@ -221,9 +221,9 @@ export function ListingCreateView({
         <section className="space-y-4">
           {activeMediaTab === "images" && (
             <DevSingleTemplateRender
-              listingId={listingId}
               subcategory={activeSubcategory}
-              captionItems={activeMediaItems}
+              isGenerating={isGenerating}
+              generateSubcategoryContent={generateSubcategoryContent}
             />
           )}
           {activeMediaTab === "videos" &&

@@ -21,6 +21,8 @@ import {
 } from "./stream";
 import type { StreamedContentItem } from "./types";
 
+const DEFAULT_GENERATION_COUNT = GENERATED_BATCH_SIZE;
+
 const generateUUID = () => {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return crypto.randomUUID();
@@ -40,7 +42,7 @@ export function useContentGeneration(params: {
   loadingCount: number;
   generateSubcategoryContent: (
     subcategory: ListingContentSubcategory,
-    options?: { forceNewBatch?: boolean }
+    options?: { forceNewBatch?: boolean; generationCount?: number; templateId?: string }
   ) => Promise<void>;
   removeContentItem: (contentItemId: string) => void;
 } {
@@ -61,6 +63,7 @@ export function useContentGeneration(params: {
   const activeControllerRef = React.useRef<AbortController | null>(null);
   const activeBatchIdRef = React.useRef<string>("");
   const activeBatchItemIdsRef = React.useRef<string[]>([]);
+  const activeGenerationCountRef = React.useRef<number>(DEFAULT_GENERATION_COUNT);
 
   React.useEffect(() => {
     setIncompleteBatchSkeletonCount(0);
@@ -73,7 +76,7 @@ export function useContentGeneration(params: {
   const generateSubcategoryContent = React.useCallback(
     async (
       subcategory: ListingContentSubcategory,
-      options?: { forceNewBatch?: boolean }
+      options?: { forceNewBatch?: boolean; generationCount?: number; templateId?: string }
     ) => {
       if (activeControllerRef.current) {
         activeControllerRef.current.abort();
@@ -82,6 +85,10 @@ export function useContentGeneration(params: {
       activeControllerRef.current = controller;
       activeBatchIdRef.current = generateUUID();
       activeBatchItemIdsRef.current = [];
+      activeGenerationCountRef.current =
+        typeof options?.generationCount === "number" && options.generationCount > 0
+          ? options.generationCount
+          : DEFAULT_GENERATION_COUNT;
       setIsGenerating(true);
       setIncompleteBatchSkeletonCount(0);
       setGenerationError(null);
@@ -98,6 +105,8 @@ export function useContentGeneration(params: {
           mediaType: resolvedMediaType,
           focus: SUBCATEGORY_LABELS[subcategory],
           generationNonce: options?.forceNewBatch ? generateUUID() : "",
+          generationCount: activeGenerationCountRef.current,
+          templateId: options?.templateId,
           signal: controller.signal
         });
 
@@ -141,7 +150,7 @@ export function useContentGeneration(params: {
 
             const missingCount = Math.max(
               0,
-              GENERATED_BATCH_SIZE - event.items.length
+              activeGenerationCountRef.current - event.items.length
             );
             if (missingCount > 0) {
               setIncompleteBatchSkeletonCount(missingCount);
@@ -190,7 +199,7 @@ export function useContentGeneration(params: {
             : "Failed to generate listing content.";
         setGenerationError(message);
         toast.error(message);
-        setIncompleteBatchSkeletonCount(GENERATED_BATCH_SIZE);
+        setIncompleteBatchSkeletonCount(activeGenerationCountRef.current);
         setLocalPostItems((prev) =>
           removeCurrentBatchItems(prev, activeBatchItemIdsRef.current)
         );
@@ -201,6 +210,7 @@ export function useContentGeneration(params: {
         setIsGenerating(false);
         activeBatchIdRef.current = "";
         activeBatchItemIdsRef.current = [];
+        activeGenerationCountRef.current = DEFAULT_GENERATION_COUNT;
       }
     },
     [activeMediaTab, listingId]
@@ -211,7 +221,7 @@ export function useContentGeneration(params: {
   }, []);
 
   const loadingCount = isGenerating
-    ? GENERATED_BATCH_SIZE
+    ? activeGenerationCountRef.current
     : incompleteBatchSkeletonCount;
 
   return {

@@ -85,6 +85,8 @@ export function resolveListingContext(
     subcategory: params.subcategory,
     mediaType: params.mediaType,
     focus: params.focus,
-    notes: params.notes
+    notes: params.notes,
+    generationCount: params.generationCount,
+    templateId: params.templateId
   };
 }
