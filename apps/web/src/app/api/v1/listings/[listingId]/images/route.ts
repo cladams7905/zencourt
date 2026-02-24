@@ -7,7 +7,6 @@ import {
 } from "@web/src/app/api/v1/_responses";
 import { parseRequiredRouteParam } from "@shared/utils/api/parsers";
 import { requireAuthenticatedUser } from "@web/src/server/utils/apiAuth";
-import { requireListingAccess } from "@web/src/server/utils/listingAccess";
 import { getListingImages } from "@web/src/server/models/listingImages";
 
 export async function GET(
@@ -17,7 +16,6 @@ export async function GET(
   try {
     const listingId = parseRequiredRouteParam((await params).listingId, "listingId");
     const user = await requireAuthenticatedUser();
-    await requireListingAccess(listingId, user.id);
     const images = await getListingImages(user.id, listingId);
     return NextResponse.json({ success: true, data: images });
   } catch (error) {

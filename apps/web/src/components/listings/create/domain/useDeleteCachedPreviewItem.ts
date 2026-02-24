@@ -1,5 +1,5 @@
 import * as React from "react";
-import { deleteCachedListingContentItem } from "@web/src/server/actions/listings/commands";
+import { deleteCachedListingContentItem } from "@web/src/server/actions/listings/cache";
 import type { ContentItem } from "@web/src/components/dashboard/components/ContentGrid";
 import type { ListingContentSubcategory } from "@shared/types/models";
 

@@ -19,7 +19,6 @@ export const useBrandingSettings = ({
   isActive = true
 }: BrandingTabProps) => {
   const profile = useBrandingProfileSettings({
-    userId,
     userAdditional,
     defaultAgentName,
     defaultHeadshotUrl

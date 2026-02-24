@@ -122,7 +122,7 @@ const mockRenderListingTemplateBatchStream = jest.fn().mockImplementation(
     return { stream };
   }
 );
-jest.mock("@web/src/server/actions/listings/commands", () => ({
+jest.mock("@web/src/server/actions/listings/templateRender", () => ({
   renderListingTemplateBatchStream: (...args: unknown[]) =>
     mockRenderListingTemplateBatchStream(...args)
 }));
@@ -144,7 +144,7 @@ describe("listing templates render stream route", () => {
     jest.doMock("@shared/utils/api/validation", () =>
       jest.requireActual("@shared/utils/api/validation")
     );
-    jest.doMock("@web/src/server/actions/listings/commands", () => ({
+    jest.doMock("@web/src/server/actions/listings/templateRender", () => ({
       renderListingTemplateBatchStream: (...args: unknown[]) =>
         mockRenderListingTemplateBatchStream(...args)
     }));

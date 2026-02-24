@@ -41,7 +41,7 @@ describe("useSyncUploadFlow", () => {
     );
 
     const { result } = renderHook(() =>
-      useSyncUploadFlow({ userId: "user-1", navigate: jest.fn() })
+      useSyncUploadFlow({ navigate: jest.fn() })
     );
 
     let id1 = "";
@@ -68,7 +68,7 @@ describe("useSyncUploadFlow", () => {
 
   it("throws when creating records without listing", async () => {
     const { result } = renderHook(() =>
-      useSyncUploadFlow({ userId: "user-1", navigate: jest.fn() })
+      useSyncUploadFlow({ navigate: jest.fn() })
     );
 
     await expect(result.current.onCreateRecords([])).rejects.toThrow(
@@ -86,7 +86,7 @@ describe("useSyncUploadFlow", () => {
     mockCreateListingImageRecords.mockResolvedValue(undefined);
 
     const { result } = renderHook(() =>
-      useSyncUploadFlow({ userId: "user-1", navigate })
+      useSyncUploadFlow({ navigate })
     );
 
     await act(async () => {
@@ -113,7 +113,7 @@ describe("useSyncUploadFlow", () => {
     mockGetImageMetadataFromFile.mockResolvedValue({ width: 10, height: 10 });
 
     const { result } = renderHook(() =>
-      useSyncUploadFlow({ userId: "user-1", navigate: jest.fn() })
+      useSyncUploadFlow({ navigate: jest.fn() })
     );
 
     const file = new File(["x"], "x.jpg", { type: "image/jpeg" });

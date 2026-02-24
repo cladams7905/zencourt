@@ -7,10 +7,24 @@ import {
   createChildLogger,
   logger as baseLogger
 } from "@web/src/lib/core/logging/logger";
+import { requireAuthenticatedUser } from "@web/src/server/utils/apiAuth";
 
 const logger = createChildLogger(baseLogger, { module: "storage-actions" });
 
+function formatError(error: unknown, fallback: string): Error {
+  if (error instanceof Error) {
+    return error;
+  }
+  return new Error(fallback);
+}
+
+async function requireStorageActor() {
+  await requireAuthenticatedUser();
+}
+
 export async function uploadFile(file: File, folder: string): Promise<string> {
+  await requireStorageActor();
+
   try {
     const arrayBuffer = await file.arrayBuffer();
     const result = await storageService.uploadFile({
@@ -21,22 +35,28 @@ export async function uploadFile(file: File, folder: string): Promise<string> {
         folder
       }
     });
-    if (!result.success) {
-      logger.error(`Error uploading file: ${result.error}`);
-      throw new Error(result.error);
+    if (!result.success || !result.url) {
+      logger.error({ error: result.error }, "Error uploading file");
+      throw new Error(result.error || "Upload failed");
     }
-    return result.url!;
+    return result.url;
   } catch (error) {
-    logger.error(`Error uploading file: ${error}`);
-    throw new Error(
-      `Failed to upload ${file.name}: ${
-        error instanceof Error ? error.message : "Unknown error"
-      }`
-    );
+    logger.error({ error }, "Error uploading file");
+    throw new Error(`Failed to upload ${file.name}: ${formatError(error, "Unknown error").message}`);
   }
 }
 
 export async function uploadFileFromBuffer(args: {
+  fileBuffer: ArrayBuffer;
+  fileName: string;
+  contentType: string;
+  folder: string;
+}): Promise<string> {
+  await requireStorageActor();
+  return uploadFileFromBufferTrusted(args);
+}
+
+async function uploadFileFromBufferTrusted(args: {
   fileBuffer: ArrayBuffer;
   fileName: string;
   contentType: string;
@@ -54,12 +74,26 @@ export async function uploadFileFromBuffer(args: {
   return result.url;
 }
 
+export async function uploadCurrentUserBrandingAssetFromBuffer(args: {
+  fileBuffer: ArrayBuffer;
+  fileName: string;
+  contentType: string;
+}) {
+  const user = await requireAuthenticatedUser();
+  return uploadFileFromBufferTrusted({
+    ...args,
+    folder: `user_${user.id}/branding`
+  });
+}
+
 export async function uploadFilesBatch(
   files: File[],
   folder: string,
   userId?: string,
   listingId?: string
 ): Promise<StorageUploadBatchResponse> {
+  await requireStorageActor();
+
   try {
     const filesWithBuffers: StorageUploadRequest[] = await Promise.all(
       files.map(async (file) => ({
@@ -75,35 +109,31 @@ export async function uploadFilesBatch(
     );
     const result = await storageService.uploadFilesBatch(filesWithBuffers);
     if (!result.success) {
-      logger.error(`Error in batch upload: ${result.error}`);
-      throw new Error(result.error);
+      logger.error({ error: result.error }, "Error in batch upload");
+      throw new Error(result.error || "Batch upload failed");
     }
     logger.info(`Batch upload successful for ${files.length} files`);
     return result;
   } catch (error) {
-    logger.error(`Error in batch upload: ${error}`);
-    return {
-      success: false,
-      results: [],
-      error: error instanceof Error ? error.message : "Unknown error"
-    };
+    logger.error({ error }, "Error in batch upload");
+    throw new Error(formatError(error, "Unknown error").message);
   }
 }
 
 export async function deleteFile(url: string): Promise<void> {
+  await requireStorageActor();
+
   try {
     const result = await storageService.deleteFile(url);
 
     if (!result.success) {
-      logger.error(`Error deleting file: ${result.error}`);
-      throw new Error(result.error);
+      logger.error({ error: result.error }, "Error deleting file");
+      throw new Error(result.error || "Delete failed");
     }
   } catch (error) {
-    logger.error(`Error deleting file: ${error}`);
+    logger.error({ error }, "Error deleting file");
     throw new Error(
-      `Failed to delete file: ${
-        error instanceof Error ? error.message : "Unknown error"
-      }`
+      `Failed to delete file: ${formatError(error, "Unknown error").message}`
     );
   }
 }

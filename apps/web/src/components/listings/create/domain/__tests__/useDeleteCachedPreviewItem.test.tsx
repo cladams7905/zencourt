@@ -2,7 +2,7 @@ import { act, renderHook } from "@testing-library/react";
 
 const mockDeleteCachedListingContentItem = jest.fn();
 
-jest.mock("@web/src/server/actions/listings/commands", () => ({
+jest.mock("@web/src/server/actions/listings/cache", () => ({
   deleteCachedListingContentItem: (...args: unknown[]) =>
     mockDeleteCachedListingContentItem(...args)
 }));

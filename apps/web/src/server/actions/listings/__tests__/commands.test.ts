@@ -97,16 +97,18 @@ import { DomainValidationError } from "@web/src/server/errors/domain";
 import {
   createListingForCurrentUser,
   updateListingForCurrentUser,
-  deleteCachedListingContentItem,
   getListingImageUploadUrlsForCurrentUser,
   createListingImageRecordsForCurrentUser,
   updateListingImageAssignmentsForCurrentUser,
   assignPrimaryListingImageForCategoryForCurrentUser,
   deleteListingImageUploadsForCurrentUser,
-  getListingImagesForCurrentUser,
+  getListingImagesForCurrentUser
+} from "@web/src/server/actions/listings/commands";
+import { deleteCachedListingContentItem } from "@web/src/server/actions/listings/cache";
+import {
   renderListingTemplateBatch,
   renderListingTemplateBatchStream
-} from "@web/src/server/actions/listings/commands";
+} from "@web/src/server/actions/listings/templateRender";
 
 describe("listings commands", () => {
   const mockUser = { id: "user-1" } as never;
