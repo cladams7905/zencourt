@@ -255,7 +255,7 @@ describe("useUploadDialogState", () => {
 
   it("marks uploads as failed when upload URLs are missing from response", async () => {
     const args = buildArgs();
-    args.getUploadUrls = jest.fn(async (_requests): Promise<UploadUrlsResponse> => ({
+    args.getUploadUrls = jest.fn(async (_requests: UploadRequest[]): Promise<UploadUrlsResponse> => ({
       uploads: [],
       failed: []
     }));
@@ -301,7 +301,7 @@ describe("useUploadDialogState", () => {
   it("retries failed uploads via handleRetryFailed", async () => {
     jest.useFakeTimers();
     const args = buildArgs();
-    args.getUploadUrls = jest.fn(async (_requests): Promise<UploadUrlsResponse> => ({
+    args.getUploadUrls = jest.fn(async (_requests: UploadRequest[]): Promise<UploadUrlsResponse> => ({
       uploads: [],
       failed: []
     }));

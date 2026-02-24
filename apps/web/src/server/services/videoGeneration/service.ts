@@ -7,7 +7,7 @@ import {
 } from "@web/src/lib/core/logging/logger";
 import { createVideoGenBatch } from "@web/src/server/models/videoGenBatch";
 import { createVideoGenJobsBatch } from "@web/src/server/models/videoGenJobs";
-import { getPublicDownloadUrls } from "@web/src/server/utils/storageUrls";
+import { getPublicDownloadUrls } from "@web/src/server/services/storage/urlResolution";
 import { isPriorityCategory } from "@shared/utils";
 import type {
   DBListingImage,
@@ -28,7 +28,7 @@ import {
   selectSecondaryImageForRoom
 } from "./domain/rooms";
 import { getVideoGenerationConfig } from "./config";
-import { requireListingAccess } from "@web/src/server/utils/listingAccess";
+import { requireListingAccess } from "@web/src/server/models/listings/access";
 
 const logger = createChildLogger(baseLogger, {
   module: "video-generation-service"

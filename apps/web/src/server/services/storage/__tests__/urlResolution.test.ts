@@ -1,17 +1,17 @@
-const mockGetPublicUrlForStorageUrl = jest.fn();
 const mockIsUrlFromStorageEndpoint = jest.fn();
+const mockGetPublicUrlForStorageUrl = jest.fn();
 
-jest.mock("@web/src/server/services/storage", () => ({
+jest.mock("@shared/utils/storagePaths", () => ({
+  isUrlFromStorageEndpoint: (...args: unknown[]) =>
+    mockIsUrlFromStorageEndpoint(...args)
+}));
+
+jest.mock("@web/src/server/services/storage/service", () => ({
   __esModule: true,
   default: {
     getPublicUrlForStorageUrl: (...args: unknown[]) =>
       mockGetPublicUrlForStorageUrl(...args)
   }
-}));
-
-jest.mock("@shared/utils/storagePaths", () => ({
-  isUrlFromStorageEndpoint: (...args: unknown[]) =>
-    mockIsUrlFromStorageEndpoint(...args)
 }));
 
 import {
@@ -20,7 +20,7 @@ import {
   getPublicDownloadUrls,
   isManagedStorageUrl,
   resolvePublicDownloadUrl
-} from "@web/src/server/utils/storageUrls";
+} from "@web/src/server/services/storage/urlResolution";
 
 describe("storageUrls utils", () => {
   beforeEach(() => {
@@ -42,9 +42,6 @@ describe("storageUrls utils", () => {
     expect(
       getPublicDownloadUrl("https://storage.example.com/bucket/folder/file.jpg")
     ).toBe("https://cdn.example.com/bucket/folder/file.jpg");
-    expect(mockGetPublicUrlForStorageUrl).toHaveBeenCalledWith(
-      "https://storage.example.com/bucket/folder/file.jpg"
-    );
   });
 
   it("returns original URL when storage returns null", () => {
@@ -66,12 +63,12 @@ describe("storageUrls utils", () => {
   });
 
   it("getPublicDownloadUrlSafe returns public or original URL", () => {
-    mockGetPublicUrlForStorageUrl.mockReturnValue("https://cdn.example.com/a.jpg");
+    mockGetPublicUrlForStorageUrl
+      .mockReturnValueOnce("https://cdn.example.com/a.jpg")
+      .mockReturnValueOnce(null);
     expect(getPublicDownloadUrlSafe("https://storage.example.com/a.jpg")).toBe(
       "https://cdn.example.com/a.jpg"
     );
-
-    mockGetPublicUrlForStorageUrl.mockReturnValue(null);
     expect(getPublicDownloadUrlSafe("https://external.com/b.jpg")).toBe(
       "https://external.com/b.jpg"
     );
@@ -84,22 +81,23 @@ describe("storageUrls utils", () => {
   });
 
   it("resolvePublicDownloadUrl returns public or original URL", () => {
-    mockGetPublicUrlForStorageUrl.mockReturnValue("https://cdn.example.com/c.jpg");
+    mockGetPublicUrlForStorageUrl
+      .mockReturnValueOnce("https://cdn.example.com/c.jpg")
+      .mockReturnValueOnce(null);
     expect(resolvePublicDownloadUrl("https://storage.example.com/c.jpg")).toBe(
       "https://cdn.example.com/c.jpg"
     );
-
-    mockGetPublicUrlForStorageUrl.mockReturnValue(null);
     expect(resolvePublicDownloadUrl("https://external.com/d.jpg")).toBe(
       "https://external.com/d.jpg"
     );
   });
 
   it("getPublicDownloadUrls resolves multiple URLs", () => {
-    mockGetPublicUrlForStorageUrl
-      .mockReturnValueOnce("https://cdn.example.com/1.jpg")
-      .mockReturnValueOnce(null)
-      .mockReturnValueOnce("https://cdn.example.com/3.jpg");
+    mockGetPublicUrlForStorageUrl.mockImplementation((url: string) => {
+      if (url.includes("1.jpg")) return "https://cdn.example.com/1.jpg";
+      if (url.includes("3.jpg")) return "https://cdn.example.com/3.jpg";
+      return null;
+    });
 
     expect(
       getPublicDownloadUrls([

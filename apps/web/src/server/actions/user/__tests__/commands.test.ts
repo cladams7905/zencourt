@@ -8,6 +8,14 @@ const mockMarkProfileCompleted = jest.fn();
 const mockCompleteWelcomeSurvey = jest.fn();
 const mockRequireAuthenticatedUser = jest.fn();
 
+jest.mock("@db/client", () => ({
+  db: {
+    select: () => ({ from: () => ({ where: () => Promise.resolve([]) }) })
+  },
+  eq: (...args: unknown[]) => args,
+  userAdditional: { userId: "userId", headshotUrl: "headshotUrl" }
+}));
+
 jest.mock("@web/src/server/models/userAdditional", () => ({
   updateUserProfile: (...args: unknown[]) =>
     (mockUpdateUserProfile as (...a: unknown[]) => unknown)(...args),
@@ -27,9 +35,21 @@ jest.mock("@web/src/server/models/userAdditional", () => ({
     (mockCompleteWelcomeSurvey as (...a: unknown[]) => unknown)(...args)
 }));
 
-jest.mock("@web/src/server/utils/apiAuth", () => ({
+jest.mock("@web/src/server/auth/apiAuth", () => ({
   requireAuthenticatedUser: (...args: unknown[]) =>
     (mockRequireAuthenticatedUser as (...a: unknown[]) => unknown)(...args)
+}));
+
+const mockUploadFile = jest.fn();
+jest.mock("@web/src/server/services/storage", () => ({
+  __esModule: true,
+  default: { uploadFile: (...args: unknown[]) => mockUploadFile(...args) }
+}));
+
+const mockUpsertUserAdditional = jest.fn();
+jest.mock("@web/src/server/models/userAdditional/helpers", () => ({
+  upsertUserAdditional: (...args: unknown[]) =>
+    (mockUpsertUserAdditional as (...a: unknown[]) => unknown)(...args)
 }));
 
 import {
@@ -49,6 +69,11 @@ describe("user commands", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockRequireAuthenticatedUser.mockResolvedValue(mockUser);
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      headers: { get: () => "image/jpeg" },
+      arrayBuffer: () => Promise.resolve(new ArrayBuffer(0))
+    }) as typeof fetch;
   });
 
   it("updateCurrentUserProfile delegates with user id", async () => {
@@ -61,15 +86,36 @@ describe("user commands", () => {
     expect(mockUpdateUserProfile).toHaveBeenCalledWith("user-1", updates);
   });
 
-  it("ensureCurrentUserGoogleHeadshot delegates with user id", async () => {
-    mockEnsureGoogleHeadshot.mockResolvedValueOnce(undefined);
+  it("ensureCurrentUserGoogleHeadshot fetches, uploads, and saves headshot", async () => {
+    const headshotUrl = "https://storage.example.com/user_1/branding/google-headshot.jpg";
+    mockUploadFile.mockResolvedValueOnce({ success: true, url: headshotUrl });
+    mockUpsertUserAdditional.mockResolvedValueOnce({
+      headshotUrl,
+      updatedAt: new Date()
+    });
 
-    await ensureCurrentUserGoogleHeadshot("https://example.com/photo.jpg");
-
-    expect(mockEnsureGoogleHeadshot).toHaveBeenCalledWith(
-      "user-1",
+    const result = await ensureCurrentUserGoogleHeadshot(
       "https://example.com/photo.jpg"
     );
+
+    expect(mockRequireAuthenticatedUser).toHaveBeenCalled();
+    expect(global.fetch).toHaveBeenCalledWith(
+      "https://example.com/photo.jpg",
+      { cache: "no-store" }
+    );
+    expect(mockUploadFile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        fileName: "google-headshot.jpg",
+        contentType: "image/jpeg",
+        options: { folder: "user_user-1/branding" }
+      })
+    );
+    expect(mockUpsertUserAdditional).toHaveBeenCalledWith(
+      "user-1",
+      expect.objectContaining({ headshotUrl }),
+      "Headshot could not be saved"
+    );
+    expect(result).toBe(headshotUrl);
   });
 
   it("updateCurrentUserLocation delegates with user id and details", async () => {

@@ -6,7 +6,13 @@ const mockSelect = jest.fn(() => ({ from: mockSelectFrom }));
 const mockDeleteWhere = jest.fn();
 const mockDelete = jest.fn(() => ({ where: mockDeleteWhere }));
 
-const mockDeleteStorageUrlsOrThrow = jest.fn();
+const mockInsertOnConflictDoUpdate = jest.fn();
+const mockInsertReturning = jest.fn();
+const mockInsertValues = jest.fn(() => ({
+  returning: mockInsertReturning,
+  onConflictDoUpdate: mockInsertOnConflictDoUpdate
+}));
+const mockInsert = jest.fn(() => ({ values: mockInsertValues }));
 const mockWithDbErrorHandling = jest.fn(
   async (fn: () => Promise<unknown>) => await fn()
 );
@@ -14,22 +20,23 @@ const mockWithDbErrorHandling = jest.fn(
 jest.mock("@db/client", () => ({
   db: {
     select: (...args: unknown[]) => ((mockSelect as (...a: unknown[]) => unknown)(...args)),
-    delete: (...args: unknown[]) => ((mockDelete as (...a: unknown[]) => unknown)(...args))
+    delete: (...args: unknown[]) => ((mockDelete as (...a: unknown[]) => unknown)(...args)),
+    insert: (...args: unknown[]) => ((mockInsert as (...a: unknown[]) => unknown)(...args))
   },
   userMedia: { id: "id", userId: "userId" },
+  userAdditional: { userId: "userId" },
   eq: (...args: unknown[]) => args,
   and: (...args: unknown[]) => args
-}));
-
-jest.mock("@web/src/server/models/shared/storageCleanup", () => ({
-  deleteStorageUrlsOrThrow: (...args: unknown[]) => ((mockDeleteStorageUrlsOrThrow as (...a: unknown[]) => unknown)(...args))
 }));
 
 jest.mock("@web/src/server/models/shared/dbErrorHandling", () => ({
   withDbErrorHandling: (...args: unknown[]) => ((mockWithDbErrorHandling as (...a: unknown[]) => unknown)(...args))
 }));
 
-import { deleteUserMedia } from "@web/src/server/models/userMedia/mutations";
+import {
+  createUserMediaRecords,
+  deleteUserMedia
+} from "@web/src/server/models/userMedia/mutations";
 
 describe("userMedia mutations", () => {
   beforeEach(() => {
@@ -39,8 +46,23 @@ describe("userMedia mutations", () => {
     mockSelect.mockClear();
     mockDeleteWhere.mockReset();
     mockDelete.mockClear();
-    mockDeleteStorageUrlsOrThrow.mockReset();
+    mockInsertOnConflictDoUpdate.mockReset();
+    mockInsertReturning.mockReset();
+    mockInsertValues.mockClear();
+    mockInsert.mockClear();
     mockWithDbErrorHandling.mockClear();
+  });
+
+  it("creates media records", async () => {
+    const inserted = [{ id: "m1", userId: "u1", type: "image", url: "u", thumbnailUrl: null }];
+    mockInsertReturning.mockResolvedValueOnce(inserted);
+    mockInsertOnConflictDoUpdate.mockResolvedValueOnce(undefined);
+
+    const result = await createUserMediaRecords("u1", [
+      { type: "image", url: "https://x", thumbnailUrl: null }
+    ]);
+
+    expect(result).toEqual(inserted);
   });
 
   it("validates required params", async () => {
@@ -57,7 +79,7 @@ describe("userMedia mutations", () => {
     await expect(deleteUserMedia("u1", "m1")).rejects.toThrow("Media not found");
   });
 
-  it("deletes storage files and db row", async () => {
+  it("deletes db row", async () => {
     mockLimit.mockResolvedValueOnce([
       { id: "m1", url: "https://x", thumbnailUrl: "https://thumb" }
     ]);
@@ -65,10 +87,6 @@ describe("userMedia mutations", () => {
 
     await expect(deleteUserMedia("u1", "m1")).resolves.toBeUndefined();
 
-    expect(mockDeleteStorageUrlsOrThrow).toHaveBeenCalledWith(
-      ["https://x", "https://thumb"],
-      "Failed to delete media file"
-    );
     expect(mockDelete).toHaveBeenCalled();
   });
 });

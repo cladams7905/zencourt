@@ -1,7 +1,7 @@
 import { MediaView } from "@web/src/components/media";
 import { requireUserOrRedirect } from "@web/src/app/(dashboard)/_utils/requireUserOrRedirect";
 import { getUserMedia } from "@web/src/server/models/userMedia";
-import { getPublicDownloadUrlSafe } from "@web/src/server/utils/storageUrls";
+import { getPublicDownloadUrlSafe } from "@web/src/server/services/storage/urlResolution";
 
 export default async function MediaPage() {
   const user = await requireUserOrRedirect();

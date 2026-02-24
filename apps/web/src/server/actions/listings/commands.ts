@@ -1,21 +1,24 @@
 "use server";
 
-import { requireAuthenticatedUser } from "@web/src/server/utils/apiAuth";
+import { requireAuthenticatedUser } from "@web/src/server/auth/apiAuth";
 import { createListing, updateListing } from "@web/src/server/models/listings";
+import { requireListingAccess } from "@web/src/server/models/listings/access";
 import type { UpdateListingInput } from "@web/src/server/models/listings/types";
 import {
   assignPrimaryListingImageForCategory,
   createListingImageRecords,
-  deleteListingImageUploads,
-  getListingImageUploadUrls,
+  getListingImages,
   updateListingImageAssignments,
-  getListingImages
+  getListingImageUrlsByIds
 } from "@web/src/server/models/listingImages";
+import { deleteStorageUrlsOrThrow } from "@web/src/server/actions/shared/storageCleanup";
+import { isManagedStorageUrl } from "@web/src/server/services/storage/urlResolution";
 import type {
   ListingImageRecordInput,
   ListingImageUpdate,
   ListingImageUploadRequest
 } from "@web/src/server/models/listingImages/types";
+import { prepareListingImageUploadUrls } from "@web/src/server/services/storage/uploadPreparation";
 
 export async function createListingForCurrentUser() {
   const user = await requireAuthenticatedUser();
@@ -35,7 +38,14 @@ export async function getListingImageUploadUrlsForCurrentUser(
   files: ListingImageUploadRequest[]
 ) {
   const user = await requireAuthenticatedUser();
-  return getListingImageUploadUrls(user.id, listingId, files);
+  await requireListingAccess(listingId, user.id);
+  const existingImages = await getListingImages(user.id, listingId);
+  return prepareListingImageUploadUrls(
+    user.id,
+    listingId,
+    files,
+    existingImages.length
+  );
 }
 
 export async function createListingImageRecordsForCurrentUser(
@@ -52,7 +62,25 @@ export async function updateListingImageAssignmentsForCurrentUser(
   deletions: string[]
 ) {
   const user = await requireAuthenticatedUser();
-  return updateListingImageAssignments(user.id, listingId, updates, deletions);
+  const deletionUrls =
+    deletions.length > 0
+      ? await getListingImageUrlsByIds(user.id, listingId, deletions)
+      : [];
+  const result = await updateListingImageAssignments(
+    user.id,
+    listingId,
+    updates,
+    deletions
+  );
+
+  if (deletionUrls.length > 0) {
+    await deleteStorageUrlsOrThrow(
+      deletionUrls.filter((url) => isManagedStorageUrl(url)),
+      "Failed to delete listing image"
+    );
+  }
+
+  return result;
 }
 
 export async function assignPrimaryListingImageForCategoryForCurrentUser(
@@ -68,7 +96,11 @@ export async function deleteListingImageUploadsForCurrentUser(
   urls: string[]
 ) {
   const user = await requireAuthenticatedUser();
-  return deleteListingImageUploads(user.id, listingId, urls);
+  await requireListingAccess(listingId, user.id);
+  await deleteStorageUrlsOrThrow(
+    urls.filter((url) => isManagedStorageUrl(url)),
+    "Failed to clean up listing uploads."
+  );
 }
 
 export async function getListingImagesForCurrentUser(listingId: string) {

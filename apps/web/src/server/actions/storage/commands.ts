@@ -7,7 +7,7 @@ import {
   createChildLogger,
   logger as baseLogger
 } from "@web/src/lib/core/logging/logger";
-import { requireAuthenticatedUser } from "@web/src/server/utils/apiAuth";
+import { requireAuthenticatedUser } from "@web/src/server/auth/apiAuth";
 
 const logger = createChildLogger(baseLogger, { module: "storage-actions" });
 

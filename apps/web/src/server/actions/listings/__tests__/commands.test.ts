@@ -2,12 +2,12 @@
 const mockCreateListing = jest.fn();
 const mockUpdateListing = jest.fn();
 const mockDeleteCachedListingContentItemService = jest.fn();
-const mockGetListingImageUploadUrls = jest.fn();
+const mockPrepareListingImageUploadUrls = jest.fn();
 const mockCreateListingImageRecords = jest.fn();
 const mockUpdateListingImageAssignments = jest.fn();
 const mockAssignPrimaryListingImageForCategory = jest.fn();
-const mockDeleteListingImageUploads = jest.fn();
 const mockGetListingImages = jest.fn();
+const mockGetListingImageUrlsByIds = jest.fn();
 const mockGetOrCreateUserAdditional = jest.fn();
 const mockRenderListingTemplateBatchService = jest.fn();
 const mockRenderListingTemplateBatchStreamService = jest.fn();
@@ -17,6 +17,8 @@ const mockParseListingSubcategory = jest.fn();
 const mockSanitizeCaptionItems = jest.fn();
 const mockEncodeSseEvent = jest.fn();
 const mockLoggerError = jest.fn();
+const mockDeleteStorageUrlsOrThrow = jest.fn();
+const mockIsManagedStorageUrl = jest.fn(() => true);
 
 jest.mock("@web/src/server/models/listings", () => ({
   createListing: (...args: unknown[]) =>
@@ -26,8 +28,6 @@ jest.mock("@web/src/server/models/listings", () => ({
 }));
 
 jest.mock("@web/src/server/models/listingImages", () => ({
-  getListingImageUploadUrls: (...args: unknown[]) =>
-    (mockGetListingImageUploadUrls as (...a: unknown[]) => unknown)(...args),
   createListingImageRecords: (...args: unknown[]) =>
     (mockCreateListingImageRecords as (...a: unknown[]) => unknown)(...args),
   updateListingImageAssignments: (...args: unknown[]) =>
@@ -36,10 +36,25 @@ jest.mock("@web/src/server/models/listingImages", () => ({
     (mockAssignPrimaryListingImageForCategory as (...a: unknown[]) => unknown)(
       ...args
     ),
-  deleteListingImageUploads: (...args: unknown[]) =>
-    (mockDeleteListingImageUploads as (...a: unknown[]) => unknown)(...args),
+  getListingImageUrlsByIds: (...args: unknown[]) =>
+    (mockGetListingImageUrlsByIds as (...a: unknown[]) => unknown)(...args),
   getListingImages: (...args: unknown[]) =>
     (mockGetListingImages as (...a: unknown[]) => unknown)(...args)
+}));
+
+jest.mock("@web/src/server/services/storage/uploadPreparation", () => ({
+  prepareListingImageUploadUrls: (...args: unknown[]) =>
+    (mockPrepareListingImageUploadUrls as (...a: unknown[]) => unknown)(...args)
+}));
+
+jest.mock("@web/src/server/actions/shared/storageCleanup", () => ({
+  deleteStorageUrlsOrThrow: (...args: unknown[]) =>
+    (mockDeleteStorageUrlsOrThrow as (...a: unknown[]) => unknown)(...args)
+}));
+
+jest.mock("@web/src/server/services/storage/urlResolution", () => ({
+  isManagedStorageUrl: (...args: unknown[]) =>
+    (mockIsManagedStorageUrl as (...a: unknown[]) => unknown)(...args)
 }));
 
 jest.mock("@web/src/server/services/cache/listingContent", () => ({
@@ -71,12 +86,12 @@ jest.mock("@web/src/server/services/templateRender/validation", () => ({
   sanitizeCaptionItems: (value: unknown) => mockSanitizeCaptionItems(value)
 }));
 
-jest.mock("@web/src/server/utils/apiAuth", () => ({
+jest.mock("@web/src/server/auth/apiAuth", () => ({
   requireAuthenticatedUser: (...args: unknown[]) =>
     (mockRequireAuthenticatedUser as (...a: unknown[]) => unknown)(...args)
 }));
 
-jest.mock("@web/src/server/utils/listingAccess", () => ({
+jest.mock("@web/src/server/models/listings/access", () => ({
   requireListingAccess: (...args: unknown[]) =>
     (mockRequireListingAccess as (...a: unknown[]) => unknown)(...args)
 }));
@@ -119,6 +134,7 @@ describe("listings commands", () => {
     mockRequireAuthenticatedUser.mockResolvedValue(mockUser);
     mockRequireListingAccess.mockResolvedValue(mockListing);
     mockSanitizeCaptionItems.mockReturnValue([]);
+    mockIsManagedStorageUrl.mockReturnValue(true);
   });
 
   describe("createListingForCurrentUser", () => {
@@ -217,21 +233,30 @@ describe("listings commands", () => {
   });
 
   describe("getListingImageUploadUrlsForCurrentUser", () => {
-    it("delegates to getListingImageUploadUrls with user id", async () => {
+    it("delegates to upload preparation after access + existing images lookup", async () => {
       const files = [{ fileName: "a.jpg" }] as never[];
-      mockGetListingImageUploadUrls.mockResolvedValueOnce([{ url: "https://x" }]);
+      mockGetListingImages.mockResolvedValueOnce([{ id: "img-1" }]);
+      mockPrepareListingImageUploadUrls.mockResolvedValueOnce({
+        uploads: [{ url: "https://x" }],
+        failed: []
+      });
 
       const result = await getListingImageUploadUrlsForCurrentUser(
         "listing-1",
         files
       );
 
-      expect(mockGetListingImageUploadUrls).toHaveBeenCalledWith(
+      expect(mockRequireListingAccess).toHaveBeenCalledWith("listing-1", "user-1");
+      expect(mockPrepareListingImageUploadUrls).toHaveBeenCalledWith(
         "user-1",
         "listing-1",
-        files
+        files,
+        1
       );
-      expect(result).toEqual([{ url: "https://x" }]);
+      expect(result).toEqual({
+        uploads: [{ url: "https://x" }],
+        failed: []
+      });
     });
   });
 
@@ -255,7 +280,11 @@ describe("listings commands", () => {
   });
 
   describe("updateListingImageAssignmentsForCurrentUser", () => {
-    it("delegates to updateListingImageAssignments with user id", async () => {
+    it("deletes managed storage URLs after model update", async () => {
+      mockGetListingImageUrlsByIds.mockResolvedValueOnce([
+        "https://example.com/1.jpg",
+        "https://external.com/2.jpg"
+      ]);
       mockUpdateListingImageAssignments.mockResolvedValueOnce(undefined);
 
       await updateListingImageAssignmentsForCurrentUser(
@@ -269,6 +298,10 @@ describe("listings commands", () => {
         "listing-1",
         [],
         ["id-1"]
+      );
+      expect(mockDeleteStorageUrlsOrThrow).toHaveBeenCalledWith(
+        ["https://example.com/1.jpg", "https://external.com/2.jpg"],
+        "Failed to delete listing image"
       );
     });
   });
@@ -291,17 +324,17 @@ describe("listings commands", () => {
   });
 
   describe("deleteListingImageUploadsForCurrentUser", () => {
-    it("delegates to deleteListingImageUploads with user id", async () => {
-      mockDeleteListingImageUploads.mockResolvedValueOnce(undefined);
+    it("deletes managed URLs after listing access check", async () => {
 
       await deleteListingImageUploadsForCurrentUser("listing-1", [
-        "https://example.com/1.jpg"
+        "https://example.com/1.jpg",
+        "https://external.com/2.jpg"
       ]);
 
-      expect(mockDeleteListingImageUploads).toHaveBeenCalledWith(
-        "user-1",
-        "listing-1",
-        ["https://example.com/1.jpg"]
+      expect(mockRequireListingAccess).toHaveBeenCalledWith("listing-1", "user-1");
+      expect(mockDeleteStorageUrlsOrThrow).toHaveBeenCalledWith(
+        ["https://example.com/1.jpg", "https://external.com/2.jpg"],
+        "Failed to clean up listing uploads."
       );
     });
   });

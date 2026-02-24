@@ -1,4 +1,3 @@
-import type { FredObservationResponse } from "../types";
 import { pickObservationValue } from "../domain/transforms";
 import { fetchWithTimeout } from "./http";
 import { parseFredObservationResponse } from "./parsers";

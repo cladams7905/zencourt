@@ -4,10 +4,7 @@ describe("listings route", () => {
   async function loadRoute() {
     jest.resetModules();
 
-    const mockRequireAuthenticatedUser = jest
-      .fn()
-      .mockResolvedValue({ id: "user-1" });
-    const mockGetUserListingSummariesPage = jest.fn().mockResolvedValue({
+    const mockGetCurrentUserListingSummariesPage = jest.fn().mockResolvedValue({
       items: [],
       total: 0
     });
@@ -18,21 +15,17 @@ describe("listings route", () => {
     jest.doMock("@web/src/app/api/v1/_utils", () => ({
       ApiError: RealApiError
     }));
-    jest.doMock("@web/src/server/utils/apiAuth", () => ({
-      requireAuthenticatedUser: (...args: unknown[]) =>
-        mockRequireAuthenticatedUser(...args)
-    }));
-    jest.doMock("@web/src/server/models/listings", () => ({
-      getUserListingSummariesPage: (...args: unknown[]) =>
-        mockGetUserListingSummariesPage(...args)
+    jest.doMock("@web/src/server/actions/listings/queries", () => ({
+      getCurrentUserListingSummariesPage: (...args: unknown[]) =>
+        mockGetCurrentUserListingSummariesPage(...args)
     }));
 
     const rootModule = await import("../route");
-    return { GET: rootModule.GET, mockGetUserListingSummariesPage };
+    return { GET: rootModule.GET, mockGetCurrentUserListingSummariesPage };
   }
 
   it("uses default limit/offset when params are missing", async () => {
-    const { GET, mockGetUserListingSummariesPage } = await loadRoute();
+    const { GET, mockGetCurrentUserListingSummariesPage } = await loadRoute();
     const request = {
       nextUrl: {
         searchParams: { get: () => null }
@@ -41,14 +34,14 @@ describe("listings route", () => {
 
     await GET(request as never);
 
-    expect(mockGetUserListingSummariesPage).toHaveBeenCalledWith("user-1", {
+    expect(mockGetCurrentUserListingSummariesPage).toHaveBeenCalledWith({
       limit: 10,
       offset: 0
     });
   });
 
   it("parses numeric limit/offset and falls back for invalid values", async () => {
-    const { GET, mockGetUserListingSummariesPage } = await loadRoute();
+    const { GET, mockGetCurrentUserListingSummariesPage } = await loadRoute();
     const request = {
       nextUrl: {
         searchParams: {
@@ -63,7 +56,7 @@ describe("listings route", () => {
 
     await GET(request as never);
 
-    expect(mockGetUserListingSummariesPage).toHaveBeenCalledWith("user-1", {
+    expect(mockGetCurrentUserListingSummariesPage).toHaveBeenCalledWith({
       limit: 20,
       offset: 0
     });

@@ -9,14 +9,13 @@ import {
   createChildLogger,
   logger as baseLogger
 } from "@web/src/lib/core/logging/logger";
-import { requireAuthenticatedUser } from "@web/src/server/utils/apiAuth";
 import {
-  runListingContentGenerate,
   type GenerateListingContentBody
-} from "@web/src/server/services/listingContentGeneration";
+} from "@web/src/server/actions/listings/contentGenerate";
 import { makeSseStreamHeaders } from "@web/src/lib/sse/sseEncoder";
 import { readJsonBodySafe } from "@shared/utils/api/validation";
 import { parseRequiredRouteParam } from "@shared/utils/api/parsers";
+import { generateListingContentForCurrentUser } from "@web/src/server/actions/listings/contentGenerate";
 
 const logger = createChildLogger(baseLogger, {
   module: "listing-content-generate-route"
@@ -44,12 +43,7 @@ export async function POST(
       request
     )) as GenerateListingContentBody | null;
 
-    const user = await requireAuthenticatedUser();
-    const result = await runListingContentGenerate(
-      listingId,
-      user.id,
-      body
-    );
+    const result = await generateListingContentForCurrentUser(listingId, body);
     return new Response(result.stream, {
       status: result.status,
       headers: makeSseStreamHeaders()

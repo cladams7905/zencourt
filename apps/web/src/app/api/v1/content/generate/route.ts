@@ -19,10 +19,8 @@ import {
 } from "@web/src/lib/core/logging/logger";
 import { readJsonBodySafe } from "@shared/utils";
 import { makeSseStreamHeaders } from "@web/src/lib/sse/sseEncoder";
-import { requireAuthenticatedUser } from "@web/src/server/utils/apiAuth";
-import { runContentGeneration } from "@web/src/server/services/contentGeneration";
+import { generateContentForCurrentUser } from "@web/src/server/actions/content/commands";
 import type { PromptAssemblyInput } from "@web/src/lib/ai/prompts/engine/assemble";
-import { DomainValidationError } from "@web/src/server/errors/domain";
 
 const logger = createChildLogger(baseLogger, {
   module: "content-generate-route"
@@ -36,15 +34,7 @@ export async function POST(request: NextRequest) {
       request
     )) as PromptAssemblyInput | null;
 
-    if (!body?.category) {
-      throw new DomainValidationError("category is required");
-    }
-    if (!body.agent_profile) {
-      throw new DomainValidationError("agent_profile is required");
-    }
-
-    const user = await requireAuthenticatedUser();
-    const result = await runContentGeneration(user.id, body);
+    const result = await generateContentForCurrentUser(body);
     return new Response(result.stream, {
       status: result.status,
       headers: makeSseStreamHeaders()

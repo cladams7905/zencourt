@@ -61,8 +61,7 @@ const { encodeSseEvent } = jest.requireActual(
 const mockRenderListingTemplateBatchStream = jest.fn().mockImplementation(
   async (
     _listingId: string,
-    body: { captionItems?: unknown[]; subcategory?: string; templateCount?: number; templateId?: string },
-    _siteOrigin: string
+    body: { captionItems?: unknown[]; subcategory?: string; templateCount?: number; templateId?: string }
   ) => {
     const { ApiError } = jest.requireMock("@web/src/app/api/v1/_utils");
     const sub = body?.subcategory;

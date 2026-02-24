@@ -12,6 +12,116 @@ const compat = new FlatCompat({
 const eslintConfig = [
   ...compat.extends("next/core-web-vitals", "next/typescript"),
   {
+    files: ["src/app/api/v1/**/route.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@web/src/server/models/**"],
+              message:
+                "API routes must not import server models directly. Call server/actions instead.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["src/app/api/v1/**/route.ts"],
+    ignores: ["src/app/api/v1/webhooks/**/route.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@web/src/server/services/**"],
+              message:
+                "API routes should call server/actions. Direct service imports are reserved for explicit edge/integration routes.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["src/server/actions/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@web/src/app/api/**"],
+              message:
+                "Server actions must remain HTTP-agnostic and must not import API route modules.",
+            },
+          ],
+          paths: [
+            {
+              name: "next/server",
+              message:
+                "Server actions must not use NextResponse/HTTP objects. Keep HTTP concerns in route handlers.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["src/server/services/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@web/src/server/actions/**"],
+              message:
+                "Services must not import server/actions. Keep dependency direction action -> service.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["src/server/models/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@web/src/server/actions/**", "@web/src/server/services/**", "@web/src/app/api/**"],
+              message:
+                "Models are the DB layer and must not depend on actions, services, or routes.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["src/components/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@web/src/server/models/**", "@web/src/server/services/**"],
+              message:
+                "Components must not depend on server models/services directly. Use server actions (mutations) or API routes (client fetching/streaming).",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     ignores: [
       "node_modules/**",
       ".next/**",

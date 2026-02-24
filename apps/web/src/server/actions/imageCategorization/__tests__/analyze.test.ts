@@ -19,7 +19,7 @@ jest.mock("@web/src/lib/core/logging/logger", () => ({
   })
 }));
 
-jest.mock("@web/src/server/utils/apiAuth", () => ({
+jest.mock("@web/src/server/auth/apiAuth", () => ({
   requireAuthenticatedUser: (...args: unknown[]) =>
     (mockRequireAuthenticatedUser as (...a: unknown[]) => unknown)(...args)
 }));

@@ -1,9 +1,9 @@
 "use server";
 
 import type { InsertDBUserAdditional } from "@db/types/models";
-import { requireAuthenticatedUser } from "@web/src/server/utils/apiAuth";
+import { requireAuthenticatedUser } from "@web/src/server/auth/apiAuth";
+import { db, eq, userAdditional } from "@db/client";
 import {
-  ensureGoogleHeadshot,
   markProfileCompleted,
   markWritingStyleCompleted,
   updateTargetAudiences,
@@ -17,6 +17,8 @@ import type {
   WelcomeSurveyUpdates,
   WritingStyleUpdates
 } from "@web/src/server/models/userAdditional/types";
+import storageService from "@web/src/server/services/storage";
+import { upsertUserAdditional } from "@web/src/server/models/userAdditional/helpers";
 
 export async function updateCurrentUserProfile(updates: UserProfileUpdates) {
   const user = await requireAuthenticatedUser();
@@ -25,7 +27,56 @@ export async function updateCurrentUserProfile(updates: UserProfileUpdates) {
 
 export async function ensureCurrentUserGoogleHeadshot(googleImageUrl: string) {
   const user = await requireAuthenticatedUser();
-  return ensureGoogleHeadshot(user.id, googleImageUrl);
+  if (!googleImageUrl) {
+    return null;
+  }
+
+  const [existing] = await db
+    .select({ headshotUrl: userAdditional.headshotUrl })
+    .from(userAdditional)
+    .where(eq(userAdditional.userId, user.id));
+
+  if (existing?.headshotUrl) {
+    return existing.headshotUrl;
+  }
+
+  const response = await fetch(googleImageUrl, { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error("Failed to download Google headshot");
+  }
+
+  const contentType = response.headers.get("content-type") || "image/jpeg";
+  const extension = contentType.includes("png")
+    ? "png"
+    : contentType.includes("webp")
+      ? "webp"
+      : "jpg";
+  const fileName = `google-headshot.${extension}`;
+  const buffer = await response.arrayBuffer();
+
+  const uploadResult = await storageService.uploadFile({
+    fileBuffer: buffer,
+    fileName,
+    contentType,
+    options: {
+      folder: `user_${user.id}/branding`
+    }
+  });
+
+  if (!uploadResult.success || !uploadResult.url) {
+    throw new Error(uploadResult.error || "Headshot upload failed");
+  }
+
+  const record = await upsertUserAdditional(
+    user.id,
+    {
+      headshotUrl: uploadResult.url,
+      updatedAt: new Date()
+    },
+    "Headshot could not be saved"
+  );
+
+  return record?.headshotUrl ?? uploadResult.url;
 }
 
 export async function updateCurrentUserLocation(

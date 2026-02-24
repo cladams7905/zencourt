@@ -13,7 +13,7 @@ jest.mock("@web/src/lib/core/logging/logger", () => ({
   })
 }));
 
-import { withDbErrorHandling } from "@web/src/server/actions/shared/dbErrorHandling";
+import { withDbErrorHandling } from "@web/src/server/models/shared/dbErrorHandling";
 
 describe("dbErrorHandling", () => {
   beforeEach(() => {

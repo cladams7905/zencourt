@@ -12,7 +12,7 @@ import {
 } from "@web/src/lib/core/logging/logger";
 import {
   requireAuthenticatedUser
-} from "@web/src/server/utils/apiAuth";
+} from "@web/src/server/auth/apiAuth";
 import type {
   ImageCategorizationActionOptions,
   ImageCategorizationStats

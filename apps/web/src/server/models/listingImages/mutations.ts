@@ -12,8 +12,6 @@ import {
 import type { DBListingImage } from "@db/types/models";
 import { getListingFolder } from "@shared/utils/storagePaths";
 import { withDbErrorHandling } from "@web/src/server/models/shared/dbErrorHandling";
-import { deleteStorageUrlsOrThrow } from "@web/src/server/models/shared/storageCleanup";
-import { isManagedStorageUrl } from "@web/src/server/utils/storageUrls";
 import { ensureListingImageAccess } from "./helpers";
 import type { ListingImageRecordInput, ListingImageUpdate } from "./types";
 
@@ -85,23 +83,6 @@ async function deleteListingImageRows(
   listingId: string,
   deletions: string[]
 ): Promise<void> {
-  const rowsToDelete = await db
-    .select({ id: listingImages.id, url: listingImages.url })
-    .from(listingImages)
-    .where(
-      and(
-        eq(listingImages.listingId, listingId),
-        inArray(listingImages.id, deletions)
-      )
-    );
-
-  await deleteStorageUrlsOrThrow(
-    rowsToDelete
-      .map((row) => row.url)
-      .filter((url) => Boolean(url) && isManagedStorageUrl(url)),
-    "Failed to delete listing image"
-  );
-
   await db
     .delete(listingImages)
     .where(
@@ -293,31 +274,6 @@ export async function createListingImageRecords(
       actionName: "createListingImageRecords",
       context: { userId, listingId, uploadCount: uploads.length },
       errorMessage: "Failed to save listing images. Please try again."
-    }
-  );
-}
-
-export async function deleteListingImageUploads(
-  userId: string,
-  listingId: string,
-  urls: string[]
-): Promise<void> {
-  if (!urls || urls.length === 0) {
-    return;
-  }
-
-  await withDbErrorHandling(
-    async () => {
-      await ensureListingImageAccess(userId, listingId, {
-        userIdError: "User ID is required to delete listing uploads",
-        listingIdError: "Listing ID is required to delete listing uploads"
-      });
-      await deleteStorageUrlsOrThrow(urls, "Failed to clean up listing uploads.");
-    },
-    {
-      actionName: "deleteListingImageUploads",
-      context: { userId, listingId, count: urls.length },
-      errorMessage: "Failed to clean up listing uploads. Please try again."
     }
   );
 }

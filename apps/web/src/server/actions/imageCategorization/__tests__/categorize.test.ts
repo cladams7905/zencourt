@@ -8,7 +8,7 @@ jest.mock("@web/src/server/services/imageCategorization", () => ({
     )(...args)
 }));
 
-jest.mock("@web/src/server/utils/apiAuth", () => ({
+jest.mock("@web/src/server/auth/apiAuth", () => ({
   requireAuthenticatedUser: (...args: unknown[]) =>
     (mockRequireAuthenticatedUser as (...a: unknown[]) => unknown)(...args)
 }));
