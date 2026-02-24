@@ -11,10 +11,10 @@ jest.mock("sonner", () => ({
   }
 }));
 
-jest.mock("@web/src/server/models/listingImages", () => ({
-  updateListingImageAssignments: (...args: unknown[]) =>
+jest.mock("@web/src/server/actions/listings/commands", () => ({
+  updateListingImageAssignmentsForCurrentUser: (...args: unknown[]) =>
     mockUpdateListingImageAssignments(...args),
-  assignPrimaryListingImageForCategory: (...args: unknown[]) =>
+  assignPrimaryListingImageForCategoryForCurrentUser: (...args: unknown[]) =>
     mockAssignPrimary(...args)
 }));
 
@@ -30,7 +30,6 @@ describe("useCategorizeMutations", () => {
     const setImages = jest.fn();
     const { result } = renderHook(() =>
       useCategorizeMutations({
-        userId: "u1",
         listingId: "l1",
         setImages
       })
@@ -46,7 +45,6 @@ describe("useCategorizeMutations", () => {
 
     expect(ok).toBe(true);
     expect(mockUpdateListingImageAssignments).toHaveBeenCalledWith(
-      "u1",
       "l1",
       [{ id: "img1", category: "kitchen", isPrimary: false }],
       []
@@ -58,7 +56,6 @@ describe("useCategorizeMutations", () => {
     const rollback = jest.fn();
     const { result } = renderHook(() =>
       useCategorizeMutations({
-        userId: "u1",
         listingId: "l1",
         setImages: jest.fn()
       })
@@ -79,7 +76,6 @@ describe("useCategorizeMutations", () => {
     const setImages = jest.fn();
     const { result } = renderHook(() =>
       useCategorizeMutations({
-        userId: "u1",
         listingId: "l1",
         setImages
       })
@@ -92,14 +88,13 @@ describe("useCategorizeMutations", () => {
       ]);
     });
 
-    expect(mockAssignPrimary).toHaveBeenCalledWith("u1", "l1", "kitchen");
+    expect(mockAssignPrimary).toHaveBeenCalledWith("l1", "kitchen");
     expect(setImages).toHaveBeenCalledTimes(1);
   });
 
   it("does nothing when category already has primary", async () => {
     const { result } = renderHook(() =>
       useCategorizeMutations({
-        userId: "u1",
         listingId: "l1",
         setImages: jest.fn()
       })

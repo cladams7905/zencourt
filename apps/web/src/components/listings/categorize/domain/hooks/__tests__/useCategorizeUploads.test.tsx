@@ -19,11 +19,12 @@ jest.mock("sonner", () => ({
   }
 }));
 
-jest.mock("@web/src/server/models/listingImages", () => ({
-  getListingImageUploadUrls: (...args: unknown[]) => mockGetUploadUrls(...args),
-  createListingImageRecords: (...args: unknown[]) =>
+jest.mock("@web/src/server/actions/listings/commands", () => ({
+  getListingImageUploadUrlsForCurrentUser: (...args: unknown[]) =>
+    mockGetUploadUrls(...args),
+  createListingImageRecordsForCurrentUser: (...args: unknown[]) =>
     mockCreateListingImageRecords(...args),
-  deleteListingImageUploads: (...args: unknown[]) =>
+  deleteListingImageUploadsForCurrentUser: (...args: unknown[]) =>
     mockDeleteListingImageUploads(...args)
 }));
 
@@ -48,7 +49,6 @@ describe("useCategorizeUploads", () => {
     mockGetUploadUrls.mockResolvedValue({ uploads: [], failed: [] });
     const { result } = renderHook(() =>
       useCategorizeUploads({
-        userId: "u1",
         listingId: "l1",
         runDraftSave: async <T,>(fn: () => Promise<T>) => fn(),
         setImages: jest.fn()
@@ -59,7 +59,7 @@ describe("useCategorizeUploads", () => {
       await result.current.getUploadUrls([]);
     });
 
-    expect(mockGetUploadUrls).toHaveBeenCalledWith("u1", "l1", []);
+    expect(mockGetUploadUrls).toHaveBeenCalledWith("l1", []);
   });
 
   it("navigates to processing after successful record creation", async () => {
@@ -75,7 +75,6 @@ describe("useCategorizeUploads", () => {
     ]);
     const { result } = renderHook(() =>
       useCategorizeUploads({
-        userId: "u1",
         listingId: "l1",
         runDraftSave: async <T,>(fn: () => Promise<T>) => fn(),
         setImages: jest.fn()
@@ -98,7 +97,6 @@ describe("useCategorizeUploads", () => {
     mockDeleteListingImageUploads.mockResolvedValue(undefined);
     const { result } = renderHook(() =>
       useCategorizeUploads({
-        userId: "u1",
         listingId: "l1",
         runDraftSave: async <T,>(fn: () => Promise<T>) => fn(),
         setImages: jest.fn()
@@ -111,32 +109,9 @@ describe("useCategorizeUploads", () => {
       ]);
     });
 
-    expect(mockDeleteListingImageUploads).toHaveBeenCalledWith("u1", "l1", [
+    expect(mockDeleteListingImageUploads).toHaveBeenCalledWith("l1", [
       "u"
     ]);
     expect(mockToastError).toHaveBeenCalled();
-  });
-
-  it("builds processing route with and without batch count", () => {
-    const { result } = renderHook(() =>
-      useCategorizeUploads({
-        userId: "u1",
-        listingId: "l1",
-        runDraftSave: async <T,>(fn: () => Promise<T>) => fn(),
-        setImages: jest.fn()
-      })
-    );
-
-    act(() => {
-      result.current.onUploadsComplete({ count: 0, batchStartedAt: 100 });
-      result.current.onUploadsComplete({ count: 2, batchStartedAt: 101 });
-    });
-
-    expect(mockPush).toHaveBeenCalledWith(
-      "/listings/l1/categorize/processing?batchStartedAt=100"
-    );
-    expect(mockPush).toHaveBeenCalledWith(
-      "/listings/l1/categorize/processing?batch=2&batchStartedAt=101"
-    );
   });
 });

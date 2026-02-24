@@ -7,7 +7,6 @@ import {
 } from "@web/src/server/actions/listings/commands";
 
 type UseCategorizeMutationsParams = {
-  userId: string;
   listingId: string;
   setImages: React.Dispatch<React.SetStateAction<ListingImageItem[]>>;
 };

@@ -5,7 +5,6 @@ import type { ListingPropertyDetails } from "@shared/types/models";
 import { saveListingPropertyDetailsForCurrentUser } from "@web/src/server/actions/propertyDetails/commands";
 
 type UseReviewAutoSaveParams = {
-  userId?: string;
   listingId: string;
   detailsRef: React.MutableRefObject<ListingPropertyDetails>;
   dirtyRef: React.MutableRefObject<boolean>;

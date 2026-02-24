@@ -34,7 +34,6 @@ import {
 
 export function ListingReviewView({
   listingId,
-  userId,
   title,
   address,
   propertyDetails,
@@ -74,7 +73,6 @@ export function ListingReviewView({
   });
   const { isSaving, handleSave, triggerAutoSave, normalizeBathrooms } =
     useReviewAutoSave({
-      userId,
       listingId,
       detailsRef,
       dirtyRef,
@@ -83,7 +81,6 @@ export function ListingReviewView({
   const { isGoingBack, handleConfirmContinue, handleGoBack } =
     useReviewStageActions({
       listingId,
-      userId,
       navigate: router.push,
       handleSave
     });

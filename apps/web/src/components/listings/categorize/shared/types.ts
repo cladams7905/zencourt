@@ -11,7 +11,6 @@ export interface ListingCategorizeViewProps {
   title: string;
   initialAddress: string;
   listingId: string;
-  userId: string;
   initialImages: ListingImageItem[];
   googleMapsApiKey: string;
   hasPropertyDetails: boolean;

@@ -36,7 +36,6 @@ export default async function ListingReviewPage({
   return (
     <ListingReviewView
       listingId={listingId}
-      userId={user.id}
       title={listing.title?.trim() || "Listing"}
       address={listing.address ?? null}
       propertyDetails={listing.propertyDetails ?? null}

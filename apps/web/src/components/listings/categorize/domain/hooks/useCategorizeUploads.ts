@@ -13,7 +13,6 @@ import {
 type RunDraftSave = <T>(fn: () => Promise<T>) => Promise<T>;
 
 type UseCategorizeUploadsParams = {
-  userId: string;
   listingId: string;
   runDraftSave: RunDraftSave;
   setImages: React.Dispatch<React.SetStateAction<ListingImageItem[]>>;
@@ -77,23 +76,8 @@ export function useCategorizeUploads({
     [listingId, router, runDraftSave, setImages]
   );
 
-  const onUploadsComplete = React.useCallback(
-    ({ count, batchStartedAt }: { count: number; batchStartedAt: number }) => {
-      if (!listingId?.trim()) {
-        return;
-      }
-      const batchParam =
-        count > 0
-          ? `?batch=${count}&batchStartedAt=${batchStartedAt}`
-          : `?batchStartedAt=${batchStartedAt}`;
-      router.push(`/listings/${listingId}/categorize/processing${batchParam}`);
-    },
-    [listingId, router]
-  );
-
   return {
     getUploadUrls,
-    onCreateRecords,
-    onUploadsComplete
+    onCreateRecords
   };
 }

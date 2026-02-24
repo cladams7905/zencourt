@@ -23,8 +23,8 @@ jest.mock("@web/src/lib/domain/listing/sidebarEvents", () => ({
     mockEmitListingSidebarUpdate(...args)
 }));
 
-jest.mock("@web/src/server/models/listings", () => ({
-  updateListing: (...args: unknown[]) => mockUpdateListing(...args)
+jest.mock("@web/src/server/actions/listings/commands", () => ({
+  updateListingForCurrentUser: (...args: unknown[]) => mockUpdateListing(...args)
 }));
 
 describe("useCategorizeListingDetails", () => {
@@ -43,7 +43,6 @@ describe("useCategorizeListingDetails", () => {
         initialAddress: "",
         hasPropertyDetails: true,
         listingId: "l1",
-        userId: "u1",
         runDraftSave: async <T,>(fn: () => Promise<T>) => fn()
       })
     );
@@ -52,7 +51,7 @@ describe("useCategorizeListingDetails", () => {
       await result.current.persistListingTitle("New");
     });
 
-    expect(mockUpdateListing).toHaveBeenCalledWith("u1", "l1", { title: "New" });
+    expect(mockUpdateListing).toHaveBeenCalledWith("l1", { title: "New" });
     expect(mockEmitListingSidebarUpdate).toHaveBeenCalled();
   });
 
@@ -63,7 +62,6 @@ describe("useCategorizeListingDetails", () => {
         initialAddress: "123 Main St",
         hasPropertyDetails: true,
         listingId: "l1",
-        userId: "u1",
         runDraftSave: async <T,>(fn: () => Promise<T>) => fn()
       })
     );
@@ -76,7 +74,6 @@ describe("useCategorizeListingDetails", () => {
 
     await waitFor(() => {
       expect(mockUpdateListing).toHaveBeenCalledWith(
-        "u1",
         "l1",
         expect.objectContaining({
           address: "456 Pine St, Seattle, WA",
@@ -93,7 +90,6 @@ describe("useCategorizeListingDetails", () => {
         initialAddress: "123 Main St",
         hasPropertyDetails: true,
         listingId: "l1",
-        userId: "u1",
         runDraftSave: async <T,>(fn: () => Promise<T>) => fn()
       })
     );
@@ -112,7 +108,6 @@ describe("useCategorizeListingDetails", () => {
         initialAddress: "",
         hasPropertyDetails: false,
         listingId: "l1",
-        userId: "u1",
         runDraftSave: async <T,>(fn: () => Promise<T>) => fn()
       })
     );

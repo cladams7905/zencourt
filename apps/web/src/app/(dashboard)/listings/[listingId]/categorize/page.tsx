@@ -43,7 +43,6 @@ export default async function ListingCategorizePage({
       title={listing.title?.trim() || "Listing"}
       initialAddress={listing.address ?? ""}
       listingId={listingId}
-      userId={user.id}
       initialImages={imageItems}
       googleMapsApiKey={googleMapsApiKey}
       hasPropertyDetails={Boolean(listing.propertyDetails)}

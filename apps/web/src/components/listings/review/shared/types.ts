@@ -4,7 +4,6 @@ export type SelectMode = "preset" | "custom";
 
 export type ListingReviewViewProps = {
   listingId: string;
-  userId: string;
   title: string;
   address: string | null;
   propertyDetails: ListingPropertyDetails | null;
