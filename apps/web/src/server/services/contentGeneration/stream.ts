@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { ApiError } from "../../../_utils";
-import { StatusCode } from "@web/src/app/api/v1/_responses";
+import { ApiError } from "@web/src/server/utils/apiError";
+import { StatusCode } from "@shared/types/api";
 import {
   encodeSseEvent,
   makeSseStreamHeaders
@@ -13,21 +13,18 @@ import {
   RECENT_HOOKS_MAX,
   RECENT_HOOKS_TTL_SECONDS
 } from "@web/src/server/services/contentRotation";
-import { OUTPUT_FORMAT } from "../domain/outputFormat";
+import { OUTPUT_FORMAT } from "./domain/outputFormat";
 import {
   extractTextDelta,
   parseJsonArray,
   validateGeneratedItems
-} from "../domain/parse";
+} from "./domain/parse";
+import type { Redis } from "@web/src/server/services/cache/redis";
 
 type Logger = {
   error: (payload: unknown, message: string) => void;
   info: (payload: unknown, message: string) => void;
 };
-
-type RedisClient = ReturnType<
-  typeof import("@web/src/server/services/cache/redis").getSharedRedisClient
->;
 
 async function initializeAiStream(
   systemPrompt: string,
@@ -172,7 +169,7 @@ function parseAndValidateResponse(
 
 async function updateRecentHooks(
   parsed: unknown,
-  redis: RedisClient | null,
+  redis: Redis | null,
   recentHooksKey: string,
   logger: Logger
 ): Promise<void> {
@@ -216,9 +213,7 @@ function sendDoneEvent(
 export async function createSseResponse(args: {
   systemPrompt: string;
   userPrompt: string;
-  redis: ReturnType<
-    typeof import("@web/src/server/services/cache/redis").getSharedRedisClient
-  >;
+  redis: Redis | null;
   recentHooksKey: string;
   logger: Logger;
 }): Promise<NextResponse> {
@@ -233,7 +228,7 @@ export async function createSseResponse(args: {
         const fullText = await processStreamChunks(upstream, controller);
         const parsed = parseAndValidateResponse(fullText, controller, logger);
         if (parsed === null) {
-          return; // Error already handled and stream closed
+          return;
         }
         await updateRecentHooks(parsed, redis, recentHooksKey, logger);
         sendDoneEvent(parsed, controller, streamConfig.model);

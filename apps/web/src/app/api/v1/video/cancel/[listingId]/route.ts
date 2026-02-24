@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  ApiError,
-  requireAuthenticatedUser,
-  requireListingAccess
-} from "@web/src/app/api/v1/_utils";
-import { getVideoServerConfig } from "@web/src/app/api/v1/video/_config";
+import { ApiError } from "@web/src/app/api/v1/_utils";
 import {
   apiErrorCodeFromStatus,
   apiErrorResponse,
@@ -16,6 +11,7 @@ import {
   logger as baseLogger
 } from "@web/src/lib/core/logging/logger";
 import { readJsonBodySafe } from "@shared/utils/api/validation";
+import { cancelListingVideoGeneration } from "@web/src/server/actions/api/video";
 
 const logger = createChildLogger(baseLogger, {
   module: "generation-cancel-route"
@@ -53,52 +49,10 @@ export async function POST(
   }
 
   try {
-    const user = await requireAuthenticatedUser();
-    await requireListingAccess(listingId, user.id);
-
     const reason = await extractReason(request);
-    const { baseUrl, apiKey } = getVideoServerConfig();
+    const result = await cancelListingVideoGeneration(listingId, reason);
 
-    const response = await fetch(`${baseUrl}/video/cancel`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-API-Key": apiKey
-      },
-      body: JSON.stringify({
-        listingId,
-        reason: reason || "Canceled via workflow"
-      })
-    });
-
-    const payload = await response.json().catch(() => ({}));
-
-    if (!response.ok) {
-      const message =
-        payload?.error || payload?.message || "Failed to cancel generation";
-      return apiErrorResponse(
-        response.status,
-        "VIDEO_SERVER_ERROR",
-        "Video server cancel error",
-        { message }
-      );
-    }
-
-    logger.info(
-      {
-        listingId,
-        canceledVideos: payload?.canceledVideos,
-        canceledJobs: payload?.canceledJobs
-      },
-      "Canceled generation via video server"
-    );
-
-    return NextResponse.json({
-      success: true,
-      listingId,
-      canceledVideos: payload?.canceledVideos ?? 0,
-      canceledJobs: payload?.canceledJobs ?? 0
-    });
+    return NextResponse.json(result);
   } catch (error) {
     if (error instanceof ApiError) {
       return apiErrorResponse(

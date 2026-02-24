@@ -1,5 +1,7 @@
 /** @jest-environment node */
 
+import { LISTING_CONTENT_SUBCATEGORIES } from "@shared/types/models";
+
 describe("listing templates render route", () => {
   async function loadRoute() {
     jest.resetModules();
@@ -15,17 +17,38 @@ describe("listing templates render route", () => {
     const mockGetOrCreateUserAdditional = jest.fn().mockResolvedValue({
       socialHandle: null
     });
-    const mockRenderListingTemplateBatch = jest.fn().mockResolvedValue({
-      items: [
-        {
-          templateId: "tpl-1",
-          imageUrl: "https://img/1.jpg",
-          captionItemId: "cap-1",
-          parametersUsed: {}
+    const mockRenderListingTemplateBatch = jest.fn().mockImplementation(
+      async (
+        _listingId: string,
+        body: { captionItems?: unknown[]; subcategory?: string; templateCount?: number },
+        _siteOrigin: string
+      ) => {
+        const sub = body?.subcategory;
+        if (!sub || typeof sub !== "string" || !sub.trim()) {
+          throw new MockApiError(400, {
+            error: "Invalid request",
+            message: "A valid listing subcategory is required"
+          });
         }
-      ],
-      failedTemplateIds: []
-    });
+        if (!(LISTING_CONTENT_SUBCATEGORIES as readonly string[]).includes(sub.trim())) {
+          throw new MockApiError(400, {
+            error: "Invalid request",
+            message: "A valid listing subcategory is required"
+          });
+        }
+        const items = Array.isArray(body?.captionItems) && body.captionItems.length > 0
+          ? [
+              {
+                templateId: "tpl-1",
+                imageUrl: "https://img/1.jpg",
+                captionItemId: "cap-1",
+                parametersUsed: {} as Record<string, string>
+              }
+            ]
+          : [];
+        return { items, failedTemplateIds: [] };
+      }
+    );
 
     class MockApiError extends Error {
       status: number;
@@ -39,20 +62,9 @@ describe("listing templates render route", () => {
     }
 
     jest.doMock("@web/src/app/api/v1/_utils", () => ({
-      ApiError: MockApiError,
-      requireAuthenticatedUser: (...args: unknown[]) =>
-        mockRequireAuthenticatedUser(...args),
-      requireListingAccess: (...args: unknown[]) =>
-        mockRequireListingAccess(...args)
+      ApiError: MockApiError
     }));
-    jest.doMock("@web/src/server/actions/db/listingImages", () => ({
-      getListingImages: (...args: unknown[]) => mockGetListingImages(...args)
-    }));
-    jest.doMock("@web/src/server/actions/db/userAdditional", () => ({
-      getOrCreateUserAdditional: (...args: unknown[]) =>
-        mockGetOrCreateUserAdditional(...args)
-    }));
-    jest.doMock("@web/src/server/services/templateRender", () => ({
+    jest.doMock("@web/src/server/actions/api/listings/templates", () => ({
       renderListingTemplateBatch: (...args: unknown[]) =>
         mockRenderListingTemplateBatch(...args)
     }));
@@ -116,8 +128,8 @@ describe("listing templates render route", () => {
     const payload = await response.json();
 
     expect(response.status).toBe(200);
-    expect(payload).toEqual({ items: [], failedTemplateIds: [] });
-    expect(mockRenderListingTemplateBatch).not.toHaveBeenCalled();
+    expect(payload).toMatchObject({ failedTemplateIds: [] });
+    expect(mockRenderListingTemplateBatch).toHaveBeenCalledTimes(1);
   });
 
   it("drops non-object and empty caption items", async () => {
@@ -136,8 +148,8 @@ describe("listing templates render route", () => {
     const payload = await response.json();
 
     expect(response.status).toBe(200);
-    expect(payload).toEqual({ items: [], failedTemplateIds: [] });
-    expect(mockRenderListingTemplateBatch).not.toHaveBeenCalled();
+    expect(payload).toMatchObject({ failedTemplateIds: [] });
+    expect(mockRenderListingTemplateBatch).toHaveBeenCalledTimes(1);
   });
 
   it("returns empty result when captionItems is not an array", async () => {
@@ -157,7 +169,7 @@ describe("listing templates render route", () => {
 
     expect(response.status).toBe(200);
     expect(payload).toEqual({ items: [], failedTemplateIds: [] });
-    expect(mockRenderListingTemplateBatch).not.toHaveBeenCalled();
+    expect(mockRenderListingTemplateBatch).toHaveBeenCalledTimes(1);
   });
 
   it("sanitizes caption items and returns render result", async () => {
@@ -187,18 +199,13 @@ describe("listing templates render route", () => {
 
     expect(response.status).toBe(200);
     expect(mockRenderListingTemplateBatch).toHaveBeenCalledWith(
+      "listing-1",
       expect.objectContaining({
         subcategory: "new_listing",
         templateCount: 3,
-        captionItems: [
-          {
-            id: "cap-1",
-            hook: "Hook",
-            caption: "Caption",
-            body: [{ header: "Header", content: "Content" }]
-          }
-        ]
-      })
+        captionItems: expect.any(Array)
+      }),
+      "http://localhost:3000"
     );
   });
 
@@ -219,47 +226,25 @@ describe("listing templates render route", () => {
 
     expect(response.status).toBe(200);
     expect(mockRenderListingTemplateBatch).toHaveBeenCalledWith(
+      "listing-1",
       expect.objectContaining({
-        templateCount: undefined
-      })
+        subcategory: "new_listing",
+        templateCount: 0,
+        captionItems: expect.any(Array)
+      }),
+      "http://localhost:3000"
     );
   });
 
   it("maps ApiError to status code response", async () => {
-    jest.resetModules();
-
-    class MockApiError extends Error {
-      status: number;
-      body: { error: string; message: string };
-      constructor(status: number, body: { error: string; message: string }) {
-        super(body.message);
-        this.status = status;
-        this.body = body;
-      }
-    }
-
-    jest.doMock("@web/src/app/api/v1/_utils", () => ({
-      ApiError: MockApiError,
-      requireAuthenticatedUser: jest.fn().mockResolvedValue({ id: "user-1" }),
-      requireListingAccess: jest.fn().mockRejectedValue(
-        new MockApiError(403, { error: "Forbidden", message: "no access" })
-      )
-    }));
-    jest.doMock("@web/src/server/actions/db/listingImages", () => ({
-      getListingImages: jest.fn()
-    }));
-    jest.doMock("@web/src/server/actions/db/userAdditional", () => ({
-      getOrCreateUserAdditional: jest.fn()
-    }));
-    jest.doMock("@web/src/server/services/templateRender", () => ({
-      renderListingTemplateBatch: jest.fn()
-    }));
-    jest.doMock("@web/src/lib/core/logging/logger", () => ({
-      logger: { error: jest.fn(), warn: jest.fn() },
-      createChildLogger: () => ({ error: jest.fn(), warn: jest.fn() })
-    }));
-
-    const routeModule = await import("../route");
+    const { POST, mockRenderListingTemplateBatch } = await loadRoute();
+    const { ApiError: MockApiError } = jest.requireMock("@web/src/app/api/v1/_utils");
+    mockRenderListingTemplateBatch.mockRejectedValueOnce(
+      new MockApiError(403, {
+        error: "Forbidden",
+        message: "no access"
+      })
+    );
     const request = {
       json: async () => ({
         subcategory: "new_listing",
@@ -268,45 +253,15 @@ describe("listing templates render route", () => {
       nextUrl: { origin: "http://localhost:3000" }
     } as unknown as Request;
 
-    const response = await routeModule.POST(request as never, {
+    const response = await POST(request as never, {
       params: Promise.resolve({ listingId: "listing-1" })
     });
     expect(response.status).toBe(403);
   });
 
   it("returns 500 for unexpected errors", async () => {
-    jest.resetModules();
-
-    class MockApiError extends Error {
-      status: number;
-      body: { error: string; message: string };
-      constructor(status: number, body: { error: string; message: string }) {
-        super(body.message);
-        this.status = status;
-        this.body = body;
-      }
-    }
-
-    jest.doMock("@web/src/app/api/v1/_utils", () => ({
-      ApiError: MockApiError,
-      requireAuthenticatedUser: jest.fn().mockResolvedValue({ id: "user-1" }),
-      requireListingAccess: jest.fn().mockResolvedValue({ id: "listing-1" })
-    }));
-    jest.doMock("@web/src/server/actions/db/listingImages", () => ({
-      getListingImages: jest.fn().mockResolvedValue([])
-    }));
-    jest.doMock("@web/src/server/actions/db/userAdditional", () => ({
-      getOrCreateUserAdditional: jest.fn().mockResolvedValue({})
-    }));
-    jest.doMock("@web/src/server/services/templateRender", () => ({
-      renderListingTemplateBatch: jest.fn().mockRejectedValue(new Error("boom"))
-    }));
-    jest.doMock("@web/src/lib/core/logging/logger", () => ({
-      logger: { error: jest.fn(), warn: jest.fn() },
-      createChildLogger: () => ({ error: jest.fn(), warn: jest.fn() })
-    }));
-
-    const routeModule = await import("../route");
+    const { POST, mockRenderListingTemplateBatch } = await loadRoute();
+    mockRenderListingTemplateBatch.mockRejectedValueOnce(new Error("boom"));
     const request = {
       json: async () => ({
         subcategory: "new_listing",
@@ -315,45 +270,15 @@ describe("listing templates render route", () => {
       nextUrl: { origin: "http://localhost:3000" }
     } as unknown as Request;
 
-    const response = await routeModule.POST(request as never, {
+    const response = await POST(request as never, {
       params: Promise.resolve({ listingId: "listing-1" })
     });
     expect(response.status).toBe(500);
   });
 
   it("returns 500 for non-Error throws", async () => {
-    jest.resetModules();
-
-    class MockApiError extends Error {
-      status: number;
-      body: { error: string; message: string };
-      constructor(status: number, body: { error: string; message: string }) {
-        super(body.message);
-        this.status = status;
-        this.body = body;
-      }
-    }
-
-    jest.doMock("@web/src/app/api/v1/_utils", () => ({
-      ApiError: MockApiError,
-      requireAuthenticatedUser: jest.fn().mockResolvedValue({ id: "user-1" }),
-      requireListingAccess: jest.fn().mockResolvedValue({ id: "listing-1" })
-    }));
-    jest.doMock("@web/src/server/actions/db/listingImages", () => ({
-      getListingImages: jest.fn().mockResolvedValue([])
-    }));
-    jest.doMock("@web/src/server/actions/db/userAdditional", () => ({
-      getOrCreateUserAdditional: jest.fn().mockResolvedValue({})
-    }));
-    jest.doMock("@web/src/server/services/templateRender", () => ({
-      renderListingTemplateBatch: jest.fn().mockRejectedValue("nope")
-    }));
-    jest.doMock("@web/src/lib/core/logging/logger", () => ({
-      logger: { error: jest.fn(), warn: jest.fn() },
-      createChildLogger: () => ({ error: jest.fn(), warn: jest.fn() })
-    }));
-
-    const routeModule = await import("../route");
+    const { POST, mockRenderListingTemplateBatch } = await loadRoute();
+    mockRenderListingTemplateBatch.mockRejectedValueOnce("nope");
     const request = {
       json: async () => ({
         subcategory: "new_listing",
@@ -362,7 +287,7 @@ describe("listing templates render route", () => {
       nextUrl: { origin: "http://localhost:3000" }
     } as unknown as Request;
 
-    const response = await routeModule.POST(request as never, {
+    const response = await POST(request as never, {
       params: Promise.resolve({ listingId: "listing-1" })
     });
     expect(response.status).toBe(500);

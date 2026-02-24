@@ -1,4 +1,4 @@
-import { ApiError } from "@web/src/app/api/v1/_utils";
+import { ApiError } from "@web/src/server/utils/apiError";
 import {
   ROOM_CATEGORIES,
   RoomCategory

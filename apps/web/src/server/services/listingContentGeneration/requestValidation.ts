@@ -1,5 +1,5 @@
-import { ApiError } from "@web/src/app/api/v1/_utils";
-import { StatusCode } from "@web/src/app/api/v1/_responses";
+import { ApiError } from "@web/src/server/utils/apiError";
+import { StatusCode } from "@shared/types/api";
 import { parseRequiredRouteParam } from "@shared/utils/api/parsers";
 import { LISTING_CONTENT_SUBCATEGORIES } from "@shared/types/models";
 import type {

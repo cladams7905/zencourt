@@ -4,16 +4,20 @@ describe("video generate route", () => {
   async function loadRoute() {
     jest.resetModules();
 
-    const mockRequireAuthenticatedUser = jest
-      .fn()
-      .mockResolvedValue({ id: "user-1" });
-    const mockRequireListingAccess = jest.fn().mockResolvedValue({
-      id: "listing-1"
-    });
-    const mockStartListingVideoGeneration = jest.fn().mockResolvedValue({
-      videoId: "video-1",
-      jobIds: ["job-1", "job-2"],
-      jobCount: 2
+    const mockStartListingVideoGeneration = jest.fn().mockImplementation(async (body: unknown) => {
+      const b = body as { listingId?: string };
+      if (!b?.listingId || typeof b.listingId !== "string") {
+        throw new MockApiError(StatusCode.BAD_REQUEST, {
+          error: "Invalid request",
+          message: "listingId is required"
+        });
+      }
+      return {
+        listingId: "listing-1",
+        videoId: "video-1",
+        jobIds: ["job-1", "job-2"],
+        jobCount: 2
+      };
     });
 
     class MockApiError extends Error {
@@ -29,19 +33,17 @@ describe("video generate route", () => {
 
     class MockDrizzleQueryError extends Error {}
 
+    const StatusCode = { BAD_REQUEST: 400 };
+
     jest.doMock("@web/src/app/api/v1/_utils", () => ({
-      ApiError: MockApiError,
-      requireAuthenticatedUser: (...args: unknown[]) =>
-        mockRequireAuthenticatedUser(...args),
-      requireListingAccess: (...args: unknown[]) =>
-        mockRequireListingAccess(...args)
+      ApiError: MockApiError
     }));
 
     jest.doMock("drizzle-orm", () => ({
       DrizzleQueryError: MockDrizzleQueryError
     }));
 
-    jest.doMock("@web/src/server/services/videoGeneration", () => ({
+    jest.doMock("@web/src/server/actions/api/video", () => ({
       startListingVideoGeneration: (...args: unknown[]) =>
         mockStartListingVideoGeneration(...args)
     }));
@@ -82,12 +84,13 @@ describe("video generate route", () => {
       jobIds: ["job-1", "job-2"],
       jobCount: 2
     });
-    expect(mockStartListingVideoGeneration).toHaveBeenCalledWith({
-      listingId: "listing-1",
-      userId: "user-1",
-      orientation: "vertical",
-      aiDirections: "focus on kitchen"
-    });
+    expect(mockStartListingVideoGeneration).toHaveBeenCalledWith(
+      expect.objectContaining({
+        listingId: "listing-1",
+        orientation: "vertical",
+        aiDirections: "focus on kitchen"
+      })
+    );
   });
 
   it("maps ApiError to route error response", async () => {

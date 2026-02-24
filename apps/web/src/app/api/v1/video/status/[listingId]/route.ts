@@ -1,18 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  ApiError,
-  requireAuthenticatedUser,
-  requireListingAccess
-} from "../../../_utils";
-import { getListingVideoStatus } from "@web/src/server/services/videoGeneration";
-import { createChildLogger } from "@shared/utils";
-import { logger as baseLogger } from "@web/src/lib/core/logging/logger";
+import { ApiError } from "../../../_utils";
 import {
   apiErrorCodeFromStatus,
   apiErrorResponse,
   StatusCode
 } from "@web/src/app/api/v1/_responses";
 import { parseRequiredRouteParam } from "@shared/utils/api/parsers";
+import {
+  createChildLogger,
+  logger as baseLogger
+} from "@web/src/lib/core/logging/logger";
+import { getListingVideoStatus } from "@web/src/server/actions/api/video";
 
 export const runtime = "nodejs";
 
@@ -39,9 +37,6 @@ export async function GET(
         { message: "listingId path parameter is required" }
       );
     }
-
-    const user = await requireAuthenticatedUser();
-    await requireListingAccess(listingId, user.id);
 
     const payload = await getListingVideoStatus(listingId);
     return NextResponse.json({

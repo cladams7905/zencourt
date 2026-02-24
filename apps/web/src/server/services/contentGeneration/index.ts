@@ -1,0 +1,1 @@
+export { runContentGeneration } from "./service";

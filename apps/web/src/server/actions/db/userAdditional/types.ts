@@ -35,3 +35,17 @@ export type WritingStyleUpdates = Pick<
   InsertDBUserAdditional,
   "writingToneLevel" | "writingStyleCustom"
 >;
+
+/** Snapshot of user additional fields used for content generation (no PII beyond what's needed). */
+export type UserAdditionalSnapshot = {
+  targetAudiences: string[] | null;
+  location: string | null;
+  writingToneLevel: number | null;
+  writingStyleCustom: string | null;
+  agentName: string;
+  brokerageName: string;
+  agentBio: string | null;
+  audienceDescription: string | null;
+  county: string | null;
+  serviceAreas: string[] | null;
+};

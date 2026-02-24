@@ -1,6 +1,6 @@
 /** @jest-environment node */
 
-jest.mock("@web/src/app/api/v1/_utils", () => ({
+jest.mock("@web/src/server/utils/apiError", () => ({
   ApiError: class ApiError extends Error {
     status: number;
     body: { error: string; message: string };
@@ -93,7 +93,7 @@ describe("requestValidation", () => {
     });
 
     it("throws ApiError 400 when subcategory is invalid", () => {
-      const utils = jest.requireMock("@web/src/app/api/v1/_utils");
+      const utils = jest.requireMock("@web/src/server/utils/apiError");
 
       expect(() =>
         parseAndValidateParams(
@@ -119,7 +119,7 @@ describe("requestValidation", () => {
     });
 
     it("throws ApiError 400 when subcategory is missing", () => {
-      const utils = jest.requireMock("@web/src/app/api/v1/_utils");
+      const utils = jest.requireMock("@web/src/server/utils/apiError");
 
       expect(() =>
         parseAndValidateParams({ media_type: "image" }, "listing-1")
@@ -135,7 +135,7 @@ describe("requestValidation", () => {
     });
 
     it("throws ApiError 400 when media_type is invalid", () => {
-      const utils = jest.requireMock("@web/src/app/api/v1/_utils");
+      const utils = jest.requireMock("@web/src/server/utils/apiError");
 
       expect(() =>
         parseAndValidateParams(
@@ -157,7 +157,7 @@ describe("requestValidation", () => {
     });
 
     it("throws ApiError 400 when listingId is undefined", () => {
-      const utils = jest.requireMock("@web/src/app/api/v1/_utils");
+      const utils = jest.requireMock("@web/src/server/utils/apiError");
 
       expect(() =>
         parseAndValidateParams(
@@ -179,7 +179,7 @@ describe("requestValidation", () => {
     });
 
     it("throws ApiError 400 when body is null and subcategory is required", () => {
-      const utils = jest.requireMock("@web/src/app/api/v1/_utils");
+      const utils = jest.requireMock("@web/src/server/utils/apiError");
 
       expect(() => parseAndValidateParams(null, "listing-1")).toThrow(utils.ApiError);
     });

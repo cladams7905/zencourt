@@ -382,5 +382,17 @@ export class ImageCategorizationService {
   }
 }
 
-const imageCategorizationService = new ImageCategorizationService();
-export default imageCategorizationService;
+const defaultService = new ImageCategorizationService();
+
+/**
+ * Analyze images workflow: classification → categorization.
+ */
+export async function analyzeImagesWorkflow(
+  imageDataList: SerializableImageData[],
+  options: {
+    onProgress?: ProgressCallback;
+    aiConcurrency?: number;
+  } = {}
+): Promise<CategorizationResult> {
+  return defaultService.analyzeImagesWorkflow(imageDataList, options);
+}

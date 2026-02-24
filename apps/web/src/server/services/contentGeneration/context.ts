@@ -1,11 +1,12 @@
-import { ApiError } from "../../../_utils";
-import { StatusCode } from "@web/src/app/api/v1/_responses";
+import { ApiError } from "@web/src/server/utils/apiError";
+import { StatusCode } from "@shared/types/api";
 import type { PromptAssemblyInput } from "@web/src/lib/ai/prompts/engine/assemble";
-import { parseMarketLocation } from "./marketLocation";
+import { parseMarketLocation } from "./domain/marketLocation";
 import { getMarketData } from "@web/src/server/services/marketData";
 import { getCommunityContentContext } from "@web/src/server/services/communityData/service";
 import type { CommunityCategoryKey } from "@web/src/server/services/contentRotation";
-import type { UserAdditionalSnapshot } from "./userAdditional";
+import type { UserAdditionalSnapshot } from "@web/src/server/actions/db/userAdditional";
+import type { Redis } from "@web/src/server/services/cache/redis";
 
 export type ResolvedContentContext = {
   marketData: PromptAssemblyInput["market_data"];
@@ -19,9 +20,7 @@ export async function resolveContentContext(args: {
   body: PromptAssemblyInput;
   snapshot: UserAdditionalSnapshot;
   userId: string;
-  redis: ReturnType<
-    typeof import("@web/src/server/services/cache/redis").getSharedRedisClient
-  >;
+  redis: Redis | null;
   activeAudience: string | null;
 }): Promise<ResolvedContentContext> {
   const { body, snapshot, userId, redis, activeAudience } = args;

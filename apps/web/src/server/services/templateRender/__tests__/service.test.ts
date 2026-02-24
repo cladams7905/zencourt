@@ -18,13 +18,10 @@ jest.mock("@web/src/server/services/storage", () => ({
   }
 }));
 
-jest.mock(
-  "@web/src/app/api/v1/listings/[listingId]/content/generate/services/cache",
-  () => ({
-    getCachedListingContentItem: jest.fn().mockResolvedValue(null),
-    updateRenderedPreviewForItem: jest.fn().mockResolvedValue(undefined)
-  })
-);
+jest.mock("@web/src/server/services/cache/listingContent", () => ({
+  getCachedListingContentItem: jest.fn().mockResolvedValue(null),
+  updateRenderedPreviewForItem: jest.fn().mockResolvedValue(undefined)
+}));
 
 jest.mock("../providers/orshot", () => ({
   renderTemplate: (...args: unknown[]) => mockRenderTemplate(...args),
