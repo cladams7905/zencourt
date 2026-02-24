@@ -1,5 +1,5 @@
 import type { CommunityData } from "@web/src/lib/domain/market/types";
-import type { Redis } from "@web/src/lib/cache/redisClient";
+import type { Redis } from "@web/src/server/services/cache/redis";
 import type { CategoryKey } from "@web/src/server/services/communityData/config";
 import {
   COMMUNITY_CATEGORY_KEYS,

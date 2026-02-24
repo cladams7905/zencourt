@@ -1,18 +1,26 @@
 import { createHash } from "node:crypto";
-import { getSharedRedisClient } from "@web/src/lib/cache/redisClient";
 import {
   createChildLogger,
   logger as baseLogger
 } from "@web/src/lib/core/logging/logger";
 import type { ListingContentSubcategory } from "@shared/types/models";
+import { getSharedRedisClient } from "../redis";
 import type {
   ListingContentItem,
+  ListingContentItemWithKey,
+  ListingGeneratedItem,
+  ListingMediaType
+} from "./types";
+
+export type {
+  ListingContentItem,
+  ListingContentItemWithKey,
   ListingGeneratedItem,
   ListingMediaType
 } from "./types";
 
 const logger = createChildLogger(baseLogger, {
-  module: "listing-content-generate-cache"
+  module: "listing-content-cache"
 });
 
 export const LISTING_CONTENT_CACHE_PREFIX = "listing-content";
@@ -151,11 +159,6 @@ export async function setCachedListingContentItem(params: {
   }
 }
 
-export type ListingContentItemWithKey = ListingContentItem & {
-  cacheKeyTimestamp: number;
-  cacheKeyId: number;
-};
-
 /**
  * Returns all cached listing content items for a filter. SCANs keys by prefix, GETs each, sorts by timestamp then id.
  */
@@ -273,5 +276,33 @@ export async function updateRenderedPreviewForItem(params: {
     });
   } catch (error) {
     logger.warn({ error, cacheKey: key }, "Failed updating listing content item render");
+  }
+}
+
+/**
+ * Deletes one cached listing content item by its key. No-op if Redis is unavailable.
+ */
+export async function deleteCachedListingContentItem(params: {
+  userId: string;
+  listingId: string;
+  subcategory: ListingContentSubcategory;
+  mediaType: ListingMediaType;
+  timestamp: number;
+  id: number;
+}): Promise<void> {
+  const redis = getSharedRedisClient();
+  if (!redis) return;
+  const key = buildListingContentItemKey({
+    userId: params.userId,
+    listingId: params.listingId,
+    subcategory: params.subcategory,
+    mediaType: params.mediaType,
+    timestamp: params.timestamp,
+    id: params.id
+  });
+  try {
+    await redis.del(key);
+  } catch (error) {
+    logger.warn({ error, cacheKey: key }, "Failed deleting listing content item cache");
   }
 }

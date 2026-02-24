@@ -8,8 +8,10 @@ import {
   getListingImages,
   mapListingImageToDisplayItem
 } from "@web/src/server/actions/db/listingImages";
-import { getAllCachedListingContentForFilter } from "@web/src/app/api/v1/listings/[listingId]/content/generate/services/cache";
-import type { ListingMediaType } from "@web/src/app/api/v1/listings/[listingId]/content/generate/services/types";
+import {
+  getAllCachedListingContentForFilter
+} from "@web/src/server/services/cache/listingContent";
+import type { ListingMediaType } from "@web/src/server/services/cache/listingContent";
 import { getListingVideoStatus } from "@web/src/server/services/videoStatus";
 import {
   ListingCreateView

@@ -1,4 +1,4 @@
-import type { Redis } from "@web/src/lib/cache/redisClient";
+import type { Redis } from "@web/src/server/services/cache/redis";
 import {
   AUDIENCE_ROTATION_PREFIX,
   getCommunityCategoryCycleKey,

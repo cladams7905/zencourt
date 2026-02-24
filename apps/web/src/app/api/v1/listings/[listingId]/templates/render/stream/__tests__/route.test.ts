@@ -500,3 +500,5 @@ describe("listing templates render stream route", () => {
     expect(mockGetOrCreateUserAdditional).toHaveBeenCalledWith("user-1");
   });
 });
+
+export {};

@@ -26,7 +26,7 @@ type Logger = {
 };
 
 type RedisClient = ReturnType<
-  typeof import("@web/src/lib/cache/redisClient").getSharedRedisClient
+  typeof import("@web/src/server/services/cache/redis").getSharedRedisClient
 >;
 
 async function initializeAiStream(
@@ -217,7 +217,7 @@ export async function createSseResponse(args: {
   systemPrompt: string;
   userPrompt: string;
   redis: ReturnType<
-    typeof import("@web/src/lib/cache/redisClient").getSharedRedisClient
+    typeof import("@web/src/server/services/cache/redis").getSharedRedisClient
   >;
   recentHooksKey: string;
   logger: Logger;

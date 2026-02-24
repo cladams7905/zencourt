@@ -19,10 +19,11 @@ import storageService from "@web/src/server/services/storage";
 import {
   getCachedListingContentItem,
   updateRenderedPreviewForItem
-} from "@web/src/app/api/v1/listings/[listingId]/content/generate/services/cache";
-import type { ListingMediaType } from "@web/src/app/api/v1/listings/[listingId]/content/generate/services/types";
+} from "@web/src/server/services/cache/listingContent";
+import type { ListingMediaType } from "@web/src/server/services/cache/listingContent";
 import { buildFallbackRenderedItem } from "./providers/fallback";
 import {
+  getTemplateById,
   renderTemplate,
   resolveTemplateParameters,
   pickRandomTemplatesForSubcategory
@@ -297,6 +298,8 @@ export type RenderListingTemplateBatchStreamParams = {
   userAdditional: DBUserAdditional;
   captionItems: TemplateRenderCaptionItemWithCacheKey[];
   templateCount?: number;
+  /** When set, render only this template (e.g. for dev single-template preview). */
+  templateId?: string;
   siteOrigin?: string | null;
   random?: () => number;
   now?: () => Date;
@@ -320,11 +323,17 @@ export async function renderListingTemplateBatchStream(
     return { failedTemplateIds };
   }
 
-  const selectedTemplates = pickRandomTemplatesForSubcategory({
-    subcategory: params.subcategory,
-    count: params.templateCount ?? DEFAULT_TEMPLATE_COUNT,
-    random: params.random
-  });
+  const selectedTemplates =
+    params.templateId != null
+      ? (() => {
+          const template = getTemplateById(params.templateId!);
+          return template ? [template] : [];
+        })()
+      : pickRandomTemplatesForSubcategory({
+          subcategory: params.subcategory,
+          count: params.templateCount ?? DEFAULT_TEMPLATE_COUNT,
+          random: params.random
+        });
 
   if (!selectedTemplates.length) {
     return { failedTemplateIds };

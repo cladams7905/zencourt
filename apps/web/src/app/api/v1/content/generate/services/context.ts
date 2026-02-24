@@ -20,7 +20,7 @@ export async function resolveContentContext(args: {
   snapshot: UserAdditionalSnapshot;
   userId: string;
   redis: ReturnType<
-    typeof import("@web/src/lib/cache/redisClient").getSharedRedisClient
+    typeof import("@web/src/server/services/cache/redis").getSharedRedisClient
   >;
   activeAudience: string | null;
 }): Promise<ResolvedContentContext> {

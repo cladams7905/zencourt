@@ -42,6 +42,7 @@ export function useContentGeneration(params: {
     subcategory: ListingContentSubcategory,
     options?: { forceNewBatch?: boolean }
   ) => Promise<void>;
+  removeContentItem: (contentItemId: string) => void;
 } {
   const { listingId, listingPostItems, activeMediaTab, activeSubcategory } =
     params;
@@ -205,6 +206,10 @@ export function useContentGeneration(params: {
     [activeMediaTab, listingId]
   );
 
+  const removeContentItem = React.useCallback((contentItemId: string) => {
+    setLocalPostItems((prev) => prev.filter((item) => item.id !== contentItemId));
+  }, []);
+
   const loadingCount = isGenerating
     ? GENERATED_BATCH_SIZE
     : incompleteBatchSkeletonCount;
@@ -214,6 +219,7 @@ export function useContentGeneration(params: {
     isGenerating,
     generationError,
     loadingCount,
-    generateSubcategoryContent
+    generateSubcategoryContent,
+    removeContentItem
   };
 }

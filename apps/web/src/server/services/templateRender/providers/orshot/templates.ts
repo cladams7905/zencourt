@@ -21,6 +21,11 @@ export function getTemplatesForSubcategory(
   );
 }
 
+export function getTemplateById(id: string): TemplateRenderConfig | null {
+  const template = ORSHOT_TEMPLATES.find((t) => t.id === id);
+  return template ?? null;
+}
+
 export function pickRandomTemplatesForSubcategory(params: {
   subcategory: ListingContentSubcategory;
   count: number;

@@ -9,13 +9,13 @@ jest.mock("@web/src/server/services/communityData/shared/common", () => ({
   slugify: jest.fn((v: string) => v.toLowerCase())
 }));
 
-jest.mock("@web/src/server/services/communityData/shared/redis", () => {
+jest.mock("@web/src/server/services/cache/redis", () => {
   const redis = {
     get: jest.fn(),
     set: jest.fn()
   };
   return {
-    createRedisClientGetter: jest.fn(() => () => redis),
+    getSharedRedisClient: jest.fn(() => redis),
     __redis: redis
   };
 });
@@ -41,9 +41,7 @@ describe("perplexity cache", () => {
   const commonMock = jest.requireMock(
     "@web/src/server/services/communityData/shared/common"
   );
-  const redisMod = jest.requireMock(
-    "@web/src/server/services/communityData/shared/redis"
-  );
+  const redisMod = jest.requireMock("@web/src/server/services/cache/redis");
   const redis = redisMod.__redis;
 
   beforeEach(() => {
@@ -104,9 +102,8 @@ describe("perplexity cache", () => {
   });
 
   it("returns null/noop when redis client is unavailable", async () => {
-    const createRedisClientGetter =
-      redisMod.createRedisClientGetter as jest.Mock;
-    createRedisClientGetter.mockImplementationOnce(() => () => null);
+    const getSharedRedisClient = redisMod.getSharedRedisClient as jest.Mock;
+    getSharedRedisClient.mockReturnValueOnce(null);
     jest.resetModules();
     const mod =
       await import("@web/src/server/services/communityData/providers/perplexity/cache");

@@ -1,8 +1,11 @@
-import { Redis } from "@upstash/redis";
 import {
   createChildLogger,
   logger as baseLogger
 } from "@web/src/lib/core/logging/logger";
+import {
+  getSharedRedisClient,
+  type Redis
+} from "@web/src/server/services/cache/redis";
 import type { MarketData, MarketLocation } from "./types";
 import { readMarketCache, type RedisLike, writeMarketCache } from "./cache";
 import {
@@ -21,7 +24,7 @@ export type MarketDataServiceDeps = {
   fetcher?: typeof fetch;
   now?: () => Date;
   logger?: LoggerLike;
-  createRedisClient?: (url: string, token: string) => RedisLike;
+  getRedisClient?: () => RedisLike | null;
 };
 
 function getCacheTtlSeconds(
@@ -42,6 +45,17 @@ function getCacheTtlSeconds(
   return parsed * 24 * 60 * 60;
 }
 
+function toRedisLike(redis: Redis | null): RedisLike | null {
+  if (!redis) return null;
+  return {
+    get: <T>(key: string) => redis.get<T>(key),
+    set: (key: string, value: unknown, options?: { ex?: number }) =>
+      options?.ex != null
+        ? redis.set(key, value, { ex: options.ex }).then(() => undefined)
+        : redis.set(key, value).then(() => undefined)
+  };
+}
+
 export function createMarketDataService(deps: MarketDataServiceDeps = {}) {
   const env = deps.env ?? process.env;
   const fetcher = deps.fetcher ?? fetch;
@@ -51,43 +65,8 @@ export function createMarketDataService(deps: MarketDataServiceDeps = {}) {
     createChildLogger(baseLogger, {
       module: "market-data-service"
     });
-  const createRedisClient =
-    deps.createRedisClient ??
-    ((url: string, token: string) => {
-      const client = new Redis({ url, token });
-      return {
-        get: <T>(key: string) => client.get<T>(key),
-        set: async (key: string, value: unknown, options?: { ex?: number }) => {
-          if (typeof options?.ex === "number") {
-            return client.set(key, value, { ex: options.ex });
-          }
-          return client.set(key, value);
-        }
-      };
-    });
-
-  let redisClient: RedisLike | null | undefined;
-
-  const getRedisClient = (): RedisLike | null => {
-    if (redisClient !== undefined) {
-      return redisClient;
-    }
-
-    const url = env.KV_REST_API_URL;
-    const token = env.KV_REST_API_TOKEN;
-    if (!url || !token) {
-      logger.warn(
-        { hasUrl: Boolean(url), hasToken: Boolean(token) },
-        "Upstash Redis env vars missing; cache disabled"
-      );
-      redisClient = null;
-      return redisClient;
-    }
-
-    redisClient = createRedisClient(url, token);
-    logger.info({}, "Upstash Redis client initialized (market data)");
-    return redisClient ?? null;
-  };
+  const getRedisClient =
+    deps.getRedisClient ?? (() => toRedisLike(getSharedRedisClient()));
 
   const providerRegistry = createMarketDataProviderRegistry({
     env,

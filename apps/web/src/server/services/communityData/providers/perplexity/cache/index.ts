@@ -14,18 +14,15 @@ import {
   getSecondsUntilEndOfMonth,
   slugify
 } from "../../../shared/common";
-import { createRedisClientGetter } from "../../../shared/redis";
+import { getSharedRedisClient } from "@web/src/server/services/cache/redis";
 
 const logger = createChildLogger(baseLogger, {
   module: "community-perplexity-cache"
 });
 
-const getRedisClient = createRedisClientGetter({
-  logger,
-  missingEnvMessage:
-    "Upstash Redis env vars missing; Perplexity cache disabled",
-  initializedMessage: "Upstash Redis client initialized (community perplexity)"
-});
+function getRedisClient() {
+  return getSharedRedisClient();
+}
 
 const CATEGORY_CACHE_TTL_SECONDS = 60 * 60 * 24 * 90;
 

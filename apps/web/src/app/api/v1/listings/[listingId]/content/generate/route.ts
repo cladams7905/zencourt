@@ -22,7 +22,7 @@ import {
   getCachedListingContent,
   setCachedListingContent,
   setCachedListingContentItem
-} from "./services/cache";
+} from "@web/src/server/services/cache/listingContent";
 import { resolveListingContext } from "./services/listingContext";
 import { parseAndValidateParams } from "./services/requestValidation";
 import {

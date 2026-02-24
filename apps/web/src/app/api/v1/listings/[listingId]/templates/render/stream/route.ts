@@ -38,6 +38,7 @@ export async function POST(
   let listing: Awaited<ReturnType<typeof requireListingAccess>>;
   let userId: string;
   let templateCount: number | undefined;
+  let templateId: string | undefined;
 
   try {
     try {
@@ -59,6 +60,7 @@ export async function POST(
       subcategory?: string;
       captionItems?: unknown;
       templateCount?: number;
+      templateId?: string;
     } | null;
 
     try {
@@ -73,6 +75,10 @@ export async function POST(
     templateCount =
       typeof body?.templateCount === "number" && body.templateCount > 0
         ? body.templateCount
+        : undefined;
+    templateId =
+      typeof body?.templateId === "string" && body.templateId.trim().length > 0
+        ? body.templateId.trim()
         : undefined;
   } catch (error) {
     if (error instanceof ApiError) {
@@ -123,6 +129,7 @@ export async function POST(
             userAdditional,
             captionItems,
             templateCount,
+            templateId,
             siteOrigin: request.nextUrl.origin
           },
           {

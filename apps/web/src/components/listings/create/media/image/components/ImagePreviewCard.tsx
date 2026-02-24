@@ -1,5 +1,5 @@
 import * as React from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
 import { Button } from "@web/src/components/ui/button";
 import { LoadingImage } from "@web/src/components/ui/loading-image";
 import { cn } from "@web/src/components/ui/utils";
@@ -17,6 +17,7 @@ type ImagePreviewCardProps = {
   onPrevSlide: () => void;
   onNextSlide: () => void;
   onSelectSlide: (index: number) => void;
+  onDelete?: () => void;
 };
 
 export function ImagePreviewCard({
@@ -25,7 +26,8 @@ export function ImagePreviewCard({
   onSelect,
   onPrevSlide,
   onNextSlide,
-  onSelectSlide
+  onSelectSlide,
+  onDelete
 }: ImagePreviewCardProps) {
   const isTemplateRender = Boolean(item.isTemplateRender);
   const itemTemplatePattern = isTemplateRender
@@ -63,6 +65,20 @@ export function ImagePreviewCard({
       }}
     >
       <div className="relative aspect-square w-full overflow-hidden bg-card">
+        {onDelete ? (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onDelete();
+            }}
+            className="absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-full border border-white/35 bg-black/50 text-white/90 opacity-0 transition-opacity duration-200 hover:bg-black/70 hover:text-white group-hover:opacity-100"
+            aria-label="Remove from grid"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        ) : null}
         {coverImage ? (
           <LoadingImage
             src={coverImage}
