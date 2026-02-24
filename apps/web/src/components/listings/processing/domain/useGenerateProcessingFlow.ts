@@ -1,4 +1,5 @@
 import * as React from "react";
+import useSWR from "swr";
 import { toast } from "sonner";
 import { emitListingSidebarUpdate } from "@web/src/lib/domain/listing/sidebarEvents";
 import type { VideoJobUpdateEvent } from "@web/src/lib/domain/listing/videoStatus";
@@ -69,13 +70,24 @@ export function useGenerateProcessingFlow(params: {
     return `${minutes}:${seconds.toString().padStart(2, "0")}`;
   }, [remainingEstimateSeconds]);
 
-  const refreshGenerationStatus = React.useCallback(async () => {
+  const { data: videoStatus } = useSWR(
+    mode === "generate" && canPollGeneration
+      ? `/api/v1/video/status/${listingId}`
+      : null,
+    () => fetchVideoStatus(listingId),
+    {
+      refreshInterval: 2000,
+      revalidateOnFocus: false
+    }
+  );
+
+  React.useEffect(() => {
     if (mode !== "generate") return;
-    const { jobs } = await fetchVideoStatus(listingId);
+    const jobs = videoStatus?.jobs ?? [];
     if (jobs.length > 0) {
       setGenerationJobs(jobs);
     }
-  }, [listingId, mode]);
+  }, [mode, videoStatus]);
 
   const initializeGeneration = React.useCallback(async () => {
     if (mode !== "generate" || hasInitializedGenerationRef.current) return;
@@ -164,13 +176,6 @@ export function useGenerateProcessingFlow(params: {
     }, 1000);
     return () => clearInterval(interval);
   }, [generationSummary.isTerminal, mode, remainingEstimateSeconds]);
-
-  React.useEffect(() => {
-    if (mode !== "generate" || !canPollGeneration) return;
-    void refreshGenerationStatus();
-    const interval = setInterval(refreshGenerationStatus, 2000);
-    return () => clearInterval(interval);
-  }, [canPollGeneration, mode, refreshGenerationStatus]);
 
   React.useEffect(() => {
     if (mode !== "generate") return;

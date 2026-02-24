@@ -8,6 +8,7 @@ import {
 } from "@web/src/components/listings/create/domain/listingCreateUtils";
 import type { TemplateRenderCaptionItemInput } from "@web/src/lib/domain/media/templateRender/types";
 import type { ListingImagePreviewItem } from "@web/src/components/listings/create/shared/types";
+import { fetchStreamResponse } from "@web/src/lib/client/http";
 import { streamTemplateRenderEvents } from "./streamEvents";
 import type { ListingCreateMediaTab } from "@web/src/components/listings/create/shared/constants";
 
@@ -143,7 +144,7 @@ async function runTemplateRenderRequest(params: {
     setRenderError
   } = params;
 
-  const response = await fetch(
+  const response = await fetchStreamResponse(
     `/api/v1/listings/${listingId}/templates/render/stream`,
     {
       method: "POST",
@@ -155,16 +156,9 @@ async function runTemplateRenderRequest(params: {
       }),
       cache: "no-store",
       signal
-    }
+    },
+    "Failed to render templates"
   );
-
-  if (!response.ok) {
-    const payload = await response.json().catch(() => ({}));
-    throw new Error(
-      (payload as { message?: string }).message ??
-        "Failed to render templates"
-    );
-  }
 
   const reader = response.body?.getReader();
   if (!reader) {
