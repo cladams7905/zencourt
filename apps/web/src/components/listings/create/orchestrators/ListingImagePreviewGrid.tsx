@@ -11,12 +11,14 @@ type ListingImagePreviewGridProps = {
   items: ListingImagePreviewItem[];
   captionSubcategoryLabel: string;
   loadingCount?: number;
+  onDeleteItem?: (contentItemId: string) => void;
 };
 
 export function ListingImagePreviewGrid({
   items,
   captionSubcategoryLabel,
-  loadingCount = 0
+  loadingCount = 0,
+  onDeleteItem
 }: ListingImagePreviewGridProps) {
   const {
     selectedItem,
@@ -61,6 +63,11 @@ export function ListingImagePreviewGrid({
                 ...prev,
                 [item.id]: index
               }))
+            }
+            onDelete={
+              onDeleteItem
+                ? () => onDeleteItem(item.captionItemId ?? item.id)
+                : undefined
             }
           />
         ))}

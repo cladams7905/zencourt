@@ -11,6 +11,7 @@ import {
 } from "@web/src/components/listings/create/domain/previewTimeline";
 import { ListingVideoPreviewGrid } from "@web/src/components/listings/create/orchestrators/ListingVideoPreviewGrid";
 import { ListingImagePreviewGrid } from "@web/src/components/listings/create/orchestrators/ListingImagePreviewGrid";
+import { DevSingleTemplateRender } from "@web/src/components/listings/create/orchestrators/DevSingleTemplateRender";
 import {
   type PreviewClipCandidate,
   type ListingCreateImage,
@@ -96,7 +97,8 @@ export function ListingCreateView({
     isGenerating,
     generationError,
     loadingCount,
-    generateSubcategoryContent
+    generateSubcategoryContent,
+    removeContentItem
   } = useContentGeneration({
     listingId,
     listingPostItems,
@@ -142,6 +144,49 @@ export function ListingCreateView({
             (activeMediaTab === "videos" ? "video" : "image")
       ),
     [activeMediaTab, activeSubcategory, localPostItems]
+  );
+
+  const handleDeleteImagePreviewItem = React.useCallback(
+    async (contentItemId: string) => {
+      const contentItem = activeMediaItems.find(
+        (item) => item.id === contentItemId
+      );
+      const withCacheKey = contentItem as
+        | (typeof contentItem & {
+            cacheKeyTimestamp?: number;
+            cacheKeyId?: number;
+          })
+        | undefined;
+      if (
+        withCacheKey &&
+        typeof withCacheKey.cacheKeyTimestamp === "number" &&
+        typeof withCacheKey.cacheKeyId === "number"
+      ) {
+        try {
+          await fetch(
+            `/api/v1/listings/${listingId}/content/cache/item`,
+            {
+              method: "DELETE",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                cacheKeyTimestamp: withCacheKey.cacheKeyTimestamp,
+                cacheKeyId: withCacheKey.cacheKeyId,
+                subcategory: activeSubcategory
+              })
+            }
+          );
+        } catch {
+          // Remove from grid anyway so UI stays consistent
+        }
+      }
+      removeContentItem(contentItemId);
+    },
+    [
+      activeMediaItems,
+      activeSubcategory,
+      listingId,
+      removeContentItem
+    ]
   );
   const fallbackImagePreviewItems = React.useMemo<
     ListingImagePreviewItem[]
@@ -446,6 +491,13 @@ export function ListingCreateView({
       </div>
       <div className="mx-auto w-full max-w-[1600px] px-4 md:px-8 pb-8 pt-8 md:pt-0">
         <section className="space-y-4">
+          {activeMediaTab === "images" && (
+            <DevSingleTemplateRender
+              listingId={listingId}
+              subcategory={activeSubcategory}
+              captionItems={activeMediaItems}
+            />
+          )}
           {activeMediaTab === "videos" &&
           (activePreviewPlans.length > 0 || isGenerating) ? (
             <ListingVideoPreviewGrid
@@ -466,6 +518,7 @@ export function ListingCreateView({
               items={activeImagePreviewItems}
               captionSubcategoryLabel={SUBCATEGORY_LABELS[activeSubcategory]}
               loadingCount={imageLoadingCount}
+              onDeleteItem={handleDeleteImagePreviewItem}
             />
           ) : (
             <div className="rounded-xl border border-border bg-background p-8 text-center text-sm text-muted-foreground">

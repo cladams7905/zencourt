@@ -1,5 +1,5 @@
 import type { CommunityData } from "@web/src/lib/domain/market/types";
-import { createRedisClientGetter } from "../../../shared/redis";
+import { getSharedRedisClient } from "@web/src/server/services/cache/redis";
 import {
   getCommunityCacheKey,
   getCommunityCacheTtlSeconds,
@@ -23,11 +23,7 @@ export function createCommunityCache(
   deps: { now?: () => Date } = {}
 ) {
   const now = deps.now ?? (() => new Date());
-  const getRedisClient = createRedisClientGetter({
-    logger,
-    missingEnvMessage: "Upstash Redis env vars missing; cache disabled",
-    initializedMessage: "Upstash Redis client initialized (community data)"
-  });
+  const getRedisClient = () => getSharedRedisClient();
 
   return {
     isPoolStale,

@@ -39,7 +39,7 @@ describe("getSharedRedisClient", () => {
   });
 
   async function importFresh() {
-    const mod = await import("../redisClient");
+    const mod = await import("../redis");
     return mod.getSharedRedisClient;
   }
 

@@ -1,8 +1,8 @@
-const mockCreateRedisClientGetter = jest.fn();
+const mockGetSharedRedisClient = jest.fn();
 
-jest.mock("@web/src/server/services/communityData/shared/redis", () => ({
-  createRedisClientGetter: (...args: unknown[]) =>
-    mockCreateRedisClientGetter(...args)
+jest.mock("@web/src/server/services/cache/redis", () => ({
+  getSharedRedisClient: (...args: unknown[]) =>
+    mockGetSharedRedisClient(...args)
 }));
 
 import { createCommunityCache } from "@web/src/server/services/communityData/providers/google/cache/store";
@@ -11,13 +11,13 @@ describe("google cache store", () => {
   const logger = { info: jest.fn(), warn: jest.fn() };
 
   beforeEach(() => {
-    mockCreateRedisClientGetter.mockReset();
+    mockGetSharedRedisClient.mockReset();
     logger.info.mockReset();
     logger.warn.mockReset();
   });
 
   it("returns null/noop when redis client unavailable", async () => {
-    mockCreateRedisClientGetter.mockReturnValue(() => null);
+    mockGetSharedRedisClient.mockReturnValue(null);
     const cache = createCommunityCache(logger);
 
     await expect(cache.getCachedCommunityData("78701")).resolves.toBeNull();
@@ -70,7 +70,7 @@ describe("google cache store", () => {
         .mockResolvedValueOnce("- D1"),
       set: jest.fn().mockResolvedValue(undefined)
     };
-    mockCreateRedisClientGetter.mockReturnValue(() => redis);
+    mockGetSharedRedisClient.mockReturnValue(redis);
 
     const cache = createCommunityCache(logger);
 
@@ -94,7 +94,7 @@ describe("google cache store", () => {
       get: jest.fn().mockRejectedValue(new Error("boom")),
       set: jest.fn().mockRejectedValue(new Error("boom"))
     };
-    mockCreateRedisClientGetter.mockReturnValue(() => redis);
+    mockGetSharedRedisClient.mockReturnValue(redis);
 
     const cache = createCommunityCache(logger);
 
@@ -154,7 +154,7 @@ describe("google cache store", () => {
         }),
       set: jest.fn().mockResolvedValue(undefined)
     };
-    mockCreateRedisClientGetter.mockReturnValue(() => redis);
+    mockGetSharedRedisClient.mockReturnValue(redis);
 
     const cache = createCommunityCache(logger);
 
@@ -196,7 +196,7 @@ describe("google cache store", () => {
       get: jest.fn().mockResolvedValue(null),
       set: jest.fn().mockResolvedValue(undefined)
     };
-    mockCreateRedisClientGetter.mockReturnValue(() => redis);
+    mockGetSharedRedisClient.mockReturnValue(redis);
     const cache = createCommunityCache(logger);
 
     await expect(cache.getCachedCommunityData("78701")).resolves.toBeNull();
@@ -218,7 +218,7 @@ describe("google cache store", () => {
       get: jest.fn().mockRejectedValue(new Error("boom")),
       set: jest.fn().mockRejectedValue(new Error("boom"))
     };
-    mockCreateRedisClientGetter.mockReturnValue(() => redis);
+    mockGetSharedRedisClient.mockReturnValue(redis);
     const cache = createCommunityCache(logger);
 
     await expect(cache.getCachedSeasonalSections("78701")).resolves.toBeNull();

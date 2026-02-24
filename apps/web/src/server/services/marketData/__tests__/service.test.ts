@@ -59,7 +59,7 @@ describe("marketData/service", () => {
       },
       fetcher,
       logger,
-      createRedisClient: () => ({ get: jest.fn(), set: jest.fn() })
+      getRedisClient: () => ({ get: jest.fn(), set: jest.fn() })
     });
 
     await expect(service.getMarketData(location)).resolves.toEqual(cached);
@@ -86,7 +86,7 @@ describe("marketData/service", () => {
       fetcher,
       logger,
       now: () => new Date("2026-02-18T00:00:00.000Z"),
-      createRedisClient: () => ({ get: jest.fn(), set: jest.fn() })
+      getRedisClient: () => ({ get: jest.fn(), set: jest.fn() })
     });
 
     await expect(service.getMarketData(location)).resolves.toEqual(fresh);
@@ -113,7 +113,7 @@ describe("marketData/service", () => {
       },
       fetcher,
       logger,
-      createRedisClient: () => ({ get: jest.fn(), set: jest.fn() })
+      getRedisClient: () => ({ get: jest.fn(), set: jest.fn() })
     });
 
     await expect(service.getMarketData(location)).resolves.toEqual(rentcast);

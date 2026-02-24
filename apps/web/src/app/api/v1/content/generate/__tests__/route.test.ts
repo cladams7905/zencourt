@@ -50,7 +50,7 @@ describe("content generate route", () => {
       ApiError: MockApiError,
       requireAuthenticatedUser: (...args: unknown[]) => mockRequireAuthenticatedUser(...args)
     }));
-    jest.doMock("@web/src/lib/cache/redisClient", () => ({
+    jest.doMock("@web/src/server/services/cache/redis", () => ({
       getSharedRedisClient: (...args: unknown[]) => mockGetSharedRedisClient(...args)
     }));
     jest.doMock("../services/userAdditional", () => ({

@@ -1,13 +1,13 @@
-jest.mock("@web/src/lib/cache/redisClient", () => ({
+jest.mock("@web/src/server/services/cache/redis", () => ({
   getSharedRedisClient: jest.fn()
 }));
 
 import {
   buildListingContentCacheKey,
   LISTING_CONTENT_CACHE_PREFIX
-} from "../cache";
+} from "..";
 
-describe("cache", () => {
+describe("listingContent cache", () => {
   it("builds cache key with expected prefix", () => {
     const key = buildListingContentCacheKey({
       userId: "user-1",

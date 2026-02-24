@@ -352,3 +352,5 @@ describe("listing content generate route", () => {
     });
   });
 });
+
+export {};
