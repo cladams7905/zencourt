@@ -1,4 +1,5 @@
 import * as React from "react";
+import useSWR from "swr";
 import { emitListingSidebarUpdate } from "@web/src/lib/domain/listing/sidebarEvents";
 import { fetchListingImages, triggerCategorization } from "./transport";
 
@@ -11,11 +12,17 @@ export function useCategorizeProcessingFlow(params: {
   const { mode, listingId, batchStartedAt, navigate } = params;
   const [isProcessing, setIsProcessing] = React.useState(true);
   const hasTriggeredCategorizeRef = React.useRef(false);
+  const { data: images = [] } = useSWR(
+    mode === "categorize" && isProcessing ? `/api/v1/listings/${listingId}/images` : null,
+    () => fetchListingImages(listingId),
+    {
+      refreshInterval: 1000,
+      revalidateOnFocus: false
+    }
+  );
 
-  const refreshCategorizeStatus = React.useCallback(async () => {
+  React.useEffect(() => {
     if (mode !== "categorize") return;
-    const images = await fetchListingImages(listingId);
-
     if (!hasTriggeredCategorizeRef.current && images.length > 0) {
       hasTriggeredCategorizeRef.current = true;
       setIsProcessing(true);
@@ -53,15 +60,7 @@ export function useCategorizeProcessingFlow(params: {
       emitListingSidebarUpdate({ id: listingId, lastOpenedAt: new Date().toISOString() });
       navigate(`/listings/${listingId}/categorize`);
     }
-  }, [batchStartedAt, listingId, mode, navigate]);
-
-  React.useEffect(() => {
-    if (mode !== "categorize" || !isProcessing) return;
-
-    void refreshCategorizeStatus();
-    const interval = setInterval(refreshCategorizeStatus, 1000);
-    return () => clearInterval(interval);
-  }, [isProcessing, mode, refreshCategorizeStatus]);
+  }, [batchStartedAt, images, isProcessing, listingId, mode, navigate]);
 
   return { isProcessing };
 }

@@ -5,6 +5,7 @@ import type { ContentItem } from "@web/src/components/dashboard/components/Conte
 import type { ListingContentSubcategory } from "@shared/types/models";
 import { buildTemplateRenderCaptionItems } from "@web/src/components/listings/create/domain/listingCreateUtils";
 import { streamTemplateRenderEvents } from "@web/src/components/listings/create/domain/templateRender/streamEvents";
+import { fetchStreamResponse } from "@web/src/lib/client/http";
 import { Button } from "@web/src/components/ui/button";
 import {
   Select,
@@ -55,7 +56,7 @@ export function DevSingleTemplateRender({
     setLastImageUrl(null);
 
     try {
-      const response = await fetch(
+      const response = await fetchStreamResponse(
         `/api/v1/listings/${listingId}/templates/render/stream`,
         {
           method: "POST",
@@ -67,15 +68,9 @@ export function DevSingleTemplateRender({
             templateId: selectedTemplateId.trim()
           }),
           cache: "no-store"
-        }
+        },
+        "Render request failed"
       );
-
-      if (!response.ok) {
-        const payload = await response.json().catch(() => ({}));
-        throw new Error(
-          (payload as { message?: string }).message ?? "Render request failed"
-        );
-      }
 
       const reader = response.body?.getReader();
       if (!reader) {

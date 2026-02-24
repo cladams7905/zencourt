@@ -6,6 +6,7 @@ import {
   startListingVideoGeneration
 } from "@web/src/server/actions/video";
 import type { VideoJobUpdateEvent } from "@web/src/lib/domain/listing/videoStatus";
+import { fetchApiData, fetchStreamResponse } from "@web/src/lib/client/http";
 
 export async function updateListingStage(
   listingId: string,
@@ -24,18 +25,14 @@ export async function fetchPropertyDetails(
 export async function fetchVideoStatus(listingId: string): Promise<{
   jobs: VideoJobUpdateEvent[];
 }> {
-  const response = await fetch(`/api/v1/video/status/${listingId}`);
-  if (!response.ok) {
+  try {
+    const data = await fetchApiData<{ jobs?: VideoJobUpdateEvent[] }>(
+      `/api/v1/video/status/${listingId}`
+    );
+    return { jobs: data?.jobs ?? [] };
+  } catch {
     return { jobs: [] };
   }
-  const payload = (await response.json()) as {
-    success: boolean;
-    data?: { jobs?: VideoJobUpdateEvent[] };
-  };
-
-  return {
-    jobs: payload?.success ? payload.data?.jobs ?? [] : []
-  };
 }
 
 export async function fetchListingImages(listingId: string): Promise<
@@ -46,20 +43,18 @@ export async function fetchListingImages(listingId: string): Promise<
     uploadedAt?: string | Date | null;
   }>
 > {
-  const response = await fetch(`/api/v1/listings/${listingId}/images`);
-  if (!response.ok) {
+  try {
+    return await fetchApiData<
+      Array<{
+        category: string | null;
+        confidence?: number | null;
+        primaryScore?: number | null;
+        uploadedAt?: string | Date | null;
+      }>
+    >(`/api/v1/listings/${listingId}/images`);
+  } catch {
     return [];
   }
-  const payload = (await response.json()) as {
-    success: boolean;
-    data?: Array<{
-      category: string | null;
-      confidence?: number | null;
-      primaryScore?: number | null;
-      uploadedAt?: string | Date | null;
-    }>;
-  };
-  return payload.data ?? [];
 }
 
 export async function triggerCategorization(listingId: string) {
@@ -67,18 +62,11 @@ export async function triggerCategorization(listingId: string) {
 }
 
 export async function startListingContentGeneration(listingId: string) {
-  const response = await fetch(`/api/v1/listings/${listingId}/content/generate`, {
+  await fetchStreamResponse(`/api/v1/listings/${listingId}/content/generate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ subcategory: "new_listing" })
   });
-
-  if (!response.ok) {
-    const payload = await response.json().catch(() => ({}));
-    throw new Error(
-      payload?.message || payload?.error || "Failed to generate listing content."
-    );
-  }
 }
 
 export async function startVideoGeneration(listingId: string) {

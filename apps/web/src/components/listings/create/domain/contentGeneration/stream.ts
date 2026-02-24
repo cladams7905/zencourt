@@ -1,4 +1,5 @@
 import type { ListingContentSubcategory } from "@shared/types/models";
+import { fetchStreamResponse } from "@web/src/lib/client/http";
 import { streamSseEvents } from "@web/src/lib/sse/sseEventStream";
 import type { ContentGenerationEvent } from "./types";
 
@@ -10,7 +11,7 @@ export async function requestContentGenerationStream(params: {
   generationNonce: string;
   signal: AbortSignal;
 }): Promise<ReadableStreamDefaultReader<Uint8Array>> {
-  const response = await fetch(
+  const response = await fetchStreamResponse(
     `/api/v1/listings/${params.listingId}/content/generate`,
     {
       method: "POST",
@@ -22,16 +23,9 @@ export async function requestContentGenerationStream(params: {
         generation_nonce: params.generationNonce
       }),
       signal: params.signal
-    }
+    },
+    "Failed to generate listing post content"
   );
-
-  if (!response.ok) {
-    const errorPayload = await response.json().catch(() => ({}));
-    throw new Error(
-      (errorPayload as { message?: string }).message ||
-        "Failed to generate listing post content"
-    );
-  }
 
   const reader = response.body?.getReader();
   if (!reader) {
