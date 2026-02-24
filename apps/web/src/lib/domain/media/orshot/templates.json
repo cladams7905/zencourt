@@ -1,35 +1,569 @@
 [
-  { "id": "4013", "subcategories": ["new_listing", "open_house", "price_change", "status_update", "property_features"], "requiredParams": [] },
-  { "id": "4015", "subcategories": ["new_listing", "open_house", "price_change", "status_update", "property_features"], "requiredParams": [] },
-  { "id": "4004", "subcategories": ["new_listing", "open_house", "price_change", "status_update", "property_features"], "requiredParams": [] },
-  { "id": "4016", "subcategories": ["new_listing", "open_house", "price_change", "status_update", "property_features"], "requiredParams": [] },
-  { "id": "4000", "subcategories": ["new_listing", "open_house", "price_change", "status_update", "property_features"], "requiredParams": [] },
-  { "id": "4010", "subcategories": ["new_listing", "open_house", "price_change", "status_update", "property_features"], "requiredParams": [] },
-  { "id": "4009", "subcategories": ["new_listing", "open_house", "price_change", "status_update", "property_features"], "requiredParams": [] },
-  { "id": "4011", "subcategories": ["new_listing", "open_house", "price_change", "status_update", "property_features"], "requiredParams": [] },
-  { "id": "4002", "subcategories": ["new_listing", "open_house", "price_change", "status_update", "property_features"], "requiredParams": [] },
-  { "id": "4005", "subcategories": ["new_listing", "open_house", "price_change", "status_update", "property_features"], "requiredParams": [] },
-  { "id": "3996", "subcategories": ["new_listing", "open_house", "price_change", "status_update", "property_features"], "requiredParams": [] },
-  { "id": "4012", "subcategories": ["new_listing", "open_house", "price_change", "status_update", "property_features"], "requiredParams": [] },
-  { "id": "4021", "subcategories": ["new_listing", "open_house", "price_change", "status_update", "property_features"], "requiredParams": [] },
-  { "id": "4025", "subcategories": ["new_listing", "open_house", "price_change", "status_update", "property_features"], "requiredParams": [] },
-  { "id": "4026", "subcategories": ["new_listing", "open_house", "price_change", "status_update", "property_features"], "requiredParams": [] },
-  { "id": "4027", "subcategories": ["new_listing", "open_house", "price_change", "status_update", "property_features"], "requiredParams": [] },
-  { "id": "4028", "subcategories": ["new_listing", "open_house", "price_change", "status_update", "property_features"], "requiredParams": [] },
-  { "id": "4029", "subcategories": ["new_listing", "open_house", "price_change", "status_update", "property_features"], "requiredParams": [] },
-  { "id": "4031", "subcategories": ["new_listing", "open_house", "price_change", "status_update", "property_features"], "requiredParams": [] },
-  { "id": "4032", "subcategories": ["new_listing", "open_house", "price_change", "status_update", "property_features"], "requiredParams": [] },
-  { "id": "4033", "subcategories": ["new_listing", "open_house", "price_change", "status_update", "property_features"], "requiredParams": [] },
-  { "id": "4035", "subcategories": ["new_listing", "open_house", "price_change", "status_update", "property_features"], "requiredParams": [] },
-  { "id": "4036", "subcategories": ["new_listing", "open_house", "price_change", "status_update", "property_features"], "requiredParams": [] },
-  { "id": "4037", "subcategories": ["new_listing", "open_house", "price_change", "status_update", "property_features"], "requiredParams": [] },
-  { "id": "4024", "subcategories": ["new_listing", "open_house", "price_change", "status_update", "property_features"], "requiredParams": [] },
-  { "id": "4034", "subcategories": ["new_listing", "open_house", "price_change", "status_update", "property_features"], "requiredParams": [] },
-  { "id": "4038", "subcategories": ["new_listing", "open_house", "price_change", "status_update", "property_features"], "requiredParams": [] },
-  { "id": "4042", "subcategories": ["new_listing", "open_house", "price_change", "status_update", "property_features"], "requiredParams": [] },
-  { "id": "4047", "subcategories": ["new_listing", "open_house", "price_change", "status_update", "property_features"], "requiredParams": [] },
-  { "id": "4046", "subcategories": ["new_listing", "open_house", "price_change", "status_update", "property_features"], "requiredParams": [] },
-  { "id": "4045", "subcategories": ["new_listing", "open_house", "price_change", "status_update", "property_features"], "requiredParams": [] },
-  { "id": "4044", "subcategories": ["new_listing", "open_house", "price_change", "status_update", "property_features"], "requiredParams": [] },
-  { "id": "4043", "subcategories": ["new_listing", "open_house", "price_change", "status_update", "property_features"], "requiredParams": [] }
+  {
+    "id": "4013",
+    "subcategories": [
+      "new_listing",
+      "open_house",
+      "price_change",
+      "status_update",
+      "property_features"
+    ],
+    "requiredParams": [
+      "backgroundImage1",
+      "headerText",
+      "subheader1Text",
+      "listingAddress"
+    ]
+  },
+  {
+    "id": "4015",
+    "subcategories": [
+      "new_listing",
+      "open_house",
+      "price_change",
+      "status_update",
+      "property_features"
+    ],
+    "requiredParams": [
+      "headerText",
+      "backgroundImage1",
+      "backgroundImage2"
+    ]
+  },
+  {
+    "id": "4004",
+    "subcategories": [
+      "new_listing",
+      "open_house",
+      "price_change",
+      "status_update",
+      "property_features"
+    ],
+    "requiredParams": [
+      "backgroundImage1",
+      "headerTextTop",
+      "headerTextBottom",
+      "priceLabel",
+      "listingPrice",
+      "socialHandle"
+    ]
+  },
+  {
+    "id": "4016",
+    "subcategories": [
+      "new_listing",
+      "open_house",
+      "price_change",
+      "status_update",
+      "property_features"
+    ],
+    "requiredParams": [
+      "backgroundImage1",
+      "headerText",
+      "socialHandle"
+    ]
+  },
+  {
+    "id": "4000",
+    "subcategories": [
+      "new_listing",
+      "open_house",
+      "price_change",
+      "status_update",
+      "property_features"
+    ],
+    "requiredParams": [
+      "headerText",
+      "backgroundImage1",
+      "featureList",
+      "listingPrice",
+      "listingAddress"
+    ]
+  },
+  {
+    "id": "4010",
+    "subcategories": [
+      "new_listing",
+      "open_house",
+      "price_change",
+      "status_update",
+      "property_features"
+    ],
+    "requiredParams": [
+      "backgroundImage1",
+      "headerTextTop",
+      "headerTextBottom",
+      "listingPrice",
+      "bedCount",
+      "bathCount",
+      "garageCount",
+      "listingAddress"
+    ]
+  },
+  {
+    "id": "4009",
+    "subcategories": [
+      "new_listing",
+      "open_house",
+      "price_change",
+      "status_update",
+      "property_features"
+    ],
+    "requiredParams": [
+      "backgroundImage1",
+      "headerText",
+      "subheader1Text"
+    ]
+  },
+  {
+    "id": "4011",
+    "subcategories": [
+      "new_listing",
+      "open_house",
+      "price_change",
+      "status_update",
+      "property_features"
+    ],
+    "requiredParams": [
+      "backgroundImage1",
+      "socialHandle",
+      "headerTextTop",
+      "headerTextBottom",
+      "listingAddress"
+    ]
+  },
+  {
+    "id": "4002",
+    "subcategories": [
+      "new_listing",
+      "open_house",
+      "price_change",
+      "status_update",
+      "property_features"
+    ],
+    "requiredParams": [
+      "backgroundImage1",
+      "headerText",
+      "listingPrice",
+      "listingAddress",
+      "featureList"
+    ]
+  },
+  {
+    "id": "4005",
+    "subcategories": [
+      "new_listing",
+      "open_house",
+      "price_change",
+      "status_update",
+      "property_features"
+    ],
+    "requiredParams": [
+      "subheader1Text",
+      "headerText",
+      "listingAddress",
+      "realtorContact1",
+      "realtorContact2"
+    ]
+  },
+  {
+    "id": "3996",
+    "subcategories": [
+      "new_listing",
+      "open_house",
+      "price_change",
+      "status_update",
+      "property_features"
+    ],
+    "requiredParams": [
+      "backgroundImage1",
+      "listingPrice",
+      "headerText",
+      "subheader1Text",
+      "featureList",
+      "socialHandle"
+    ]
+  },
+  {
+    "id": "4012",
+    "subcategories": [
+      "new_listing",
+      "open_house",
+      "price_change",
+      "status_update",
+      "property_features"
+    ],
+    "requiredParams": [
+      "backgroundImage1",
+      "listingPrice",
+      "featureList",
+      "headerText"
+    ]
+  },
+  {
+    "id": "4021",
+    "subcategories": [
+      "new_listing",
+      "open_house",
+      "price_change",
+      "status_update",
+      "property_features"
+    ],
+    "requiredParams": [
+      "backgroundImage1",
+      "headerText",
+      "listingAddress",
+      "feature1",
+      "feature2",
+      "feature3",
+      "socialHandle"
+    ]
+  },
+  {
+    "id": "4025",
+    "subcategories": [
+      "new_listing",
+      "open_house",
+      "price_change",
+      "status_update",
+      "property_features"
+    ],
+    "requiredParams": [
+      "backgroundImage2",
+      "backgroundImage1",
+      "headerText",
+      "openHouseDateTime",
+      "listingAddress",
+      "socialHandle"
+    ]
+  },
+  {
+    "id": "4026",
+    "subcategories": [
+      "new_listing",
+      "open_house",
+      "price_change",
+      "status_update",
+      "property_features"
+    ],
+    "requiredParams": [
+      "backgroundImage1",
+      "headerText",
+      "propertyDescription",
+      "priceLabel",
+      "listingPrice",
+      "socialHandle"
+    ]
+  },
+  {
+    "id": "4027",
+    "subcategories": [
+      "new_listing",
+      "open_house",
+      "price_change",
+      "status_update",
+      "property_features"
+    ],
+    "requiredParams": [
+      "backgroundImage1",
+      "backgroundImage2",
+      "backgroundImage3",
+      "headerText",
+      "subheader1Text",
+      "socialHandle"
+    ]
+  },
+  {
+    "id": "4028",
+    "subcategories": [
+      "new_listing",
+      "open_house",
+      "price_change",
+      "status_update",
+      "property_features"
+    ],
+    "requiredParams": [
+      "headerText",
+      "backgroundImage1",
+      "backgroundImage2",
+      "backgroundImage3",
+      "backgroundImage4",
+      "subheader1Text",
+      "socialHandle"
+    ]
+  },
+  {
+    "id": "4029",
+    "subcategories": [
+      "new_listing",
+      "open_house",
+      "price_change",
+      "status_update",
+      "property_features"
+    ],
+    "requiredParams": [
+      "headerText",
+      "backgroundImage1",
+      "backgroundImage2",
+      "backgroundImage3",
+      "featureList",
+      "listingAddress",
+      "socialHandle"
+    ]
+  },
+  {
+    "id": "4031",
+    "subcategories": [
+      "new_listing",
+      "open_house",
+      "price_change",
+      "status_update",
+      "property_features"
+    ],
+    "requiredParams": [
+      "backgroundImage1",
+      "headerText",
+      "listingAddress",
+      "realtorContact1"
+    ]
+  },
+  {
+    "id": "4032",
+    "subcategories": [
+      "new_listing",
+      "open_house",
+      "price_change",
+      "status_update",
+      "property_features"
+    ],
+    "requiredParams": []
+  },
+  {
+    "id": "4033",
+    "subcategories": [
+      "new_listing",
+      "open_house",
+      "price_change",
+      "status_update",
+      "property_features"
+    ],
+    "requiredParams": [
+      "headerText",
+      "priceDescription",
+      "feature1",
+      "feature2",
+      "bathCount",
+      "listingAddress",
+      "socialHandle"
+    ]
+  },
+  {
+    "id": "4035",
+    "subcategories": [
+      "new_listing",
+      "open_house",
+      "price_change",
+      "status_update",
+      "property_features"
+    ],
+    "requiredParams": [
+      "headerTextTop",
+      "backgroundImage1",
+      "realtorContact1",
+      "realtorContact1",
+      "backgroundImage3",
+      "backgroundImage2",
+      "headerTextBottom"
+    ]
+  },
+  {
+    "id": "4036",
+    "subcategories": [
+      "new_listing",
+      "open_house",
+      "price_change",
+      "status_update",
+      "property_features"
+    ],
+    "requiredParams": [
+      "backgroundImage1",
+      "headerTextTop",
+      "headerTextBottom",
+      "feature1",
+      "feature2",
+      "feature3",
+      "realtorContact1",
+      "realtorContact2",
+      "socialHandle"
+    ]
+  },
+  {
+    "id": "4037",
+    "subcategories": [
+      "new_listing",
+      "open_house",
+      "price_change",
+      "status_update",
+      "property_features"
+    ],
+    "requiredParams": [
+      "backgroundImage1",
+      "listingAddress",
+      "squareFootage",
+      "priceLabel",
+      "listingPrice",
+      "socialHandle",
+      "bedCount",
+      "bathCount",
+      "garageCount"
+    ]
+  },
+  {
+    "id": "4024",
+    "subcategories": [
+      "new_listing",
+      "open_house",
+      "price_change",
+      "status_update",
+      "property_features"
+    ],
+    "requiredParams": [
+      "backgroundImage1",
+      "headerText",
+      "listingAddress"
+    ]
+  },
+  {
+    "id": "4034",
+    "subcategories": [
+      "new_listing",
+      "open_house",
+      "price_change",
+      "status_update",
+      "property_features"
+    ],
+    "requiredParams": []
+  },
+  {
+    "id": "4038",
+    "subcategories": [
+      "new_listing",
+      "open_house",
+      "price_change",
+      "status_update",
+      "property_features"
+    ],
+    "requiredParams": [
+      "headerTag",
+      "backgroundImage2",
+      "backgroundImage3",
+      "backgroundImage1",
+      "priceLabel",
+      "listingPrice",
+      "realtorProfileImage",
+      "realtorContactInfo",
+      "realtorName"
+    ]
+  },
+  {
+    "id": "4042",
+    "subcategories": [
+      "new_listing",
+      "open_house",
+      "price_change",
+      "status_update",
+      "property_features"
+    ],
+    "requiredParams": [
+      "headerText",
+      "bedCount",
+      "feature1",
+      "socialHandle",
+      "bathCount"
+    ]
+  },
+  {
+    "id": "4047",
+    "subcategories": [
+      "new_listing",
+      "open_house",
+      "price_change",
+      "status_update",
+      "property_features"
+    ],
+    "requiredParams": [
+      "headerText",
+      "backgroundImage1"
+    ]
+  },
+  {
+    "id": "4046",
+    "subcategories": [
+      "new_listing",
+      "open_house",
+      "price_change",
+      "status_update",
+      "property_features"
+    ],
+    "requiredParams": [
+      "backgroundImage1",
+      "backgroundImage2",
+      "backgroundImage3",
+      "bedCount",
+      "listingAddress",
+      "socialHandle",
+      "bathCount"
+    ]
+  },
+  {
+    "id": "4045",
+    "subcategories": [
+      "new_listing",
+      "open_house",
+      "price_change",
+      "status_update",
+      "property_features"
+    ],
+    "requiredParams": [
+      "backgroundImage1",
+      "headerText",
+      "subheader1Text",
+      "arrowImage",
+      "socialHandle",
+      "subheader2Text"
+    ]
+  },
+  {
+    "id": "4044",
+    "subcategories": [
+      "new_listing",
+      "open_house",
+      "price_change",
+      "status_update",
+      "property_features"
+    ],
+    "requiredParams": [
+      "feature1",
+      "headerText",
+      "subheader1Text",
+      "bedCount",
+      "bathCount"
+    ]
+  },
+  {
+    "id": "4043",
+    "subcategories": [
+      "new_listing",
+      "open_house",
+      "price_change",
+      "status_update",
+      "property_features"
+    ],
+    "requiredParams": [
+      "subheader1Text",
+      "headerText",
+      "listingAddress",
+      "socialHandle"
+    ]
+  }
 ]

@@ -281,10 +281,11 @@ export async function renderListingTemplateBatch(params: {
   };
 }
 
-export type TemplateRenderCaptionItemWithCacheKey = TemplateRenderCaptionItemInput & {
-  cacheKeyTimestamp?: number;
-  cacheKeyId?: number;
-};
+export type TemplateRenderCaptionItemWithCacheKey =
+  TemplateRenderCaptionItemInput & {
+    cacheKeyTimestamp?: number;
+    cacheKeyId?: number;
+  };
 
 export type RenderListingTemplateBatchStreamParams = {
   userId: string;
@@ -307,7 +308,7 @@ export type RenderListingTemplateBatchStreamCallbacks = {
 
 /**
  * Renders templates one-by-one, checking Redis first and calling onItem for each
- * (cache hit or after Orshot render). Caller can push SSE from onItem.
+ * (cache hit or after primary template render). Caller can push SSE from onItem.
  */
 export async function renderListingTemplateBatchStream(
   params: RenderListingTemplateBatchStreamParams,
@@ -329,9 +330,8 @@ export async function renderListingTemplateBatchStream(
     return { failedTemplateIds };
   }
 
-  const { images: listingImagesWithPublicUrls } = resolveListingImagesToPublicUrls(
-    params.listingImages
-  );
+  const { images: listingImagesWithPublicUrls } =
+    resolveListingImagesToPublicUrls(params.listingImages);
 
   for (let index = 0; index < selectedTemplates.length; index += 1) {
     const template = selectedTemplates[index] as TemplateRenderConfig;

@@ -1,4 +1,7 @@
-import { createChildLogger, logger as baseLogger } from "@web/src/lib/core/logging/logger";
+import {
+  createChildLogger,
+  logger as baseLogger
+} from "@web/src/lib/core/logging/logger";
 
 const logger = createChildLogger(baseLogger, { module: "orshot-client" });
 
@@ -16,7 +19,12 @@ type CreateRendererDeps = {
 
 /** Single-page API response: data is an object with content */
 type OrshotSinglePageResponse = {
-  data: { content: string; format?: string; type?: string; responseTime?: number };
+  data: {
+    content: string;
+    format?: string;
+    type?: string;
+    responseTime?: number;
+  };
   format?: string;
   type?: string;
   responseTime?: number;
@@ -50,7 +58,11 @@ function getOrshotApiKey(override?: string): string {
 
 function normalizeImageContent(content: string): string {
   const trimmed = content.trim();
-  if (trimmed.startsWith("data:") || trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+  if (
+    trimmed.startsWith("data:") ||
+    trimmed.startsWith("http://") ||
+    trimmed.startsWith("https://")
+  ) {
     return trimmed;
   }
   return `data:image/png;base64,${trimmed}`;
@@ -77,7 +89,7 @@ export function createTemplateRenderer(
     const body = {
       templateId,
       modifications,
-      response: { type: "base64" as const, format: "png" as const }
+      response: { type: "url" as const, format: "png" as const }
     };
 
     const response = await fetchFn(ORSHOT_RENDER_URL, {
@@ -92,7 +104,10 @@ export function createTemplateRenderer(
     if (!response.ok) {
       let detail: string;
       try {
-        const json = (await response.json()) as { error?: string; message?: string };
+        const json = (await response.json()) as {
+          error?: string;
+          message?: string;
+        };
         detail = json.error ?? json.message ?? response.statusText;
       } catch {
         detail = response.statusText;
