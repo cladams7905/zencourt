@@ -89,13 +89,10 @@ export function createTemplateRenderer(
     const body = {
       templateId,
       modifications,
-      response: { type: "url" as const, format: "png" as const }
+      response: { type: "base64" as const, format: "png" as const }
     };
 
-    logger.debug(
-      { requestBody: body },
-      "Orshot render request"
-    );
+    logger.debug({ requestBody: body }, "Orshot render request");
 
     const response = await fetchFn(ORSHOT_RENDER_URL, {
       method: "POST",
@@ -125,10 +122,7 @@ export function createTemplateRenderer(
     }
 
     const raw = (await response.json()) as OrshotApiResponse;
-    logger.debug(
-      { responseBody: raw },
-      "Orshot render response"
-    );
+    logger.debug({ responseBody: raw }, "Orshot render response");
     const content = extractContentString(raw);
     if (!content) {
       logger.error(
