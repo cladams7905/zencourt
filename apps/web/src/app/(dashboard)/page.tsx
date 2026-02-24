@@ -1,6 +1,4 @@
-import { getUserListings } from "@web/src/server/models/listings";
 import { DashboardView } from "@web/src/components/dashboard/DashboardView";
-import { DBListing } from "@db/types/models";
 import { getUser } from "@web/src/server/models/users";
 import { getOrCreateUserAdditional, getUserProfileCompletion } from "@web/src/server/models/userAdditional";
 import { LandingPage } from "@web/src/components/landing/LandingPage";
@@ -58,12 +56,10 @@ export default async function Home() {
   const { headerName } = getUserDisplayNames(user);
   const locationLabel = getLocationLabel(userAdditional.location);
 
-  const listings: DBListing[] = await getUserListings(user.id);
   const profileCompletion = await getUserProfileCompletion(user.id);
 
   return (
     <DashboardView
-      initialListings={listings}
       headerName={headerName}
       location={locationLabel}
       profileCompleted={profileCompletion.profileCompleted}

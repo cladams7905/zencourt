@@ -10,7 +10,6 @@ import { useBrandingProfileSettings } from "./useBrandingProfileSettings";
 import { useBrandingWritingStyleSettings } from "./useBrandingWritingStyleSettings";
 
 export const useBrandingSettings = ({
-  userId,
   userAdditional,
   defaultAgentName,
   defaultHeadshotUrl,
@@ -23,9 +22,8 @@ export const useBrandingSettings = ({
     defaultAgentName,
     defaultHeadshotUrl
   });
-  const audiences = useBrandingAudienceSettings({ userId, userAdditional });
+  const audiences = useBrandingAudienceSettings({ userAdditional });
   const writingStyle = useBrandingWritingStyleSettings({
-    userId,
     userAdditional,
     isActive
   });

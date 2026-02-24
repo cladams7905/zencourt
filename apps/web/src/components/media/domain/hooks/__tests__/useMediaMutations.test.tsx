@@ -3,9 +3,9 @@ import { toast } from "sonner";
 import { useMediaMutations } from "@web/src/components/media/domain/hooks/useMediaMutations";
 import type { DBUserMedia } from "@db/types/models";
 
-jest.mock("@web/src/server/models/userMedia", () => ({
-  createUserMediaRecords: jest.fn(),
-  deleteUserMedia: jest.fn()
+jest.mock("@web/src/server/actions/media/commands", () => ({
+  createUserMediaRecordsForCurrentUser: jest.fn(),
+  deleteUserMediaForCurrentUser: jest.fn()
 }));
 
 jest.mock("sonner", () => ({
@@ -15,8 +15,8 @@ jest.mock("sonner", () => ({
   }
 }));
 
-const { createUserMediaRecords, deleteUserMedia } = jest.requireMock(
-  "@web/src/server/models/userMedia"
+const { createUserMediaRecordsForCurrentUser, deleteUserMediaForCurrentUser } = jest.requireMock(
+  "@web/src/server/actions/media/commands"
 );
 
 const initialMedia: DBUserMedia[] = [
@@ -39,7 +39,7 @@ describe("useMediaMutations", () => {
   it("initializes and syncs media items from props", () => {
     const { result, rerender } = renderHook(
       (items: DBUserMedia[]) =>
-        useMediaMutations({ userId: "u1", initialMedia: items }),
+        useMediaMutations({ initialMedia: items }),
       { initialProps: initialMedia }
     );
 
@@ -60,7 +60,7 @@ describe("useMediaMutations", () => {
   });
 
   it("creates records and prepends created media", async () => {
-    createUserMediaRecords.mockResolvedValue([
+    createUserMediaRecordsForCurrentUser.mockResolvedValue([
       {
         ...initialMedia[0],
         id: "m-new"
@@ -68,7 +68,7 @@ describe("useMediaMutations", () => {
     ]);
 
     const { result } = renderHook(() =>
-      useMediaMutations({ userId: "u1", initialMedia })
+      useMediaMutations({ initialMedia })
     );
 
     await act(async () => {
@@ -82,7 +82,7 @@ describe("useMediaMutations", () => {
 
   it("opens and clears delete dialog state", () => {
     const { result } = renderHook(() =>
-      useMediaMutations({ userId: "u1", initialMedia })
+      useMediaMutations({ initialMedia })
     );
 
     act(() => {
@@ -101,10 +101,10 @@ describe("useMediaMutations", () => {
   });
 
   it("deletes media successfully", async () => {
-    deleteUserMedia.mockResolvedValue(undefined);
+    deleteUserMediaForCurrentUser.mockResolvedValue(undefined);
 
     const { result } = renderHook(() =>
-      useMediaMutations({ userId: "u1", initialMedia })
+      useMediaMutations({ initialMedia })
     );
 
     act(() => {
@@ -116,17 +116,17 @@ describe("useMediaMutations", () => {
     });
 
     await waitFor(() => {
-      expect(deleteUserMedia).toHaveBeenCalledWith("u1", "m1");
+      expect(deleteUserMediaForCurrentUser).toHaveBeenCalledWith("m1");
       expect(result.current.mediaItems).toHaveLength(0);
       expect(toast.success).toHaveBeenCalledWith("Media deleted.");
     });
   });
 
   it("shows error toast when delete fails", async () => {
-    deleteUserMedia.mockRejectedValue(new Error("boom"));
+    deleteUserMediaForCurrentUser.mockRejectedValue(new Error("boom"));
 
     const { result } = renderHook(() =>
-      useMediaMutations({ userId: "u1", initialMedia })
+      useMediaMutations({ initialMedia })
     );
 
     act(() => {
@@ -145,13 +145,13 @@ describe("useMediaMutations", () => {
 
   it("no-ops delete when nothing is selected", async () => {
     const { result } = renderHook(() =>
-      useMediaMutations({ userId: "u1", initialMedia })
+      useMediaMutations({ initialMedia })
     );
 
     await act(async () => {
       await result.current.handleConfirmDelete();
     });
 
-    expect(deleteUserMedia).not.toHaveBeenCalled();
+    expect(deleteUserMediaForCurrentUser).not.toHaveBeenCalled();
   });
 });

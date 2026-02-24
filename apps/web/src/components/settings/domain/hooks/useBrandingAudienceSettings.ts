@@ -8,7 +8,6 @@ import type { BrandingTabProps } from "@web/src/components/settings/shared";
 import { updateCurrentUserTargetAudiences } from "@web/src/server/actions/user/commands";
 
 interface UseBrandingAudienceSettingsArgs {
-  userId: string;
   userAdditional: BrandingTabProps["userAdditional"];
 }
 
@@ -16,7 +15,6 @@ const normalizeText = (value: string | null | undefined) =>
   (value ?? "").trim();
 
 export const useBrandingAudienceSettings = ({
-  userId,
   userAdditional
 }: UseBrandingAudienceSettingsArgs) => {
   const router = useRouter();

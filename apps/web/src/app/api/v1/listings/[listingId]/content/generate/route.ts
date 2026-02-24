@@ -16,6 +16,7 @@ import {
 } from "@web/src/server/services/listingContentGeneration";
 import { makeSseStreamHeaders } from "@web/src/lib/sse/sseEncoder";
 import { readJsonBodySafe } from "@shared/utils/api/validation";
+import { parseRequiredRouteParam } from "@shared/utils/api/parsers";
 
 const logger = createChildLogger(baseLogger, {
   module: "listing-content-generate-route"
@@ -27,13 +28,25 @@ export async function POST(
 ) {
   try {
     const resolvedParams = await params;
+    let listingId: string;
+    try {
+      listingId = parseRequiredRouteParam(resolvedParams.listingId, "listingId");
+    } catch {
+      return apiErrorResponse(
+        StatusCode.BAD_REQUEST,
+        "INVALID_REQUEST",
+        "Listing ID is required",
+        { message: "Listing ID is required" }
+      );
+    }
+
     const body = (await readJsonBodySafe(
       request
     )) as GenerateListingContentBody | null;
 
     const user = await requireAuthenticatedUser();
     const result = await runListingContentGenerate(
-      resolvedParams.listingId,
+      listingId,
       user.id,
       body
     );

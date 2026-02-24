@@ -156,28 +156,6 @@ describe("requestValidation", () => {
       }
     });
 
-    it("throws ApiError 400 when listingId is undefined", () => {
-      const utils = jest.requireMock("@web/src/server/utils/apiError");
-
-      expect(() =>
-        parseAndValidateParams(
-          { subcategory: "new_listing", media_type: "image" },
-          undefined
-        )
-      ).toThrow(utils.ApiError);
-
-      try {
-        parseAndValidateParams(
-          { subcategory: "new_listing", media_type: "image" },
-          undefined
-        );
-      } catch (err) {
-        expect((err as { body: { message: string } }).body.message).toBe(
-          "Listing ID is required"
-        );
-      }
-    });
-
     it("throws ApiError 400 when body is null and subcategory is required", () => {
       const utils = jest.requireMock("@web/src/server/utils/apiError");
 

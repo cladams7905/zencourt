@@ -4,4 +4,7 @@ export {
   categorizeListingImagesByIds,
   categorizeListingImagesForCurrentUser
 } from "./commands";
-export type { VisionActionOptions, VisionStats } from "./types";
+export type {
+  ImageCategorizationActionOptions,
+  ImageCategorizationStats
+} from "./types";

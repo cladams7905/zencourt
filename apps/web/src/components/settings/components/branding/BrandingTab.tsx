@@ -7,7 +7,6 @@ import { BrandingTargetAudiencesSection } from "./BrandingTargetAudiencesSection
 import { BrandingWritingStyleSection } from "./BrandingWritingStyleSection";
 
 export function BrandingTab({
-  userId,
   userAdditional,
   defaultAgentName,
   defaultHeadshotUrl,
@@ -54,7 +53,6 @@ export function BrandingTab({
     handleSaveWritingStyle,
     writingStyleSentinelRef
   } = useBrandingSettings({
-    userId,
     userAdditional,
     defaultAgentName,
     defaultHeadshotUrl,

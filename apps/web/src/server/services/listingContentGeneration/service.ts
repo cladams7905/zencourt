@@ -1,7 +1,7 @@
 import {
   encodeSseEvent
 } from "@web/src/lib/sse/sseEncoder";
-import { consumeSseStream } from "@web/src/lib/sse/sseStreamReader";
+import { consumeSseStream } from "@web/src/lib/sse/sseEventStream";
 import {
   createChildLogger,
   logger as baseLogger

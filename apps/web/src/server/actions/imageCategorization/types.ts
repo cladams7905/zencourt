@@ -1,15 +1,15 @@
 import type { CategorizationResult } from "@web/src/server/services/imageCategorization";
 
-export type VisionActionOptions = {
+export type ImageCategorizationActionOptions = {
   aiConcurrency?: number;
 };
 
-export type VisionStats = CategorizationResult["stats"];
+export type ImageCategorizationStats = CategorizationResult["stats"];
 
 export function buildNoopStats(
   uploaded: number,
   analyzed: number
-): VisionStats {
+): ImageCategorizationStats {
   return {
     total: 0,
     uploaded,

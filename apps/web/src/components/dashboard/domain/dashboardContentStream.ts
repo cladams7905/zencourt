@@ -2,6 +2,7 @@ import {
   type DashboardContentCategory,
   type DashboardGenerationEvent
 } from "@web/src/components/dashboard/shared";
+import { streamSseEvents } from "@web/src/lib/sse/sseEventStream";
 
 export async function requestDashboardContentStream(params: {
   category: DashboardContentCategory;
@@ -53,32 +54,7 @@ export async function requestDashboardContentStream(params: {
 export async function* streamDashboardContentEvents(
   reader: ReadableStreamDefaultReader<Uint8Array>
 ): AsyncGenerator<DashboardGenerationEvent> {
-  const decoder = new TextDecoder();
-  let buffer = "";
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) {
-      return;
-    }
-
-    buffer += decoder.decode(value, { stream: true });
-    const parts = buffer.split("\n\n");
-    buffer = parts.pop() ?? "";
-
-    for (const part of parts) {
-      const line = part.split("\n").find((entry) => entry.startsWith("data:"));
-      if (!line) {
-        continue;
-      }
-
-      const payload = line.replace(/^data:\s*/, "");
-      if (!payload) {
-        continue;
-      }
-
-      const event = JSON.parse(payload) as DashboardGenerationEvent;
-      yield event;
-    }
+  for await (const event of streamSseEvents<DashboardGenerationEvent>(reader)) {
+    yield event;
   }
 }

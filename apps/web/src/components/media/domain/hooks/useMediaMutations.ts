@@ -7,7 +7,6 @@ import {
 } from "@web/src/server/actions/media/commands";
 
 interface UseMediaMutationsArgs {
-  userId: string;
   initialMedia: DBUserMedia[];
 }
 

@@ -15,8 +15,8 @@ jest.mock("sonner", () => ({
   }
 }));
 
-jest.mock("@web/src/server/models/userAdditional", () => ({
-  updateUserLocation: (...args: unknown[]) => mockUpdateUserLocation(...args)
+jest.mock("@web/src/server/actions/user/commands", () => ({
+  updateCurrentUserLocation: (...args: unknown[]) => mockUpdateUserLocation(...args)
 }));
 
 jest.mock("@web/src/lib/domain/location/cityDataset", () => ({
@@ -58,7 +58,6 @@ describe("useAccountLocationSettings", () => {
 
     const { result } = renderHook(() =>
       useAccountLocationSettings({
-        userId: "u1",
         location: null,
         onDirtyChange,
         onRegisterSave
@@ -81,7 +80,6 @@ describe("useAccountLocationSettings", () => {
 
     const { result } = renderHook(() =>
       useAccountLocationSettings({
-        userId: "u1",
         location: null
       })
     );
@@ -99,7 +97,6 @@ describe("useAccountLocationSettings", () => {
     });
 
     expect(mockUpdateUserLocation).toHaveBeenCalledWith(
-      "u1",
       "Austin, TX 78701",
       {
         county: "Travis",
@@ -113,7 +110,6 @@ describe("useAccountLocationSettings", () => {
   it("does nothing when save is triggered without location value", async () => {
     const { result } = renderHook(() =>
       useAccountLocationSettings({
-        userId: "u1",
         location: null
       })
     );
@@ -130,7 +126,6 @@ describe("useAccountLocationSettings", () => {
 
     const { result } = renderHook(() =>
       useAccountLocationSettings({
-        userId: "u1",
         location: null
       })
     );
