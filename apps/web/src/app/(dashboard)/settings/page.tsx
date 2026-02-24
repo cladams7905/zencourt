@@ -31,7 +31,6 @@ export default async function SettingsPage() {
     <>
       {needsProfileCompletion && <MarkProfileCompleted userId={user.id} />}
       <SettingsView
-        userId={user.id}
         userAdditional={userAdditional}
         userEmail={email}
         userName={userName}

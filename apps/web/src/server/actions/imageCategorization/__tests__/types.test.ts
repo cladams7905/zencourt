@@ -1,6 +1,6 @@
 import { buildNoopStats } from "@web/src/server/actions/imageCategorization/types";
 
-describe("vision types helpers", () => {
+describe("imageCategorization types helpers", () => {
   it("builds noop stats with expected defaults", () => {
     expect(buildNoopStats(3, 1)).toEqual({
       total: 0,

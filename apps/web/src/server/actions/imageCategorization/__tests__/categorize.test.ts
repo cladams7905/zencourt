@@ -18,7 +18,7 @@ import {
   categorizeListingImagesByIds
 } from "@web/src/server/actions/imageCategorization/commands";
 
-describe("vision categorize action", () => {
+describe("imageCategorization categorize action", () => {
   beforeEach(() => {
     mockRunListingImagesCategorizationWorkflow.mockReset();
     mockRequireAuthenticatedUser.mockReset();

@@ -29,7 +29,7 @@ import {
 } from "@web/src/components/media/components";
 import { formatBytes } from "@web/src/lib/core/formatting/bytes";
 
-const MediaView = ({ userId, initialMedia = [] }: MediaViewProps) => {
+const MediaView = ({ initialMedia = [] }: MediaViewProps) => {
   const { selectedTypes, usageSort, setUsageSort, handleTypeToggle } =
     useMediaFilters();
   const {
@@ -44,7 +44,6 @@ const MediaView = ({ userId, initialMedia = [] }: MediaViewProps) => {
     handleDeleteDialogChange,
     handleConfirmDelete
   } = useMediaMutations({
-    userId,
     initialMedia
   });
 
@@ -142,7 +141,7 @@ const MediaView = ({ userId, initialMedia = [] }: MediaViewProps) => {
         compressDriveImages
         compressOversizeImages
         fileValidator={validateMediaFile}
-        getUploadUrls={(requests) => getUserMediaUploadUrlsForCurrentUser(requests)}
+        getUploadUrls={getUserMediaUploadUrlsForCurrentUser}
         buildRecordInput={buildUploadRecordInput}
         onCreateRecords={handleCreateRecords}
         fileMetaLabel={getMediaFileMetaLabel}

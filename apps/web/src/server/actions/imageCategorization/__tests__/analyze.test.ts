@@ -26,7 +26,7 @@ jest.mock("@web/src/server/utils/apiAuth", () => ({
 
 import { analyzeImagesWorkflow } from "@web/src/server/actions/imageCategorization/commands";
 
-describe("vision analyze action", () => {
+describe("imageCategorization analyze action", () => {
   beforeEach(() => {
     mockAnalyzeImagesWorkflow.mockReset();
     mockLoggerInfo.mockReset();

@@ -1,7 +1,6 @@
 import type { DBUserAdditional } from "@db/types/models";
 
 export interface SettingsViewProps {
-  userId: string;
   userAdditional: DBUserAdditional;
   userEmail: string;
   userName: string;
@@ -13,7 +12,6 @@ export interface SettingsViewProps {
 }
 
 export interface AccountTabProps {
-  userId: string;
   userEmail: string;
   location: string | null;
   googleMapsApiKey: string;
@@ -22,7 +20,6 @@ export interface AccountTabProps {
 }
 
 export interface BrandingTabProps {
-  userId: string;
   userAdditional: DBUserAdditional;
   defaultAgentName?: string;
   defaultHeadshotUrl?: string;

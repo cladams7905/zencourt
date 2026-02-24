@@ -66,14 +66,22 @@ describe("useSyncUploadFlow", () => {
     expect(mockEmitListingSidebarUpdate).toHaveBeenCalledTimes(1);
   });
 
-  it("throws when creating records without listing", async () => {
+  it("creates draft listing on-demand before creating records", async () => {
+    mockCreateListing.mockResolvedValue({
+      id: "listing-1",
+      title: null,
+      listingStage: "categorize"
+    });
     const { result } = renderHook(() =>
       useSyncUploadFlow({ navigate: jest.fn() })
     );
 
-    await expect(result.current.onCreateRecords([])).rejects.toThrow(
-      "Listing is missing for upload."
-    );
+    await act(async () => {
+      await result.current.onCreateRecords([]);
+    });
+
+    expect(mockCreateListing).toHaveBeenCalledTimes(1);
+    expect(mockCreateListingImageRecords).toHaveBeenCalledWith("listing-1", []);
   });
 
   it("creates records and navigates after uploads complete", async () => {

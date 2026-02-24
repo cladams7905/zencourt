@@ -150,6 +150,21 @@ describe("listing content generate route", () => {
     expect(response.status).toBe(400);
   });
 
+  it("returns 400 when listingId is missing", async () => {
+    const { POST } = await loadRoute();
+    const request = {
+      json: async () => ({ subcategory: "new_listing", media_type: "video" }),
+      nextUrl: { origin: "http://localhost:3000" },
+      headers: { get: () => null }
+    } as unknown as Request;
+
+    const response = await POST(request as never, {
+      params: Promise.resolve({ listingId: "" })
+    });
+
+    expect(response.status).toBe(400);
+  });
+
   it("returns cached done event when cache has items", async () => {
     const cachedItems = [
       {

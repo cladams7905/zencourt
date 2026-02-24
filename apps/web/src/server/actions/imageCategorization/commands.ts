@@ -13,14 +13,19 @@ import {
 import {
   requireAuthenticatedUser
 } from "@web/src/server/utils/apiAuth";
-import type { VisionActionOptions, VisionStats } from "./types";
+import type {
+  ImageCategorizationActionOptions,
+  ImageCategorizationStats
+} from "./types";
 import { buildNoopStats } from "./types";
 
-const logger = createChildLogger(baseLogger, { module: "vision-actions" });
+const logger = createChildLogger(baseLogger, {
+  module: "image-categorization-actions"
+});
 
 export async function analyzeImagesWorkflow(
   images: SerializableImageData[],
-  options: VisionActionOptions = {}
+  options: ImageCategorizationActionOptions = {}
 ): Promise<CategorizationResult> {
   try {
     logger.info({ total: images.length }, "Starting image analysis workflow");
@@ -59,8 +64,8 @@ export async function analyzeImagesWorkflow(
 export async function categorizeListingImages(
   userId: string,
   listingId: string,
-  options: VisionActionOptions = {}
-): Promise<VisionStats> {
+  options: ImageCategorizationActionOptions = {}
+): Promise<ImageCategorizationStats> {
   return runListingImagesCategorizationWorkflow(userId, listingId, {
     aiConcurrency: options.aiConcurrency
   });
@@ -70,8 +75,8 @@ export async function categorizeListingImagesByIds(
   userId: string,
   listingId: string,
   imageIds: string[],
-  options: VisionActionOptions = {}
-): Promise<VisionStats> {
+  options: ImageCategorizationActionOptions = {}
+): Promise<ImageCategorizationStats> {
   if (!imageIds || imageIds.length === 0) {
     return buildNoopStats(0, 0);
   }
@@ -86,8 +91,8 @@ export async function categorizeListingImagesByIds(
 
 export async function categorizeListingImagesForCurrentUser(
   listingId: string,
-  options: VisionActionOptions = {}
-): Promise<VisionStats> {
+  options: ImageCategorizationActionOptions = {}
+): Promise<ImageCategorizationStats> {
   const user = await requireAuthenticatedUser();
   return categorizeListingImages(user.id, listingId, options);
 }

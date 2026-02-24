@@ -6,14 +6,12 @@ import type { LocationData } from "@web/src/components/location";
 import { updateCurrentUserLocation } from "@web/src/server/actions/user/commands";
 
 interface UseAccountLocationSettingsArgs {
-  userId: string;
   location: string | null;
   onDirtyChange?: (dirty: boolean) => void;
   onRegisterSave?: (save: () => Promise<void>) => void;
 }
 
 export const useAccountLocationSettings = ({
-  userId,
   location,
   onDirtyChange,
   onRegisterSave

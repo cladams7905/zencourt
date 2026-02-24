@@ -20,10 +20,11 @@ jest.mock("sonner", () => ({
   }
 }));
 
-jest.mock("@web/src/server/models/userAdditional", () => ({
-  markWritingStyleCompleted: (...args: unknown[]) =>
+jest.mock("@web/src/server/actions/user/commands", () => ({
+  markCurrentUserWritingStyleCompleted: (...args: unknown[]) =>
     mockMarkWritingStyleCompleted(...args),
-  updateWritingStyle: (...args: unknown[]) => mockUpdateWritingStyle(...args)
+  updateCurrentUserWritingStyle: (...args: unknown[]) =>
+    mockUpdateWritingStyle(...args)
 }));
 
 describe("useBrandingWritingStyleSettings", () => {
@@ -54,7 +55,6 @@ describe("useBrandingWritingStyleSettings", () => {
   it("derives tone metadata and dirty state", () => {
     const { result } = renderHook(() =>
       useBrandingWritingStyleSettings({
-        userId: "u1",
         userAdditional: {
           writingToneLevel: 3,
           writingStyleCustom: ""
@@ -79,7 +79,6 @@ describe("useBrandingWritingStyleSettings", () => {
 
     const { result } = renderHook(() =>
       useBrandingWritingStyleSettings({
-        userId: "u1",
         userAdditional: {
           writingToneLevel: 3,
           writingStyleCustom: ""
@@ -97,7 +96,7 @@ describe("useBrandingWritingStyleSettings", () => {
       await result.current.handleSaveWritingStyle();
     });
 
-    expect(mockUpdateWritingStyle).toHaveBeenCalledWith("u1", {
+    expect(mockUpdateWritingStyle).toHaveBeenCalledWith({
       writingToneLevel: 4,
       writingStyleCustom: "Friendly"
     });
@@ -112,7 +111,6 @@ describe("useBrandingWritingStyleSettings", () => {
     const { result, rerender } = renderHook(
       ({ isActive }) =>
         useBrandingWritingStyleSettings({
-          userId: "u1",
           userAdditional: {
             writingToneLevel: 3,
             writingStyleCustom: "",
@@ -136,7 +134,7 @@ describe("useBrandingWritingStyleSettings", () => {
       observerCallback?.([{ isIntersecting: true }]);
     });
 
-    expect(mockMarkWritingStyleCompleted).toHaveBeenCalledWith("u1");
+    expect(mockMarkWritingStyleCompleted).toHaveBeenCalled();
     expect(disconnectMock).toHaveBeenCalled();
   });
 
@@ -145,7 +143,6 @@ describe("useBrandingWritingStyleSettings", () => {
 
     const { result } = renderHook(() =>
       useBrandingWritingStyleSettings({
-        userId: "u1",
         userAdditional: {
           writingToneLevel: 3,
           writingStyleCustom: ""

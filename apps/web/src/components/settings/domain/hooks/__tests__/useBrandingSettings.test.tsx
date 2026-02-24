@@ -50,7 +50,6 @@ describe("useBrandingSettings", () => {
 
     renderHook(() =>
       useBrandingSettings({
-        userId: "u1",
         userAdditional: {} as never,
         onDirtyChange
       } as never)
@@ -83,7 +82,6 @@ describe("useBrandingSettings", () => {
 
     renderHook(() =>
       useBrandingSettings({
-        userId: "u1",
         userAdditional: {} as never,
         onRegisterSave
       } as never)

@@ -21,7 +21,6 @@ import type { AccountTabProps } from "@web/src/components/settings/shared";
 import { useAccountLocationSettings } from "@web/src/components/settings/domain";
 
 export function AccountTab({
-  userId,
   userEmail,
   location,
   googleMapsApiKey,
@@ -55,7 +54,6 @@ export function AccountTab({
     isLocationDirty,
     handleSaveLocation
   } = useAccountLocationSettings({
-    userId,
     location,
     onDirtyChange,
     onRegisterSave

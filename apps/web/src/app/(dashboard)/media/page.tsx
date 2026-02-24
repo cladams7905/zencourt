@@ -14,7 +14,6 @@ export default async function MediaPage() {
   }));
   return (
     <MediaView
-      userId={user.id}
       initialMedia={mediaWithPublicUrls}
     />
   );

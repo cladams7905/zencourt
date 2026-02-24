@@ -19,7 +19,6 @@ import {
 } from "@web/src/components/settings/components";
 
 export function SettingsView({
-  userId,
   userAdditional,
   userEmail,
   userName,
@@ -107,7 +106,6 @@ export function SettingsView({
           <div className="flex-1 min-w-0">
             <TabsContent value="account" className="mt-0 space-y-6">
               <AccountTab
-                userId={userId}
                 userEmail={userEmail}
                 location={userAdditional.location}
                 googleMapsApiKey={googleMapsApiKey}
@@ -124,7 +122,6 @@ export function SettingsView({
               className="mt-0 space-y-6 data-[state=inactive]:hidden"
             >
               <BrandingTab
-                userId={userId}
                 userAdditional={userAdditional}
                 defaultAgentName={defaultAgentName}
                 defaultHeadshotUrl={defaultHeadshotUrl}

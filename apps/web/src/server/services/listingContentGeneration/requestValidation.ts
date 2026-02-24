@@ -1,6 +1,5 @@
 import { ApiError } from "@web/src/server/utils/apiError";
 import { StatusCode } from "@shared/types/api";
-import { parseRequiredRouteParam } from "@shared/utils/api/parsers";
 import { LISTING_CONTENT_SUBCATEGORIES } from "@shared/types/models";
 import type {
   GenerateListingContentBody,
@@ -55,17 +54,15 @@ function parseListingContentGenerateParams(
  */
 export function parseAndValidateParams(
   body: GenerateListingContentBody | null,
-  listingIdRaw: string | undefined
+  listingId: string
 ): ValidatedGenerateParams {
   try {
-    const listingId = parseRequiredRouteParam(listingIdRaw, "listingId");
     return parseListingContentGenerateParams(body, listingId);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Invalid request";
     throw new ApiError(StatusCode.BAD_REQUEST, {
       error: "Invalid request",
-      message:
-        message === "listingId is required" ? "Listing ID is required" : message
+      message
     });
   }
 }

@@ -14,13 +14,11 @@ import {
 } from "@web/src/server/actions/user/commands";
 
 interface UseBrandingWritingStyleSettingsArgs {
-  userId: string;
   userAdditional: BrandingTabProps["userAdditional"];
   isActive: boolean;
 }
 
 export const useBrandingWritingStyleSettings = ({
-  userId,
   userAdditional,
   isActive
 }: UseBrandingWritingStyleSettingsArgs) => {
@@ -82,7 +80,7 @@ export const useBrandingWritingStyleSettings = ({
 
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [hasMarkedWritingStyle, isActive, userId]);
+  }, [hasMarkedWritingStyle, isActive]);
 
   const handleSaveWritingStyle = React.useCallback(async () => {
     setIsLoadingStyle(true);
@@ -102,7 +100,7 @@ export const useBrandingWritingStyleSettings = ({
     } finally {
       setIsLoadingStyle(false);
     }
-  }, [router, userId, writingToneLevel, writingStyleCustom]);
+  }, [router, writingToneLevel, writingStyleCustom]);
 
   return {
     toneMeta,

@@ -1,7 +1,6 @@
 import type { DBUserMedia, UserMediaType } from "@db/types/models";
 
 export interface MediaViewProps {
-  userId: string;
   initialMedia?: DBUserMedia[];
 }
 

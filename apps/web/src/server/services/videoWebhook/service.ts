@@ -83,7 +83,7 @@ function shouldIgnoreWebhookUpdate(args: {
 function scheduleListingRevalidation(listingId: string): void {
   setImmediate(() => {
     try {
-      revalidatePath(`/listing/${listingId}`);
+      revalidatePath(`/listings/${listingId}`);
     } catch (error) {
       logger.error(
         {

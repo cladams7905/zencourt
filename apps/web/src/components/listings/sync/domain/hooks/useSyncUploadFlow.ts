@@ -26,14 +26,8 @@ type UseSyncUploadFlowParams = {
 export const useSyncUploadFlow = ({
   navigate
 }: UseSyncUploadFlowParams) => {
-  const [listingId, setListingIdState] = React.useState<string | null>(null);
   const listingIdRef = React.useRef<string | null>(null);
   const inFlightListingPromiseRef = React.useRef<Promise<string> | null>(null);
-
-  const setListingId = React.useCallback((next: string) => {
-    listingIdRef.current = next;
-    setListingIdState(next);
-  }, []);
 
   const ensureListingId = React.useCallback(async () => {
     if (listingIdRef.current) {
@@ -50,7 +44,7 @@ export const useSyncUploadFlow = ({
         throw new Error("Draft listing could not be created.");
       }
 
-      setListingId(listing.id);
+      listingIdRef.current = listing.id;
       emitListingSidebarUpdate({
         id: listing.id,
         title: listing.title ?? null,
@@ -68,7 +62,7 @@ export const useSyncUploadFlow = ({
     } finally {
       inFlightListingPromiseRef.current = null;
     }
-  }, [setListingId]);
+  }, []);
 
   const getUploadUrls = React.useCallback(
     async (requests: UploadRequest[]) => {
@@ -100,13 +94,10 @@ export const useSyncUploadFlow = ({
 
   const onCreateRecords = React.useCallback(
     async (records: ListingSyncUploadRecordInput[]) => {
-      const activeListingId = listingIdRef.current;
-      if (!activeListingId) {
-        throw new Error("Listing is missing for upload.");
-      }
+      const activeListingId = await ensureListingId();
       await createListingImageRecordsForCurrentUser(activeListingId, records);
     },
-    []
+    [ensureListingId]
   );
 
   const onUploadsComplete = React.useCallback(
@@ -122,7 +113,6 @@ export const useSyncUploadFlow = ({
   );
 
   return {
-    listingId,
     ensureListingId,
     getUploadUrls,
     buildRecordInput,

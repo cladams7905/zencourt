@@ -14,8 +14,7 @@ import {
   ContentFilterBar,
   ContentGrid,
   ProfileCompletionChecklist,
-  ScheduleCard,
-  type ContentItem
+  ScheduleCard
 } from "@web/src/components/dashboard/components";
 import {
   useDashboardContentActions,
@@ -23,10 +22,8 @@ import {
   useDashboardFilters,
   useDashboardSessionCache
 } from "@web/src/components/dashboard/domain";
-import type { DBListing } from "@db/types/models";
 
 interface DashboardViewProps {
-  initialListings?: DBListing[];
   headerName?: string;
   location?: string;
   profileCompleted?: boolean;
@@ -91,9 +88,6 @@ export function DashboardView({
   mediaUploaded = false
 }: DashboardViewProps) {
   const handleNoopAction = React.useCallback(() => {}, []);
-  const [existingContentItems, setExistingContentItems] = React.useState<
-    ContentItem[]
-  >([]);
   const { generatedContentItems, setGeneratedContentItems } =
     useDashboardSessionCache();
   const {
@@ -127,7 +121,6 @@ export function DashboardView({
     useDashboardContentActions({
       contentType,
       activeCategory,
-      setExistingContentItems,
       setGeneratedContentItems
     });
 
@@ -182,16 +175,6 @@ export function DashboardView({
 
           {generationError && (
             <p className="mb-4 text-sm text-red-500">{generationError}</p>
-          )}
-
-          {existingContentItems.length > 0 && (
-            <ContentGrid
-              items={existingContentItems}
-              onFavoriteToggle={handleFavoriteToggle}
-              onEdit={handleNoopAction}
-              onDownload={handleNoopAction}
-              onShare={handleNoopAction}
-            />
           )}
 
           {activeCategory &&

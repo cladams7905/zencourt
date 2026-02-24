@@ -19,13 +19,13 @@ jest.mock("sonner", () => ({
   }
 }));
 
-jest.mock("@web/src/server/models/userAdditional", () => ({
-  updateTargetAudiences: (...args: unknown[]) => mockUpdateTargetAudiences(...args)
+jest.mock("@web/src/server/actions/user/commands", () => ({
+  updateCurrentUserTargetAudiences: (...args: unknown[]) =>
+    mockUpdateTargetAudiences(...args)
 }));
 
 describe("useBrandingAudienceSettings", () => {
   const baseArgs = {
-    userId: "user-1",
     userAdditional: {
       targetAudiences: ["first_time_homebuyers"],
       audienceDescription: "Initial"
@@ -82,7 +82,6 @@ describe("useBrandingAudienceSettings", () => {
     });
 
     expect(mockUpdateTargetAudiences).toHaveBeenCalledWith(
-      "user-1",
       ["first_time_homebuyers", "growing_families"],
       "New notes"
     );

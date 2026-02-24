@@ -1,4 +1,3 @@
 export { encodeSseEvent, makeSseStreamHeaders } from "./sseEncoder";
-export { consumeSseStream } from "./sseStreamReader";
+export { consumeSseStream, streamSseEvents } from "./sseEventStream";
 export { extractJsonItemsFromStream } from "./contentExtractor";
-export { streamSseEvents } from "./sseEventStream";

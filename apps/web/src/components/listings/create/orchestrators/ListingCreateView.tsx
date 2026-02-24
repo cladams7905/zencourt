@@ -12,12 +12,7 @@ import { useStickyHeader } from "@web/src/components/listings/create/shared/hook
 import { useScrollFade } from "@web/src/components/listings/create/shared/hooks/useScrollFade";
 import {
   useListingCreateEffects,
-  useListingCreateActiveMediaItems,
-  useListingCreateMediaItems,
-  useListingCreatePreviewPlans,
-  useDeleteCachedPreviewItem,
-  useTemplateRender,
-  useContentGeneration
+  useListingCreateWorkflow
 } from "@web/src/components/listings/create/domain";
 import {
   MEDIA_TAB_LABELS,
@@ -78,66 +73,29 @@ export function ListingCreateView({
     useStickyHeader();
   const { containerRef: filterTagsRef, maskImage: tagFadeMask } =
     useScrollFade();
-  const [activeMediaTab, setActiveMediaTab] =
-    React.useState<ListingCreateMediaTab>(initialMediaTab);
-  const [activeSubcategory, setActiveSubcategory] =
-    React.useState<ListingContentSubcategory>(initialSubcategory);
   const {
-    localPostItems,
+    activeMediaTab,
+    setActiveMediaTab,
+    activeSubcategory,
+    setActiveSubcategory,
     isGenerating,
     generationError,
     loadingCount,
     generateSubcategoryContent,
-    removeContentItem
-  } = useContentGeneration({
+    activeMediaItems,
+    templateRenderError,
+    isTemplateRendering,
+    activeImagePreviewItems,
+    imageLoadingCount,
+    activePreviewPlans,
+    handleDeleteImagePreviewItem
+  } = useListingCreateWorkflow({
     listingId,
     listingPostItems,
-    activeMediaTab,
-    activeSubcategory
-  });
-
-  const activeMediaItems = useListingCreateActiveMediaItems({
-    activeMediaTab,
-    activeSubcategory,
-    localPostItems
-  });
-
-  const {
-    previewItems: templatePreviewItems,
-    isRendering: isTemplateRendering,
-    renderError: templateRenderError,
-    isTemplateRenderingUnavailable
-  } = useTemplateRender({
-    listingId,
-    activeSubcategory,
-    activeMediaTab,
-    captionItems: activeMediaItems,
-    isGenerating
-  });
-
-  const { activeImagePreviewItems, imageLoadingCount } = useListingCreateMediaItems({
-    activeMediaTab,
-    activeMediaItems,
     listingImages,
-    isGenerating,
-    isTemplateRendering,
-    isTemplateRenderingUnavailable,
-    templatePreviewItems
-  });
-
-  const activePreviewPlans = useListingCreatePreviewPlans({
-    listingId,
-    activeMediaTab,
-    activeSubcategory,
-    activeMediaItems,
-    videoItems
-  });
-
-  const handleDeleteImagePreviewItem = useDeleteCachedPreviewItem({
-    listingId,
-    activeSubcategory,
-    activeMediaItems,
-    removeContentItem
+    videoItems,
+    initialMediaTab,
+    initialSubcategory
   });
 
   useListingCreateEffects({

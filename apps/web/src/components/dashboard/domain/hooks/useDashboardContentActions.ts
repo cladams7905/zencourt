@@ -1,7 +1,6 @@
 import * as React from "react";
 import type {
   DashboardContentCategory,
-  DashboardContentItem,
   DashboardContentType,
   GeneratedContentState
 } from "@web/src/components/dashboard/shared";
@@ -10,26 +9,19 @@ import { toggleFavoriteAcrossGenerated } from "@web/src/components/dashboard/dom
 type UseDashboardContentActionsParams = {
   contentType: DashboardContentType;
   activeCategory: DashboardContentCategory | null;
-  setExistingContentItems: React.Dispatch<React.SetStateAction<DashboardContentItem[]>>;
   setGeneratedContentItems: React.Dispatch<React.SetStateAction<GeneratedContentState>>;
 };
 
 export function useDashboardContentActions({
   contentType,
   activeCategory,
-  setExistingContentItems,
   setGeneratedContentItems
 }: UseDashboardContentActionsParams) {
   const handleFavoriteToggle = React.useCallback(
     (id: string) => {
-      setExistingContentItems((prev) =>
-        prev.map((item) =>
-          item.id === id ? { ...item, isFavorite: !item.isFavorite } : item
-        )
-      );
       setGeneratedContentItems((prev) => toggleFavoriteAcrossGenerated(prev, id));
     },
-    [setExistingContentItems, setGeneratedContentItems]
+    [setGeneratedContentItems]
   );
 
   const handleDeleteGeneratedItem = React.useCallback(

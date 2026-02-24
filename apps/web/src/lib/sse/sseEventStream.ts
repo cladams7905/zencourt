@@ -34,3 +34,21 @@ export async function* streamSseEvents<T>(
   }
 }
 
+/**
+ * Consumes an SSE stream and invokes the callback for each parsed event.
+ * Implemented in terms of streamSseEvents so parsing logic lives in one place.
+ */
+export async function consumeSseStream<T>(
+  body: ReadableStream<Uint8Array>,
+  onEvent: (event: T) => void | Promise<void>
+): Promise<void> {
+  const reader = body.getReader();
+  try {
+    for await (const event of streamSseEvents<T>(reader)) {
+      await onEvent(event);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}
+
