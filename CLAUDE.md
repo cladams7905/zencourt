@@ -226,6 +226,33 @@ Rules:
 - Prefer importing from folder boundaries (`.../db/listings`, `.../db/listingImages`) instead of deep file paths.
 - Extract shared action utilities to `apps/web/src/server/actions/shared/*` when reused across modules.
 
+### 5b. API Route vs Server Action Decision Rule (Web)
+
+Use this exact decision order for `apps/web`:
+
+1. **Server Component reads (default):**
+   - Read data directly in Server Components via server actions/services/models.
+   - Do **not** call internal `/api/v1/*` for normal page data loading.
+
+2. **Client mutations (default):**
+   - Use **Server Actions** for internal app mutations triggered by client components/forms.
+   - Keep auth/access checks in the server action layer; keep HTTP concerns out of actions.
+
+3. **Create an API route only when at least one of these is true:**
+   - Webhook or external system callback endpoint.
+   - Client-side polling / long-running status checks.
+   - Streaming/SSE or protocol-level HTTP behavior that requires route handler control.
+   - Public or cross-application HTTP contract is explicitly required.
+   - Infinite scrolling / client-side fetching pattern where an HTTP endpoint is intentionally the boundary.
+
+4. **Do not create API routes for:**
+   - Internal one-off mutations that can be Server Actions.
+   - Internal reads that can be done in Server Components.
+
+5. **If a route is no longer needed by rule #3:**
+   - Migrate callers to Server Actions or Server Component reads.
+   - Delete the route and its route-specific tests in the same refactor.
+
 ### 6. Type Placement
 
 Types should be placed at the appropriate scope — never higher than necessary:

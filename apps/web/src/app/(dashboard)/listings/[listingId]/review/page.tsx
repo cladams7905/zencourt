@@ -2,9 +2,9 @@ import { redirect } from "next/navigation";
 import {
   getListingById,
   updateListing
-} from "@web/src/server/actions/db/listings";
+} from "@web/src/server/models/listings";
 import { requireUserOrRedirect } from "@web/src/app/(dashboard)/_utils/requireUserOrRedirect";
-import { getOrCreateUserAdditional } from "@web/src/server/actions/db/userAdditional";
+import { getOrCreateUserAdditional } from "@web/src/server/models/userAdditional";
 import { ListingReviewView } from "@web/src/components/listings/review";
 import { redirectToListingStage } from "../_utils/redirectToListingStage";
 

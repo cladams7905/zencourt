@@ -1,6 +1,6 @@
 import { MediaView } from "@web/src/components/media";
 import { requireUserOrRedirect } from "@web/src/app/(dashboard)/_utils/requireUserOrRedirect";
-import { getUserMedia } from "@web/src/server/actions/db/userMedia";
+import { getUserMedia } from "@web/src/server/models/userMedia";
 import { getPublicDownloadUrlSafe } from "@web/src/server/utils/storageUrls";
 
 export default async function MediaPage() {

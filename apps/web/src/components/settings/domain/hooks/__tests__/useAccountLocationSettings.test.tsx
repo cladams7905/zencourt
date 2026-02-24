@@ -15,7 +15,7 @@ jest.mock("sonner", () => ({
   }
 }));
 
-jest.mock("@web/src/server/actions/db/userAdditional", () => ({
+jest.mock("@web/src/server/models/userAdditional", () => ({
   updateUserLocation: (...args: unknown[]) => mockUpdateUserLocation(...args)
 }));
 

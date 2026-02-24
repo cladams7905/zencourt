@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { useMediaMutations } from "@web/src/components/media/domain/hooks/useMediaMutations";
 import type { DBUserMedia } from "@db/types/models";
 
-jest.mock("@web/src/server/actions/db/userMedia", () => ({
+jest.mock("@web/src/server/models/userMedia", () => ({
   createUserMediaRecords: jest.fn(),
   deleteUserMedia: jest.fn()
 }));
@@ -16,7 +16,7 @@ jest.mock("sonner", () => ({
 }));
 
 const { createUserMediaRecords, deleteUserMedia } = jest.requireMock(
-  "@web/src/server/actions/db/userMedia"
+  "@web/src/server/models/userMedia"
 );
 
 const initialMedia: DBUserMedia[] = [

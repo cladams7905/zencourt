@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ApiError, requireAuthenticatedUser } from "@web/src/app/api/v1/_utils";
-import { getUserListingSummariesPage } from "@web/src/server/actions/db/listings";
+import { ApiError } from "@web/src/app/api/v1/_utils";
+import { requireAuthenticatedUser } from "@web/src/server/utils/apiAuth";
+import { getUserListingSummariesPage } from "@web/src/server/models/listings";
 import {
   apiErrorCodeFromStatus,
   apiErrorResponse,
@@ -15,11 +16,11 @@ const clampNumber = (value: string | null, fallback: number) => {
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
-    const user = await requireAuthenticatedUser();
     const { searchParams } = request.nextUrl;
     const limit = clampNumber(searchParams.get("limit"), 10);
     const offset = clampNumber(searchParams.get("offset"), 0);
 
+    const user = await requireAuthenticatedUser();
     const result = await getUserListingSummariesPage(user.id, {
       limit,
       offset

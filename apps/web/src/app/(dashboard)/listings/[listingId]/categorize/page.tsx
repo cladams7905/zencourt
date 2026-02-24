@@ -2,11 +2,11 @@ import { redirect } from "next/navigation";
 import {
   getListingById,
   updateListing
-} from "@web/src/server/actions/db/listings";
+} from "@web/src/server/models/listings";
 import {
   getListingImages,
   mapListingImageToDisplayItem
-} from "@web/src/server/actions/db/listingImages";
+} from "@web/src/server/models/listingImages";
 import { ListingCategorizeView } from "@web/src/components/listings/categorize";
 import { redirectToListingStage } from "../_utils/redirectToListingStage";
 import { requireUserOrRedirect } from "@web/src/app/(dashboard)/_utils/requireUserOrRedirect";

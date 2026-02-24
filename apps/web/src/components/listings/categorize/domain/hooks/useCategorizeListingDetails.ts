@@ -4,7 +4,15 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { emitListingSidebarUpdate } from "@web/src/lib/domain/listing/sidebarEvents";
-import { updateListing } from "@web/src/server/actions/db/listings";
+import { updateListingForCurrentUser } from "@web/src/server/actions/listings/commands";
+
+type ListingAddressUpdatePayload = {
+  address: string;
+  propertyDetails?: null;
+  propertyDetailsSource?: null;
+  propertyDetailsFetchedAt?: null;
+  propertyDetailsRevision?: null;
+};
 
 type RunDraftSave = <T>(fn: () => Promise<T>) => Promise<T>;
 
@@ -26,7 +34,7 @@ const buildAddressUpdatePayload = (
   previousAddress: string
 ): {
   shouldClearDetails: boolean;
-  payload: Parameters<typeof updateListing>[2];
+  payload: ListingAddressUpdatePayload;
 } => {
   const shouldClearDetails =
     nextAddress !== previousAddress && nextAddress.length > 0;
@@ -48,7 +56,6 @@ export function useCategorizeListingDetails({
   initialAddress,
   hasPropertyDetails,
   listingId,
-  userId,
   runDraftSave
 }: UseCategorizeListingDetailsParams) {
   const router = useRouter();
@@ -69,7 +76,7 @@ export function useCategorizeListingDetails({
       setDraftTitle(nextTitle);
       try {
         await runDraftSave(() =>
-          updateListing(userId, listingId, { title: nextTitle })
+          updateListingForCurrentUser(listingId, { title: nextTitle })
         );
         emitListingSidebarUpdate({
           id: listingId,
@@ -85,7 +92,7 @@ export function useCategorizeListingDetails({
         return false;
       }
     },
-    [listingId, runDraftSave, userId]
+    [listingId, runDraftSave]
   );
 
   const persistAddress = React.useCallback(
@@ -97,9 +104,7 @@ export function useCategorizeListingDetails({
       );
 
       try {
-        await runDraftSave(() =>
-          updateListing(userId, listingId, payload)
-        );
+        await runDraftSave(() => updateListingForCurrentUser(listingId, payload));
         lastSavedAddressRef.current = nextAddress;
         if (shouldClearDetails) {
           setHasPropertyDetailsState(false);
@@ -110,7 +115,7 @@ export function useCategorizeListingDetails({
         return false;
       }
     },
-    [listingId, runDraftSave, userId]
+    [listingId, runDraftSave]
   );
 
   const handleAddressSelect = React.useCallback(
@@ -142,7 +147,7 @@ export function useCategorizeListingDetails({
     }
 
     try {
-      await updateListing(userId, listingId, {
+      await updateListingForCurrentUser(listingId, {
         listingStage: "review"
       });
       emitListingSidebarUpdate({
@@ -170,8 +175,7 @@ export function useCategorizeListingDetails({
     hasPropertyDetailsState,
     listingId,
     persistAddress,
-    router,
-    userId
+    router
   ]);
 
   return {

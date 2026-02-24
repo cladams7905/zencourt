@@ -1,7 +1,5 @@
-import { NextResponse } from "next/server";
 import {
-  encodeSseEvent,
-  makeSseStreamHeaders
+  encodeSseEvent
 } from "@web/src/lib/sse/sseEncoder";
 import { consumeSseStream } from "@web/src/lib/sse/sseStreamReader";
 import {
@@ -45,7 +43,10 @@ export async function runListingContentGenerate(
   listingId: string,
   userId: string,
   body: GenerateListingContentBody | null
-): Promise<NextResponse> {
+): Promise<{
+  stream: ReadableStream;
+  status: number;
+}> {
   const listing = await requireListingAccess(listingId, userId);
   const validated = parseAndValidateParams(body, listingId);
   const context: ListingGenerationContext = resolveListingContext(
@@ -67,48 +68,11 @@ export async function runListingContentGenerate(
         controller.close();
       }
     });
-    return new NextResponse(stream, {
-      headers: makeSseStreamHeaders()
-    });
+    return { stream, status: 200 };
   }
 
   const upstreamBody = buildUpstreamRequestBody(context);
   const upstreamResponse = await runContentGeneration(userId, upstreamBody);
-
-  if (!upstreamResponse.ok) {
-    const errorPayload = await upstreamResponse.json().catch(() => ({}));
-    const message =
-      (errorPayload as { message?: string }).message ??
-      "Failed to generate listing content";
-    const stream = new ReadableStream({
-      start(controller) {
-        controller.enqueue(encodeSseEvent({ type: "error", message }));
-        controller.close();
-      }
-    });
-    return new NextResponse(stream, {
-      headers: makeSseStreamHeaders(),
-      status: upstreamResponse.status
-    });
-  }
-
-  if (!upstreamResponse.body) {
-    const stream = new ReadableStream({
-      start(controller) {
-        controller.enqueue(
-          encodeSseEvent({
-            type: "error",
-            message: "Streaming response not available from upstream"
-          })
-        );
-        controller.close();
-      }
-    });
-    return new NextResponse(stream, {
-      headers: makeSseStreamHeaders(),
-      status: 502
-    });
-  }
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -117,7 +81,7 @@ export async function runListingContentGenerate(
         let errored = false;
 
         await consumeSseStream<ContentStreamEvent>(
-          upstreamResponse.body!,
+          upstreamResponse.stream,
           async (event) => {
             if (event.type === "delta" || event.type === "error") {
               controller.enqueue(encodeSseEvent(event));
@@ -193,7 +157,8 @@ export async function runListingContentGenerate(
     }
   });
 
-  return new NextResponse(stream, {
-    headers: makeSseStreamHeaders()
-  });
+  return {
+    stream,
+    status: 200
+  };
 }

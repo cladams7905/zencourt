@@ -54,6 +54,7 @@ import {
   TooltipTrigger
 } from "@web/src/components/ui/tooltip";
 import { toast } from "sonner";
+import { deleteCachedListingContentItem } from "@web/src/server/actions/listings/commands";
 import {
   LISTING_CONTENT_SUBCATEGORIES,
   type ListingContentSubcategory
@@ -163,18 +164,11 @@ export function ListingCreateView({
         typeof withCacheKey.cacheKeyId === "number"
       ) {
         try {
-          await fetch(
-            `/api/v1/listings/${listingId}/content/cache/item`,
-            {
-              method: "DELETE",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                cacheKeyTimestamp: withCacheKey.cacheKeyTimestamp,
-                cacheKeyId: withCacheKey.cacheKeyId,
-                subcategory: activeSubcategory
-              })
-            }
-          );
+          await deleteCachedListingContentItem(listingId, {
+            cacheKeyTimestamp: withCacheKey.cacheKeyTimestamp,
+            cacheKeyId: withCacheKey.cacheKeyId,
+            subcategory: activeSubcategory
+          });
         } catch {
           // Remove from grid anyway so UI stays consistent
         }

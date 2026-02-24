@@ -1,8 +1,8 @@
-import { getUserListings } from "@web/src/server/actions/db/listings";
+import { getUserListings } from "@web/src/server/models/listings";
 import { DashboardView } from "@web/src/components/dashboard/DashboardView";
 import { DBListing } from "@db/types/models";
-import { getUser } from "@web/src/server/actions/db/users";
-import { getOrCreateUserAdditional, getUserProfileCompletion } from "@web/src/server/actions/db/userAdditional";
+import { getUser } from "@web/src/server/models/users";
+import { getOrCreateUserAdditional, getUserProfileCompletion } from "@web/src/server/models/userAdditional";
 import { LandingPage } from "@web/src/components/landing/LandingPage";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";

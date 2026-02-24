@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect } from "react";
-import { markProfileCompleted } from "@web/src/server/actions/db/userAdditional";
+import { markCurrentUserProfileCompleted } from "@web/src/server/actions/user/commands";
 
 export function MarkProfileCompleted({ userId }: { userId: string }) {
   useEffect(() => {
-    void markProfileCompleted(userId);
+    void markCurrentUserProfileCompleted();
   }, [userId]);
   return null;
 }

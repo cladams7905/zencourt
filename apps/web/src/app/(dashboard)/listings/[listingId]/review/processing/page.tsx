@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getListingById } from "@web/src/server/actions/db/listings";
+import { getListingById } from "@web/src/server/models/listings";
 import { requireUserOrRedirect } from "@web/src/app/(dashboard)/_utils/requireUserOrRedirect";
 import { ListingProcessingView } from "@web/src/components/listings/processing";
 import { redirectToListingStage } from "../../_utils/redirectToListingStage";

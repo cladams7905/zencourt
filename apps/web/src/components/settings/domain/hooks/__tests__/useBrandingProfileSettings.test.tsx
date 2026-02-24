@@ -7,7 +7,6 @@ const mockToastSuccess = jest.fn();
 const mockToastError = jest.fn();
 const mockEnsureGoogleHeadshot = jest.fn();
 const mockUpdateUserProfile = jest.fn();
-const mockGetPublicDownloadUrl = jest.fn();
 const mockUploadFile = jest.fn();
 
 jest.mock("next/navigation", () => ({
@@ -23,14 +22,14 @@ jest.mock("sonner", () => ({
   }
 }));
 
-jest.mock("@web/src/server/actions/db/userAdditional", () => ({
-  ensureGoogleHeadshot: (...args: unknown[]) => mockEnsureGoogleHeadshot(...args),
-  updateUserProfile: (...args: unknown[]) => mockUpdateUserProfile(...args)
+jest.mock("@web/src/server/actions/user/commands", () => ({
+  ensureCurrentUserGoogleHeadshot: (...args: unknown[]) =>
+    mockEnsureGoogleHeadshot(...args),
+  updateCurrentUserProfile: (...args: unknown[]) => mockUpdateUserProfile(...args)
 }));
 
-jest.mock("@web/src/server/actions/api/storage", () => ({
-  getPublicDownloadUrl: (...args: unknown[]) => mockGetPublicDownloadUrl(...args),
-  uploadFile: (...args: unknown[]) => mockUploadFile(...args)
+jest.mock("@web/src/server/actions/storage/commands", () => ({
+  uploadFileFromBuffer: (...args: unknown[]) => mockUploadFile(...args)
 }));
 
 describe("useBrandingProfileSettings", () => {
@@ -52,9 +51,10 @@ describe("useBrandingProfileSettings", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    global.URL.createObjectURL = jest.fn(() => "blob:test");
+    global.URL.revokeObjectURL = jest.fn();
     mockEnsureGoogleHeadshot.mockResolvedValue(null);
     mockUpdateUserProfile.mockResolvedValue({});
-    mockGetPublicDownloadUrl.mockImplementation(async (url: string) => `public:${url}`);
     mockUploadFile.mockResolvedValue("https://cdn.example/new.png");
   });
 
@@ -114,12 +114,21 @@ describe("useBrandingProfileSettings", () => {
     const smallFile = new File([new Uint8Array([1, 2, 3])], "avatar.png", {
       type: "image/png"
     });
+    Object.defineProperty(smallFile, "arrayBuffer", {
+      value: async () => new Uint8Array([1, 2, 3]).buffer
+    });
 
     await act(async () => {
       await result.current.handleImageUpload(smallFile, "headshotUrl", "Headshot");
     });
 
-    expect(mockUploadFile).toHaveBeenCalledWith(smallFile, "user_u1/branding");
+    expect(mockUploadFile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        fileName: "avatar.png",
+        contentType: "image/png",
+        folder: "user_u1/branding"
+      })
+    );
     expect(mockUpdateUserProfile).toHaveBeenCalled();
     expect(mockToastSuccess).toHaveBeenCalledWith(
       "Successfully updated Headshot to avatar.png."
@@ -141,7 +150,6 @@ describe("useBrandingProfileSettings", () => {
     });
 
     expect(mockEnsureGoogleHeadshot).toHaveBeenCalledWith(
-      "u1",
       "https://google/avatar.png"
     );
   });
@@ -172,6 +180,9 @@ describe("useBrandingProfileSettings", () => {
     const { result } = renderHook(() => useBrandingProfileSettings(baseArgs));
     const smallFile = new File([new Uint8Array([1, 2, 3])], "avatar.png", {
       type: "image/png"
+    });
+    Object.defineProperty(smallFile, "arrayBuffer", {
+      value: async () => new Uint8Array([1, 2, 3]).buffer
     });
 
     await act(async () => {

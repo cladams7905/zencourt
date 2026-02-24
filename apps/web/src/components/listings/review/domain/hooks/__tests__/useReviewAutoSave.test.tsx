@@ -7,7 +7,7 @@ const mockToastSuccess = jest.fn();
 const mockToastError = jest.fn();
 const mockToastMessage = jest.fn();
 
-jest.mock("@web/src/server/actions/api/propertyDetails", () => ({
+jest.mock("@web/src/server/actions/propertyDetails/commands", () => ({
   saveListingPropertyDetails: (...args: unknown[]) =>
     mockSaveListingPropertyDetails(...args)
 }));

@@ -1,12 +1,22 @@
 /** @jest-environment node */
+export {};
 
 describe("content generate route", () => {
   async function loadRoute() {
     jest.resetModules();
 
-    const mockGenerateContent = jest.fn();
-    jest.doMock("@web/src/server/actions/api/content/generate", () => ({
-      generateContent: (...args: unknown[]) => mockGenerateContent(...args)
+    const mockRequireAuthenticatedUser = jest
+      .fn()
+      .mockResolvedValue({ id: "user-1" });
+    const mockRunContentGeneration = jest.fn();
+
+    jest.doMock("@web/src/server/utils/apiAuth", () => ({
+      requireAuthenticatedUser: (...args: unknown[]) =>
+        mockRequireAuthenticatedUser(...args)
+    }));
+    jest.doMock("@web/src/server/services/contentGeneration", () => ({
+      runContentGeneration: (...args: unknown[]) =>
+        mockRunContentGeneration(...args)
     }));
     jest.doMock("@web/src/lib/core/logging/logger", () => ({
       logger: { info: jest.fn(), error: jest.fn() },
@@ -14,35 +24,16 @@ describe("content generate route", () => {
     }));
 
     const mod = await import("../route");
-    const { ApiError } = await import("@web/src/server/utils/apiError");
-    const { StatusCode } = await import("@shared/types/api");
-
-    mockGenerateContent.mockImplementation(async (body: unknown) => {
-      const b = body as { category?: unknown; agent_profile?: unknown } | null;
-      if (!b?.category) {
-        throw new ApiError(StatusCode.BAD_REQUEST, {
-          error: "Invalid request",
-          message: "category is required"
-        });
-      }
-      if (!b.agent_profile) {
-        throw new ApiError(StatusCode.BAD_REQUEST, {
-          error: "Invalid request",
-          message: "agent_profile is required"
-        });
-      }
-      return new Response("ok", { status: 200 });
-    });
-
     return {
       POST: mod.POST,
-      mockGenerateContent
+      mockRequireAuthenticatedUser,
+      mockRunContentGeneration
     };
   }
 
   it("returns 400 when category is missing", async () => {
     const { POST } = await loadRoute();
-    const request = { json: async () => ({ agent_profile: {} }) } as unknown as Request;
+    const request = { json: async () => ({ agent_profile: {} }) } as Request;
 
     const response = await POST(request as never);
 
@@ -56,7 +47,7 @@ describe("content generate route", () => {
 
   it("returns 400 when agent_profile is missing", async () => {
     const { POST } = await loadRoute();
-    const request = { json: async () => ({ category: "general" }) } as unknown as Request;
+    const request = { json: async () => ({ category: "general" }) } as Request;
 
     const response = await POST(request as never);
 
@@ -68,41 +59,43 @@ describe("content generate route", () => {
     });
   });
 
-  it("calls generateContent and returns its response", async () => {
-    const { POST, mockGenerateContent } = await loadRoute();
-    const request = {
-      json: async () => ({
-        category: "general",
-        agent_profile: {
-          agent_name: "Test Agent",
-          brokerage_name: "Test Brokerage",
-          city: "Austin",
-          state: "TX",
-          zip_code: "78701",
-          writing_tone_level: 3,
-          writing_tone_label: "Conversational",
-          writing_style_description: "Conversational"
-        }
-      })
-    } as unknown as Request;
+  it("calls service and returns SSE response", async () => {
+    const { POST, mockRequireAuthenticatedUser, mockRunContentGeneration } =
+      await loadRoute();
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode("ok"));
+        controller.close();
+      }
+    });
+    mockRunContentGeneration.mockResolvedValueOnce({ stream, status: 200 });
+
+    const body = {
+      category: "general",
+      agent_profile: {
+        agent_name: "Test Agent",
+        brokerage_name: "Test Brokerage",
+        city: "Austin",
+        state: "TX",
+        zip_code: "78701",
+        writing_tone_level: 3,
+        writing_tone_label: "Conversational",
+        writing_style_description: "Conversational"
+      }
+    };
+    const request = { json: async () => body } as Request;
 
     const response = await POST(request as never);
 
     expect(response.status).toBe(200);
-    expect(mockGenerateContent).toHaveBeenCalledWith(
-      expect.objectContaining({
-        category: "general",
-        agent_profile: expect.objectContaining({
-          agent_name: "Test Agent",
-          brokerage_name: "Test Brokerage"
-        })
-      })
-    );
+    expect(mockRequireAuthenticatedUser).toHaveBeenCalledTimes(1);
+    expect(mockRunContentGeneration).toHaveBeenCalledWith("user-1", body);
   });
 
   it("returns 500 for unexpected errors", async () => {
-    const { POST, mockGenerateContent } = await loadRoute();
-    mockGenerateContent.mockRejectedValueOnce(new Error("boom"));
+    const { POST, mockRunContentGeneration } = await loadRoute();
+    mockRunContentGeneration.mockRejectedValueOnce(new Error("boom"));
+
     const request = {
       json: async () => ({
         category: "general",
@@ -117,7 +110,7 @@ describe("content generate route", () => {
           writing_style_description: "Conversational"
         }
       })
-    } as unknown as Request;
+    } as Request;
 
     const response = await POST(request as never);
 

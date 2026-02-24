@@ -1,7 +1,7 @@
 import { SettingsView } from "@web/src/components/settings";
 import { MarkProfileCompleted } from "@web/src/components/settings/MarkProfileCompleted";
 import { requireUserOrRedirect } from "@web/src/app/(dashboard)/_utils/requireUserOrRedirect";
-import { getOrCreateUserAdditional } from "@web/src/server/actions/db/userAdditional";
+import { getOrCreateUserAdditional } from "@web/src/server/models/userAdditional";
 import {
   getDefaultAgentName,
   getDefaultHeadshotUrl,

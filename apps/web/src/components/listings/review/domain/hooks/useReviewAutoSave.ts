@@ -1,11 +1,11 @@
 import * as React from "react";
 import { toast } from "sonner";
-import { saveListingPropertyDetails } from "@web/src/server/actions/api/propertyDetails";
 import { roundBathroomsToHalfStep } from "@web/src/components/listings/review/shared/formatters";
 import type { ListingPropertyDetails } from "@shared/types/models";
+import { saveListingPropertyDetailsForCurrentUser } from "@web/src/server/actions/propertyDetails/commands";
 
 type UseReviewAutoSaveParams = {
-  userId: string;
+  userId?: string;
   listingId: string;
   detailsRef: React.MutableRefObject<ListingPropertyDetails>;
   dirtyRef: React.MutableRefObject<boolean>;
@@ -15,7 +15,6 @@ type UseReviewAutoSaveParams = {
 };
 
 export const useReviewAutoSave = ({
-  userId,
   listingId,
   detailsRef,
   dirtyRef,
@@ -28,7 +27,10 @@ export const useReviewAutoSave = ({
     async (options?: { silent?: boolean }) => {
       setIsSaving(true);
       try {
-        await saveListingPropertyDetails(userId, listingId, detailsRef.current);
+        await saveListingPropertyDetailsForCurrentUser(
+          listingId,
+          detailsRef.current
+        );
         dirtyRef.current = false;
         if (!options?.silent) {
           toast.success("Property details saved.");
@@ -41,7 +43,7 @@ export const useReviewAutoSave = ({
         setIsSaving(false);
       }
     },
-    [detailsRef, dirtyRef, listingId, userId]
+    [detailsRef, dirtyRef, listingId]
   );
 
   const triggerAutoSave = React.useCallback(() => {

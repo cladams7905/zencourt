@@ -1,9 +1,9 @@
 import * as React from "react";
 import { toast } from "sonner";
-import { updateUserLocation } from "@web/src/server/actions/db/userAdditional";
 import { normalizeCountyName } from "@web/src/lib/domain/location/cityDataset";
 import { formatLocationForStorage } from "@web/src/lib/domain/location/formatters";
 import type { LocationData } from "@web/src/components/location";
+import { updateCurrentUserLocation } from "@web/src/server/actions/user/commands";
 
 interface UseAccountLocationSettingsArgs {
   userId: string;
@@ -91,7 +91,7 @@ export const useAccountLocationSettings = ({
         .map((area) => area.trim())
         .filter(Boolean);
 
-      await updateUserLocation(userId, formattedLocation, {
+      await updateCurrentUserLocation(formattedLocation, {
         county: resolvedCounty || null,
         serviceAreas:
           resolvedServiceAreas.length > 0
@@ -110,8 +110,7 @@ export const useAccountLocationSettings = ({
     locationValue,
     serviceAreasOverride,
     suggestedCounty,
-    suggestedServiceAreas,
-    userId
+    suggestedServiceAreas
   ]);
 
   React.useEffect(() => {

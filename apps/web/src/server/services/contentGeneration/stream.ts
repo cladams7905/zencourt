@@ -1,9 +1,6 @@
-import { NextResponse } from "next/server";
-import { ApiError } from "@web/src/server/utils/apiError";
-import { StatusCode } from "@shared/types/api";
+import { DomainDependencyError } from "@web/src/server/errors/domain";
 import {
-  encodeSseEvent,
-  makeSseStreamHeaders
+  encodeSseEvent
 } from "@web/src/lib/sse/sseEncoder";
 import {
   generateStructuredStreamForUseCase,
@@ -40,13 +37,9 @@ async function initializeAiStream(
       outputFormat: OUTPUT_FORMAT
     });
   } catch (error) {
-    throw new ApiError(StatusCode.INTERNAL_SERVER_ERROR, {
-      error: "Missing configuration",
-      message:
-        error instanceof Error
-          ? error.message
-          : "Failed to initialize AI stream"
-    });
+    throw new DomainDependencyError(
+      error instanceof Error ? error.message : "Failed to initialize AI stream"
+    );
   }
 
   if (!response.ok) {
@@ -55,18 +48,14 @@ async function initializeAiStream(
       { status: response.status, errorPayload },
       "AI provider error"
     );
-    throw new ApiError(response.status, {
-      error: "Upstream error",
-      message: "AI provider request failed"
+    throw new DomainDependencyError("AI provider request failed", {
+      upstreamStatus: response.status
     });
   }
 
   const upstream = response.body;
   if (!upstream) {
-    throw new ApiError(StatusCode.BAD_GATEWAY, {
-      error: "Invalid response",
-      message: "AI provider response stream missing"
-    });
+    throw new DomainDependencyError("AI provider response stream missing");
   }
 
   return upstream;
@@ -216,7 +205,10 @@ export async function createSseResponse(args: {
   redis: Redis | null;
   recentHooksKey: string;
   logger: Logger;
-}): Promise<NextResponse> {
+}): Promise<{
+  stream: ReadableStream;
+  status: number;
+}> {
   const { systemPrompt, userPrompt, redis, recentHooksKey, logger } = args;
   const streamConfig = getAiUseCaseConfig("content_generation_stream");
 
@@ -245,5 +237,5 @@ export async function createSseResponse(args: {
     }
   });
 
-  return new NextResponse(stream, { headers: makeSseStreamHeaders() });
+  return { stream, status: 200 };
 }

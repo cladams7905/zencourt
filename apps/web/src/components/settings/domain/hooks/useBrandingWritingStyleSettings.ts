@@ -9,9 +9,9 @@ import {
   TONE_SCALE
 } from "@web/src/components/settings/shared";
 import {
-  markWritingStyleCompleted,
-  updateWritingStyle
-} from "@web/src/server/actions/db/userAdditional";
+  markCurrentUserWritingStyleCompleted,
+  updateCurrentUserWritingStyle
+} from "@web/src/server/actions/user/commands";
 
 interface UseBrandingWritingStyleSettingsArgs {
   userId: string;
@@ -74,7 +74,7 @@ export const useBrandingWritingStyleSettings = ({
           return;
         }
         setHasMarkedWritingStyle(true);
-        void markWritingStyleCompleted(userId);
+        void markCurrentUserWritingStyleCompleted();
         observer.disconnect();
       },
       { threshold: 0.2 }
@@ -87,7 +87,7 @@ export const useBrandingWritingStyleSettings = ({
   const handleSaveWritingStyle = React.useCallback(async () => {
     setIsLoadingStyle(true);
     try {
-      await updateWritingStyle(userId, {
+      await updateCurrentUserWritingStyle({
         writingToneLevel: writingToneLevel ?? null,
         writingStyleCustom: writingStyleCustom || null
       });

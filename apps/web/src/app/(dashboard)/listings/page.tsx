@@ -1,4 +1,4 @@
-import { getUserListingSummariesPage } from "@web/src/server/actions/db/listings";
+import { getUserListingSummariesPage } from "@web/src/server/models/listings";
 import { MyListingsView } from "@web/src/components/listings/myListings";
 import { requireUserOrRedirect } from "@web/src/app/(dashboard)/_utils/requireUserOrRedirect";
 
