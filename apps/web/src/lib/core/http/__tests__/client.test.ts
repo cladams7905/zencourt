@@ -1,9 +1,8 @@
 import {
-  ClientHttpError,
   fetchApiData,
   fetchJson,
   fetchStreamResponse
-} from "@web/src/lib/client/http";
+} from "@web/src/lib/core/http/client";
 
 describe("client/http", () => {
   const originalFetch = global.fetch;
