@@ -1,5 +1,5 @@
 import type { ListingSummaryItem } from "@web/src/components/listings/myListings/shared";
-import { fetchJson } from "@web/src/lib/client/http";
+import { fetchJson } from "@web/src/lib/core/http/client";
 
 type FetchListingsResponse = {
   items: ListingSummaryItem[];

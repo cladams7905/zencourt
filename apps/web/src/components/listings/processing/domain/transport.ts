@@ -6,7 +6,7 @@ import {
   startListingVideoGeneration
 } from "@web/src/server/actions/video";
 import type { VideoJobUpdateEvent } from "@web/src/lib/domain/listing/videoStatus";
-import { fetchApiData, fetchStreamResponse } from "@web/src/lib/client/http";
+import { fetchApiData, fetchStreamResponse } from "@web/src/lib/core/http/client";
 
 export async function updateListingStage(
   listingId: string,

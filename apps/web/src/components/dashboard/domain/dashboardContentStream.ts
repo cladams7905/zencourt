@@ -2,7 +2,7 @@ import {
   type DashboardContentCategory,
   type DashboardGenerationEvent
 } from "@web/src/components/dashboard/shared";
-import { fetchStreamResponse } from "@web/src/lib/client/http";
+import { fetchStreamResponse } from "@web/src/lib/core/http/client";
 import { streamSseEvents } from "@web/src/lib/sse/sseEventStream";
 
 export async function requestDashboardContentStream(params: {

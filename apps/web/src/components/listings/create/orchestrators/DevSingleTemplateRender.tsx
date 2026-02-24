@@ -5,7 +5,7 @@ import type { ContentItem } from "@web/src/components/dashboard/components/Conte
 import type { ListingContentSubcategory } from "@shared/types/models";
 import { buildTemplateRenderCaptionItems } from "@web/src/components/listings/create/domain/listingCreateUtils";
 import { streamTemplateRenderEvents } from "@web/src/components/listings/create/domain/templateRender/streamEvents";
-import { fetchStreamResponse } from "@web/src/lib/client/http";
+import { fetchStreamResponse } from "@web/src/lib/core/http/client";
 import { Button } from "@web/src/components/ui/button";
 import {
   Select,

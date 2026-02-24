@@ -8,7 +8,7 @@ import {
 } from "@web/src/components/listings/create/domain/listingCreateUtils";
 import type { TemplateRenderCaptionItemInput } from "@web/src/lib/domain/media/templateRender/types";
 import type { ListingImagePreviewItem } from "@web/src/components/listings/create/shared/types";
-import { fetchStreamResponse } from "@web/src/lib/client/http";
+import { fetchStreamResponse } from "@web/src/lib/core/http/client";
 import { streamTemplateRenderEvents } from "./streamEvents";
 import type { ListingCreateMediaTab } from "@web/src/components/listings/create/shared/constants";
 
