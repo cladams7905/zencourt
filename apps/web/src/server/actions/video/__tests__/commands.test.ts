@@ -2,6 +2,7 @@ const mockStartListingVideoGenerationService = jest.fn();
 const mockCancelListingVideoGenerationService = jest.fn();
 const mockRequireAuthenticatedUser = jest.fn();
 const mockRequireListingAccess = jest.fn();
+const mockGetPublicDownloadUrls = jest.fn();
 
 jest.mock("@web/src/server/services/videoGeneration", () => ({
   startListingVideoGeneration: (...args: unknown[]) =>
@@ -22,6 +23,11 @@ jest.mock("@web/src/server/auth/apiAuth", () => ({
 jest.mock("@web/src/server/models/listings/access", () => ({
   requireListingAccess: (...args: unknown[]) =>
     (mockRequireListingAccess as (...a: unknown[]) => unknown)(...args)
+}));
+
+jest.mock("@web/src/server/services/storage/urlResolution", () => ({
+  getPublicDownloadUrls: (...args: unknown[]) =>
+    (mockGetPublicDownloadUrls as (...a: unknown[]) => unknown)(...args)
 }));
 
 import {
@@ -73,7 +79,8 @@ describe("video commands", () => {
         listingId: "listing-1",
         userId: "user-1",
         orientation: undefined,
-        aiDirections: undefined
+        aiDirections: undefined,
+        resolvePublicDownloadUrls: expect.any(Function)
       });
       expect(result).toEqual({
         batchId: "b1",
@@ -98,7 +105,8 @@ describe("video commands", () => {
         listingId: "listing-1",
         userId: "user-1",
         orientation: "portrait",
-        aiDirections: "sunny day"
+        aiDirections: "sunny day",
+        resolvePublicDownloadUrls: expect.any(Function)
       });
     });
   });

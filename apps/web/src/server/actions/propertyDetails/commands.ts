@@ -2,8 +2,11 @@
 
 import {
   fetchAndPersistPropertyDetails,
-  buildPropertyDetailsRevision
+  buildPropertyDetailsRevision,
+  getDefaultPropertyDetailsProvider
 } from "@web/src/server/services/propertyDetails";
+import { generateText } from "@web/src/server/services/ai";
+import type { AITextRequest } from "@web/src/server/services/ai";
 import type { ListingPropertyDetails } from "@shared/types/models";
 import { updateListing } from "@web/src/server/models/listings";
 import {
@@ -23,7 +26,24 @@ export async function fetchPropertyDetails(
     "Listing ID is required to fetch listing details"
   );
 
-  return fetchAndPersistPropertyDetails({ userId, listingId, addressOverride });
+  return fetchAndPersistPropertyDetails({
+    userId,
+    listingId,
+    addressOverride,
+    provider: getDefaultPropertyDetailsProvider({
+      runStructuredQuery: async ({ systemPrompt, userPrompt, responseFormat }) => {
+        const result = await generateText({
+          provider: "perplexity",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt }
+          ],
+          responseFormat: responseFormat as AITextRequest["responseFormat"]
+        });
+        return result?.raw ?? null;
+      }
+    })
+  });
 }
 
 export async function saveListingPropertyDetails(

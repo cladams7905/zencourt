@@ -4,7 +4,6 @@ const mockProvider = {
   name: "test",
   fetch: mockFetch
 };
-
 jest.mock("@db/client", () => ({
   db: { select: () => ({ from: () => ({ where: () => Promise.resolve([]) }) }) },
   eq: (...args: unknown[]) => args,

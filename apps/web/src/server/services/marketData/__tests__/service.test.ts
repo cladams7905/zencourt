@@ -24,6 +24,7 @@ jest.mock("../cache", () => ({
 }));
 
 import { createMarketDataService } from "../service";
+import { createMarketDataProviderRegistry } from "../registry";
 
 describe("marketData/service", () => {
   const location = { city: "Austin", state: "TX", zip_code: "73301" };
@@ -59,6 +60,13 @@ describe("marketData/service", () => {
       },
       fetcher,
       logger,
+      providerRegistry: createMarketDataProviderRegistry({
+        env: withEnv({}),
+        fetcher,
+        logger,
+        now: () => new Date("2026-02-18T00:00:00.000Z"),
+        runStructuredMarketQuery: jest.fn()
+      }),
       getRedisClient: () => ({ get: jest.fn(), set: jest.fn() })
     });
 
@@ -86,6 +94,13 @@ describe("marketData/service", () => {
       fetcher,
       logger,
       now: () => new Date("2026-02-18T00:00:00.000Z"),
+      providerRegistry: createMarketDataProviderRegistry({
+        env: withEnv({}),
+        fetcher,
+        logger,
+        now: () => new Date("2026-02-18T00:00:00.000Z"),
+        runStructuredMarketQuery: jest.fn()
+      }),
       getRedisClient: () => ({ get: jest.fn(), set: jest.fn() })
     });
 
@@ -113,6 +128,13 @@ describe("marketData/service", () => {
       },
       fetcher,
       logger,
+      providerRegistry: createMarketDataProviderRegistry({
+        env: withEnv({}),
+        fetcher,
+        logger,
+        now: () => new Date("2026-02-18T00:00:00.000Z"),
+        runStructuredMarketQuery: jest.fn()
+      }),
       getRedisClient: () => ({ get: jest.fn(), set: jest.fn() })
     });
 
@@ -136,7 +158,13 @@ describe("marketData/service", () => {
         })
       },
       fetcher,
-      logger
+      logger,
+      providerRegistry: createMarketDataProviderRegistry({
+        env: withEnv({ MARKET_DATA_PROVIDER: "rentcast" }),
+        fetcher,
+        logger,
+        now: () => new Date("2026-02-18T00:00:00.000Z")
+      })
     });
 
     await expect(service.getMarketData(location)).resolves.toEqual(rentcast);

@@ -10,6 +10,7 @@ import type { MarketData, MarketLocation } from "./types";
 import { readMarketCache, type RedisLike, writeMarketCache } from "./cache";
 import {
   createMarketDataProviderRegistry,
+  type MarketDataProviderRegistry,
   type MarketDataProviderStrategy
 } from "./registry";
 
@@ -23,6 +24,7 @@ export type MarketDataServiceDeps = {
   env?: NodeJS.ProcessEnv;
   fetcher?: typeof fetch;
   now?: () => Date;
+  providerRegistry?: MarketDataProviderRegistry;
   logger?: LoggerLike;
   getRedisClient?: () => RedisLike | null;
 };
@@ -68,12 +70,14 @@ export function createMarketDataService(deps: MarketDataServiceDeps = {}) {
   const getRedisClient =
     deps.getRedisClient ?? (() => toRedisLike(getSharedRedisClient()));
 
-  const providerRegistry = createMarketDataProviderRegistry({
-    env,
-    logger,
-    fetcher,
-    now
-  });
+  const providerRegistry =
+    deps.providerRegistry ??
+    createMarketDataProviderRegistry({
+      env,
+      logger,
+      fetcher,
+      now
+    });
 
   async function getProviderMarketData(
     provider: MarketDataProviderStrategy,

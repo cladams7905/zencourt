@@ -5,7 +5,6 @@ import {
 } from "@web/src/lib/core/logging/logger";
 import type { ListingPropertyDetails } from "@shared/types/models";
 import { getListingById, updateListing } from "@web/src/server/models/listings";
-import { getDefaultPropertyDetailsProvider } from "./providers";
 import type { PropertyDetailsProvider } from "./providers/types";
 import { normalizeListingPropertyDetails } from "./domain/normalize";
 import { parseListingPropertyRaw } from "./domain/parsing";
@@ -22,14 +21,13 @@ export function buildPropertyDetailsRevision(
 
 export async function fetchPropertyDetails(
   address: string,
-  provider?: PropertyDetailsProvider
+  provider: PropertyDetailsProvider
 ): Promise<ListingPropertyDetails | null> {
   if (!address || address.trim() === "") {
     throw new Error("Address is required to fetch property details");
   }
 
-  const resolvedProvider = provider ?? getDefaultPropertyDetailsProvider();
-  const parsed = await resolvedProvider.fetch(address);
+  const parsed = await provider.fetch(address);
 
   const rawPayload = parseListingPropertyRaw(parsed);
   const normalized = rawPayload
@@ -47,8 +45,9 @@ export async function fetchAndPersistPropertyDetails(params: {
   userId: string;
   listingId: string;
   addressOverride?: string | null;
+  provider: PropertyDetailsProvider;
 }) {
-  const { userId, listingId, addressOverride } = params;
+  const { userId, listingId, addressOverride, provider } = params;
 
   const listing = await getListingById(userId, listingId);
   if (!listing) {
@@ -60,7 +59,6 @@ export async function fetchAndPersistPropertyDetails(params: {
     throw new Error("Listing address is required to fetch property details");
   }
 
-  const provider = getDefaultPropertyDetailsProvider();
   const propertyDetails = await fetchPropertyDetails(address, provider);
   if (!propertyDetails) {
     throw new Error("Failed to fetch property details");

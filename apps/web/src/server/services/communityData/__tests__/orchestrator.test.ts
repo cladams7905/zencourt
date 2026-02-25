@@ -16,14 +16,12 @@ describe("communityData/orchestrator", () => {
     const primary = {
       provider: "perplexity",
       getCommunityDataByZip: jest.fn().mockRejectedValue(new Error("boom")),
-      getCommunityDataByZipAndAudience: jest.fn(),
-      getCityDescription: jest.fn()
+      getCommunityDataByZipAndAudience: jest.fn()
     };
     const fallback = {
       provider: "google",
       getCommunityDataByZip: jest.fn().mockResolvedValue({ zip_code: "78701" }),
-      getCommunityDataByZipAndAudience: jest.fn(),
-      getCityDescription: jest.fn()
+      getCommunityDataByZipAndAudience: jest.fn()
     };
     mockCreateRegistry.mockReturnValue({
       getPrimaryProvider: () => primary,
@@ -46,8 +44,7 @@ describe("communityData/orchestrator", () => {
       getMonthlyEventsSectionByZip: jest.fn().mockResolvedValue({
         key: "things_to_do_february",
         value: "- Event"
-      }),
-      getCityDescription: jest.fn().mockResolvedValue("Austin description")
+      })
     };
     mockCreateRegistry.mockReturnValue({
       getPrimaryProvider: () => primary,
@@ -65,7 +62,7 @@ describe("communityData/orchestrator", () => {
     expect(result.seasonalExtraSections).toEqual({
       things_to_do_february: "- Event"
     });
-    expect(result.cityDescription).toBe("Austin description");
+    expect(result.cityDescription).toBeNull();
   });
 
   it("passes avoid recommendations to provider for category-based community flow", async () => {
@@ -80,8 +77,7 @@ describe("communityData/orchestrator", () => {
       getCommunityDataByZipAndAudienceForCategories: jest
         .fn()
         .mockResolvedValue({ dining_list: "Cafe A" }),
-      prefetchCategoriesByZip: jest.fn(),
-      getCityDescription: jest.fn().mockResolvedValue("Austin")
+      prefetchCategoriesByZip: jest.fn()
     };
     mockCreateRegistry.mockReturnValue({
       getPrimaryProvider: () => primary,

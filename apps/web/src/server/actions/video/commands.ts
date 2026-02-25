@@ -10,6 +10,7 @@ import {
   cancelListingVideoGeneration as cancelListingVideoGenerationService,
   startListingVideoGeneration as startListingVideoGenerationService
 } from "@web/src/server/services/videoGeneration";
+import { getPublicDownloadUrls } from "@web/src/server/services/storage/urlResolution";
 
 function parseVideoGenerateRequest(body: unknown): VideoGenerateRequest {
   const input = (body || {}) as Partial<VideoGenerateRequest>;
@@ -32,7 +33,8 @@ export async function startListingVideoGeneration(body: unknown) {
     listingId: listing.id,
     userId: user.id,
     orientation: parsed.orientation,
-    aiDirections: parsed.aiDirections
+    aiDirections: parsed.aiDirections,
+    resolvePublicDownloadUrls: getPublicDownloadUrls
   });
   return { ...result, listingId: listing.id };
 }

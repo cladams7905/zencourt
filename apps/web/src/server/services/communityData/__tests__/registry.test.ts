@@ -12,6 +12,47 @@ const mockGetCachedPerplexityCategoryPayload = jest.fn();
 jest.mock(
   "@web/src/server/services/communityData/providers/perplexity",
   () => ({
+    createPerplexityCommunityDataProvider: () => ({
+      provider: "perplexity",
+      getCommunityDataByZip: (...args: unknown[]) =>
+        mockGetPerplexityCommunityData(...args),
+      getCommunityDataByZipAndAudience: (...args: unknown[]) =>
+        mockGetPerplexityCommunityData(...args),
+      getMonthlyEventsSectionByZip: (...args: unknown[]) =>
+        mockGetPerplexityMonthlyEvents(...args),
+      getCommunityDataByZipAndAudienceForCategories: (...args: unknown[]) =>
+        mockGetPerplexityByCategories(...args),
+      getAvoidRecommendationsForCategories: async (params: {
+        zipCode: string;
+        audienceSegment?: string;
+        serviceAreas?: string[] | null;
+        preferredCity?: string | null;
+        preferredState?: string | null;
+        categories: string[];
+      }) => {
+        const out: Record<string, string[]> = {};
+        for (const category of params.categories) {
+          const cached = await mockGetCachedPerplexityCategoryPayload({
+            zipCode: params.zipCode,
+            category,
+            audience: params.audienceSegment,
+            serviceAreas:
+              category === "dining" ? params.serviceAreas : null,
+            city: params.preferredCity ?? undefined,
+            state: params.preferredState ?? undefined
+          });
+          const names = (cached?.items ?? [])
+            .map((item: { name?: string }) => item.name?.trim())
+            .filter((name: string | undefined): name is string => Boolean(name));
+          if (names.length > 0) {
+            out[category] = Array.from(new Set(names));
+          }
+        }
+        return out;
+      },
+      prefetchCategoriesByZip: (...args: unknown[]) =>
+        mockPrefetchPerplexityCategories(...args)
+    }),
     getPerplexityCommunityData: (...args: unknown[]) =>
       mockGetPerplexityCommunityData(...args),
     getPerplexityCommunityDataByZipAndAudienceForCategories: (
@@ -25,6 +66,12 @@ jest.mock(
 );
 
 jest.mock("@web/src/server/services/communityData/providers/google", () => ({
+  createGoogleCommunityDataProvider: () => ({
+    provider: "google",
+    getCommunityDataByZip: (...args: unknown[]) => mockGetGoogleByZip(...args),
+    getCommunityDataByZipAndAudience: (...args: unknown[]) =>
+      mockGetGoogleByZipAndAudience(...args)
+  }),
   getCommunityDataByZip: (...args: unknown[]) => mockGetGoogleByZip(...args),
   getCommunityDataByZipAndAudience: (...args: unknown[]) =>
     mockGetGoogleByZipAndAudience(...args),

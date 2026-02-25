@@ -1,19 +1,10 @@
-import {
-  CommunityDataProvider,
-  getCommunityDataProvider
-} from "@web/src/server/services/communityData/config";
-import { generateTextForUseCase } from "@web/src/server/services/ai";
 import type { CityDescriptionCachePayload } from "../providers/google/cache";
 
-type LoggerLike = {
-  warn: (...args: unknown[]) => void;
-};
-
-function buildCityDescriptionPrompt(city: string, state: string): string {
+export function buildCityDescriptionPrompt(city: string, state: string): string {
   return `Write a 2-3 sentence high-quality description summarizing the city of ${city}, ${state}. This should include the general vibe of the area, places of interest, and its proximity to other things in the geographic region. Keep it brief but informative. Output only the sentences.`;
 }
 
-function parseCityDescriptionResult(result: {
+export function parseCityDescriptionResult(result: {
   text: string | null;
   citations?: Array<{ title?: string; url?: string; source?: string }>;
 }): CityDescriptionCachePayload | null {
@@ -54,39 +45,4 @@ function parseCityDescriptionResult(result: {
         }
       : null;
   }
-}
-
-export async function fetchCityDescription(
-  city: string,
-  state: string,
-  logger: LoggerLike
-): Promise<CityDescriptionCachePayload | null> {
-  const result = await generateTextForUseCase({
-    useCase: "city_description",
-    system:
-      "You write concise, factual city descriptions for real estate marketing prompts.",
-    messages: [
-      {
-        role: "user",
-        content: buildCityDescriptionPrompt(city, state)
-      }
-    ]
-  });
-
-  if (!result) {
-    logger.warn(
-      {
-        city,
-        state,
-        provider:
-          getCommunityDataProvider() === CommunityDataProvider.Perplexity
-            ? "perplexity"
-            : "anthropic"
-      },
-      "City description request failed"
-    );
-    return null;
-  }
-
-  return parseCityDescriptionResult(result);
 }

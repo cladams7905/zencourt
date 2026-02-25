@@ -7,7 +7,6 @@ import {
 } from "@web/src/lib/core/logging/logger";
 import { createVideoGenBatch } from "@web/src/server/models/videoGenBatch";
 import { createVideoGenJobsBatch } from "@web/src/server/models/videoGenJobs";
-import { getPublicDownloadUrls } from "@web/src/server/services/storage/urlResolution";
 import { isPriorityCategory } from "@shared/utils";
 import type {
   DBListingImage,
@@ -122,6 +121,7 @@ async function buildPrimaryJobRecord(args: {
   aiDirections?: string;
   sortOrder: number;
   previousTemplateKey: string | null;
+  resolvePublicDownloadUrls: (urls: string[]) => string[];
 }): Promise<{
   record: InsertDBVideoGenJob;
   primaryImageUrl: string;
@@ -137,7 +137,8 @@ async function buildPrimaryJobRecord(args: {
     orientation,
     aiDirections,
     sortOrder,
-    previousTemplateKey
+    previousTemplateKey,
+    resolvePublicDownloadUrls
   } = args;
 
   const roomWithCategory = { ...room, category };
@@ -147,7 +148,7 @@ async function buildPrimaryJobRecord(args: {
     listingPrimaryImageUrl
   );
   const primaryImage = findImageByUrl(groupedImages, category, primaryImageUrl);
-  const publicPrimaryUrls = getPublicDownloadUrls([primaryImageUrl]);
+  const publicPrimaryUrls = resolvePublicDownloadUrls([primaryImageUrl]);
 
   const primaryPrompt = buildPrompt({
     roomName: room.name,
@@ -197,6 +198,7 @@ async function buildSecondaryJobRecord(args: {
   aiDirections?: string;
   sortOrder: number;
   previousTemplateKey: string | null;
+  resolvePublicDownloadUrls: (urls: string[]) => string[];
 }): Promise<{
   record: InsertDBVideoGenJob;
   nextTemplateKey: string | null;
@@ -211,7 +213,8 @@ async function buildSecondaryJobRecord(args: {
     orientation,
     aiDirections,
     sortOrder,
-    previousTemplateKey
+    previousTemplateKey,
+    resolvePublicDownloadUrls
   } = args;
 
   const roomWithCategory = { ...room, category };
@@ -230,7 +233,7 @@ async function buildSecondaryJobRecord(args: {
     category,
     secondaryImageUrl
   );
-  const publicSecondaryUrls = getPublicDownloadUrls([secondaryImageUrl]);
+  const publicSecondaryUrls = resolvePublicDownloadUrls([secondaryImageUrl]);
 
   const secondaryPrompt = buildPrompt({
     roomName: room.name,
@@ -278,6 +281,7 @@ async function processRoomForJobRecords(args: {
   aiDirections?: string;
   sortOrder: number;
   previousTemplateKey: string | null;
+  resolvePublicDownloadUrls: (urls: string[]) => string[];
 }): Promise<{
   records: InsertDBVideoGenJob[];
   nextSortOrder: number;
@@ -292,7 +296,8 @@ async function processRoomForJobRecords(args: {
     orientation,
     aiDirections,
     sortOrder,
-    previousTemplateKey
+    previousTemplateKey,
+    resolvePublicDownloadUrls
   } = args;
 
   const category = getCategoryForRoom(room);
@@ -307,7 +312,8 @@ async function processRoomForJobRecords(args: {
     orientation,
     aiDirections,
     sortOrder,
-    previousTemplateKey
+    previousTemplateKey,
+    resolvePublicDownloadUrls
   });
 
   records.push(primaryResult.record);
@@ -327,7 +333,8 @@ async function processRoomForJobRecords(args: {
       orientation,
       aiDirections,
       sortOrder: currentSortOrder,
-      previousTemplateKey: currentTemplateKey
+      previousTemplateKey: currentTemplateKey,
+      resolvePublicDownloadUrls
     });
 
     if (secondaryResult) {
@@ -350,13 +357,15 @@ async function buildJobRecords(args: {
   listingPrimaryImageUrl: string;
   orientation: VideoOrientation;
   aiDirections?: string;
+  resolvePublicDownloadUrls: (urls: string[]) => string[];
 }): Promise<InsertDBVideoGenJob[]> {
   const {
     parentVideoId,
     groupedImages,
     listingPrimaryImageUrl,
     orientation,
-    aiDirections
+    aiDirections,
+    resolvePublicDownloadUrls
   } = args;
 
   const rooms = buildRoomsFromImages(groupedImages);
@@ -375,7 +384,8 @@ async function buildJobRecords(args: {
       orientation,
       aiDirections,
       sortOrder,
-      previousTemplateKey
+      previousTemplateKey,
+      resolvePublicDownloadUrls
     });
 
     allRecords.push(...result.records);
@@ -428,8 +438,9 @@ export async function startListingVideoGeneration(args: {
   userId: string;
   orientation?: VideoOrientation;
   aiDirections?: string;
+  resolvePublicDownloadUrls: (urls: string[]) => string[];
 }): Promise<{ videoId: string; jobIds: string[]; jobCount: number }> {
-  const { listingId, userId, aiDirections } = args;
+  const { listingId, userId, aiDirections, resolvePublicDownloadUrls } = args;
   const config = getVideoGenerationConfig();
   const orientation = args.orientation ?? config.defaultOrientation;
 
@@ -448,7 +459,8 @@ export async function startListingVideoGeneration(args: {
     groupedImages,
     listingPrimaryImageUrl: listingPrimaryImage.url,
     orientation,
-    aiDirections
+    aiDirections,
+    resolvePublicDownloadUrls
   });
 
   await createVideoGenJobsBatch(records);

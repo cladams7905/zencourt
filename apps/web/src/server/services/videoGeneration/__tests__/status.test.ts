@@ -29,11 +29,6 @@ jest.mock("@db/client", () => ({
   eq: (...args: unknown[]) => args
 }));
 
-jest.mock("@web/src/server/services/storage/urlResolution", () => ({
-  getPublicDownloadUrlSafe: (...args: unknown[]) =>
-    mockGetPublicDownloadUrlSafe(...args)
-}));
-
 import { getListingVideoStatus } from "../status";
 
 function makeLatestBatchBuilder(rows: unknown[]) {
@@ -74,7 +69,9 @@ describe("videoGeneration/status/service", () => {
   it("returns empty jobs when no video batch exists", async () => {
     mockSelect.mockReturnValueOnce(makeLatestBatchBuilder([]));
 
-    await expect(getListingVideoStatus("listing-1")).resolves.toEqual({
+    await expect(
+      getListingVideoStatus("listing-1", mockGetPublicDownloadUrlSafe)
+    ).resolves.toEqual({
       jobs: []
     });
   });
@@ -110,7 +107,10 @@ describe("videoGeneration/status/service", () => {
       .mockReturnValueOnce("signed-video")
       .mockReturnValueOnce("signed-thumb");
 
-    const result = await getListingVideoStatus("listing-1");
+    const result = await getListingVideoStatus(
+      "listing-1",
+      mockGetPublicDownloadUrlSafe
+    );
 
     expect(result).toEqual({
       jobs: [
@@ -159,7 +159,10 @@ describe("videoGeneration/status/service", () => {
       .mockReturnValueOnce(undefined)
       .mockReturnValueOnce(undefined);
 
-    const result = await getListingVideoStatus("listing-2");
+    const result = await getListingVideoStatus(
+      "listing-2",
+      mockGetPublicDownloadUrlSafe
+    );
 
     expect(result).toEqual({
       jobs: [

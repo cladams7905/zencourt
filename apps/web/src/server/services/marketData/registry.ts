@@ -14,6 +14,11 @@ type BaseProviderDeps = {
   logger: LoggerLike;
   fetcher: typeof fetch;
   now: () => Date;
+  runStructuredMarketQuery?: (args: {
+    messages: Array<{ role: "system" | "user" | "assistant"; content: string }>;
+    responseFormat: unknown;
+    maxTokens?: number;
+  }) => Promise<unknown | null>;
 };
 
 const DEFAULT_HTTP_TIMEOUT_MS = 10_000;
@@ -58,6 +63,11 @@ export interface MarketDataProviderStrategy {
   getMarketData(location: MarketLocation): Promise<MarketData | null>;
 }
 
+export interface MarketDataProviderRegistry {
+  getProvider(name: ProviderName): MarketDataProviderStrategy;
+  getProviderChain(): MarketDataProviderStrategy[];
+}
+
 function createPerplexityProvider(
   deps: BaseProviderDeps
 ): MarketDataProviderStrategy {
@@ -68,9 +78,17 @@ function createPerplexityProvider(
     cacheTtlEnvKey: "MARKET_DATA_CACHE_TTL_DAYS",
     cacheTtlFallbackDays: 30,
     async getMarketData(location) {
+      if (!deps.runStructuredMarketQuery) {
+        deps.logger.warn(
+          { provider: "perplexity" },
+          "Perplexity text generator is not configured"
+        );
+        return null;
+      }
       return fetchPerplexityMarketData(location, {
         logger: deps.logger,
-        now: deps.now
+        now: deps.now,
+        runStructuredMarketQuery: deps.runStructuredMarketQuery
       });
     }
   };
@@ -114,10 +132,9 @@ function getPrimaryProviderName(env: NodeJS.ProcessEnv): ProviderName {
     : "perplexity";
 }
 
-export function createMarketDataProviderRegistry(deps: BaseProviderDeps): {
-  getProvider(name: ProviderName): MarketDataProviderStrategy;
-  getProviderChain(): MarketDataProviderStrategy[];
-} {
+export function createMarketDataProviderRegistry(
+  deps: BaseProviderDeps
+): MarketDataProviderRegistry {
   const providers: Record<ProviderName, MarketDataProviderStrategy> = {
     perplexity: createPerplexityProvider(deps),
     rentcast: createRentCastProvider(deps)
