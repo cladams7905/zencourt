@@ -24,7 +24,7 @@ import {
   createVideoGenJobsBatch,
   getVideoGenJobById,
   updateVideoGenJob
-} from "@web/src/server/models/videoGenJobs";
+} from "@web/src/server/models/videoGen";
 
 describe("videoGenJobs actions", () => {
   beforeEach(() => {

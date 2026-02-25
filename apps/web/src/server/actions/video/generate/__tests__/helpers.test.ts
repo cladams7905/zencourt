@@ -30,11 +30,8 @@ jest.mock("@db/client", () => ({
   asc: (...args: unknown[]) => args
 }));
 
-jest.mock("@web/src/server/models/videoGenBatch", () => ({
-  createVideoGenBatch: (...args: unknown[]) => mockCreateVideoGenBatch(...args)
-}));
-
-jest.mock("@web/src/server/models/videoGenJobs", () => ({
+jest.mock("@web/src/server/models/videoGen", () => ({
+  createVideoGenBatch: (...args: unknown[]) => mockCreateVideoGenBatch(...args),
   createVideoGenJobsBatch: (...args: unknown[]) =>
     mockCreateVideoGenJobsBatch(...args)
 }));

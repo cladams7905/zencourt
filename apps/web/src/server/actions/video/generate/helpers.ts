@@ -4,8 +4,8 @@ import {
   createChildLogger,
   logger as baseLogger
 } from "@web/src/lib/core/logging/logger";
-import { createVideoGenBatch } from "@web/src/server/models/videoGenBatch";
-import { createVideoGenJobsBatch } from "@web/src/server/models/videoGenJobs";
+import { createVideoGenBatch } from "@web/src/server/models/videoGen";
+import { createVideoGenJobsBatch } from "@web/src/server/models/videoGen";
 import { getVideoGenerationConfig } from "@web/src/server/services/videoGeneration/config";
 import {
   groupImagesByCategory,

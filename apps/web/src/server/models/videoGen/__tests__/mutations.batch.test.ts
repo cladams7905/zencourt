@@ -17,7 +17,7 @@ jest.mock("@db/client", () => ({
 import {
   createVideoGenBatch,
   updateVideoGenBatch
-} from "@web/src/server/models/videoGenBatch";
+} from "@web/src/server/models/videoGen";
 
 describe("videoGenBatch actions", () => {
   beforeEach(() => {
