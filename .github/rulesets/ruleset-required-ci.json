@@ -15,8 +15,14 @@
         "strict_required_status_checks_policy": true,
         "required_status_checks": [
           { "context": "Web Tests / web-required", "integration_id": null },
-          { "context": "Core Packages Checks / core-packages-required", "integration_id": null },
-          { "context": "Deploy Video Server Preview / video-server-preview-required", "integration_id": null }
+          {
+            "context": "Core Packages Checks / core-packages-required",
+            "integration_id": null
+          },
+          {
+            "context": "Deploy Video Server Preview / video-server-required",
+            "integration_id": null
+          }
         ]
       }
     }
