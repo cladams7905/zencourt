@@ -4,17 +4,23 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 
+permissions:
+  contents: read
+  pull-requests: read
+  packages: write
+
 jobs:
-  detect-preview-changes:
+  video-server-preview-required:
     runs-on: ubuntu-latest
-    outputs:
-      preview_changed: ${{ steps.filter.outputs.preview }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Detect preview deployment changes
         uses: dorny/paths-filter@v3
-        id: filter
+        id: changes
         with:
           filters: |
             preview:
@@ -25,46 +31,39 @@ jobs:
               - "tsconfig.base.json"
               - ".github/workflows/deploy-video-server-preview.yml"
 
-  deploy-preview:
-    needs: detect-preview-changes
-    if: needs.detect-preview-changes.outputs.preview_changed == 'true'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    env:
-      GHCR_IMAGE: ${{ vars.GHCR_IMAGE || format('ghcr.io/{0}/zencourt-video-server', github.repository_owner) }}
-      PREVIEW_TAG: preview
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
       - name: Set up Node.js
+        if: steps.changes.outputs.preview == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
 
       - name: Install dependencies
+        if: steps.changes.outputs.preview == 'true'
         run: npm ci
 
       - name: Lint video server
+        if: steps.changes.outputs.preview == 'true'
         run: npm run lint --workspace=@zencourt/video-server
 
       - name: Test video server
+        if: steps.changes.outputs.preview == 'true'
         run: npm run test --workspace=@zencourt/video-server
 
       - name: Coverage report (video server)
+        if: steps.changes.outputs.preview == 'true'
         run: npm run test:coverage:ci --workspace=@zencourt/video-server
 
       - name: Coverage gate (video server)
+        if: steps.changes.outputs.preview == 'true'
         run: npm run check-coverage --workspace=@zencourt/video-server
 
       - name: Build video server
+        if: steps.changes.outputs.preview == 'true'
         run: npm run build --workspace=@zencourt/video-server
 
       - name: Log in to GHCR
+        if: steps.changes.outputs.preview == 'true'
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -72,11 +71,16 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push preview Docker image
+        if: steps.changes.outputs.preview == 'true'
+        env:
+          GHCR_IMAGE: ${{ vars.GHCR_IMAGE || format('ghcr.io/{0}/zencourt-video-server', github.repository_owner) }}
+          PREVIEW_TAG: preview
         run: |
           docker build -f apps/video-server/Dockerfile -t "$GHCR_IMAGE:$PREVIEW_TAG" .
           docker push "$GHCR_IMAGE:$PREVIEW_TAG"
 
       - name: Trigger Coolify preview redeploy
+        if: steps.changes.outputs.preview == 'true'
         env:
           COOLIFY_PREVIEW_WEBHOOK_URL: ${{ secrets.COOLIFY_PREVIEW_WEBHOOK_URL }}
           COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
@@ -100,22 +104,7 @@ jobs:
             exit 1
           fi
 
-  preview-required:
-    needs: [detect-preview-changes, deploy-preview]
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - name: Finalize required check status
+      - name: Skip note when no preview changes
+        if: steps.changes.outputs.preview != 'true'
         run: |
-          if [ "${{ needs.detect-preview-changes.outputs.preview_changed }}" != "true" ]; then
-            echo "No preview deployment changes; required check passes."
-            exit 0
-          fi
-
-          if [ "${{ needs.deploy-preview.result }}" = "success" ]; then
-            echo "deploy-preview job succeeded."
-            exit 0
-          fi
-
-          echo "deploy-preview job result: ${{ needs.deploy-preview.result }}"
-          exit 1
+          echo "No preview deployment changes detected; check passes."
