@@ -14,7 +14,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  deploy:
+  video-server-required:
     runs-on: ubuntu-latest
     permissions:
       contents: read
