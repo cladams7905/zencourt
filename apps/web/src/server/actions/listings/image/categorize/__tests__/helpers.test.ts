@@ -256,12 +256,12 @@ describe("categorize helpers", () => {
     ).rejects.toThrow("No images successfully uploaded for analysis");
   });
 
-  it("falls back to original url when public-url mapping returns null", async () => {
+  it("throws when uploaded images do not resolve to accessible urls", async () => {
     mockGetPublicUrlForStorageUrl.mockReturnValue("");
-    mockClassifyRoomBatch.mockResolvedValue(undefined);
     const { runAnalyzeImagesWorkflow } = await import("../helpers");
 
-    const result = await runAnalyzeImagesWorkflow([
+    await expect(
+      runAnalyzeImagesWorkflow([
         {
           id: "img-1",
           listingId: "listing-1",
@@ -274,11 +274,10 @@ describe("categorize helpers", () => {
           isPrimary: false,
           metadata: null
         } as never
-      ]);
-    expect(result.stats.uploaded).toBe(1);
-    expect(mockClassifyRoomBatch).toHaveBeenCalledWith(
-      ["https://private"],
-      expect.any(Object)
+      ])
+    ).rejects.toThrow(
+      "No accessible images available for analysis"
     );
+    expect(mockClassifyRoomBatch).not.toHaveBeenCalled();
   });
 });
