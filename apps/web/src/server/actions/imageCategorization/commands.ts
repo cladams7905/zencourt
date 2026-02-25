@@ -1,10 +1,8 @@
 "use server";
 
 import {
-  analyzeImagesWorkflow as runAnalyzeImagesWorkflow,
-  runListingImagesCategorizationWorkflow,
   type CategorizationResult
-} from "@web/src/server/services/imageCategorization";
+} from "./domain/types";
 import type { SerializableImageData } from "@web/src/lib/domain/listing/images";
 import {
   createChildLogger,
@@ -18,6 +16,10 @@ import type {
   ImageCategorizationStats
 } from "./types";
 import { buildNoopStats } from "./types";
+import {
+  runAnalyzeImagesWorkflow,
+  runListingImagesCategorizationWorkflow
+} from "./helpers";
 
 const logger = createChildLogger(baseLogger, {
   module: "image-categorization-actions"

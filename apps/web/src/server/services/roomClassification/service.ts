@@ -11,7 +11,7 @@ import {
 import { CLASSIFICATION_PROMPT, CLASSIFICATION_PROMPT_VERSION } from "./prompt";
 import { CLASSIFICATION_SCHEMA } from "./schema";
 import { parseClassificationResponse, validateClassification } from "./parsing";
-import { AIVisionError } from "./errors";
+import { RoomClassificationError } from "./errors";
 import { executeWithRetry } from "./retry";
 
 type LoggerLike = {
@@ -44,7 +44,7 @@ export class RoomClassification {
       (() => {
         const apiKey = process.env.OPENAI_API_KEY;
         if (!apiKey) {
-          throw new AIVisionError(
+          throw new RoomClassificationError(
             "OpenAI API key not found. Please set OPENAI_API_KEY environment variable.",
             "API_ERROR"
           );
@@ -121,7 +121,7 @@ export class RoomClassification {
 
     const content = response.choices[0]?.message?.content;
     if (!content) {
-      throw new AIVisionError(
+      throw new RoomClassificationError(
         "No content in API response",
         "INVALID_RESPONSE",
         response
@@ -150,7 +150,7 @@ export class RoomClassification {
     } = options;
 
     if (!Array.isArray(imageUrls) || imageUrls.length === 0) {
-      throw new AIVisionError(
+      throw new RoomClassificationError(
         "imageUrls must be a non-empty array",
         "API_ERROR"
       );

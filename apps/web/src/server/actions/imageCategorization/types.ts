@@ -1,4 +1,4 @@
-import type { CategorizationResult } from "@web/src/server/services/imageCategorization";
+import type { CategorizationResult } from "./domain/types";
 
 export type ImageCategorizationActionOptions = {
   aiConcurrency?: number;

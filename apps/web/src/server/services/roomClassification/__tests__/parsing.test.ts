@@ -1,4 +1,4 @@
-import { AIVisionError } from "../errors";
+import { RoomClassificationError } from "../errors";
 import {
   parseClassificationResponse,
   validateClassification
@@ -21,7 +21,9 @@ describe("roomClassification/parsing", () => {
   });
 
   it("throws INVALID_RESPONSE when JSON parsing fails", () => {
-    expect(() => parseClassificationResponse("not-json")).toThrow(AIVisionError);
+    expect(() => parseClassificationResponse("not-json")).toThrow(
+      RoomClassificationError
+    );
     expect(() => parseClassificationResponse("not-json")).toThrow(
       "Failed to parse AI response as JSON"
     );

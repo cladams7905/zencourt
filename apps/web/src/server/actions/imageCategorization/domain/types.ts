@@ -17,3 +17,4 @@ export interface CategorizationResult {
   };
   categorized: CategorizedImages;
 }
+

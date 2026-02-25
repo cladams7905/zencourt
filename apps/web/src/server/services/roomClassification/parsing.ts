@@ -3,7 +3,7 @@ import {
   type RoomCategory,
   type RoomClassification
 } from "@web/src/lib/domain/listing/roomCategories";
-import { AIVisionError } from "./errors";
+import { RoomClassificationError } from "./errors";
 
 const VALID_CATEGORIES = Object.keys(ROOM_CATEGORIES) as RoomCategory[];
 
@@ -41,7 +41,7 @@ export function parseClassificationResponse(
       perspective
     };
   } catch (error) {
-    throw new AIVisionError(
+    throw new RoomClassificationError(
       "Failed to parse AI response as JSON",
       "INVALID_RESPONSE",
       {
@@ -56,7 +56,7 @@ export function validateClassification(
   classification: RoomClassification
 ): void {
   if (!VALID_CATEGORIES.includes(classification.category)) {
-    throw new AIVisionError(
+    throw new RoomClassificationError(
       `Invalid room category: ${classification.category}`,
       "INVALID_RESPONSE",
       classification
@@ -68,7 +68,7 @@ export function validateClassification(
     classification.confidence < 0 ||
     classification.confidence > 1
   ) {
-    throw new AIVisionError(
+    throw new RoomClassificationError(
       `Invalid confidence value: ${classification.confidence}`,
       "INVALID_RESPONSE",
       classification
@@ -81,7 +81,7 @@ export function validateClassification(
       classification.primaryScore < 0 ||
       classification.primaryScore > 1)
   ) {
-    throw new AIVisionError(
+    throw new RoomClassificationError(
       `Invalid primary_score value: ${classification.primaryScore}`,
       "INVALID_RESPONSE",
       classification
