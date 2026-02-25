@@ -1,4 +1,4 @@
-import { AIVisionError } from "./errors";
+import { RoomClassificationError } from "./errors";
 
 type RetryLogger = {
   debug: (obj: unknown, msg?: string) => void;
@@ -16,7 +16,7 @@ type RetryOptions = {
 function createTimeout(timeout: number, message: string): Promise<never> {
   return new Promise((_, reject) => {
     setTimeout(() => {
-      reject(new AIVisionError(message, "TIMEOUT"));
+      reject(new RoomClassificationError(message, "TIMEOUT"));
     }, timeout);
   });
 }
@@ -52,8 +52,11 @@ export async function executeWithRetry<T>(params: {
       const message = error instanceof Error ? error.message.toLowerCase() : "";
 
       if (message.includes("rate_limit")) {
-        logger.warn({ context: failureContext }, "OpenAI rate limit encountered");
-        throw new AIVisionError(
+        logger.warn(
+          { context: failureContext },
+          "OpenAI rate limit encountered"
+        );
+        throw new RoomClassificationError(
           "OpenAI API rate limit exceeded. Please try again later.",
           "RATE_LIMIT",
           error
@@ -69,7 +72,8 @@ export async function executeWithRetry<T>(params: {
     }
   }
 
-  const failureMessage = lastError instanceof Error ? lastError.message : "Unknown error";
+  const failureMessage =
+    lastError instanceof Error ? lastError.message : "Unknown error";
   logger.error(
     {
       context: failureContext,
@@ -82,7 +86,7 @@ export async function executeWithRetry<T>(params: {
     "OpenAI operation exhausted retries"
   );
 
-  throw new AIVisionError(
+  throw new RoomClassificationError(
     `Failed to ${failureContext} after ${maxRetries + 1} attempts: ${failureMessage ?? "Unknown error"}`,
     "API_ERROR",
     lastError

@@ -3,9 +3,9 @@ const mockLoggerInfo = jest.fn();
 const mockLoggerError = jest.fn();
 const mockRequireAuthenticatedUser = jest.fn();
 
-jest.mock("@web/src/server/services/imageCategorization", () => ({
+jest.mock("@web/src/server/actions/imageCategorization/helpers", () => ({
   __esModule: true,
-  analyzeImagesWorkflow: (...args: unknown[]) =>
+  runAnalyzeImagesWorkflow: (...args: unknown[]) =>
     (mockAnalyzeImagesWorkflow as (...a: unknown[]) => unknown)(...args)
 }));
 

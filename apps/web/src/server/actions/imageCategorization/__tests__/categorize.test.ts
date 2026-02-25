@@ -1,7 +1,7 @@
 const mockRunListingImagesCategorizationWorkflow = jest.fn();
 const mockRequireAuthenticatedUser = jest.fn();
 
-jest.mock("@web/src/server/services/imageCategorization", () => ({
+jest.mock("@web/src/server/actions/imageCategorization/helpers", () => ({
   runListingImagesCategorizationWorkflow: (...args: unknown[]) =>
     (
       mockRunListingImagesCategorizationWorkflow as (...a: unknown[]) => unknown

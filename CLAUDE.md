@@ -35,15 +35,17 @@ npm run db:push
   - Parse HTTP input/params
   - Call `server/actions/*`
   - Shape HTTP responses + error mapping
-  - No model imports in routes
+  - No model or service imports in routes
 - `server/actions/*`
   - Auth/access checks
   - Request/domain validation
-  - Lightweight orchestration
+  - Orchestrate multi-service workflows when a use case spans multiple domains
   - Call services/models
   - No HTTP response objects/status handling
 - `server/services/*`
-  - Main business orchestration
+  - Standalone domain modules with their own business logic
+  - Avoid direct dependencies on other service modules (shared exceptions: infra/cache and shared config layers).
+  - When services call third-party APIs, make sure to keep the service provider-agnostic (see existing marketData or CommunityData services for reference).
 - `server/models/*`
   - DB access only
 - `components/*`
