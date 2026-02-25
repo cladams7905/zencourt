@@ -48,6 +48,35 @@ function isCarouselResponse(
   return Array.isArray(res.data);
 }
 
+/** Max length of base64 image content to include in logs (avoids huge payloads). */
+const LOG_BASE64_PREFIX_LENGTH = 80;
+
+function truncateForLog(value: string, maxLen: number): string {
+  if (value.length <= maxLen) return value;
+  return `${value.slice(0, maxLen)}... [${value.length} chars total]`;
+}
+
+/** Returns a copy of the API response with base64 content truncated for logging. */
+function responseForLog(res: OrshotApiResponse): OrshotApiResponse {
+  if (isCarouselResponse(res)) {
+    return {
+      ...res,
+      data: res.data.map((page) => ({
+        ...page,
+        content: truncateForLog(page.content, LOG_BASE64_PREFIX_LENGTH)
+      }))
+    };
+  }
+  const data = res.data as OrshotSinglePageResponse["data"];
+  return {
+    ...res,
+    data: {
+      ...data,
+      content: truncateForLog(data.content ?? "", LOG_BASE64_PREFIX_LENGTH)
+    }
+  };
+}
+
 function getOrshotApiKey(override?: string): string {
   const key = (override ?? process.env.ORSHOT_API_KEY)?.trim();
   if (!key) {
@@ -122,11 +151,11 @@ export function createTemplateRenderer(
     }
 
     const raw = (await response.json()) as OrshotApiResponse;
-    logger.debug({ responseBody: raw }, "Orshot render response");
+    logger.debug({ responseBody: responseForLog(raw) }, "Orshot render response");
     const content = extractContentString(raw);
     if (!content) {
       logger.error(
-        { templateId, response: raw },
+        { templateId, response: responseForLog(raw) },
         "Orshot render succeeded but returned no image content"
       );
       throw new Error("Orshot render returned an empty image response");

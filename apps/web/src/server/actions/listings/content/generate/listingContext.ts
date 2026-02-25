@@ -1,6 +1,5 @@
 import { createHash } from "node:crypto";
 import type { ListingPropertyDetails } from "@shared/types/models";
-import { buildListingContentCacheKey } from "@web/src/server/infra/cache/listingContent/cache";
 import type {
   ListingGenerationContext,
   ValidatedGenerateParams
@@ -63,16 +62,6 @@ export function resolveListingContext(
   const locationState = listingDetails?.location_context?.state?.trim() ?? "";
   const resolvedState = locationState || addressParts.state;
   const propertyFingerprint = buildListingPropertyFingerprint(listingDetails);
-  const cacheKey = buildListingContentCacheKey({
-    userId: listing.userId,
-    listingId: listing.id,
-    subcategory: params.subcategory,
-    mediaType: params.mediaType,
-    focus: params.focus,
-    notes: params.notes,
-    generation_nonce: params.generationNonce,
-    propertyFingerprint
-  });
 
   return {
     listingId: params.listingId,
@@ -81,7 +70,6 @@ export function resolveListingContext(
     addressParts,
     resolvedState,
     propertyFingerprint,
-    cacheKey,
     subcategory: params.subcategory,
     mediaType: params.mediaType,
     focus: params.focus,

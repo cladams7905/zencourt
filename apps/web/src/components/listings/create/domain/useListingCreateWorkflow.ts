@@ -31,13 +31,16 @@ export function useListingCreateWorkflow(params: {
     React.useState<ListingCreateMediaTab>(initialMediaTab);
   const [activeSubcategory, setActiveSubcategory] =
     React.useState<ListingContentSubcategory>(initialSubcategory);
+  /** When set (e.g. by Dev single-template generate), next template render uses this id. Cleared after use. */
+  const [templateIdForRender, setTemplateIdForRender] =
+    React.useState<string | null>(null);
 
   const {
     localPostItems,
     isGenerating,
     generationError,
     loadingCount,
-    generateSubcategoryContent,
+    generateSubcategoryContent: generateSubcategoryContentRaw,
     removeContentItem
   } = useContentGeneration({
     listingId,
@@ -46,11 +49,32 @@ export function useListingCreateWorkflow(params: {
     activeSubcategory
   });
 
+  const generateSubcategoryContent = React.useCallback(
+    async (
+      subcategory: ListingContentSubcategory,
+      options?: {
+        forceNewBatch?: boolean;
+        generationCount?: number;
+        templateId?: string;
+      }
+    ) => {
+      if (options?.templateId?.trim()) {
+        setTemplateIdForRender(options.templateId.trim());
+      }
+      return generateSubcategoryContentRaw(subcategory, options);
+    },
+    [generateSubcategoryContentRaw]
+  );
+
   const activeMediaItems = useListingCreateActiveMediaItems({
     activeMediaTab,
     activeSubcategory,
     localPostItems
   });
+
+  const clearTemplateIdForRender = React.useCallback(() => {
+    setTemplateIdForRender(null);
+  }, []);
 
   const {
     previewItems: templatePreviewItems,
@@ -62,7 +86,9 @@ export function useListingCreateWorkflow(params: {
     activeSubcategory,
     activeMediaTab,
     captionItems: activeMediaItems,
-    isGenerating
+    isGenerating,
+    templateIdForRender: templateIdForRender ?? undefined,
+    clearTemplateIdForRender
   });
 
   const { activeImagePreviewItems, imageLoadingCount } = useListingCreateMediaItems({

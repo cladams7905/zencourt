@@ -2,8 +2,6 @@
 
 const mockRequireAuthenticatedUser = jest.fn();
 const mockRequireListingAccess = jest.fn();
-const mockGetCachedListingContent = jest.fn();
-const mockSetCachedListingContent = jest.fn();
 const mockSetCachedListingContentItem = jest.fn();
 const mockRunContentGeneration = jest.fn();
 const mockParseAndValidateParams = jest.fn();
@@ -23,10 +21,6 @@ jest.mock("@web/src/server/models/listings/access", () => ({
 }));
 
 jest.mock("@web/src/server/infra/cache/listingContent/cache", () => ({
-  getCachedListingContent: (...args: unknown[]) =>
-    (mockGetCachedListingContent as (...a: unknown[]) => unknown)(...args),
-  setCachedListingContent: (...args: unknown[]) =>
-    (mockSetCachedListingContent as (...a: unknown[]) => unknown)(...args),
   setCachedListingContentItem: (...args: unknown[]) =>
     (mockSetCachedListingContentItem as (...a: unknown[]) => unknown)(...args)
 }));
@@ -88,8 +82,7 @@ describe("contentGeneration/commands", () => {
       userId: "user-1",
       listingId: "listing-1",
       subcategory: "new_listing",
-      mediaType: "image",
-      cacheKey: "cache-key-1"
+      mediaType: "image"
     });
     mockBuildUpstreamRequestBody.mockReturnValue({ category: "listing" });
     mockEncodeSseEvent.mockImplementation((payload: unknown) =>
@@ -97,39 +90,12 @@ describe("contentGeneration/commands", () => {
     );
   });
 
-  it("returns cached stream and skips generation when cache exists", async () => {
-    mockGetCachedListingContent.mockResolvedValue([
-      {
-        hook: "Hook",
-        broll_query: "b",
-        body: null,
-        cta: null,
-        caption: "Caption"
-      }
-    ]);
-
-    const result = await generateListingContentForCurrentUser("listing-1", {
-      subcategory: "new_listing"
-    });
-
-    expect(result.status).toBe(200);
-    expect(mockRunContentGeneration).not.toHaveBeenCalled();
-    expect(mockSetCachedListingContent).not.toHaveBeenCalled();
-    expect(mockEncodeSseEvent).toHaveBeenCalledWith(
-      expect.objectContaining({
-        type: "done",
-        meta: expect.objectContaining({ model: "cache" })
-      })
-    );
-  });
-
-  it("runs generation and writes batch cache on done", async () => {
+  it("runs generation and returns stream", async () => {
     const upstreamStream = new ReadableStream({
       start(controller) {
         controller.close();
       }
     });
-    mockGetCachedListingContent.mockResolvedValue(null);
     mockRunContentGeneration.mockResolvedValue({
       stream: upstreamStream,
       status: 200
@@ -173,10 +139,6 @@ describe("contentGeneration/commands", () => {
     expect(mockRunContentGeneration).toHaveBeenCalledWith("user-1", {
       category: "listing"
     });
-    expect(mockSetCachedListingContent).toHaveBeenCalledWith(
-      "cache-key-1",
-      expect.arrayContaining([expect.objectContaining({ hook: "Hook" })])
-    );
     expect(mockEncodeSseEvent).toHaveBeenCalledWith(
       expect.objectContaining({
         type: "done",
