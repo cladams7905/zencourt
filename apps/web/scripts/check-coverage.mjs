@@ -38,12 +38,36 @@ const THRESHOLDS = {
   branches: 70
 };
 
-function subfolderPrefixes(root, srcRelative) {
+function hasSourceFiles(root) {
   return fs
     .readdirSync(path.resolve(webRoot, root), { withFileTypes: true })
+    .some((entry) => {
+      if (!entry.isFile()) return false;
+      if (!/\.(ts|tsx)$/.test(entry.name)) return false;
+      if (entry.name.endsWith(".d.ts")) return false;
+      if (/\.(test|spec)\.(ts|tsx)$/.test(entry.name)) return false;
+      return true;
+    });
+}
+
+function modulePrefixes(root, srcRelative, { includeRoot = false } = {}) {
+  const rootPath = path.resolve(webRoot, root);
+  if (!fs.existsSync(rootPath)) {
+    return [];
+  }
+
+  const prefixes = fs
+    .readdirSync(rootPath, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
+    .filter((entry) => entry.name !== "__tests__")
     .map((entry) => `${srcRelative}/${entry.name}/`)
     .sort();
+
+  if (includeRoot && hasSourceFiles(root)) {
+    prefixes.unshift(`${srcRelative}/`);
+  }
+
+  return prefixes;
 }
 
 function componentPrefixesWithDomain() {
@@ -91,10 +115,14 @@ function apiRoutePrefixes(root, srcRelative) {
 
 const MODULE_PREFIXES = [
   ...componentPrefixesWithDomain(),
-  ...subfolderPrefixes("src/server/services", "src/server/services"),
+  ...modulePrefixes("src/server/actions", "src/server/actions", { includeRoot: true }),
+  ...modulePrefixes("src/server/services", "src/server/services", { includeRoot: true }),
+  ...modulePrefixes("src/server/models", "src/server/models", { includeRoot: true }),
+  ...modulePrefixes("src/server/infra", "src/server/infra", { includeRoot: true }),
+  ...modulePrefixes("src/server/errors", "src/server/errors", { includeRoot: true }),
+  ...modulePrefixes("src/server/utils", "src/server/utils", { includeRoot: true }),
   ...apiRoutePrefixes("src/app/api/v1", "src/app/api/v1"),
   "src/lib/",
-  "src/server/actions/"
 ].filter((value, index, arr) => arr.indexOf(value) === index);
 
 function percentage(covered, total) {
