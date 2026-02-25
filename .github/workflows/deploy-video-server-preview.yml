@@ -1,8 +1,9 @@
 name: Deploy Video Server Preview
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
+  push:
+    branches:
+      - main
 
 permissions:
   contents: read
