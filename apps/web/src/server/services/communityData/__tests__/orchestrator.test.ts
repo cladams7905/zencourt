@@ -1,25 +1,11 @@
 const mockCreateRegistry = jest.fn();
-const mockSelectCommunityCategories = jest.fn();
-const mockPeekNextCommunityCategories = jest.fn();
 
 jest.mock("@web/src/server/services/communityData/registry", () => ({
   createCommunityDataProviderRegistry: (...args: unknown[]) =>
     mockCreateRegistry(...args)
 }));
 
-jest.mock("@web/src/server/services/contentRotation", () => ({
-  COMMUNITY_CATEGORY_KEYS: ["dining_list", "community_events_list"],
-  COMMUNITY_CATEGORY_KEY_TO_CATEGORY: {
-    dining_list: "dining",
-    community_events_list: "community_events"
-  },
-  selectCommunityCategories: (...args: unknown[]) =>
-    mockSelectCommunityCategories(...args),
-  peekNextCommunityCategories: (...args: unknown[]) =>
-    mockPeekNextCommunityCategories(...args)
-}));
-
-import { createCommunityDataOrchestrator } from "../orchestrator";
+import { createCommunityDataOrchestrator } from "../service";
 
 describe("communityData/orchestrator", () => {
   beforeEach(() => {
@@ -70,8 +56,6 @@ describe("communityData/orchestrator", () => {
 
     const orchestrator = createCommunityDataOrchestrator();
     const result = await orchestrator.getCommunityContentContext({
-      redis: null,
-      userId: "user-1",
       category: "seasonal",
       zipCode: "78701",
       preferredCity: "Austin",
@@ -103,25 +87,16 @@ describe("communityData/orchestrator", () => {
       getPrimaryProvider: () => primary,
       getFallbackProvider: () => null
     });
-    mockSelectCommunityCategories
-      .mockResolvedValueOnce({
-        selected: ["dining_list"],
-        shouldRefresh: true
-      })
-      .mockResolvedValueOnce({
-        selected: ["dining_list"],
-        shouldRefresh: false
-      });
-    mockPeekNextCommunityCategories.mockResolvedValue([]);
 
     const orchestrator = createCommunityDataOrchestrator();
     await orchestrator.getCommunityContentContext({
-      redis: null,
-      userId: "user-1",
       category: "community",
       zipCode: "78701",
       preferredCity: "Austin",
-      preferredState: "TX"
+      preferredState: "TX",
+      selectedCommunityCategoryKeys: ["dining_list"],
+      shouldRefreshCommunityCategories: true,
+      nextCommunityCategoryKeys: []
     });
 
     expect(primary.getAvoidRecommendationsForCategories).toHaveBeenCalled();

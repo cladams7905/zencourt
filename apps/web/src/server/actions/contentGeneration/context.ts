@@ -6,7 +6,12 @@ import type { PromptAssemblyInput } from "@web/src/lib/ai/prompts/engine/assembl
 import { parseMarketLocation } from "./domain/marketLocation";
 import { getMarketData } from "@web/src/server/services/marketData";
 import { getCommunityContentContext } from "@web/src/server/services/communityData/service";
-import type { CommunityCategoryKey } from "@web/src/server/services/contentRotation";
+import {
+  COMMUNITY_CATEGORY_KEYS,
+  peekNextCommunityCategories,
+  selectCommunityCategories,
+  type CommunityCategoryKey
+} from "@web/src/server/services/contentRotation";
 import type { UserAdditionalSnapshot } from "@web/src/server/models/userAdditional";
 import type { Redis } from "@web/src/server/services/cache/redis";
 
@@ -53,15 +58,30 @@ export async function resolveContentContext(args: {
     (body.category === "community" || body.category === "seasonal") &&
     marketLocation
   ) {
+    const communitySelection =
+      body.category === "community"
+        ? await selectCommunityCategories(
+            redis,
+            userId,
+            2,
+            COMMUNITY_CATEGORY_KEYS
+          )
+        : { selected: [] as CommunityCategoryKey[], shouldRefresh: false };
+    const nextCommunityCategoryKeys =
+      body.category === "community"
+        ? await peekNextCommunityCategories(redis, userId, 2)
+        : [];
+
     const context = await getCommunityContentContext({
-      redis,
-      userId,
       category: body.category,
       zipCode: marketLocation.zip_code,
       audienceSegment: activeAudience,
       serviceAreas: snapshot.serviceAreas,
       preferredCity: marketLocation.city,
-      preferredState: marketLocation.state
+      preferredState: marketLocation.state,
+      selectedCommunityCategoryKeys: communitySelection.selected,
+      shouldRefreshCommunityCategories: communitySelection.shouldRefresh,
+      nextCommunityCategoryKeys
     });
 
     communityData = context.communityData;
