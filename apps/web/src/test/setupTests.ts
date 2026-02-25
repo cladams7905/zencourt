@@ -42,10 +42,11 @@ Object.defineProperty(global, "URL", {
 
 jest.mock("next/image", () => ({
   __esModule: true,
-  default: (
-    props: React.ComponentProps<"img"> & { onLoadingComplete?: () => void }
-  ) => {
-    const { onLoadingComplete: _onLoadingComplete, ...rest } = props;
+  default: (props: React.ComponentProps<"img">) => {
+    const { onLoadingComplete, ...rest } = props as React.ComponentProps<"img"> & {
+      onLoadingComplete?: () => void;
+    };
+    void onLoadingComplete;
     return React.createElement("img", rest);
   }
 }));

@@ -3,16 +3,31 @@ name: Deploy Video Server Preview
 on:
   pull_request:
     types: [opened, synchronize, reopened]
-    paths:
-      - "apps/video-server/**"
-      - "packages/**"
-      - "package.json"
-      - "package-lock.json"
-      - "tsconfig.base.json"
-      - ".github/workflows/deploy-video-server-preview.yml"
 
 jobs:
+  detect-preview-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      preview_changed: ${{ steps.filter.outputs.preview }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Detect preview deployment changes
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            preview:
+              - "apps/video-server/**"
+              - "packages/**"
+              - "package.json"
+              - "package-lock.json"
+              - "tsconfig.base.json"
+              - ".github/workflows/deploy-video-server-preview.yml"
+
   deploy-preview:
+    needs: detect-preview-changes
+    if: needs.detect-preview-changes.outputs.preview_changed == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -84,3 +99,23 @@ jobs:
             echo "Coolify preview webhook failed with status $status_code"
             exit 1
           fi
+
+  preview-required:
+    needs: [detect-preview-changes, deploy-preview]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Finalize required check status
+        run: |
+          if [ "${{ needs.detect-preview-changes.outputs.preview_changed }}" != "true" ]; then
+            echo "No preview deployment changes; required check passes."
+            exit 0
+          fi
+
+          if [ "${{ needs.deploy-preview.result }}" = "success" ]; then
+            echo "deploy-preview job succeeded."
+            exit 0
+          fi
+
+          echo "deploy-preview job result: ${{ needs.deploy-preview.result }}"
+          exit 1

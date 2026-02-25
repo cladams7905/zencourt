@@ -2,26 +2,34 @@ name: Core Packages Checks
 
 on:
   pull_request:
-    paths:
-      - "packages/shared/**"
-      - "packages/db/**"
-      - "package.json"
-      - "package-lock.json"
-      - "tsconfig.base.json"
-      - ".github/workflows/core-packages-checks.yml"
   push:
     branches:
       - main
-    paths:
-      - "packages/shared/**"
-      - "packages/db/**"
-      - "package.json"
-      - "package-lock.json"
-      - "tsconfig.base.json"
-      - ".github/workflows/core-packages-checks.yml"
 
 jobs:
+  detect-core-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      core_changed: ${{ steps.filter.outputs.core }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Detect core package changes
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            core:
+              - "packages/shared/**"
+              - "packages/db/**"
+              - "package.json"
+              - "package-lock.json"
+              - "tsconfig.base.json"
+              - ".github/workflows/core-packages-checks.yml"
+
   core-packages:
+    needs: detect-core-changes
+    if: needs.detect-core-changes.outputs.core_changed == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -61,3 +69,23 @@ jobs:
 
       - name: Test db package
         run: npm run test:db
+
+  core-packages-required:
+    needs: [detect-core-changes, core-packages]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Finalize required check status
+        run: |
+          if [ "${{ needs.detect-core-changes.outputs.core_changed }}" != "true" ]; then
+            echo "No core package changes; required check passes."
+            exit 0
+          fi
+
+          if [ "${{ needs.core-packages.result }}" = "success" ]; then
+            echo "core-packages job succeeded."
+            exit 0
+          fi
+
+          echo "core-packages job result: ${{ needs.core-packages.result }}"
+          exit 1

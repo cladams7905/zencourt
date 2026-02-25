@@ -38,7 +38,6 @@ import {
   createParentVideoBatchRecord,
   extractJobIds
 } from "../jobs";
-import { ApiError } from "@web/src/server/errors/api";
 
 describe("video jobs domain", () => {
   beforeEach(() => {

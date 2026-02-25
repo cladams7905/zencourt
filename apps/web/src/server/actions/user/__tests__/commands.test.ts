@@ -13,7 +13,8 @@ const mockUserAdditionalSelect = jest.fn(() => ({ from: mockUserAdditionalFrom }
 
 jest.mock("@db/client", () => ({
   db: {
-    select: (...args: unknown[]) => mockUserAdditionalSelect(...args)
+    select: (...args: unknown[]) =>
+      (mockUserAdditionalSelect as (...a: unknown[]) => unknown)(...args)
   },
   eq: (...args: unknown[]) => args,
   userAdditional: { userId: "userId", headshotUrl: "headshotUrl" }
