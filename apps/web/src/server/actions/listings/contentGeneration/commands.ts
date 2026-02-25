@@ -12,13 +12,13 @@ import {
   setCachedListingContent,
   setCachedListingContentItem
 } from "@web/src/server/services/cache/listingContent";
-import { runContentGeneration } from "@web/src/server/services/contentGeneration";
+import { runContentGenerationForUser } from "@web/src/server/actions/contentGeneration/helpers";
 import {
   buildUpstreamRequestBody,
   parseAndValidateParams,
   resolveListingContext
-} from "@web/src/server/actions/listings/contentGenerate/helpers";
-import type { GenerateListingContentBody } from "@web/src/server/actions/listings/contentGenerate/types";
+} from "@web/src/server/actions/listings/contentGeneration/helpers";
+import type { GenerateListingContentBody } from "@web/src/server/actions/listings/contentGeneration/types";
 import type { ListingGeneratedItem } from "@web/src/server/services/cache/listingContent";
 import { requireAuthenticatedUser } from "@web/src/server/auth/apiAuth";
 
@@ -62,7 +62,10 @@ export async function generateListingContentForCurrentUser(
   }
 
   const upstreamBody = buildUpstreamRequestBody(context);
-  const upstreamResponse = await runContentGeneration(user.id, upstreamBody);
+  const upstreamResponse = await runContentGenerationForUser(
+    user.id,
+    upstreamBody
+  );
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -129,7 +132,8 @@ export async function generateListingContentForCurrentUser(
           controller.enqueue(
             encodeSseEvent({
               type: "error",
-              message: "Listing content generation did not return completed items"
+              message:
+                "Listing content generation did not return completed items"
             })
           );
         }

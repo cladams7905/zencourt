@@ -24,13 +24,16 @@ describe("listing content generate route", () => {
     jest.doMock("@web/src/app/api/v1/_utils", () => ({
       ApiError: RealApiError
     }));
-    jest.doMock("@web/src/server/actions/listings/contentGenerate/commands", () => ({
-      generateListingContentForCurrentUser: (...args: unknown[]) =>
-        mockGenerateListingContentForCurrentUser(
-          args[0] as string,
-          args[1] as unknown
-        )
-    }));
+    jest.doMock(
+      "@web/src/server/actions/listings/contentGeneration/commands",
+      () => ({
+        generateListingContentForCurrentUser: (...args: unknown[]) =>
+          mockGenerateListingContentForCurrentUser(
+            args[0] as string,
+            args[1] as unknown
+          )
+      })
+    );
     jest.doMock("@web/src/lib/core/logging/logger", () => ({
       logger: { error: jest.fn(), warn: jest.fn(), info: jest.fn() },
       createChildLogger: () => ({
@@ -62,7 +65,8 @@ describe("listing content generate route", () => {
   });
 
   it("returns stream response from action", async () => {
-    const { POST, mockGenerateListingContentForCurrentUser } = await loadRoute();
+    const { POST, mockGenerateListingContentForCurrentUser } =
+      await loadRoute();
     const stream = new ReadableStream<Uint8Array>({
       start(controller) {
         controller.enqueue(new TextEncoder().encode("data: ok\n\n"));

@@ -24,14 +24,10 @@ import { writePromptLog } from "./promptLog";
 import { createSseResponse } from "./stream";
 
 const logger = createChildLogger(baseLogger, {
-  module: "content-generation-service"
+  module: "content-generation-actions"
 });
 
-/**
- * Run the full content generation flow: resolve context, build prompts,
- * log prompts (dev), stream AI response as SSE.
- */
-export async function runContentGeneration(
+export async function runContentGenerationForUser(
   userId: string,
   body: PromptAssemblyInput
 ): Promise<{

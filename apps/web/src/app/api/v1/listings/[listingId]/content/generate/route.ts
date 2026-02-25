@@ -9,11 +9,11 @@ import {
   createChildLogger,
   logger as baseLogger
 } from "@web/src/lib/core/logging/logger";
-import type { GenerateListingContentBody } from "@web/src/server/actions/listings/contentGenerate/types";
+import type { GenerateListingContentBody } from "@web/src/server/actions/listings/contentGeneration/types";
 import { makeSseStreamHeaders } from "@web/src/lib/sse/sseEncoder";
 import { readJsonBodySafe } from "@shared/utils/api/validation";
 import { parseRequiredRouteParam } from "@shared/utils/api/parsers";
-import { generateListingContentForCurrentUser } from "@web/src/server/actions/listings/contentGenerate/commands";
+import { generateListingContentForCurrentUser } from "@web/src/server/actions/listings/contentGeneration/commands";
 
 const logger = createChildLogger(baseLogger, {
   module: "listing-content-generate-route"
@@ -27,7 +27,10 @@ export async function POST(
     const resolvedParams = await params;
     let listingId: string;
     try {
-      listingId = parseRequiredRouteParam(resolvedParams.listingId, "listingId");
+      listingId = parseRequiredRouteParam(
+        resolvedParams.listingId,
+        "listingId"
+      );
     } catch {
       return apiErrorResponse(
         StatusCode.BAD_REQUEST,

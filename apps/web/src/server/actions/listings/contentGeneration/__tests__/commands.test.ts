@@ -31,12 +31,12 @@ jest.mock("@web/src/server/services/cache/listingContent", () => ({
     (mockSetCachedListingContentItem as (...a: unknown[]) => unknown)(...args)
 }));
 
-jest.mock("@web/src/server/services/contentGeneration", () => ({
-  runContentGeneration: (...args: unknown[]) =>
+jest.mock("@web/src/server/actions/contentGeneration/helpers", () => ({
+  runContentGenerationForUser: (...args: unknown[]) =>
     (mockRunContentGeneration as (...a: unknown[]) => unknown)(...args)
 }));
 
-jest.mock("@web/src/server/actions/listings/contentGenerate/helpers", () => ({
+jest.mock("@web/src/server/actions/listings/contentGeneration/helpers", () => ({
   parseAndValidateParams: (...args: unknown[]) =>
     (mockParseAndValidateParams as (...a: unknown[]) => unknown)(...args),
   resolveListingContext: (...args: unknown[]) =>
@@ -64,9 +64,9 @@ jest.mock("@web/src/lib/core/logging/logger", () => ({
   })
 }));
 
-import { generateListingContentForCurrentUser } from "@web/src/server/actions/listings/contentGenerate/commands";
+import { generateListingContentForCurrentUser } from "@web/src/server/actions/listings/contentGeneration/commands";
 
-describe("contentGenerate/commands", () => {
+describe("contentGeneration/commands", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockRequireAuthenticatedUser.mockResolvedValue({ id: "user-1" });
@@ -92,15 +92,20 @@ describe("contentGenerate/commands", () => {
       cacheKey: "cache-key-1"
     });
     mockBuildUpstreamRequestBody.mockReturnValue({ category: "listing" });
-    mockEncodeSseEvent.mockImplementation(
-      (payload: unknown) =>
-        new TextEncoder().encode(`data: ${JSON.stringify(payload)}\n\n`)
+    mockEncodeSseEvent.mockImplementation((payload: unknown) =>
+      new TextEncoder().encode(`data: ${JSON.stringify(payload)}\n\n`)
     );
   });
 
   it("returns cached stream and skips generation when cache exists", async () => {
     mockGetCachedListingContent.mockResolvedValue([
-      { hook: "Hook", broll_query: "b", body: null, cta: null, caption: "Caption" }
+      {
+        hook: "Hook",
+        broll_query: "b",
+        body: null,
+        cta: null,
+        caption: "Caption"
+      }
     ]);
 
     const result = await generateListingContentForCurrentUser("listing-1", {
@@ -180,4 +185,3 @@ describe("contentGenerate/commands", () => {
     );
   });
 });
-
