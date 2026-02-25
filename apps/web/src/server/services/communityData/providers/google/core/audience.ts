@@ -25,7 +25,7 @@ import {
   getCategoryTargetQueryCount,
   type AudienceAugmentCategory,
   type CategoryKey
-} from "@web/src/server/services/communityData/config";
+} from "@web/src/server/services/_config/community";
 import { getUtcMonthKey } from "../../../shared/common";
 import { estimateGoogleCallsCostUsd } from "../../../shared/apiCost";
 import { hydratePlacesFromItems } from "./places/details";

@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import type { CategoryKey } from "@web/src/server/services/communityData/config";
+import type { CategoryKey } from "@web/src/server/services/_config/community";
 
 export const UTC_MONTH_KEYS = [
   "january",

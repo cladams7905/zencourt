@@ -1,4 +1,4 @@
-jest.mock("@web/src/server/services/communityData/config", () => ({
+jest.mock("@web/src/server/services/_config/community", () => ({
   COMMUNITY_CACHE_KEY_PREFIX: "community",
   shouldIncludeServiceAreasInCache: jest.fn(() => true)
 }));
@@ -9,7 +9,7 @@ jest.mock("@web/src/server/services/communityData/shared/common", () => ({
   slugify: jest.fn((v: string) => v.toLowerCase())
 }));
 
-jest.mock("@web/src/server/services/cache/redis", () => {
+jest.mock("@web/src/server/cache/redis", () => {
   const redis = {
     get: jest.fn(),
     set: jest.fn()
@@ -36,12 +36,12 @@ import {
 
 describe("perplexity cache", () => {
   const configMock = jest.requireMock(
-    "@web/src/server/services/communityData/config"
+    "@web/src/server/services/_config/community"
   );
   const commonMock = jest.requireMock(
     "@web/src/server/services/communityData/shared/common"
   );
-  const redisMod = jest.requireMock("@web/src/server/services/cache/redis");
+  const redisMod = jest.requireMock("@web/src/server/cache/redis");
   const redis = redisMod.__redis;
 
   beforeEach(() => {

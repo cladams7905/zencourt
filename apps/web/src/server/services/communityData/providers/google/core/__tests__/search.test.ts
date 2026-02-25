@@ -7,7 +7,7 @@ jest.mock(
   })
 );
 
-jest.mock("@web/src/server/services/communityData/config", () => ({
+jest.mock("@web/src/server/services/_config/community", () => ({
   CHAIN_FILTER_CATEGORIES: ["dining", "coffee_brunch"],
   CHAIN_NAME_BLACKLIST: ["starbucks"],
   DEFAULT_SEARCH_RADIUS_METERS: 1000,

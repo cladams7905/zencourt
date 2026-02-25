@@ -8,7 +8,7 @@ import {
   getCategoryMinRating,
   getCategoryMinReviews,
   type CategoryKey
-} from "@web/src/server/services/communityData/config";
+} from "@web/src/server/services/_config/community";
 import { LOW_PRIORITY_ANCHOR_CATEGORIES, normalizeQueryKey } from "./seasonal";
 import type {
   CityRecord,

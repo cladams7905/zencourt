@@ -1,5 +1,5 @@
 import type { CommunityData } from "@web/src/lib/domain/market/types";
-import { getSharedRedisClient } from "@web/src/server/services/cache/redis";
+import { getSharedRedisClient } from "@web/src/server/cache/redis";
 import {
   getCommunityCacheKey,
   getCommunityCacheTtlSeconds,

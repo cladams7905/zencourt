@@ -1,5 +1,5 @@
 export * from "./service";
 export * from "./registry";
-export * from "./config";
+export * from "../_config/community";
 export * from "./shared";
 export * as communityDataProviders from "./providers";

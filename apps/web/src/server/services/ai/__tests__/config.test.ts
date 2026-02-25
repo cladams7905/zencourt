@@ -2,7 +2,7 @@
 
 const mockGetCommunityDataProvider = jest.fn();
 
-jest.mock("@web/src/server/services/communityData/config", () => ({
+jest.mock("@web/src/server/services/_config/community", () => ({
   CommunityDataProvider: { Perplexity: "perplexity", Google: "google" },
   getCommunityDataProvider: (...args: unknown[]) =>
     mockGetCommunityDataProvider(...args)

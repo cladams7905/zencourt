@@ -1,7 +1,7 @@
 import type {
   CategoryKey,
   CommunityPlaceItem
-} from "@web/src/server/services/communityData/config";
+} from "@web/src/server/services/_config/community";
 const FIELD_SEPARATOR = " | ";
 
 function formatLabel(label: string, value: string): string {

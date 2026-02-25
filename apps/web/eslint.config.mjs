@@ -1,5 +1,6 @@
 import { dirname } from "path";
 import { fileURLToPath } from "url";
+import { readdirSync } from "fs";
 import { FlatCompat } from "@eslint/eslintrc";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -8,6 +9,32 @@ const __dirname = dirname(__filename);
 const compat = new FlatCompat({
   baseDirectory: __dirname,
 });
+
+const servicesDir = `${__dirname}/src/server/services`;
+const serviceNames = readdirSync(servicesDir, { withFileTypes: true })
+  .filter((entry) => entry.isDirectory())
+  .map((entry) => entry.name);
+
+const serviceBoundaryRules = serviceNames.map((serviceName) => ({
+  files: [`src/server/services/${serviceName}/**/*.ts`],
+  ignores: ["**/__tests__/**", "**/*.test.ts"],
+  rules: {
+    "no-restricted-imports": [
+      "error",
+      {
+        patterns: [
+          {
+            group: serviceNames
+              .filter((other) => other !== serviceName && other !== "_config")
+              .map((other) => `@web/src/server/services/${other}/**`),
+            message:
+              "Services must not import other services. Allowed: imports within the same service module and shared config under @web/src/server/services/_config/**. Shared cache utilities live under @web/src/server/cache/**.",
+          },
+        ],
+      },
+    ],
+  },
+}));
 
 const eslintConfig = [
   ...compat.extends("next/core-web-vitals", "next/typescript"),
@@ -87,6 +114,7 @@ const eslintConfig = [
       ],
     },
   },
+  ...serviceBoundaryRules,
   {
     files: ["src/server/models/**/*.ts"],
     rules: {

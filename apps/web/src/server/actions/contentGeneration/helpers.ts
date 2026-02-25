@@ -7,7 +7,7 @@ import {
   createChildLogger,
   logger as baseLogger
 } from "@web/src/lib/core/logging/logger";
-import { getSharedRedisClient } from "@web/src/server/services/cache/redis";
+import { getSharedRedisClient } from "@web/src/server/cache/redis";
 import {
   RECENT_HOOKS_MAX,
   getRecentHooksKey,

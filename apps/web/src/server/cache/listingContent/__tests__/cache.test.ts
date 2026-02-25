@@ -1,4 +1,4 @@
-jest.mock("@web/src/server/services/cache/redis", () => ({
+jest.mock("@web/src/server/cache/redis", () => ({
   getSharedRedisClient: jest.fn()
 }));
 

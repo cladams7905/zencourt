@@ -15,7 +15,7 @@ jest.mock(
   })
 );
 
-jest.mock("@web/src/server/services/communityData/config", () => ({
+jest.mock("@web/src/server/services/_config/community", () => ({
   NEIGHBORHOOD_QUERIES: [
     { key: "neighborhoods_general", query: "q1", max: 3 },
     { key: "neighborhoods_family", query: "q2", max: 3 }

@@ -2,7 +2,7 @@ import type { CommunityData } from "@web/src/lib/domain/market/types";
 import type {
   CategoryKey,
   CommunityDataProvider
-} from "@web/src/server/services/communityData/config";
+} from "@web/src/server/services/_config/community";
 
 type CommonParams = {
   zipCode: string;

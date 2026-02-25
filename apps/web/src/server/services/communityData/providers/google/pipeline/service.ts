@@ -15,7 +15,7 @@ import {
   SEARCH_ANCHOR_OFFSETS,
   CATEGORY_CONFIG,
   type CategoryKey
-} from "@web/src/server/services/communityData/config";
+} from "@web/src/server/services/_config/community";
 import {
   buildGeoRuntimeContext,
   communityCache,

@@ -6,7 +6,7 @@ import {
   trimCommunityDataLists
 } from "../core/communityLists";
 import { normalizeAudienceSegment } from "../../../shared/audience";
-import { SEARCH_ANCHOR_OFFSETS } from "@web/src/server/services/communityData/config";
+import { SEARCH_ANCHOR_OFFSETS } from "@web/src/server/services/_config/community";
 import { getCommunityDataByZip } from "./service";
 import {
   buildGeoRuntimeContext,

@@ -2,7 +2,7 @@ import {
   AUDIENCE_SEGMENT_ALIASES,
   NORMALIZED_AUDIENCE_SEGMENTS,
   type AudienceSegment
-} from "@web/src/server/services/communityData/config";
+} from "@web/src/server/services/_config/community";
 
 export function normalizeAudienceSegment(
   segment?: string

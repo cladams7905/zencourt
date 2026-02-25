@@ -1,7 +1,7 @@
 import {
   CommunityDataProvider,
   getCommunityDataProvider
-} from "@web/src/server/services/communityData/config";
+} from "@web/src/server/services/_config/community";
 import type { CommunityDataProviderStrategy } from "./providers/types";
 import { createGoogleCommunityDataProvider } from "./providers/google";
 import { createPerplexityCommunityDataProvider } from "./providers/perplexity";

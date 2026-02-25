@@ -2,7 +2,7 @@ import {
   CommunityDataProvider,
   shouldIncludeServiceAreasInCache,
   type CategoryKey
-} from "@web/src/server/services/communityData/config";
+} from "@web/src/server/services/_config/community";
 import { normalizeAudienceSegment } from "@web/src/server/services/communityData/shared/audience";
 import {
   getPerplexityCommunityData,

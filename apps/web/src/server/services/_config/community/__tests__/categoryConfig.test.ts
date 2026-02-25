@@ -7,7 +7,7 @@ import {
   getCategoryFallbackQueries,
   getCategoryMinPrimaryResults,
   getCategoryTargetQueryCount
-} from "@web/src/server/services/communityData/config/categoryConfig";
+} from "@web/src/server/services/_config/community/categoryConfig";
 
 describe("category config", () => {
   it("returns configured values for known categories", () => {

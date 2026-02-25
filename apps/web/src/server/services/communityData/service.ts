@@ -1,5 +1,5 @@
 import type { CommunityData } from "@web/src/lib/domain/market/types";
-import type { CategoryKey } from "@web/src/server/services/communityData/config";
+import type { CategoryKey } from "@web/src/server/services/_config/community";
 import {
   createCommunityDataProviderRegistry,
   type CommunityDataProviderStrategy

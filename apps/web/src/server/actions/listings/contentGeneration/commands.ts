@@ -11,7 +11,7 @@ import {
   getCachedListingContent,
   setCachedListingContent,
   setCachedListingContentItem
-} from "@web/src/server/services/cache/listingContent";
+} from "@web/src/server/cache/listingContent";
 import { runContentGenerationForUser } from "@web/src/server/actions/contentGeneration/helpers";
 import {
   buildUpstreamRequestBody,
@@ -19,7 +19,7 @@ import {
   resolveListingContext
 } from "@web/src/server/actions/listings/contentGeneration/helpers";
 import type { GenerateListingContentBody } from "@web/src/server/actions/listings/contentGeneration/types";
-import type { ListingGeneratedItem } from "@web/src/server/services/cache/listingContent";
+import type { ListingGeneratedItem } from "@web/src/server/cache/listingContent";
 import { requireAuthenticatedUser } from "@web/src/server/auth/apiAuth";
 
 const logger = createChildLogger(baseLogger, {

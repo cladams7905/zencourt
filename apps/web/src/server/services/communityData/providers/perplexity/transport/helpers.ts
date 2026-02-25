@@ -1,4 +1,4 @@
-import type { AudienceSegment } from "@web/src/server/services/communityData/config";
+import type { AudienceSegment } from "@web/src/server/services/_config/community";
 
 export function getWhySuitableFieldKey(audience?: AudienceSegment): string {
   return audience

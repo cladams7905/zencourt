@@ -1,7 +1,7 @@
 import {
   CommunityDataProvider,
   getCommunityDataProvider
-} from "@web/src/server/services/communityData/config";
+} from "@web/src/server/services/_config/community";
 import type { AIProviderName } from "./types";
 
 export type AIUseCase =

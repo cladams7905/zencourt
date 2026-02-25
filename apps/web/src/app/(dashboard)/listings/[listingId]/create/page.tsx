@@ -10,8 +10,8 @@ import {
 } from "@web/src/server/models/listingImages";
 import {
   getAllCachedListingContentForFilter
-} from "@web/src/server/services/cache/listingContent";
-import type { ListingMediaType } from "@web/src/server/services/cache/listingContent";
+} from "@web/src/server/cache/listingContent";
+import type { ListingMediaType } from "@web/src/server/cache/listingContent";
 import { getListingVideoStatus } from "@web/src/server/services/videoGeneration";
 import {
   ListingCreateView

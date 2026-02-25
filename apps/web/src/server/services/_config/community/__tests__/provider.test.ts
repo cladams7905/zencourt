@@ -3,7 +3,7 @@ import {
   DEFAULT_COMMUNITY_DATA_PROVIDER,
   getCommunityDataProvider,
   CommunityDataProvider
-} from "@web/src/server/services/communityData/config";
+} from "@web/src/server/services/_config/community";
 
 describe("community provider config", () => {
   const previous = process.env[COMMUNITY_DATA_PROVIDER];

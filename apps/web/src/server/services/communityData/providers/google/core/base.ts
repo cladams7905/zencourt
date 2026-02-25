@@ -4,7 +4,7 @@ import {
   CATEGORY_CONFIG,
   getCategoryDisplayLimit,
   type CategoryKey
-} from "@web/src/server/services/communityData/config";
+} from "@web/src/server/services/_config/community";
 import {
   buildSeasonalQueries,
   CATEGORY_FIELD_MAP,

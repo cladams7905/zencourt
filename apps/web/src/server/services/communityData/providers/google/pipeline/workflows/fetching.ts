@@ -10,7 +10,7 @@ import {
   SEARCH_ANCHOR_OFFSETS,
   type CategoryKey,
   NEIGHBORHOOD_QUERIES
-} from "@web/src/server/services/communityData/config";
+} from "@web/src/server/services/_config/community";
 import {
   communityCache,
   getPlaceDetailsCached,
