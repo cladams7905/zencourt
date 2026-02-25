@@ -10,7 +10,7 @@ import {
   createChildLogger,
   logger as baseLogger
 } from "@web/src/lib/core/logging/logger";
-import { renderListingTemplateBatchStream } from "@web/src/server/actions/listings/templateRender";
+import { renderListingTemplateBatchStream } from "@web/src/server/actions/listings/templateRender/commands";
 import { makeSseStreamHeaders } from "@web/src/lib/sse/sseEncoder";
 import { readJsonBodySafe } from "@shared/utils/api/validation";
 

@@ -45,6 +45,8 @@ export function sanitizeCaptionItems(
         id?: string;
         hook?: string | null;
         caption?: string | null;
+        broll_query?: string | null;
+        cta?: string | null;
         body?: Array<{ header?: string; content?: string }>;
         cacheKeyTimestamp?: number;
         cacheKeyId?: number;
@@ -65,6 +67,8 @@ export function sanitizeCaptionItems(
         id,
         hook: candidate.hook?.trim() || null,
         caption: candidate.caption?.trim() || null,
+        broll_query: candidate.broll_query?.trim() || null,
+        cta: candidate.cta?.trim() || null,
         body
       };
       if (typeof candidate.cacheKeyTimestamp === "number" && typeof candidate.cacheKeyId === "number") {

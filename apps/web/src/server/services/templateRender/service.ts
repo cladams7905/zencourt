@@ -15,12 +15,6 @@ import {
   createChildLogger,
   logger as baseLogger
 } from "@web/src/lib/core/logging/logger";
-import storageService from "@web/src/server/services/storage";
-import {
-  getCachedListingContentItem,
-  updateRenderedPreviewForItem
-} from "@web/src/server/services/cache/listingContent";
-import type { ListingMediaType } from "@web/src/server/services/cache/listingContent";
 import { buildFallbackRenderedItem } from "./providers/fallback";
 import {
   getTemplateById,
@@ -102,28 +96,6 @@ function selectCaptionItem(
   ] as TemplateRenderCaptionItemInput;
 }
 
-function resolveListingImagesToPublicUrls(listingImages: DBListingImage[]): {
-  images: DBListingImage[];
-  resolutionSummary: { publicUrlCount: number };
-} {
-  let publicUrlCount = 0;
-  const images = listingImages.map((img) => {
-    const publicUrl = storageService.getPublicUrlForStorageUrl(img.url);
-    const resolvedUrl = publicUrl ?? img.url;
-    if (publicUrl) {
-      publicUrlCount += 1;
-    }
-    return {
-      ...img,
-      url: resolvedUrl
-    };
-  });
-  return {
-    images,
-    resolutionSummary: { publicUrlCount }
-  };
-}
-
 function buildModifications(params: {
   resolvedParameters: Partial<Record<TemplateRenderParameterKey, string>>;
   template: TemplateRenderConfig;
@@ -186,35 +158,13 @@ export async function renderListingTemplateBatch(params: {
     return { items: [], failedTemplateIds: [] };
   }
 
-  const { images: listingImagesWithPublicUrls, resolutionSummary } =
-    resolveListingImagesToPublicUrls(params.listingImages);
-
-  const usingPublicBaseUrl = storageService.hasPublicBaseUrl();
-  logger.debug(
-    {
-      subcategory: params.subcategory,
-      listingId: params.listing.id,
-      usingPublicBaseUrl,
-      urlSource: usingPublicBaseUrl
-        ? "STORAGE_PUBLIC_BASE_URL (CDN)"
-        : "fallback (no public base URL)",
-      resolutionSummary,
-      imageUrls: listingImagesWithPublicUrls.map((img) => ({
-        id: img.id,
-        url: img.url,
-        category: img.category
-      }))
-    },
-    "Template render: listing image URLs (after public URL resolution)"
-  );
-
   const renders = await Promise.all(
     selectedTemplates.map(async (template, index) => {
       const captionItem = selectCaptionItem(params.captionItems, index);
       const resolvedParameters = resolveTemplateParameters({
         subcategory: params.subcategory,
         listing: params.listing,
-        listingImages: listingImagesWithPublicUrls,
+        listingImages: params.listingImages,
         userAdditional: params.userAdditional,
         captionItem,
         siteOrigin: params.siteOrigin,
@@ -266,10 +216,7 @@ export async function renderListingTemplateBatch(params: {
     if (result?.ok && result.value) {
       items.push(result.value);
     } else {
-      const fallback = buildFallbackRenderedItem(
-        captionItem,
-        listingImagesWithPublicUrls
-      );
+      const fallback = buildFallbackRenderedItem(captionItem, params.listingImages);
       if (fallback) {
         items.push(fallback);
       }
@@ -292,7 +239,7 @@ export type RenderListingTemplateBatchStreamParams = {
   userId: string;
   listingId: string;
   subcategory: ListingContentSubcategory;
-  mediaType: ListingMediaType;
+  mediaType: "video" | "image";
   listing: DBListing;
   listingImages: DBListingImage[];
   userAdditional: DBUserAdditional;
@@ -307,11 +254,27 @@ export type RenderListingTemplateBatchStreamParams = {
 
 export type RenderListingTemplateBatchStreamCallbacks = {
   onItem: (item: ListingTemplateRenderedItem) => Promise<void>;
+  onResult?: (result: {
+    cacheKeyTimestamp?: number;
+    cacheKeyId?: number;
+    content: {
+      hook: string;
+      broll_query: string;
+      body: Array<{ header: string; content: string; broll_query: string }> | null;
+      cta: string | null;
+      caption: string;
+    };
+    rendered: {
+      imageUrl: string;
+      templateId: string;
+      modifications: Record<string, string>;
+    } | null;
+  }) => Promise<void>;
 };
 
 /**
- * Renders templates one-by-one, checking Redis first and calling onItem for each
- * (cache hit or after primary template render). Caller can push SSE from onItem.
+ * Renders templates one-by-one and emits each result via onItem.
+ * This path intentionally does not mutate listing content cache.
  */
 export async function renderListingTemplateBatchStream(
   params: RenderListingTemplateBatchStreamParams,
@@ -339,9 +302,6 @@ export async function renderListingTemplateBatchStream(
     return { failedTemplateIds };
   }
 
-  const { images: listingImagesWithPublicUrls } =
-    resolveListingImagesToPublicUrls(params.listingImages);
-
   for (let index = 0; index < selectedTemplates.length; index += 1) {
     const template = selectedTemplates[index] as TemplateRenderConfig;
     const captionItem = selectCaptionItem(
@@ -351,37 +311,26 @@ export async function renderListingTemplateBatchStream(
 
     const cacheKeyTimestamp = captionItem.cacheKeyTimestamp;
     const cacheKeyId = captionItem.cacheKeyId;
-    const hasCacheKey =
-      typeof cacheKeyTimestamp === "number" && typeof cacheKeyId === "number";
 
-    if (hasCacheKey) {
-      const cachedItem = await getCachedListingContentItem({
-        userId: params.userId,
-        listingId: params.listingId,
-        subcategory: params.subcategory,
-        mediaType: params.mediaType,
-        timestamp: cacheKeyTimestamp,
-        id: cacheKeyId
-      });
-      if (
-        cachedItem?.renderedImageUrl &&
-        typeof cachedItem.renderedImageUrl === "string" &&
-        cachedItem.renderedImageUrl.length > 0
-      ) {
-        await callbacks.onItem({
-          templateId: cachedItem.renderedTemplateId ?? template.id,
-          imageUrl: cachedItem.renderedImageUrl,
-          captionItemId: captionItem.id,
-          parametersUsed: {}
-        });
-        continue;
-      }
-    }
+    const content = {
+      hook: captionItem.hook ?? "",
+      broll_query: captionItem.broll_query ?? "",
+      body:
+        captionItem.body.length > 0
+          ? captionItem.body.map((slide) => ({
+              header: slide.header,
+              content: slide.content,
+              broll_query: captionItem.broll_query ?? ""
+            }))
+          : null,
+      cta: captionItem.cta ?? null,
+      caption: captionItem.caption ?? ""
+    };
 
     const resolvedParameters = resolveTemplateParameters({
       subcategory: params.subcategory,
       listing: params.listing,
-      listingImages: listingImagesWithPublicUrls,
+      listingImages: params.listingImages,
       userAdditional: params.userAdditional,
       captionItem,
       siteOrigin: params.siteOrigin,
@@ -400,19 +349,16 @@ export async function renderListingTemplateBatchStream(
         modifications
       });
 
-      if (hasCacheKey) {
-        await updateRenderedPreviewForItem({
-          userId: params.userId,
-          listingId: params.listingId,
-          subcategory: params.subcategory,
-          mediaType: params.mediaType,
-          timestamp: cacheKeyTimestamp!,
-          id: cacheKeyId!,
+      await callbacks.onResult?.({
+        cacheKeyTimestamp,
+        cacheKeyId,
+        content,
+        rendered: {
           imageUrl,
           templateId: template.id,
           modifications
-        });
-      }
+        }
+      });
 
       await callbacks.onItem({
         templateId: template.id,
@@ -429,9 +375,17 @@ export async function renderListingTemplateBatchStream(
         "Template render failed"
       );
       failedTemplateIds.push(template.id);
+
+      await callbacks.onResult?.({
+        cacheKeyTimestamp,
+        cacheKeyId,
+        content,
+        rendered: null
+      });
+
       const fallback = buildFallbackRenderedItem(
         captionItem,
-        listingImagesWithPublicUrls
+        params.listingImages
       );
       if (fallback) {
         await callbacks.onItem(fallback);

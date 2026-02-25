@@ -55,6 +55,8 @@ export type TemplateRenderCaptionItemInput = {
   id: string;
   hook: string | null;
   caption: string | null;
+  broll_query?: string | null;
+  cta?: string | null;
   body: TemplateRenderCaptionSlideInput[];
   /** When present, template render API can read/update the unified content cache for this item. */
   cacheKeyTimestamp?: number;

@@ -7,7 +7,7 @@ import {
   Mulish,
   Italiana,
   Rouge_Script,
-  TikTok_Sans,
+  Open_Sans,
   Gwendolyn,
   DM_Serif_Text,
   Onest
@@ -51,7 +51,7 @@ const gwendolyn = Gwendolyn({
   display: "swap"
 });
 
-const tikTokSans = TikTok_Sans({
+const tikTokSans = Open_Sans({
   subsets: ["latin"],
   weight: ["600", "700"],
   variable: "--font-tiktok",

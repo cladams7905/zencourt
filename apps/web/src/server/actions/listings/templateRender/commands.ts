@@ -6,6 +6,7 @@ import {
 } from "@web/src/lib/core/logging/logger";
 import { getOrCreateUserAdditional } from "@web/src/server/models/userAdditional";
 import { getListingImages } from "@web/src/server/models/listingImages";
+import { setCachedListingContentItem } from "@web/src/server/services/cache/listingContent";
 import {
   renderListingTemplateBatch as renderListingTemplateBatchService,
   renderListingTemplateBatchStream as renderListingTemplateBatchStreamService
@@ -15,6 +16,11 @@ import {
   sanitizeCaptionItems
 } from "@web/src/server/services/templateRender/validation";
 import type { ListingTemplateRenderResult } from "@web/src/lib/domain/media/templateRender/types";
+import type {
+  RenderListingTemplateBatchBody,
+  RenderListingTemplateBatchStreamBody
+} from "./helpers";
+import { resolveListingImagesToPublicUrls } from "./helpers";
 import { DomainValidationError } from "@web/src/server/errors/domain";
 import { requireAuthenticatedUser } from "@web/src/server/auth/apiAuth";
 import { requireListingAccess } from "@web/src/server/models/listings/access";
@@ -23,19 +29,6 @@ import { encodeSseEvent } from "@web/src/lib/sse/sseEncoder";
 const logger = createChildLogger(baseLogger, {
   module: "listing-template-render-actions"
 });
-
-export type RenderListingTemplateBatchBody = {
-  subcategory?: unknown;
-  captionItems?: unknown;
-  templateCount?: number;
-};
-
-export type RenderListingTemplateBatchStreamBody = {
-  subcategory?: unknown;
-  captionItems?: unknown;
-  templateCount?: number;
-  templateId?: string;
-};
 
 export async function renderListingTemplateBatch(
   listingId: string,
@@ -61,11 +54,12 @@ export async function renderListingTemplateBatch(
     getListingImages(user.id, listing.id),
     getOrCreateUserAdditional(user.id)
   ]);
+  const listingImagesWithPublicUrls = resolveListingImagesToPublicUrls(listingImages);
 
   return renderListingTemplateBatchService({
     subcategory,
     listing,
-    listingImages,
+    listingImages: listingImagesWithPublicUrls,
     userAdditional,
     captionItems,
     templateCount:
@@ -117,6 +111,7 @@ export async function renderListingTemplateBatchStream(
     getListingImages(user.id, listing.id),
     getOrCreateUserAdditional(user.id)
   ]);
+  const listingImagesWithPublicUrls = resolveListingImagesToPublicUrls(listingImages);
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -128,7 +123,7 @@ export async function renderListingTemplateBatchStream(
             subcategory,
             mediaType: "image",
             listing,
-            listingImages,
+            listingImages: listingImagesWithPublicUrls,
             userAdditional,
             captionItems,
             templateCount,
@@ -138,6 +133,37 @@ export async function renderListingTemplateBatchStream(
           {
             onItem: async (item) => {
               controller.enqueue(encodeSseEvent({ type: "item", item }));
+            },
+            onResult: async (result) => {
+              const { cacheKeyTimestamp, cacheKeyId, content, rendered } = result;
+              if (
+                typeof cacheKeyTimestamp !== "number" ||
+                typeof cacheKeyId !== "number"
+              ) {
+                return;
+              }
+
+              try {
+                await setCachedListingContentItem({
+                  userId: user.id,
+                  listingId,
+                  subcategory,
+                  mediaType: "image",
+                  timestamp: cacheKeyTimestamp,
+                  id: cacheKeyId,
+                  item: {
+                    ...content,
+                    renderedImageUrl: rendered?.imageUrl ?? null,
+                    renderedTemplateId: rendered?.templateId,
+                    renderedModifications: rendered?.modifications
+                  }
+                });
+              } catch (error) {
+                logger.warn(
+                  { error, listingId, cacheKeyTimestamp, cacheKeyId },
+                  "Failed to persist template render cache item"
+                );
+              }
             }
           }
         );

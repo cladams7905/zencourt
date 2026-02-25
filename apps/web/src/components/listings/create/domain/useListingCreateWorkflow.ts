@@ -70,6 +70,7 @@ export function useListingCreateWorkflow(params: {
     activeMediaItems,
     listingImages,
     isGenerating,
+    loadingCount,
     isTemplateRendering,
     isTemplateRenderingUnavailable,
     templatePreviewItems

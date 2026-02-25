@@ -180,6 +180,8 @@ describe("listingCreateUtils", () => {
         id: "item-1",
         hook: "Hook",
         caption: "Caption",
+        cta: null,
+        broll_query: null,
         body: [{ header: "Header", content: "Content" }]
       }
     ]);

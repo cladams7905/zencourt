@@ -24,7 +24,7 @@ describe("listing content generate route", () => {
     jest.doMock("@web/src/app/api/v1/_utils", () => ({
       ApiError: RealApiError
     }));
-    jest.doMock("@web/src/server/actions/listings/contentGenerate", () => ({
+    jest.doMock("@web/src/server/actions/listings/contentGenerate/commands", () => ({
       generateListingContentForCurrentUser: (...args: unknown[]) =>
         mockGenerateListingContentForCurrentUser(
           args[0] as string,

@@ -7,21 +7,6 @@ import type {
 const mockRenderTemplate = jest.fn();
 const mockResolveTemplateParameters = jest.fn();
 const mockPickRandomTemplatesForSubcategory = jest.fn();
-const mockGetPublicUrlForStorageUrl = jest.fn();
-
-jest.mock("@web/src/server/services/storage", () => ({
-  __esModule: true,
-  default: {
-    getPublicUrlForStorageUrl: (...args: unknown[]) =>
-      mockGetPublicUrlForStorageUrl(...args),
-    hasPublicBaseUrl: () => true
-  }
-}));
-
-jest.mock("@web/src/server/services/cache/listingContent", () => ({
-  getCachedListingContentItem: jest.fn().mockResolvedValue(null),
-  updateRenderedPreviewForItem: jest.fn().mockResolvedValue(undefined)
-}));
 
 jest.mock("../providers/orshot", () => ({
   renderTemplate: (...args: unknown[]) => mockRenderTemplate(...args),
@@ -59,9 +44,6 @@ function buildParams() {
 describe("templateRender/service", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockGetPublicUrlForStorageUrl.mockImplementation((url: string) =>
-      url.includes("signed") ? url.replace("signed", "cdn-public") : null
-    );
   });
 
   it("returns empty result when caption items are empty", async () => {
@@ -351,10 +333,8 @@ describe("templateRender/service", () => {
     expect(result.failedTemplateIds).toEqual(["template-b"]);
   });
 
-  it("transforms listing image URLs to public CDN URLs when storage service returns them", async () => {
+  it("passes listing image URLs through to parameter resolver", async () => {
     const signedUrl = "https://storage.example.com/bucket/user_1/signed-photo.jpg?X-Amz-Signature=abc";
-    const publicUrl = "https://cdn.example.com/bucket/user_1/photo.jpg";
-    mockGetPublicUrlForStorageUrl.mockReturnValue(publicUrl);
     mockPickRandomTemplatesForSubcategory.mockReturnValue([
       {
         id: "template-public",
@@ -364,7 +344,7 @@ describe("templateRender/service", () => {
     ]);
     mockResolveTemplateParameters.mockReturnValue({
       headerText: "Dream Home",
-      backgroundImage1: publicUrl
+      backgroundImage1: signedUrl
     });
     mockRenderTemplate.mockResolvedValueOnce("https://cdn.example.com/render.jpg");
 
@@ -388,13 +368,11 @@ describe("templateRender/service", () => {
       listingImages
     });
 
-    expect(mockGetPublicUrlForStorageUrl).toHaveBeenCalledWith(signedUrl);
     expect(mockResolveTemplateParameters).toHaveBeenCalledWith(
       expect.objectContaining({
         listingImages: [
           expect.objectContaining({
-            ...listingImages[0],
-            url: publicUrl
+            ...listingImages[0]
           })
         ]
       })
