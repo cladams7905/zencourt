@@ -1,7 +1,7 @@
 "use server";
 
 import { requireAuthenticatedUser } from "@web/src/server/auth/apiAuth";
-import { runContentGeneration } from "@web/src/server/services/contentGeneration";
+import { runContentGenerationForUser } from "@web/src/server/actions/contentGeneration/helpers";
 import type { PromptAssemblyInput } from "@web/src/lib/ai/prompts/engine/assemble";
 import { DomainValidationError } from "@web/src/server/errors/domain";
 
@@ -16,5 +16,5 @@ export async function generateContentForCurrentUser(
   }
 
   const user = await requireAuthenticatedUser();
-  return runContentGeneration(user.id, body);
+  return runContentGenerationForUser(user.id, body);
 }

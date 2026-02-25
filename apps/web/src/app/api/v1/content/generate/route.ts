@@ -5,21 +5,15 @@
  */
 
 import { NextRequest } from "next/server";
-import {
-  mapDomainError,
-  DomainError
-} from "@web/src/app/api/v1/_utils";
-import {
-  apiErrorResponse,
-  StatusCode
-} from "@web/src/app/api/v1/_responses";
+import { mapDomainError, DomainError } from "@web/src/app/api/v1/_utils";
+import { apiErrorResponse, StatusCode } from "@web/src/app/api/v1/_responses";
 import {
   createChildLogger,
   logger as baseLogger
 } from "@web/src/lib/core/logging/logger";
 import { readJsonBodySafe } from "@shared/utils";
 import { makeSseStreamHeaders } from "@web/src/lib/sse/sseEncoder";
-import { generateContentForCurrentUser } from "@web/src/server/actions/content/commands";
+import { generateContentForCurrentUser } from "@web/src/server/actions/contentGeneration/commands";
 import type { PromptAssemblyInput } from "@web/src/lib/ai/prompts/engine/assemble";
 
 const logger = createChildLogger(baseLogger, {
@@ -42,11 +36,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     if (error instanceof DomainError) {
       const { status, code } = mapDomainError(error);
-      return apiErrorResponse(
-        status,
-        code,
-        error.message
-      );
+      return apiErrorResponse(status, code, error.message);
     }
 
     const errorDetails =
