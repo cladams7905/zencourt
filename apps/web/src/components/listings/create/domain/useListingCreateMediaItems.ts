@@ -6,13 +6,13 @@ import {
   buildVariedImageSequence,
   rankListingImagesForItem
 } from "@web/src/components/listings/create/domain/listingCreateUtils";
-import { GENERATED_BATCH_SIZE } from "@web/src/components/listings/create/shared/constants";
 
 export function useListingCreateMediaItems(params: {
   activeMediaTab: "videos" | "images";
   activeMediaItems: ContentItem[];
   listingImages: ListingCreateImage[];
   isGenerating: boolean;
+  loadingCount: number;
   isTemplateRendering: boolean;
   isTemplateRenderingUnavailable: boolean;
   templatePreviewItems: ListingImagePreviewItem[];
@@ -22,6 +22,7 @@ export function useListingCreateMediaItems(params: {
     activeMediaItems,
     listingImages,
     isGenerating,
+    loadingCount,
     isTemplateRendering,
     isTemplateRenderingUnavailable,
     templatePreviewItems
@@ -95,7 +96,7 @@ export function useListingCreateMediaItems(params: {
       return 0;
     }
     if (isGenerating) {
-      return GENERATED_BATCH_SIZE;
+      return Math.max(0, loadingCount);
     }
     const expectingTemplateResults =
       activeMediaItems.length > 0 && (isTemplateRendering || templatePreviewItems.length === 0);
@@ -107,6 +108,7 @@ export function useListingCreateMediaItems(params: {
     activeMediaItems.length,
     activeMediaTab,
     isGenerating,
+    loadingCount,
     isTemplateRendering,
     isTemplateRenderingUnavailable,
     templatePreviewItems.length

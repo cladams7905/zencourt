@@ -13,14 +13,28 @@ import {
 import { Label } from "@web/src/components/ui/label";
 import orshotTemplates from "@web/src/lib/domain/media/orshot/templates.json";
 
-const TEMPLATE_IDS = (orshotTemplates as { id: string }[]).map((t) => t.id).sort();
+type OrshotTemplateOption = {
+  id: string;
+  thumbnail_url?: string;
+};
+
+const TEMPLATE_OPTIONS = (orshotTemplates as OrshotTemplateOption[])
+  .map((t) => ({
+    id: String(t.id),
+    thumbnailUrl: typeof t.thumbnail_url === "string" ? t.thumbnail_url : ""
+  }))
+  .sort((a, b) => a.id.localeCompare(b.id));
 
 type DevSingleTemplateRenderProps = {
   subcategory: ListingContentSubcategory;
   isGenerating: boolean;
   generateSubcategoryContent: (
     subcategory: ListingContentSubcategory,
-    options?: { forceNewBatch?: boolean; generationCount?: number; templateId?: string }
+    options?: {
+      forceNewBatch?: boolean;
+      generationCount?: number;
+      templateId?: string;
+    }
   ) => Promise<void>;
 };
 
@@ -34,8 +48,11 @@ export function DevSingleTemplateRender({
   generateSubcategoryContent
 }: DevSingleTemplateRenderProps) {
   const [selectedTemplateId, setSelectedTemplateId] = React.useState<string>(
-    TEMPLATE_IDS[0] ?? ""
+    TEMPLATE_OPTIONS[0]?.id ?? ""
   );
+  const selectedTemplate =
+    TEMPLATE_OPTIONS.find((option) => option.id === selectedTemplateId) ?? null;
+
   const handleGenerate = React.useCallback(async () => {
     if (!selectedTemplateId.trim()) return;
     await generateSubcategoryContent(subcategory, {
@@ -43,11 +60,7 @@ export function DevSingleTemplateRender({
       generationCount: 1,
       templateId: selectedTemplateId.trim()
     });
-  }, [
-    selectedTemplateId,
-    subcategory,
-    generateSubcategoryContent
-  ]);
+  }, [selectedTemplateId, subcategory, generateSubcategoryContent]);
 
   if (process.env.NODE_ENV !== "development") {
     return null;
@@ -59,6 +72,16 @@ export function DevSingleTemplateRender({
         Dev: Single template render
       </div>
       <div className="flex flex-wrap items-end gap-3">
+        {selectedTemplate?.thumbnailUrl ? (
+          <div className="mb-0.5">
+            {/* eslint-disable-next-line @next/next/no-img-element -- dev-only template thumbnails */}
+            <img
+              src={selectedTemplate.thumbnailUrl}
+              alt=""
+              className="h-16 w-16 rounded object-cover"
+            />
+          </div>
+        ) : null}
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="dev-template-select" className="text-xs">
             Template ID
@@ -71,15 +94,30 @@ export function DevSingleTemplateRender({
           >
             <SelectTrigger
               id="dev-template-select"
-              className="w-[140px]"
+              className="w-[260px]"
               size="sm"
             >
               <SelectValue placeholder="Select template" />
             </SelectTrigger>
             <SelectContent>
-              {TEMPLATE_IDS.map((id) => (
-                <SelectItem key={id} value={id}>
-                  {id}
+              {TEMPLATE_OPTIONS.map((option) => (
+                <SelectItem
+                  key={option.id}
+                  value={option.id}
+                  textValue={option.id}
+                  itemText={option.id}
+                >
+                  <div className="flex items-center gap-2">
+                    {option.thumbnailUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- dev-only template thumbnails
+                      <img
+                        src={option.thumbnailUrl}
+                        alt=""
+                        className="h-12 w-12 rounded object-cover"
+                      />
+                    ) : null}
+                    <span>{option.id}</span>
+                  </div>
                 </SelectItem>
               ))}
             </SelectContent>

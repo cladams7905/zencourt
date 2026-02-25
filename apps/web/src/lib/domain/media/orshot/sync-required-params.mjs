@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Fetches template modifications from Orshot API and updates templates.json requiredParams.
+ * Fetches template metadata from Orshot API and updates templates.json.
  * Usage: ORSHOT_API_KEY=your_key node sync-required-params.mjs
  * Run from repo root or apps/web.
  */
@@ -54,6 +54,27 @@ function getRequiredParams(modifications) {
   return modifications
     .map((m) => m?.key)
     .filter((key) => typeof key === "string" && VALID_KEYS.has(key));
+}
+
+function getThumbnailUrl(template) {
+  const topLevel = template?.thumbnail_url;
+  if (typeof topLevel === "string" && topLevel.trim().length > 0) {
+    return topLevel.trim();
+  }
+
+  if (Array.isArray(template?.pages_data)) {
+    for (const page of template.pages_data) {
+      const pageThumbnail = page?.thumbnail_url;
+      if (
+        typeof pageThumbnail === "string" &&
+        pageThumbnail.trim().length > 0
+      ) {
+        return pageThumbnail.trim();
+      }
+    }
+  }
+
+  return "";
 }
 
 async function fetchAllTemplates(apiKey) {
@@ -127,13 +148,28 @@ async function main() {
     const apiMap = new Map();
     for (const t of apiTemplates) {
       const id = String(t.id);
-      apiMap.set(id, getRequiredParams(t.modifications));
+      apiMap.set(id, {
+        requiredParams: getRequiredParams(t.modifications),
+        thumbnail_url: getThumbnailUrl(t)
+      });
     }
 
-    const updated = templates.map((t) => ({
-      ...t,
-      requiredParams: apiMap.get(t.id) ?? []
-    }));
+    let matchedCount = 0;
+    let thumbnailCount = 0;
+    const updated = templates.map((t) => {
+      const apiTemplate = apiMap.get(String(t.id));
+      if (apiTemplate) {
+        matchedCount += 1;
+      }
+      if (apiTemplate?.thumbnail_url) {
+        thumbnailCount += 1;
+      }
+      return {
+        ...t,
+        requiredParams: apiTemplate?.requiredParams ?? [],
+        thumbnail_url: apiTemplate?.thumbnail_url ?? ""
+      };
+    });
 
     writeFileSync(
       TEMPLATES_JSON,
@@ -141,8 +177,14 @@ async function main() {
       "utf8"
     );
     console.error(
-      "Updated %s with requiredParams from Orshot API.",
+      "Updated %s with requiredParams and thumbnail_url from Orshot API.",
       TEMPLATES_JSON
+    );
+    console.error(
+      "Template matches: %d/%d. Templates with thumbnail_url: %d.",
+      matchedCount,
+      templates.length,
+      thumbnailCount
     );
   } catch (err) {
     console.error(err.message);

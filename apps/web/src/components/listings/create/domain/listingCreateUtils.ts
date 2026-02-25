@@ -185,6 +185,8 @@ export function buildTemplateRenderCaptionItems(
         id: item.id,
         hook: item.hook?.trim() || null,
         caption: item.caption?.trim() || null,
+        broll_query: item.brollQuery?.trim() || null,
+        cta: null,
         body: (item.body ?? [])
           .map((slide) => ({
             header: slide.header?.trim() ?? "",

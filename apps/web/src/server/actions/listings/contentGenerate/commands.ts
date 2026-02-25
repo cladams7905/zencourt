@@ -1,6 +1,6 @@
-import {
-  encodeSseEvent
-} from "@web/src/lib/sse/sseEncoder";
+"use server";
+
+import { encodeSseEvent } from "@web/src/lib/sse/sseEncoder";
 import { consumeSseStream } from "@web/src/lib/sse/sseEventStream";
 import {
   createChildLogger,
@@ -13,17 +13,17 @@ import {
   setCachedListingContentItem
 } from "@web/src/server/services/cache/listingContent";
 import { runContentGeneration } from "@web/src/server/services/contentGeneration";
-import { resolveListingContext } from "./listingContext";
-import { parseAndValidateParams } from "./requestValidation";
-import { buildUpstreamRequestBody } from "./upstream";
-import type {
-  GenerateListingContentBody,
-  ListingGenerationContext,
-  ListingGeneratedItem
-} from "./types";
+import {
+  buildUpstreamRequestBody,
+  parseAndValidateParams,
+  resolveListingContext
+} from "@web/src/server/actions/listings/contentGenerate/helpers";
+import type { GenerateListingContentBody } from "@web/src/server/actions/listings/contentGenerate/types";
+import type { ListingGeneratedItem } from "@web/src/server/services/cache/listingContent";
+import { requireAuthenticatedUser } from "@web/src/server/auth/apiAuth";
 
 const logger = createChildLogger(baseLogger, {
-  module: "listing-content-generation-service"
+  module: "listing-content-generate-actions"
 });
 
 type ContentStreamEvent =
@@ -35,24 +35,14 @@ type ContentStreamEvent =
     }
   | { type: "error"; message: string };
 
-/**
- * Full listing-scoped content generation: resolve context, check cache,
- * generate via contentGeneration service if needed, write cache on done, return SSE response.
- */
-export async function runListingContentGenerate(
+export async function generateListingContentForCurrentUser(
   listingId: string,
-  userId: string,
   body: GenerateListingContentBody | null
-): Promise<{
-  stream: ReadableStream;
-  status: number;
-}> {
-  const listing = await requireListingAccess(listingId, userId);
+) {
+  const user = await requireAuthenticatedUser();
+  const listing = await requireListingAccess(listingId, user.id);
   const validated = parseAndValidateParams(body, listingId);
-  const context: ListingGenerationContext = resolveListingContext(
-    listing,
-    validated
-  );
+  const context = resolveListingContext(listing, validated);
 
   const cachedItems = await getCachedListingContent(context.cacheKey);
   if (cachedItems && cachedItems.length > 0) {
@@ -72,7 +62,7 @@ export async function runListingContentGenerate(
   }
 
   const upstreamBody = buildUpstreamRequestBody(context);
-  const upstreamResponse = await runContentGeneration(userId, upstreamBody);
+  const upstreamResponse = await runContentGeneration(user.id, upstreamBody);
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -91,24 +81,28 @@ export async function runListingContentGenerate(
               if (!errored && doneItems && doneItems.length > 0) {
                 await setCachedListingContent(context.cacheKey, doneItems);
                 const timestamp = Date.now();
-                for (let id = 0; id < doneItems.length; id += 1) {
-                  const item = doneItems[id];
-                  if (!item) continue;
-                  await setCachedListingContentItem({
-                    userId: context.userId,
-                    listingId: context.listingId,
-                    subcategory: context.subcategory,
-                    mediaType: context.mediaType,
-                    timestamp,
-                    id,
-                    item: {
-                      ...item,
-                      renderedImageUrl: null,
-                      renderedTemplateId: undefined,
-                      renderedModifications: undefined
-                    }
-                  });
+
+                if (context.mediaType === "video") {
+                  for (let id = 0; id < doneItems.length; id += 1) {
+                    const item = doneItems[id];
+                    if (!item) continue;
+                    await setCachedListingContentItem({
+                      userId: context.userId,
+                      listingId: context.listingId,
+                      subcategory: context.subcategory,
+                      mediaType: context.mediaType,
+                      timestamp,
+                      id,
+                      item: {
+                        ...item,
+                        renderedImageUrl: null,
+                        renderedTemplateId: undefined,
+                        renderedModifications: undefined
+                      }
+                    });
+                  }
                 }
+
                 controller.enqueue(
                   encodeSseEvent({
                     type: "done",
@@ -135,8 +129,7 @@ export async function runListingContentGenerate(
           controller.enqueue(
             encodeSseEvent({
               type: "error",
-              message:
-                "Listing content generation did not return completed items"
+              message: "Listing content generation did not return completed items"
             })
           );
         }
