@@ -92,7 +92,10 @@ export async function setCachedListingContentItem(params: {
       ex: LISTING_CONTENT_CACHE_TTL_SECONDS
     });
   } catch (error) {
-    logger.warn({ error, cacheKey: key }, "Failed writing listing content item cache");
+    logger.warn(
+      { error, cacheKey: key },
+      "Failed writing listing content item cache"
+    );
   }
 }
 
@@ -118,7 +121,10 @@ export async function getAllCachedListingContentForFilter(params: {
       keys.push(...(batch as string[]));
     } while (cursor !== 0);
   } catch (error) {
-    logger.warn({ error, match }, "Failed scanning listing content cache keys");
+    logger.warn(
+      { error, match },
+      "Failed scanning listing content cache keys"
+    );
     return [];
   }
   const entries: { timestamp: number; id: number; key: string }[] = [];
@@ -144,7 +150,10 @@ export async function getAllCachedListingContentForFilter(params: {
         });
       }
     } catch (error) {
-      logger.warn({ error, cacheKey: key }, "Failed reading listing content item");
+      logger.warn(
+        { error, cacheKey: key },
+        "Failed reading listing content item"
+      );
     }
   }
   return result;
@@ -170,7 +179,10 @@ export async function getCachedListingContentItem(params: {
       return item;
     }
   } catch (error) {
-    logger.warn({ error, cacheKey: key }, "Failed reading listing content item");
+    logger.warn(
+      { error, cacheKey: key },
+      "Failed reading listing content item"
+    );
   }
   return null;
 }
@@ -212,7 +224,10 @@ export async function updateRenderedPreviewForItem(params: {
       ex: LISTING_CONTENT_CACHE_TTL_SECONDS
     });
   } catch (error) {
-    logger.warn({ error, cacheKey: key }, "Failed updating listing content item render");
+    logger.warn(
+      { error, cacheKey: key },
+      "Failed updating listing content item render"
+    );
   }
 }
 
@@ -240,6 +255,9 @@ export async function deleteCachedListingContentItem(params: {
   try {
     await redis.del(key);
   } catch (error) {
-    logger.warn({ error, cacheKey: key }, "Failed deleting listing content item cache");
+    logger.warn(
+      { error, cacheKey: key },
+      "Failed deleting listing content item cache"
+    );
   }
 }

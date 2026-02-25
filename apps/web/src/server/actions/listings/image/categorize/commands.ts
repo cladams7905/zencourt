@@ -1,5 +1,6 @@
 "use server";
 
+import { withServerActionCaller } from "@web/src/server/infra/logger/callContext";
 import { type CategorizationResult } from "./domain/types";
 import type { SerializableImageData } from "@web/src/lib/domain/listing/images";
 import {
@@ -87,10 +88,13 @@ export async function categorizeListingImagesByIds(
   );
 }
 
-export async function categorizeListingImagesForCurrentUser(
-  listingId: string,
-  options: ImageCategorizationActionOptions = {}
-): Promise<ImageCategorizationStats> {
-  const user = await requireAuthenticatedUser();
-  return categorizeListingImages(user.id, listingId, options);
-}
+export const categorizeListingImagesForCurrentUser = withServerActionCaller(
+  "serverAction:categorizeListingImagesForCurrentUser",
+  async (
+    listingId: string,
+    options: ImageCategorizationActionOptions = {}
+  ): Promise<ImageCategorizationStats> => {
+    const user = await requireAuthenticatedUser();
+    return categorizeListingImages(user.id, listingId, options);
+  }
+);

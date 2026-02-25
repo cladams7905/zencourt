@@ -1,8 +1,6 @@
 import { redirect } from "next/navigation";
-import {
-  getListingById,
-  updateListing
-} from "@web/src/server/models/listings";
+import { runWithCaller } from "@web/src/server/infra/logger/callContext";
+import { getListingById, updateListing } from "@web/src/server/models/listings";
 import { requireUserOrRedirect } from "@web/src/app/(dashboard)/_utils/requireUserOrRedirect";
 import { getOrCreateUserAdditional } from "@web/src/server/models/userAdditional";
 import { ListingReviewView } from "@web/src/components/listings/review";
@@ -15,31 +13,33 @@ interface ListingReviewPageProps {
 export default async function ListingReviewPage({
   params
 }: ListingReviewPageProps) {
-  const { listingId } = await params;
-  const user = await requireUserOrRedirect();
+  return runWithCaller("listings/[id]/review", async () => {
+    const { listingId } = await params;
+    const user = await requireUserOrRedirect();
 
-  if (!listingId?.trim()) {
-    redirect("/listings/sync");
-  }
+    if (!listingId?.trim()) {
+      redirect("/listings/sync");
+    }
 
-  const listing = await getListingById(user.id, listingId);
-  if (!listing) {
-    redirect("/listings/sync");
-  }
+    const listing = await getListingById(user.id, listingId);
+    if (!listing) {
+      redirect("/listings/sync");
+    }
 
-  redirectToListingStage(listingId, listing.listingStage, "review");
+    redirectToListingStage(listingId, listing.listingStage, "review");
 
-  const userAdditional = await getOrCreateUserAdditional(user.id);
+    const userAdditional = await getOrCreateUserAdditional(user.id);
 
-  await updateListing(user.id, listingId, { lastOpenedAt: new Date() });
+    await updateListing(user.id, listingId, { lastOpenedAt: new Date() });
 
-  return (
-    <ListingReviewView
-      listingId={listingId}
-      title={listing.title?.trim() || "Listing"}
-      address={listing.address ?? null}
-      propertyDetails={listing.propertyDetails ?? null}
-      targetAudiences={userAdditional.targetAudiences ?? []}
-    />
-  );
+    return (
+      <ListingReviewView
+        listingId={listingId}
+        title={listing.title?.trim() || "Listing"}
+        address={listing.address ?? null}
+        propertyDetails={listing.propertyDetails ?? null}
+        targetAudiences={userAdditional.targetAudiences ?? []}
+      />
+    );
+  });
 }

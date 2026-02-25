@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { runWithCaller } from "@web/src/server/infra/logger/callContext";
 import { getListingById } from "@web/src/server/models/listings";
 import { requireUserOrRedirect } from "@web/src/app/(dashboard)/_utils/requireUserOrRedirect";
 import { ListingProcessingView } from "@web/src/components/listings/processing";
@@ -11,27 +12,29 @@ interface ListingPropertyProcessingPageProps {
 export default async function ListingPropertyProcessingPage({
   params
 }: ListingPropertyProcessingPageProps) {
-  const { listingId } = await params;
-  const user = await requireUserOrRedirect();
+  return runWithCaller("listings/[id]/review/processing", async () => {
+    const { listingId } = await params;
+    const user = await requireUserOrRedirect();
 
-  if (!listingId?.trim()) {
-    redirect("/listings/sync");
-  }
+    if (!listingId?.trim()) {
+      redirect("/listings/sync");
+    }
 
-  const listing = await getListingById(user.id, listingId);
-  if (!listing) {
-    redirect("/listings/sync");
-  }
+    const listing = await getListingById(user.id, listingId);
+    if (!listing) {
+      redirect("/listings/sync");
+    }
 
-  redirectToListingStage(listingId, listing.listingStage, "review");
+    redirectToListingStage(listingId, listing.listingStage, "review");
 
-  return (
-    <ListingProcessingView
-      mode="review"
-      listingId={listingId}
-      userId={user.id}
-      title={listing.title?.trim() || "Listing"}
-      address={listing.address ?? ""}
-    />
-  );
+    return (
+      <ListingProcessingView
+        mode="review"
+        listingId={listingId}
+        userId={user.id}
+        title={listing.title?.trim() || "Listing"}
+        address={listing.address ?? ""}
+      />
+    );
+  });
 }

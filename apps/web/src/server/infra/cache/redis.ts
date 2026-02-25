@@ -27,6 +27,6 @@ export function getSharedRedisClient(): Redis | null {
   }
 
   redisClient = new Redis({ url, token });
-  logger.info("Upstash Redis client initialized");
+  logger.debug("Upstash Redis client initialized");
   return redisClient;
 }

@@ -63,7 +63,8 @@ async function readStreamToEvents(
 describe("contentGeneration stream", () => {
   const logger = {
     error: jest.fn(),
-    info: jest.fn()
+    info: jest.fn(),
+    debug: jest.fn()
   };
 
   beforeEach(() => {
@@ -71,6 +72,7 @@ describe("contentGeneration stream", () => {
     mockGetAiUseCaseConfig.mockReturnValue({ model: "test-model" });
     logger.error.mockClear();
     logger.info.mockClear();
+    logger.debug.mockClear();
   });
 
   describe("createSseResponse", () => {

@@ -87,7 +87,7 @@ export async function fetchPerplexityCategoryPayload(params: {
   if (!params.forceRefresh) {
     const cached = await getCachedPerplexityCategoryPayload(cacheParams);
     if (cached) {
-      logger.info(
+      logger.debug(
         { zipCode, category, audience, cached: true },
         "Perplexity category cache hit"
       );

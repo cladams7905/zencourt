@@ -4,12 +4,14 @@
 
 const mockWarn = jest.fn();
 const mockInfo = jest.fn();
+const mockDebug = jest.fn();
 
 jest.mock("@web/src/lib/core/logging/logger", () => ({
   logger: {},
   createChildLogger: () => ({
     warn: (...args: unknown[]) => ((mockWarn as (...a: unknown[]) => unknown)(...args)),
-    info: (...args: unknown[]) => ((mockInfo as (...a: unknown[]) => unknown)(...args))
+    info: (...args: unknown[]) => ((mockInfo as (...a: unknown[]) => unknown)(...args)),
+    debug: (...args: unknown[]) => ((mockDebug as (...a: unknown[]) => unknown)(...args))
   })
 }));
 
@@ -30,6 +32,7 @@ describe("getSharedRedisClient", () => {
     jest.resetModules();
     mockWarn.mockReset();
     mockInfo.mockReset();
+    mockDebug.mockReset();
     mockRedisConstructor.mockReset();
   });
 
@@ -68,7 +71,7 @@ describe("getSharedRedisClient", () => {
     const result = getSharedRedisClient();
     expect(result).not.toBeNull();
     expect(mockRedisConstructor).toHaveBeenCalledTimes(1);
-    expect(mockInfo).toHaveBeenCalled();
+    expect(mockDebug).toHaveBeenCalled();
   });
 
   it("returns the same cached instance on repeat calls", async () => {

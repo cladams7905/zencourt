@@ -9,6 +9,7 @@ import {
   createChildLogger,
   logger as baseLogger
 } from "@web/src/lib/core/logging/logger";
+import { runWithCaller } from "@web/src/server/infra/logger/callContext";
 import {
   generateListingContentForCurrentUser,
   type GenerateListingContentBody
@@ -21,51 +22,61 @@ const logger = createChildLogger(baseLogger, {
   module: "listing-content-generate-route"
 });
 
+const ROUTE_CALLER = "api/v1/listings/.../content/generate";
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ listingId: string }> }
 ) {
-  try {
-    const resolvedParams = await params;
-    let listingId: string;
+  return runWithCaller(ROUTE_CALLER, async () => {
     try {
-      listingId = parseRequiredRouteParam(
-        resolvedParams.listingId,
-        "listingId"
+      const resolvedParams = await params;
+      let listingId: string;
+      try {
+        listingId = parseRequiredRouteParam(
+          resolvedParams.listingId,
+          "listingId"
+        );
+      } catch {
+        return apiErrorResponse(
+          StatusCode.BAD_REQUEST,
+          "INVALID_REQUEST",
+          "Listing ID is required",
+          { message: "Listing ID is required" }
+        );
+      }
+
+      const body = (await readJsonBodySafe(
+        request
+      )) as GenerateListingContentBody | null;
+
+      const result = await generateListingContentForCurrentUser(
+        listingId,
+        body
       );
-    } catch {
+      return new Response(result.stream, {
+        status: result.status,
+        headers: makeSseStreamHeaders()
+      });
+    } catch (error) {
+      if (error instanceof ApiError) {
+        return apiErrorResponse(
+          error.status,
+          apiErrorCodeFromStatus(error.status),
+          error.body.message,
+          { message: error.body.message }
+        );
+      }
+      logger.error(
+        { error },
+        "Failed to generate listing content (pre-stream)"
+      );
       return apiErrorResponse(
-        StatusCode.BAD_REQUEST,
-        "INVALID_REQUEST",
-        "Listing ID is required",
-        { message: "Listing ID is required" }
+        StatusCode.INTERNAL_SERVER_ERROR,
+        "INTERNAL_ERROR",
+        "Failed to generate listing content",
+        { message: "Failed to generate listing content" }
       );
     }
-
-    const body = (await readJsonBodySafe(
-      request
-    )) as GenerateListingContentBody | null;
-
-    const result = await generateListingContentForCurrentUser(listingId, body);
-    return new Response(result.stream, {
-      status: result.status,
-      headers: makeSseStreamHeaders()
-    });
-  } catch (error) {
-    if (error instanceof ApiError) {
-      return apiErrorResponse(
-        error.status,
-        apiErrorCodeFromStatus(error.status),
-        error.body.message,
-        { message: error.body.message }
-      );
-    }
-    logger.error({ error }, "Failed to generate listing content (pre-stream)");
-    return apiErrorResponse(
-      StatusCode.INTERNAL_SERVER_ERROR,
-      "INTERNAL_ERROR",
-      "Failed to generate listing content",
-      { message: "Failed to generate listing content" }
-    );
-  }
+  });
 }

@@ -123,7 +123,7 @@ export function useGenerateProcessingFlow(params: {
           await goToStage("review", `/listings/${listingId}/review`);
           return;
         }
-        await goToStage("create", `/listings/${listingId}/create`);
+        await goToStage("create", `/listings/${listingId}/create?mediaType=videos&filter=new_listing`);
         return;
       }
 
@@ -196,7 +196,7 @@ export function useGenerateProcessingFlow(params: {
     }
 
     hasNavigatedRef.current = true;
-    void goToStage("create", `/listings/${listingId}/create`);
+    void goToStage("create", `/listings/${listingId}/create?mediaType=videos&filter=new_listing`);
   }, [generationSummary, goToStage, listingContentStatus, listingId, mode]);
 
   React.useEffect(() => {

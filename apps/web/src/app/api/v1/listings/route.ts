@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ApiError } from "@web/src/app/api/v1/_utils";
+import { runWithCaller } from "@web/src/server/infra/logger/callContext";
 import { getCurrentUserListingSummariesPage } from "@web/src/server/actions/listings/queries";
 import {
   apiErrorCodeFromStatus,
   apiErrorResponse,
   StatusCode
 } from "@web/src/app/api/v1/_responses";
+
+const ROUTE_CALLER = "api/v1/listings";
 
 const clampNumber = (value: string | null, fallback: number) => {
   if (!value) return fallback;
@@ -14,29 +17,31 @@ const clampNumber = (value: string | null, fallback: number) => {
 };
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
-  try {
-    const { searchParams } = request.nextUrl;
-    const limit = clampNumber(searchParams.get("limit"), 10);
-    const offset = clampNumber(searchParams.get("offset"), 0);
+  return runWithCaller(ROUTE_CALLER, async () => {
+    try {
+      const { searchParams } = request.nextUrl;
+      const limit = clampNumber(searchParams.get("limit"), 10);
+      const offset = clampNumber(searchParams.get("offset"), 0);
 
-    const result = await getCurrentUserListingSummariesPage({
-      limit,
-      offset
-    });
+      const result = await getCurrentUserListingSummariesPage({
+        limit,
+        offset
+      });
 
-    return NextResponse.json(result);
-  } catch (error) {
-    if (error instanceof ApiError) {
+      return NextResponse.json(result);
+    } catch (error) {
+      if (error instanceof ApiError) {
+        return apiErrorResponse(
+          error.status,
+          apiErrorCodeFromStatus(error.status),
+          error.body.message
+        );
+      }
       return apiErrorResponse(
-        error.status,
-        apiErrorCodeFromStatus(error.status),
-        error.body.message
+        StatusCode.INTERNAL_SERVER_ERROR,
+        "INTERNAL_ERROR",
+        error instanceof Error ? error.message : "An unexpected error occurred"
       );
     }
-    return apiErrorResponse(
-      StatusCode.INTERNAL_SERVER_ERROR,
-      "INTERNAL_ERROR",
-      error instanceof Error ? error.message : "An unexpected error occurred"
-    );
-  }
+  });
 }
