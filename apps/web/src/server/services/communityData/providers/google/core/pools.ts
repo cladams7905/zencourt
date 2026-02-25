@@ -4,7 +4,7 @@ import { dedupePlaces, rankPlaces, sampleFromPool } from "./places";
 import {
   getCategoryDisplayLimit,
   getCategoryPoolMax
-} from "@web/src/server/services/communityData/config";
+} from "@web/src/server/services/_config/community";
 
 type LoggerLike = {
   warn: (context: unknown, message?: string) => void;

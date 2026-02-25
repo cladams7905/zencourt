@@ -6,7 +6,7 @@ import {
 } from "@web/src/lib/core/logging/logger";
 import { getOrCreateUserAdditional } from "@web/src/server/models/userAdditional";
 import { getListingImages } from "@web/src/server/models/listingImages";
-import { setCachedListingContentItem } from "@web/src/server/services/cache/listingContent";
+import { setCachedListingContentItem } from "@web/src/server/cache/listingContent";
 import {
   renderListingTemplateBatch as renderListingTemplateBatchService,
   renderListingTemplateBatchStream as renderListingTemplateBatchStreamService

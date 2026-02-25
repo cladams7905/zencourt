@@ -1,4 +1,4 @@
-import type { CategoryKey } from "@web/src/server/services/communityData/config";
+import type { CategoryKey } from "@web/src/server/services/_config/community";
 
 export const AUDIENCE_ROTATION_PREFIX = "content:audience-rotation";
 export const RECENT_HOOKS_TTL_SECONDS = 60 * 60 * 24 * 7;

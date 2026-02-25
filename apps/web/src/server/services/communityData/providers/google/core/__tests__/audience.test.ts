@@ -51,7 +51,7 @@ jest.mock(
   })
 );
 
-jest.mock("@web/src/server/services/communityData/config", () => ({
+jest.mock("@web/src/server/services/_config/community", () => ({
   AUDIENCE_AUGMENT_CATEGORIES: ["dining", "education"],
   getAllAudienceAugmentQueries: (...args: unknown[]) =>
     mockGetAllAudienceAugmentQueries(...args),

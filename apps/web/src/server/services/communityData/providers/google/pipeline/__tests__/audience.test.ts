@@ -35,7 +35,7 @@ jest.mock("@web/src/server/services/communityData/shared/audience", () => ({
     mockNormalizeAudienceSegment(...args)
 }));
 
-jest.mock("@web/src/server/services/communityData/config", () => ({
+jest.mock("@web/src/server/services/_config/community", () => ({
   SEARCH_ANCHOR_OFFSETS: [{ lat: 0, lng: 0 }]
 }));
 

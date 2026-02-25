@@ -4,7 +4,7 @@ import {
   getAudienceAugmentQueries,
   getAllAudienceAugmentQueries,
   getAudienceAugmentLimit
-} from "@web/src/server/services/communityData/config/audienceConfig";
+} from "@web/src/server/services/_config/community/audienceConfig";
 
 describe("audience config", () => {
   it("returns config and queries for known audience", () => {

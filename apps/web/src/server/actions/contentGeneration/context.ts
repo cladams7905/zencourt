@@ -19,7 +19,7 @@ import {
   type CommunityCategoryKey
 } from "@web/src/server/services/contentRotation";
 import type { UserAdditionalSnapshot } from "@web/src/server/models/userAdditional";
-import type { Redis } from "@web/src/server/services/cache/redis";
+import type { Redis } from "@web/src/server/cache/redis";
 
 export type ResolvedContentContext = {
   marketData: PromptAssemblyInput["market_data"];

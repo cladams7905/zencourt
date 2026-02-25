@@ -7,7 +7,7 @@ import { ALL_CATEGORY_KEYS, getUtcMonthKey } from "../../../shared/common";
 import type {
   AudienceSegment,
   CategoryKey
-} from "@web/src/server/services/communityData/config";
+} from "@web/src/server/services/_config/community";
 import { buildCategoryList, buildPerplexityCommunityData } from "./assembly";
 import {
   fetchPerplexityCategoryPayload,

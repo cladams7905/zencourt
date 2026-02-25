@@ -8,7 +8,7 @@ import {
   type AudienceSegment,
   type CategoryKey,
   type CommunityCategoryPayload
-} from "@web/src/server/services/communityData/config";
+} from "@web/src/server/services/_config/community";
 import { getUtcMonthKey } from "../../../shared/common";
 import { buildCommunityCategoryPayload } from "./parsing";
 import {

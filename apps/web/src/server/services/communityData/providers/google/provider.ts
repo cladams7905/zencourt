@@ -1,4 +1,4 @@
-import { CommunityDataProvider } from "@web/src/server/services/communityData/config";
+import { CommunityDataProvider } from "@web/src/server/services/_config/community";
 import type { CommunityDataProviderStrategy } from "../types";
 import {
   getCommunityDataByZip,

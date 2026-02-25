@@ -2,7 +2,7 @@ import {
   DISTANCE_SCORE_CAP_KM,
   DISTANCE_SCORE_WEIGHT,
   getCategoryDisplayLimit
-} from "@web/src/server/services/communityData/config";
+} from "@web/src/server/services/_config/community";
 
 export type ScoredPlace = {
   name: string;

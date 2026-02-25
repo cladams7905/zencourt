@@ -1,8 +1,8 @@
 import type {
   AudienceSegment,
   CategoryKey
-} from "@web/src/server/services/communityData/config";
-import { getCategoryDisplayLimit } from "@web/src/server/services/communityData/config";
+} from "@web/src/server/services/_config/community";
+import { getCategoryDisplayLimit } from "@web/src/server/services/_config/community";
 import type { PerplexityMessage } from "@web/src/server/integrations/perplexity";
 import { getWhySuitableFieldKey } from "./helpers";
 

@@ -13,7 +13,7 @@ import {
   NEW_ENGLAND_STATES,
   PACIFIC_NORTHWEST_STATES,
   type CategoryKey
-} from "@web/src/server/services/communityData/config";
+} from "@web/src/server/services/_config/community";
 import { GEO_SEASON_QUERY_PACK } from "../transport/queries/geographicQueries";
 import { HOLIDAY_QUERY_PACK } from "../transport/queries/holidaySeasonQueries";
 import { getUtcMonthKey } from "../../../shared/common";

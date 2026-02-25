@@ -10,7 +10,7 @@ const mockGetCachedMonthly = jest.fn();
 const mockSetCachedMonthly = jest.fn();
 const mockRequestPerplexity = jest.fn();
 
-jest.mock("@web/src/server/services/communityData/config", () => ({
+jest.mock("@web/src/server/services/_config/community", () => ({
   getCategoryDisplayLimit: (...args: unknown[]) =>
     mockGetCategoryDisplayLimit(...args),
   shouldIncludeServiceAreasInCache: (...args: unknown[]) =>

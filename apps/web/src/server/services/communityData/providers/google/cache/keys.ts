@@ -1,4 +1,4 @@
-import { COMMUNITY_CACHE_KEY_PREFIX } from "@web/src/server/services/communityData/config";
+import { COMMUNITY_CACHE_KEY_PREFIX } from "@web/src/server/services/_config/community";
 import {
   buildServiceAreasSignature,
   getSecondsUntilEndOfMonth,

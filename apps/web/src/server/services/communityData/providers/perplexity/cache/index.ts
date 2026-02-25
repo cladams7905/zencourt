@@ -8,13 +8,13 @@ import {
   type AudienceSegment,
   type CategoryKey,
   type CommunityCategoryPayload
-} from "@web/src/server/services/communityData/config";
+} from "@web/src/server/services/_config/community";
 import {
   buildServiceAreasSignature,
   getSecondsUntilEndOfMonth,
   slugify
 } from "../../../shared/common";
-import { getSharedRedisClient } from "@web/src/server/services/cache/redis";
+import { getSharedRedisClient } from "@web/src/server/cache/redis";
 
 const logger = createChildLogger(baseLogger, {
   module: "community-perplexity-cache"

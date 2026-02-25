@@ -1,7 +1,7 @@
 const mockGetCategoryDisplayLimit = jest.fn();
 const mockGetCategoryPoolMax = jest.fn();
 
-jest.mock("@web/src/server/services/communityData/config", () => ({
+jest.mock("@web/src/server/services/_config/community", () => ({
   getCategoryDisplayLimit: (...args: unknown[]) =>
     mockGetCategoryDisplayLimit(...args),
   getCategoryPoolMax: (...args: unknown[]) => mockGetCategoryPoolMax(...args)

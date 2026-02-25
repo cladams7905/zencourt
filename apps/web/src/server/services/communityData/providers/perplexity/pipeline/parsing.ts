@@ -5,7 +5,7 @@ import {
   type CommunityCategoryPayload,
   type CommunityPlaceCitation,
   type CommunityPlaceItem
-} from "@web/src/server/services/communityData/config";
+} from "@web/src/server/services/_config/community";
 import type {
   PerplexityCategoryResponse,
   PerplexityChatCompletionResponse,

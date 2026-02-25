@@ -7,7 +7,7 @@ const mockBuildUserPrompt = jest.fn();
 const mockWritePromptLog = jest.fn();
 const mockCreateSseResponse = jest.fn();
 
-jest.mock("@web/src/server/services/cache/redis", () => ({
+jest.mock("@web/src/server/cache/redis", () => ({
   getSharedRedisClient: () => mockGetSharedRedisClient()
 }));
 

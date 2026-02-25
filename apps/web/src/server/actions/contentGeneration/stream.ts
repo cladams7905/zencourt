@@ -16,7 +16,7 @@ import {
   parseJsonArray,
   validateGeneratedItems
 } from "./domain/parse";
-import type { Redis } from "@web/src/server/services/cache/redis";
+import type { Redis } from "@web/src/server/cache/redis";
 
 type Logger = {
   error: (payload: unknown, message: string) => void;

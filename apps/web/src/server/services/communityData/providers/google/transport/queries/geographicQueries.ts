@@ -1,4 +1,4 @@
-import type { CategoryKey } from "@web/src/server/services/communityData/config";
+import type { CategoryKey } from "@web/src/server/services/_config/community";
 import { GEO_SEASON_QUERY_PACK_BY_CATEGORY } from "./geographicQueryPacks";
 
 export const GEO_SEASON_QUERY_PACK: Partial<

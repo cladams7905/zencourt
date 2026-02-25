@@ -1,4 +1,4 @@
-import type { AudienceAugmentCategory } from "@web/src/server/services/communityData/config";
+import type { AudienceAugmentCategory } from "@web/src/server/services/_config/community";
 
 export type AudienceDelta = Partial<Record<AudienceAugmentCategory, string>>;
 

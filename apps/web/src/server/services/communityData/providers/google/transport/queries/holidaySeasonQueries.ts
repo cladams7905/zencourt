@@ -1,4 +1,4 @@
-import type { CategoryKey } from "@web/src/server/services/communityData/config";
+import type { CategoryKey } from "@web/src/server/services/_config/community";
 
 export const HOLIDAY_QUERY_PACK: Partial<
   Record<CategoryKey, Record<string, string[]>>

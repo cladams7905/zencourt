@@ -3,7 +3,7 @@ import { NON_NEIGHBORHOOD_CATEGORY_KEYS } from "../../core/seasonal";
 import {
   NEIGHBORHOOD_QUERIES,
   type CategoryKey
-} from "@web/src/server/services/communityData/config";
+} from "@web/src/server/services/_config/community";
 import { communityCache } from "../shared";
 
 export async function loadBaseCachePlan(params: {

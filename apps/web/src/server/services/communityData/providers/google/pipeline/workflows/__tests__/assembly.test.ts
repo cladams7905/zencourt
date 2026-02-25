@@ -38,7 +38,7 @@ jest.mock(
   })
 );
 
-jest.mock("@web/src/server/services/communityData/config", () => ({
+jest.mock("@web/src/server/services/_config/community", () => ({
   getCategoryDisplayLimit: (...args: unknown[]) =>
     mockGetCategoryDisplayLimit(...args)
 }));

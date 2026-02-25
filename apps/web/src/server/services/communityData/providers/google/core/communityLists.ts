@@ -8,7 +8,7 @@ import {
   getCategoryMinPrimaryResults,
   type AudienceAugmentCategory,
   type CategoryKey
-} from "@web/src/server/services/communityData/config";
+} from "@web/src/server/services/_config/community";
 
 export function applyAudienceDelta(
   communityData: CommunityData,

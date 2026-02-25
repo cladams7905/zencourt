@@ -2,7 +2,7 @@ import { createChildLogger, logger as baseLogger } from "@web/src/lib/core/loggi
 import {
   CommunityDataProvider,
   getCommunityDataProvider
-} from "@web/src/server/services/communityData/config";
+} from "@web/src/server/services/_config/community";
 import { generateTextForUseCase } from "@web/src/server/services/ai";
 import {
   buildCityDescriptionPrompt,

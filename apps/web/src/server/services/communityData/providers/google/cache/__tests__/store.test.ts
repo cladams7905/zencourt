@@ -1,6 +1,6 @@
 const mockGetSharedRedisClient = jest.fn();
 
-jest.mock("@web/src/server/services/cache/redis", () => ({
+jest.mock("@web/src/server/cache/redis", () => ({
   getSharedRedisClient: (...args: unknown[]) =>
     mockGetSharedRedisClient(...args)
 }));

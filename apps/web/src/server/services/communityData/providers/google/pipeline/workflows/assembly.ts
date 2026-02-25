@@ -13,7 +13,7 @@ import {
 import {
   getCategoryDisplayLimit,
   type CategoryKey
-} from "@web/src/server/services/communityData/config";
+} from "@web/src/server/services/_config/community";
 import { communityCache, getPlaceDetailsCached } from "../shared";
 
 export async function buildAndPersistCategoryListMap(params: {

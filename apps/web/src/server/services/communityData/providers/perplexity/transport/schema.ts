@@ -1,7 +1,7 @@
 import type {
   AudienceSegment,
   CategoryKey
-} from "@web/src/server/services/communityData/config";
+} from "@web/src/server/services/_config/community";
 import type { PerplexityResponseFormat } from "@web/src/server/integrations/perplexity";
 import { getWhySuitableFieldKey } from "./helpers";
 
