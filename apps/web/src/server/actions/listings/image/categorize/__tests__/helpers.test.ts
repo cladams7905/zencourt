@@ -47,8 +47,8 @@ jest.mock("@web/src/server/services/roomClassification", () => ({
 jest.mock("@web/src/server/services/storage", () => ({
   __esModule: true,
   default: {
-    getPublicUrlForStorageUrl: (...args: unknown[]) =>
-      mockGetPublicUrlForStorageUrl(...args)
+    getPublicUrlForStorageUrl: (url: string) =>
+      mockGetPublicUrlForStorageUrl(url)
   }
 }));
 
@@ -257,7 +257,7 @@ describe("categorize helpers", () => {
   });
 
   it("falls back to original url when public-url mapping returns null", async () => {
-    mockGetPublicUrlForStorageUrl.mockReturnValue(null);
+    mockGetPublicUrlForStorageUrl.mockReturnValue("");
     mockClassifyRoomBatch.mockResolvedValue(undefined);
     const { runAnalyzeImagesWorkflow } = await import("../helpers");
 

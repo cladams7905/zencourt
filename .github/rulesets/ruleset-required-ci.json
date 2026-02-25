@@ -1,0 +1,25 @@
+{
+  "name": "Required CI Checks",
+  "target": "branch",
+  "enforcement": "active",
+  "conditions": {
+    "ref_name": {
+      "include": ["~DEFAULT_BRANCH"],
+      "exclude": []
+    }
+  },
+  "rules": [
+    {
+      "type": "required_status_checks",
+      "parameters": {
+        "strict_required_status_checks_policy": true,
+        "required_status_checks": [
+          { "context": "Web Tests / web-required", "integration_id": null },
+          { "context": "Core Packages Checks / core-packages-required", "integration_id": null },
+          { "context": "Deploy Video Server Preview / preview-required", "integration_id": null }
+        ]
+      }
+    }
+  ],
+  "bypass_actors": []
+}

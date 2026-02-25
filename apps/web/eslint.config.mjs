@@ -27,11 +27,13 @@ const serviceBoundaryRules = serviceNames.map((serviceName) => ({
             group: serviceNames
               .filter(
                 (other) =>
-                  other !== serviceName && other !== "_config" && other !== "_infra"
+                  other !== serviceName &&
+                  other !== "_config" &&
+                  other !== "_integrations"
               )
               .map((other) => `@web/src/server/services/${other}/**`),
             message:
-              "Services must not import other services. Allowed: imports within the same service module and shared config/integrations under @web/src/server/services/_config/** and @web/src/server/services/_infra/**. Shared cache utilities live under @web/src/server/cache/**.",
+              "Services must not import other services. Allowed: imports within the same service module and shared config/integrations under @web/src/server/services/_config/** and @web/src/server/services/_integrations/**.",
           },
         ],
       },
@@ -41,6 +43,30 @@ const serviceBoundaryRules = serviceNames.map((serviceName) => ({
 
 const eslintConfig = [
   ...compat.extends("next/core-web-vitals", "next/typescript"),
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: ["**/__tests__/**", "**/*.test.ts", "**/*.spec.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["drizzle-orm", "drizzle-orm/*"],
+              message:
+                "Import Drizzle helpers from @db/client in app code. Avoid direct drizzle-orm imports.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["src/server/models/shared/dbErrorHandling.ts"],
+    rules: {
+      "no-restricted-imports": "off",
+    },
+  },
   {
     files: ["src/app/api/v1/**/route.ts"],
     rules: {
@@ -155,6 +181,7 @@ const eslintConfig = [
     ignores: [
       "node_modules/**",
       ".next/**",
+      "coverage/**",
       "out/**",
       "build/**",
       "next-env.d.ts",

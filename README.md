@@ -8,7 +8,7 @@ This is a monorepo containing the Zencourt application suite.
 zencourt/
 ├── apps/
 │   ├── web/              # Next.js web client and dashboard
-│   └── video-server/     # Express + FFmpeg API for heavy media work
+│   └── video-server/     # Express + Remotion backend for video generation
 ├── packages/
 │   ├── db/               # Drizzle schema, migrations, and Neon client helpers
 │   └── shared/           # Reusable TypeScript utilities (logger, storage paths, etc.)
@@ -30,7 +30,37 @@ zencourt/
 - DB-inferred model types (`DB*`, `InsertDB*`) live in `@db/types/models`.
 - Shared non-DB domain contracts live in `@shared/types/*`.
 
-These boundaries are enforced with package-local ESLint rules and CI checks.
+These package boundaries are enforced with package-local ESLint rules and CI checks.
+
+## Web Workspace Architecture
+
+`apps/web` follows strict layering:
+
+- `app/api/v1/*/route.ts`
+  - Parse HTTP input
+  - Call `server/actions/*`
+  - Shape HTTP responses
+  - Must not import models/services directly
+- `server/actions/*`
+  - Auth/access checks and orchestration
+  - Call services/models
+  - Must remain HTTP-agnostic
+- `server/services/*`
+  - Domain/business logic
+  - Must not import actions
+- `server/models/*`
+  - DB access only
+- `components/*`
+  - UI/presentational-first
+  - Must not import server models/services
+
+Import guardrails in `apps/web`:
+
+- Use `@db/client` for Drizzle helpers in app code.
+- Do not import `drizzle-orm` directly in app code.
+- Use storage path/url helpers from `@shared/utils/storagePaths`.
+
+Source of truth for web architectural rules: `CLAUDE.md` and `apps/web/eslint.config.mjs`.
 
 ## Getting Started
 

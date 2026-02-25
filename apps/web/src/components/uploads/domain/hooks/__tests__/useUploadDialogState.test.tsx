@@ -255,10 +255,15 @@ describe("useUploadDialogState", () => {
 
   it("marks uploads as failed when upload URLs are missing from response", async () => {
     const args = buildArgs();
-    args.getUploadUrls = jest.fn(async (_requests: UploadRequest[]): Promise<UploadUrlsResponse> => ({
-      uploads: [],
-      failed: []
-    }));
+    args.getUploadUrls = jest.fn(
+      async (requests: UploadRequest[]): Promise<UploadUrlsResponse> => {
+        void requests;
+        return {
+          uploads: [],
+          failed: []
+        };
+      }
+    );
 
     const { result } = renderHook(() => useUploadDialogState(args));
     const file = new File(["a"], "a.jpg", { type: "image/jpeg" });
@@ -301,10 +306,15 @@ describe("useUploadDialogState", () => {
   it("retries failed uploads via handleRetryFailed", async () => {
     jest.useFakeTimers();
     const args = buildArgs();
-    args.getUploadUrls = jest.fn(async (_requests: UploadRequest[]): Promise<UploadUrlsResponse> => ({
-      uploads: [],
-      failed: []
-    }));
+    args.getUploadUrls = jest.fn(
+      async (requests: UploadRequest[]): Promise<UploadUrlsResponse> => {
+        void requests;
+        return {
+          uploads: [],
+          failed: []
+        };
+      }
+    );
 
     const { result } = renderHook(() => useUploadDialogState(args));
     const file = new File(["a"], "retry.jpg", { type: "image/jpeg" });

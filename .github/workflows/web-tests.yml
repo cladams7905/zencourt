@@ -2,22 +2,34 @@ name: Web Tests
 
 on:
   pull_request:
-    paths:
-      - "apps/web/**"
-      - "packages/**"
-      - "package-lock.json"
-      - ".github/workflows/web-tests.yml"
   push:
     branches:
       - main
-    paths:
-      - "apps/web/**"
-      - "packages/**"
-      - "package-lock.json"
-      - ".github/workflows/web-tests.yml"
 
 jobs:
+  detect-web-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      web_changed: ${{ steps.filter.outputs.web }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Detect web workspace changes
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            web:
+              - "apps/web/**"
+              - "packages/**"
+              - "package.json"
+              - "package-lock.json"
+              - "tsconfig.base.json"
+              - ".github/workflows/web-tests.yml"
+
   web-workspace-coverage:
+    needs: detect-web-changes
+    if: needs.detect-web-changes.outputs.web_changed == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -39,3 +51,23 @@ jobs:
 
       - name: Enforce coverage thresholds (global + modules)
         run: node apps/web/scripts/check-coverage.mjs
+
+  web-required:
+    needs: [detect-web-changes, web-workspace-coverage]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Finalize required check status
+        run: |
+          if [ "${{ needs.detect-web-changes.outputs.web_changed }}" != "true" ]; then
+            echo "No web workspace changes; required check passes."
+            exit 0
+          fi
+
+          if [ "${{ needs.web-workspace-coverage.result }}" = "success" ]; then
+            echo "web-workspace-coverage job succeeded."
+            exit 0
+          fi
+
+          echo "web-workspace-coverage job result: ${{ needs.web-workspace-coverage.result }}"
+          exit 1
