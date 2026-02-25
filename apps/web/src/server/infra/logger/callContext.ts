@@ -83,7 +83,7 @@ function normalizeToSourcePath(filePath: string): string {
 }
 
 /**
- * Extract function name from caller (strip "" or "serverAction:" prefix).
+ * Extract function name from caller (strip prefix).
  */
 function getFunctionName(caller: string): string {
   return caller.includes(":") ? caller.slice(caller.indexOf(":") + 1) : caller;

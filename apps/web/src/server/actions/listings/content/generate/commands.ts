@@ -33,7 +33,7 @@ type ContentStreamEvent =
   | { type: "error"; message: string };
 
 export const generateListingContentForCurrentUser = withServerActionCaller(
-  "serverAction:generateListingContentForCurrentUser",
+  "generateListingContentForCurrentUser",
   async (listingId: string, body: GenerateListingContentBody | null) => {
     const user = await requireAuthenticatedUser();
     const listing = await requireListingAccess(listingId, user.id);

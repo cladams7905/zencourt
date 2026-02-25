@@ -32,7 +32,7 @@ const logger = createChildLogger(baseLogger, {
 });
 
 export const renderListingTemplateBatch = withServerActionCaller(
-  "serverAction:renderListingTemplateBatch",
+  "renderListingTemplateBatch",
   async (
     listingId: string,
     body: RenderListingTemplateBatchBody | null,
@@ -78,7 +78,7 @@ export const renderListingTemplateBatch = withServerActionCaller(
 );
 
 export const renderListingTemplateBatchStream = withServerActionCaller(
-  "serverAction:renderListingTemplateBatchStream",
+  "renderListingTemplateBatchStream",
   async (
     listingId: string,
     body: RenderListingTemplateBatchStreamBody | null,

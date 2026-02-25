@@ -7,7 +7,7 @@ import { getListingVideoStatus as getListingVideoStatusService } from "@web/src/
 import { getPublicDownloadUrlSafe } from "@web/src/server/services/storage/urlResolution";
 
 export const getListingVideoStatus = withServerActionCaller(
-  "serverAction:getListingVideoStatus",
+  "getListingVideoStatus",
   async (listingId: string) => {
     const user = await requireAuthenticatedUser();
     await requireListingAccess(listingId, user.id);

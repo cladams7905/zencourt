@@ -89,7 +89,7 @@ export async function categorizeListingImagesByIds(
 }
 
 export const categorizeListingImagesForCurrentUser = withServerActionCaller(
-  "serverAction:categorizeListingImagesForCurrentUser",
+  "categorizeListingImagesForCurrentUser",
   async (
     listingId: string,
     options: ImageCategorizationActionOptions = {}

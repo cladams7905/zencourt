@@ -19,7 +19,7 @@ import type {
 } from "@web/src/server/models/userMedia/types";
 
 export const getUserMediaUploadUrlsForCurrentUser = withServerActionCaller(
-  "serverAction:getUserMediaUploadUrlsForCurrentUser",
+  "getUserMediaUploadUrlsForCurrentUser",
   async (files: UserMediaUploadRequest[]) => {
     const user = await requireAuthenticatedUser();
     return prepareUserMediaUploadUrls(user.id, files);
@@ -27,7 +27,7 @@ export const getUserMediaUploadUrlsForCurrentUser = withServerActionCaller(
 );
 
 export const createUserMediaRecordsForCurrentUser = withServerActionCaller(
-  "serverAction:createUserMediaRecordsForCurrentUser",
+  "createUserMediaRecordsForCurrentUser",
   async (uploads: UserMediaRecordInput[]) => {
     const user = await requireAuthenticatedUser();
     return createUserMediaRecords(
@@ -38,7 +38,7 @@ export const createUserMediaRecordsForCurrentUser = withServerActionCaller(
 );
 
 export const deleteUserMediaForCurrentUser = withServerActionCaller(
-  "serverAction:deleteUserMediaForCurrentUser",
+  "deleteUserMediaForCurrentUser",
   async (mediaId: string) => {
     const user = await requireAuthenticatedUser();
     const media = await getUserMediaById(user.id, mediaId);

@@ -1,6 +1,10 @@
 import type { CommunityData } from "@web/src/lib/domain/market/types";
 import type { CategoryKey } from "@web/src/server/services/_config/community";
 import {
+  createChildLogger,
+  logger as baseLogger
+} from "@web/src/lib/core/logging/logger";
+import {
   createCommunityDataProviderRegistry,
   type CommunityDataProviderStrategy
 } from "./registry";
@@ -29,6 +33,10 @@ export type CommunityContentContext = {
   seasonalExtraSections: Record<string, string> | null;
 };
 
+const logger = createChildLogger(baseLogger, {
+  module: "community-data-orchestrator"
+});
+
 async function getCommunityDataByZipWithFallback(
   provider: CommunityDataProviderStrategy,
   fallback: CommunityDataProviderStrategy | null,
@@ -48,8 +56,16 @@ async function getCommunityDataByZipWithFallback(
     if (data) {
       return data;
     }
-  } catch {
-    // Fallback to secondary provider when primary request path fails.
+  } catch (error) {
+    logger.warn(
+      {
+        error,
+        zipCode: params.zipCode,
+        path: "byZip",
+        hasFallback: Boolean(fallback)
+      },
+      "Primary community data provider failed; trying fallback"
+    );
   }
 
   if (!fallback) {
@@ -79,8 +95,17 @@ async function getCommunityDataByZipAndAudienceWithFallback(
     if (data) {
       return data;
     }
-  } catch {
-    // Fallback to secondary provider when primary request path fails.
+  } catch (error) {
+    logger.warn(
+      {
+        error,
+        zipCode: params.zipCode,
+        audienceSegment: params.audienceSegment ?? null,
+        path: "byZipAndAudience",
+        hasFallback: Boolean(fallback)
+      },
+      "Primary community data+audience provider failed; trying fallback"
+    );
   }
 
   if (!fallback) {
