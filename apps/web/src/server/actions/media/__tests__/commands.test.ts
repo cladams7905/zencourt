@@ -102,5 +102,33 @@ describe("media commands", () => {
         "Failed to delete media file"
       );
     });
+
+    it("does not attempt storage delete when media is missing", async () => {
+      mockGetUserMediaById.mockResolvedValueOnce(null);
+      mockDeleteUserMedia.mockResolvedValueOnce(undefined);
+
+      await deleteUserMediaForCurrentUser("media-2");
+
+      expect(mockDeleteUserMedia).toHaveBeenCalledWith("user-1", "media-2");
+      expect(mockDeleteStorageUrlsOrThrow).not.toHaveBeenCalled();
+    });
+
+    it("filters out unmanaged urls before storage cleanup", async () => {
+      mockGetUserMediaById.mockResolvedValueOnce({
+        url: "https://managed.com/a.jpg",
+        thumbnailUrl: "https://external.com/t.jpg"
+      });
+      mockDeleteUserMedia.mockResolvedValueOnce(undefined);
+      mockIsManagedStorageUrl
+        .mockReturnValueOnce(true)
+        .mockReturnValueOnce(false);
+
+      await deleteUserMediaForCurrentUser("media-3");
+
+      expect(mockDeleteStorageUrlsOrThrow).toHaveBeenCalledWith(
+        ["https://managed.com/a.jpg"],
+        "Failed to delete media file"
+      );
+    });
   });
 });

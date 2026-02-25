@@ -141,6 +141,7 @@ function aggregateByPrefix(prefix) {
     if (file === "total") continue;
     const relative = file.replace(/^.*apps\/web\//, "");
     if (!relative.startsWith(prefix)) continue;
+    if (relative.endsWith("/index.ts")) continue;
 
     for (const key of Object.keys(totals)) {
       totals[key].covered += metrics[key].covered;

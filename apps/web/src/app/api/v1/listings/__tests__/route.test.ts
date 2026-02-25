@@ -61,4 +61,43 @@ describe("listings route", () => {
       offset: 0
     });
   });
+
+  it("maps ApiError thrown by action", async () => {
+    const { GET, mockGetCurrentUserListingSummariesPage } = await loadRoute();
+    const { ApiError } = await import("@web/src/server/errors/api");
+    mockGetCurrentUserListingSummariesPage.mockRejectedValueOnce(
+      new ApiError(403, { error: "Forbidden", message: "No access" })
+    );
+
+    const request = {
+      nextUrl: { searchParams: { get: () => null } }
+    } as unknown as Request;
+
+    const response = await GET(request as never);
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toEqual({
+      success: false,
+      code: "FORBIDDEN",
+      error: "No access"
+    });
+  });
+
+  it("maps unknown errors to INTERNAL_ERROR", async () => {
+    const { GET, mockGetCurrentUserListingSummariesPage } = await loadRoute();
+    mockGetCurrentUserListingSummariesPage.mockRejectedValueOnce(
+      new Error("boom")
+    );
+
+    const request = {
+      nextUrl: { searchParams: { get: () => null } }
+    } as unknown as Request;
+
+    const response = await GET(request as never);
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toEqual({
+      success: false,
+      code: "INTERNAL_ERROR",
+      error: "boom"
+    });
+  });
 });

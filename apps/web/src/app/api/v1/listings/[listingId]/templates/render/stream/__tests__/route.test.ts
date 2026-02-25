@@ -365,6 +365,31 @@ describe("listing templates render stream route", () => {
     expect(response.status).toBe(403);
   });
 
+  it("maps DomainError to mapped response", async () => {
+    const { POST, mockRenderListingTemplateBatchStream } = await loadRoute();
+    const { DomainError: MockDomainErrorForThrow } = jest.requireMock(
+      "@web/src/app/api/v1/_utils"
+    );
+    mockRenderListingTemplateBatchStream.mockRejectedValueOnce(
+      new MockDomainErrorForThrow("validation", "invalid input")
+    );
+    const request = requestWithBody({
+      subcategory: "new_listing",
+      captionItems: [{ id: "a", hook: "h", caption: "c", body: [] }]
+    });
+
+    const response = await POST(request as never, {
+      params: Promise.resolve({ listingId: "listing-1" })
+    });
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({
+      success: false,
+      code: "INVALID_REQUEST",
+      error: "invalid input",
+      message: "invalid input"
+    });
+  });
+
   it("returns 500 when action throws", async () => {
     const { POST } = await loadRoute({
       streamRejects: new Error("body read failed")

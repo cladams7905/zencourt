@@ -30,6 +30,8 @@ jest.mock("@web/src/server/actions/_auth/api", () => ({
 import {
   deleteFile,
   uploadFile,
+  uploadFileFromBuffer,
+  uploadCurrentUserBrandingAssetFromBuffer,
   uploadFilesBatch
 } from "@web/src/server/actions/storage/commands";
 
@@ -62,6 +64,47 @@ describe("storage actions", () => {
     expect(mockUploadFile).toHaveBeenCalled();
   });
 
+  it("wraps uploadFile failures with filename context", async () => {
+    mockUploadFile.mockResolvedValue({ success: false, error: "upload failed" });
+    const file = makeMockFile("photo.png", "image/png");
+
+    await expect(uploadFile(file, "folder")).rejects.toThrow(
+      "Failed to upload photo.png: upload failed"
+    );
+  });
+
+  it("supports uploadFileFromBuffer and user branding upload", async () => {
+    mockUploadFile.mockResolvedValueOnce({ success: true, url: "https://buf" });
+    const url = await uploadFileFromBuffer({
+      fileBuffer: new Uint8Array([1, 2, 3]).buffer,
+      fileName: "x.bin",
+      contentType: "application/octet-stream",
+      folder: "folder-a"
+    });
+    expect(url).toBe("https://buf");
+    expect(mockUploadFile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        fileName: "x.bin",
+        contentType: "application/octet-stream",
+        options: { folder: "folder-a" }
+      })
+    );
+
+    mockUploadFile.mockResolvedValueOnce({ success: true, url: "https://brand" });
+    const brandingUrl = await uploadCurrentUserBrandingAssetFromBuffer({
+      fileBuffer: new Uint8Array([9]).buffer,
+      fileName: "logo.png",
+      contentType: "image/png"
+    });
+    expect(brandingUrl).toBe("https://brand");
+    expect(mockUploadFile).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        fileName: "logo.png",
+        options: { folder: "user_user-1/branding" }
+      })
+    );
+  });
+
   it("throws on batch upload failure", async () => {
     mockUploadFilesBatch.mockResolvedValue({ success: false, error: "bad" });
 
@@ -75,6 +118,53 @@ describe("storage actions", () => {
 
     mockDeleteFile.mockResolvedValueOnce({ success: false, error: "nope" });
     await expect(deleteFile("https://x")).rejects.toThrow("Failed to delete file");
+  });
+
+  it("wraps unknown delete errors", async () => {
+    mockDeleteFile.mockRejectedValueOnce("nope");
+    await expect(deleteFile("https://x")).rejects.toThrow(
+      "Failed to delete file: Unknown error"
+    );
+  });
+
+  it("returns batch result on success", async () => {
+    mockUploadFilesBatch.mockResolvedValue({
+      success: true,
+      files: [{ url: "https://x" }]
+    });
+    const result = await uploadFilesBatch([makeMockFile()], "folder", "u1", "l1");
+    expect(result).toEqual({
+      success: true,
+      files: [{ url: "https://x" }]
+    });
+    expect(mockLoggerInfo).toHaveBeenCalled();
+  });
+
+  it("wraps unknown errors in uploadFilesBatch", async () => {
+    mockUploadFilesBatch.mockRejectedValue("bad");
+    await expect(uploadFilesBatch([makeMockFile()], "folder")).rejects.toThrow(
+      "Unknown error"
+    );
+  });
+
+  it("requires authenticated user before storage operations", async () => {
+    mockRequireAuthenticatedUser.mockRejectedValueOnce(new Error("auth required"));
+    await expect(uploadFile(makeMockFile(), "folder")).rejects.toThrow(
+      "auth required"
+    );
+    expect(mockUploadFile).not.toHaveBeenCalled();
+  });
+
+  it("throws when trusted upload returns missing url", async () => {
+    mockUploadFile.mockResolvedValueOnce({ success: true, url: null, error: "bad" });
+    await expect(
+      uploadFileFromBuffer({
+        fileBuffer: new Uint8Array([1]).buffer,
+        fileName: "x.bin",
+        contentType: "application/octet-stream",
+        folder: "folder-a"
+      })
+    ).rejects.toThrow("bad");
   });
 
 });

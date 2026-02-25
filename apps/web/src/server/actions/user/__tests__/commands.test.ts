@@ -7,10 +7,13 @@ const mockMarkWritingStyleCompleted = jest.fn();
 const mockMarkProfileCompleted = jest.fn();
 const mockCompleteWelcomeSurvey = jest.fn();
 const mockRequireAuthenticatedUser = jest.fn();
+const mockUserAdditionalWhere = jest.fn();
+const mockUserAdditionalFrom = jest.fn(() => ({ where: mockUserAdditionalWhere }));
+const mockUserAdditionalSelect = jest.fn(() => ({ from: mockUserAdditionalFrom }));
 
 jest.mock("@db/client", () => ({
   db: {
-    select: () => ({ from: () => ({ where: () => Promise.resolve([]) }) })
+    select: (...args: unknown[]) => mockUserAdditionalSelect(...args)
   },
   eq: (...args: unknown[]) => args,
   userAdditional: { userId: "userId", headshotUrl: "headshotUrl" }
@@ -69,6 +72,7 @@ describe("user commands", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockRequireAuthenticatedUser.mockResolvedValue(mockUser);
+    mockUserAdditionalWhere.mockResolvedValue([]);
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
       headers: { get: () => "image/jpeg" },
@@ -118,6 +122,62 @@ describe("user commands", () => {
     expect(result).toBe(headshotUrl);
   });
 
+  it("returns null when googleImageUrl is empty", async () => {
+    await expect(ensureCurrentUserGoogleHeadshot("")).resolves.toBeNull();
+    expect(global.fetch).not.toHaveBeenCalled();
+    expect(mockUploadFile).not.toHaveBeenCalled();
+  });
+
+  it("returns existing headshot without fetch/upload", async () => {
+    mockUserAdditionalWhere.mockResolvedValueOnce([
+      { headshotUrl: "https://existing-headshot" }
+    ]);
+    await expect(
+      ensureCurrentUserGoogleHeadshot("https://example.com/photo.jpg")
+    ).resolves.toBe("https://existing-headshot");
+    expect(global.fetch).not.toHaveBeenCalled();
+    expect(mockUploadFile).not.toHaveBeenCalled();
+  });
+
+  it("throws when google headshot download fails", async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      headers: { get: () => "image/jpeg" }
+    }) as typeof fetch;
+    await expect(
+      ensureCurrentUserGoogleHeadshot("https://example.com/photo.jpg")
+    ).rejects.toThrow("Failed to download Google headshot");
+  });
+
+  it("chooses png/webp extension and throws on upload failure", async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      headers: { get: () => "image/png" },
+      arrayBuffer: () => Promise.resolve(new ArrayBuffer(0))
+    }) as typeof fetch;
+    mockUploadFile.mockResolvedValueOnce({ success: false, error: "bad upload" });
+    await expect(
+      ensureCurrentUserGoogleHeadshot("https://example.com/photo.png")
+    ).rejects.toThrow("bad upload");
+    expect(mockUploadFile).toHaveBeenCalledWith(
+      expect.objectContaining({ fileName: "google-headshot.png" })
+    );
+
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      headers: { get: () => "image/webp" },
+      arrayBuffer: () => Promise.resolve(new ArrayBuffer(0))
+    }) as typeof fetch;
+    mockUploadFile.mockResolvedValueOnce({ success: true, url: "https://storage/headshot.webp" });
+    mockUpsertUserAdditional.mockResolvedValueOnce(null);
+    await expect(
+      ensureCurrentUserGoogleHeadshot("https://example.com/photo.webp")
+    ).resolves.toBe("https://storage/headshot.webp");
+    expect(mockUploadFile).toHaveBeenLastCalledWith(
+      expect.objectContaining({ fileName: "google-headshot.webp" })
+    );
+  });
+
   it("updateCurrentUserLocation delegates with user id and details", async () => {
     mockUpdateUserLocation.mockResolvedValueOnce(undefined);
 
@@ -129,6 +189,14 @@ describe("user commands", () => {
     expect(mockUpdateUserLocation).toHaveBeenCalledWith("user-1", "San Francisco", {
       county: "SF",
       serviceAreas: ["Bay Area"]
+    });
+  });
+
+  it("updateCurrentUserLocation fills nullable defaults", async () => {
+    await updateCurrentUserLocation("Austin");
+    expect(mockUpdateUserLocation).toHaveBeenCalledWith("user-1", "Austin", {
+      county: null,
+      serviceAreas: null
     });
   });
 
