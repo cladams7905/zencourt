@@ -1,5 +1,5 @@
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL, URL } from "node:url";
 import { findSourceMap } from "node:module";
 
 export type StackFrame = {
@@ -52,5 +52,5 @@ export function toAbsoluteFileUri(filePath: string): string {
   const absolutePath = path.isAbsolute(filePath)
     ? filePath
     : path.resolve(process.cwd(), filePath);
-  return new URL(`file://${absolutePath}`).toString();
+  return pathToFileURL(absolutePath).toString();
 }
