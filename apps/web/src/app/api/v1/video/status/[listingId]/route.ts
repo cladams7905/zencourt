@@ -10,7 +10,7 @@ import {
   createChildLogger,
   logger as baseLogger
 } from "@web/src/lib/core/logging/logger";
-import { getListingVideoStatus } from "@web/src/server/actions/video";
+import { getListingVideoStatus } from "@web/src/server/actions/video/generate";
 
 export const runtime = "nodejs";
 

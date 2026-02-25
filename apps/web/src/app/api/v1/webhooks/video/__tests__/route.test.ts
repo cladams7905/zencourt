@@ -17,7 +17,7 @@ jest.mock("@web/src/server/utils/webhookVerification", () => {
   };
 });
 
-jest.mock("@web/src/server/services/videoWebhook", () => ({
+jest.mock("@web/src/server/actions/video/webhook", () => ({
   processVideoWebhookPayload: (...args: unknown[]) =>
     mockProcessVideoWebhookPayload(...args)
 }));

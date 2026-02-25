@@ -1,6 +1,5 @@
 export {
-  buildPropertyDetailsRevision,
-  fetchAndPersistPropertyDetails,
-  fetchPropertyDetails
-} from "./service";
+  buildPropertyDetailsRevision
+} from "./domain/revision";
+export { fetchPropertyDetails } from "./domain/fetch";
 export { getDefaultPropertyDetailsProvider } from "./providers";

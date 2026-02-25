@@ -1,7 +1,7 @@
 import {
   type PerplexityMessage,
   type PerplexityResponseFormat
-} from "@web/src/server/integrations/perplexity";
+} from "@web/src/server/services/_integrations/perplexity";
 import type {
   MarketData,
   MarketLocation,
@@ -94,7 +94,11 @@ type PerplexityTextRunner = (args: {
 
 export async function fetchPerplexityMarketData(
   location: MarketLocation,
-  deps: { logger: LoggerLike; now: Clock; runStructuredMarketQuery: PerplexityTextRunner }
+  deps: {
+    logger: LoggerLike;
+    now: Clock;
+    runStructuredMarketQuery: PerplexityTextRunner;
+  }
 ): Promise<MarketData | null> {
   const responseRaw = await deps.runStructuredMarketQuery({
     messages: buildPerplexityMarketMessages(location),

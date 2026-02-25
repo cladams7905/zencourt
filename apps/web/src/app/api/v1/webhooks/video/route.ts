@@ -17,7 +17,7 @@ import {
 import {
   processVideoWebhookPayload,
   type VideoWebhookPayload
-} from "@web/src/server/services/videoWebhook";
+} from "@web/src/server/actions/video/webhook";
 import { apiErrorResponse, StatusCode } from "@web/src/app/api/v1/_responses";
 
 const logger = createChildLogger(baseLogger, {

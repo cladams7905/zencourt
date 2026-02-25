@@ -1,12 +1,15 @@
 import { updateListingForCurrentUser } from "@web/src/server/actions/listings/commands";
-import { fetchPropertyDetailsForCurrentUser } from "@web/src/server/actions/propertyDetails/commands";
-import { categorizeListingImagesForCurrentUser } from "@web/src/server/actions/imageCategorization";
+import { fetchPropertyDetailsForCurrentUser } from "@web/src/server/actions/listings/propertyDetails";
+import { categorizeListingImagesForCurrentUser } from "@web/src/server/actions/listings/image/categorize";
 import {
   cancelListingVideoGeneration,
   startListingVideoGeneration
-} from "@web/src/server/actions/video";
+} from "@web/src/server/actions/video/generate";
 import type { VideoJobUpdateEvent } from "@web/src/lib/domain/listing/videoStatus";
-import { fetchApiData, fetchStreamResponse } from "@web/src/lib/core/http/client";
+import {
+  fetchApiData,
+  fetchStreamResponse
+} from "@web/src/lib/core/http/client";
 
 export async function updateListingStage(
   listingId: string,

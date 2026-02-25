@@ -1,6 +1,6 @@
 import { and, db, eq, listings } from "@db/client";
 import { StatusCode } from "@shared/types/api";
-import { ApiError } from "@web/src/server/utils/apiError";
+import { ApiError } from "@web/src/server/errors/api";
 
 type Listing = typeof listings.$inferSelect;
 

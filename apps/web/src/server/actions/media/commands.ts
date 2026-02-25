@@ -1,6 +1,6 @@
 "use server";
 
-import { requireAuthenticatedUser } from "@web/src/server/auth/apiAuth";
+import { requireAuthenticatedUser } from "@web/src/server/actions/_auth/api";
 import {
   createUserMediaRecords,
   deleteUserMedia,
@@ -28,7 +28,10 @@ export async function createUserMediaRecordsForCurrentUser(
   uploads: UserMediaRecordInput[]
 ) {
   const user = await requireAuthenticatedUser();
-  return createUserMediaRecords(user.id, mapUserMediaRecordInputs(user.id, uploads));
+  return createUserMediaRecords(
+    user.id,
+    mapUserMediaRecordInputs(user.id, uploads)
+  );
 }
 
 export async function deleteUserMediaForCurrentUser(mediaId: string) {
@@ -42,7 +45,8 @@ export async function deleteUserMediaForCurrentUser(mediaId: string) {
 
   await deleteStorageUrlsOrThrow(
     [media.url, media.thumbnailUrl].filter(
-      (url): url is string => typeof url === "string" && isManagedStorageUrl(url)
+      (url): url is string =>
+        typeof url === "string" && isManagedStorageUrl(url)
     ),
     "Failed to delete media file"
   );

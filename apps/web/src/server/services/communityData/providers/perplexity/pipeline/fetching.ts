@@ -22,7 +22,7 @@ import {
   setCachedPerplexityCategoryPayload,
   setCachedPerplexityMonthlyEventsPayload
 } from "../cache";
-import { requestPerplexity } from "@web/src/server/integrations/perplexity";
+import { requestPerplexity } from "@web/src/server/services/_integrations/perplexity";
 
 const logger = createChildLogger(baseLogger, {
   module: "community-perplexity-service"

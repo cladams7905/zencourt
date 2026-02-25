@@ -2,16 +2,18 @@ import { NextResponse } from "next/server";
 import {
   requireAuthenticatedUser,
   requireListingAccess
-} from "@web/src/server/auth/apiAuth";
-import { ApiError } from "@web/src/server/utils/apiError";
+} from "@web/src/server/actions/_auth/api";
+import { ApiError } from "@web/src/server/errors/api";
 import { StatusCode } from "@shared/types/api";
-import {
-  DomainError,
-  isDomainError
-} from "@web/src/server/errors/domain";
+import { DomainError, isDomainError } from "@web/src/server/errors/domain";
 import { apiErrorCodeFromStatus } from "@shared/utils/api/responses";
 
-export { ApiError, requireAuthenticatedUser, requireListingAccess, DomainError };
+export {
+  ApiError,
+  requireAuthenticatedUser,
+  requireListingAccess,
+  DomainError
+};
 
 export function errorResponse(
   status: number,
@@ -51,9 +53,10 @@ export async function withApiErrorHandling<T>(
   }
 }
 
-export function mapDomainError(
-  error: DomainError
-): { status: number; code: ReturnType<typeof apiErrorCodeFromStatus> } {
+export function mapDomainError(error: DomainError): {
+  status: number;
+  code: ReturnType<typeof apiErrorCodeFromStatus>;
+} {
   let status = StatusCode.INTERNAL_SERVER_ERROR;
 
   switch (error.kind) {

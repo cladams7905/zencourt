@@ -9,17 +9,17 @@ jest.mock("@web/src/server/actions/listings/commands", () => ({
     mockUpdateListingForCurrentUser(...args)
 }));
 
-jest.mock("@web/src/server/actions/propertyDetails/commands", () => ({
+jest.mock("@web/src/server/actions/listings/propertyDetails", () => ({
   fetchPropertyDetailsForCurrentUser: (...args: unknown[]) =>
     mockFetchPropertyDetailsForCurrentUser(...args)
 }));
 
-jest.mock("@web/src/server/actions/imageCategorization", () => ({
+jest.mock("@web/src/server/actions/listings/image/categorize", () => ({
   categorizeListingImagesForCurrentUser: (...args: unknown[]) =>
     mockCategorizeListingImagesForCurrentUser(...args)
 }));
 
-jest.mock("@web/src/server/actions/video", () => ({
+jest.mock("@web/src/server/actions/video/generate", () => ({
   startListingVideoGeneration: (...args: unknown[]) =>
     mockStartListingVideoGeneration(...args),
   cancelListingVideoGeneration: (...args: unknown[]) =>

@@ -5,7 +5,7 @@ import {
 import {
   getSharedRedisClient,
   type Redis
-} from "@web/src/server/cache/redis";
+} from "@web/src/server/infra/cache/redis";
 import type { MarketData, MarketLocation } from "./types";
 import { readMarketCache, type RedisLike, writeMarketCache } from "./cache";
 import {

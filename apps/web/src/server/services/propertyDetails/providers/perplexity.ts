@@ -1,4 +1,4 @@
-import type { PerplexityResponseFormat } from "@web/src/server/integrations/perplexity";
+import type { PerplexityResponseFormat } from "@web/src/server/services/_integrations/perplexity";
 import { parsePossiblyWrappedJson } from "@web/src/server/utils/jsonParsing";
 import { ARCHITECTURE_ENUM, PROPERTY_TYPE_ENUM } from "../schemaSections/enums";
 import {

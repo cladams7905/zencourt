@@ -9,11 +9,13 @@ import {
   createChildLogger,
   logger as baseLogger
 } from "@web/src/lib/core/logging/logger";
-import type { GenerateListingContentBody } from "@web/src/server/actions/listings/contentGeneration/types";
+import {
+  generateListingContentForCurrentUser,
+  type GenerateListingContentBody
+} from "@web/src/server/actions/listings/content";
 import { makeSseStreamHeaders } from "@web/src/lib/sse/sseEncoder";
 import { readJsonBodySafe } from "@shared/utils/api/validation";
 import { parseRequiredRouteParam } from "@shared/utils/api/parsers";
-import { generateListingContentForCurrentUser } from "@web/src/server/actions/listings/contentGeneration/commands";
 
 const logger = createChildLogger(baseLogger, {
   module: "listing-content-generate-route"

@@ -4,9 +4,11 @@ import * as React from "react";
 import { ListingViewHeader } from "@web/src/components/listings/shared";
 import { type ContentItem } from "@web/src/components/dashboard/components/ContentGrid";
 import { usePathname, useRouter } from "next/navigation";
-import { ListingVideoPreviewGrid } from "@web/src/components/listings/create/orchestrators/ListingVideoPreviewGrid";
-import { ListingImagePreviewGrid } from "@web/src/components/listings/create/orchestrators/ListingImagePreviewGrid";
-import { DevSingleTemplateRender } from "@web/src/components/listings/create/orchestrators/DevSingleTemplateRender";
+import {
+  ListingVideoPreviewGrid,
+  ListingImagePreviewGrid,
+  DevSingleTemplateRender
+} from "@web/src/components/listings/create/components";
 import { type ListingCreateImage } from "@web/src/components/listings/create/domain/listingCreateUtils";
 import { useStickyHeader } from "@web/src/components/listings/create/shared/hooks/useStickyHeader";
 import { useScrollFade } from "@web/src/components/listings/create/shared/hooks/useScrollFade";

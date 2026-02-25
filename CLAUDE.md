@@ -68,9 +68,8 @@ Do not add API routes for internal reads/mutations that fit server components/ac
 
 ### Route Dependency Policy
 
-- Default: `route -> action -> service/model`
-- Exception: edge/integration endpoints may use `route -> service` when transport behavior is the core concern (e.g. webhook verification).
-- Avoid `route -> model`.
+- `route -> action -> service/model`
+- Avoid `route -> model` or `route -> service`.
 
 ## Import/Dependency Guardrails
 

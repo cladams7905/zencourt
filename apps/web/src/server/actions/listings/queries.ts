@@ -1,6 +1,6 @@
 "use server";
 
-import { requireAuthenticatedUser } from "@web/src/server/auth/apiAuth";
+import { requireAuthenticatedUser } from "@web/src/server/actions/_auth/api";
 import { getUserListingSummariesPage } from "@web/src/server/models/listings";
 
 export async function getCurrentUserListingSummariesPage(params: {

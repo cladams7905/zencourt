@@ -4,7 +4,7 @@ export {};
 describe("api v1 utils", () => {
   async function loadUtils() {
     jest.resetModules();
-    jest.doMock("@web/src/server/auth/apiAuth", () => ({
+    jest.doMock("@web/src/server/actions/_auth/api", () => ({
       requireAuthenticatedUser: jest.fn(),
       requireListingAccess: jest.fn()
     }));

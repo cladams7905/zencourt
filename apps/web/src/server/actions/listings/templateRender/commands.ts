@@ -6,7 +6,7 @@ import {
 } from "@web/src/lib/core/logging/logger";
 import { getOrCreateUserAdditional } from "@web/src/server/models/userAdditional";
 import { getListingImages } from "@web/src/server/models/listingImages";
-import { setCachedListingContentItem } from "@web/src/server/cache/listingContent";
+import { setCachedListingContentItem } from "@web/src/server/infra/cache/listingContent";
 import {
   renderListingTemplateBatch as renderListingTemplateBatchService,
   renderListingTemplateBatchStream as renderListingTemplateBatchStreamService
@@ -22,7 +22,7 @@ import type {
 } from "./helpers";
 import { resolveListingImagesToPublicUrls } from "./helpers";
 import { DomainValidationError } from "@web/src/server/errors/domain";
-import { requireAuthenticatedUser } from "@web/src/server/auth/apiAuth";
+import { requireAuthenticatedUser } from "@web/src/server/actions/_auth/api";
 import { requireListingAccess } from "@web/src/server/models/listings/access";
 import { encodeSseEvent } from "@web/src/lib/sse/sseEncoder";
 
@@ -54,7 +54,8 @@ export async function renderListingTemplateBatch(
     getListingImages(user.id, listing.id),
     getOrCreateUserAdditional(user.id)
   ]);
-  const listingImagesWithPublicUrls = resolveListingImagesToPublicUrls(listingImages);
+  const listingImagesWithPublicUrls =
+    resolveListingImagesToPublicUrls(listingImages);
 
   return renderListingTemplateBatchService({
     subcategory,
@@ -111,62 +112,65 @@ export async function renderListingTemplateBatchStream(
     getListingImages(user.id, listing.id),
     getOrCreateUserAdditional(user.id)
   ]);
-  const listingImagesWithPublicUrls = resolveListingImagesToPublicUrls(listingImages);
+  const listingImagesWithPublicUrls =
+    resolveListingImagesToPublicUrls(listingImages);
 
   const stream = new ReadableStream({
     async start(controller) {
       try {
-        const { failedTemplateIds } = await renderListingTemplateBatchStreamService(
-          {
-            userId: user.id,
-            listingId,
-            subcategory,
-            mediaType: "image",
-            listing,
-            listingImages: listingImagesWithPublicUrls,
-            userAdditional,
-            captionItems,
-            templateCount,
-            templateId,
-            siteOrigin
-          },
-          {
-            onItem: async (item) => {
-              controller.enqueue(encodeSseEvent({ type: "item", item }));
+        const { failedTemplateIds } =
+          await renderListingTemplateBatchStreamService(
+            {
+              userId: user.id,
+              listingId,
+              subcategory,
+              mediaType: "image",
+              listing,
+              listingImages: listingImagesWithPublicUrls,
+              userAdditional,
+              captionItems,
+              templateCount,
+              templateId,
+              siteOrigin
             },
-            onResult: async (result) => {
-              const { cacheKeyTimestamp, cacheKeyId, content, rendered } = result;
-              if (
-                typeof cacheKeyTimestamp !== "number" ||
-                typeof cacheKeyId !== "number"
-              ) {
-                return;
-              }
+            {
+              onItem: async (item) => {
+                controller.enqueue(encodeSseEvent({ type: "item", item }));
+              },
+              onResult: async (result) => {
+                const { cacheKeyTimestamp, cacheKeyId, content, rendered } =
+                  result;
+                if (
+                  typeof cacheKeyTimestamp !== "number" ||
+                  typeof cacheKeyId !== "number"
+                ) {
+                  return;
+                }
 
-              try {
-                await setCachedListingContentItem({
-                  userId: user.id,
-                  listingId,
-                  subcategory,
-                  mediaType: "image",
-                  timestamp: cacheKeyTimestamp,
-                  id: cacheKeyId,
-                  item: {
-                    ...content,
-                    renderedImageUrl: rendered?.imageUrl ?? null,
-                    renderedTemplateId: rendered?.templateId,
-                    renderedModifications: rendered?.modifications
-                  }
-                });
-              } catch (error) {
-                logger.warn(
-                  { error, listingId, cacheKeyTimestamp, cacheKeyId },
-                  "Failed to persist template render cache item"
-                );
+                try {
+                  await setCachedListingContentItem({
+                    userId: user.id,
+                    listingId,
+                    subcategory,
+                    mediaType: "image",
+                    timestamp: cacheKeyTimestamp,
+                    id: cacheKeyId,
+                    item: {
+                      ...content,
+                      renderedImageUrl: rendered?.imageUrl ?? null,
+                      renderedTemplateId: rendered?.templateId,
+                      renderedModifications: rendered?.modifications
+                    }
+                  });
+                } catch (error) {
+                  logger.warn(
+                    { error, listingId, cacheKeyTimestamp, cacheKeyId },
+                    "Failed to persist template render cache item"
+                  );
+                }
               }
             }
-          }
-        );
+          );
 
         controller.enqueue(
           encodeSseEvent({

@@ -18,17 +18,20 @@ jest.mock("@web/src/server/services/templateRender", () => ({
       ...args
     ),
   renderListingTemplateBatchStream: (...args: unknown[]) =>
-    (mockRenderListingTemplateBatchStreamService as (...a: unknown[]) => unknown)(
-      ...args
-    )
+    (
+      mockRenderListingTemplateBatchStreamService as (
+        ...a: unknown[]
+      ) => unknown
+    )(...args)
 }));
 
 jest.mock("@web/src/server/services/templateRender/validation", () => ({
-  parseListingSubcategory: (value: unknown) => mockParseListingSubcategory(value),
+  parseListingSubcategory: (value: unknown) =>
+    mockParseListingSubcategory(value),
   sanitizeCaptionItems: (value: unknown) => mockSanitizeCaptionItems(value)
 }));
 
-jest.mock("@web/src/server/auth/apiAuth", () => ({
+jest.mock("@web/src/server/actions/_auth/api", () => ({
   requireAuthenticatedUser: (...args: unknown[]) =>
     (mockRequireAuthenticatedUser as (...a: unknown[]) => unknown)(...args)
 }));
@@ -52,7 +55,7 @@ jest.mock("@web/src/server/models/userAdditional", () => ({
     (mockGetOrCreateUserAdditional as (...a: unknown[]) => unknown)(...args)
 }));
 
-jest.mock("@web/src/server/cache/listingContent", () => ({
+jest.mock("@web/src/server/infra/cache/listingContent", () => ({
   setCachedListingContentItem: (...args: unknown[]) =>
     (mockSetCachedListingContentItem as (...a: unknown[]) => unknown)(...args)
 }));
@@ -99,7 +102,11 @@ describe("listing templateRender commands", () => {
       });
 
       await expect(
-        renderListingTemplateBatch("listing-1", { subcategory: "x" }, "https://site.com")
+        renderListingTemplateBatch(
+          "listing-1",
+          { subcategory: "x" },
+          "https://site.com"
+        )
       ).rejects.toThrow(DomainValidationError);
     });
 
@@ -133,7 +140,10 @@ describe("listing templateRender commands", () => {
         "https://site.com"
       );
 
-      expect(mockRequireListingAccess).toHaveBeenCalledWith("listing-1", "user-1");
+      expect(mockRequireListingAccess).toHaveBeenCalledWith(
+        "listing-1",
+        "user-1"
+      );
       expect(mockRenderListingTemplateBatchService).toHaveBeenCalledWith(
         expect.objectContaining({
           subcategory: "new_listing",
@@ -166,9 +176,8 @@ describe("listing templateRender commands", () => {
 
     it("returns stream with done event when captionItems are empty", async () => {
       mockParseListingSubcategory.mockReturnValue("new_listing" as never);
-      mockEncodeSseEvent.mockImplementation(
-        (payload: { type: string }) =>
-          new TextEncoder().encode(`data: ${JSON.stringify(payload)}\n\n`)
+      mockEncodeSseEvent.mockImplementation((payload: { type: string }) =>
+        new TextEncoder().encode(`data: ${JSON.stringify(payload)}\n\n`)
       );
 
       const { stream } = await renderListingTemplateBatchStream(
@@ -191,7 +200,9 @@ describe("listing templateRender commands", () => {
         items: [],
         failedTemplateIds: []
       });
-      expect(mockRenderListingTemplateBatchStreamService).not.toHaveBeenCalled();
+      expect(
+        mockRenderListingTemplateBatchStreamService
+      ).not.toHaveBeenCalled();
     });
 
     it("returns stream that calls service and enqueues item and done events", async () => {
@@ -200,8 +211,8 @@ describe("listing templateRender commands", () => {
       mockSanitizeCaptionItems.mockReturnValue(captionItems);
       mockGetListingImages.mockResolvedValueOnce([]);
       mockGetOrCreateUserAdditional.mockResolvedValueOnce({} as never);
-      mockEncodeSseEvent.mockImplementation(
-        (p: unknown) => new TextEncoder().encode(`data: ${JSON.stringify(p)}\n\n`)
+      mockEncodeSseEvent.mockImplementation((p: unknown) =>
+        new TextEncoder().encode(`data: ${JSON.stringify(p)}\n\n`)
       );
       mockRenderListingTemplateBatchStreamService.mockImplementation(
         async (
@@ -255,8 +266,8 @@ describe("listing templateRender commands", () => {
       mockSanitizeCaptionItems.mockReturnValue(captionItems);
       mockGetListingImages.mockResolvedValueOnce([]);
       mockGetOrCreateUserAdditional.mockResolvedValueOnce({} as never);
-      mockEncodeSseEvent.mockImplementation(
-        (p: unknown) => new TextEncoder().encode(`data: ${JSON.stringify(p)}\n\n`)
+      mockEncodeSseEvent.mockImplementation((p: unknown) =>
+        new TextEncoder().encode(`data: ${JSON.stringify(p)}\n\n`)
       );
       mockRenderListingTemplateBatchStreamService.mockRejectedValueOnce(
         new Error("render failed")

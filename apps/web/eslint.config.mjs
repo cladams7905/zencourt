@@ -25,10 +25,13 @@ const serviceBoundaryRules = serviceNames.map((serviceName) => ({
         patterns: [
           {
             group: serviceNames
-              .filter((other) => other !== serviceName && other !== "_config")
+              .filter(
+                (other) =>
+                  other !== serviceName && other !== "_config" && other !== "_infra"
+              )
               .map((other) => `@web/src/server/services/${other}/**`),
             message:
-              "Services must not import other services. Allowed: imports within the same service module and shared config under @web/src/server/services/_config/**. Shared cache utilities live under @web/src/server/cache/**.",
+              "Services must not import other services. Allowed: imports within the same service module and shared config/integrations under @web/src/server/services/_config/** and @web/src/server/services/_infra/**. Shared cache utilities live under @web/src/server/cache/**.",
           },
         ],
       },
@@ -57,7 +60,6 @@ const eslintConfig = [
   },
   {
     files: ["src/app/api/v1/**/route.ts"],
-    ignores: ["src/app/api/v1/webhooks/**/route.ts"],
     rules: {
       "no-restricted-imports": [
         "error",
