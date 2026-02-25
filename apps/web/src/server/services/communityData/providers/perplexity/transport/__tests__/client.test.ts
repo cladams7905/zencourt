@@ -8,7 +8,7 @@ jest.mock("@web/src/server/utils/retry", () => ({
   sleep: (...args: unknown[]) => mockSleep(...args)
 }));
 
-import { requestPerplexity } from "@web/src/server/services/communityData/providers/perplexity/transport/client";
+import { requestPerplexity } from "@web/src/server/integrations/perplexity";
 
 describe("perplexity client", () => {
   const originalFetch = global.fetch;

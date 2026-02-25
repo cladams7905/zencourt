@@ -1,6 +1,9 @@
 import { createChildLogger, logger as baseLogger } from "@web/src/lib/core/logging/logger";
-import type { PerplexityMessage, PerplexityResponseFormat } from "../transport/types";
-import { requestPerplexity } from "../transport/client";
+import {
+  requestPerplexity,
+  type PerplexityMessage,
+  type PerplexityResponseFormat
+} from "@web/src/server/integrations/perplexity";
 
 const logger = createChildLogger(baseLogger, {
   module: "community-perplexity-city-description"

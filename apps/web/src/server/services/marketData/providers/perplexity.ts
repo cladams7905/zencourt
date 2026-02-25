@@ -1,7 +1,7 @@
 import {
   type PerplexityMessage,
   type PerplexityResponseFormat
-} from "../../communityData/providers/perplexity";
+} from "@web/src/server/integrations/perplexity";
 import { generateText } from "@web/src/server/services/ai";
 import type {
   MarketData,
