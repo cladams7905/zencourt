@@ -64,11 +64,12 @@ describe("storage uploadPreparation", () => {
 
   it("maps user media record inputs and validates key prefixes", () => {
     const key = getUserMediaPath("u1", "image", "img.jpg");
+    const videoKey = getUserMediaPath("u1", "video", "v.mp4");
     const thumb = getUserMediaThumbnailPath("u1", "img.jpg");
 
     const mapped = mapUserMediaRecordInputs("u1", [
       { type: "image", key },
-      { type: "video", key: getUserMediaPath("u1", "video", "v.mp4"), thumbnailKey: thumb }
+      { type: "video", key: videoKey, thumbnailKey: thumb }
     ] as never);
 
     expect(mapped).toEqual([
@@ -79,7 +80,7 @@ describe("storage uploadPreparation", () => {
       },
       {
         type: "video",
-        url: `https://public/${getUserMediaPath("u1", "video", "v.mp4")}`,
+        url: `https://public/${videoKey}`,
         thumbnailUrl: `https://public/${thumb}`
       }
     ]);

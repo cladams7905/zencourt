@@ -63,4 +63,39 @@ describe("api v1 utils", () => {
       message: "Fallback"
     });
   });
+
+  it("maps DomainError in withApiErrorHandling", async () => {
+    const { withApiErrorHandling, DomainError } = await loadUtils();
+    const response = await withApiErrorHandling(async () => {
+      throw new DomainError("forbidden", "no access");
+    });
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toEqual({
+      success: false,
+      code: "FORBIDDEN",
+      error: "no access",
+      message: "no access"
+    });
+  });
+
+  it.each([
+    ["validation", 400, "INVALID_REQUEST"],
+    ["unauthorized", 401, "UNAUTHORIZED"],
+    ["forbidden", 403, "FORBIDDEN"],
+    ["not_found", 404, "NOT_FOUND"],
+    ["conflict", 400, "INVALID_REQUEST"],
+    ["dependency", 502, "INVALID_REQUEST"],
+    ["internal", 500, "INVALID_REQUEST"]
+  ] as const)(
+    "maps %s domain errors",
+    async (kind, expectedStatus, expectedCode) => {
+      const { mapDomainError, DomainError } = await loadUtils();
+      const mapped = mapDomainError(new DomainError(kind, "message"));
+      expect(mapped).toEqual({
+        status: expectedStatus,
+        code: expectedCode
+      });
+    }
+  );
 });

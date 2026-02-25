@@ -106,6 +106,24 @@ describe("anthropic client", () => {
       expect(result).toBeNull();
     });
 
+    it("returns null on non-ok response when error payload is not json", async () => {
+      process.env.ANTHROPIC_API_KEY = "test-key";
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        json: async () => {
+          throw new Error("not json");
+        }
+      });
+
+      const result = await requestAnthropic({
+        model: "claude-3-5-sonnet",
+        max_tokens: 100,
+        messages: [{ role: "user", content: "hi" }]
+      });
+      expect(result).toBeNull();
+    });
+
   });
 
   describe("requestAnthropicStream", () => {

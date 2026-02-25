@@ -31,6 +31,9 @@ npm run db:push
 
 ### Layering
 
+- `components/*`
+  - Keep components almost exclusively UI/presentational.
+  - Move domain logic, types, and constants into `domain/hooks` and helper files within the same component submodule (see existing component module examples for reference).
 - `app/api/v1/*/route.ts`
   - Parse HTTP input/params
   - Call `server/actions/*`
@@ -45,7 +48,7 @@ npm run db:push
 - `server/services/*`
   - Standalone domain modules with their own business logic
   - Avoid direct dependencies on other service modules (shared exceptions: infra/cache and shared config layers).
-  - When services call third-party APIs, make sure to keep the service provider-agnostic (see existing marketData or CommunityData services for reference).
+  - When services call third-party APIs, make sure to keep the service provider-agnostic (see existing services for reference).
 - `server/models/*`
   - DB access only
 - `components/*`
@@ -79,38 +82,10 @@ Do not add API routes for internal reads/mutations that fit server components/ac
 
 ## Naming and Organization
 
-### `server/actions` module naming
-
-Preferred files by module:
-
-- `commands.ts`: mutations/side effects
-- `queries.ts`: reads
-- `index.ts`: boundary exports
-- `types.ts`: module-local types
-- `helpers.ts`: shared internal helpers (only when needed)
-
-Rules:
-
 - Keep unrelated table/domain concerns in separate modules.
 - Prefer module-boundary imports over deep internal paths.
-
-### Large frontend feature structure (when warranted)
-
-```
-feature/
-  orchestrators/
-  components/
-  domain/
-    hooks/
-  shared/
-```
-
-- `orchestrators`: composition only
-- `components`: presentational UI
-- `domain/hooks`: behavior/state transitions
-- `shared`: feature-local constants/types
-
-Keep component files exclusively presentational UI. Extract all other logic to domain/hooks or shared (see existing component modules for reference).
+- Follow existing file/folder naming and structure of adjacent modules at the same layer.
+- Prevent putting logic in `index.ts` files. Reserve `index.ts` for barrel exports.
 
 ## Testing Expectations
 

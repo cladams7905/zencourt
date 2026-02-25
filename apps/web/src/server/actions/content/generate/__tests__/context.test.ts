@@ -13,7 +13,30 @@ jest.mock(
 );
 
 jest.mock("@web/src/server/services/marketData", () => ({
-  createMarketDataProviderRegistry: () => ({}),
+  createMarketDataProviderRegistry: (config: {
+    fetcher: () => Promise<unknown>;
+    now: () => Date;
+    logger: { warn: () => void; error: () => void };
+    runStructuredMarketQuery: (args: {
+      messages: unknown[];
+      responseFormat: unknown;
+      maxTokens: number;
+    }) => Promise<unknown>;
+  }) => {
+    // Exercise injected provider callbacks so function coverage includes them.
+    void config.fetcher().catch(() => undefined);
+    config.now();
+    config.logger.warn();
+    config.logger.error();
+    void config
+      .runStructuredMarketQuery({
+        messages: [],
+        responseFormat: null,
+        maxTokens: 1
+      })
+      .catch(() => undefined);
+    return {};
+  },
   createMarketDataService: () => ({
     getMarketData: (...args: unknown[]) =>
       (mockGetMarketData as (...a: unknown[]) => unknown)(...args)

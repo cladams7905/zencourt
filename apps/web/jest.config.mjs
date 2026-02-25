@@ -17,7 +17,8 @@ const customJestConfig = {
     "!src/components/ui/**",
     "!src/**/__tests__/**",
     "!src/**/*.test.{ts,tsx}",
-    "!src/**/*.spec.{ts,tsx}"
+    "!src/**/*.spec.{ts,tsx}",
+    "!src/**/index.ts"
   ],
   testMatch: [
     "<rootDir>/**/__test__/**/*.(spec|test).(js|jsx|ts|tsx)",

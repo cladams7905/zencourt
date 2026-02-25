@@ -139,6 +139,24 @@ describe("perplexity client", () => {
     expect(result).toBeNull();
   });
 
+  it("returns null when non-ok response body is not json", async () => {
+    process.env.PERPLEXITY_API_KEY = "test-key";
+    mockIsRetryable.mockReturnValue(false);
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      json: async () => {
+        throw new Error("not-json");
+      }
+    });
+
+    const result = await requestPerplexity({
+      messages: [{ role: "user", content: "hello" }]
+    });
+
+    expect(result).toBeNull();
+  });
+
   it("returns null when fetch throws after retries exhausted", async () => {
     process.env.PERPLEXITY_API_KEY = "test-key";
     (global.fetch as jest.Mock).mockRejectedValue(new Error("Network error"));
