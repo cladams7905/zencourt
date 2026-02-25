@@ -1,4 +1,4 @@
-export { requestPerplexity } from "./client";
+export { requestPerplexity } from "@web/src/server/integrations/perplexity";
 export {
   buildPerplexityCommunityMessages,
   getAudienceLabel
@@ -7,4 +7,4 @@ export { buildPerplexityResponseFormat } from "./schema";
 export type {
   PerplexityMessage,
   PerplexityResponseFormat
-} from "./types";
+} from "@web/src/server/integrations/perplexity";

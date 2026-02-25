@@ -3,7 +3,7 @@ import type {
   CategoryKey
 } from "@web/src/server/services/communityData/config";
 import { getCategoryDisplayLimit } from "@web/src/server/services/communityData/config";
-import type { PerplexityMessage } from "./types";
+import type { PerplexityMessage } from "@web/src/server/integrations/perplexity";
 import { getWhySuitableFieldKey } from "./helpers";
 
 const AUDIENCE_LABELS: Record<AudienceSegment, string> = {

@@ -1,7 +1,7 @@
 import {
   requestPerplexity
-} from "@web/src/server/services/communityData/providers/perplexity";
-import type { PerplexityChatCompletionResponse } from "@web/src/server/services/communityData/providers/perplexity/transport/types";
+} from "@web/src/server/integrations/perplexity";
+import type { PerplexityChatCompletionResponse } from "@web/src/server/integrations/perplexity";
 import type { AITextRequest, AITextResult, AITextStrategy } from "../types";
 
 export const perplexityTextStrategy: AITextStrategy = {

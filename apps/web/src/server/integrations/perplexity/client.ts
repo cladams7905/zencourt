@@ -5,7 +5,7 @@ import {
   PERPLEXITY_MAX_TOKENS,
   PERPLEXITY_TEMPERATURE,
   PERPLEXITY_TIMEOUT_MS
-} from "../cache/constants";
+} from "./constants";
 import type {
   PerplexityChatCompletionResponse,
   PerplexityRequest
@@ -17,7 +17,7 @@ import {
 } from "@web/src/server/utils/retry";
 
 const logger = createChildLogger(baseLogger, {
-  module: "community-perplexity-client"
+  module: "perplexity-client"
 });
 
 type RetryConfig = {

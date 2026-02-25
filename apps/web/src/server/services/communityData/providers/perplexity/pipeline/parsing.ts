@@ -11,7 +11,7 @@ import type {
   PerplexityChatCompletionResponse,
   PerplexityPlaceDraft,
   PerplexitySearchResult
-} from "../transport/types";
+} from "@web/src/server/integrations/perplexity/types";
 import { getWhySuitableFieldKey } from "../transport/helpers";
 import { parsePossiblyWrappedJson } from "@web/src/server/utils/jsonParsing";
 import {

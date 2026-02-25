@@ -2,7 +2,7 @@ import type {
   AudienceSegment,
   CategoryKey
 } from "@web/src/server/services/communityData/config";
-import type { PerplexityResponseFormat } from "./types";
+import type { PerplexityResponseFormat } from "@web/src/server/integrations/perplexity";
 import { getWhySuitableFieldKey } from "./helpers";
 
 const NULLABLE_STRING = { type: ["string", "null"] };
