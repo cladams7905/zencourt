@@ -9,7 +9,7 @@ jest.mock("@web/src/server/services/communityData/shared/common", () => ({
   slugify: jest.fn((v: string) => v.toLowerCase())
 }));
 
-jest.mock("@web/src/server/cache/redis", () => {
+jest.mock("@web/src/server/infra/cache/redis", () => {
   const redis = {
     get: jest.fn(),
     set: jest.fn()
@@ -41,7 +41,7 @@ describe("perplexity cache", () => {
   const commonMock = jest.requireMock(
     "@web/src/server/services/communityData/shared/common"
   );
-  const redisMod = jest.requireMock("@web/src/server/cache/redis");
+  const redisMod = jest.requireMock("@web/src/server/infra/cache/redis");
   const redis = redisMod.__redis;
 
   beforeEach(() => {

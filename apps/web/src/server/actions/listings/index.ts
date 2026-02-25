@@ -11,12 +11,12 @@ export {
 
 export { deleteCachedListingContentItem } from "./cache";
 
-export { generateListingContentForCurrentUser } from "./contentGeneration";
+export { generateListingContentForCurrentUser } from "./content";
 export type {
   GenerateListingContentBody,
   ValidatedGenerateParams,
   ListingGenerationContext
-} from "./contentGeneration";
+} from "./content";
 
 export {
   renderListingTemplateBatch,

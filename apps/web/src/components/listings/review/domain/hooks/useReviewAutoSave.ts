@@ -2,7 +2,7 @@ import * as React from "react";
 import { toast } from "sonner";
 import { roundBathroomsToHalfStep } from "@web/src/components/listings/review/shared/formatters";
 import type { ListingPropertyDetails } from "@shared/types/models";
-import { saveListingPropertyDetailsForCurrentUser } from "@web/src/server/actions/propertyDetails/commands";
+import { saveListingPropertyDetailsForCurrentUser } from "@web/src/server/actions/listings/propertyDetails";
 
 type UseReviewAutoSaveParams = {
   listingId: string;

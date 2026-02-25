@@ -35,7 +35,7 @@ jest.mock("@web/src/server/models/userAdditional", () => ({
     (mockCompleteWelcomeSurvey as (...a: unknown[]) => unknown)(...args)
 }));
 
-jest.mock("@web/src/server/auth/apiAuth", () => ({
+jest.mock("@web/src/server/actions/_auth/api", () => ({
   requireAuthenticatedUser: (...args: unknown[]) =>
     (mockRequireAuthenticatedUser as (...a: unknown[]) => unknown)(...args)
 }));

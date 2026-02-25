@@ -1,6 +1,6 @@
 "use server";
 
-import { requireAuthenticatedUser } from "@web/src/server/auth/apiAuth";
+import { requireAuthenticatedUser } from "@web/src/server/actions/_auth/api";
 import { createListing, updateListing } from "@web/src/server/models/listings";
 import { requireListingAccess } from "@web/src/server/models/listings/access";
 import type { UpdateListingInput } from "@web/src/server/models/listings/types";

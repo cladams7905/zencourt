@@ -61,7 +61,7 @@ jest.mock(
 );
 
 jest.mock(
-  "@web/src/server/integrations/perplexity",
+  "@web/src/server/services/_integrations/perplexity",
   () => ({
     requestPerplexity: (...args: unknown[]) => mockRequestPerplexity(...args)
   })

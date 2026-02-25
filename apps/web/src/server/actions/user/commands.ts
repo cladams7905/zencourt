@@ -1,7 +1,7 @@
 "use server";
 
 import type { InsertDBUserAdditional } from "@db/types/models";
-import { requireAuthenticatedUser } from "@web/src/server/auth/apiAuth";
+import { requireAuthenticatedUser } from "@web/src/server/actions/_auth/api";
 import { db, eq, userAdditional } from "@db/client";
 import {
   markProfileCompleted,
@@ -101,7 +101,9 @@ export async function updateCurrentUserTargetAudiences(
   return updateTargetAudiences(user.id, targetAudiences, audienceDescription);
 }
 
-export async function updateCurrentUserWritingStyle(updates: WritingStyleUpdates) {
+export async function updateCurrentUserWritingStyle(
+  updates: WritingStyleUpdates
+) {
   const user = await requireAuthenticatedUser();
   return updateWritingStyle(user.id, updates);
 }

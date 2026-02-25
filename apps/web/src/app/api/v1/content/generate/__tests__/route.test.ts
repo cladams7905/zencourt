@@ -6,10 +6,10 @@ describe("content generate route", () => {
     jest.resetModules();
 
     const mockGenerateContentForCurrentUser = jest.fn();
-    jest.doMock("@web/src/server/auth/apiAuth", () => ({
+    jest.doMock("@web/src/server/actions/_auth/api", () => ({
       requireAuthenticatedUser: jest.fn()
     }));
-    jest.doMock("@web/src/server/actions/contentGeneration/commands", () => ({
+    jest.doMock("@web/src/server/actions/content/generate/commands", () => ({
       generateContentForCurrentUser: (...args: unknown[]) =>
         mockGenerateContentForCurrentUser(...args)
     }));

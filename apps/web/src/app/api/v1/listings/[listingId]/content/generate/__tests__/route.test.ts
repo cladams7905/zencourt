@@ -15,17 +15,17 @@ describe("listing content generate route", () => {
     >();
 
     const { ApiError: RealApiError } = jest.requireActual(
-      "@web/src/server/utils/apiError"
-    ) as typeof import("@web/src/server/utils/apiError");
+      "@web/src/server/errors/api"
+    ) as typeof import("@web/src/server/errors/api");
 
-    jest.doMock("@web/src/server/auth/apiAuth", () => ({
+    jest.doMock("@web/src/server/actions/_auth/api", () => ({
       requireAuthenticatedUser: jest.fn()
     }));
     jest.doMock("@web/src/app/api/v1/_utils", () => ({
       ApiError: RealApiError
     }));
     jest.doMock(
-      "@web/src/server/actions/listings/contentGeneration/commands",
+      "@web/src/server/actions/listings/content/generate/commands",
       () => ({
         generateListingContentForCurrentUser: (...args: unknown[]) =>
           mockGenerateListingContentForCurrentUser(

@@ -14,7 +14,7 @@ import {
   getSecondsUntilEndOfMonth,
   slugify
 } from "../../../shared/common";
-import { getSharedRedisClient } from "@web/src/server/cache/redis";
+import { getSharedRedisClient } from "@web/src/server/infra/cache/redis";
 
 const logger = createChildLogger(baseLogger, {
   module: "community-perplexity-cache"

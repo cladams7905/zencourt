@@ -7,7 +7,7 @@ import {
   createChildLogger,
   logger as baseLogger
 } from "@web/src/lib/core/logging/logger";
-import { requireAuthenticatedUser } from "@web/src/server/auth/apiAuth";
+import { requireAuthenticatedUser } from "@web/src/server/actions/_auth/api";
 
 const logger = createChildLogger(baseLogger, { module: "storage-actions" });
 
@@ -42,7 +42,9 @@ export async function uploadFile(file: File, folder: string): Promise<string> {
     return result.url;
   } catch (error) {
     logger.error({ error }, "Error uploading file");
-    throw new Error(`Failed to upload ${file.name}: ${formatError(error, "Unknown error").message}`);
+    throw new Error(
+      `Failed to upload ${file.name}: ${formatError(error, "Unknown error").message}`
+    );
   }
 }
 

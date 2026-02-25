@@ -34,7 +34,7 @@ describe("video status route", () => {
     jest.doMock("@web/src/app/api/v1/_utils", () => ({
       ApiError: TestApiError
     }));
-    jest.doMock("@web/src/server/actions/video", () => ({
+    jest.doMock("@web/src/server/actions/video/generate", () => ({
       getListingVideoStatus: (...args: unknown[]) =>
         mockGetListingVideoStatus(...args)
     }));

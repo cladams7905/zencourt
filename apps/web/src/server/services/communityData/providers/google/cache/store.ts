@@ -1,5 +1,5 @@
 import type { CommunityData } from "@web/src/lib/domain/market/types";
-import { getSharedRedisClient } from "@web/src/server/cache/redis";
+import { getSharedRedisClient } from "@web/src/server/infra/cache/redis";
 import {
   getCommunityCacheKey,
   getCommunityCacheTtlSeconds,
@@ -8,9 +8,7 @@ import {
   getCityDescriptionCacheKey,
   isPoolStale
 } from "./keys";
-import type {
-  CityDescriptionCachePayload
-} from "./types";
+import type { CityDescriptionCachePayload } from "./types";
 import { createPlaceCacheOps } from "./placeOps";
 
 type LoggerLike = {
@@ -224,7 +222,6 @@ export function createCommunityCache(
           "Failed to write seasonal sections to cache"
         );
       }
-    },
-
+    }
   };
 }

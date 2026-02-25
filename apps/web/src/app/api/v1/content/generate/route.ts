@@ -13,7 +13,7 @@ import {
 } from "@web/src/lib/core/logging/logger";
 import { readJsonBodySafe } from "@shared/utils";
 import { makeSseStreamHeaders } from "@web/src/lib/sse/sseEncoder";
-import { generateContentForCurrentUser } from "@web/src/server/actions/contentGeneration/commands";
+import { generateContentForCurrentUser } from "@web/src/server/actions/content/generate/commands";
 import type { PromptAssemblyInput } from "@web/src/lib/ai/prompts/engine/assemble";
 
 const logger = createChildLogger(baseLogger, {
