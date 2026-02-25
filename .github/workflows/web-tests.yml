@@ -6,17 +6,24 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+  pull-requests: read
+
 jobs:
-  detect-web-changes:
+  web-required:
     runs-on: ubuntu-latest
-    outputs:
-      web_changed: ${{ steps.filter.outputs.web }}
+    timeout-minutes: 30
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Detect web workspace changes
         uses: dorny/paths-filter@v3
-        id: filter
+        id: changes
         with:
           filters: |
             web:
@@ -27,47 +34,26 @@ jobs:
               - "tsconfig.base.json"
               - ".github/workflows/web-tests.yml"
 
-  web-workspace-coverage:
-    needs: detect-web-changes
-    if: needs.detect-web-changes.outputs.web_changed == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
       - name: Setup Node
+        if: steps.changes.outputs.web == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
 
       - name: Install dependencies
+        if: steps.changes.outputs.web == 'true'
         run: npm ci
 
       - name: Run web workspace tests with coverage
+        if: steps.changes.outputs.web == 'true'
         run: npm run test --workspace=@zencourt/web -- --coverage --coverageReporters=text-summary --coverageReporters=json-summary --watchman=false --watchAll=false
 
       - name: Enforce coverage thresholds (global + modules)
+        if: steps.changes.outputs.web == 'true'
         run: node apps/web/scripts/check-coverage.mjs
 
-  web-required:
-    needs: [detect-web-changes, web-workspace-coverage]
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - name: Finalize required check status
+      - name: Skip note when no web changes
+        if: steps.changes.outputs.web != 'true'
         run: |
-          if [ "${{ needs.detect-web-changes.outputs.web_changed }}" != "true" ]; then
-            echo "No web workspace changes; required check passes."
-            exit 0
-          fi
-
-          if [ "${{ needs.web-workspace-coverage.result }}" = "success" ]; then
-            echo "web-workspace-coverage job succeeded."
-            exit 0
-          fi
-
-          echo "web-workspace-coverage job result: ${{ needs.web-workspace-coverage.result }}"
-          exit 1
+          echo "No web workspace changes detected; check passes."

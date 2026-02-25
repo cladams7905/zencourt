@@ -6,17 +6,24 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+  pull-requests: read
+
 jobs:
-  detect-core-changes:
+  core-packages-required:
     runs-on: ubuntu-latest
-    outputs:
-      core_changed: ${{ steps.filter.outputs.core }}
+    timeout-minutes: 20
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Detect core package changes
         uses: dorny/paths-filter@v3
-        id: filter
+        id: changes
         with:
           filters: |
             core:
@@ -27,65 +34,50 @@ jobs:
               - "tsconfig.base.json"
               - ".github/workflows/core-packages-checks.yml"
 
-  core-packages:
-    needs: detect-core-changes
-    if: needs.detect-core-changes.outputs.core_changed == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
       - name: Setup Node
+        if: steps.changes.outputs.core == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
 
       - name: Install dependencies
+        if: steps.changes.outputs.core == 'true'
         run: npm ci
 
       - name: Lint shared package boundaries
+        if: steps.changes.outputs.core == 'true'
         run: npm run lint:shared
 
       - name: Lint db package boundaries
+        if: steps.changes.outputs.core == 'true'
         run: npm run lint:db
 
       - name: Type-check shared package
+        if: steps.changes.outputs.core == 'true'
         run: npm run type-check:shared
 
       - name: Type-check db package
+        if: steps.changes.outputs.core == 'true'
         run: npm run type-check:db
 
       - name: Type-check web workspace
+        if: steps.changes.outputs.core == 'true'
         run: npm run type-check:web
 
       - name: Type-check video-server workspace
+        if: steps.changes.outputs.core == 'true'
         run: npm run type-check:video
 
       - name: Test shared package
+        if: steps.changes.outputs.core == 'true'
         run: npm run test:shared
 
       - name: Test db package
+        if: steps.changes.outputs.core == 'true'
         run: npm run test:db
 
-  core-packages-required:
-    needs: [detect-core-changes, core-packages]
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - name: Finalize required check status
+      - name: Skip note when no core changes
+        if: steps.changes.outputs.core != 'true'
         run: |
-          if [ "${{ needs.detect-core-changes.outputs.core_changed }}" != "true" ]; then
-            echo "No core package changes; required check passes."
-            exit 0
-          fi
-
-          if [ "${{ needs.core-packages.result }}" = "success" ]; then
-            echo "core-packages job succeeded."
-            exit 0
-          fi
-
-          echo "core-packages job result: ${{ needs.core-packages.result }}"
-          exit 1
+          echo "No core package changes detected; check passes."

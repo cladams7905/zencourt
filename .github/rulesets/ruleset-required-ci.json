@@ -16,7 +16,7 @@
         "required_status_checks": [
           { "context": "Web Tests / web-required", "integration_id": null },
           { "context": "Core Packages Checks / core-packages-required", "integration_id": null },
-          { "context": "Deploy Video Server Preview / preview-required", "integration_id": null }
+          { "context": "Deploy Video Server Preview / video-server-preview-required", "integration_id": null }
         ]
       }
     }
