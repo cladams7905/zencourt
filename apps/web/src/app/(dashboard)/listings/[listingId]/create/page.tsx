@@ -5,8 +5,8 @@ import {
   getListingImages,
   mapListingImageToDisplayItem
 } from "@web/src/server/models/listingImages";
-import { getAllCachedListingContentForFilter } from "@web/src/server/infra/cache/listingContent";
-import type { ListingMediaType } from "@web/src/server/infra/cache/listingContent";
+import { getAllCachedListingContentForFilter } from "@web/src/server/infra/cache/listingContent/cache";
+import type { ListingMediaType } from "@web/src/server/infra/cache/listingContent/cache";
 import { getListingVideoStatus } from "@web/src/server/services/videoGeneration";
 import { ListingCreateView } from "@web/src/components/listings/create/components";
 import type { ContentItem } from "@web/src/components/dashboard/components/ContentGrid";

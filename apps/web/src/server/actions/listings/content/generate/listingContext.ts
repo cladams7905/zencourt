@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import type { ListingPropertyDetails } from "@shared/types/models";
-import { buildListingContentCacheKey } from "@web/src/server/infra/cache/listingContent";
+import { buildListingContentCacheKey } from "@web/src/server/infra/cache/listingContent/cache";
 import type {
   ListingGenerationContext,
   ValidatedGenerateParams

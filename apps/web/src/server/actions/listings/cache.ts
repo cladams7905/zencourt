@@ -1,7 +1,7 @@
 "use server";
 
 import { LISTING_CONTENT_SUBCATEGORIES } from "@shared/types/models";
-import { deleteCachedListingContentItem as deleteCachedListingContentItemService } from "@web/src/server/infra/cache/listingContent";
+import { deleteCachedListingContentItem as deleteCachedListingContentItemService } from "@web/src/server/infra/cache/listingContent/cache";
 import { DomainValidationError } from "@web/src/server/errors/domain";
 import { requireAuthenticatedUser } from "@web/src/server/actions/_auth/api";
 import { requireListingAccess } from "@web/src/server/models/listings/access";

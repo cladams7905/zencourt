@@ -106,18 +106,16 @@ export function DevSingleTemplateRender({
                   value={option.id}
                   textValue={option.id}
                   itemText={option.id}
+                  itemContentOrder="childrenFirst"
                 >
-                  <div className="flex items-center gap-2">
-                    {option.thumbnailUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element -- dev-only template thumbnails
-                      <img
-                        src={option.thumbnailUrl}
-                        alt=""
-                        className="h-12 w-12 rounded object-cover"
-                      />
-                    ) : null}
-                    <span>{option.id}</span>
-                  </div>
+                  {option.thumbnailUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- dev-only template thumbnails
+                    <img
+                      src={option.thumbnailUrl}
+                      alt=""
+                      className="h-12 w-12 rounded object-cover"
+                    />
+                  ) : null}
                 </SelectItem>
               ))}
             </SelectContent>

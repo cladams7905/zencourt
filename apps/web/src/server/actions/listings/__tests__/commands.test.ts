@@ -52,7 +52,7 @@ jest.mock("@web/src/server/services/storage/urlResolution", () => ({
     (mockIsManagedStorageUrl as (...a: unknown[]) => unknown)(...args)
 }));
 
-jest.mock("@web/src/server/infra/cache/listingContent", () => ({
+jest.mock("@web/src/server/infra/cache/listingContent/cache", () => ({
   deleteCachedListingContentItem: (...args: unknown[]) =>
     (mockDeleteCachedListingContentItemService as (...a: unknown[]) => unknown)(
       ...args

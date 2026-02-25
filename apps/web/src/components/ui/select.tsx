@@ -102,10 +102,16 @@ function SelectItem({
   className,
   children,
   itemText,
+  itemContentOrder = "textFirst",
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Item> & {
   itemText?: string;
+  /** When both itemText and children are set: "childrenFirst" renders image/custom content left, text right. Default "textFirst". */
+  itemContentOrder?: "textFirst" | "childrenFirst";
 }) {
+  const itemTextContent = itemText ?? children;
+  const showChildren = itemText ? children : null;
+  const textFirst = itemContentOrder === "textFirst";
   return (
     <SelectPrimitive.Item
       data-slot="select-item"
@@ -120,8 +126,17 @@ function SelectItem({
           <CheckIcon className="size-4" />
         </SelectPrimitive.ItemIndicator>
       </span>
-      <SelectPrimitive.ItemText>{itemText ?? children}</SelectPrimitive.ItemText>
-      {itemText ? children : null}
+      {textFirst ? (
+        <>
+          <SelectPrimitive.ItemText>{itemTextContent}</SelectPrimitive.ItemText>
+          {showChildren}
+        </>
+      ) : (
+        <>
+          {showChildren}
+          <SelectPrimitive.ItemText>{itemTextContent}</SelectPrimitive.ItemText>
+        </>
+      )}
     </SelectPrimitive.Item>
   );
 }
