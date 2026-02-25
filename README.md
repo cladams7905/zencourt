@@ -36,6 +36,9 @@ These package boundaries are enforced with package-local ESLint rules and CI che
 
 `apps/web` follows strict layering:
 
+- `components/*`
+  - UI/presentational-first
+  - Must not import server models/services
 - `app/api/v1/*/route.ts`
   - Parse HTTP input
   - Call `server/actions/*`
@@ -50,9 +53,6 @@ These package boundaries are enforced with package-local ESLint rules and CI che
   - Must not import actions
 - `server/models/*`
   - DB access only
-- `components/*`
-  - UI/presentational-first
-  - Must not import server models/services
 
 Import guardrails in `apps/web`:
 
