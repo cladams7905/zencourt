@@ -1,6 +1,10 @@
 "use server";
 
 import { withServerActionCaller } from "@web/src/server/infra/logger/callContext";
+import {
+  createChildLogger,
+  logger as baseLogger
+} from "@web/src/lib/core/logging/logger";
 import type { InsertDBUserAdditional } from "@db/types/models";
 import { requireAuthenticatedUser } from "@web/src/server/actions/_auth/api";
 import { db, eq, userAdditional } from "@db/client";
@@ -21,8 +25,10 @@ import type {
 import storageService from "@web/src/server/services/storage";
 import { upsertUserAdditional } from "@web/src/server/models/userAdditional/helpers";
 
+const logger = createChildLogger(baseLogger, { module: "user-actions" });
+
 export const updateCurrentUserProfile = withServerActionCaller(
-  "serverAction:updateCurrentUserProfile",
+  "updateCurrentUserProfile",
   async (updates: UserProfileUpdates) => {
     const user = await requireAuthenticatedUser();
     return updateUserProfile(user.id, updates);
@@ -30,7 +36,7 @@ export const updateCurrentUserProfile = withServerActionCaller(
 );
 
 export const ensureCurrentUserGoogleHeadshot = withServerActionCaller(
-  "serverAction:ensureCurrentUserGoogleHeadshot",
+  "ensureCurrentUserGoogleHeadshot",
   async (googleImageUrl: string) => {
     const user = await requireAuthenticatedUser();
     if (!googleImageUrl) {
@@ -48,6 +54,10 @@ export const ensureCurrentUserGoogleHeadshot = withServerActionCaller(
 
     const response = await fetch(googleImageUrl, { cache: "no-store" });
     if (!response.ok) {
+      logger.warn(
+        { userId: user.id, status: response.status },
+        "Failed to download Google headshot"
+      );
       throw new Error("Failed to download Google headshot");
     }
 
@@ -70,6 +80,10 @@ export const ensureCurrentUserGoogleHeadshot = withServerActionCaller(
     });
 
     if (!uploadResult.success || !uploadResult.url) {
+      logger.warn(
+        { userId: user.id, error: uploadResult.error ?? null },
+        "Failed to upload Google headshot"
+      );
       throw new Error(uploadResult.error || "Headshot upload failed");
     }
 
@@ -87,7 +101,7 @@ export const ensureCurrentUserGoogleHeadshot = withServerActionCaller(
 );
 
 export const updateCurrentUserLocation = withServerActionCaller(
-  "serverAction:updateCurrentUserLocation",
+  "updateCurrentUserLocation",
   async (
     location: InsertDBUserAdditional["location"],
     details?: {
@@ -104,7 +118,7 @@ export const updateCurrentUserLocation = withServerActionCaller(
 );
 
 export const updateCurrentUserTargetAudiences = withServerActionCaller(
-  "serverAction:updateCurrentUserTargetAudiences",
+  "updateCurrentUserTargetAudiences",
   async (
     targetAudiences: NonNullable<InsertDBUserAdditional["targetAudiences"]>,
     audienceDescription?: InsertDBUserAdditional["audienceDescription"]
@@ -115,7 +129,7 @@ export const updateCurrentUserTargetAudiences = withServerActionCaller(
 );
 
 export const updateCurrentUserWritingStyle = withServerActionCaller(
-  "serverAction:updateCurrentUserWritingStyle",
+  "updateCurrentUserWritingStyle",
   async (updates: WritingStyleUpdates) => {
     const user = await requireAuthenticatedUser();
     return updateWritingStyle(user.id, updates);
@@ -123,7 +137,7 @@ export const updateCurrentUserWritingStyle = withServerActionCaller(
 );
 
 export const markCurrentUserWritingStyleCompleted = withServerActionCaller(
-  "serverAction:markCurrentUserWritingStyleCompleted",
+  "markCurrentUserWritingStyleCompleted",
   async () => {
     const user = await requireAuthenticatedUser();
     return markWritingStyleCompleted(user.id);
@@ -131,7 +145,7 @@ export const markCurrentUserWritingStyleCompleted = withServerActionCaller(
 );
 
 export const markCurrentUserProfileCompleted = withServerActionCaller(
-  "serverAction:markCurrentUserProfileCompleted",
+  "markCurrentUserProfileCompleted",
   async () => {
     const user = await requireAuthenticatedUser();
     return markProfileCompleted(user.id);
@@ -139,7 +153,7 @@ export const markCurrentUserProfileCompleted = withServerActionCaller(
 );
 
 export const completeCurrentUserWelcomeSurvey = withServerActionCaller(
-  "serverAction:completeCurrentUserWelcomeSurvey",
+  "completeCurrentUserWelcomeSurvey",
   async (updates: WelcomeSurveyUpdates) => {
     const user = await requireAuthenticatedUser();
     return completeWelcomeSurvey(user.id, updates);

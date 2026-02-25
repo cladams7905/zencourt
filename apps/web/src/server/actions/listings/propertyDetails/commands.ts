@@ -93,7 +93,7 @@ export async function saveListingPropertyDetails(
 }
 
 export const fetchPropertyDetailsForCurrentUser = withServerActionCaller(
-  "serverAction:fetchPropertyDetailsForCurrentUser",
+  "fetchPropertyDetailsForCurrentUser",
   async (listingId: string, addressOverride?: string | null) => {
     const user = await requireAuthenticatedUser();
     return fetchPropertyDetails(user.id, listingId, addressOverride);
@@ -101,7 +101,7 @@ export const fetchPropertyDetailsForCurrentUser = withServerActionCaller(
 );
 
 export const saveListingPropertyDetailsForCurrentUser = withServerActionCaller(
-  "serverAction:saveListingPropertyDetailsForCurrentUser",
+  "saveListingPropertyDetailsForCurrentUser",
   async (listingId: string, propertyDetails: ListingPropertyDetails) => {
     const user = await requireAuthenticatedUser();
     return saveListingPropertyDetails(user.id, listingId, propertyDetails);

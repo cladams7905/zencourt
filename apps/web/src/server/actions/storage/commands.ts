@@ -24,7 +24,7 @@ async function requireStorageActor() {
 }
 
 export const uploadFile = withServerActionCaller(
-  "serverAction:uploadFile",
+  "uploadFile",
   async (file: File, folder: string): Promise<string> => {
     await requireStorageActor();
 
@@ -53,7 +53,7 @@ export const uploadFile = withServerActionCaller(
 );
 
 export const uploadFileFromBuffer = withServerActionCaller(
-  "serverAction:uploadFileFromBuffer",
+  "uploadFileFromBuffer",
   async (args: {
     fileBuffer: ArrayBuffer;
     fileName: string;
@@ -84,7 +84,7 @@ async function uploadFileFromBufferTrusted(args: {
 }
 
 export const uploadCurrentUserBrandingAssetFromBuffer = withServerActionCaller(
-  "serverAction:uploadCurrentUserBrandingAssetFromBuffer",
+  "uploadCurrentUserBrandingAssetFromBuffer",
   async (args: {
     fileBuffer: ArrayBuffer;
     fileName: string;
@@ -99,7 +99,7 @@ export const uploadCurrentUserBrandingAssetFromBuffer = withServerActionCaller(
 );
 
 export const uploadFilesBatch = withServerActionCaller(
-  "serverAction:uploadFilesBatch",
+  "uploadFilesBatch",
   async (
     files: File[],
     folder: string,
@@ -136,7 +136,7 @@ export const uploadFilesBatch = withServerActionCaller(
 );
 
 export const deleteFile = withServerActionCaller(
-  "serverAction:deleteFile",
+  "deleteFile",
   async (url: string): Promise<void> => {
     await requireStorageActor();
 

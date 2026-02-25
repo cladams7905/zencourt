@@ -6,7 +6,7 @@ import { getOrCreateUserAdditional } from "@web/src/server/models/userAdditional
 import { getUserListings } from "@web/src/server/models/listings";
 
 export const getCurrentUserSidebarData = withServerActionCaller(
-  "serverAction:getCurrentUserSidebarData",
+  "getCurrentUserSidebarData",
   async () => {
     const user = await getUser();
     if (!user) {

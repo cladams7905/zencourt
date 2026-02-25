@@ -25,7 +25,7 @@ function parseVideoGenerateRequest(body: unknown): VideoGenerateRequest {
 }
 
 export const startListingVideoGeneration = withServerActionCaller(
-  "serverAction:startListingVideoGeneration",
+  "startListingVideoGeneration",
   async (body: unknown) => {
     const user = await requireAuthenticatedUser();
     const parsed = parseVideoGenerateRequest(body);
@@ -42,7 +42,7 @@ export const startListingVideoGeneration = withServerActionCaller(
 );
 
 export const cancelListingVideoGeneration = withServerActionCaller(
-  "serverAction:cancelListingVideoGeneration",
+  "cancelListingVideoGeneration",
   async (listingId: string, reason?: string) => {
     const user = await requireAuthenticatedUser();
     await requireListingAccess(listingId, user.id);

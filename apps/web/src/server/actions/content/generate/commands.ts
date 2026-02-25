@@ -7,7 +7,7 @@ import type { PromptAssemblyInput } from "@web/src/lib/ai/prompts/engine/assembl
 import { DomainValidationError } from "@web/src/server/errors/domain";
 
 export const generateContentForCurrentUser = withServerActionCaller(
-  "serverAction:generateContentForCurrentUser",
+  "generateContentForCurrentUser",
   async (body: PromptAssemblyInput | null) => {
     if (!body?.category) {
       throw new DomainValidationError("category is required");

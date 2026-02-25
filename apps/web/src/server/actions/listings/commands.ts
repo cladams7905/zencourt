@@ -22,7 +22,7 @@ import type {
 import { prepareListingImageUploadUrls } from "@web/src/server/services/storage/uploadPreparation";
 
 export const createListingForCurrentUser = withServerActionCaller(
-  "serverAction:createListingForCurrentUser",
+  "createListingForCurrentUser",
   async () => {
     const user = await requireAuthenticatedUser();
     return createListing(user.id);
@@ -30,86 +30,90 @@ export const createListingForCurrentUser = withServerActionCaller(
 );
 
 export const updateListingForCurrentUser = withServerActionCaller(
-  "serverAction:updateListingForCurrentUser",
+  "updateListingForCurrentUser",
   async (listingId: string, updates: UpdateListingInput) => {
     const user = await requireAuthenticatedUser();
     return updateListing(user.id, listingId, updates);
   }
 );
 
-export async function getListingImageUploadUrlsForCurrentUser(
-  listingId: string,
-  files: ListingImageUploadRequest[]
-) {
-  const user = await requireAuthenticatedUser();
-  await requireListingAccess(listingId, user.id);
-  const existingImages = await getListingImages(user.id, listingId);
-  return prepareListingImageUploadUrls(
-    user.id,
-    listingId,
-    files,
-    existingImages.length
-  );
-}
+export const getListingImageUploadUrlsForCurrentUser = withServerActionCaller(
+  "getListingImageUploadUrlsForCurrentUser",
+  async (listingId: string, files: ListingImageUploadRequest[]) => {
+    const user = await requireAuthenticatedUser();
+    await requireListingAccess(listingId, user.id);
+    const existingImages = await getListingImages(user.id, listingId);
+    return prepareListingImageUploadUrls(
+      user.id,
+      listingId,
+      files,
+      existingImages.length
+    );
+  }
+);
 
 export const createListingImageRecordsForCurrentUser = withServerActionCaller(
-  "serverAction:createListingImageRecordsForCurrentUser",
+  "createListingImageRecordsForCurrentUser",
   async (listingId: string, uploads: ListingImageRecordInput[]) => {
     const user = await requireAuthenticatedUser();
     return createListingImageRecords(user.id, listingId, uploads);
   }
 );
 
-export async function updateListingImageAssignmentsForCurrentUser(
-  listingId: string,
-  updates: ListingImageUpdate[],
-  deletions: string[]
-) {
-  const user = await requireAuthenticatedUser();
-  const deletionUrls =
-    deletions.length > 0
-      ? await getListingImageUrlsByIds(user.id, listingId, deletions)
-      : [];
-  const result = await updateListingImageAssignments(
-    user.id,
-    listingId,
-    updates,
-    deletions
+export const updateListingImageAssignmentsForCurrentUser =
+  withServerActionCaller(
+    "updateListingImageAssignmentsForCurrentUser",
+    async (
+      listingId: string,
+      updates: ListingImageUpdate[],
+      deletions: string[]
+    ) => {
+      const user = await requireAuthenticatedUser();
+      const deletionUrls =
+        deletions.length > 0
+          ? await getListingImageUrlsByIds(user.id, listingId, deletions)
+          : [];
+      const result = await updateListingImageAssignments(
+        user.id,
+        listingId,
+        updates,
+        deletions
+      );
+
+      if (deletionUrls.length > 0) {
+        await deleteStorageUrlsOrThrow(
+          deletionUrls.filter((url) => isManagedStorageUrl(url)),
+          "Failed to delete listing image"
+        );
+      }
+
+      return result;
+    }
   );
 
-  if (deletionUrls.length > 0) {
+export const deleteListingImageUploadsForCurrentUser = withServerActionCaller(
+  "deleteListingImageUploadsForCurrentUser",
+  async (listingId: string, urls: string[]) => {
+    const user = await requireAuthenticatedUser();
+    await requireListingAccess(listingId, user.id);
     await deleteStorageUrlsOrThrow(
-      deletionUrls.filter((url) => isManagedStorageUrl(url)),
-      "Failed to delete listing image"
+      urls.filter((url) => isManagedStorageUrl(url)),
+      "Failed to clean up listing uploads."
     );
   }
-
-  return result;
-}
+);
 
 export const assignPrimaryListingImageForCategoryForCurrentUser =
   withServerActionCaller(
-    "serverAction:assignPrimaryListingImageForCategoryForCurrentUser",
+    "assignPrimaryListingImageForCategoryForCurrentUser",
     async (listingId: string, category: string) => {
       const user = await requireAuthenticatedUser();
       return assignPrimaryListingImageForCategory(user.id, listingId, category);
     }
   );
 
-export async function deleteListingImageUploadsForCurrentUser(
-  listingId: string,
-  urls: string[]
-) {
-  const user = await requireAuthenticatedUser();
-  await requireListingAccess(listingId, user.id);
-  await deleteStorageUrlsOrThrow(
-    urls.filter((url) => isManagedStorageUrl(url)),
-    "Failed to clean up listing uploads."
-  );
-}
-
 export const getListingImagesForCurrentUser = withServerActionCaller(
-  "serverAction:getListingImagesForCurrentUser",
+  "getListingImagesForCurrentUser",
   async (listingId: string) => {
     const user = await requireAuthenticatedUser();
     return getListingImages(user.id, listingId);

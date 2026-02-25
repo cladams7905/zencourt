@@ -16,7 +16,7 @@ export type DeleteCachedListingContentItemParams = {
 };
 
 export const deleteCachedListingContentItem = withServerActionCaller(
-  "serverAction:deleteCachedListingContentItem",
+  "deleteCachedListingContentItem",
   async (listingId: string, params: DeleteCachedListingContentItemParams) => {
     const user = await requireAuthenticatedUser();
     await requireListingAccess(listingId, user.id);

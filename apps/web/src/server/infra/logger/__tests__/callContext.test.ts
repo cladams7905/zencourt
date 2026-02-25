@@ -53,29 +53,23 @@ describe("callContext", () => {
 
   describe("withServerActionCaller", () => {
     it("wraps async fn and returns result", async () => {
-      const action = withServerActionCaller(
-        "serverAction:test",
-        async (x: number) => x * 2
-      );
+      const action = withServerActionCaller("test", async (x: number) => x * 2);
       const result = await action(21);
       expect(result).toBe(42);
     });
 
     it("sets caller context during execution", async () => {
-      const action = withServerActionCaller(
-        "serverAction:myAction",
-        async () => {
-          const ctx = getCallContext();
-          expect(ctx?.caller).toBe("myAction");
-          return "ok";
-        }
-      );
+      const action = withServerActionCaller("myAction", async () => {
+        const ctx = getCallContext();
+        expect(ctx?.caller).toBe("myAction");
+        return "ok";
+      });
       await action();
     });
 
     it("passes args through", async () => {
       const action = withServerActionCaller(
-        "serverAction:add",
+        "add",
         async (a: number, b: number) => a + b
       );
       expect(await action(1, 2)).toBe(3);
