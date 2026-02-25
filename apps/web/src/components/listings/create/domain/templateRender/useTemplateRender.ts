@@ -18,6 +18,9 @@ type UseTemplateRenderParams = {
   activeMediaTab: ListingCreateMediaTab;
   captionItems: ContentItem[];
   isGenerating: boolean;
+  /** When set (e.g. dev single-template), render stream uses this template id. Cleared after request. */
+  templateIdForRender?: string;
+  clearTemplateIdForRender?: () => void;
 };
 
 type UseTemplateRenderResult = {
@@ -130,6 +133,8 @@ async function runTemplateRenderRequest(params: {
   signal: AbortSignal;
   setPreviewItems: React.Dispatch<React.SetStateAction<ListingImagePreviewItem[]>>;
   setRenderError: React.Dispatch<React.SetStateAction<string | null>>;
+  templateIdForRender?: string;
+  clearTemplateIdForRender?: () => void;
 }): Promise<void> {
   const {
     listingId,
@@ -141,19 +146,31 @@ async function runTemplateRenderRequest(params: {
     requestRef,
     signal,
     setPreviewItems,
-    setRenderError
+    setRenderError,
+    templateIdForRender,
+    clearTemplateIdForRender
   } = params;
+
+  const body: {
+    subcategory: ListingContentSubcategory;
+    captionItems: TemplateRenderCaptionItemInput[];
+    templateCount: number;
+    templateId?: string;
+  } = {
+    subcategory: activeSubcategory,
+    captionItems: captionItemsNeedingRender,
+    templateCount: templateIdForRender ? 1 : captionItemsNeedingRender.length
+  };
+  if (templateIdForRender?.trim()) {
+    body.templateId = templateIdForRender.trim();
+  }
 
   const response = await fetchStreamResponse(
     `/api/v1/listings/${listingId}/templates/render/stream`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        subcategory: activeSubcategory,
-        captionItems: captionItemsNeedingRender,
-        templateCount: captionItemsNeedingRender.length
-      }),
+      body: JSON.stringify(body),
       cache: "no-store",
       signal
     },
@@ -197,6 +214,8 @@ async function runTemplateRenderRequest(params: {
       break;
     }
   }
+
+  clearTemplateIdForRender?.();
 }
 
 function handleTemplateRenderRequestError(params: {
@@ -237,7 +256,9 @@ export function useTemplateRender(
     activeSubcategory,
     activeMediaTab,
     captionItems,
-    isGenerating
+    isGenerating,
+    templateIdForRender,
+    clearTemplateIdForRender
   } = params;
 
   const [previewItemsBySubcategory, setPreviewItemsBySubcategory] =
@@ -329,7 +350,9 @@ export function useTemplateRender(
           requestRef,
           signal: controller.signal,
           setPreviewItems: setPreviewItemsForCurrentSubcategory,
-          setRenderError
+          setRenderError,
+          templateIdForRender,
+          clearTemplateIdForRender
         });
       } catch (error) {
         handleTemplateRenderRequestError({
@@ -358,7 +381,9 @@ export function useTemplateRender(
     isGenerating,
     consideredIdsKey,
     templateCaptionItems,
-    setPreviewItemsForCurrentSubcategory
+    setPreviewItemsForCurrentSubcategory,
+    templateIdForRender,
+    clearTemplateIdForRender
   ]);
 
   return {

@@ -4,16 +4,13 @@ jest.mock("@web/src/server/infra/cache/redis", () => ({
 
 import { getSharedRedisClient } from "@web/src/server/infra/cache/redis";
 import {
-  buildListingContentCacheKey,
   buildListingContentItemKey,
   deleteCachedListingContentItem,
   getAllCachedListingContentForFilter,
-  getCachedListingContent,
   getCachedListingContentItem,
   getListingContentFilterPrefix,
   LISTING_CONTENT_CACHE_PREFIX,
   LISTING_CONTENT_CACHE_TTL_SECONDS,
-  setCachedListingContent,
   setCachedListingContentItem,
   updateRenderedPreviewForItem
 } from "../cache";
@@ -31,19 +28,6 @@ describe("listingContent cache", () => {
     mockedGetSharedRedisClient.mockReset();
   });
 
-  it("builds cache key with expected prefix", () => {
-    const key = buildListingContentCacheKey({
-      ...baseParams,
-      focus: "",
-      notes: "",
-      generation_nonce: "",
-      propertyFingerprint: "abc123"
-    });
-    expect(
-      key.startsWith(`${LISTING_CONTENT_CACHE_PREFIX}:user-1:listing-1`)
-    ).toBe(true);
-  });
-
   it("builds item key and filter prefix", () => {
     const key = buildListingContentItemKey({
       ...baseParams,
@@ -57,56 +41,6 @@ describe("listingContent cache", () => {
     const prefix = getListingContentFilterPrefix(baseParams);
     expect(prefix).toBe(
       `${LISTING_CONTENT_CACHE_PREFIX}:user-1:listing-1:new_listing:video`
-    );
-  });
-
-  it("returns null when single-list cache is unavailable or empty", async () => {
-    mockedGetSharedRedisClient.mockReturnValue(null);
-    await expect(getCachedListingContent("cache-key")).resolves.toBeNull();
-
-    mockedGetSharedRedisClient.mockReturnValue({
-      get: jest.fn().mockResolvedValue([])
-    } as unknown as ReturnType<typeof getSharedRedisClient>);
-    await expect(getCachedListingContent("cache-key")).resolves.toBeNull();
-  });
-
-  it("returns cached generated items when present", async () => {
-    const cached = [
-      {
-        hook: "Hook",
-        broll_query: "broll",
-        body: null,
-        cta: null,
-        caption: "caption"
-      }
-    ];
-    mockedGetSharedRedisClient.mockReturnValue({
-      get: jest.fn().mockResolvedValue(cached)
-    } as unknown as ReturnType<typeof getSharedRedisClient>);
-
-    await expect(getCachedListingContent("cache-key")).resolves.toEqual(cached);
-  });
-
-  it("writes single-list cache with configured ttl", async () => {
-    const set = jest.fn().mockResolvedValue("OK");
-    mockedGetSharedRedisClient.mockReturnValue({
-      set
-    } as unknown as ReturnType<typeof getSharedRedisClient>);
-
-    await setCachedListingContent("cache-key", [
-      {
-        hook: "Hook",
-        broll_query: "broll",
-        body: null,
-        cta: null,
-        caption: "caption"
-      }
-    ]);
-
-    expect(set).toHaveBeenCalledWith(
-      "cache-key",
-      expect.any(Array),
-      { ex: LISTING_CONTENT_CACHE_TTL_SECONDS }
     );
   });
 

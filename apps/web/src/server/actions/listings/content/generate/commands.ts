@@ -7,11 +7,7 @@ import {
   logger as baseLogger
 } from "@web/src/lib/core/logging/logger";
 import { requireListingAccess } from "@web/src/server/models/listings/access";
-import {
-  getCachedListingContent,
-  setCachedListingContent,
-  setCachedListingContentItem
-} from "@web/src/server/infra/cache/listingContent/cache";
+import { setCachedListingContentItem } from "@web/src/server/infra/cache/listingContent/cache";
 import { runContentGenerationForUser } from "@web/src/server/actions/content/generate/helpers";
 import {
   buildUpstreamRequestBody,
@@ -44,23 +40,6 @@ export async function generateListingContentForCurrentUser(
   const validated = parseAndValidateParams(body, listingId);
   const context = resolveListingContext(listing, validated);
 
-  const cachedItems = await getCachedListingContent(context.cacheKey);
-  if (cachedItems && cachedItems.length > 0) {
-    const stream = new ReadableStream({
-      start(controller) {
-        controller.enqueue(
-          encodeSseEvent({
-            type: "done",
-            items: cachedItems,
-            meta: { model: "cache", batch_size: cachedItems.length }
-          })
-        );
-        controller.close();
-      }
-    });
-    return { stream, status: 200 };
-  }
-
   const upstreamBody = buildUpstreamRequestBody(context);
   const upstreamResponse = await runContentGenerationForUser(
     user.id,
@@ -82,7 +61,6 @@ export async function generateListingContentForCurrentUser(
             } else if (event.type === "done") {
               doneItems = event.items;
               if (!errored && doneItems && doneItems.length > 0) {
-                await setCachedListingContent(context.cacheKey, doneItems);
                 const timestamp = Date.now();
 
                 if (context.mediaType === "video") {

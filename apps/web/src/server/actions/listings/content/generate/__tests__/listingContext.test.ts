@@ -5,7 +5,7 @@ jest.mock("@web/src/server/infra/cache/redis", () => ({
 import { resolveListingContext } from "../listingContext";
 
 describe("listingContext", () => {
-  it("resolves context with address parts and cache key", () => {
+  it("resolves context with address parts", () => {
       const listing = {
         id: "listing-1",
         userId: "user-1",
@@ -28,7 +28,6 @@ describe("listingContext", () => {
         state: "TX",
         zipCode: "78701"
       });
-      expect(ctx.cacheKey).toMatch(/^listing-content:user-1:listing-1:new_listing:video:/);
     });
 
   it("builds deterministic property fingerprint for same details", () => {

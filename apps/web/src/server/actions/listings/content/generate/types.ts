@@ -37,7 +37,6 @@ export type ListingGenerationContext = {
   addressParts: { city: string; state: string; zipCode: string };
   resolvedState: string;
   propertyFingerprint: string;
-  cacheKey: string;
   subcategory: ListingContentSubcategory;
   mediaType: ListingMediaType;
   focus: string;
