@@ -22,7 +22,7 @@ jest.mock("@web/src/server/models/listings/access", () => ({
     (mockRequireListingAccess as (...a: unknown[]) => unknown)(...args)
 }));
 
-jest.mock("@web/src/server/infra/cache/listingContent", () => ({
+jest.mock("@web/src/server/infra/cache/listingContent/cache", () => ({
   getCachedListingContent: (...args: unknown[]) =>
     (mockGetCachedListingContent as (...a: unknown[]) => unknown)(...args),
   setCachedListingContent: (...args: unknown[]) =>

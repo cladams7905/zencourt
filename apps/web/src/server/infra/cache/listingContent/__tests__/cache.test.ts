@@ -5,7 +5,7 @@ jest.mock("@web/src/server/infra/cache/redis", () => ({
 import {
   buildListingContentCacheKey,
   LISTING_CONTENT_CACHE_PREFIX
-} from "..";
+} from "../cache";
 
 describe("listingContent cache", () => {
   it("builds cache key with expected prefix", () => {
@@ -19,8 +19,8 @@ describe("listingContent cache", () => {
       generation_nonce: "",
       propertyFingerprint: "abc123"
     });
-    expect(key.startsWith(`${LISTING_CONTENT_CACHE_PREFIX}:user-1:listing-1`)).toBe(
-      true
-    );
+    expect(
+      key.startsWith(`${LISTING_CONTENT_CACHE_PREFIX}:user-1:listing-1`)
+    ).toBe(true);
   });
 });

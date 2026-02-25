@@ -55,7 +55,7 @@ jest.mock("@web/src/server/models/userAdditional", () => ({
     (mockGetOrCreateUserAdditional as (...a: unknown[]) => unknown)(...args)
 }));
 
-jest.mock("@web/src/server/infra/cache/listingContent", () => ({
+jest.mock("@web/src/server/infra/cache/listingContent/cache", () => ({
   setCachedListingContentItem: (...args: unknown[]) =>
     (mockSetCachedListingContentItem as (...a: unknown[]) => unknown)(...args)
 }));

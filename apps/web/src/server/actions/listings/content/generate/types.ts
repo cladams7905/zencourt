@@ -5,7 +5,7 @@ import type {
 import type {
   ListingGeneratedItem,
   ListingMediaType
-} from "@web/src/server/infra/cache/listingContent";
+} from "@web/src/server/infra/cache/listingContent/cache";
 
 export type { ListingGeneratedItem, ListingMediaType };
 

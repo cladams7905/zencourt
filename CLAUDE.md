@@ -117,6 +117,41 @@ Keep component files exclusively presentational UI. Extract all other logic to d
 - Add/update behavior tests for route/action/service changes.
 - Keep route tests focused on route concerns (input parsing, action calls, response shaping).
 - Do not add tests that only verify barrel exports.
+- Write unit tests for business/domain logic by default.
+- Exemptions (do not require direct unit tests unless requested): `types`, `constants`, pure schema declaration files, and test-only mock/fixture utilities.
+- Prefer co-located tests that map directly to a single target file (avoid broad drift where a unit test implicitly validates many unrelated modules).
+
+## Review Workflow Directives
+
+When asked for a review/plan before implementation:
+
+- Review thoroughly before proposing code changes.
+- For each issue/recommendation, explain concrete tradeoffs and give an opinionated recommendation.
+- Ask for confirmation before assuming direction when multiple valid options exist.
+
+Review in this order:
+
+1. Architecture
+   - Boundaries, dependency graph/coupling, data flow, scaling/single points of failure, security boundaries.
+2. Code Quality
+   - Module organization, DRY violations, error handling/edge cases, technical debt, over/under-engineering.
+3. Tests
+   - Coverage gaps, assertion quality, missing edge cases, untested failure/error paths.
+4. Performance
+   - Query/access patterns, memory usage, caching opportunities, high-complexity code paths.
+
+For each issue found:
+
+- Describe the issue concretely with file/line references.
+- Present 2-3 options (including “do nothing” where reasonable).
+- For each option: implementation effort, risk, blast radius, maintenance impact.
+- Provide a recommended option mapped to the stated preferences.
+- Pause for user confirmation before proceeding when direction is non-trivial.
+
+Interaction rules:
+
+- Do not assume priority, timeline, or scope.
+- After each major section, pause and request feedback before continuing.
 
 ## Coverage Policy (Web)
 
