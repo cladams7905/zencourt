@@ -62,7 +62,14 @@ export function useListingCreateEffects(params: {
     next.set("filter", filterParam);
 
     const query = next.toString();
-    replaceUrl(query ? `${pathname}?${query}` : pathname);
+    const newUrl = query ? `${pathname}?${query}` : pathname;
+
+    if (!currentMediaType && !currentFilter) {
+      window.history.replaceState(null, "", newUrl);
+      return;
+    }
+
+    replaceUrl(newUrl);
   }, [activeMediaTab, activeSubcategory, pathname, replaceUrl]);
 
   React.useEffect(() => {

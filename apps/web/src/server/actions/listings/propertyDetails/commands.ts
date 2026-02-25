@@ -1,5 +1,6 @@
 "use server";
 
+import { withServerActionCaller } from "@web/src/server/infra/logger/callContext";
 import {
   fetchPropertyDetails as fetchPropertyDetailsFromService,
   buildPropertyDetailsRevision,
@@ -91,18 +92,18 @@ export async function saveListingPropertyDetails(
   });
 }
 
-export async function fetchPropertyDetailsForCurrentUser(
-  listingId: string,
-  addressOverride?: string | null
-) {
-  const user = await requireAuthenticatedUser();
-  return fetchPropertyDetails(user.id, listingId, addressOverride);
-}
+export const fetchPropertyDetailsForCurrentUser = withServerActionCaller(
+  "serverAction:fetchPropertyDetailsForCurrentUser",
+  async (listingId: string, addressOverride?: string | null) => {
+    const user = await requireAuthenticatedUser();
+    return fetchPropertyDetails(user.id, listingId, addressOverride);
+  }
+);
 
-export async function saveListingPropertyDetailsForCurrentUser(
-  listingId: string,
-  propertyDetails: ListingPropertyDetails
-) {
-  const user = await requireAuthenticatedUser();
-  return saveListingPropertyDetails(user.id, listingId, propertyDetails);
-}
+export const saveListingPropertyDetailsForCurrentUser = withServerActionCaller(
+  "serverAction:saveListingPropertyDetailsForCurrentUser",
+  async (listingId: string, propertyDetails: ListingPropertyDetails) => {
+    const user = await requireAuthenticatedUser();
+    return saveListingPropertyDetails(user.id, listingId, propertyDetails);
+  }
+);

@@ -151,7 +151,10 @@ export function createTemplateRenderer(
     }
 
     const raw = (await response.json()) as OrshotApiResponse;
-    logger.debug({ responseBody: responseForLog(raw) }, "Orshot render response");
+    logger.debug(
+      { responseBody: responseForLog(raw) },
+      "Orshot render response"
+    );
     const content = extractContentString(raw);
     if (!content) {
       logger.error(

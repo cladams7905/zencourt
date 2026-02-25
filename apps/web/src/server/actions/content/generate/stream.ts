@@ -19,6 +19,7 @@ import type { Redis } from "@web/src/server/infra/cache/redis";
 type Logger = {
   error: (payload: unknown, message: string) => void;
   info: (payload: unknown, message: string) => void;
+  debug: (payload: unknown, message: string) => void;
 };
 
 async function initializeAiStream(
@@ -172,7 +173,7 @@ async function updateRecentHooks(
     await redis.lpush(recentHooksKey, ...hooks);
     await redis.ltrim(recentHooksKey, 0, RECENT_HOOKS_MAX - 1);
     await redis.expire(recentHooksKey, RECENT_HOOKS_TTL_SECONDS);
-    logger.info(
+    logger.debug(
       { recentHooksKey, hookCount: hooks.length },
       "Updated recent hooks"
     );

@@ -1,5 +1,6 @@
 "use server";
 
+import { withServerActionCaller } from "@web/src/server/infra/logger/callContext";
 import type { VideoGenerateRequest } from "@shared/types/api";
 import { DomainValidationError } from "@web/src/server/errors/domain";
 import { requireAuthenticatedUser } from "@web/src/server/actions/_auth/api";
@@ -23,28 +24,31 @@ function parseVideoGenerateRequest(body: unknown): VideoGenerateRequest {
   };
 }
 
-export async function startListingVideoGeneration(body: unknown) {
-  const user = await requireAuthenticatedUser();
-  const parsed = parseVideoGenerateRequest(body);
-  const listing = await requireListingAccess(parsed.listingId, user.id);
-  const result = await startListingVideoGenerationHelper({
-    listingId: listing.id,
-    userId: user.id,
-    orientation: parsed.orientation,
-    aiDirections: parsed.aiDirections,
-    resolvePublicDownloadUrls: getPublicDownloadUrls
-  });
-  return { ...result, listingId: listing.id };
-}
+export const startListingVideoGeneration = withServerActionCaller(
+  "serverAction:startListingVideoGeneration",
+  async (body: unknown) => {
+    const user = await requireAuthenticatedUser();
+    const parsed = parseVideoGenerateRequest(body);
+    const listing = await requireListingAccess(parsed.listingId, user.id);
+    const result = await startListingVideoGenerationHelper({
+      listingId: listing.id,
+      userId: user.id,
+      orientation: parsed.orientation,
+      aiDirections: parsed.aiDirections,
+      resolvePublicDownloadUrls: getPublicDownloadUrls
+    });
+    return { ...result, listingId: listing.id };
+  }
+);
 
-export async function cancelListingVideoGeneration(
-  listingId: string,
-  reason?: string
-) {
-  const user = await requireAuthenticatedUser();
-  await requireListingAccess(listingId, user.id);
-  return cancelListingVideoGenerationHelper({
-    listingId,
-    reason
-  });
-}
+export const cancelListingVideoGeneration = withServerActionCaller(
+  "serverAction:cancelListingVideoGeneration",
+  async (listingId: string, reason?: string) => {
+    const user = await requireAuthenticatedUser();
+    await requireListingAccess(listingId, user.id);
+    return cancelListingVideoGenerationHelper({
+      listingId,
+      reason
+    });
+  }
+);

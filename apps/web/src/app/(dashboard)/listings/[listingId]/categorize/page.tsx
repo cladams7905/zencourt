@@ -1,8 +1,6 @@
 import { redirect } from "next/navigation";
-import {
-  getListingById,
-  updateListing
-} from "@web/src/server/models/listings";
+import { runWithCaller } from "@web/src/server/infra/logger/callContext";
+import { getListingById, updateListing } from "@web/src/server/models/listings";
 import {
   getListingImages,
   mapListingImageToDisplayItem
@@ -18,34 +16,36 @@ interface ListingCategorizePageProps {
 export default async function ListingCategorizePage({
   params
 }: ListingCategorizePageProps) {
-  const { listingId } = await params;
-  const user = await requireUserOrRedirect();
-  const googleMapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
+  return runWithCaller("listings/[id]/categorize", async () => {
+    const { listingId } = await params;
+    const user = await requireUserOrRedirect();
+    const googleMapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
 
-  if (!listingId?.trim()) {
-    redirect("/listings/sync");
-  }
+    if (!listingId?.trim()) {
+      redirect("/listings/sync");
+    }
 
-  const listing = await getListingById(user.id, listingId);
-  if (!listing) {
-    redirect("/listings/sync");
-  }
+    const listing = await getListingById(user.id, listingId);
+    if (!listing) {
+      redirect("/listings/sync");
+    }
 
-  redirectToListingStage(listingId, listing.listingStage, "categorize");
+    redirectToListingStage(listingId, listing.listingStage, "categorize");
 
-  await updateListing(user.id, listingId, { lastOpenedAt: new Date() });
+    await updateListing(user.id, listingId, { lastOpenedAt: new Date() });
 
-  const images = await getListingImages(user.id, listingId);
-  const imageItems = images.map(mapListingImageToDisplayItem);
+    const images = await getListingImages(user.id, listingId);
+    const imageItems = images.map(mapListingImageToDisplayItem);
 
-  return (
-    <ListingCategorizeView
-      title={listing.title?.trim() || "Listing"}
-      initialAddress={listing.address ?? ""}
-      listingId={listingId}
-      initialImages={imageItems}
-      googleMapsApiKey={googleMapsApiKey}
-      hasPropertyDetails={Boolean(listing.propertyDetails)}
-    />
-  );
+    return (
+      <ListingCategorizeView
+        title={listing.title?.trim() || "Listing"}
+        initialAddress={listing.address ?? ""}
+        listingId={listingId}
+        initialImages={imageItems}
+        googleMapsApiKey={googleMapsApiKey}
+        hasPropertyDetails={Boolean(listing.propertyDetails)}
+      />
+    );
+  });
 }

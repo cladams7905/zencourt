@@ -1,5 +1,6 @@
 "use server";
 
+import { withServerActionCaller } from "@web/src/server/infra/logger/callContext";
 import { requireAuthenticatedUser } from "@web/src/server/actions/_auth/api";
 import {
   createUserMediaRecords,
@@ -17,37 +18,42 @@ import type {
   UserMediaUploadRequest
 } from "@web/src/server/models/userMedia/types";
 
-export async function getUserMediaUploadUrlsForCurrentUser(
-  files: UserMediaUploadRequest[]
-) {
-  const user = await requireAuthenticatedUser();
-  return prepareUserMediaUploadUrls(user.id, files);
-}
-
-export async function createUserMediaRecordsForCurrentUser(
-  uploads: UserMediaRecordInput[]
-) {
-  const user = await requireAuthenticatedUser();
-  return createUserMediaRecords(
-    user.id,
-    mapUserMediaRecordInputs(user.id, uploads)
-  );
-}
-
-export async function deleteUserMediaForCurrentUser(mediaId: string) {
-  const user = await requireAuthenticatedUser();
-  const media = await getUserMediaById(user.id, mediaId);
-  await deleteUserMedia(user.id, mediaId);
-
-  if (!media) {
-    return;
+export const getUserMediaUploadUrlsForCurrentUser = withServerActionCaller(
+  "serverAction:getUserMediaUploadUrlsForCurrentUser",
+  async (files: UserMediaUploadRequest[]) => {
+    const user = await requireAuthenticatedUser();
+    return prepareUserMediaUploadUrls(user.id, files);
   }
+);
 
-  await deleteStorageUrlsOrThrow(
-    [media.url, media.thumbnailUrl].filter(
-      (url): url is string =>
-        typeof url === "string" && isManagedStorageUrl(url)
-    ),
-    "Failed to delete media file"
-  );
-}
+export const createUserMediaRecordsForCurrentUser = withServerActionCaller(
+  "serverAction:createUserMediaRecordsForCurrentUser",
+  async (uploads: UserMediaRecordInput[]) => {
+    const user = await requireAuthenticatedUser();
+    return createUserMediaRecords(
+      user.id,
+      mapUserMediaRecordInputs(user.id, uploads)
+    );
+  }
+);
+
+export const deleteUserMediaForCurrentUser = withServerActionCaller(
+  "serverAction:deleteUserMediaForCurrentUser",
+  async (mediaId: string) => {
+    const user = await requireAuthenticatedUser();
+    const media = await getUserMediaById(user.id, mediaId);
+    await deleteUserMedia(user.id, mediaId);
+
+    if (!media) {
+      return;
+    }
+
+    await deleteStorageUrlsOrThrow(
+      [media.url, media.thumbnailUrl].filter(
+        (url): url is string =>
+          typeof url === "string" && isManagedStorageUrl(url)
+      ),
+      "Failed to delete media file"
+    );
+  }
+);

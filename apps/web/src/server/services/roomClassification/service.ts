@@ -62,7 +62,7 @@ export class RoomClassification {
       return this.client;
     }
 
-    this.logger.info({}, "Creating new OpenAI client instance");
+    this.logger.debug({}, "Creating new OpenAI client instance");
     this.client = this.clientFactory();
     return this.client;
   }

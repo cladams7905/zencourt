@@ -58,6 +58,31 @@ describe("useListingCreateEffects", () => {
     );
   });
 
+  it("uses history.replaceState when URL has no params to avoid redundant server round-trip", () => {
+    window.history.replaceState({}, "", "/listings/l1/create");
+    const replaceUrl = jest.fn();
+
+    renderHook(() =>
+      useListingCreateEffects({
+        listingId: "l1",
+        pathname: "/listings/l1/create",
+        replaceUrl,
+        activeMediaTab: "videos",
+        activeSubcategory: "new_listing",
+        initialMediaTab: "videos",
+        initialSubcategory: "new_listing",
+        activeMediaItemsLength: 0,
+        isGenerating: false,
+        generationError: null,
+        templateRenderError: null,
+        generateSubcategoryContent: jest.fn().mockResolvedValue(undefined)
+      } as never)
+    );
+
+    expect(replaceUrl).not.toHaveBeenCalled();
+    expect(window.location.search).toBe("?mediaType=videos&filter=new_listing");
+  });
+
   it("triggers initial auto-generation when no active items", () => {
     const { generateSubcategoryContent } = renderEffects();
     expect(generateSubcategoryContent).toHaveBeenCalledWith("new_listing");

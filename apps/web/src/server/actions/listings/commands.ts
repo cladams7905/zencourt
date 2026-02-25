@@ -1,5 +1,6 @@
 "use server";
 
+import { withServerActionCaller } from "@web/src/server/infra/logger/callContext";
 import { requireAuthenticatedUser } from "@web/src/server/actions/_auth/api";
 import { createListing, updateListing } from "@web/src/server/models/listings";
 import { requireListingAccess } from "@web/src/server/models/listings/access";
@@ -20,18 +21,21 @@ import type {
 } from "@web/src/server/models/listingImages/types";
 import { prepareListingImageUploadUrls } from "@web/src/server/services/storage/uploadPreparation";
 
-export async function createListingForCurrentUser() {
-  const user = await requireAuthenticatedUser();
-  return createListing(user.id);
-}
+export const createListingForCurrentUser = withServerActionCaller(
+  "serverAction:createListingForCurrentUser",
+  async () => {
+    const user = await requireAuthenticatedUser();
+    return createListing(user.id);
+  }
+);
 
-export async function updateListingForCurrentUser(
-  listingId: string,
-  updates: UpdateListingInput
-) {
-  const user = await requireAuthenticatedUser();
-  return updateListing(user.id, listingId, updates);
-}
+export const updateListingForCurrentUser = withServerActionCaller(
+  "serverAction:updateListingForCurrentUser",
+  async (listingId: string, updates: UpdateListingInput) => {
+    const user = await requireAuthenticatedUser();
+    return updateListing(user.id, listingId, updates);
+  }
+);
 
 export async function getListingImageUploadUrlsForCurrentUser(
   listingId: string,
@@ -48,13 +52,13 @@ export async function getListingImageUploadUrlsForCurrentUser(
   );
 }
 
-export async function createListingImageRecordsForCurrentUser(
-  listingId: string,
-  uploads: ListingImageRecordInput[]
-) {
-  const user = await requireAuthenticatedUser();
-  return createListingImageRecords(user.id, listingId, uploads);
-}
+export const createListingImageRecordsForCurrentUser = withServerActionCaller(
+  "serverAction:createListingImageRecordsForCurrentUser",
+  async (listingId: string, uploads: ListingImageRecordInput[]) => {
+    const user = await requireAuthenticatedUser();
+    return createListingImageRecords(user.id, listingId, uploads);
+  }
+);
 
 export async function updateListingImageAssignmentsForCurrentUser(
   listingId: string,
@@ -83,13 +87,14 @@ export async function updateListingImageAssignmentsForCurrentUser(
   return result;
 }
 
-export async function assignPrimaryListingImageForCategoryForCurrentUser(
-  listingId: string,
-  category: string
-) {
-  const user = await requireAuthenticatedUser();
-  return assignPrimaryListingImageForCategory(user.id, listingId, category);
-}
+export const assignPrimaryListingImageForCategoryForCurrentUser =
+  withServerActionCaller(
+    "serverAction:assignPrimaryListingImageForCategoryForCurrentUser",
+    async (listingId: string, category: string) => {
+      const user = await requireAuthenticatedUser();
+      return assignPrimaryListingImageForCategory(user.id, listingId, category);
+    }
+  );
 
 export async function deleteListingImageUploadsForCurrentUser(
   listingId: string,
@@ -103,7 +108,10 @@ export async function deleteListingImageUploadsForCurrentUser(
   );
 }
 
-export async function getListingImagesForCurrentUser(listingId: string) {
-  const user = await requireAuthenticatedUser();
-  return getListingImages(user.id, listingId);
-}
+export const getListingImagesForCurrentUser = withServerActionCaller(
+  "serverAction:getListingImagesForCurrentUser",
+  async (listingId: string) => {
+    const user = await requireAuthenticatedUser();
+    return getListingImages(user.id, listingId);
+  }
+);

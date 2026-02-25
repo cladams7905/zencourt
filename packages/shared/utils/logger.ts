@@ -18,7 +18,20 @@ export interface LoggerOptions {
    * Additional base properties to include in all log entries
    */
   base?: Record<string, unknown>;
+
+  /**
+   * Optional function called on every log to add dynamic context (e.g. invokedBy from AsyncLocalStorage).
+   * Returned fields are merged into each log object.
+   */
+  contextMixin?: () => Record<string, unknown>;
+
+  /**
+   * Include default base metadata fields (`service`, `env`) in every log entry.
+   * Defaults to true.
+   */
+  includeDefaultBaseFields?: boolean;
 }
+
 
 /**
  * Create a Pino logger instance configured for the Zencourt monorepo
@@ -45,7 +58,13 @@ export interface LoggerOptions {
  * ```
  */
 export function createLogger(options: LoggerOptions): pino.Logger {
-  const { service, level, base = {} } = options;
+  const {
+    service,
+    level,
+    base = {},
+    contextMixin,
+    includeDefaultBaseFields = true
+  } = options;
   const nodeEnv = process.env.NODE_ENV || "development";
   const isDevelopment = nodeEnv === "development";
   const logLevel =
@@ -53,6 +72,40 @@ export function createLogger(options: LoggerOptions): pino.Logger {
 
   return pino({
     level: logLevel,
+
+    hooks: contextMixin
+      ? {
+          logMethod(inputArgs: unknown[], method: pino.LogFn, _level: number) {
+            const mixinObj = contextMixin();
+            const [first, ...rest] = inputArgs;
+            let obj: Record<string, unknown>;
+
+            if (
+              typeof first === "object" &&
+              first !== null &&
+              !Array.isArray(first)
+            ) {
+              obj =
+                Object.keys(mixinObj).length > 0
+                  ? { ...(first as Record<string, unknown>), ...mixinObj }
+                  : (first as Record<string, unknown>);
+            } else {
+              obj = Object.keys(mixinObj).length > 0 ? mixinObj : {};
+            }
+
+            const args =
+              typeof first === "object" &&
+              first !== null &&
+              !Array.isArray(first)
+                ? [obj, ...rest]
+                : Object.keys(obj).length > 0
+                  ? [obj, first, ...rest]
+                  : (inputArgs as [unknown, ...unknown[]]);
+
+            return (method as (...a: unknown[]) => void).apply(this, args);
+          }
+        }
+      : undefined,
 
     // Standard formatters
     formatters: {
@@ -63,11 +116,13 @@ export function createLogger(options: LoggerOptions): pino.Logger {
     timestamp: pino.stdTimeFunctions.isoTime,
 
     // Base context included in all logs
-    base: {
-      service,
-      env: nodeEnv,
-      ...base
-    },
+    base: includeDefaultBaseFields
+      ? {
+          service,
+          env: nodeEnv,
+          ...base
+        }
+      : base,
 
     // Pretty printing in development for readability
     transport: isDevelopment
@@ -75,8 +130,9 @@ export function createLogger(options: LoggerOptions): pino.Logger {
           target: "pino-pretty",
           options: {
             colorize: true,
-            translateTime: "HH:MM:ss Z",
-            ignore: "pid,hostname"
+            translateTime: "SYS:hh:MM:ss TT",
+            ignore: "pid,hostname",
+            messageFormat: "{msg}"
           }
         }
       : undefined
