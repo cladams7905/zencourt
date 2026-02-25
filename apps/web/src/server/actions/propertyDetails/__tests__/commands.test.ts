@@ -3,6 +3,7 @@ const mockUpdateListing = jest.fn();
 const mockFetchPropertyDetailsFromService = jest.fn();
 const mockFetchAndPersistPropertyDetails = jest.fn();
 const mockBuildPropertyDetailsRevision = jest.fn();
+const mockGetDefaultPropertyDetailsProvider = jest.fn();
 const mockRequireAuthenticatedUser = jest.fn();
 
 jest.mock("@web/src/server/models/listings", () => ({
@@ -18,7 +19,9 @@ jest.mock("@web/src/server/services/propertyDetails", () => ({
   fetchPropertyDetails: (...args: unknown[]) =>
     (mockFetchPropertyDetailsFromService as (...a: unknown[]) => unknown)(...args),
   buildPropertyDetailsRevision: (...args: unknown[]) =>
-    (mockBuildPropertyDetailsRevision as (...a: unknown[]) => unknown)(...args)
+    (mockBuildPropertyDetailsRevision as (...a: unknown[]) => unknown)(...args),
+  getDefaultPropertyDetailsProvider: (...args: unknown[]) =>
+    (mockGetDefaultPropertyDetailsProvider as (...a: unknown[]) => unknown)(...args)
 }));
 
 jest.mock("@web/src/server/auth/apiAuth", () => ({
@@ -40,7 +43,12 @@ describe("listingProperty actions", () => {
     mockFetchPropertyDetailsFromService.mockReset();
     mockFetchAndPersistPropertyDetails.mockReset();
     mockBuildPropertyDetailsRevision.mockReset();
+    mockGetDefaultPropertyDetailsProvider.mockReset();
     mockRequireAuthenticatedUser.mockReset();
+    mockGetDefaultPropertyDetailsProvider.mockReturnValue({
+      name: "perplexity",
+      fetch: jest.fn()
+    });
   });
 
   it("validates required params", async () => {
@@ -82,7 +90,8 @@ describe("listingProperty actions", () => {
     expect(mockFetchAndPersistPropertyDetails).toHaveBeenCalledWith({
       userId: "u1",
       listingId: "l1",
-      addressOverride: undefined
+      addressOverride: undefined,
+      provider: expect.objectContaining({ name: "perplexity", fetch: expect.any(Function) })
     });
   });
 
@@ -108,7 +117,8 @@ describe("listingProperty actions", () => {
       expect(mockFetchAndPersistPropertyDetails).toHaveBeenCalledWith({
         userId: "current-user",
         listingId: "l1",
-        addressOverride: undefined
+        addressOverride: undefined,
+        provider: expect.objectContaining({ name: "perplexity", fetch: expect.any(Function) })
       });
     });
 

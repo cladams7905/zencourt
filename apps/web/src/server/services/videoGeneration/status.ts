@@ -5,10 +5,12 @@ import type {
   VideoJobUpdateEvent
 } from "@web/src/lib/domain/listing/videoStatus";
 import { isPriorityCategory } from "@shared/utils";
-import { getPublicDownloadUrlSafe } from "@web/src/server/services/storage/urlResolution";
 
 export async function getListingVideoStatus(
-  listingId: string
+  listingId: string,
+  resolvePublicDownloadUrlSafe: (
+    url: string | null
+  ) => string | null | undefined = () => null
 ): Promise<InitialVideoStatusPayload> {
   const latestVideoResult = await db
     .select({
@@ -41,26 +43,27 @@ export async function getListingVideoStatus(
       .orderBy(asc(videoGenJobs.createdAt));
 
     jobs = jobRows.map((job) => {
-      const videoUrl = getPublicDownloadUrlSafe(job.videoUrl) ?? job.videoUrl;
+      const videoUrl =
+        resolvePublicDownloadUrlSafe(job.videoUrl) ?? job.videoUrl;
       const thumbnailUrl =
-        getPublicDownloadUrlSafe(job.thumbnailUrl) ?? job.thumbnailUrl;
+        resolvePublicDownloadUrlSafe(job.thumbnailUrl) ?? job.thumbnailUrl;
       return {
         listingId,
         jobId: job.id,
         status: job.status,
         videoUrl,
         thumbnailUrl,
-          generationModel: job.generationSettings?.model ?? null,
-          orientation: job.metadata?.orientation ?? null,
-          errorMessage: job.errorMessage,
-          roomId: job.generationSettings?.roomId,
-          roomName: job.generationSettings?.roomName,
-          category: job.generationSettings?.category ?? null,
-          isPriorityCategory: job.generationSettings?.category
-            ? isPriorityCategory(job.generationSettings.category)
-            : false,
-          sortOrder: job.generationSettings?.sortOrder ?? null
-        };
+        generationModel: job.generationSettings?.model ?? null,
+        orientation: job.metadata?.orientation ?? null,
+        errorMessage: job.errorMessage,
+        roomId: job.generationSettings?.roomId,
+        roomName: job.generationSettings?.roomName,
+        category: job.generationSettings?.category ?? null,
+        isPriorityCategory: job.generationSettings?.category
+          ? isPriorityCategory(job.generationSettings.category)
+          : false,
+        sortOrder: job.generationSettings?.sortOrder ?? null
+      };
     });
   }
 

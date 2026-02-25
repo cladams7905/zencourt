@@ -1,74 +1,80 @@
-const mockGenerateText = jest.fn();
-
-jest.mock("@web/src/server/services/ai", () => ({
-  generateText: (...args: unknown[]) => mockGenerateText(...args)
-}));
-
-import { perplexityPropertyDetailsProvider } from "../perplexity";
+import { createPerplexityPropertyDetailsProvider } from "../perplexity";
 
 describe("propertyDetails/providers/perplexity", () => {
+  const mockRunStructuredPropertyQuery = jest.fn();
+
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
   it("has name perplexity", () => {
+    const perplexityPropertyDetailsProvider = createPerplexityPropertyDetailsProvider({
+      runStructuredQuery: mockRunStructuredPropertyQuery
+    });
     expect(perplexityPropertyDetailsProvider.name).toBe("perplexity");
   });
 
-  it("calls generateText with provider perplexity and prompts", async () => {
-    mockGenerateText.mockResolvedValue({
-      raw: {
-        choices: [{ message: { content: JSON.stringify({ address: "123 Main" }) } }]
-      }
+  it("calls injected perplexity generator with prompts", async () => {
+    mockRunStructuredPropertyQuery.mockResolvedValue({
+      choices: [{ message: { content: JSON.stringify({ address: "123 Main" }) } }]
     });
 
+    const perplexityPropertyDetailsProvider = createPerplexityPropertyDetailsProvider({
+      runStructuredQuery: mockRunStructuredPropertyQuery
+    });
     await perplexityPropertyDetailsProvider.fetch("123 Main St");
 
-    expect(mockGenerateText).toHaveBeenCalledTimes(1);
-    const call = mockGenerateText.mock.calls[0][0];
-    expect(call.provider).toBe("perplexity");
-    expect(call.messages).toHaveLength(2);
-    expect(call.messages[0].role).toBe("system");
-    expect(call.messages[1].role).toBe("user");
-    expect(call.messages[1].content).toContain("123 Main St");
+    expect(mockRunStructuredPropertyQuery).toHaveBeenCalledTimes(1);
+    const call = mockRunStructuredPropertyQuery.mock.calls[0][0];
+    expect(call.systemPrompt).toBeTruthy();
+    expect(call.userPrompt).toContain("123 Main St");
     expect(call.responseFormat).toBeDefined();
-    expect(call.responseFormat.type).toBe("json_schema");
   });
 
   it("returns parsed JSON from choices[0].message.content", async () => {
     const payload = { address: "456 Oak Ave", bedrooms: 3 };
-    mockGenerateText.mockResolvedValue({
-      raw: {
-        choices: [{ message: { content: JSON.stringify(payload) } }]
-      }
+    mockRunStructuredPropertyQuery.mockResolvedValue({
+      choices: [{ message: { content: JSON.stringify(payload) } }]
     });
 
+    const perplexityPropertyDetailsProvider = createPerplexityPropertyDetailsProvider({
+      runStructuredQuery: mockRunStructuredPropertyQuery
+    });
     const result = await perplexityPropertyDetailsProvider.fetch("456 Oak Ave");
 
     expect(result).toEqual(payload);
   });
 
   it("returns null when choices is empty", async () => {
-    mockGenerateText.mockResolvedValue({ raw: { choices: [] } });
+    mockRunStructuredPropertyQuery.mockResolvedValue({ choices: [] });
 
+    const perplexityPropertyDetailsProvider = createPerplexityPropertyDetailsProvider({
+      runStructuredQuery: mockRunStructuredPropertyQuery
+    });
     const result = await perplexityPropertyDetailsProvider.fetch("789 Pine Rd");
 
     expect(result).toBeNull();
   });
 
   it("returns null when choices[0].message.content is missing", async () => {
-    mockGenerateText.mockResolvedValue({
-      raw: { choices: [{ message: {} }] }
+    mockRunStructuredPropertyQuery.mockResolvedValue({
+      choices: [{ message: {} }]
     });
 
+    const perplexityPropertyDetailsProvider = createPerplexityPropertyDetailsProvider({
+      runStructuredQuery: mockRunStructuredPropertyQuery
+    });
     const result = await perplexityPropertyDetailsProvider.fetch("789 Pine Rd");
 
     expect(result).toBeNull();
   });
 
   it("returns null when result.raw is undefined", async () => {
-    mockGenerateText.mockResolvedValue(null);
+    mockRunStructuredPropertyQuery.mockResolvedValue(null);
 
+    const perplexityPropertyDetailsProvider = createPerplexityPropertyDetailsProvider({
+      runStructuredQuery: mockRunStructuredPropertyQuery
+    });
     const result = await perplexityPropertyDetailsProvider.fetch("789 Pine Rd");
 
     expect(result).toBeNull();

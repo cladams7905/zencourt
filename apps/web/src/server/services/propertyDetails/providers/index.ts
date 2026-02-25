@@ -1,9 +1,14 @@
 import type { PropertyDetailsProvider } from "./types";
-import { perplexityPropertyDetailsProvider } from "./perplexity";
+import {
+  createPerplexityPropertyDetailsProvider
+} from "./perplexity";
+import type { RunStructuredPropertyQuery } from "./types";
 
-export type { PropertyDetailsProvider } from "./types";
-export { perplexityPropertyDetailsProvider };
+export type { PropertyDetailsProvider, RunStructuredPropertyQuery } from "./types";
+export { createPerplexityPropertyDetailsProvider };
 
-export function getDefaultPropertyDetailsProvider(): PropertyDetailsProvider {
-  return perplexityPropertyDetailsProvider;
+export function getDefaultPropertyDetailsProvider(deps: {
+  runStructuredQuery: RunStructuredPropertyQuery;
+}): PropertyDetailsProvider {
+  return createPerplexityPropertyDetailsProvider(deps);
 }

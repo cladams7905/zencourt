@@ -1,5 +1,4 @@
 import type { PerplexityResponseFormat } from "@web/src/server/integrations/perplexity";
-import { generateText } from "@web/src/server/services/ai";
 import { parsePossiblyWrappedJson } from "@web/src/server/utils/jsonParsing";
 import { ARCHITECTURE_ENUM, PROPERTY_TYPE_ENUM } from "../schemaSections/enums";
 import {
@@ -16,7 +15,10 @@ import {
   buildPropertyDetailsSystemPrompt,
   buildPropertyDetailsUserPrompt
 } from "../prompts";
-import type { PropertyDetailsProvider } from "./types";
+import type {
+  RunStructuredPropertyQuery,
+  PropertyDetailsProvider
+} from "./types";
 
 const PERPLEXITY_PROPERTY_SCHEMA: PerplexityResponseFormat = {
   type: "json_schema",
@@ -77,28 +79,28 @@ const PERPLEXITY_PROPERTY_SCHEMA: PerplexityResponseFormat = {
   }
 };
 
-export const perplexityPropertyDetailsProvider: PropertyDetailsProvider = {
-  name: "perplexity",
+export function createPerplexityPropertyDetailsProvider(deps: {
+  runStructuredQuery: RunStructuredPropertyQuery;
+}): PropertyDetailsProvider {
+  return {
+    name: "perplexity",
+    async fetch(address: string): Promise<unknown | null> {
+      const result = await deps.runStructuredQuery({
+        systemPrompt: buildPropertyDetailsSystemPrompt(),
+        userPrompt: buildPropertyDetailsUserPrompt(address),
+        responseFormat: PERPLEXITY_PROPERTY_SCHEMA
+      });
 
-  async fetch(address: string): Promise<unknown | null> {
-    const result = await generateText({
-      provider: "perplexity",
-      messages: [
-        { role: "system", content: buildPropertyDetailsSystemPrompt() },
-        { role: "user", content: buildPropertyDetailsUserPrompt(address) }
-      ],
-      responseFormat: PERPLEXITY_PROPERTY_SCHEMA
-    });
+      const response = result as
+        | { choices?: Array<{ message?: { content?: string } }> }
+        | undefined;
 
-    const response = result?.raw as
-      | { choices?: Array<{ message?: { content?: string } }> }
-      | undefined;
+      if (!response?.choices?.length) {
+        return null;
+      }
 
-    if (!response?.choices?.length) {
-      return null;
+      const content = response.choices[0]?.message?.content;
+      return parsePossiblyWrappedJson(content) ?? null;
     }
-
-    const content = response.choices[0]?.message?.content;
-    return parsePossiblyWrappedJson(content) ?? null;
-  }
-};
+  };
+}

@@ -1,4 +1,3 @@
-const mockFetchCityDescription = jest.fn();
 const mockBuildAudienceAugmentDelta = jest.fn();
 const mockApplyAudienceDelta = jest.fn();
 const mockGetAudienceSkipCategories = jest.fn();
@@ -11,14 +10,6 @@ const mockGetCachedAudienceDelta = jest.fn();
 const mockSetCachedAudienceDelta = jest.fn();
 const mockGetCachedCityDescription = jest.fn();
 const mockSetCachedCityDescription = jest.fn();
-
-jest.mock(
-  "@web/src/server/services/communityData/shared/cityDescription",
-  () => ({
-    fetchCityDescription: (...args: unknown[]) =>
-      mockFetchCityDescription(...args)
-  })
-);
 
 jest.mock(
   "@web/src/server/services/communityData/providers/google/core/audience",
@@ -81,13 +72,11 @@ jest.mock(
 
 import {
   getCommunityDataByZipAndAudience,
-  buildAudienceCommunityData,
-  getCityDescription
+  buildAudienceCommunityData
 } from "@web/src/server/services/communityData/providers/google/pipeline/audience";
 
 describe("google audience pipeline", () => {
   beforeEach(() => {
-    mockFetchCityDescription.mockReset();
     mockBuildAudienceAugmentDelta.mockReset();
     mockApplyAudienceDelta.mockReset();
     mockGetAudienceSkipCategories.mockReset();
@@ -165,13 +154,4 @@ describe("google audience pipeline", () => {
     expect(result.neighborhoods_list).toBe("- luxury");
   });
 
-  it("reads and caches city descriptions", async () => {
-    mockGetCachedCityDescription.mockResolvedValueOnce(null);
-    mockFetchCityDescription.mockResolvedValueOnce({
-      description: "Nice city"
-    });
-
-    await expect(getCityDescription("Austin", "TX")).resolves.toBe("Nice city");
-    expect(mockSetCachedCityDescription).toHaveBeenCalled();
-  });
 });

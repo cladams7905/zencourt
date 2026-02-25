@@ -2,7 +2,6 @@ import {
   type PerplexityMessage,
   type PerplexityResponseFormat
 } from "@web/src/server/integrations/perplexity";
-import { generateText } from "@web/src/server/services/ai";
 import type {
   MarketData,
   MarketLocation,
@@ -87,17 +86,22 @@ type LoggerLike = {
 
 type Clock = () => Date;
 
+type PerplexityTextRunner = (args: {
+  messages: PerplexityMessage[];
+  responseFormat: PerplexityResponseFormat;
+  maxTokens?: number;
+}) => Promise<unknown | null>;
+
 export async function fetchPerplexityMarketData(
   location: MarketLocation,
-  deps: { logger: LoggerLike; now: Clock }
+  deps: { logger: LoggerLike; now: Clock; runStructuredMarketQuery: PerplexityTextRunner }
 ): Promise<MarketData | null> {
-  const result = await generateText({
-    provider: "perplexity",
+  const responseRaw = await deps.runStructuredMarketQuery({
     messages: buildPerplexityMarketMessages(location),
     responseFormat: PERPLEXITY_MARKET_SCHEMA,
     maxTokens: 900
   });
-  const response = result?.raw as
+  const response = responseRaw as
     | {
         choices?: Array<{ message?: { content?: string } }>;
         search_results?: Array<{

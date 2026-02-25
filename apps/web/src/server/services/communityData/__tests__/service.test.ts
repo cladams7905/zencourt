@@ -11,6 +11,19 @@ const mockToOriginLocationInput = jest.fn();
 jest.mock(
   "@web/src/server/services/communityData/providers/perplexity",
   () => ({
+    createPerplexityCommunityDataProvider: () => ({
+      provider: "perplexity",
+      getCommunityDataByZip: (...args: unknown[]) =>
+        mockGetPerplexityCommunityData(...args),
+      getCommunityDataByZipAndAudience: (...args: unknown[]) =>
+        mockGetPerplexityCommunityData(...args),
+      getMonthlyEventsSectionByZip: (...args: unknown[]) =>
+        mockGetPerplexityMonthlyEvents(...args),
+      getCommunityDataByZipAndAudienceForCategories: (...args: unknown[]) =>
+        mockGetPerplexityByCategories(...args),
+      prefetchCategoriesByZip: (...args: unknown[]) =>
+        mockPrefetchPerplexityCategories(...args)
+    }),
     getPerplexityCommunityData: (...args: unknown[]) =>
       mockGetPerplexityCommunityData(...args),
     getPerplexityCommunityDataByZipAndAudienceForCategories: (
@@ -24,6 +37,12 @@ jest.mock(
 );
 
 jest.mock("@web/src/server/services/communityData/providers/google", () => ({
+  createGoogleCommunityDataProvider: () => ({
+    provider: "google",
+    getCommunityDataByZip: (...args: unknown[]) => mockGetGoogleByZip(...args),
+    getCommunityDataByZipAndAudience: (...args: unknown[]) =>
+      mockGetGoogleByZipAndAudience(...args)
+  }),
   getCommunityDataByZip: (...args: unknown[]) => mockGetGoogleByZip(...args),
   getCommunityDataByZipAndAudience: (...args: unknown[]) =>
     mockGetGoogleByZipAndAudience(...args),
@@ -86,11 +105,7 @@ describe("communityDataService routing", () => {
 
     expect(result).toEqual({ zip_code: "78701" });
     expect(mockGetGoogleByZip).toHaveBeenCalledWith(
-      "78701",
-      undefined,
-      undefined,
-      undefined,
-      undefined
+      expect.objectContaining({ zipCode: "78701" })
     );
     expect(mockGetPerplexityCommunityData).not.toHaveBeenCalled();
   });
@@ -102,7 +117,6 @@ describe("communityDataService routing", () => {
 
     const result = await getCommunityDataByZip("90210");
 
-    expect(mockResolveLocationOrWarn).toHaveBeenCalled();
     expect(mockGetPerplexityCommunityData).toHaveBeenCalled();
     expect(mockGetGoogleByZip).toHaveBeenCalled();
     expect(result).toEqual({ zip_code: "90210" });
@@ -131,10 +145,10 @@ describe("communityDataService routing", () => {
 
   it("returns null when location cannot be resolved for perplexity route", async () => {
     process.env.COMMUNITY_DATA_PROVIDER = "perplexity";
-    mockResolveLocationOrWarn.mockResolvedValueOnce(null);
+    mockGetPerplexityCommunityData.mockResolvedValueOnce(undefined);
 
     await expect(getCommunityDataByZip("73301")).resolves.toBeNull();
-    expect(mockGetPerplexityCommunityData).not.toHaveBeenCalled();
+    expect(mockGetPerplexityCommunityData).toHaveBeenCalled();
   });
 
   it("routes audience flow and falls back to google on perplexity error", async () => {
@@ -153,11 +167,11 @@ describe("communityDataService routing", () => {
 
   it("routes audience flow to null when location cannot resolve", async () => {
     process.env.COMMUNITY_DATA_PROVIDER = "perplexity";
-    mockResolveLocationOrWarn.mockResolvedValueOnce(null);
+    mockGetPerplexityCommunityData.mockResolvedValueOnce(undefined);
 
     await expect(
       getCommunityDataByZipAndAudience("30301", "relocators")
     ).resolves.toBeNull();
-    expect(mockGetPerplexityCommunityData).not.toHaveBeenCalled();
+    expect(mockGetPerplexityCommunityData).toHaveBeenCalled();
   });
 });

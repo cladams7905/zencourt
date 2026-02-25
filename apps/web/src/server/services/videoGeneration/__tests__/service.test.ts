@@ -1,7 +1,6 @@
 const mockNanoid = jest.fn();
 const mockCreateVideoGenBatch = jest.fn();
 const mockCreateVideoGenJobsBatch = jest.fn();
-const mockGetPublicDownloadUrls = jest.fn();
 const mockGroupImagesByCategory = jest.fn();
 const mockSelectListingPrimaryImage = jest.fn();
 const mockBuildRoomsFromImages = jest.fn();
@@ -38,11 +37,6 @@ jest.mock("@web/src/server/models/videoGenBatch", () => ({
 jest.mock("@web/src/server/models/videoGenJobs", () => ({
   createVideoGenJobsBatch: (...args: unknown[]) =>
     mockCreateVideoGenJobsBatch(...args)
-}));
-
-jest.mock("@web/src/server/services/storage/urlResolution", () => ({
-  getPublicDownloadUrls: (...args: unknown[]) =>
-    mockGetPublicDownloadUrls(...args)
 }));
 
 jest.mock("../domain/rooms", () => ({
@@ -109,6 +103,9 @@ function makeSelectBuilder(rows: unknown[]) {
 }
 
 describe("videoGeneration/service", () => {
+  const resolvePublicDownloadUrls = (urls: string[]) =>
+    urls.map((url) => `https://signed/${url.split("/").pop()}`);
+
   beforeEach(() => {
     jest.clearAllMocks();
     global.fetch = mockFetch as unknown as typeof fetch;
@@ -145,9 +142,6 @@ describe("videoGeneration/service", () => {
     mockSelectPrimaryImageForRoom.mockReturnValue(
       "https://img/kitchen-primary.jpg"
     );
-    mockGetPublicDownloadUrls.mockReturnValue([
-      "https://signed/kitchen-primary.jpg"
-    ]);
     mockBuildPrompt.mockReturnValue({
       prompt: "Forward pan through the Kitchen.",
       templateKey: "interior-forward-pan"
@@ -159,7 +153,8 @@ describe("videoGeneration/service", () => {
 
     const result = await startListingVideoGeneration({
       listingId: "listing-1",
-      userId: "user-1"
+      userId: "user-1",
+      resolvePublicDownloadUrls
     });
 
     expect(mockCreateVideoGenBatch).toHaveBeenCalledWith(
@@ -210,9 +205,6 @@ describe("videoGeneration/service", () => {
     mockSelectPrimaryImageForRoom.mockReturnValue(
       "https://img/kitchen-primary.jpg"
     );
-    mockGetPublicDownloadUrls.mockReturnValue([
-      "https://signed/kitchen-primary.jpg"
-    ]);
     mockBuildPrompt.mockReturnValue({
       prompt: "Forward pan through the Kitchen.",
       templateKey: "interior-forward-pan"
@@ -227,7 +219,11 @@ describe("videoGeneration/service", () => {
     });
 
     await expect(
-      startListingVideoGeneration({ listingId: "listing-1", userId: "user-1" })
+      startListingVideoGeneration({
+        listingId: "listing-1",
+        userId: "user-1",
+        resolvePublicDownloadUrls
+      })
     ).rejects.toEqual(
       expect.objectContaining({
         status: 502,
@@ -243,7 +239,11 @@ describe("videoGeneration/service", () => {
     mockSelect.mockReturnValue(makeSelectBuilder([]));
 
     await expect(
-      startListingVideoGeneration({ listingId: "listing-1", userId: "user-1" })
+      startListingVideoGeneration({
+        listingId: "listing-1",
+        userId: "user-1",
+        resolvePublicDownloadUrls
+      })
     ).rejects.toEqual(
       expect.objectContaining({
         status: 400
@@ -274,9 +274,6 @@ describe("videoGeneration/service", () => {
     mockSelectPrimaryImageForRoom.mockReturnValue(
       "https://img/kitchen-primary.jpg"
     );
-    mockGetPublicDownloadUrls.mockReturnValue([
-      "https://signed/kitchen-primary.jpg"
-    ]);
     mockBuildPrompt.mockReturnValue({
       prompt: "Forward pan through the Kitchen.",
       templateKey: "interior-forward-pan"
@@ -286,7 +283,11 @@ describe("videoGeneration/service", () => {
     mockCreateVideoGenJobsBatch.mockResolvedValue(undefined);
 
     await expect(
-      startListingVideoGeneration({ listingId: "listing-1", userId: "user-1" })
+      startListingVideoGeneration({
+        listingId: "listing-1",
+        userId: "user-1",
+        resolvePublicDownloadUrls
+      })
     ).rejects.toThrow("APP_URL must be configured");
   });
 
@@ -319,9 +320,6 @@ describe("videoGeneration/service", () => {
     mockSelectSecondaryImageForRoom.mockReturnValue(
       "https://img/kitchen-secondary.jpg"
     );
-    mockGetPublicDownloadUrls
-      .mockReturnValueOnce(["https://signed/kitchen-primary.jpg"])
-      .mockReturnValueOnce(["https://signed/kitchen-secondary.jpg"]);
     mockBuildPrompt
       .mockReturnValueOnce({
         prompt: "Primary prompt",
@@ -338,7 +336,8 @@ describe("videoGeneration/service", () => {
 
     const result = await startListingVideoGeneration({
       listingId: "listing-1",
-      userId: "user-1"
+      userId: "user-1",
+      resolvePublicDownloadUrls
     });
 
     expect(mockCreateVideoGenJobsBatch).toHaveBeenCalledWith(

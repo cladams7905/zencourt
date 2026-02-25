@@ -1,7 +1,6 @@
 export { getCommunityDataByZip } from "./service";
 export {
   buildAudienceCommunityData,
-  getCityDescription,
   getCommunityDataByZipAndAudience
 } from "./audience";
 export {

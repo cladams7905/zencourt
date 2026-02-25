@@ -4,7 +4,13 @@ import {
 } from "@web/src/server/errors/domain";
 import type { PromptAssemblyInput } from "@web/src/lib/ai/prompts/engine/assemble";
 import { parseMarketLocation } from "./domain/marketLocation";
-import { getMarketData } from "@web/src/server/services/marketData";
+import { resolveCityDescription } from "./domain/cityDescription";
+import {
+  createMarketDataService,
+  createMarketDataProviderRegistry
+} from "@web/src/server/services/marketData";
+import { generateText } from "@web/src/server/services/ai";
+import type { AITextRequest } from "@web/src/server/services/ai";
 import { getCommunityContentContext } from "@web/src/server/services/communityData/service";
 import {
   COMMUNITY_CATEGORY_KEYS,
@@ -46,7 +52,7 @@ export async function resolveContentContext(args: {
       );
     }
 
-    marketData = await getMarketData(marketLocation);
+    marketData = await marketDataService.getMarketData(marketLocation);
     if (!marketData) {
       throw new DomainDependencyError(
         "Market data is not configured. Please try again later."
@@ -85,7 +91,10 @@ export async function resolveContentContext(args: {
     });
 
     communityData = context.communityData;
-    cityDescription = context.cityDescription;
+    cityDescription = await resolveCityDescription({
+      city: marketLocation.city,
+      state: marketLocation.state
+    });
     communityCategoryKeys = context.communityCategoryKeys;
     seasonalExtraSections = context.seasonalExtraSections;
   }
@@ -98,3 +107,24 @@ export async function resolveContentContext(args: {
     seasonalExtraSections
   };
 }
+  const marketDataService = createMarketDataService({
+    providerRegistry: createMarketDataProviderRegistry({
+      env: process.env,
+      fetcher: (() =>
+        Promise.reject(new Error("fetch not configured"))) as unknown as typeof fetch,
+      now: () => new Date(),
+      logger: {
+        warn: () => undefined,
+        error: () => undefined
+      },
+      runStructuredMarketQuery: async ({ messages, responseFormat, maxTokens }) => {
+        const result = await generateText({
+          provider: "perplexity",
+          messages,
+          responseFormat: responseFormat as AITextRequest["responseFormat"],
+          maxTokens
+        });
+        return result?.raw ?? null;
+      }
+    })
+  });

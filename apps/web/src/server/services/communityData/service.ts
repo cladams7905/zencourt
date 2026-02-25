@@ -199,7 +199,6 @@ export function createCommunityDataOrchestrator() {
     }
 
     let communityData: CommunityData | null = null;
-    let cityDescription: string | null = null;
     let communityCategoryKeys: string[] | null = null;
     let seasonalExtraSections: Record<string, string> | null = null;
     const registry = createCommunityDataProviderRegistry();
@@ -306,18 +305,9 @@ export function createCommunityDataOrchestrator() {
       }
     }
 
-    if (params.category === "community" || params.category === "seasonal") {
-      cityDescription = primary.getCityDescription
-        ? await primary.getCityDescription({
-            city: params.preferredCity,
-            state: params.preferredState
-          })
-        : null;
-    }
-
     return {
       communityData,
-      cityDescription,
+      cityDescription: null,
       communityCategoryKeys,
       seasonalExtraSections
     };

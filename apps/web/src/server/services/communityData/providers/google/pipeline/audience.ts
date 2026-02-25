@@ -1,5 +1,4 @@
 import type { CommunityData } from "@web/src/lib/domain/market/types";
-import { fetchCityDescription } from "../../../shared/cityDescription";
 import { buildAudienceAugmentDelta } from "../core/audience";
 import {
   applyAudienceDelta,
@@ -100,28 +99,6 @@ export async function getCommunityDataByZipAndAudience(
 
   const merged = delta ? applyAudienceDelta(base, delta) : base;
   return buildAudienceCommunityData(trimCommunityDataLists(merged), normalized);
-}
-
-export async function getCityDescription(
-  city?: string | null,
-  state?: string | null
-): Promise<string | null> {
-  if (!city || !state) {
-    return null;
-  }
-
-  const cached = await communityCache.getCachedCityDescription(city, state);
-  if (cached) {
-    return cached.description;
-  }
-
-  const description = await fetchCityDescription(city, state, logger);
-  if (description) {
-    await communityCache.setCachedCityDescription(city, state, description);
-    return description.description;
-  }
-
-  return null;
 }
 
 export function buildAudienceCommunityData(
