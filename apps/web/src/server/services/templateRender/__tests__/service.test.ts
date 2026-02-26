@@ -9,6 +9,7 @@ const mockResolveTemplateParameters = jest.fn();
 const mockPickRandomTemplatesForSubcategory = jest.fn();
 
 jest.mock("../providers/orshot", () => ({
+  ...jest.requireActual("../providers/orshot"),
   renderTemplate: (...args: unknown[]) => mockRenderTemplate(...args),
   resolveTemplateParameters: (...args: unknown[]) =>
     mockResolveTemplateParameters(...args),
@@ -92,8 +93,7 @@ describe("templateRender/service", () => {
     expect(mockRenderTemplate).toHaveBeenNthCalledWith(1, {
       templateId: "template-1",
       modifications: {
-        headerText: "Dream Home",
-        "heading:headerText": "Dream Home"
+        headerText: "Dream Home"
       }
     });
     expect(result).toEqual({
@@ -104,7 +104,11 @@ describe("templateRender/service", () => {
           captionItemId: "caption-1",
           parametersUsed: {
             headerText: "Dream Home",
-            backgroundImage1: "http://localhost:3000/private.jpg"
+            backgroundImage1: "http://localhost:3000/private.jpg",
+            headerTextTop: "Dream",
+            headerTextBottom: "Home",
+            subheader1Text: "",
+            subheader2Text: ""
           }
         }
       ],
@@ -134,9 +138,10 @@ describe("templateRender/service", () => {
       templateId: "template-3",
       modifications: {
         headerText: "Heading",
-        "heading:headerText": "Heading",
-        feature1: "Pool",
-        "heading:feature1": "Pool"
+        headerTextTop: "Heading",
+        subheader1Text: "Pool",
+        subheader2Text: "Pool",
+        feature1: "Pool"
       }
     });
     expect(result.failedTemplateIds).toEqual([]);
@@ -162,8 +167,7 @@ describe("templateRender/service", () => {
     expect(mockRenderTemplate).toHaveBeenCalledWith({
       templateId: "template-4",
       modifications: {
-        headerText: "Public Image",
-        "heading:headerText": "Public Image"
+        headerText: "Public Image"
       }
     });
   });
@@ -189,9 +193,97 @@ describe("templateRender/service", () => {
       templateId: "template-5",
       modifications: {
         headerText: "Title",
-        "heading:headerText": "Title",
-        feature1: "Patio",
-        "heading:feature1": "Patio"
+        feature1: "Patio"
+      }
+    });
+  });
+
+  it("prefixes modifications with page1@ for multi-page templates", async () => {
+    mockPickRandomTemplatesForSubcategory.mockReturnValue([
+      {
+        id: "template-multi-page",
+        subcategories: ["new_listing"],
+        requiredParams: ["headerText", "feature1"],
+        page_length: 2
+      }
+    ]);
+    mockResolveTemplateParameters.mockReturnValue({
+      headerText: "Dream Home",
+      feature1: "Pool"
+    });
+    mockRenderTemplate.mockResolvedValueOnce("https://cdn.example.com/render-6.jpg");
+
+    await renderListingTemplateBatch(buildParams());
+
+    expect(mockRenderTemplate).toHaveBeenCalledWith({
+      templateId: "template-multi-page",
+      modifications: {
+        "page1@headerText": "Dream Home",
+        "page1@feature1": "Pool"
+      }
+    });
+  });
+
+  it("uses short preset headers when template header_length is short", async () => {
+    mockPickRandomTemplatesForSubcategory.mockReturnValue([
+      {
+        id: "template-short-header",
+        subcategories: ["new_listing"],
+        requiredParams: ["headerText", "subheader1Text", "subheader2Text"],
+        header_length: "short"
+      }
+    ]);
+    mockResolveTemplateParameters.mockReturnValue({
+      headerText: "A much longer AI generated headline",
+      subheader1Text: "AI Subheader",
+      subheader2Text: "AI Secondary",
+      listingAddress: "123 Main St"
+    });
+    mockRenderTemplate.mockResolvedValueOnce("https://cdn.example.com/render-7.jpg");
+
+    await renderListingTemplateBatch({
+      ...buildParams(),
+      random: () => 0
+    });
+
+    expect(mockRenderTemplate).toHaveBeenCalledWith({
+      templateId: "template-short-header",
+      modifications: {
+        headerText: "Just Listed",
+        subheader1Text: "123 Main St",
+        subheader2Text: "AI Subheader"
+      }
+    });
+  });
+
+  it("prefers AI subheaders for medium headers and falls back when missing", async () => {
+    mockPickRandomTemplatesForSubcategory.mockReturnValue([
+      {
+        id: "template-medium-header",
+        subcategories: ["new_listing"],
+        requiredParams: ["subheader1Text", "subheader2Text"],
+        header_length: "medium"
+      }
+    ]);
+    mockResolveTemplateParameters.mockReturnValue({
+      headerText: "Generated headline that can be medium length",
+      subheader1Text: "",
+      subheader2Text: "",
+      listingAddress: "55 Oak Ave",
+      feature1: "4 beds"
+    });
+    mockRenderTemplate.mockResolvedValueOnce("https://cdn.example.com/render-8.jpg");
+
+    await renderListingTemplateBatch({
+      ...buildParams(),
+      random: () => 0
+    });
+
+    expect(mockRenderTemplate).toHaveBeenCalledWith({
+      templateId: "template-medium-header",
+      modifications: {
+        subheader1Text: "55 Oak Ave",
+        subheader2Text: "4 beds"
       }
     });
   });
@@ -321,7 +413,13 @@ describe("templateRender/service", () => {
       templateId: "template-a",
       imageUrl: "https://cdn.example.com/stream-1.jpg",
       captionItemId: "cap-1",
-      parametersUsed: { headerText: "Hi" }
+      parametersUsed: {
+        headerText: "Hi",
+        headerTextTop: "Hi",
+        headerTextBottom: "",
+        subheader1Text: "",
+        subheader2Text: ""
+      }
     });
     expect(onItem).toHaveBeenNthCalledWith(2, {
       templateId: "fallback",

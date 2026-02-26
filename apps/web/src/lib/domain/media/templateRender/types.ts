@@ -28,21 +28,47 @@ export const TEMPLATE_RENDER_PARAMETER_KEYS = [
   "featureList",
   "openHouseDateTime",
   "socialHandle",
-  "realtorName",
-  "realtorProfileImage",
-  "realtorContactInfo",
-  "realtorContact1",
-  "realtorContact2",
-  "realtorContact3"
+  "agentName",
+  "agentTitle",
+  "agentProfileImage",
+  "agentContactInfo",
+  "agentContact1",
+  "agentContact2",
+  "agentContact3",
+  "agencyName"
 ] as const;
 
 export type TemplateRenderParameterKey =
   (typeof TEMPLATE_RENDER_PARAMETER_KEYS)[number];
 
+export const TEMPLATE_RENDER_PARAMETER_KEY_SET = new Set<TemplateRenderParameterKey>(
+  TEMPLATE_RENDER_PARAMETER_KEYS
+);
+
+export const TEMPLATE_RENDER_IMAGE_PARAMETER_KEYS = [
+  "arrowImage",
+  "backgroundImage1",
+  "backgroundImage2",
+  "backgroundImage3",
+  "backgroundImage4",
+  "backgroundImage5",
+  "agentProfileImage"
+] as const satisfies readonly TemplateRenderParameterKey[];
+
+export const TEMPLATE_RENDER_IMAGE_PARAMETER_KEY_SET =
+  new Set<TemplateRenderParameterKey>(TEMPLATE_RENDER_IMAGE_PARAMETER_KEYS);
+
+export const TEMPLATE_HEADER_LENGTHS = ["short", "medium", "long"] as const;
+
+export type TemplateHeaderLength = (typeof TEMPLATE_HEADER_LENGTHS)[number];
+
 export type TemplateRenderConfig = {
   id: string;
+  name: string;
   subcategories: ListingContentSubcategory[];
   requiredParams: TemplateRenderParameterKey[];
+  page_length?: number;
+  header_length?: TemplateHeaderLength;
   supportsHeaderTag?: boolean;
 };
 
@@ -62,6 +88,12 @@ export type TemplateRenderCaptionItemInput = {
   cacheKeyTimestamp?: number;
   cacheKeyId?: number;
 };
+
+export type TemplateRenderCaptionItemWithCacheKey =
+  TemplateRenderCaptionItemInput & {
+    cacheKeyTimestamp?: number;
+    cacheKeyId?: number;
+  };
 
 export type ListingTemplateRenderRequest = {
   listingId: string;

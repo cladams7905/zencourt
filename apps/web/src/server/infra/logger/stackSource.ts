@@ -52,5 +52,8 @@ export function toAbsoluteFileUri(filePath: string): string {
   const absolutePath = path.isAbsolute(filePath)
     ? filePath
     : path.resolve(process.cwd(), filePath);
-  return pathToFileURL(absolutePath).toString();
+  return pathToFileURL(absolutePath)
+    .toString()
+    .replace(/%5B/gi, "[")
+    .replace(/%5D/gi, "]");
 }

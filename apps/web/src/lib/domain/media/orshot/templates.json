@@ -12,9 +12,13 @@
       "backgroundImage1",
       "headerText",
       "subheader1Text",
-      "listingAddress"
+      "listingAddress",
+      "agentContact1"
     ],
-    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/81787c9ac2b5da2b2fc442dbfeef81ae.png"
+    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/81787c9ac2b5da2b2fc442dbfeef81ae.png",
+    "page_length": 1,
+    "header_length": "medium",
+    "name": "Elegant Real Estate Open House"
   },
   {
     "id": "4015",
@@ -28,9 +32,15 @@
     "requiredParams": [
       "headerText",
       "backgroundImage1",
-      "backgroundImage2"
+      "backgroundImage2",
+      "agentName",
+      "agentContact1",
+      "agentContact2"
     ],
-    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/d863af2503e2bb520a265764796d351c.png"
+    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/d863af2503e2bb520a265764796d351c.png",
+    "page_length": 1,
+    "header_length": "medium",
+    "name": "Elegant Real Estate Just Sold"
   },
   {
     "id": "4004",
@@ -47,9 +57,13 @@
       "headerTextBottom",
       "priceLabel",
       "listingPrice",
+      "agentContact1",
       "socialHandle"
     ],
-    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/aa177a8a2e50c1582fa594bcc278ad2d.png"
+    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/ab381c14be9a030e56af314f03957eaa.png",
+    "page_length": 1,
+    "header_length": "medium",
+    "name": "Modern Home Listing"
   },
   {
     "id": "4016",
@@ -63,9 +77,16 @@
     "requiredParams": [
       "backgroundImage1",
       "headerText",
+      "agentProfileImage",
+      "agentName",
+      "agentTitle",
+      "agentContact1",
       "socialHandle"
     ],
-    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/b233843df78c7c0dd107bcb4139c20a0.png"
+    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/b233843df78c7c0dd107bcb4139c20a0.png",
+    "page_length": 1,
+    "header_length": "medium",
+    "name": "Real Estate Just Sold Luxury"
   },
   {
     "id": "4000",
@@ -80,10 +101,17 @@
       "headerText",
       "backgroundImage1",
       "featureList",
+      "agentProfileImage",
+      "agentName",
+      "agentContact1",
       "listingPrice",
-      "listingAddress"
+      "listingAddress",
+      "agentContact2"
     ],
-    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/8daaaa1db50759f21c7f7f9e5456aebc.png"
+    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/8daaaa1db50759f21c7f7f9e5456aebc.png",
+    "page_length": 1,
+    "header_length": "medium",
+    "name": "Classic Elegant Real Estate Just Sold"
   },
   {
     "id": "4010",
@@ -102,9 +130,14 @@
       "bedCount",
       "bathCount",
       "garageCount",
-      "listingAddress"
+      "agentContact1",
+      "listingAddress",
+      "agentContact2"
     ],
-    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/f8f115ebfa86e49faccee3d374ee0fa7.png"
+    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/e303ef14c1a895525ce18a3b91b19ddc.png",
+    "page_length": 1,
+    "header_length": "medium",
+    "name": "Modern Real Estate Listing"
   },
   {
     "id": "4009",
@@ -120,7 +153,10 @@
       "headerText",
       "subheader1Text"
     ],
-    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/c193b538fe4aead642e32a94903a5231.png"
+    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/c193b538fe4aead642e32a94903a5231.png",
+    "page_length": 1,
+    "header_length": "medium",
+    "name": "Luxury Real Estate Just Sold"
   },
   {
     "id": "4011",
@@ -135,10 +171,14 @@
       "backgroundImage1",
       "socialHandle",
       "headerTextTop",
+      "agencyName",
       "headerTextBottom",
       "listingAddress"
     ],
-    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/74954664826cfc469582ece12f7fbb26.png"
+    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/74954664826cfc469582ece12f7fbb26.png",
+    "page_length": 1,
+    "header_length": "medium",
+    "name": "Elegant Real Estate Just Sold"
   },
   {
     "id": "4002",
@@ -154,9 +194,16 @@
       "headerText",
       "listingPrice",
       "listingAddress",
-      "featureList"
+      "featureList",
+      "agentProfileImage",
+      "agentName",
+      "agentContact1",
+      "agentContact2"
     ],
-    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/72abf9d318468702cc8cb1690b09d810.png"
+    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/72abf9d318468702cc8cb1690b09d810.png",
+    "page_length": 1,
+    "header_length": "medium",
+    "name": "Minimalist Beige Real Estate Just Sold"
   },
   {
     "id": "4005",
@@ -168,13 +215,17 @@
       "property_features"
     ],
     "requiredParams": [
+      "backgroundImage1",
       "subheader1Text",
       "headerText",
       "listingAddress",
-      "realtorContact1",
-      "realtorContact2"
+      "agentContact1",
+      "agentContact2"
     ],
-    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/dda29a1e436407ec1149f1396951c529.png"
+    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/9bee165310b0750ecf718a935ac541b6.png",
+    "page_length": 1,
+    "header_length": "medium",
+    "name": "Modern Real Estate Dream"
   },
   {
     "id": "3996",
@@ -191,9 +242,14 @@
       "headerText",
       "subheader1Text",
       "featureList",
+      "agentName",
+      "agentTitle",
       "socialHandle"
     ],
-    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/4cc1486e0d3ee0b68bc9b6130d74a4a2.png"
+    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/4cc1486e0d3ee0b68bc9b6130d74a4a2.png",
+    "page_length": 1,
+    "header_length": "medium",
+    "name": "Luxury Estate Listing"
   },
   {
     "id": "4012",
@@ -210,7 +266,10 @@
       "featureList",
       "headerText"
     ],
-    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/6381a363d87e60b85097ce5d01f7d239.png"
+    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/6381a363d87e60b85097ce5d01f7d239.png",
+    "page_length": 1,
+    "header_length": "medium",
+    "name": "Luxury Real Estate Just Sold"
   },
   {
     "id": "4021",
@@ -230,7 +289,10 @@
       "feature3",
       "socialHandle"
     ],
-    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/b284dc78c0b0fd0d6e3841a062e34717.png"
+    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/b284dc78c0b0fd0d6e3841a062e34717.png",
+    "page_length": 1,
+    "header_length": "medium",
+    "name": "Real Estate Just Sold Sage"
   },
   {
     "id": "4025",
@@ -249,7 +311,10 @@
       "listingAddress",
       "socialHandle"
     ],
-    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/aa3fa4c6c94a6531c227923271c61c2d.png"
+    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/aa3fa4c6c94a6531c227923271c61c2d.png",
+    "page_length": 1,
+    "header_length": "medium",
+    "name": "Elegant Real Estate Open House"
   },
   {
     "id": "4026",
@@ -262,13 +327,17 @@
     ],
     "requiredParams": [
       "backgroundImage1",
+      "agencyName",
       "headerText",
       "propertyDescription",
       "priceLabel",
       "listingPrice",
       "socialHandle"
     ],
-    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/11ba7ca4e981a76adf3cf81a0efe2d00.png"
+    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/11ba7ca4e981a76adf3cf81a0efe2d00.png",
+    "page_length": 1,
+    "header_length": "medium",
+    "name": "Elegant Real Estate Listing"
   },
   {
     "id": "4027",
@@ -287,7 +356,10 @@
       "subheader1Text",
       "socialHandle"
     ],
-    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/4b12bfe25acc58d48a90fe7c4248dcb4.png"
+    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/4b12bfe25acc58d48a90fe7c4248dcb4.png",
+    "page_length": 1,
+    "header_length": "medium",
+    "name": "Luxury Real Estate Collage"
   },
   {
     "id": "4028",
@@ -307,7 +379,10 @@
       "subheader1Text",
       "socialHandle"
     ],
-    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/635faf856fe4fde251d961727f35a00f.png"
+    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/3a79cc0c75cf16930dbc326fa7a2573d.png",
+    "page_length": 1,
+    "header_length": "medium",
+    "name": "Real Estate Just Listed Grid"
   },
   {
     "id": "4029",
@@ -327,7 +402,10 @@
       "listingAddress",
       "socialHandle"
     ],
-    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/458135e55bad4b5813f1f2fc1a25eea9.png"
+    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/458135e55bad4b5813f1f2fc1a25eea9.png",
+    "page_length": 1,
+    "header_length": "medium",
+    "name": "Elegant Real Estate Listing"
   },
   {
     "id": "4031",
@@ -340,11 +418,15 @@
     ],
     "requiredParams": [
       "backgroundImage1",
+      "agencyName",
       "headerText",
       "listingAddress",
-      "realtorContact1"
+      "agentContact1"
     ],
-    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/a14897a98b0bc8eee63fd05579567b89.png"
+    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/ec1b2482ccb0c8c351ac988094896f46.png",
+    "page_length": 1,
+    "header_length": "medium",
+    "name": "Elegant Just Listed Real Estate"
   },
   {
     "id": "4032",
@@ -355,8 +437,28 @@
       "status_update",
       "property_features"
     ],
-    "requiredParams": [],
-    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/d413c944da3c5e9cd4d2649134246e75.png"
+    "requiredParams": [
+      "backgroundImage1",
+      "backgroundImage2",
+      "backgroundImage3",
+      "backgroundImage4",
+      "socialHandle",
+      "subheader1Text",
+      "headerTextTop",
+      "headerTextBottom",
+      "backgroundImage1",
+      "backgroundImage2",
+      "backgroundImage3",
+      "backgroundImage4",
+      "socialHandle",
+      "subheader1Text",
+      "headerTextTop",
+      "headerTextBottom"
+    ],
+    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/d413c944da3c5e9cd4d2649134246e75.png",
+    "page_length": 2,
+    "header_length": "medium",
+    "name": "Modern Beige Real Estate Open House"
   },
   {
     "id": "4033",
@@ -368,6 +470,7 @@
       "property_features"
     ],
     "requiredParams": [
+      "backgroundImage1",
       "headerText",
       "priceDescription",
       "feature1",
@@ -376,7 +479,10 @@
       "listingAddress",
       "socialHandle"
     ],
-    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/5bf4e205b873a456f4edff5381443810.png"
+    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/ca0ac97103966bb6d02edef91a909128.png",
+    "page_length": 1,
+    "header_length": "medium",
+    "name": "Luxury Real Estate Listing"
   },
   {
     "id": "4035",
@@ -390,13 +496,16 @@
     "requiredParams": [
       "headerTextTop",
       "backgroundImage1",
-      "realtorContact1",
-      "realtorContact1",
+      "agentContact1",
+      "agentContact2",
       "backgroundImage3",
       "backgroundImage2",
       "headerTextBottom"
     ],
-    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/4bdaf6c0fa8edbfcb56713d822a75d5c.png"
+    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/3f2f9be53bf9614a8d0323b1f794aacf.png",
+    "page_length": 1,
+    "header_length": "medium",
+    "name": "Elegant Arch Real Estate"
   },
   {
     "id": "4036",
@@ -414,11 +523,14 @@
       "feature1",
       "feature2",
       "feature3",
-      "realtorContact1",
-      "realtorContact2",
+      "agentContact1",
+      "agentContact2",
       "socialHandle"
     ],
-    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/04f9dc8ba0ce4a5ba7ae060181b3c0ef.png"
+    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/5b1cac27c5a236ae85cc3bc6cb1dd724.png",
+    "page_length": 1,
+    "header_length": "medium",
+    "name": "Cozy Dream Home Listing"
   },
   {
     "id": "4037",
@@ -440,7 +552,10 @@
       "bathCount",
       "garageCount"
     ],
-    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/e094f12d560ca1de4ad34d84c9d5d0d5.png"
+    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/e094f12d560ca1de4ad34d84c9d5d0d5.png",
+    "page_length": 1,
+    "header_length": "medium",
+    "name": "Luxury Real Estate Listing"
   },
   {
     "id": "4024",
@@ -456,7 +571,10 @@
       "headerText",
       "listingAddress"
     ],
-    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/deabf31b9f92a664201374463e2f948c.png"
+    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/deabf31b9f92a664201374463e2f948c.png",
+    "page_length": 1,
+    "header_length": "medium",
+    "name": "Real Estate Just Sold Modern"
   },
   {
     "id": "4034",
@@ -467,8 +585,30 @@
       "status_update",
       "property_features"
     ],
-    "requiredParams": [],
-    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/7c4fecab9254a40d15b4eb8fab79836c.png"
+    "requiredParams": [
+      "backgroundImage2",
+      "backgroundImage4",
+      "backgroundImage1",
+      "backgroundImage5",
+      "backgroundImage3",
+      "subheader2Text",
+      "headerText",
+      "socialHandle",
+      "subheader1Text",
+      "backgroundImage4",
+      "backgroundImage3",
+      "backgroundImage1",
+      "backgroundImage2",
+      "backgroundImage5",
+      "subheader2Text",
+      "headerText",
+      "socialHandle",
+      "subheader1Text"
+    ],
+    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/7c4fecab9254a40d15b4eb8fab79836c.png",
+    "page_length": 2,
+    "header_length": "medium",
+    "name": "Real Estate Hexagon Story"
   },
   {
     "id": "4038",
@@ -486,11 +626,15 @@
       "backgroundImage1",
       "priceLabel",
       "listingPrice",
-      "realtorProfileImage",
-      "realtorContactInfo",
-      "realtorName"
+      "agentProfileImage",
+      "agentContactInfo",
+      "agentName",
+      "featureList"
     ],
-    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/7393e6e3e30484b45f52840c8eb2478f.png"
+    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/dd508e98b8d7ddc8db0b27a2675f9743.png",
+    "page_length": 1,
+    "header_length": "medium",
+    "name": "Luxury Real Estate Listing"
   },
   {
     "id": "4042",
@@ -502,13 +646,17 @@
       "property_features"
     ],
     "requiredParams": [
+      "backgroundImage1",
       "headerText",
       "bedCount",
       "feature1",
       "socialHandle",
       "bathCount"
     ],
-    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/90f97de1177ef39ccfb072283f381354.png"
+    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/e0d886f918414349d95211e31caf78f0.png",
+    "page_length": 1,
+    "header_length": "medium",
+    "name": "Luxury Real Estate Villa"
   },
   {
     "id": "4047",
@@ -523,7 +671,10 @@
       "headerText",
       "backgroundImage1"
     ],
-    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/ca9da96262a553f22c6623218e17416a.png"
+    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/ca9da96262a553f22c6623218e17416a.png",
+    "page_length": 1,
+    "header_length": "medium",
+    "name": "Realtor Lead Gen Square"
   },
   {
     "id": "4046",
@@ -538,12 +689,16 @@
       "backgroundImage1",
       "backgroundImage2",
       "backgroundImage3",
+      "headerText",
       "bedCount",
       "listingAddress",
       "socialHandle",
       "bathCount"
     ],
-    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/0113037a4655507d98ae239bbcb2ec66.png"
+    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/58306dc10349fe75ba5e5eaee0e2a94b.png",
+    "page_length": 1,
+    "header_length": "medium",
+    "name": "Luxury Villa Rental Post"
   },
   {
     "id": "4045",
@@ -562,7 +717,10 @@
       "socialHandle",
       "subheader2Text"
     ],
-    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/b2c0369be478e1483adc54e14211c1ae.png"
+    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/b2c0369be478e1483adc54e14211c1ae.png",
+    "page_length": 1,
+    "header_length": "medium",
+    "name": "Real Estate Content Secret"
   },
   {
     "id": "4044",
@@ -574,13 +732,17 @@
       "property_features"
     ],
     "requiredParams": [
+      "backgroundImage1",
       "feature1",
       "headerText",
       "subheader1Text",
       "bedCount",
       "bathCount"
     ],
-    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/dc7ecb84c0c50744c701325f722b269f.png"
+    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/09af63d1e5513e6e6517729e9bfd17f6.png",
+    "page_length": 1,
+    "header_length": "medium",
+    "name": "Luxury Real Estate Modern"
   },
   {
     "id": "4043",
@@ -592,11 +754,15 @@
       "property_features"
     ],
     "requiredParams": [
+      "backgroundImage1",
       "subheader1Text",
       "headerText",
       "listingAddress",
       "socialHandle"
     ],
-    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/8de7c2966382f3ad9443c776fc94c48c.png"
+    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/51fd91ef2b8342950a6f7d130a14c138.png",
+    "page_length": 1,
+    "header_length": "medium",
+    "name": "Elegant Real Estate Open House"
   }
 ]

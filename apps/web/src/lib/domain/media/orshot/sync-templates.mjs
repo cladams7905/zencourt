@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Fetches template metadata from Orshot API and updates templates.json.
- * Usage: ORSHOT_API_KEY=your_key node sync-required-params.mjs
+ * Usage: ORSHOT_API_KEY=your_key node sync-templates.mjs
  * Run from repo root or apps/web.
  */
 
@@ -11,49 +11,50 @@ import { fileURLToPath } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TEMPLATES_JSON = join(__dirname, "templates.json");
+const TEMPLATE_RENDER_TYPES = join(__dirname, "../templateRender/types.ts");
 
-// Must match TEMPLATE_RENDER_PARAMETER_KEYS in templateRender/types.ts
-const VALID_KEYS = new Set([
-  "headerText",
-  "headerTag",
-  "headerTextTop",
-  "headerTextBottom",
-  "subheader1Text",
-  "subheader2Text",
-  "arrowImage",
-  "bedCount",
-  "bathCount",
-  "garageCount",
-  "squareFootage",
-  "listingPrice",
-  "priceLabel",
-  "priceDescription",
-  "propertyDescription",
-  "backgroundImage1",
-  "backgroundImage2",
-  "backgroundImage3",
-  "backgroundImage4",
-  "backgroundImage5",
-  "listingAddress",
-  "feature1",
-  "feature2",
-  "feature3",
-  "featureList",
-  "openHouseDateTime",
-  "socialHandle",
-  "realtorName",
-  "realtorProfileImage",
-  "realtorContactInfo",
-  "realtorContact1",
-  "realtorContact2",
-  "realtorContact3"
-]);
+function loadTemplateRenderParameterKeys() {
+  const source = readFileSync(TEMPLATE_RENDER_TYPES, "utf8");
+  const match = source.match(
+    /export const TEMPLATE_RENDER_PARAMETER_KEYS = \[([\s\S]*?)\] as const;/
+  );
+  if (!match || typeof match[1] !== "string") {
+    throw new Error(
+      "Failed to load TEMPLATE_RENDER_PARAMETER_KEYS from templateRender/types.ts"
+    );
+  }
+
+  return [...match[1].matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+}
+
+const VALID_KEYS = new Set(loadTemplateRenderParameterKeys());
+
+function normalizeModificationKey(key) {
+  if (typeof key !== "string") return key;
+  return key.replace(/^page\d+@/, "");
+}
 
 function getRequiredParams(modifications) {
   if (!Array.isArray(modifications)) return [];
   return modifications
-    .map((m) => m?.key)
+    .map((m) => normalizeModificationKey(m?.key))
     .filter((key) => typeof key === "string" && VALID_KEYS.has(key));
+}
+
+function getPageLength(template) {
+  const pagesData = template?.pages_data;
+  if (!Array.isArray(pagesData)) {
+    return 1;
+  }
+  return Math.max(1, pagesData.length);
+}
+
+function getTemplateName(template) {
+  const name = template?.name;
+  if (typeof name !== "string") {
+    return "";
+  }
+  return name.trim();
 }
 
 function getThumbnailUrl(template) {
@@ -145,29 +146,68 @@ async function main() {
 
   try {
     const apiTemplates = await fetchAllTemplates(apiKey);
+
+    // Collect all modification keys from API that are NOT in VALID_KEYS
+    const keysNotInValidSet = new Map(); // key -> Map<id, { id, name }>
+    for (const t of apiTemplates) {
+      const mods = t?.modifications;
+      if (!Array.isArray(mods)) continue;
+      const id = String(t.id);
+      const name = typeof t?.name === "string" ? t.name : "";
+      for (const m of mods) {
+        const key = normalizeModificationKey(m?.key);
+        if (typeof key !== "string") continue;
+        if (VALID_KEYS.has(key)) continue;
+        if (!keysNotInValidSet.has(key)) {
+          keysNotInValidSet.set(key, new Map());
+        }
+        keysNotInValidSet.get(key).set(id, { id, name });
+      }
+    }
+    const sortedUnknownKeys = [...keysNotInValidSet.keys()].sort();
+    if (sortedUnknownKeys.length > 0) {
+      console.warn(
+        "⚠️ Modification keys from API not in VALID_KEYS (%d unique):\n%s",
+        sortedUnknownKeys.length,
+        JSON.stringify(
+          Object.fromEntries(
+            sortedUnknownKeys.map((k) => [
+              k,
+              [...keysNotInValidSet.get(k).values()].sort(
+                (a, b) => Number(a.id) - Number(b.id)
+              )
+            ])
+          ),
+          null,
+          2
+        )
+      );
+    }
+
     const apiMap = new Map();
     for (const t of apiTemplates) {
       const id = String(t.id);
       apiMap.set(id, {
+        name: getTemplateName(t),
         requiredParams: getRequiredParams(t.modifications),
-        thumbnail_url: getThumbnailUrl(t)
+        thumbnail_url: getThumbnailUrl(t),
+        page_length: getPageLength(t)
       });
     }
 
     let matchedCount = 0;
-    let thumbnailCount = 0;
     const updated = templates.map((t) => {
       const apiTemplate = apiMap.get(String(t.id));
       if (apiTemplate) {
         matchedCount += 1;
       }
-      if (apiTemplate?.thumbnail_url) {
-        thumbnailCount += 1;
-      }
       return {
         ...t,
+        name: apiTemplate?.name ?? t.name ?? "",
         requiredParams: apiTemplate?.requiredParams ?? [],
-        thumbnail_url: apiTemplate?.thumbnail_url ?? ""
+        thumbnail_url: apiTemplate?.thumbnail_url ?? "",
+        page_length: apiTemplate?.page_length ?? 1,
+        header_length: t.header_length ?? "medium"
       };
     });
 
@@ -176,16 +216,7 @@ async function main() {
       JSON.stringify(updated, null, 2) + "\n",
       "utf8"
     );
-    console.error(
-      "Updated %s with requiredParams and thumbnail_url from Orshot API.",
-      TEMPLATES_JSON
-    );
-    console.error(
-      "Template matches: %d/%d. Templates with thumbnail_url: %d.",
-      matchedCount,
-      templates.length,
-      thumbnailCount
-    );
+    console.log("Template matches: %d/%d.", matchedCount, templates.length);
   } catch (err) {
     console.error(err.message);
     process.exit(1);

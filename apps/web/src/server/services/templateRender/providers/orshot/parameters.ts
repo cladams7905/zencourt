@@ -163,13 +163,13 @@ export function resolveTemplateParameters(params: {
     details?.architecture ?? null
   ]);
 
-  const realtorName = params.userAdditional.agentName?.trim() || "Your Realtor";
-  const realtorTitle = params.userAdditional.agentTitle?.trim() || "Realtor";
+  const agentName = params.userAdditional.agentName?.trim() || "Your Realtor";
+  const agentTitle = params.userAdditional.agentTitle?.trim() || "Realtor";
   const brokerageName = params.userAdditional.brokerageName?.trim() || "Your Brokerage";
 
-  const realtorContact1 = "(555) 555-0199";
-  const realtorContact2 = "www.example-realty.com";
-  const realtorContact3 = `${realtorTitle} · ${brokerageName}`;
+  const agentContact1 = "(555) 555-0199";
+  const agentContact2 = "www.example-realty.com";
+  const agentContact3 = `${agentTitle} · ${brokerageName}`;
 
   return {
     headerText: fallbackHeader,
@@ -200,11 +200,13 @@ export function resolveTemplateParameters(params: {
     featureList: featureItems.join(" • "),
     openHouseDateTime: formatPlaceholderOpenHouseDateTime(now),
     socialHandle: "@zencourt_realtor",
-    realtorName,
-    realtorProfileImage: params.userAdditional.headshotUrl?.trim() || "",
-    realtorContactInfo: [realtorContact1, realtorContact2, realtorContact3].join(" • "),
-    realtorContact1,
-    realtorContact2,
-    realtorContact3
+    agentName,
+    agentTitle,
+    agentProfileImage: params.userAdditional.headshotUrl?.trim() || "",
+    agentContactInfo: [agentContact1, agentContact2, agentContact3].join(" • "),
+    agentContact1,
+    agentContact2,
+    agentContact3,
+    agencyName: brokerageName
   };
 }
