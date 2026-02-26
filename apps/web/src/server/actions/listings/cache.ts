@@ -33,7 +33,7 @@ export const deleteCachedListingContentItem = withServerActionCaller(
       cacheKeyTimestamp <= 0 ||
       typeof cacheKeyId !== "number" ||
       !Number.isFinite(cacheKeyId) ||
-      cacheKeyId <= 0 ||
+      cacheKeyId < 0 ||
       !subcategory ||
       !(LISTING_CONTENT_SUBCATEGORIES as readonly string[]).includes(
         subcategory

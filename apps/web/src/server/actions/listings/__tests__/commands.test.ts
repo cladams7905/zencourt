@@ -151,7 +151,7 @@ describe("listings commands", () => {
       await expect(
         deleteCachedListingContentItem("listing-1", {
           cacheKeyTimestamp: 1,
-          cacheKeyId: 0,
+          cacheKeyId: -1,
           subcategory: "new_listing"
         })
       ).rejects.toThrow(DomainValidationError);
@@ -196,6 +196,27 @@ describe("listings commands", () => {
         mediaType: "image",
         timestamp: 123,
         id: 456
+      });
+    });
+
+    it("accepts cacheKeyId of 0 for zero-indexed cache entries", async () => {
+      mockDeleteCachedListingContentItemService.mockResolvedValueOnce(
+        undefined
+      );
+
+      await deleteCachedListingContentItem("listing-1", {
+        cacheKeyTimestamp: 123,
+        cacheKeyId: 0,
+        subcategory: "new_listing"
+      });
+
+      expect(mockDeleteCachedListingContentItemService).toHaveBeenCalledWith({
+        userId: "user-1",
+        listingId: "listing-1",
+        subcategory: "new_listing",
+        mediaType: "image",
+        timestamp: 123,
+        id: 0
       });
     });
   });
