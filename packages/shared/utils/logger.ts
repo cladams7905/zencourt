@@ -1,5 +1,29 @@
 import pino from "pino";
 
+type PrettyTransportTarget = NonNullable<
+  NonNullable<Parameters<typeof pino>[0]>["transport"]
+>;
+
+declare global {
+  var __zencourtPrettyTransport: PrettyTransportTarget | undefined;
+}
+
+function getPrettyTransportTarget(): PrettyTransportTarget {
+  if (!globalThis.__zencourtPrettyTransport) {
+    globalThis.__zencourtPrettyTransport = {
+      target: "pino-pretty",
+      options: {
+        colorize: true,
+        translateTime: "SYS:hh:MM:ss TT",
+        ignore: "pid,hostname",
+        messageFormat: "{msg}"
+      }
+    };
+  }
+
+  return globalThis.__zencourtPrettyTransport;
+}
+
 /**
  * Options for creating a logger instance
  */
@@ -125,17 +149,7 @@ export function createLogger(options: LoggerOptions): pino.Logger {
       : base,
 
     // Pretty printing in development for readability
-    transport: isDevelopment
-      ? {
-          target: "pino-pretty",
-          options: {
-            colorize: true,
-            translateTime: "SYS:hh:MM:ss TT",
-            ignore: "pid,hostname",
-            messageFormat: "{msg}"
-          }
-        }
-      : undefined
+    transport: isDevelopment ? getPrettyTransportTarget() : undefined
   });
 }
 
