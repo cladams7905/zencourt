@@ -79,8 +79,8 @@ describe("templateRender/providers/orshot/parameters", () => {
     expect(result.arrowImage).toContain("/overlays/");
     expect(result.featureList).toContain("4 beds");
     expect(result.featureList).toContain("3 baths");
-    expect(result.realtorName).toBe("Agent Jane");
-    expect(result.realtorProfileImage).toBe("https://cdn.example.com/headshot.jpg");
+    expect(result.agentName).toBe("Agent Jane");
+    expect(result.agentProfileImage).toBe("https://cdn.example.com/headshot.jpg");
     expect(result.backgroundImage1).toBe("https://cdn.example.com/1.jpg");
     expect(result.openHouseDateTime).toMatch(/^Feb \d+(st|nd|rd|th), 7-10AM$/);
   });
@@ -106,7 +106,7 @@ describe("templateRender/providers/orshot/parameters", () => {
     expect(result.priceLabel).toBe("sold for");
     expect(result.headerText).toBe("Just listed");
     expect(result.listingAddress).toBe("123 Listing Address");
-    expect(result.realtorName).toBe("Your Realtor");
+    expect(result.agentName).toBe("Your Realtor");
     expect(result.backgroundImage1).toBe("");
   });
 
@@ -136,7 +136,7 @@ describe("templateRender/providers/orshot/parameters", () => {
     expect(result.headerTag).toBe("");
     expect(result.headerTextTop).toBe("Hello");
     expect(result.headerTextBottom).toBe("");
-    expect(result.realtorName).toBe("Your Realtor");
+    expect(result.agentName).toBe("Your Realtor");
   });
 
   it("falls back to raw arrow path when siteOrigin is invalid", () => {

@@ -1,14 +1,6 @@
 import { LISTING_CONTENT_SUBCATEGORIES } from "@shared/types/models";
 import type { ListingContentSubcategory } from "@shared/types/models";
-import type { TemplateRenderCaptionItemInput } from "@web/src/lib/domain/media/templateRender/types";
-
-/**
- * Caption item with optional cache key identity for reading/updating the unified listing content cache.
- */
-export type TemplateRenderCaptionItemWithCacheKey = TemplateRenderCaptionItemInput & {
-  cacheKeyTimestamp?: number;
-  cacheKeyId?: number;
-};
+import type { TemplateRenderCaptionItemWithCacheKey } from "@web/src/lib/domain/media/templateRender/types";
 
 /**
  * Parses and validates a listing subcategory from request body.
