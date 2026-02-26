@@ -243,13 +243,14 @@
       "subheader1Text",
       "featureList",
       "agentName",
-      "agentTitle",
-      "socialHandle"
+      "agentContactInfo",
+      "socialHandle",
+      "agentProfileImage"
     ],
-    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/4cc1486e0d3ee0b68bc9b6130d74a4a2.png",
+    "thumbnail_url": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/3785480fdafa724cd1b8c6cd774694ed.png",
     "page_length": 1,
     "header_length": "medium",
-    "name": "Luxury Estate Listing"
+    "name": "Modern Luxury Listing Template"
   },
   {
     "id": "4012",

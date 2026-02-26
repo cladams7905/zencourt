@@ -195,13 +195,10 @@ async function main() {
       });
     }
 
-    let matchedCount = 0;
+    let syncedCount = 0;
     const updated = templates.map((t) => {
       const apiTemplate = apiMap.get(String(t.id));
-      if (apiTemplate) {
-        matchedCount += 1;
-      }
-      return {
+      const nextTemplate = {
         ...t,
         name: apiTemplate?.name ?? t.name ?? "",
         requiredParams: apiTemplate?.requiredParams ?? [],
@@ -209,6 +206,10 @@ async function main() {
         page_length: apiTemplate?.page_length ?? 1,
         header_length: t.header_length ?? "medium"
       };
+      if (JSON.stringify(nextTemplate) !== JSON.stringify(t)) {
+        syncedCount += 1;
+      }
+      return nextTemplate;
     });
 
     writeFileSync(
@@ -216,7 +217,7 @@ async function main() {
       JSON.stringify(updated, null, 2) + "\n",
       "utf8"
     );
-    console.log("Template matches: %d/%d.", matchedCount, templates.length);
+    console.log("Synced %d templates.", syncedCount);
   } catch (err) {
     console.error(err.message);
     process.exit(1);

@@ -1,6 +1,6 @@
 export { renderTemplate } from "./client";
-export { buildOrshotModifications } from "./modifications";
-export { resolveTemplateParameters } from "./parameters";
+export { buildModifications } from "./modifications";
+export { resolveTemplateParameters, pickPropertyDetails } from "./parameters";
 export {
   getTemplateById,
   getTemplatesForSubcategory,

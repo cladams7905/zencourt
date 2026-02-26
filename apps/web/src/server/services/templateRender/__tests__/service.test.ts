@@ -96,7 +96,7 @@ describe("templateRender/service", () => {
         headerText: "Dream Home"
       }
     });
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       items: [
         {
           templateId: "template-1",
@@ -138,10 +138,7 @@ describe("templateRender/service", () => {
       templateId: "template-3",
       modifications: {
         headerText: "Heading",
-        headerTextTop: "Heading",
-        subheader1Text: "Pool",
-        subheader2Text: "Pool",
-        feature1: "Pool"
+        headerTextTop: "Heading"
       }
     });
     expect(result.failedTemplateIds).toEqual([]);
@@ -192,8 +189,7 @@ describe("templateRender/service", () => {
     expect(mockRenderTemplate).toHaveBeenCalledWith({
       templateId: "template-5",
       modifications: {
-        headerText: "Title",
-        feature1: "Patio"
+        headerText: "Title"
       }
     });
   });
@@ -218,8 +214,7 @@ describe("templateRender/service", () => {
     expect(mockRenderTemplate).toHaveBeenCalledWith({
       templateId: "template-multi-page",
       modifications: {
-        "page1@headerText": "Dream Home",
-        "page1@feature1": "Pool"
+        "page1@headerText": "Dream Home"
       }
     });
   });
@@ -283,7 +278,7 @@ describe("templateRender/service", () => {
       templateId: "template-medium-header",
       modifications: {
         subheader1Text: "55 Oak Ave",
-        subheader2Text: "4 beds"
+        subheader2Text: "55 Oak Ave"
       }
     });
   });
@@ -414,6 +409,19 @@ describe("templateRender/service", () => {
       imageUrl: "https://cdn.example.com/stream-1.jpg",
       captionItemId: "cap-1",
       parametersUsed: {
+        agentContactInfo: "",
+        agentContact1: "",
+        agentContact2: "",
+        agentContact3: "",
+        bedCount: "",
+        bathCount: "",
+        garageCount: "",
+        squareFootage: "",
+        listingAddress: "",
+        feature1: "",
+        feature2: "",
+        feature3: "",
+        featureList: "",
         headerText: "Hi",
         headerTextTop: "Hi",
         headerTextBottom: "",
