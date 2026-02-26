@@ -89,7 +89,7 @@ export function ImagePreviewCard({
           />
         ) : null}
         {hasOverlay ? (
-          <div className="pointer-events-none absolute inset-0 bg-linear-to-b from-black/35 via-black/15 to-black/40" />
+          <div className="pointer-events-none absolute inset-0" />
         ) : null}
         {coverOverlay ? <ImageTextOverlay overlay={coverOverlay} /> : null}
         {item.slides.length > 1 ? (

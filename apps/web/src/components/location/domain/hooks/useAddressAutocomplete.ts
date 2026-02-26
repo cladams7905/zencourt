@@ -1,6 +1,6 @@
 import * as React from "react";
 import { toast } from "sonner";
-import { logger as baseLogger, createChildLogger } from "@web/src/lib/core/logging/logger";
+import { logger as baseLogger, createChildLogger } from "@shared/utils/logger";
 import { AUTOCOMPLETE_DEBOUNCE_MS, BLUR_DISMISS_DELAY_MS } from "@web/src/components/location/shared/constants";
 import type { AddressSelection } from "@web/src/components/location/shared/types";
 import { useGooglePlacesServices } from "@web/src/components/location/domain/hooks/useGooglePlacesServices";

@@ -1,7 +1,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { useLocationAutocomplete } from "@web/src/components/location/domain/hooks/useLocationAutocomplete";
 
-jest.mock("@web/src/lib/core/logging/logger", () => ({
+jest.mock("@shared/utils/logger", () => ({
   logger: {},
   createChildLogger: () => ({
     error: jest.fn(),

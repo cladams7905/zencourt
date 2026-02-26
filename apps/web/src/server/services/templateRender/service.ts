@@ -78,7 +78,9 @@ export async function renderListingTemplateBatch(params: {
         captionItem,
         siteOrigin: params.siteOrigin,
         random: params.random,
-        now: params.now?.()
+        now: params.now?.(),
+        renderIndex: index,
+        rotationKey: `${params.listing.id}:${template.id}`
       });
       const normalizedParameters = applyTemplatePolicies({
         resolvedParameters,
@@ -257,7 +259,9 @@ export async function renderListingTemplateBatchStream(
       captionItem,
       siteOrigin: params.siteOrigin,
       random: params.random,
-      now: params.now?.()
+      now: params.now?.(),
+      renderIndex: index,
+      rotationKey: `${params.listing.id}:${template.id}`
     });
     const normalizedParameters = applyTemplatePolicies({
       resolvedParameters,

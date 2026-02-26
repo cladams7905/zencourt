@@ -94,42 +94,8 @@ export function createLogger(options: LoggerOptions): pino.Logger {
   const logLevel =
     level || process.env.LOG_LEVEL || (isDevelopment ? "debug" : "info");
 
-  return pino({
+  const pinoOptions: Parameters<typeof pino>[0] = {
     level: logLevel,
-
-    hooks: contextMixin
-      ? {
-          logMethod(inputArgs: unknown[], method: pino.LogFn, _level: number) {
-            const mixinObj = contextMixin();
-            const [first, ...rest] = inputArgs;
-            let obj: Record<string, unknown>;
-
-            if (
-              typeof first === "object" &&
-              first !== null &&
-              !Array.isArray(first)
-            ) {
-              obj =
-                Object.keys(mixinObj).length > 0
-                  ? { ...(first as Record<string, unknown>), ...mixinObj }
-                  : (first as Record<string, unknown>);
-            } else {
-              obj = Object.keys(mixinObj).length > 0 ? mixinObj : {};
-            }
-
-            const args =
-              typeof first === "object" &&
-              first !== null &&
-              !Array.isArray(first)
-                ? [obj, ...rest]
-                : Object.keys(obj).length > 0
-                  ? [obj, first, ...rest]
-                  : (inputArgs as [unknown, ...unknown[]]);
-
-            return (method as (...a: unknown[]) => void).apply(this, args);
-          }
-        }
-      : undefined,
 
     // Standard formatters
     formatters: {
@@ -150,7 +116,45 @@ export function createLogger(options: LoggerOptions): pino.Logger {
 
     // Pretty printing in development for readability
     transport: isDevelopment ? getPrettyTransportTarget() : undefined
-  });
+  };
+
+  if (contextMixin) {
+    pinoOptions.hooks = {
+      logMethod(inputArgs: unknown[], method: pino.LogFn, _level: number) {
+        const mixinObj = contextMixin();
+        const [first, ...rest] = inputArgs;
+        let obj: Record<string, unknown>;
+
+        if (
+          typeof first === "object" &&
+          first !== null &&
+          !Array.isArray(first)
+        ) {
+          obj =
+            Object.keys(mixinObj).length > 0
+              ? { ...(first as Record<string, unknown>), ...mixinObj }
+              : (first as Record<string, unknown>);
+        } else {
+          obj = Object.keys(mixinObj).length > 0 ? mixinObj : {};
+        }
+
+        const args =
+          typeof first === "object" &&
+          first !== null &&
+          !Array.isArray(first)
+            ? [obj, ...rest]
+            : Object.keys(obj).length > 0
+              ? [obj, first, ...rest]
+              : (inputArgs as [unknown, ...unknown[]]);
+
+        return (method as (...a: unknown[]) => void).apply(this, args);
+      }
+    };
+  }
+
+  return pino(
+    pinoOptions as NonNullable<Parameters<typeof pino>[0]>
+  ) as unknown as pino.Logger;
 }
 
 /**
@@ -173,3 +177,11 @@ export function createChildLogger(
 ): pino.Logger {
   return parentLogger.child(context);
 }
+
+/**
+ * Shared base logger for modules that don't need custom context mixins.
+ * Keep service overrideable per runtime via LOG_SERVICE.
+ */
+export const logger = createLogger({
+  service: process.env.LOG_SERVICE || "zencourt"
+});
