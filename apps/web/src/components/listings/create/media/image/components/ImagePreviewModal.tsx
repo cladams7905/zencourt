@@ -3,7 +3,12 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@web/src/components/ui/button";
 import { cn } from "@web/src/components/ui/utils";
 import { LoadingImage } from "@web/src/components/ui/loading-image";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@web/src/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle
+} from "@web/src/components/ui/dialog";
 import type { ListingImagePreviewItem } from "@web/src/components/listings/create/shared/types";
 import {
   buildImagePreviewOverlay,
@@ -31,12 +36,14 @@ export function ImagePreviewModal({
   onSelectSlide
 }: ImagePreviewModalProps) {
   const selectedSlides = selectedItem?.slides ?? [];
-  const selectedTemplatePattern = selectedItem
-    ? resolveItemTemplatePattern(selectedItem)
-    : "sandwich";
+  const isTemplateRender = Boolean(selectedItem?.isTemplateRender);
+  const selectedTemplatePattern =
+    selectedItem && !isTemplateRender
+      ? resolveItemTemplatePattern(selectedItem)
+      : undefined;
   const selectedSlide = selectedSlides[activeSlideIndex] ?? null;
   const selectedOverlay =
-    selectedItem && selectedSlide
+    selectedItem && selectedSlide && !isTemplateRender
       ? buildImagePreviewOverlay(
           selectedItem.id,
           selectedSlide,
@@ -47,21 +54,20 @@ export function ImagePreviewModal({
 
   return (
     <Dialog open={Boolean(selectedItem)} onOpenChange={onOpenChange}>
-      <DialogContent className="h-[80vh] w-[60vw] max-w-[calc(100vw-2rem)] sm:max-w-[1600px] grid-rows-[auto_minmax(0,1fr)] overflow-hidden">
+      <DialogContent className="h-[82vh] w-[94vw] max-w-[calc(100vw-1.5rem)] grid-rows-[auto_minmax(0,1fr)] overflow-hidden sm:h-[80vh] sm:w-[88vw] sm:max-w-[calc(100vw-2rem)] xl:w-[72vw] xl:max-w-[1600px]">
         <DialogHeader>
           <DialogTitle>Image Preview</DialogTitle>
         </DialogHeader>
         {selectedItem ? (
-          <div className="grid h-full min-h-0 gap-6 md:grid-cols-[minmax(0,1fr)_490px]">
-            <div className="group relative flex min-h-0 items-center justify-center overflow-hidden rounded-lg bg-card p-3">
-              <div className="relative aspect-square w-full max-w-[720px] overflow-hidden rounded-lg">
+          <div className="grid h-full min-h-0 gap-4 lg:grid-cols-[minmax(0,1fr)_420px] lg:grid-rows-none lg:gap-6 xl:grid-cols-[minmax(0,1fr)_490px]">
+            <div className="group relative mx-auto h-fit w-fit">
+              <div className="relative aspect-square w-[min(72vh,88vw)] max-w-[420px] overflow-hidden rounded-lg bg-card">
                 {selectedSlide?.imageUrl ? (
                   <LoadingImage
                     src={selectedSlide.imageUrl}
                     alt="Listing image preview"
                     fill
-                    sizes="(min-width: 768px) 60vw, 100vw"
-                    className="object-cover"
+                    className="object-contain"
                   />
                 ) : null}
                 {selectedOverlay ? (
@@ -77,7 +83,7 @@ export function ImagePreviewModal({
                     type="button"
                     size="icon"
                     variant="ghost"
-                    className="absolute left-5 top-1/2 h-6 w-6 -translate-y-1/2 rounded-full border border-white/35 bg-white/20 text-white/90 opacity-0 transition-opacity duration-200 hover:bg-white/30 group-hover:opacity-100"
+                    className="absolute left-3 top-1/2 h-6 w-6 -translate-y-1/2 rounded-full border border-white/35 bg-white/20 text-white/90 opacity-100 transition-opacity duration-200 hover:bg-white/30 sm:left-5 sm:opacity-0 sm:group-hover:opacity-100"
                     onClick={onPrevSlide}
                   >
                     <ChevronLeft className="h-4 w-4" />
@@ -86,7 +92,7 @@ export function ImagePreviewModal({
                     type="button"
                     size="icon"
                     variant="ghost"
-                    className="absolute right-5 top-1/2 h-6 w-6 -translate-y-1/2 rounded-full border border-white/35 bg-white/20 text-white/90 opacity-0 transition-opacity duration-200 hover:bg-white/30 group-hover:opacity-100"
+                    className="absolute right-3 top-1/2 h-6 w-6 -translate-y-1/2 rounded-full border border-white/35 bg-white/20 text-white/90 opacity-100 transition-opacity duration-200 hover:bg-white/30 sm:right-5 sm:opacity-0 sm:group-hover:opacity-100"
                     onClick={onNextSlide}
                   >
                     <ChevronRight className="h-4 w-4" />
@@ -110,7 +116,7 @@ export function ImagePreviewModal({
                 </>
               ) : null}
             </div>
-            <div className="min-h-0 overflow-y-auto rounded-lg border border-border bg-card p-4">
+            <div className="min-h-0 overflow-y-auto rounded-lg border border-border bg-card p-3 sm:p-4">
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 {captionSubcategoryLabel} Caption · Variation{" "}
                 {selectedItem.variationNumber}
@@ -121,7 +127,9 @@ export function ImagePreviewModal({
                     <p className="text-xs font-semibold text-muted-foreground">
                       Hook
                     </p>
-                    <p className="text-sm text-foreground">{selectedItem.hook}</p>
+                    <p className="text-sm text-foreground">
+                      {selectedItem.hook}
+                    </p>
                   </div>
                 ) : null}
                 <div>
