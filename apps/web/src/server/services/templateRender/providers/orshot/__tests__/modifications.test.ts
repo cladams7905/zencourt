@@ -1,8 +1,8 @@
-import { buildOrshotModifications } from "../modifications";
+import { buildModifications } from "../modifications";
 
 describe("templateRender/providers/orshot/modifications", () => {
   it("builds raw-key modifications for required params", () => {
-    const result = buildOrshotModifications({
+    const result = buildModifications({
       resolvedParameters: {
         headerText: "  Dream Home  ",
         feature1: "  Pool  "
@@ -22,7 +22,7 @@ describe("templateRender/providers/orshot/modifications", () => {
   });
 
   it("prefixes keys with page1@ when template has multiple pages", () => {
-    const result = buildOrshotModifications({
+    const result = buildModifications({
       resolvedParameters: {
         headerText: "Title"
       },
@@ -41,7 +41,7 @@ describe("templateRender/providers/orshot/modifications", () => {
   });
 
   it("filters non-public image URLs", () => {
-    const result = buildOrshotModifications({
+    const result = buildModifications({
       resolvedParameters: {
         backgroundImage1: "http://localhost:3000/private.jpg",
         feature1: "Patio"

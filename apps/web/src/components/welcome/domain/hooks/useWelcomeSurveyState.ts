@@ -3,7 +3,7 @@ import type { ReferralSource, TargetAudience } from "@db/client";
 import type { CarouselApi } from "@web/src/components/ui/carousel";
 import type { LocationData } from "@web/src/components/location";
 import { normalizeCountyName } from "@web/src/lib/domain/location/cityDataset";
-import { logger as baseLogger, createChildLogger } from "@web/src/lib/core/logging/logger";
+import { logger as baseLogger, createChildLogger } from "@shared/utils/logger";
 import { toast } from "sonner";
 import type { SurveyFormData } from "../../shared";
 

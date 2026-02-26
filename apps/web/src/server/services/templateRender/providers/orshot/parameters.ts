@@ -12,6 +12,8 @@ import {
   formatCountWithNoun
 } from "@web/src/lib/core/formatting/number";
 
+const lastUsedImageIndexByRotationKey = new Map<string, number>();
+
 function toOrdinal(day: number): string {
   const mod10 = day % 10;
   const mod100 = day % 100;
@@ -68,13 +70,14 @@ function rankListingImagesForTemplate(
   images: DBListingImage[],
   captionItem: TemplateRenderCaptionItemInput
 ): string[] {
+  const primaryImages = images.filter((image) => image.isPrimary);
   const needle = `${captionItem.hook ?? ""} ${captionItem.caption ?? ""} ${captionItem.body
     .map((slide) => `${slide.header} ${slide.content}`)
     .join(" ")}`
     .toLowerCase()
     .replace(/[^\w\s]/g, " ");
 
-  const sorted = [...images].sort((a, b) => {
+  const sorted = [...primaryImages].sort((a, b) => {
     const aPriority = a.category && isPriorityCategory(a.category) ? 1 : 0;
     const bPriority = b.category && isPriorityCategory(b.category) ? 1 : 0;
     if (aPriority !== bPriority) {
@@ -105,6 +108,14 @@ function rankListingImagesForTemplate(
   return sorted.map((image) => image.url);
 }
 
+function rotateImages(images: string[], startIndex: number): string[] {
+  if (images.length === 0) {
+    return images;
+  }
+  const normalized = ((startIndex % images.length) + images.length) % images.length;
+  return [...images.slice(normalized), ...images.slice(0, normalized)];
+}
+
 function resolveHeaderTag(subcategory: ListingContentSubcategory): string {
   if (subcategory === "new_listing") {
     return "listed";
@@ -133,12 +144,24 @@ export function resolveTemplateParameters(params: {
   siteOrigin?: string | null;
   random?: () => number;
   now?: Date;
+  renderIndex?: number;
+  rotationKey?: string;
 }): Partial<Record<TemplateRenderParameterKey, string>> {
   const details = pickPropertyDetails(params.listing);
-  const images = rankListingImagesForTemplate(
+  const rankedImages = rankListingImagesForTemplate(
     params.listingImages,
     params.captionItem
   );
+  const resolvedRotationIndex = (() => {
+    if (typeof params.rotationKey === "string" && params.rotationKey.length > 0) {
+      const previous = lastUsedImageIndexByRotationKey.get(params.rotationKey) ?? -1;
+      const next = (previous + 1) % Math.max(1, rankedImages.length);
+      lastUsedImageIndexByRotationKey.set(params.rotationKey, next);
+      return next;
+    }
+    return params.renderIndex ?? 0;
+  })();
+  const images = rotateImages(rankedImages, resolvedRotationIndex);
   const random = params.random ?? Math.random;
   const now = params.now ?? new Date();
 

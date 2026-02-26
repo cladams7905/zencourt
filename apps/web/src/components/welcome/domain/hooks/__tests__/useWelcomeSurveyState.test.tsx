@@ -16,7 +16,7 @@ jest.mock("sonner", () => ({
   }
 }));
 
-jest.mock("@web/src/lib/core/logging/logger", () => ({
+jest.mock("@shared/utils/logger", () => ({
   logger: {},
   createChildLogger: () => ({
     error: (...args: unknown[]) => mockLoggerError(...args)

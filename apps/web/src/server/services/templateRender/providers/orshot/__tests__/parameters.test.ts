@@ -152,4 +152,105 @@ describe("templateRender/providers/orshot/parameters", () => {
 
     expect(result.arrowImage).toBe("/overlays/a.svg");
   });
+
+  it("rotates primary images per render index", () => {
+    const rotatingImages = [
+      ...listingImages,
+      {
+        id: "img-3",
+        url: "https://cdn.example.com/3.jpg",
+        category: "living room",
+        isPrimary: true,
+        primaryScore: 0.6,
+        uploadedAt: new Date("2026-02-16T00:00:00.000Z")
+      }
+    ];
+
+    const first = resolveTemplateParameters({
+      subcategory: "new_listing",
+      listing: listingBase as never,
+      listingImages: rotatingImages as never,
+      userAdditional: userAdditional as never,
+      captionItem,
+      renderIndex: 0
+    });
+
+    const second = resolveTemplateParameters({
+      subcategory: "new_listing",
+      listing: listingBase as never,
+      listingImages: rotatingImages as never,
+      userAdditional: userAdditional as never,
+      captionItem,
+      renderIndex: 1
+    });
+
+    expect(first.backgroundImage1).toBe("https://cdn.example.com/1.jpg");
+    expect(second.backgroundImage1).toBe("https://cdn.example.com/3.jpg");
+  });
+
+  it("uses only primary images for background assignments", () => {
+    const mixedImages = [
+      {
+        id: "img-a",
+        url: "https://cdn.example.com/non-primary.jpg",
+        category: "kitchen",
+        isPrimary: false,
+        primaryScore: 0.99,
+        uploadedAt: new Date("2026-02-19T00:00:00.000Z")
+      },
+      {
+        id: "img-b",
+        url: "https://cdn.example.com/primary.jpg",
+        category: "bedroom",
+        isPrimary: true,
+        primaryScore: 0.1,
+        uploadedAt: new Date("2026-02-18T00:00:00.000Z")
+      }
+    ];
+
+    const result = resolveTemplateParameters({
+      subcategory: "new_listing",
+      listing: listingBase as never,
+      listingImages: mixedImages as never,
+      userAdditional: userAdditional as never,
+      captionItem
+    });
+
+    expect(result.backgroundImage1).toBe("https://cdn.example.com/primary.jpg");
+    expect(result.backgroundImage1).not.toBe("https://cdn.example.com/non-primary.jpg");
+  });
+
+  it("rotates across repeated renders with the same rotation key", () => {
+    const rotatingImages = [
+      ...listingImages,
+      {
+        id: "img-3",
+        url: "https://cdn.example.com/3.jpg",
+        category: "living room",
+        isPrimary: true,
+        primaryScore: 0.6,
+        uploadedAt: new Date("2026-02-16T00:00:00.000Z")
+      }
+    ];
+
+    const first = resolveTemplateParameters({
+      subcategory: "new_listing",
+      listing: listingBase as never,
+      listingImages: rotatingImages as never,
+      userAdditional: userAdditional as never,
+      captionItem,
+      rotationKey: "listing-1:template-1"
+    });
+    const second = resolveTemplateParameters({
+      subcategory: "new_listing",
+      listing: listingBase as never,
+      listingImages: rotatingImages as never,
+      userAdditional: userAdditional as never,
+      captionItem,
+      rotationKey: "listing-1:template-1"
+    });
+
+    expect(first.backgroundImage1).toBe("https://cdn.example.com/1.jpg");
+    expect(second.backgroundImage1).toBe("https://cdn.example.com/3.jpg");
+  });
 });
