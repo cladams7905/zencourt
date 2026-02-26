@@ -2,9 +2,7 @@ import type {
   TemplateRenderConfig,
   TemplateRenderParameterKey
 } from "@web/src/lib/domain/media/templateRender/types";
-import {
-  TEMPLATE_RENDER_IMAGE_PARAMETER_KEY_SET
-} from "@web/src/lib/domain/media/templateRender/types";
+import { TEMPLATE_RENDER_IMAGE_PARAMETER_KEY_SET } from "@web/src/lib/domain/media/templateRender/types";
 
 const DEFAULT_TEMPLATE_PAGE_LENGTH = 1;
 
@@ -29,7 +27,7 @@ function isPublicFetchableImageUrl(value: string): boolean {
   }
 }
 
-export function buildOrshotModifications(params: {
+export function buildModifications(params: {
   resolvedParameters: Partial<Record<TemplateRenderParameterKey, string>>;
   template: TemplateRenderConfig;
 }): Record<string, string> {

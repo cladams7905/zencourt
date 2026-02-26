@@ -119,7 +119,7 @@ function compactList(values: Array<string | null | undefined>): string[] {
   return values.map((value) => value?.trim() ?? "").filter((value) => value.length > 0);
 }
 
-function pickPropertyDetails(listing: DBListing): ListingPropertyDetails | null {
+export function pickPropertyDetails(listing: DBListing): ListingPropertyDetails | null {
   const details = listing.propertyDetails as ListingPropertyDetails | null;
   return details ?? null;
 }
@@ -153,7 +153,6 @@ export function resolveTemplateParameters(params: {
 
   const listingPrice = formatCurrencyUsd(details?.listing_price ?? null, "$0");
   const priceLabel = params.subcategory === "status_update" ? "sold for" : "starting from";
-
   const featureItems = compactList([
     bedCount,
     bathCount,
@@ -166,7 +165,8 @@ export function resolveTemplateParameters(params: {
   const agentName = params.userAdditional.agentName?.trim() || "Your Realtor";
   const agentTitle = params.userAdditional.agentTitle?.trim() || "Realtor";
   const brokerageName = params.userAdditional.brokerageName?.trim() || "Your Brokerage";
-
+  const listingAddress =
+    details?.address?.trim() || params.listing.address?.trim() || params.listing.title?.trim() || "";
   const agentContact1 = "(555) 555-0199";
   const agentContact2 = "www.example-realty.com";
   const agentContact3 = `${agentTitle} · ${brokerageName}`;
@@ -192,8 +192,7 @@ export function resolveTemplateParameters(params: {
     backgroundImage3: images[2] ?? "",
     backgroundImage4: images[3] ?? "",
     backgroundImage5: images[4] ?? "",
-    listingAddress:
-      details?.address?.trim() || params.listing.address?.trim() || params.listing.title?.trim() || "",
+    listingAddress,
     feature1: featureItems[0] ?? "",
     feature2: featureItems[1] ?? "",
     feature3: featureItems[2] ?? "",

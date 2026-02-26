@@ -18,8 +18,9 @@ import {
 import { applyTemplatePolicies } from "./policies";
 import { buildFallbackRenderedItem } from "./providers/fallback";
 import {
-  buildOrshotModifications,
+  buildModifications,
   getTemplateById,
+  pickPropertyDetails,
   renderTemplate,
   resolveTemplateParameters,
   pickRandomTemplatesForSubcategory
@@ -64,6 +65,7 @@ export async function renderListingTemplateBatch(params: {
   if (!selectedTemplates.length) {
     return { items: [], failedTemplateIds: [] };
   }
+  const details = pickPropertyDetails(params.listing);
 
   const renders = await Promise.all(
     selectedTemplates.map(async (template, index) => {
@@ -82,10 +84,15 @@ export async function renderListingTemplateBatch(params: {
         resolvedParameters,
         headerLength: template.header_length,
         subcategory: params.subcategory,
+        details,
+        contactSource: params.userAdditional as unknown as Record<
+          string,
+          unknown
+        >,
         random: params.random
       });
 
-      const modifications = buildOrshotModifications({
+      const modifications = buildModifications({
         resolvedParameters: normalizedParameters,
         template
       });
@@ -129,7 +136,10 @@ export async function renderListingTemplateBatch(params: {
     if (result?.ok && result.value) {
       items.push(result.value);
     } else {
-      const fallback = buildFallbackRenderedItem(captionItem, params.listingImages);
+      const fallback = buildFallbackRenderedItem(
+        captionItem,
+        params.listingImages
+      );
       if (fallback) {
         items.push(fallback);
       }
@@ -167,7 +177,11 @@ export type RenderListingTemplateBatchStreamCallbacks = {
     content: {
       hook: string;
       broll_query: string;
-      body: Array<{ header: string; content: string; broll_query: string }> | null;
+      body: Array<{
+        header: string;
+        content: string;
+        broll_query: string;
+      }> | null;
       cta: string | null;
       caption: string;
     };
@@ -208,6 +222,7 @@ export async function renderListingTemplateBatchStream(
   if (!selectedTemplates.length) {
     return { failedTemplateIds };
   }
+  const details = pickPropertyDetails(params.listing);
 
   for (let index = 0; index < selectedTemplates.length; index += 1) {
     const template = selectedTemplates[index] as TemplateRenderConfig;
@@ -248,10 +263,15 @@ export async function renderListingTemplateBatchStream(
       resolvedParameters,
       headerLength: template.header_length,
       subcategory: params.subcategory,
+      details,
+      contactSource: params.userAdditional as unknown as Record<
+        string,
+        unknown
+      >,
       random: params.random
     });
 
-    const modifications = buildOrshotModifications({
+    const modifications = buildModifications({
       resolvedParameters: normalizedParameters,
       template
     });
