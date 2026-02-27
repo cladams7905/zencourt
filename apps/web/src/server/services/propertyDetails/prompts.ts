@@ -1,4 +1,4 @@
-export const PROPERTY_DETAILS_PROMPT_VERSION = "2026-02-18.1";
+export const PROPERTY_DETAILS_PROMPT_VERSION = "2026-02-27.1";
 
 export function buildPropertyDetailsSystemPrompt(): string {
   return [
@@ -27,6 +27,7 @@ export function buildPropertyDetailsUserPrompt(address: string): string {
     "Architecture must be one of the allowed enum values in the schema.",
     "Location state must be a two-letter abbreviation from the schema enum.",
     "Street type and lot type must be selected from the schema enum values.",
+    "Include open house events only if explicitly listed on reliable sources; include date, start time, and end time when available.",
     "Exclude tax assessments, APN/MLS identifiers, and listing status info.",
     "Include sources in the sources array where possible.",
     "Each sources.citation must be a valid URL to the exact page where the data was found.",

@@ -39,10 +39,11 @@ describe("useReviewDetailsState", () => {
     expect(result.current.details.bedrooms).toBe(3);
   });
 
-  it("normalizes sale history and valuation examples to null when empty", () => {
+  it("normalizes list sections to null when empty", () => {
     const { result } = renderHook(() =>
       useReviewDetailsState({
         propertyDetails: {
+          open_house_events: [{ date: "2026-03-01" }],
           sale_history: [{ event: "Sold" }]
         } as ListingPropertyDetails,
         address: null
@@ -50,10 +51,12 @@ describe("useReviewDetailsState", () => {
     );
 
     act(() => {
+      result.current.setOpenHouseEvents([]);
       result.current.setSaleHistory([]);
       result.current.setValuationExamples([]);
     });
 
+    expect(result.current.details.open_house_events).toBeNull();
     expect(result.current.details.sale_history).toBeNull();
     expect(result.current.details.valuation_estimates?.third_party_examples).toBeNull();
   });

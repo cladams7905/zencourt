@@ -25,6 +25,7 @@ import {
   ReviewExteriorFeaturesCard,
   ReviewInteriorFeaturesCard,
   ReviewLocationContextCard,
+  ReviewOpenHouseEventsCard,
   ReviewPropertyBasicsCard,
   ReviewSaleHistoryCard,
   ReviewSidebarActions,
@@ -65,6 +66,7 @@ export function ListingReviewView({
     setLotTypeCustom,
     updateDetails,
     updateSection,
+    setOpenHouseEvents,
     setSaleHistory,
     setValuationExamples
   } = useReviewDetailsState({
@@ -92,6 +94,7 @@ export function ListingReviewView({
   const valuation = details.valuation_estimates ?? {};
   const locationContext = details.location_context ?? {};
 
+  const openHouseEvents = details.open_house_events ?? [];
   const saleHistory = details.sale_history ?? [];
   const valuationExamples = valuation.third_party_examples ?? [];
   const sources = details.sources ?? [];
@@ -182,6 +185,12 @@ export function ListingReviewView({
               primarySuite={primarySuite}
               updateDetails={updateDetails}
               updateSection={updateSection}
+              triggerAutoSave={triggerAutoSave}
+            />
+
+            <ReviewOpenHouseEventsCard
+              openHouseEvents={openHouseEvents}
+              setOpenHouseEvents={setOpenHouseEvents}
               triggerAutoSave={triggerAutoSave}
             />
 

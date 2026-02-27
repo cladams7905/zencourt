@@ -17,6 +17,7 @@ const ALLOWED_TOP_LEVEL_KEYS = new Set([
   "interior_features",
   "living_spaces",
   "additional_spaces",
+  "open_house_events",
   "sale_history",
   "valuation_estimates",
   "location_context",

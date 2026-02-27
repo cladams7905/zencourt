@@ -9,6 +9,7 @@ import {
   SALE_HISTORY_SCHEMA,
   VALUATION_ESTIMATES_SCHEMA
 } from "../schemaSections/financial";
+import { OPEN_HOUSE_EVENTS_SCHEMA } from "../schemaSections/events";
 import { LOCATION_CONTEXT_SCHEMA } from "../schemaSections/location";
 import { SOURCES_SCHEMA } from "../schemaSections/sources";
 import {
@@ -41,6 +42,7 @@ const PERPLEXITY_PROPERTY_SCHEMA: PerplexityResponseFormat = {
         "interior_features",
         "living_spaces",
         "additional_spaces",
+        "open_house_events",
         "sale_history",
         "valuation_estimates",
         "location_context",
@@ -70,6 +72,7 @@ const PERPLEXITY_PROPERTY_SCHEMA: PerplexityResponseFormat = {
           type: ["array", "null"],
           items: { type: "string" }
         },
+        open_house_events: OPEN_HOUSE_EVENTS_SCHEMA,
         sale_history: SALE_HISTORY_SCHEMA,
         valuation_estimates: VALUATION_ESTIMATES_SCHEMA,
         location_context: LOCATION_CONTEXT_SCHEMA,

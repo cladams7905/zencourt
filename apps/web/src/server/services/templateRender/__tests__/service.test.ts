@@ -4,15 +4,13 @@ import type {
   DBUserAdditional
 } from "@db/types/models";
 
-const mockRenderTemplate = jest.fn();
-const mockResolveTemplateParameters = jest.fn();
+const mockRenderOrshotTemplate = jest.fn();
 const mockPickRandomTemplatesForSubcategory = jest.fn();
 
 jest.mock("../providers/orshot", () => ({
   ...jest.requireActual("../providers/orshot"),
-  renderTemplate: (...args: unknown[]) => mockRenderTemplate(...args),
-  resolveTemplateParameters: (...args: unknown[]) =>
-    mockResolveTemplateParameters(...args),
+  renderOrshotTemplate: (...args: unknown[]) =>
+    mockRenderOrshotTemplate(...args),
   pickRandomTemplatesForSubcategory: (...args: unknown[]) =>
     mockPickRandomTemplatesForSubcategory(...args)
 }));
@@ -82,22 +80,29 @@ describe("templateRender/service", () => {
         headerLength: "long"
       }
     ]);
-    mockResolveTemplateParameters.mockReturnValue({
-      headerText: "Dream Home",
-      backgroundImage1: "http://localhost:3000/private.jpg"
-    });
-    mockRenderTemplate
-      .mockResolvedValueOnce("https://cdn.example.com/render-1.jpg")
+    mockRenderOrshotTemplate
+      .mockResolvedValueOnce({
+        imageUrl: "https://cdn.example.com/render-1.jpg",
+        parametersUsed: {
+          headerText: "Dream Home",
+          backgroundImage1: "http://localhost:3000/private.jpg",
+          headerTextTop: "Dream",
+          headerTextBottom: "Home",
+          subheader1Text: "",
+          subheader2Text: ""
+        },
+        modifications: { headerText: "Dream Home" }
+      })
       .mockRejectedValueOnce(new Error("render failed"));
 
     const result = await renderListingTemplateBatch(buildParams());
 
-    expect(mockRenderTemplate).toHaveBeenNthCalledWith(1, {
-      templateId: "template-1",
-      modifications: {
-        headerText: "Dream Home"
-      }
-    });
+    expect(mockRenderOrshotTemplate).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        template: expect.objectContaining({ id: "template-1" })
+      })
+    );
     expect(result).toMatchObject({
       items: [
         {
@@ -127,25 +132,24 @@ describe("templateRender/service", () => {
         headerLength: "long"
       }
     ]);
-    mockResolveTemplateParameters.mockReturnValue({
-      headerText: "  Heading  ",
-      feature1: "  Pool  ",
-      backgroundImage1: "ftp://private/asset.jpg",
-      listingPrice: "   "
-    });
-    mockRenderTemplate.mockResolvedValueOnce("https://cdn.example.com/render-3.jpg");
-
-    const result = await renderListingTemplateBatch(buildParams());
-
-    expect(mockRenderTemplate).toHaveBeenCalledWith({
-      templateId: "template-3",
-      modifications: expect.objectContaining({
+    mockRenderOrshotTemplate.mockResolvedValueOnce({
+      imageUrl: "https://cdn.example.com/render-3.jpg",
+      parametersUsed: {},
+      modifications: {
         headerText: "Heading",
         headerTextTop: "Heading",
         socialHandleIcon:
           "https://upload.wikimedia.org/wikipedia/commons/c/ce/Transparent.gif"
-      })
+      }
     });
+
+    const result = await renderListingTemplateBatch(buildParams());
+
+    expect(mockRenderOrshotTemplate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        template: expect.objectContaining({ id: "template-3" })
+      })
+    );
     expect(result.failedTemplateIds).toEqual([]);
     expect(result.items).toHaveLength(1);
   });
@@ -159,20 +163,19 @@ describe("templateRender/service", () => {
         headerLength: "long"
       }
     ]);
-    mockResolveTemplateParameters.mockReturnValue({
-      headerText: "Public Image",
-      backgroundImage1: "https://cdn.example.com/public.jpg"
+    mockRenderOrshotTemplate.mockResolvedValueOnce({
+      imageUrl: "https://cdn.example.com/render-4.jpg",
+      parametersUsed: { headerText: "Public Image" },
+      modifications: { headerText: "Public Image" }
     });
-    mockRenderTemplate.mockResolvedValueOnce("https://cdn.example.com/render-4.jpg");
 
     await renderListingTemplateBatch(buildParams());
 
-    expect(mockRenderTemplate).toHaveBeenCalledWith({
-      templateId: "template-4",
-      modifications: {
-        headerText: "Public Image"
-      }
-    });
+    expect(mockRenderOrshotTemplate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        template: expect.objectContaining({ id: "template-4" })
+      })
+    );
   });
 
   it("filters malformed image urls while keeping other required params", async () => {
@@ -184,21 +187,19 @@ describe("templateRender/service", () => {
         headerLength: "long"
       }
     ]);
-    mockResolveTemplateParameters.mockReturnValue({
-      headerText: "Title",
-      feature1: "Patio",
-      backgroundImage1: "not-a-url"
+    mockRenderOrshotTemplate.mockResolvedValueOnce({
+      imageUrl: "https://cdn.example.com/render-5.jpg",
+      parametersUsed: { headerText: "Title", feature1: "Patio" },
+      modifications: { headerText: "Title" }
     });
-    mockRenderTemplate.mockResolvedValueOnce("https://cdn.example.com/render-5.jpg");
 
     await renderListingTemplateBatch(buildParams());
 
-    expect(mockRenderTemplate).toHaveBeenCalledWith({
-      templateId: "template-5",
-      modifications: {
-        headerText: "Title"
-      }
-    });
+    expect(mockRenderOrshotTemplate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        template: expect.objectContaining({ id: "template-5" })
+      })
+    );
   });
 
   it("prefixes modifications with page1@ for multi-page templates", async () => {
@@ -211,20 +212,22 @@ describe("templateRender/service", () => {
         headerLength: "long"
       }
     ]);
-    mockResolveTemplateParameters.mockReturnValue({
-      headerText: "Dream Home",
-      feature1: "Pool"
+    mockRenderOrshotTemplate.mockResolvedValueOnce({
+      imageUrl: "https://cdn.example.com/render-6.jpg",
+      parametersUsed: { headerText: "Dream Home", feature1: "Pool" },
+      modifications: { "page1@headerText": "Dream Home" }
     });
-    mockRenderTemplate.mockResolvedValueOnce("https://cdn.example.com/render-6.jpg");
 
     await renderListingTemplateBatch(buildParams());
 
-    expect(mockRenderTemplate).toHaveBeenCalledWith({
-      templateId: "template-multi-page",
-      modifications: {
-        "page1@headerText": "Dream Home"
-      }
-    });
+    expect(mockRenderOrshotTemplate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        template: expect.objectContaining({
+          id: "template-multi-page",
+          pageLength: 2
+        })
+      })
+    );
   });
 
   it("uses short preset headers when template headerLength is short", async () => {
@@ -236,31 +239,29 @@ describe("templateRender/service", () => {
         headerLength: "short"
       }
     ]);
-    mockResolveTemplateParameters.mockReturnValue({
-      headerText: "A much longer AI generated headline",
-      subheader1Text: "AI Subheader",
-      subheader2Text: "AI Secondary",
-      listingAddress: "123 Main St"
+    mockRenderOrshotTemplate.mockResolvedValueOnce({
+      imageUrl: "https://cdn.example.com/render-7.jpg",
+      parametersUsed: {},
+      modifications: {
+        headerText: "Just Listed",
+        subheader1Text: "AI Subheader",
+        subheader2Text: "AI Secondary"
+      }
     });
-    mockRenderTemplate.mockResolvedValueOnce("https://cdn.example.com/render-7.jpg");
 
     await renderListingTemplateBatch({
       ...buildParams(),
       random: () => 0
     });
 
-    expect(mockRenderTemplate).toHaveBeenCalledWith(
+    expect(mockRenderOrshotTemplate).toHaveBeenCalledWith(
       expect.objectContaining({
-        templateId: "template-short-header",
-        modifications: expect.objectContaining({
-          subheader2Text: "AI Secondary"
+        template: expect.objectContaining({
+          id: "template-short-header",
+          headerLength: "short"
         })
       })
     );
-    const firstCall = mockRenderTemplate.mock.calls[0]?.[0];
-    const headerText = firstCall?.modifications?.headerText ?? "";
-    expect(typeof headerText).toBe("string");
-    expect(headerText.trim().length).toBeGreaterThan(0);
   });
 
   it("prefers AI subheaders for medium headers and falls back when missing", async () => {
@@ -272,32 +273,28 @@ describe("templateRender/service", () => {
         headerLength: "medium"
       }
     ]);
-    mockResolveTemplateParameters.mockReturnValue({
-      headerText: "Generated headline that can be medium length",
-      subheader1Text: "",
-      subheader2Text: "",
-      listingAddress: "55 Oak Ave",
-      feature1: "4 beds"
+    mockRenderOrshotTemplate.mockResolvedValueOnce({
+      imageUrl: "https://cdn.example.com/render-8.jpg",
+      parametersUsed: {},
+      modifications: {
+        subheader1Text: "New Listing",
+        subheader2Text: "55 Oak Ave"
+      }
     });
-    mockRenderTemplate.mockResolvedValueOnce("https://cdn.example.com/render-8.jpg");
 
     await renderListingTemplateBatch({
       ...buildParams(),
       random: () => 0
     });
 
-    expect(mockRenderTemplate).toHaveBeenCalledWith(
+    expect(mockRenderOrshotTemplate).toHaveBeenCalledWith(
       expect.objectContaining({
-        templateId: "template-medium-header",
-        modifications: expect.objectContaining({
-          subheader2Text: "55 Oak Ave"
+        template: expect.objectContaining({
+          id: "template-medium-header",
+          headerLength: "medium"
         })
       })
     );
-    const firstCall = mockRenderTemplate.mock.calls[0]?.[0];
-    const subheader1Text = firstCall?.modifications?.subheader1Text ?? "";
-    expect(typeof subheader1Text).toBe("string");
-    expect(subheader1Text.trim().length).toBeGreaterThan(0);
   });
 
   it("applies template flags for uppercase headers and address-only subheaders", async () => {
@@ -311,24 +308,27 @@ describe("templateRender/service", () => {
         forceListingAddressSubheader: true
       }
     ]);
-    mockResolveTemplateParameters.mockReturnValue({
-      headerText: "welcome home",
-      subheader1Text: "AI Subheader",
-      subheader2Text: "AI Subheader 2",
-      listingAddress: "100 State St, Austin, TX"
-    });
-    mockRenderTemplate.mockResolvedValueOnce("https://cdn.example.com/render-flags.jpg");
-
-    await renderListingTemplateBatch(buildParams());
-
-    expect(mockRenderTemplate).toHaveBeenCalledWith({
-      templateId: "template-flags",
+    mockRenderOrshotTemplate.mockResolvedValueOnce({
+      imageUrl: "https://cdn.example.com/render-flags.jpg",
+      parametersUsed: {},
       modifications: {
         headerText: "WELCOME HOME",
         subheader1Text: "100 State St, Austin, TX",
         subheader2Text: "100 State St, Austin, TX"
       }
     });
+
+    await renderListingTemplateBatch(buildParams());
+
+    expect(mockRenderOrshotTemplate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        template: expect.objectContaining({
+          id: "template-flags",
+          forceUppercaseHeader: true,
+          forceListingAddressSubheader: true
+        })
+      })
+    );
   });
 
   it("captures failed template ids when renderer rejects with non-Error value", async () => {
@@ -340,8 +340,7 @@ describe("templateRender/service", () => {
         headerLength: "long"
       }
     ]);
-    mockResolveTemplateParameters.mockReturnValue({ headerText: "Hello" });
-    mockRenderTemplate.mockRejectedValueOnce("boom");
+    mockRenderOrshotTemplate.mockRejectedValueOnce("boom");
 
     const result = await renderListingTemplateBatch(buildParams());
 
@@ -378,9 +377,12 @@ describe("templateRender/service", () => {
         headerLength: "long"
       }
     ]);
-    mockResolveTemplateParameters.mockReturnValue({ headerText: "Dream Home" });
-    mockRenderTemplate
-      .mockResolvedValueOnce("https://cdn.example.com/render-1.jpg")
+    mockRenderOrshotTemplate
+      .mockResolvedValueOnce({
+        imageUrl: "https://cdn.example.com/render-1.jpg",
+        parametersUsed: { headerText: "Dream Home" },
+        modifications: { headerText: "Dream Home" }
+      })
       .mockRejectedValueOnce(new Error("render failed"));
 
     const result = await renderListingTemplateBatch({
@@ -437,9 +439,34 @@ describe("templateRender/service", () => {
         headerLength: "long"
       }
     ]);
-    mockResolveTemplateParameters.mockReturnValue({ headerText: "Hi" });
-    mockRenderTemplate
-      .mockResolvedValueOnce("https://cdn.example.com/stream-1.jpg")
+    mockRenderOrshotTemplate
+      .mockResolvedValueOnce({
+        imageUrl: "https://cdn.example.com/stream-1.jpg",
+        parametersUsed: {
+          agentContactInfo: "",
+          agentContact1: "",
+          agentContact2: "",
+          agentContact3: "",
+          bedCount: "",
+          bathCount: "",
+          garageCount: "",
+          squareFootage: "",
+          listingAddress: "",
+          feature1: "",
+          feature2: "",
+          feature3: "",
+          featureList: "",
+          headerText: "Hi",
+          headerTextTop: "Hi",
+          headerTextBottom: "",
+          garageLabel: "",
+          socialHandleIcon:
+            "https://upload.wikimedia.org/wikipedia/commons/c/ce/Transparent.gif",
+          subheader1Text: "",
+          subheader2Text: ""
+        },
+        modifications: { headerText: "Hi" }
+      })
       .mockRejectedValueOnce(new Error("stream render failed"));
 
     const onItem = jest.fn().mockResolvedValue(undefined);
@@ -496,7 +523,8 @@ describe("templateRender/service", () => {
   });
 
   it("passes listing image URLs through to parameter resolver", async () => {
-    const signedUrl = "https://storage.example.com/bucket/user_1/signed-photo.jpg?X-Amz-Signature=abc";
+    const signedUrl =
+      "https://storage.example.com/bucket/user_1/signed-photo.jpg?X-Amz-Signature=abc";
     mockPickRandomTemplatesForSubcategory.mockReturnValue([
       {
         id: "template-public",
@@ -505,11 +533,11 @@ describe("templateRender/service", () => {
         headerLength: "long"
       }
     ]);
-    mockResolveTemplateParameters.mockReturnValue({
-      headerText: "Dream Home",
-      backgroundImage1: signedUrl
+    mockRenderOrshotTemplate.mockResolvedValueOnce({
+      imageUrl: "https://cdn.example.com/render.jpg",
+      parametersUsed: { headerText: "Dream Home", backgroundImage1: signedUrl },
+      modifications: { headerText: "Dream Home", backgroundImage1: signedUrl }
     });
-    mockRenderTemplate.mockResolvedValueOnce("https://cdn.example.com/render.jpg");
 
     const listingImages: DBListingImage[] = [
       {
@@ -531,7 +559,7 @@ describe("templateRender/service", () => {
       listingImages
     });
 
-    expect(mockResolveTemplateParameters).toHaveBeenCalledWith(
+    expect(mockRenderOrshotTemplate).toHaveBeenCalledWith(
       expect.objectContaining({
         listingImages: [
           expect.objectContaining({

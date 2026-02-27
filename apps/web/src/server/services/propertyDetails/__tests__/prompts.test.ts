@@ -45,6 +45,7 @@ describe("propertyDetails prompts", () => {
       const prompt = buildPropertyDetailsUserPrompt("any");
       expect(prompt).toContain("Provide property details in the schema");
       expect(prompt).toContain("US units");
+      expect(prompt).toContain("open house events");
       expect(prompt).toContain("sources.citation");
     });
   });
