@@ -5,7 +5,7 @@ import type {
 } from "@web/src/lib/domain/media/templateRender/types";
 import { getHeaderHooks } from "./hookCatalog";
 import { selectRotatedHeaderHook } from "./hookRotation";
-import type { TemplateHeaderRotationStore } from "../rotation";
+import type { TemplateHeaderRotationStore } from "../../../rotation";
 
 const SHORT_HEADERS_BY_SUBCATEGORY: Partial<
   Record<ListingContentSubcategory, readonly string[]>

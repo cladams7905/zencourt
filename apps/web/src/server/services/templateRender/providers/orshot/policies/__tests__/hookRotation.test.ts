@@ -1,5 +1,5 @@
 import { selectRotatedHeaderHook } from "../hookRotation";
-import { createInMemoryTemplateHeaderRotationStore } from "../../rotation";
+import { createInMemoryTemplateHeaderRotationStore } from "../../../../rotation";
 
 describe("templateRender/policies/hookRotation", () => {
   it("rotates hooks in memory when a rotationKey is provided", async () => {

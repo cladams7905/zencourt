@@ -5,5 +5,6 @@ export * from "./ReviewPropertyBasicsCard";
 export * from "./ReviewLocationContextCard";
 export * from "./ReviewExteriorFeaturesCard";
 export * from "./ReviewInteriorFeaturesCard";
+export * from "./ReviewOpenHouseEventsCard";
 export * from "./ReviewSaleHistoryCard";
 export * from "./ReviewValuationEstimatesCard";

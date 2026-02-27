@@ -11,7 +11,7 @@ import { applyFeaturePolicy } from "./feature";
 import { applyContactPolicy } from "./contact";
 import { applyGarageLabelPolicy } from "./garageLabel";
 import { applySocialHandleIconPolicy } from "./socialHandleIcon";
-import type { TemplateHeaderRotationStore } from "../rotation";
+import type { TemplateHeaderRotationStore } from "../../../rotation";
 
 const DEFAULT_HEADER_LENGTH: TemplateHeaderLength = "medium";
 

@@ -12,6 +12,12 @@ export type ListingValuationExample = {
   value_usd?: number | null;
 };
 
+export type ListingOpenHouseEvent = {
+  date?: string | null;
+  start_time?: string | null;
+  end_time?: string | null;
+};
+
 export type ListingPropertySource = {
   site?: string | null;
   notes?: string | null;
@@ -43,6 +49,7 @@ export type ListingPropertyDetails = {
   } | null;
   living_spaces?: string[] | null;
   additional_spaces?: string[] | null;
+  open_house_events?: ListingOpenHouseEvent[] | null;
   sale_history?: ListingSaleHistory[] | null;
   valuation_estimates?: {
     range_low_usd?: number | null;

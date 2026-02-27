@@ -91,6 +91,32 @@ function normalizeSaleHistory(raw: Record<string, unknown>): ListingPropertyDeta
   return saleHistory.length > 0 ? saleHistory : null;
 }
 
+function normalizeOpenHouseEvents(raw: Record<string, unknown>): ListingPropertyDetails["open_house_events"] | undefined {
+  const openHouseEventsRaw = raw.open_house_events;
+  if (openHouseEventsRaw === null) {
+    return null;
+  }
+  if (!Array.isArray(openHouseEventsRaw)) {
+    return undefined;
+  }
+
+  const openHouseEvents = openHouseEventsRaw
+    .map((entry) => {
+      if (!isRecord(entry)) {
+        return null;
+      }
+      const item = {
+        date: normalizeString(entry.date),
+        start_time: normalizeString(entry.start_time),
+        end_time: normalizeString(entry.end_time)
+      };
+      return hasDefinedValues(item) ? item : null;
+    })
+    .filter((entry) => entry !== null);
+
+  return openHouseEvents.length > 0 ? openHouseEvents : null;
+}
+
 function normalizeValuationEstimates(raw: Record<string, unknown>): ListingPropertyDetails["valuation_estimates"] | undefined {
   if (raw.valuation_estimates === null) {
     return null;
@@ -246,6 +272,11 @@ export function normalizeListingPropertyDetails(
   const additionalSpaces = normalizeStringArray(raw.additional_spaces);
   if (additionalSpaces !== undefined) {
     propertyDetails.additional_spaces = additionalSpaces;
+  }
+
+  const openHouseEvents = normalizeOpenHouseEvents(raw);
+  if (openHouseEvents !== undefined) {
+    propertyDetails.open_house_events = openHouseEvents;
   }
 
   const saleHistory = normalizeSaleHistory(raw);

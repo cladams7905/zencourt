@@ -29,6 +29,9 @@ describe("propertyDetails/providers/perplexity", () => {
     expect(call.systemPrompt).toBeTruthy();
     expect(call.userPrompt).toContain("123 Main St");
     expect(call.responseFormat).toBeDefined();
+    expect(
+      call.responseFormat?.json_schema?.schema?.properties?.open_house_events
+    ).toBeDefined();
   });
 
   it("returns parsed JSON from choices[0].message.content", async () => {

@@ -20,6 +20,10 @@ describe("listingProperty/domain/normalize", () => {
           kitchen: { features: ["Island", ""] },
           primary_suite: null
         },
+        open_house_events: [
+          { date: "2026-03-07", start_time: "7:00 AM", end_time: "10:00 AM" },
+          "bad-entry"
+        ],
         sale_history: [
           { event: "sold", sale_price_usd: "500000" },
           "bad-entry"
@@ -55,6 +59,13 @@ describe("listingProperty/domain/normalize", () => {
         kitchen: { features: ["Island"] },
         primary_suite: null
       },
+      open_house_events: [
+        {
+          date: "2026-03-07",
+          start_time: "7:00 AM",
+          end_time: "10:00 AM"
+        }
+      ],
       sale_history: [
         {
           event: "sold",
@@ -85,6 +96,7 @@ describe("listingProperty/domain/normalize", () => {
     const result = normalizeListingPropertyDetails(
       {
         exterior_features: null,
+        open_house_events: [],
         sale_history: [],
         valuation_estimates: null,
         location_context: null,
@@ -96,6 +108,7 @@ describe("listingProperty/domain/normalize", () => {
     expect(result).toEqual({
       address: "fallback",
       exterior_features: null,
+      open_house_events: null,
       sale_history: null,
       valuation_estimates: null,
       location_context: null,

@@ -15,15 +15,11 @@ import {
   createChildLogger,
   logger as baseLogger
 } from "@web/src/lib/core/logging/logger";
-import { applyTemplatePolicies } from "./policies";
 import { buildFallbackRenderedItem } from "./providers/fallback";
 import {
-  buildModifications,
   getTemplateById,
-  pickPropertyDetails,
-  renderTemplate,
-  resolveTemplateParameters,
-  pickRandomTemplatesForSubcategory
+  pickRandomTemplatesForSubcategory,
+  renderOrshotTemplate
 } from "./providers/orshot";
 import {
   createInMemoryTemplateHeaderRotationStore,
@@ -73,7 +69,6 @@ export async function renderListingTemplateBatch(params: {
   if (!selectedTemplates.length) {
     return { items: [], failedTemplateIds: [] };
   }
-  const details = pickPropertyDetails(params.listing);
   const headerRotationStore =
     params.headerRotationStore ?? createInMemoryTemplateHeaderRotationStore();
   const imageRotationStore =
@@ -82,44 +77,21 @@ export async function renderListingTemplateBatch(params: {
   const renders = await Promise.all(
     selectedTemplates.map(async (template, index) => {
       const captionItem = selectCaptionItem(params.captionItems, index);
-      const resolvedParameters = resolveTemplateParameters({
-        subcategory: params.subcategory,
-        listing: params.listing,
-        listingImages: params.listingImages,
-        userAdditional: params.userAdditional,
-        captionItem,
-        siteOrigin: params.siteOrigin,
-        random: params.random,
-        now: params.now?.(),
-        renderIndex: index,
-        rotationKey: `${params.listing.id}:${template.id}`,
-        imageRotationStore
-      });
-      const normalizedParameters = await applyTemplatePolicies({
-        resolvedParameters,
-        headerLength: template.headerLength,
-        forceUppercaseHeader: template.forceUppercaseHeader,
-        forceListingAddressSubheader: template.forceListingAddressSubheader,
-        headerRotationStore,
-        subcategory: params.subcategory,
-        details,
-        contactSource: params.userAdditional as unknown as Record<
-          string,
-          unknown
-        >,
-        rotationKey: `${params.listing.id}:${template.id}:${params.subcategory}:${template.headerLength ?? "medium"}`,
-        random: params.random
-      });
-
-      const modifications = buildModifications({
-        resolvedParameters: normalizedParameters,
-        template
-      });
 
       try {
-        const imageUrl = await renderTemplate({
-          templateId: template.id,
-          modifications
+        const { imageUrl, parametersUsed } = await renderOrshotTemplate({
+          template,
+          subcategory: params.subcategory,
+          listing: params.listing,
+          listingImages: params.listingImages,
+          userAdditional: params.userAdditional,
+          captionItem,
+          siteOrigin: params.siteOrigin,
+          random: params.random,
+          now: params.now?.(),
+          renderIndex: index,
+          headerRotationStore,
+          imageRotationStore
         });
 
         return {
@@ -128,7 +100,7 @@ export async function renderListingTemplateBatch(params: {
             templateId: template.id,
             imageUrl,
             captionItemId: captionItem.id,
-            parametersUsed: normalizedParameters
+            parametersUsed
           }
         };
       } catch (error) {
@@ -243,7 +215,6 @@ export async function renderListingTemplateBatchStream(
   if (!selectedTemplates.length) {
     return { failedTemplateIds };
   }
-  const details = pickPropertyDetails(params.listing);
   const headerRotationStore =
     params.headerRotationStore ?? createInMemoryTemplateHeaderRotationStore();
   const imageRotationStore =
@@ -274,45 +245,22 @@ export async function renderListingTemplateBatchStream(
       caption: captionItem.caption ?? ""
     };
 
-    const resolvedParameters = resolveTemplateParameters({
-      subcategory: params.subcategory,
-      listing: params.listing,
-      listingImages: params.listingImages,
-      userAdditional: params.userAdditional,
-      captionItem,
-      siteOrigin: params.siteOrigin,
-      random: params.random,
-      now: params.now?.(),
-      renderIndex: index,
-      rotationKey: `${params.listing.id}:${template.id}`,
-      imageRotationStore
-    });
-    const normalizedParameters = await applyTemplatePolicies({
-      resolvedParameters,
-      headerLength: template.headerLength,
-      forceUppercaseHeader: template.forceUppercaseHeader,
-      forceListingAddressSubheader: template.forceListingAddressSubheader,
-      headerRotationStore,
-      subcategory: params.subcategory,
-      details,
-      contactSource: params.userAdditional as unknown as Record<
-        string,
-        unknown
-      >,
-      rotationKey: `${params.listing.id}:${template.id}:${params.subcategory}:${template.headerLength ?? "medium"}`,
-      random: params.random
-    });
-
-    const modifications = buildModifications({
-      resolvedParameters: normalizedParameters,
-      template
-    });
-
     try {
-      const imageUrl = await renderTemplate({
-        templateId: template.id,
-        modifications
-      });
+      const { imageUrl, parametersUsed, modifications } =
+        await renderOrshotTemplate({
+          template,
+          subcategory: params.subcategory,
+          listing: params.listing,
+          listingImages: params.listingImages,
+          userAdditional: params.userAdditional,
+          captionItem,
+          siteOrigin: params.siteOrigin,
+          random: params.random,
+          now: params.now?.(),
+          renderIndex: index,
+          headerRotationStore,
+          imageRotationStore
+        });
 
       await callbacks.onResult?.({
         cacheKeyTimestamp,
@@ -329,7 +277,7 @@ export async function renderListingTemplateBatchStream(
         templateId: template.id,
         imageUrl,
         captionItemId: captionItem.id,
-        parametersUsed: normalizedParameters
+        parametersUsed
       });
     } catch (error) {
       logger.error(

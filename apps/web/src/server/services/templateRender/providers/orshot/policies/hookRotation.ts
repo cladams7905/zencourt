@@ -1,5 +1,5 @@
 import type { HeaderHook } from "./hookCatalog";
-import type { TemplateHeaderRotationStore } from "../rotation";
+import type { TemplateHeaderRotationStore } from "../../../rotation";
 
 const HOOK_ROTATION_PREFIX = "template:header-hook-rotation";
 

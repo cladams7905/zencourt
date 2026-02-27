@@ -11,12 +11,14 @@ describe("listingProperty/domain/parsing", () => {
     const parsed = parseListingPropertyRaw({
       address: "123 Main St",
       bedrooms: 3,
+      open_house_events: [{ date: "2026-03-01" }],
       unknown_key: "drop me"
     });
 
     expect(parsed).toEqual({
       address: "123 Main St",
-      bedrooms: 3
+      bedrooms: 3,
+      open_house_events: [{ date: "2026-03-01" }]
     });
   });
 });

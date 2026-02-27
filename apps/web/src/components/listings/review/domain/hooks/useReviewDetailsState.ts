@@ -1,6 +1,7 @@
 import * as React from "react";
 import type {
   ListingPropertyDetails,
+  ListingOpenHouseEvent,
   ListingSaleHistory,
   ListingValuationExample
 } from "@shared/types/models";
@@ -149,6 +150,16 @@ export const useReviewDetailsState = ({
     [updateDetails]
   );
 
+  const setOpenHouseEvents = React.useCallback(
+    (next: ListingOpenHouseEvent[]) => {
+      updateDetails((prev) => ({
+        ...prev,
+        open_house_events: next.length > 0 ? next : null
+      }));
+    },
+    [updateDetails]
+  );
+
   const setValuationExamples = React.useCallback(
     (next: ListingValuationExample[]) => {
       updateSection("valuation_estimates", (prev) => ({
@@ -185,6 +196,7 @@ export const useReviewDetailsState = ({
     updateDetails,
     updateSection,
     setSaleHistory,
+    setOpenHouseEvents,
     setValuationExamples
   };
 };
