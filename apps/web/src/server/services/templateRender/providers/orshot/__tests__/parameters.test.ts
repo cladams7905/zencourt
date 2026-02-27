@@ -1,4 +1,5 @@
 import { resolveTemplateParameters } from "../parameters";
+import { createInMemoryTemplateImageRotationStore } from "../../../rotation";
 
 jest.mock("@shared/utils", () => ({
   PREVIEW_TEXT_OVERLAY_ARROW_PATHS: ["/overlays/a.svg", "/overlays/b.svg"],
@@ -76,6 +77,9 @@ describe("templateRender/providers/orshot/parameters", () => {
     expect(result.priceLabel).toBe("starting from");
     expect(result.listingPrice).toBe("$750,000");
     expect(result.squareFootage).toBe("2,500 sqft");
+    expect(result.bedCount).toBe("4");
+    expect(result.bathCount).toBe("3");
+    expect(result.garageCount).toBe("");
     expect(result.arrowImage).toContain("/overlays/");
     expect(result.featureList).toContain("4 beds");
     expect(result.featureList).toContain("3 baths");
@@ -106,7 +110,9 @@ describe("templateRender/providers/orshot/parameters", () => {
     expect(result.priceLabel).toBe("sold for");
     expect(result.headerText).toBe("Just listed");
     expect(result.listingAddress).toBe("123 Listing Address");
-    expect(result.agentName).toBe("Your Realtor");
+    expect(result.agentName).toBe("");
+    expect(result.socialHandle).toBe("@zencourt_test2");
+    expect(result.agentContactInfo).toBe("");
     expect(result.backgroundImage1).toBe("");
   });
 
@@ -136,7 +142,7 @@ describe("templateRender/providers/orshot/parameters", () => {
     expect(result.headerTag).toBe("");
     expect(result.headerTextTop).toBe("Hello");
     expect(result.headerTextBottom).toBe("");
-    expect(result.agentName).toBe("Your Realtor");
+    expect(result.agentName).toBe("");
   });
 
   it("falls back to raw arrow path when siteOrigin is invalid", () => {
@@ -233,13 +239,16 @@ describe("templateRender/providers/orshot/parameters", () => {
       }
     ];
 
+    const imageRotationStore = createInMemoryTemplateImageRotationStore();
     const first = resolveTemplateParameters({
       subcategory: "new_listing",
       listing: listingBase as never,
       listingImages: rotatingImages as never,
       userAdditional: userAdditional as never,
       captionItem,
-      rotationKey: "listing-1:template-1"
+      rotationKey: "listing-1:template-1-seeded",
+      random: () => 0,
+      imageRotationStore
     });
     const second = resolveTemplateParameters({
       subcategory: "new_listing",
@@ -247,10 +256,38 @@ describe("templateRender/providers/orshot/parameters", () => {
       listingImages: rotatingImages as never,
       userAdditional: userAdditional as never,
       captionItem,
-      rotationKey: "listing-1:template-1"
+      rotationKey: "listing-1:template-1-seeded",
+      random: () => 0,
+      imageRotationStore
     });
 
     expect(first.backgroundImage1).toBe("https://cdn.example.com/1.jpg");
     expect(second.backgroundImage1).toBe("https://cdn.example.com/3.jpg");
+  });
+
+  it("seeds first rotation index from random when rotation key is first seen", () => {
+    const rotatingImages = [
+      ...listingImages,
+      {
+        id: "img-3",
+        url: "https://cdn.example.com/3.jpg",
+        category: "living room",
+        isPrimary: true,
+        primaryScore: 0.6,
+        uploadedAt: new Date("2026-02-16T00:00:00.000Z")
+      }
+    ];
+
+    const first = resolveTemplateParameters({
+      subcategory: "new_listing",
+      listing: listingBase as never,
+      listingImages: rotatingImages as never,
+      userAdditional: userAdditional as never,
+      captionItem,
+      rotationKey: "listing-1:template-1-random-start",
+      random: () => 0.99
+    });
+
+    expect(first.backgroundImage1).toBe("https://cdn.example.com/3.jpg");
   });
 });

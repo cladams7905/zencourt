@@ -4,6 +4,13 @@ import { useTemplateRender } from "@web/src/components/listings/create/domain/te
 const mockBuildTemplateRenderCaptionItems = jest.fn();
 const mockMapSingleTemplateRenderItemToPreviewItem = jest.fn();
 const mockStreamEvents: Array<{ type: "item"; item: unknown } | { type: "done"; failedTemplateIds: string[] } | { type: "error"; message: string }> = [];
+const mockStreamEventBatches: Array<
+  Array<
+    | { type: "item"; item: unknown }
+    | { type: "done"; failedTemplateIds: string[] }
+    | { type: "error"; message: string }
+  >
+> = [];
 
 jest.mock("@web/src/components/listings/create/domain/listingCreateUtils", () => ({
   buildTemplateRenderCaptionItems: (...args: unknown[]) =>
@@ -15,7 +22,11 @@ jest.mock("@web/src/components/listings/create/domain/listingCreateUtils", () =>
 
 jest.mock("@web/src/components/listings/create/domain/templateRender/streamEvents", () => ({
   streamTemplateRenderEvents: async function* () {
-    for (const event of mockStreamEvents) {
+    const events =
+      mockStreamEventBatches.length > 0
+        ? mockStreamEventBatches.shift() ?? []
+        : mockStreamEvents;
+    for (const event of events) {
       yield event;
     }
   }
@@ -27,6 +38,7 @@ describe("useTemplateRender", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockStreamEvents.length = 0;
+    mockStreamEventBatches.length = 0;
     mockBuildTemplateRenderCaptionItems.mockReturnValue([]);
     Object.defineProperty(globalThis, "fetch", {
       writable: true,
@@ -194,5 +206,69 @@ describe("useTemplateRender", () => {
     });
     expect(result.current.renderError).toBeNull();
     expect(result.current.previewItems).toEqual([]);
+  });
+
+  it("removes stale streamed previews when a caption item is deleted", async () => {
+    mockBuildTemplateRenderCaptionItems.mockImplementation((items: { id: string }[]) =>
+      items.map((item) => ({ id: item.id, hook: "h", caption: null, body: [] }))
+    );
+    mockMapSingleTemplateRenderItemToPreviewItem.mockImplementation(
+      ({ renderedItem }: { renderedItem: { captionItemId: string; imageUrl: string } }) => ({
+        id: `preview-${renderedItem.captionItemId}`,
+        variationNumber: 1,
+        hook: "h",
+        caption: null,
+        slides: [],
+        coverImageUrl: renderedItem.imageUrl,
+        captionItemId: renderedItem.captionItemId
+      })
+    );
+    mockStreamEventBatches.push(
+      [
+        {
+          type: "item",
+          item: {
+            templateId: "t1",
+            imageUrl: "u1",
+            captionItemId: "a",
+            parametersUsed: {}
+          }
+        },
+        { type: "done", failedTemplateIds: [] }
+      ],
+      [{ type: "done", failedTemplateIds: [] }]
+    );
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      body: {
+        getReader: () => ({
+          read: () => Promise.resolve({ done: true, value: undefined })
+        })
+      }
+    });
+
+    const { result, rerender } = renderHook(
+      ({ captionItems }) =>
+        useTemplateRender({
+          listingId: "listing-1",
+          activeSubcategory: "new_listing",
+          activeMediaTab: "images",
+          captionItems,
+          isGenerating: false
+        }),
+      {
+        initialProps: { captionItems: [{ id: "a" }, { id: "b" }] }
+      }
+    );
+
+    await waitFor(() => {
+      expect(result.current.previewItems.some((item) => item.captionItemId === "a")).toBe(true);
+    });
+
+    rerender({ captionItems: [{ id: "b" }] });
+
+    await waitFor(() => {
+      expect(result.current.previewItems.some((item) => item.captionItemId === "a")).toBe(false);
+    });
   });
 });

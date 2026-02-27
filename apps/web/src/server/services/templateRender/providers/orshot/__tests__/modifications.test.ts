@@ -31,7 +31,7 @@ describe("templateRender/providers/orshot/modifications", () => {
         name: "Template 2",
         subcategories: ["new_listing"],
         requiredParams: ["headerText"],
-        page_length: 2
+        pageLength: 2
       }
     });
 
@@ -56,6 +56,40 @@ describe("templateRender/providers/orshot/modifications", () => {
 
     expect(result).toEqual({
       feature1: "Patio"
+    });
+  });
+
+  it("skips socialHandleIcon when empty", () => {
+    const result = buildModifications({
+      resolvedParameters: {
+        socialHandleIcon: ""
+      },
+      template: {
+        id: "template-4",
+        name: "Template 4",
+        subcategories: ["new_listing"],
+        requiredParams: ["socialHandleIcon"]
+      }
+    });
+
+    expect(result).toEqual({});
+  });
+
+  it("keeps socialHandleIcon when present", () => {
+    const result = buildModifications({
+      resolvedParameters: {
+        socialHandleIcon: "https://cdn.orshot.com/elements/icons/logos/instagram.svg"
+      },
+      template: {
+        id: "template-5",
+        name: "Template 5",
+        subcategories: ["new_listing"],
+        requiredParams: ["socialHandleIcon"]
+      }
+    });
+
+    expect(result).toEqual({
+      socialHandleIcon: "https://cdn.orshot.com/elements/icons/logos/instagram.svg"
     });
   });
 });

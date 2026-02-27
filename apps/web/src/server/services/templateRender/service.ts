@@ -25,6 +25,12 @@ import {
   resolveTemplateParameters,
   pickRandomTemplatesForSubcategory
 } from "./providers/orshot";
+import {
+  createInMemoryTemplateHeaderRotationStore,
+  createInMemoryTemplateImageRotationStore,
+  type TemplateHeaderRotationStore,
+  type TemplateImageRotationStore
+} from "./rotation";
 
 const logger = createChildLogger(baseLogger, {
   module: "template-render-service"
@@ -51,6 +57,8 @@ export async function renderListingTemplateBatch(params: {
   siteOrigin?: string | null;
   random?: () => number;
   now?: () => Date;
+  headerRotationStore?: TemplateHeaderRotationStore;
+  imageRotationStore?: TemplateImageRotationStore;
 }): Promise<ListingTemplateRenderResult> {
   if (!params.captionItems.length) {
     return { items: [], failedTemplateIds: [] };
@@ -66,6 +74,10 @@ export async function renderListingTemplateBatch(params: {
     return { items: [], failedTemplateIds: [] };
   }
   const details = pickPropertyDetails(params.listing);
+  const headerRotationStore =
+    params.headerRotationStore ?? createInMemoryTemplateHeaderRotationStore();
+  const imageRotationStore =
+    params.imageRotationStore ?? createInMemoryTemplateImageRotationStore();
 
   const renders = await Promise.all(
     selectedTemplates.map(async (template, index) => {
@@ -80,17 +92,22 @@ export async function renderListingTemplateBatch(params: {
         random: params.random,
         now: params.now?.(),
         renderIndex: index,
-        rotationKey: `${params.listing.id}:${template.id}`
+        rotationKey: `${params.listing.id}:${template.id}`,
+        imageRotationStore
       });
-      const normalizedParameters = applyTemplatePolicies({
+      const normalizedParameters = await applyTemplatePolicies({
         resolvedParameters,
-        headerLength: template.header_length,
+        headerLength: template.headerLength,
+        forceUppercaseHeader: template.forceUppercaseHeader,
+        forceListingAddressSubheader: template.forceListingAddressSubheader,
+        headerRotationStore,
         subcategory: params.subcategory,
         details,
         contactSource: params.userAdditional as unknown as Record<
           string,
           unknown
         >,
+        rotationKey: `${params.listing.id}:${template.id}:${params.subcategory}:${template.headerLength ?? "medium"}`,
         random: params.random
       });
 
@@ -169,6 +186,8 @@ export type RenderListingTemplateBatchStreamParams = {
   siteOrigin?: string | null;
   random?: () => number;
   now?: () => Date;
+  headerRotationStore?: TemplateHeaderRotationStore;
+  imageRotationStore?: TemplateImageRotationStore;
 };
 
 export type RenderListingTemplateBatchStreamCallbacks = {
@@ -225,6 +244,10 @@ export async function renderListingTemplateBatchStream(
     return { failedTemplateIds };
   }
   const details = pickPropertyDetails(params.listing);
+  const headerRotationStore =
+    params.headerRotationStore ?? createInMemoryTemplateHeaderRotationStore();
+  const imageRotationStore =
+    params.imageRotationStore ?? createInMemoryTemplateImageRotationStore();
 
   for (let index = 0; index < selectedTemplates.length; index += 1) {
     const template = selectedTemplates[index] as TemplateRenderConfig;
@@ -261,17 +284,22 @@ export async function renderListingTemplateBatchStream(
       random: params.random,
       now: params.now?.(),
       renderIndex: index,
-      rotationKey: `${params.listing.id}:${template.id}`
+      rotationKey: `${params.listing.id}:${template.id}`,
+      imageRotationStore
     });
-    const normalizedParameters = applyTemplatePolicies({
+    const normalizedParameters = await applyTemplatePolicies({
       resolvedParameters,
-      headerLength: template.header_length,
+      headerLength: template.headerLength,
+      forceUppercaseHeader: template.forceUppercaseHeader,
+      forceListingAddressSubheader: template.forceListingAddressSubheader,
+      headerRotationStore,
       subcategory: params.subcategory,
       details,
       contactSource: params.userAdditional as unknown as Record<
         string,
         unknown
       >,
+      rotationKey: `${params.listing.id}:${template.id}:${params.subcategory}:${template.headerLength ?? "medium"}`,
       random: params.random
     });
 

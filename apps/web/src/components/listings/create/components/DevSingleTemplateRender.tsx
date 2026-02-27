@@ -15,13 +15,13 @@ import orshotTemplates from "@web/src/lib/domain/media/orshot/templates.json";
 
 type OrshotTemplateOption = {
   id: string;
-  thumbnail_url?: string;
+  thumbnailUrl?: string;
 };
 
 const TEMPLATE_OPTIONS = (orshotTemplates as OrshotTemplateOption[])
   .map((t) => ({
     id: String(t.id),
-    thumbnailUrl: typeof t.thumbnail_url === "string" ? t.thumbnail_url : ""
+    thumbnailUrl: typeof t.thumbnailUrl === "string" ? t.thumbnailUrl : ""
   }))
   .sort((a, b) => a.id.localeCompare(b.id));
 

@@ -6,10 +6,14 @@ import {
 import { readPromptFile } from "@web/src/lib/ai/prompts/engine/promptFileCache";
 
 jest.mock("@web/src/lib/ai/prompts/engine/promptFileCache", () => {
-  const actual = jest.requireActual("@web/src/lib/ai/prompts/engine/promptFileCache");
+  const actual = jest.requireActual(
+    "@web/src/lib/ai/prompts/engine/promptFileCache"
+  );
   return {
     ...actual,
-    readPromptFile: jest.fn(async (relativePath: string) => `file:${relativePath}`)
+    readPromptFile: jest.fn(
+      async (relativePath: string) => `file:${relativePath}`
+    )
   };
 });
 
@@ -25,7 +29,9 @@ describe("dataPrompt", () => {
       price_change_yoy: "N/A"
     } as never);
 
-    expect(xml).toContain('<market_data location="Austin, TX" zip_code="78701" as_of="2026-02-18">');
+    expect(xml).toContain(
+      '<market_data location="Austin, TX" zip_code="78701" as_of="2026-02-18">'
+    );
     expect(xml).toContain("summary: Balanced market");
     expect(xml).toContain("median_home_price: $500k");
     expect(xml).not.toContain("price_change_yoy");
@@ -62,10 +68,10 @@ describe("dataPrompt", () => {
 
   it("loads listing subcategory directive when recognized", async () => {
     await expect(loadListingSubcategoryDirective("new_listing")).resolves.toBe(
-      "file:listingSubcategories/new-listing.md"
+      "file:listings/new-listing.md"
     );
     await expect(loadListingSubcategoryDirective("unknown")).resolves.toBe("");
 
-    expect(readPromptFile).toHaveBeenCalledWith("listingSubcategories/new-listing.md");
+    expect(readPromptFile).toHaveBeenCalledWith("listings/new-listing.md");
   });
 });

@@ -3,6 +3,9 @@ import type {
   TemplateHeaderLength,
   TemplateRenderParameterKey
 } from "@web/src/lib/domain/media/templateRender/types";
+import { getHeaderHooks } from "./hookCatalog";
+import { selectRotatedHeaderHook } from "./hookRotation";
+import type { TemplateHeaderRotationStore } from "../rotation";
 
 const SHORT_HEADERS_BY_SUBCATEGORY: Partial<
   Record<ListingContentSubcategory, readonly string[]>
@@ -13,18 +16,6 @@ const SHORT_HEADERS_BY_SUBCATEGORY: Partial<
   status_update: ["Just Sold", "Under Contract", "Sold"],
   property_features: ["Home Highlights", "Featured Home", "Property Spotlight"]
 };
-
-function countWords(value: string): number {
-  return value.trim().split(/\s+/).filter(Boolean).length;
-}
-
-function truncateToWordCount(value: string, maxWords: number): string {
-  const words = value.trim().split(/\s+/).filter(Boolean);
-  if (words.length <= maxWords) {
-    return value.trim();
-  }
-  return words.slice(0, maxWords).join(" ");
-}
 
 function splitHeaderText(headerText: string): {
   headerTextTop: string;
@@ -56,34 +47,51 @@ function pickShortHeader(params: {
   return options[index] ?? options[0] ?? fallback[0];
 }
 
-export function applyHeaderPolicy(params: {
+export async function applyHeaderPolicy(params: {
   resolvedParameters: Partial<Record<TemplateRenderParameterKey, string>>;
   headerLength: TemplateHeaderLength;
+  forceUppercaseHeader?: boolean;
   subcategory: ListingContentSubcategory;
+  rotationKey?: string;
+  rotationStore?: TemplateHeaderRotationStore;
   random?: () => number;
-}): Partial<Record<TemplateRenderParameterKey, string>> {
+}): Promise<Partial<Record<TemplateRenderParameterKey, string>>> {
   const next = { ...params.resolvedParameters };
   const base = next.headerText?.trim() ?? "";
 
   let headerText = base;
-  if (params.headerLength === "short") {
-    headerText = pickShortHeader({
+  if (params.headerLength === "short" || params.headerLength === "medium") {
+    const hooks = getHeaderHooks({
       subcategory: params.subcategory,
+      headerLength: params.headerLength
+    });
+    const selectedHook = await selectRotatedHeaderHook({
+      hooks,
+      rotationKey: params.rotationKey,
+      rotationStore: params.rotationStore,
       random: params.random
     });
+    if (selectedHook) {
+      headerText = selectedHook.header;
+      if (selectedHook.subheader) {
+        next.subheader1Text = selectedHook.subheader;
+      }
+    }
+    if (!headerText) {
+      headerText = pickShortHeader({
+        subcategory: params.subcategory,
+        random: params.random
+      });
+    }
   } else if (!base) {
     headerText = pickShortHeader({
       subcategory: params.subcategory,
       random: params.random
     });
-  } else if (params.headerLength === "medium") {
-    headerText = truncateToWordCount(base, 5);
-  } else {
-    headerText = truncateToWordCount(base, 10);
   }
 
-  if (params.headerLength === "short" && countWords(headerText) > 3) {
-    headerText = truncateToWordCount(headerText, 3);
+  if (params.forceUppercaseHeader) {
+    headerText = headerText.toUpperCase().replace(/\.$/, "");
   }
 
   next.headerText = headerText;

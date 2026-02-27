@@ -9,17 +9,24 @@ import { applySubheaderPolicy } from "./subheader";
 import { sanitizeAddress } from "./address";
 import { applyFeaturePolicy } from "./feature";
 import { applyContactPolicy } from "./contact";
+import { applyGarageLabelPolicy } from "./garageLabel";
+import { applySocialHandleIconPolicy } from "./socialHandleIcon";
+import type { TemplateHeaderRotationStore } from "../rotation";
 
 const DEFAULT_HEADER_LENGTH: TemplateHeaderLength = "medium";
 
-export function applyTemplatePolicies(params: {
+export async function applyTemplatePolicies(params: {
   resolvedParameters: Partial<Record<TemplateRenderParameterKey, string>>;
   headerLength?: TemplateHeaderLength;
+  forceUppercaseHeader?: boolean;
+  forceListingAddressSubheader?: boolean;
+  headerRotationStore?: TemplateHeaderRotationStore;
   subcategory: ListingContentSubcategory;
   details?: ListingPropertyDetails | null;
   contactSource?: Record<string, unknown>;
+  rotationKey?: string;
   random?: () => number;
-}): Partial<Record<TemplateRenderParameterKey, string>> {
+}): Promise<Partial<Record<TemplateRenderParameterKey, string>>> {
   const withParameterPolicies = (() => {
     if (!params.details && !params.contactSource) {
       return params.resolvedParameters;
@@ -27,7 +34,8 @@ export function applyTemplatePolicies(params: {
 
     const withFeaturePolicy = applyFeaturePolicy({
       resolvedParameters: params.resolvedParameters,
-      details: params.details ?? null
+      details: params.details ?? null,
+      random: params.random
     });
     const rawAddress = withFeaturePolicy.listingAddress?.trim() ?? "";
     const withAddressPolicy = {
@@ -43,15 +51,27 @@ export function applyTemplatePolicies(params: {
   })();
 
   const headerLength = params.headerLength ?? DEFAULT_HEADER_LENGTH;
-  const withHeaderPolicy = applyHeaderPolicy({
+  const withHeaderPolicy = await applyHeaderPolicy({
     resolvedParameters: withParameterPolicies,
     headerLength,
+    forceUppercaseHeader: params.forceUppercaseHeader,
+    rotationStore: params.headerRotationStore,
     subcategory: params.subcategory,
+    rotationKey: params.rotationKey,
     random: params.random
   });
 
-  return applySubheaderPolicy({
+  const withSubheaderPolicy = applySubheaderPolicy({
     resolvedParameters: withHeaderPolicy,
-    headerLength
+    headerLength,
+    forceListingAddressSubheader: params.forceListingAddressSubheader
+  });
+
+  const withGarageLabelPolicy = applyGarageLabelPolicy({
+    resolvedParameters: withSubheaderPolicy
+  });
+
+  return applySocialHandleIconPolicy({
+    resolvedParameters: withGarageLabelPolicy
   });
 }

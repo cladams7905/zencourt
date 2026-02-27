@@ -67,6 +67,26 @@ function getCaptionItemsNeedingRender<T extends { id: string }>(
     .filter((c) => !idsWeHave.has(c.id));
 }
 
+function filterPreviewItemsForActiveCaptionItems<
+  T extends { captionItemId?: string | null }
+>(
+  previewItems: T[],
+  captionItems: { id: string }[]
+): T[] {
+  if (previewItems.length === 0 || captionItems.length === 0) {
+    return [];
+  }
+
+  const activeCaptionIds = new Set(captionItems.map((item) => item.id));
+  return previewItems.filter((item) => {
+    const captionItemId = item.captionItemId?.trim();
+    if (!captionItemId) {
+      return true;
+    }
+    return activeCaptionIds.has(captionItemId);
+  });
+}
+
 function getResetReason(params: {
   activeMediaTab: ListingCreateMediaTab;
   isGenerating: boolean;
@@ -274,8 +294,16 @@ export function useTemplateRender(
     [captionItems]
   );
 
-  const streamedPreviews =
-    previewItemsBySubcategory[activeSubcategory] ?? [];
+  const templateCaptionItems = React.useMemo(
+    () => buildTemplateRenderCaptionItems(captionItems),
+    [captionItems]
+  );
+
+  const streamedPreviews = React.useMemo(() => {
+    const previews = previewItemsBySubcategory[activeSubcategory] ?? [];
+    return filterPreviewItemsForActiveCaptionItems(previews, templateCaptionItems);
+  }, [activeSubcategory, previewItemsBySubcategory, templateCaptionItems]);
+
   const previewItems = [...cachedPreviews, ...streamedPreviews];
 
   const setPreviewItemsForCurrentSubcategory = React.useCallback(
@@ -298,15 +326,20 @@ export function useTemplateRender(
     setPreviewItemsBySubcategory({});
   }, [listingId]);
 
-  const templateCaptionItems = React.useMemo(
-    () => buildTemplateRenderCaptionItems(captionItems),
-    [captionItems]
-  );
-
   const consideredIdsKey = captionItemIdsKey(
     templateCaptionItems,
     templateCaptionItems.length
   );
+
+  React.useEffect(() => {
+    setPreviewItemsForCurrentSubcategory((prev) => {
+      const filtered = filterPreviewItemsForActiveCaptionItems(
+        prev,
+        templateCaptionItems
+      );
+      return filtered.length === prev.length ? prev : filtered;
+    });
+  }, [setPreviewItemsForCurrentSubcategory, templateCaptionItems]);
 
   React.useEffect(() => {
     const captionItemsNeedingRender = getCaptionItemsNeedingRender(

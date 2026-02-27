@@ -58,11 +58,11 @@ export const LISTING_SUBCATEGORY_DIRECTIVE_FILES: Record<
   ListingContentSubcategory,
   string
 > = {
-  new_listing: "listingSubcategories/new-listing.md",
-  open_house: "listingSubcategories/open-house.md",
-  price_change: "listingSubcategories/price-change.md",
-  status_update: "listingSubcategories/status-update.md",
-  property_features: "listingSubcategories/property-features.md"
+  new_listing: "listings/new-listing.md",
+  open_house: "listings/open-house.md",
+  price_change: "listings/price-change.md",
+  status_update: "listings/status-update.md",
+  property_features: "listings/property-features.md"
 };
 
 export const LISTING_SUBCATEGORY_HOOK_FILES: Record<

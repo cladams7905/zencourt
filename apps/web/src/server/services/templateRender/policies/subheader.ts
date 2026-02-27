@@ -6,6 +6,7 @@ import type {
 export function applySubheaderPolicy(params: {
   resolvedParameters: Partial<Record<TemplateRenderParameterKey, string>>;
   headerLength: TemplateHeaderLength;
+  forceListingAddressSubheader?: boolean;
 }): Partial<Record<TemplateRenderParameterKey, string>> {
   const next = { ...params.resolvedParameters };
   const aiSubheader1 = next.subheader1Text?.trim() ?? "";
@@ -14,10 +15,16 @@ export function applySubheaderPolicy(params: {
   const featureFallback =
     next.feature1?.trim() ?? next.feature2?.trim() ?? next.feature3?.trim() ?? "";
 
+  if (params.forceListingAddressSubheader && listingAddress) {
+    next.subheader1Text = listingAddress;
+    next.subheader2Text = listingAddress;
+    return next;
+  }
+
   if (params.headerLength === "short") {
-    next.subheader1Text = listingAddress || aiSubheader1 || featureFallback;
+    next.subheader1Text = aiSubheader1 || listingAddress || featureFallback;
     next.subheader2Text =
-      aiSubheader1 || aiSubheader2 || featureFallback || listingAddress;
+      aiSubheader2 || listingAddress || featureFallback || aiSubheader1;
     return next;
   }
 
