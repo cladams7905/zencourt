@@ -1,17 +1,21 @@
 const mockCreateUserMediaRecords = jest.fn();
 const mockDeleteUserMedia = jest.fn();
 const mockGetUserMediaById = jest.fn();
+const mockGetUserMedia = jest.fn();
 const mockRequireAuthenticatedUser = jest.fn();
 const mockPrepareUserMediaUploadUrls = jest.fn();
 const mockMapUserMediaRecordInputs = jest.fn((_: string, uploads: unknown[]) => uploads);
 const mockDeleteStorageUrlsOrThrow = jest.fn();
 const mockIsManagedStorageUrl = jest.fn(() => true);
+const mockGetPublicDownloadUrlSafe = jest.fn((url: string | null | undefined) => url);
 
 jest.mock("@web/src/server/models/userMedia", () => ({
   createUserMediaRecords: (...args: unknown[]) =>
     (mockCreateUserMediaRecords as (...a: unknown[]) => unknown)(...args),
   getUserMediaById: (...args: unknown[]) =>
     (mockGetUserMediaById as (...a: unknown[]) => unknown)(...args),
+  getUserMedia: (...args: unknown[]) =>
+    (mockGetUserMedia as (...a: unknown[]) => unknown)(...args),
   deleteUserMedia: (...args: unknown[]) =>
     (mockDeleteUserMedia as (...a: unknown[]) => unknown)(...args)
 }));
@@ -26,6 +30,8 @@ jest.mock("@web/src/server/actions/shared/storageCleanup", () => ({
     (mockDeleteStorageUrlsOrThrow as (...a: unknown[]) => unknown)(...args)
 }));
 jest.mock("@web/src/server/services/storage/urlResolution", () => ({
+  getPublicDownloadUrlSafe: (...args: unknown[]) =>
+    (mockGetPublicDownloadUrlSafe as (...a: unknown[]) => unknown)(...args),
   isManagedStorageUrl: (...args: unknown[]) =>
     (mockIsManagedStorageUrl as (...a: unknown[]) => unknown)(...args)
 }));
@@ -38,7 +44,8 @@ jest.mock("@web/src/server/actions/_auth/api", () => ({
 import {
   getUserMediaUploadUrlsForCurrentUser,
   createUserMediaRecordsForCurrentUser,
-  deleteUserMediaForCurrentUser
+  deleteUserMediaForCurrentUser,
+  getUserMediaForCurrentUser
 } from "@web/src/server/actions/media/commands";
 
 describe("media commands", () => {
@@ -48,11 +55,14 @@ describe("media commands", () => {
     mockCreateUserMediaRecords.mockReset();
     mockDeleteUserMedia.mockReset();
     mockGetUserMediaById.mockReset();
+    mockGetUserMedia.mockReset();
     mockPrepareUserMediaUploadUrls.mockReset();
     mockMapUserMediaRecordInputs.mockClear();
     mockDeleteStorageUrlsOrThrow.mockReset();
     mockIsManagedStorageUrl.mockReset();
+    mockGetPublicDownloadUrlSafe.mockReset();
     mockIsManagedStorageUrl.mockReturnValue(true);
+    mockGetPublicDownloadUrlSafe.mockImplementation((url: string | null | undefined) => url);
     mockRequireAuthenticatedUser.mockReset();
     mockRequireAuthenticatedUser.mockResolvedValue(mockUser);
   });
@@ -129,6 +139,32 @@ describe("media commands", () => {
         ["https://managed.com/a.jpg"],
         "Failed to delete media file"
       );
+    });
+  });
+
+  describe("getUserMediaForCurrentUser", () => {
+    it("returns media with resolved public urls", async () => {
+      mockGetUserMedia.mockResolvedValueOnce([
+        {
+          id: "m1",
+          url: "private://media-1",
+          thumbnailUrl: "private://thumb-1"
+        }
+      ]);
+      mockGetPublicDownloadUrlSafe
+        .mockReturnValueOnce("https://public/media-1")
+        .mockReturnValueOnce("https://public/thumb-1");
+
+      const result = await getUserMediaForCurrentUser();
+
+      expect(mockGetUserMedia).toHaveBeenCalledWith("user-1");
+      expect(result).toEqual([
+        expect.objectContaining({
+          id: "m1",
+          url: "https://public/media-1",
+          thumbnailUrl: "https://public/thumb-1"
+        })
+      ]);
     });
   });
 });

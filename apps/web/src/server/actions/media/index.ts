@@ -1,5 +1,6 @@
 export {
   createUserMediaRecordsForCurrentUser,
   deleteUserMediaForCurrentUser,
-  getUserMediaUploadUrlsForCurrentUser
+  getUserMediaUploadUrlsForCurrentUser,
+  getUserMediaForCurrentUser
 } from "./commands";

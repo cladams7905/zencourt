@@ -24,13 +24,11 @@ describe("useListingCreateEffects", () => {
 
   function renderEffects(overrides?: Record<string, unknown>) {
     const generateSubcategoryContent = jest.fn().mockResolvedValue(undefined);
-    const replaceUrl = jest.fn();
 
     renderHook(() =>
       useListingCreateEffects({
         listingId: "l1",
         pathname: "/listings/l1/create",
-        replaceUrl,
         activeMediaTab: "images",
         activeSubcategory: "new_listing",
         initialMediaTab: "images",
@@ -44,29 +42,25 @@ describe("useListingCreateEffects", () => {
       } as never)
     );
 
-    return { generateSubcategoryContent, replaceUrl };
+    return { generateSubcategoryContent };
   }
 
   it("syncs URL params and emits sidebar update", () => {
-    const { replaceUrl } = renderEffects();
+    renderEffects();
 
     expect(mockEmitListingSidebarUpdate).toHaveBeenCalledWith(
       expect.objectContaining({ id: "l1", listingStage: "create" })
     );
-    expect(replaceUrl).toHaveBeenCalledWith(
-      "/listings/l1/create?mediaType=photos&filter=new_listing"
-    );
+    expect(window.location.search).toBe("?mediaType=photos&filter=new_listing");
   });
 
   it("uses history.replaceState when URL has no params to avoid redundant server round-trip", () => {
     window.history.replaceState({}, "", "/listings/l1/create");
-    const replaceUrl = jest.fn();
 
     renderHook(() =>
       useListingCreateEffects({
         listingId: "l1",
         pathname: "/listings/l1/create",
-        replaceUrl,
         activeMediaTab: "videos",
         activeSubcategory: "new_listing",
         initialMediaTab: "videos",
@@ -79,7 +73,6 @@ describe("useListingCreateEffects", () => {
       } as never)
     );
 
-    expect(replaceUrl).not.toHaveBeenCalled();
     expect(window.location.search).toBe("?mediaType=videos&filter=new_listing");
   });
 
@@ -94,7 +87,6 @@ describe("useListingCreateEffects", () => {
         useListingCreateEffects({
           listingId: "l1",
           pathname: "/listings/l1/create",
-          replaceUrl: jest.fn(),
           activeMediaTab: "images",
           activeSubcategory: "new_listing",
           initialMediaTab: "images",
@@ -110,5 +102,30 @@ describe("useListingCreateEffects", () => {
 
     rerender({ generationError: "bad" });
     expect(mockToastError).toHaveBeenCalledTimes(1);
+  });
+
+  it("avoids duplicate replaceState calls for the same URL across rerenders", () => {
+    const replaceSpy = jest.spyOn(window.history, "replaceState");
+    const { rerender } = renderHook(
+      () =>
+        useListingCreateEffects({
+          listingId: "l1",
+          pathname: "/listings/l1/create",
+          activeMediaTab: "images",
+          activeSubcategory: "status_update",
+          initialMediaTab: "images",
+          initialSubcategory: "new_listing",
+          activeMediaItemsLength: 1,
+          isGenerating: false,
+          generationError: null,
+          templateRenderError: null,
+          generateSubcategoryContent: jest.fn().mockResolvedValue(undefined)
+        }),
+    );
+
+    rerender();
+
+    expect(replaceSpy).toHaveBeenCalledTimes(1);
+    replaceSpy.mockRestore();
   });
 });

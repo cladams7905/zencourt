@@ -5,10 +5,14 @@ import { requireAuthenticatedUser } from "@web/src/server/actions/_auth/api";
 import {
   createUserMediaRecords,
   deleteUserMedia,
-  getUserMediaById
+  getUserMediaById,
+  getUserMedia
 } from "@web/src/server/models/userMedia";
 import { deleteStorageUrlsOrThrow } from "@web/src/server/actions/shared/storageCleanup";
-import { isManagedStorageUrl } from "@web/src/server/services/storage/urlResolution";
+import {
+  getPublicDownloadUrlSafe,
+  isManagedStorageUrl
+} from "@web/src/server/services/storage/urlResolution";
 import {
   mapUserMediaRecordInputs,
   prepareUserMediaUploadUrls
@@ -55,5 +59,19 @@ export const deleteUserMediaForCurrentUser = withServerActionCaller(
       ),
       "Failed to delete media file"
     );
+  }
+);
+
+export const getUserMediaForCurrentUser = withServerActionCaller(
+  "getUserMediaForCurrentUser",
+  async () => {
+    const user = await requireAuthenticatedUser();
+    const userMedia = await getUserMedia(user.id);
+    return userMedia.map((media) => ({
+      ...media,
+      url: getPublicDownloadUrlSafe(media.url) ?? media.url,
+      thumbnailUrl:
+        getPublicDownloadUrlSafe(media.thumbnailUrl) ?? media.thumbnailUrl
+    }));
   }
 );

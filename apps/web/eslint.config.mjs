@@ -102,6 +102,24 @@ const eslintConfig = [
     },
   },
   {
+    files: ["src/app/**/*.{ts,tsx}"],
+    ignores: ["src/app/api/v1/**/route.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@web/src/server/services/**"],
+              message:
+                "App layer modules must not import server/services directly. Route through server/actions instead.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ["src/server/actions/**/*.ts"],
     rules: {
       "no-restricted-imports": [

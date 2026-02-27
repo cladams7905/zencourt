@@ -2,12 +2,14 @@ import {
   createChildLogger,
   logger as baseLogger
 } from "@web/src/lib/core/logging/logger";
-import type { ListingContentSubcategory } from "@shared/types/models";
+import {
+  LISTING_CONTENT_SUBCATEGORIES,
+  type ListingContentSubcategory
+} from "@shared/types/models";
 import { getSharedRedisClient } from "../redis";
 import type {
   ListingContentItem,
   ListingContentItemWithKey,
-  ListingGeneratedItem,
   ListingMediaType
 } from "./types";
 
@@ -24,6 +26,63 @@ const logger = createChildLogger(baseLogger, {
 
 export const LISTING_CONTENT_CACHE_PREFIX = "listing-content";
 export const LISTING_CONTENT_CACHE_TTL_SECONDS = 60 * 60 * 12;
+const LISTING_MEDIA_TYPES: readonly ListingMediaType[] = ["image", "video"];
+
+export type ListingCreateCachedContentItem = {
+  id: string;
+  aspectRatio: "square";
+  isFavorite: false;
+  hook: string;
+  caption: string | null;
+  body: Array<{
+    header: string;
+    content: string;
+    broll_query?: string | null;
+  }> | null;
+  brollQuery: string | null;
+  listingSubcategory: ListingContentSubcategory;
+  mediaType: ListingMediaType;
+  cacheKeyTimestamp: number;
+  cacheKeyId: number;
+  cachedRenderedPreview?: {
+    imageUrl: string;
+    templateId: string;
+    modifications: Record<string, string>;
+  };
+};
+
+function mapCachedListingItemToCreateContent(params: {
+  item: ListingContentItemWithKey;
+  subcategory: ListingContentSubcategory;
+  mediaType: ListingMediaType;
+}): ListingCreateCachedContentItem {
+  const { item, subcategory, mediaType } = params;
+  const mapped: ListingCreateCachedContentItem = {
+    id: `cached-${subcategory}-${mediaType}-${item.cacheKeyTimestamp}-${item.cacheKeyId}`,
+    aspectRatio: "square",
+    isFavorite: false,
+    hook: item.hook,
+    caption: item.caption ?? null,
+    body: item.body ?? null,
+    brollQuery: item.broll_query ?? null,
+    listingSubcategory: subcategory,
+    mediaType,
+    cacheKeyTimestamp: item.cacheKeyTimestamp,
+    cacheKeyId: item.cacheKeyId
+  };
+  if (
+    item.renderedImageUrl &&
+    item.renderedTemplateId &&
+    item.renderedModifications
+  ) {
+    mapped.cachedRenderedPreview = {
+      imageUrl: item.renderedImageUrl,
+      templateId: item.renderedTemplateId,
+      modifications: item.renderedModifications
+    };
+  }
+  return mapped;
+}
 
 /**
  * Key for a single item: listing-content:{userId}:{listingId}:{subcategory}:{mediaType}:{timestamp}:{id}
@@ -116,15 +175,16 @@ export async function getAllCachedListingContentForFilter(params: {
   let cursor = 0;
   try {
     do {
-      const [nextCursor, batch] = await redis.scan(cursor, { match, count: 100 });
-      cursor = typeof nextCursor === "string" ? parseInt(nextCursor, 10) : nextCursor;
+      const [nextCursor, batch] = await redis.scan(cursor, {
+        match,
+        count: 100
+      });
+      cursor =
+        typeof nextCursor === "string" ? parseInt(nextCursor, 10) : nextCursor;
       keys.push(...(batch as string[]));
     } while (cursor !== 0);
   } catch (error) {
-    logger.warn(
-      { error, match },
-      "Failed scanning listing content cache keys"
-    );
+    logger.warn({ error, match }, "Failed scanning listing content cache keys");
     return [];
   }
   const entries: { timestamp: number; id: number; key: string }[] = [];
@@ -157,6 +217,29 @@ export async function getAllCachedListingContentForFilter(params: {
     }
   }
   return result;
+}
+
+export async function getAllCachedListingContentForCreate(params: {
+  userId: string;
+  listingId: string;
+}): Promise<ListingCreateCachedContentItem[]> {
+  const { userId, listingId } = params;
+  const groups = await Promise.all(
+    LISTING_CONTENT_SUBCATEGORIES.flatMap((subcategory) =>
+      LISTING_MEDIA_TYPES.map(async (mediaType) => {
+        const items = await getAllCachedListingContentForFilter({
+          userId,
+          listingId,
+          subcategory,
+          mediaType
+        });
+        return items.map((item) =>
+          mapCachedListingItemToCreateContent({ item, subcategory, mediaType })
+        );
+      })
+    )
+  );
+  return groups.flat();
 }
 
 /**
