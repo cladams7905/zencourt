@@ -181,4 +181,34 @@ describe("useContentGeneration", () => {
     };
     expect(firstCall.generationNonce).toBeTruthy();
   });
+
+  it("re-syncs local post items when server props update for same listing", () => {
+    const { result, rerender } = renderHook(
+      (props: { listingPostItems: Array<{ id: string }> }) =>
+        useContentGeneration({
+          listingId: "listing-1",
+          listingPostItems: props.listingPostItems,
+          activeMediaTab: "images",
+          activeSubcategory: "new_listing"
+        }),
+      {
+        initialProps: {
+          listingPostItems: [{ id: "cached-new-listing-1" }]
+        }
+      }
+    );
+
+    expect(result.current.localPostItems).toEqual([
+      { id: "cached-new-listing-1" }
+    ]);
+
+    rerender({
+      listingPostItems: [{ id: "cached-open-house-1" }]
+    });
+
+    expect(result.current.localPostItems).toEqual([
+      { id: "cached-open-house-1" }
+    ]);
+  });
+
 });

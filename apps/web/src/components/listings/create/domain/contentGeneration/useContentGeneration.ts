@@ -23,6 +23,31 @@ import type { StreamedContentItem } from "./types";
 
 const DEFAULT_GENERATION_COUNT = GENERATED_BATCH_SIZE;
 
+function buildContentItemRevision(item: ContentItem): string {
+  const cacheIdentity = item as ContentItem & {
+    cacheKeyTimestamp?: number;
+    cacheKeyId?: number;
+  };
+  const bodyRevision = (item.body ?? [])
+    .map((slide) => `${slide.header ?? ""}|${slide.content ?? ""}`)
+    .join("||");
+  return [
+    item.id,
+    item.listingSubcategory ?? "",
+    item.mediaType ?? "",
+    item.hook ?? "",
+    item.caption ?? "",
+    item.brollQuery ?? "",
+    bodyRevision,
+    String(cacheIdentity.cacheKeyTimestamp ?? ""),
+    String(cacheIdentity.cacheKeyId ?? "")
+  ].join("::");
+}
+
+function buildListingPostItemsRevision(items: ContentItem[]): string {
+  return items.map(buildContentItemRevision).join("###");
+}
+
 const generateUUID = () => {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return crypto.randomUUID();
@@ -64,14 +89,24 @@ export function useContentGeneration(params: {
   const activeBatchIdRef = React.useRef<string>("");
   const activeBatchItemIdsRef = React.useRef<string[]>([]);
   const activeGenerationCountRef = React.useRef<number>(DEFAULT_GENERATION_COUNT);
+  const lastSyncedServerRevisionRef = React.useRef<string>("");
+  const listingPostItemsSnapshot = React.useMemo(
+    () => buildListingPostItemsRevision(listingPostItems),
+    [listingPostItems]
+  );
 
   React.useEffect(() => {
     setIncompleteBatchSkeletonCount(0);
   }, [activeSubcategory, activeMediaTab]);
 
   React.useEffect(() => {
+    const nextRevision = `${listingId}::${listingPostItemsSnapshot}`;
+    if (nextRevision === lastSyncedServerRevisionRef.current) {
+      return;
+    }
+    lastSyncedServerRevisionRef.current = nextRevision;
     setLocalPostItems(listingPostItems);
-  }, [listingId]); // eslint-disable-line react-hooks/exhaustive-deps -- only sync when listing changes so we show that listing's cache; listingPostItems omitted to avoid loop when parent passes new array ref
+  }, [listingId, listingPostItems, listingPostItemsSnapshot]);
 
   const generateSubcategoryContent = React.useCallback(
     async (

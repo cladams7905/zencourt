@@ -7,7 +7,6 @@ import type { ListingCreateMediaTab } from "@web/src/components/listings/create/
 export function useListingCreateEffects(params: {
   listingId: string;
   pathname: string;
-  replaceUrl: (url: string) => void;
   activeMediaTab: ListingCreateMediaTab;
   activeSubcategory: ListingContentSubcategory;
   initialMediaTab: ListingCreateMediaTab;
@@ -24,7 +23,6 @@ export function useListingCreateEffects(params: {
   const {
     listingId,
     pathname,
-    replaceUrl,
     activeMediaTab,
     activeSubcategory,
     initialMediaTab,
@@ -38,6 +36,11 @@ export function useListingCreateEffects(params: {
 
   const hasHandledInitialAutoGenerateRef = React.useRef(false);
   const lastToastedErrorRef = React.useRef<string | null>(null);
+  /**
+   * Tracks the most recent URL we requested so rerenders don't repeatedly call
+   * `history.replaceState` before `window.location.search` reflects the change.
+   */
+  const lastRequestedUrlRef = React.useRef<string | null>(null);
 
   React.useEffect(() => {
     emitListingSidebarUpdate({
@@ -55,6 +58,7 @@ export function useListingCreateEffects(params: {
     const currentFilter = next.get("filter");
 
     if (currentMediaType === mediaTypeParam && currentFilter === filterParam) {
+      lastRequestedUrlRef.current = null;
       return;
     }
 
@@ -63,14 +67,13 @@ export function useListingCreateEffects(params: {
 
     const query = next.toString();
     const newUrl = query ? `${pathname}?${query}` : pathname;
-
-    if (!currentMediaType && !currentFilter) {
-      window.history.replaceState(null, "", newUrl);
+    if (newUrl === lastRequestedUrlRef.current) {
       return;
     }
+    lastRequestedUrlRef.current = newUrl;
 
-    replaceUrl(newUrl);
-  }, [activeMediaTab, activeSubcategory, pathname, replaceUrl]);
+    window.history.replaceState(null, "", newUrl);
+  }, [activeMediaTab, activeSubcategory, pathname]);
 
   React.useEffect(() => {
     if (hasHandledInitialAutoGenerateRef.current) {

@@ -3,7 +3,7 @@
 import * as React from "react";
 import { ListingViewHeader } from "@web/src/components/listings/shared";
 import { type ContentItem } from "@web/src/components/dashboard/components/ContentGrid";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   ListingVideoPreviewGrid,
   ListingImagePreviewGrid,
@@ -69,7 +69,6 @@ export function ListingCreateView({
   initialMediaTab = "videos",
   initialSubcategory = LISTING_CONTENT_SUBCATEGORIES[0]
 }: ListingCreateViewProps) {
-  const router = useRouter();
   const pathname = usePathname();
   const { sentinelRef: filterSentinelRef, isSticky: isFilterStickyActive } =
     useStickyHeader();
@@ -103,7 +102,6 @@ export function ListingCreateView({
   useListingCreateEffects({
     listingId,
     pathname,
-    replaceUrl: (url) => router.replace(url, { scroll: false }),
     activeMediaItemsLength: activeMediaItems.length,
     activeMediaTab,
     activeSubcategory,
