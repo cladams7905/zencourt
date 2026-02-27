@@ -72,12 +72,14 @@ describe("templateRender/service", () => {
       {
         id: "template-1",
         subcategories: ["new_listing"],
-        requiredParams: ["headerText", "backgroundImage1"]
+        requiredParams: ["headerText", "backgroundImage1"],
+        headerLength: "long"
       },
       {
         id: "template-2",
         subcategories: ["new_listing"],
-        requiredParams: ["headerText"]
+        requiredParams: ["headerText"],
+        headerLength: "long"
       }
     ]);
     mockResolveTemplateParameters.mockReturnValue({
@@ -121,7 +123,8 @@ describe("templateRender/service", () => {
       {
         id: "template-3",
         subcategories: ["new_listing"],
-        requiredParams: []
+        requiredParams: [],
+        headerLength: "long"
       }
     ]);
     mockResolveTemplateParameters.mockReturnValue({
@@ -136,10 +139,12 @@ describe("templateRender/service", () => {
 
     expect(mockRenderTemplate).toHaveBeenCalledWith({
       templateId: "template-3",
-      modifications: {
+      modifications: expect.objectContaining({
         headerText: "Heading",
-        headerTextTop: "Heading"
-      }
+        headerTextTop: "Heading",
+        socialHandleIcon:
+          "https://upload.wikimedia.org/wikipedia/commons/c/ce/Transparent.gif"
+      })
     });
     expect(result.failedTemplateIds).toEqual([]);
     expect(result.items).toHaveLength(1);
@@ -150,7 +155,8 @@ describe("templateRender/service", () => {
       {
         id: "template-4",
         subcategories: ["new_listing"],
-        requiredParams: ["backgroundImage1", "headerText"]
+        requiredParams: ["backgroundImage1", "headerText"],
+        headerLength: "long"
       }
     ]);
     mockResolveTemplateParameters.mockReturnValue({
@@ -174,7 +180,8 @@ describe("templateRender/service", () => {
       {
         id: "template-5",
         subcategories: ["new_listing"],
-        requiredParams: ["backgroundImage1", "headerText", "feature1"]
+        requiredParams: ["backgroundImage1", "headerText", "feature1"],
+        headerLength: "long"
       }
     ]);
     mockResolveTemplateParameters.mockReturnValue({
@@ -200,7 +207,8 @@ describe("templateRender/service", () => {
         id: "template-multi-page",
         subcategories: ["new_listing"],
         requiredParams: ["headerText", "feature1"],
-        page_length: 2
+        pageLength: 2,
+        headerLength: "long"
       }
     ]);
     mockResolveTemplateParameters.mockReturnValue({
@@ -219,13 +227,13 @@ describe("templateRender/service", () => {
     });
   });
 
-  it("uses short preset headers when template header_length is short", async () => {
+  it("uses short preset headers when template headerLength is short", async () => {
     mockPickRandomTemplatesForSubcategory.mockReturnValue([
       {
         id: "template-short-header",
         subcategories: ["new_listing"],
         requiredParams: ["headerText", "subheader1Text", "subheader2Text"],
-        header_length: "short"
+        headerLength: "short"
       }
     ]);
     mockResolveTemplateParameters.mockReturnValue({
@@ -241,14 +249,18 @@ describe("templateRender/service", () => {
       random: () => 0
     });
 
-    expect(mockRenderTemplate).toHaveBeenCalledWith({
-      templateId: "template-short-header",
-      modifications: {
-        headerText: "Just Listed",
-        subheader1Text: "123 Main St",
-        subheader2Text: "AI Subheader"
-      }
-    });
+    expect(mockRenderTemplate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        templateId: "template-short-header",
+        modifications: expect.objectContaining({
+          subheader2Text: "AI Secondary"
+        })
+      })
+    );
+    const firstCall = mockRenderTemplate.mock.calls[0]?.[0];
+    const headerText = firstCall?.modifications?.headerText ?? "";
+    expect(typeof headerText).toBe("string");
+    expect(headerText.trim().length).toBeGreaterThan(0);
   });
 
   it("prefers AI subheaders for medium headers and falls back when missing", async () => {
@@ -257,7 +269,7 @@ describe("templateRender/service", () => {
         id: "template-medium-header",
         subcategories: ["new_listing"],
         requiredParams: ["subheader1Text", "subheader2Text"],
-        header_length: "medium"
+        headerLength: "medium"
       }
     ]);
     mockResolveTemplateParameters.mockReturnValue({
@@ -274,11 +286,47 @@ describe("templateRender/service", () => {
       random: () => 0
     });
 
+    expect(mockRenderTemplate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        templateId: "template-medium-header",
+        modifications: expect.objectContaining({
+          subheader2Text: "55 Oak Ave"
+        })
+      })
+    );
+    const firstCall = mockRenderTemplate.mock.calls[0]?.[0];
+    const subheader1Text = firstCall?.modifications?.subheader1Text ?? "";
+    expect(typeof subheader1Text).toBe("string");
+    expect(subheader1Text.trim().length).toBeGreaterThan(0);
+  });
+
+  it("applies template flags for uppercase headers and address-only subheaders", async () => {
+    mockPickRandomTemplatesForSubcategory.mockReturnValue([
+      {
+        id: "template-flags",
+        subcategories: ["new_listing"],
+        requiredParams: ["headerText", "subheader1Text", "subheader2Text"],
+        headerLength: "long",
+        forceUppercaseHeader: true,
+        forceListingAddressSubheader: true
+      }
+    ]);
+    mockResolveTemplateParameters.mockReturnValue({
+      headerText: "welcome home",
+      subheader1Text: "AI Subheader",
+      subheader2Text: "AI Subheader 2",
+      listingAddress: "100 State St, Austin, TX"
+    });
+    mockRenderTemplate.mockResolvedValueOnce("https://cdn.example.com/render-flags.jpg");
+
+    await renderListingTemplateBatch(buildParams());
+
     expect(mockRenderTemplate).toHaveBeenCalledWith({
-      templateId: "template-medium-header",
+      templateId: "template-flags",
       modifications: {
-        subheader1Text: "55 Oak Ave",
-        subheader2Text: "55 Oak Ave"
+        headerText: "WELCOME HOME",
+        subheader1Text: "100 State St, Austin, TX",
+        subheader2Text: "100 State St, Austin, TX"
       }
     });
   });
@@ -288,7 +336,8 @@ describe("templateRender/service", () => {
       {
         id: "template-non-error",
         subcategories: ["new_listing"],
-        requiredParams: ["headerText"]
+        requiredParams: ["headerText"],
+        headerLength: "long"
       }
     ]);
     mockResolveTemplateParameters.mockReturnValue({ headerText: "Hello" });
@@ -319,12 +368,14 @@ describe("templateRender/service", () => {
       {
         id: "template-1",
         subcategories: ["new_listing"],
-        requiredParams: ["headerText"]
+        requiredParams: ["headerText"],
+        headerLength: "long"
       },
       {
         id: "template-2",
         subcategories: ["new_listing"],
-        requiredParams: ["headerText"]
+        requiredParams: ["headerText"],
+        headerLength: "long"
       }
     ]);
     mockResolveTemplateParameters.mockReturnValue({ headerText: "Dream Home" });
@@ -376,12 +427,14 @@ describe("templateRender/service", () => {
       {
         id: "template-a",
         subcategories: ["new_listing"],
-        requiredParams: ["headerText"]
+        requiredParams: ["headerText"],
+        headerLength: "long"
       },
       {
         id: "template-b",
         subcategories: ["new_listing"],
-        requiredParams: ["headerText"]
+        requiredParams: ["headerText"],
+        headerLength: "long"
       }
     ]);
     mockResolveTemplateParameters.mockReturnValue({ headerText: "Hi" });
@@ -425,6 +478,9 @@ describe("templateRender/service", () => {
         headerText: "Hi",
         headerTextTop: "Hi",
         headerTextBottom: "",
+        garageLabel: "",
+        socialHandleIcon:
+          "https://upload.wikimedia.org/wikipedia/commons/c/ce/Transparent.gif",
         subheader1Text: "",
         subheader2Text: ""
       }
@@ -445,7 +501,8 @@ describe("templateRender/service", () => {
       {
         id: "template-public",
         subcategories: ["new_listing"],
-        requiredParams: ["headerText", "backgroundImage1"]
+        requiredParams: ["headerText", "backgroundImage1"],
+        headerLength: "long"
       }
     ]);
     mockResolveTemplateParameters.mockReturnValue({

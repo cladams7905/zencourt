@@ -58,14 +58,14 @@ function getTemplateName(template) {
 }
 
 function getThumbnailUrl(template) {
-  const topLevel = template?.thumbnail_url;
+  const topLevel = template?.thumbnail_url ?? template?.thumbnailUrl;
   if (typeof topLevel === "string" && topLevel.trim().length > 0) {
     return topLevel.trim();
   }
 
   if (Array.isArray(template?.pages_data)) {
     for (const page of template.pages_data) {
-      const pageThumbnail = page?.thumbnail_url;
+      const pageThumbnail = page?.thumbnail_url ?? page?.thumbnailUrl;
       if (
         typeof pageThumbnail === "string" &&
         pageThumbnail.trim().length > 0
@@ -167,7 +167,7 @@ async function main() {
     const sortedUnknownKeys = [...keysNotInValidSet.keys()].sort();
     if (sortedUnknownKeys.length > 0) {
       console.warn(
-        "⚠️ Modification keys from API not in VALID_KEYS (%d unique):\n%s",
+        "⚠️  Modification keys from API not in VALID_KEYS (%d unique):\n%s",
         sortedUnknownKeys.length,
         JSON.stringify(
           Object.fromEntries(
@@ -190,8 +190,8 @@ async function main() {
       apiMap.set(id, {
         name: getTemplateName(t),
         requiredParams: getRequiredParams(t.modifications),
-        thumbnail_url: getThumbnailUrl(t),
-        page_length: getPageLength(t)
+        thumbnailUrl: getThumbnailUrl(t),
+        pageLength: getPageLength(t)
       });
     }
 
@@ -202,9 +202,9 @@ async function main() {
         ...t,
         name: apiTemplate?.name ?? t.name ?? "",
         requiredParams: apiTemplate?.requiredParams ?? [],
-        thumbnail_url: apiTemplate?.thumbnail_url ?? "",
-        page_length: apiTemplate?.page_length ?? 1,
-        header_length: t.header_length ?? "medium"
+        thumbnailUrl: apiTemplate?.thumbnailUrl ?? "",
+        pageLength: apiTemplate?.pageLength ?? 1,
+        headerLength: t.headerLength ?? "medium"
       };
       if (JSON.stringify(nextTemplate) !== JSON.stringify(t)) {
         syncedCount += 1;

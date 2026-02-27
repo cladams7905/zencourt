@@ -8,11 +8,9 @@ import type {
 } from "@web/src/lib/domain/media/templateRender/types";
 import {
   formatCurrencyUsd,
-  formatNumberUs,
-  formatCountWithNoun
+  formatNumberUs
 } from "@web/src/lib/core/formatting/number";
-
-const lastUsedImageIndexByRotationKey = new Map<string, number>();
+import type { TemplateImageRotationStore } from "@web/src/server/services/templateRender/rotation";
 
 function toOrdinal(day: number): string {
   const mod10 = day % 10;
@@ -146,29 +144,50 @@ export function resolveTemplateParameters(params: {
   now?: Date;
   renderIndex?: number;
   rotationKey?: string;
+  imageRotationStore?: TemplateImageRotationStore;
 }): Partial<Record<TemplateRenderParameterKey, string>> {
   const details = pickPropertyDetails(params.listing);
   const rankedImages = rankListingImagesForTemplate(
     params.listingImages,
     params.captionItem
   );
+  const random = params.random ?? Math.random;
   const resolvedRotationIndex = (() => {
     if (typeof params.rotationKey === "string" && params.rotationKey.length > 0) {
-      const previous = lastUsedImageIndexByRotationKey.get(params.rotationKey) ?? -1;
-      const next = (previous + 1) % Math.max(1, rankedImages.length);
-      lastUsedImageIndexByRotationKey.set(params.rotationKey, next);
-      return next;
+      if (rankedImages.length === 0) {
+        return 0;
+      }
+
+      const previous = params.imageRotationStore?.getIndex(params.rotationKey);
+      if (typeof previous === "number" && Number.isFinite(previous)) {
+        const next = (previous + 1) % rankedImages.length;
+        params.imageRotationStore?.setIndex(params.rotationKey, next);
+        return next;
+      }
+
+      const seeded = Math.floor(random() * rankedImages.length);
+      const start = Number.isFinite(seeded)
+        ? Math.min(rankedImages.length - 1, Math.max(0, seeded))
+        : 0;
+      params.imageRotationStore?.setIndex(params.rotationKey, start);
+      return start;
     }
     return params.renderIndex ?? 0;
   })();
   const images = rotateImages(rankedImages, resolvedRotationIndex);
-  const random = params.random ?? Math.random;
   const now = params.now ?? new Date();
 
   const fallbackHeader = params.captionItem.hook?.trim() || "Just listed";
   const { headerTextTop, headerTextBottom } = splitHeaderText(fallbackHeader);
-  const bedCount = formatCountWithNoun(details?.bedrooms, "bed");
-  const bathCount = formatCountWithNoun(details?.bathrooms, "bath");
+  const bedCount =
+    typeof details?.bedrooms === "number"
+      ? formatNumberUs(details.bedrooms)
+      : "";
+  const bathCount =
+    typeof details?.bathrooms === "number"
+      ? formatNumberUs(details.bathrooms)
+      : "";
+  const garageCount = "";
   const squareFootageRaw =
     typeof details?.living_area_sq_ft === "number"
       ? `${formatNumberUs(details.living_area_sq_ft)} sqft`
@@ -177,22 +196,22 @@ export function resolveTemplateParameters(params: {
   const listingPrice = formatCurrencyUsd(details?.listing_price ?? null, "$0");
   const priceLabel = params.subcategory === "status_update" ? "sold for" : "starting from";
   const featureItems = compactList([
-    bedCount,
-    bathCount,
+    bedCount ? `${bedCount} beds` : "",
+    bathCount ? `${bathCount} baths` : "",
     squareFootageRaw,
     ...(details?.living_spaces ?? []),
     ...(details?.additional_spaces ?? []),
     details?.architecture ?? null
   ]);
 
-  const agentName = params.userAdditional.agentName?.trim() || "Your Realtor";
-  const agentTitle = params.userAdditional.agentTitle?.trim() || "Realtor";
-  const brokerageName = params.userAdditional.brokerageName?.trim() || "Your Brokerage";
+  const agentName = params.userAdditional.agentName?.trim() || "";
+  const agentTitle = params.userAdditional.agentTitle?.trim() || "";
+  const brokerageName = params.userAdditional.brokerageName?.trim() || "";
   const listingAddress =
     details?.address?.trim() || params.listing.address?.trim() || params.listing.title?.trim() || "";
-  const agentContact1 = "(555) 555-0199";
-  const agentContact2 = "www.example-realty.com";
-  const agentContact3 = `${agentTitle} · ${brokerageName}`;
+  const agentContact1 = "";
+  const agentContact2 = "";
+  const agentContact3 = "";
 
   return {
     headerText: fallbackHeader,
@@ -204,7 +223,7 @@ export function resolveTemplateParameters(params: {
     arrowImage: pickRandomArrowPath(params.siteOrigin, random),
     bedCount,
     bathCount,
-    garageCount: "",
+    garageCount,
     squareFootage: squareFootageRaw,
     listingPrice,
     priceLabel,
@@ -221,11 +240,11 @@ export function resolveTemplateParameters(params: {
     feature3: featureItems[2] ?? "",
     featureList: featureItems.join(" • "),
     openHouseDateTime: formatPlaceholderOpenHouseDateTime(now),
-    socialHandle: "@zencourt_realtor",
+    socialHandle: "@zencourt_test2",
     agentName,
     agentTitle,
     agentProfileImage: params.userAdditional.headshotUrl?.trim() || "",
-    agentContactInfo: [agentContact1, agentContact2, agentContact3].join(" • "),
+    agentContactInfo: "",
     agentContact1,
     agentContact2,
     agentContact3,

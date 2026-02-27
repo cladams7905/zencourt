@@ -8,10 +8,15 @@ import {
 import { getOrCreateUserAdditional } from "@web/src/server/models/userAdditional";
 import { getListingImages } from "@web/src/server/models/listingImages";
 import { setCachedListingContentItem } from "@web/src/server/infra/cache/listingContent/cache";
+import { getSharedRedisClient } from "@web/src/server/infra/cache/redis";
 import {
   renderListingTemplateBatch as renderListingTemplateBatchService,
   renderListingTemplateBatchStream as renderListingTemplateBatchStreamService
 } from "@web/src/server/services/templateRender";
+import {
+  createInMemoryTemplateImageRotationStore,
+  createRedisTemplateHeaderRotationStore
+} from "@web/src/server/services/templateRender/rotation";
 import {
   parseListingSubcategory,
   sanitizeCaptionItems
@@ -30,6 +35,7 @@ import { encodeSseEvent } from "@web/src/lib/sse/sseEncoder";
 const logger = createChildLogger(baseLogger, {
   module: "listing-template-render-actions"
 });
+const imageRotationStore = createInMemoryTemplateImageRotationStore();
 
 export const renderListingTemplateBatch = withServerActionCaller(
   "renderListingTemplateBatch",
@@ -59,6 +65,10 @@ export const renderListingTemplateBatch = withServerActionCaller(
       getListingImages(user.id, listing.id),
       getOrCreateUserAdditional(user.id)
     ]);
+    const redis = getSharedRedisClient();
+    const headerRotationStore = redis
+      ? createRedisTemplateHeaderRotationStore(redis)
+      : undefined;
     const listingImagesWithPublicUrls =
       resolveListingImagesToPublicUrls(listingImages);
 
@@ -72,7 +82,9 @@ export const renderListingTemplateBatch = withServerActionCaller(
         typeof body?.templateCount === "number" && body.templateCount > 0
           ? body.templateCount
           : undefined,
-      siteOrigin
+      siteOrigin,
+      headerRotationStore,
+      imageRotationStore
     });
   }
 );
@@ -122,6 +134,10 @@ export const renderListingTemplateBatchStream = withServerActionCaller(
       getListingImages(user.id, listing.id),
       getOrCreateUserAdditional(user.id)
     ]);
+    const redis = getSharedRedisClient();
+    const headerRotationStore = redis
+      ? createRedisTemplateHeaderRotationStore(redis)
+      : undefined;
     const listingImagesWithPublicUrls =
       resolveListingImagesToPublicUrls(listingImages);
 
@@ -141,7 +157,9 @@ export const renderListingTemplateBatchStream = withServerActionCaller(
                 captionItems,
                 templateCount,
                 templateId,
-                siteOrigin
+                siteOrigin,
+                headerRotationStore,
+                imageRotationStore
               },
               {
                 onItem: async (item) => {

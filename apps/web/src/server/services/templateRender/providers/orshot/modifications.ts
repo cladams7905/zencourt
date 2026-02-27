@@ -39,7 +39,7 @@ export function buildModifications(params: {
 
   const modifications: Record<string, string> = {};
   const isMultiPage =
-    (params.template.page_length ?? DEFAULT_TEMPLATE_PAGE_LENGTH) > 1;
+    (params.template.pageLength ?? DEFAULT_TEMPLATE_PAGE_LENGTH) > 1;
 
   for (const key of requestedKeys) {
     const value = source[key];

@@ -14,6 +14,7 @@ export const TEMPLATE_RENDER_PARAMETER_KEYS = [
   "squareFootage",
   "listingPrice",
   "priceLabel",
+  "garageLabel",
   "priceDescription",
   "propertyDescription",
   "backgroundImage1",
@@ -28,6 +29,7 @@ export const TEMPLATE_RENDER_PARAMETER_KEYS = [
   "featureList",
   "openHouseDateTime",
   "socialHandle",
+  "socialHandleIcon",
   "agentName",
   "agentTitle",
   "agentProfileImage",
@@ -41,9 +43,8 @@ export const TEMPLATE_RENDER_PARAMETER_KEYS = [
 export type TemplateRenderParameterKey =
   (typeof TEMPLATE_RENDER_PARAMETER_KEYS)[number];
 
-export const TEMPLATE_RENDER_PARAMETER_KEY_SET = new Set<TemplateRenderParameterKey>(
-  TEMPLATE_RENDER_PARAMETER_KEYS
-);
+export const TEMPLATE_RENDER_PARAMETER_KEY_SET =
+  new Set<TemplateRenderParameterKey>(TEMPLATE_RENDER_PARAMETER_KEYS);
 
 export const TEMPLATE_RENDER_IMAGE_PARAMETER_KEYS = [
   "arrowImage",
@@ -67,8 +68,10 @@ export type TemplateRenderConfig = {
   name: string;
   subcategories: ListingContentSubcategory[];
   requiredParams: TemplateRenderParameterKey[];
-  page_length?: number;
-  header_length?: TemplateHeaderLength;
+  pageLength?: number;
+  headerLength?: TemplateHeaderLength;
+  forceListingAddressSubheader?: boolean;
+  forceUppercaseHeader?: boolean;
   supportsHeaderTag?: boolean;
 };
 
