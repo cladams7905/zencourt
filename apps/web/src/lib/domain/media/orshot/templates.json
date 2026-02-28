@@ -238,10 +238,10 @@
     ],
     "thumbnailUrl": "https://storage.orshot.com/cloud/w-2687/studio_page_thumbnails/81787c9ac2b5da2b2fc442dbfeef81ae.png",
     "pageLength": 1,
-    "headerLength": "medium",
+    "headerLength": "short",
     "name": "Elegant Real Estate Open House",
     "forceListingAddressSubheader": false,
-    "forceUppercaseHeader": false
+    "forceUppercaseHeader": true
   },
   {
     "id": "4015",

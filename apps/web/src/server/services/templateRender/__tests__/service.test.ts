@@ -65,6 +65,47 @@ describe("templateRender/service", () => {
     });
   });
 
+  it("filters open house templates that require schedule when schedule is missing", async () => {
+    mockPickRandomTemplatesForSubcategory.mockReturnValue([
+      {
+        id: "template-open-house-required",
+        subcategories: ["open_house"],
+        requiredParams: ["headerText", "openHouseDateTime"],
+        headerLength: "long"
+      },
+      {
+        id: "template-open-house-allowed",
+        subcategories: ["open_house"],
+        requiredParams: ["headerText"],
+        headerLength: "long"
+      }
+    ]);
+    mockRenderOrshotTemplate.mockResolvedValue({
+      imageUrl: "https://cdn.example.com/render-open-house.jpg",
+      parametersUsed: { headerText: "Open house this weekend" },
+      modifications: { headerText: "Open house this weekend" }
+    });
+
+    const result = await renderListingTemplateBatch({
+      ...buildParams(),
+      subcategory: "open_house",
+      listing: {
+        id: "listing-1",
+        propertyDetails: {
+          open_house_events: [{ date: "bad-date" }]
+        }
+      } as unknown as DBListing
+    });
+
+    expect(mockRenderOrshotTemplate).toHaveBeenCalledTimes(1);
+    expect(mockRenderOrshotTemplate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        template: expect.objectContaining({ id: "template-open-house-allowed" })
+      })
+    );
+    expect(result.failedTemplateIds).toEqual([]);
+  });
+
   it("renders templates and records failed template ids", async () => {
     mockPickRandomTemplatesForSubcategory.mockReturnValue([
       {

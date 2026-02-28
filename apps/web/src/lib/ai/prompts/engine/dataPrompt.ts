@@ -1,5 +1,6 @@
 import type { ListingPropertyDetails } from "@shared/types/models";
 import type { MarketDataInput } from "./types";
+import type { ListingOpenHouseContext } from "@web/src/lib/domain/listings/openHouse";
 import {
   readPromptFile,
   LISTING_SUBCATEGORY_DIRECTIVE_FILES
@@ -117,4 +118,42 @@ export async function loadListingSubcategoryDirective(
 
   const file = LISTING_SUBCATEGORY_DIRECTIVE_FILES[normalized];
   return readPromptFile(file);
+}
+
+export function buildOpenHouseContextXml(
+  context?: ListingOpenHouseContext | null
+): string {
+  if (!context) {
+    return [
+      "<open_house_context>",
+      "No open-house context is available.",
+      "</open_house_context>"
+    ].join("\n");
+  }
+
+  const lines = [
+    "<open_house_context>",
+    `has_any_event: ${context.hasAnyEvent ? "true" : "false"}`,
+    `has_schedule: ${context.hasSchedule ? "true" : "false"}`,
+    `open_house_date_time_label: ${context.openHouseDateTimeLabel || "(none)"}`,
+    `open_house_overlay_label: ${context.openHouseOverlayLabel || "(none)"}`,
+    `listing_address_line: ${context.listingAddressLine || "(none)"}`
+  ];
+
+  if (context.selectedEvent) {
+    lines.push(
+      "selected_event:",
+      `  date: ${context.selectedEvent.date || "(none)"}`,
+      `  start_time: ${context.selectedEvent.startTime || "(none)"}`,
+      `  end_time: ${context.selectedEvent.endTime || "(none)"}`,
+      `  date_label: ${context.selectedEvent.dateLabel || "(none)"}`,
+      `  time_label: ${context.selectedEvent.timeLabel || "(none)"}`,
+      `  date_time_label: ${context.selectedEvent.dateTimeLabel || "(none)"}`
+    );
+  } else {
+    lines.push("selected_event: (none)");
+  }
+
+  lines.push("</open_house_context>");
+  return lines.join("\n");
 }

@@ -28,6 +28,7 @@ describe("listingContext", () => {
         state: "TX",
         zipCode: "78701"
       });
+      expect(ctx.openHouseContext).toBeNull();
     });
 
   it("builds deterministic property fingerprint for same details", () => {
@@ -51,5 +52,42 @@ describe("listingContext", () => {
     const ctx1 = resolveListingContext(listing, params);
     const ctx2 = resolveListingContext(listing, params);
     expect(ctx1.propertyFingerprint).toBe(ctx2.propertyFingerprint);
+  });
+
+  it("resolves open house context only for open_house subcategory", () => {
+    const listing = {
+      id: "listing-1",
+      userId: "user-1",
+      address: "123 Main St, Austin, TX 78701",
+      propertyDetails: {
+        open_house_events: [
+          { date: "2026-03-01", start_time: "13:00", end_time: "15:00" }
+        ]
+      }
+    };
+
+    const openHouseCtx = resolveListingContext(listing, {
+      listingId: "listing-1",
+      subcategory: "open_house",
+      mediaType: "image",
+      focus: "",
+      notes: "",
+      generationNonce: "",
+      generationCount: 4,
+      templateId: ""
+    });
+    const newListingCtx = resolveListingContext(listing, {
+      listingId: "listing-1",
+      subcategory: "new_listing",
+      mediaType: "image",
+      focus: "",
+      notes: "",
+      generationNonce: "",
+      generationCount: 4,
+      templateId: ""
+    });
+
+    expect(openHouseCtx.openHouseContext?.hasAnyEvent).toBe(true);
+    expect(newListingCtx.openHouseContext).toBeNull();
   });
 });

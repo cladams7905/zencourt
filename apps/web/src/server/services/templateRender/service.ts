@@ -10,7 +10,11 @@ import type {
   TemplateRenderConfig,
   TemplateRenderCaptionItemWithCacheKey
 } from "@web/src/lib/domain/media/templateRender/types";
-import type { ListingContentSubcategory } from "@shared/types/models";
+import type {
+  ListingContentSubcategory,
+  ListingPropertyDetails
+} from "@shared/types/models";
+import { resolveListingOpenHouseContext } from "@web/src/lib/domain/listings/openHouse";
 import {
   createChildLogger,
   logger as baseLogger
@@ -33,6 +37,7 @@ const logger = createChildLogger(baseLogger, {
 });
 
 const DEFAULT_TEMPLATE_COUNT = 4;
+const OPEN_HOUSE_SCHEDULE_PARAM = "openHouseDateTime";
 
 function selectCaptionItem(
   captionItems: TemplateRenderCaptionItemInput[],
@@ -65,8 +70,45 @@ export async function renderListingTemplateBatch(params: {
     count: params.templateCount ?? DEFAULT_TEMPLATE_COUNT,
     random: params.random
   });
+  const openHouseContext =
+    params.subcategory === "open_house"
+      ? resolveListingOpenHouseContext({
+          listingPropertyDetails:
+            (params.listing.propertyDetails as ListingPropertyDetails | null) ??
+            null,
+          listingAddress: params.listing.address?.trim() ?? "",
+          now: params.now?.()
+        })
+      : null;
+  if (params.subcategory === "open_house") {
+    logger.info(
+      {
+        listingId: params.listing.id,
+        hasAnyEvent: openHouseContext?.hasAnyEvent ?? false,
+        hasSchedule: openHouseContext?.hasSchedule ?? false,
+        selectedEventDate: openHouseContext?.selectedEvent?.date ?? null
+      },
+      "Resolved open house template context"
+    );
+  }
+  const templatesToRender =
+    params.subcategory === "open_house" && openHouseContext && !openHouseContext.hasSchedule
+      ? selectedTemplates.filter(
+          (template) => !template.requiredParams.includes(OPEN_HOUSE_SCHEDULE_PARAM)
+        )
+      : selectedTemplates;
 
-  if (!selectedTemplates.length) {
+  if (templatesToRender.length !== selectedTemplates.length) {
+    logger.info(
+      {
+        listingId: params.listing.id,
+        droppedTemplateCount: selectedTemplates.length - templatesToRender.length
+      },
+      "Filtered open house templates requiring schedule parameter"
+    );
+  }
+
+  if (!templatesToRender.length) {
     return { items: [], failedTemplateIds: [] };
   }
   const headerRotationStore =
@@ -75,7 +117,7 @@ export async function renderListingTemplateBatch(params: {
     params.imageRotationStore ?? createInMemoryTemplateImageRotationStore();
 
   const renders = await Promise.all(
-    selectedTemplates.map(async (template, index) => {
+    templatesToRender.map(async (template, index) => {
       const captionItem = selectCaptionItem(params.captionItems, index);
 
       try {
@@ -211,8 +253,45 @@ export async function renderListingTemplateBatchStream(
           count: params.templateCount ?? DEFAULT_TEMPLATE_COUNT,
           random: params.random
         });
+  const openHouseContext =
+    params.subcategory === "open_house"
+      ? resolveListingOpenHouseContext({
+          listingPropertyDetails:
+            (params.listing.propertyDetails as ListingPropertyDetails | null) ??
+            null,
+          listingAddress: params.listing.address?.trim() ?? "",
+          now: params.now?.()
+        })
+      : null;
+  if (params.subcategory === "open_house") {
+    logger.info(
+      {
+        listingId: params.listing.id,
+        hasAnyEvent: openHouseContext?.hasAnyEvent ?? false,
+        hasSchedule: openHouseContext?.hasSchedule ?? false,
+        selectedEventDate: openHouseContext?.selectedEvent?.date ?? null
+      },
+      "Resolved open house template context"
+    );
+  }
+  const templatesToRender =
+    params.subcategory === "open_house" && openHouseContext && !openHouseContext.hasSchedule
+      ? selectedTemplates.filter(
+          (template) => !template.requiredParams.includes(OPEN_HOUSE_SCHEDULE_PARAM)
+        )
+      : selectedTemplates;
 
-  if (!selectedTemplates.length) {
+  if (templatesToRender.length !== selectedTemplates.length) {
+    logger.info(
+      {
+        listingId: params.listing.id,
+        droppedTemplateCount: selectedTemplates.length - templatesToRender.length
+      },
+      "Filtered open house templates requiring schedule parameter"
+    );
+  }
+
+  if (!templatesToRender.length) {
     return { failedTemplateIds };
   }
   const headerRotationStore =
@@ -220,8 +299,8 @@ export async function renderListingTemplateBatchStream(
   const imageRotationStore =
     params.imageRotationStore ?? createInMemoryTemplateImageRotationStore();
 
-  for (let index = 0; index < selectedTemplates.length; index += 1) {
-    const template = selectedTemplates[index] as TemplateRenderConfig;
+  for (let index = 0; index < templatesToRender.length; index += 1) {
+    const template = templatesToRender[index] as TemplateRenderConfig;
     const captionItem = selectCaptionItem(
       params.captionItems,
       index

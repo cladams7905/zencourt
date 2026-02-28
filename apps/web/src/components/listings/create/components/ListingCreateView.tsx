@@ -4,6 +4,7 @@ import * as React from "react";
 import { ListingViewHeader } from "@web/src/components/listings/shared";
 import { type ContentItem } from "@web/src/components/dashboard/components/ContentGrid";
 import { usePathname } from "next/navigation";
+import type { ListingOpenHouseContext } from "@web/src/lib/domain/listings/openHouse";
 import {
   ListingVideoPreviewGrid,
   ListingImagePreviewGrid,
@@ -50,6 +51,7 @@ type ListingCreateViewProps = {
   listingId: string;
   title: string;
   listingAddress?: string | null;
+  openHouseContext?: ListingOpenHouseContext | null;
   videoItems: ContentItem[];
   listingPostItems: ContentItem[];
   listingImages: ListingCreateImage[];
@@ -63,6 +65,7 @@ export function ListingCreateView({
   listingId,
   title,
   listingAddress,
+  openHouseContext,
   videoItems,
   listingPostItems,
   listingImages,
@@ -235,6 +238,7 @@ export function ListingCreateView({
               listingSubcategory={activeSubcategory}
               captionSubcategoryLabel={SUBCATEGORY_LABELS[activeSubcategory]}
               listingAddress={listingAddress ?? null}
+              openHouseContext={openHouseContext ?? null}
               forceSimpleOverlayTemplate
               loadingCount={loadingCount}
             />

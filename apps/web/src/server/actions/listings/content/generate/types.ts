@@ -2,6 +2,7 @@ import type {
   ListingContentSubcategory,
   ListingPropertyDetails
 } from "@shared/types/models";
+import type { ListingOpenHouseContext } from "@web/src/lib/domain/listings/openHouse";
 import type {
   ListingGeneratedItem,
   ListingMediaType
@@ -37,6 +38,7 @@ export type ListingGenerationContext = {
   addressParts: { city: string; state: string; zipCode: string };
   resolvedState: string;
   propertyFingerprint: string;
+  openHouseContext: ListingOpenHouseContext | null;
   subcategory: ListingContentSubcategory;
   mediaType: ListingMediaType;
   focus: string;

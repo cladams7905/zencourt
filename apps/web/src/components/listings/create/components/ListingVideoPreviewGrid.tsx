@@ -4,6 +4,7 @@ import * as React from "react";
 import type { ContentItem } from "@web/src/components/dashboard/components/ContentGrid";
 import type { PreviewTimelinePlan } from "@web/src/components/listings/create/domain/previewTimeline";
 import type { ListingContentSubcategory } from "@shared/types/models";
+import type { ListingOpenHouseContext } from "@web/src/lib/domain/listings/openHouse";
 import { buildPlayablePreviews } from "@web/src/components/listings/create/media/video/videoPreviewViewModel";
 import { PREVIEW_FPS } from "@web/src/components/listings/create/media/video/previewConstants";
 import { useHoverReveal } from "@web/src/components/listings/create/media/video/useHoverReveal";
@@ -18,6 +19,7 @@ type ListingVideoPreviewGridProps = {
   listingSubcategory: ListingContentSubcategory;
   captionSubcategoryLabel: string;
   listingAddress: string | null;
+  openHouseContext: ListingOpenHouseContext | null;
   forceSimpleOverlayTemplate?: boolean;
   loadingCount?: number;
 };
@@ -29,6 +31,7 @@ export function ListingVideoPreviewGrid({
   listingSubcategory,
   captionSubcategoryLabel,
   listingAddress,
+  openHouseContext,
   forceSimpleOverlayTemplate = false,
   loadingCount = 0
 }: ListingVideoPreviewGridProps) {
@@ -48,6 +51,7 @@ export function ListingVideoPreviewGrid({
         captionItems,
         listingSubcategory,
         listingAddress,
+        openHouseContext,
         forceSimpleOverlayTemplate,
         previewFps: PREVIEW_FPS
       }),
@@ -56,6 +60,7 @@ export function ListingVideoPreviewGrid({
       forceSimpleOverlayTemplate,
       items,
       listingAddress,
+      openHouseContext,
       listingSubcategory,
       plans
     ]

@@ -63,6 +63,7 @@ export async function applyTemplatePolicies(params: {
 
   const withSubheaderPolicy = applySubheaderPolicy({
     resolvedParameters: withHeaderPolicy,
+    subcategory: params.subcategory,
     headerLength,
     forceListingAddressSubheader: params.forceListingAddressSubheader
   });

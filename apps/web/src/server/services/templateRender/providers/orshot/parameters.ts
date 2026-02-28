@@ -2,6 +2,7 @@ import type { DBListing, DBListingImage, DBUserAdditional } from "@db/types/mode
 import type { ListingContentSubcategory, ListingPropertyDetails } from "@shared/types/models";
 import { PREVIEW_TEXT_OVERLAY_ARROW_PATHS } from "@shared/utils";
 import { isPriorityCategory } from "@shared/utils";
+import { resolveListingOpenHouseContext } from "@web/src/lib/domain/listings/openHouse";
 import type {
   TemplateRenderCaptionItemInput,
   TemplateRenderParameterKey
@@ -11,20 +12,6 @@ import {
   formatNumberUs
 } from "@web/src/lib/core/formatting/number";
 import type { TemplateImageRotationStore } from "@web/src/server/services/templateRender/rotation";
-
-function toOrdinal(day: number): string {
-  const mod10 = day % 10;
-  const mod100 = day % 100;
-  if (mod10 === 1 && mod100 !== 11) return `${day}st`;
-  if (mod10 === 2 && mod100 !== 12) return `${day}nd`;
-  if (mod10 === 3 && mod100 !== 13) return `${day}rd`;
-  return `${day}th`;
-}
-
-function formatPlaceholderOpenHouseDateTime(date: Date): string {
-  const month = date.toLocaleString("en-US", { month: "short" });
-  return `${month} ${toOrdinal(date.getDate())}, 7-10AM`;
-}
 
 function splitHeaderText(headerText: string): {
   headerTextTop: string;
@@ -176,6 +163,15 @@ export function resolveTemplateParameters(params: {
   })();
   const images = rotateImages(rankedImages, resolvedRotationIndex);
   const now = params.now ?? new Date();
+  const openHouseContext = resolveListingOpenHouseContext({
+    listingPropertyDetails: details,
+    listingAddress:
+      details?.address?.trim() ||
+      params.listing.address?.trim() ||
+      params.listing.title?.trim() ||
+      "",
+    now
+  });
 
   const fallbackHeader = params.captionItem.hook?.trim() || "Just listed";
   const { headerTextTop, headerTextBottom } = splitHeaderText(fallbackHeader);
@@ -239,7 +235,10 @@ export function resolveTemplateParameters(params: {
     feature2: featureItems[1] ?? "",
     feature3: featureItems[2] ?? "",
     featureList: featureItems.join(" • "),
-    openHouseDateTime: formatPlaceholderOpenHouseDateTime(now),
+    openHouseDateTime:
+      params.subcategory === "open_house" && openHouseContext.hasSchedule
+        ? openHouseContext.openHouseDateTimeLabel
+        : "",
     socialHandle: "@zencourt_test2",
     agentName,
     agentTitle,

@@ -7,7 +7,7 @@ export const VIDEO_GENERATION_ENABLE_PRIORITY_SECONDARY = true;
 
 export const VIDEO_SERVER_URL_ENV_KEY = "VIDEO_SERVER_URL";
 export const VIDEO_SERVER_API_KEY_ENV_KEY = "VIDEO_SERVER_API_KEY";
-export const APP_URL_ENV_KEY = "APP_URL";
+export const APP_URL = "APP_URL";
 
 export type VideoGenerationConfig = {
   model: string;
@@ -20,17 +20,17 @@ export type VideoGenerationConfig = {
 
 /**
  * Derives the web app base URL for building callback URLs.
- * VERCEL_URL is set by Vercel (without https://). APP_URL is for local dev.
+ * VERCEL_PROJECT_PRODUCTION_URL is set by Vercel (without https://). APP_URL is for local dev.
  * Throws if neither is set (no fallback).
  */
 function getAppUrl(): string {
-  if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`;
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+    return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
   }
-  const appUrl = process.env[APP_URL_ENV_KEY]?.trim();
+  const appUrl = process.env[APP_URL]?.trim();
   if (!appUrl) {
     throw new Error(
-      `${APP_URL_ENV_KEY} must be configured when not on Vercel (e.g. http://localhost:3000 or http://host.docker.internal:3000)`
+      `${APP_URL} must be configured when not on Vercel (e.g. http://localhost:3000 or http://host.docker.internal:3000)`
     );
   }
   return appUrl.replace(/\/+$/, "");

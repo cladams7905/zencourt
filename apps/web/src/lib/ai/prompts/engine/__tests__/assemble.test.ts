@@ -23,6 +23,9 @@ jest.mock("@web/src/lib/ai/prompts/engine/audiencePrompt", () => ({
 jest.mock("@web/src/lib/ai/prompts/engine/dataPrompt", () => ({
   buildMarketDataXml: jest.fn(() => "<market_data>xml</market_data>"),
   buildListingDataXml: jest.fn(() => "<listing_data>json</listing_data>"),
+  buildOpenHouseContextXml: jest.fn(
+    () => "<open_house_context>xml</open_house_context>"
+  ),
   loadListingSubcategoryDirective: jest.fn(async () => "LISTING_DIRECTIVE")
 }));
 
@@ -93,5 +96,29 @@ describe("assemble", () => {
     const prompt = buildUserPrompt(baseInput as never);
     expect(prompt).not.toContain("Audience Segments");
     expect(prompt).toContain("**Listing Subcategory:** new_listing");
+  });
+
+  it("includes open house context block for open_house listing prompts", async () => {
+    const prompt = await buildSystemPrompt({
+      ...baseInput,
+      listing_subcategory: "open_house",
+      listing_open_house_context: {
+        hasAnyEvent: true,
+        hasSchedule: true,
+        selectedEvent: {
+          date: "2026-03-01",
+          startTime: "13:00",
+          endTime: "15:00",
+          dateLabel: "Mar 1st",
+          timeLabel: "1-3PM",
+          dateTimeLabel: "Mar 1st, 1-3PM"
+        },
+        openHouseDateTimeLabel: "Mar 1st, 1-3PM",
+        openHouseOverlayLabel: "Mar 1st, 1-3PM",
+        listingAddressLine: "123 Main St"
+      }
+    } as never);
+
+    expect(prompt).toContain("<open_house_context>xml</open_house_context>");
   });
 });
