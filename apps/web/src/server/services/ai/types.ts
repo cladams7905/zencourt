@@ -20,6 +20,7 @@ export type AITextRequest = {
   messages: AIMessage[];
   maxTokens?: number;
   temperature?: number;
+  searchContextSize?: "low" | "medium" | "high";
   responseFormat?: AIJsonSchemaFormat;
 };
 

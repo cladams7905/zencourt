@@ -5,11 +5,16 @@ import type { AITextRequest, AITextResult, AITextStrategy } from "../types";
 export const perplexityTextStrategy: AITextStrategy = {
   provider: "perplexity",
   async complete(request: AITextRequest): Promise<AITextResult | null> {
+    const messages = request.system
+      ? [{ role: "system" as const, content: request.system }, ...request.messages]
+      : request.messages;
+
     const raw = (await requestPerplexity({
       model: request.model,
-      messages: request.messages,
+      messages,
       temperature: request.temperature,
       max_tokens: request.maxTokens,
+      search_context_size: request.searchContextSize,
       response_format: request.responseFormat
     })) as PerplexityChatCompletionResponse | null;
 

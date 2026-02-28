@@ -4,7 +4,10 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { emitListingSidebarUpdate } from "@web/src/lib/domain/listing/sidebarEvents";
-import { updateListingForCurrentUser } from "@web/src/server/actions/listings/commands";
+import {
+  touchListingActivityForCurrentUser,
+  updateListingForCurrentUser
+} from "@web/src/server/actions/listings/commands";
 
 type ListingAddressUpdatePayload = {
   address: string;
@@ -69,6 +72,14 @@ export function useCategorizeListingDetails({
     draftTitleRef.current = draftTitle;
   }, [draftTitle]);
 
+  const touchListingActivity = React.useCallback(async () => {
+    try {
+      await touchListingActivityForCurrentUser(listingId);
+    } catch {
+      // Best-effort activity tracking should not block user flows.
+    }
+  }, [listingId]);
+
   const persistListingTitle = React.useCallback(
     async (nextTitle: string) => {
       const previous = draftTitleRef.current;
@@ -82,6 +93,7 @@ export function useCategorizeListingDetails({
           title: nextTitle,
           lastOpenedAt: new Date().toISOString()
         });
+        await touchListingActivity();
         return true;
       } catch (error) {
         setDraftTitle(previous);
@@ -91,12 +103,15 @@ export function useCategorizeListingDetails({
         return false;
       }
     },
-    [listingId, runDraftSave]
+    [listingId, runDraftSave, touchListingActivity]
   );
 
   const persistAddress = React.useCallback(
     async (nextAddress: string, errorMessage: string) => {
       const previousAddress = lastSavedAddressRef.current;
+      if (nextAddress === previousAddress) {
+        return true;
+      }
       const { shouldClearDetails, payload } = buildAddressUpdatePayload(
         nextAddress,
         previousAddress
@@ -108,29 +123,63 @@ export function useCategorizeListingDetails({
         if (shouldClearDetails) {
           setHasPropertyDetailsState(false);
         }
+        await touchListingActivity();
         return true;
       } catch (error) {
         toast.error((error as Error).message || errorMessage);
         return false;
       }
     },
-    [listingId, runDraftSave]
+    [listingId, runDraftSave, touchListingActivity]
   );
 
   const handleAddressSelect = React.useCallback(
     (selection: AddressSelection) => {
-      const nextTitle = selection.formattedAddress?.split(",")[0]?.trim() || "";
-      if (nextTitle) {
-        void persistListingTitle(nextTitle);
-      }
       if (!selection.formattedAddress) {
         return;
       }
+
       const nextAddress = selection.formattedAddress.trim();
+      const nextTitle = selection.formattedAddress.split(",")[0]?.trim() || "";
       setAddressValue(nextAddress);
-      void persistAddress(nextAddress, "Failed to update listing address.");
+      if (nextTitle) {
+        setDraftTitle(nextTitle);
+      }
+
+      void (async () => {
+        const previousAddress = lastSavedAddressRef.current;
+        const { shouldClearDetails, payload } = buildAddressUpdatePayload(
+          nextAddress,
+          previousAddress
+        );
+
+        try {
+          await runDraftSave(() =>
+            updateListingForCurrentUser(listingId, {
+              ...payload,
+              title: nextTitle || undefined
+            })
+          );
+          lastSavedAddressRef.current = nextAddress;
+          if (shouldClearDetails) {
+            setHasPropertyDetailsState(false);
+          }
+          if (nextTitle) {
+            emitListingSidebarUpdate({
+              id: listingId,
+              title: nextTitle,
+              lastOpenedAt: new Date().toISOString()
+            });
+          }
+          await touchListingActivity();
+        } catch (error) {
+          toast.error(
+            (error as Error).message || "Failed to update listing address."
+          );
+        }
+      })();
     },
-    [persistAddress, persistListingTitle]
+    [listingId, runDraftSave, touchListingActivity]
   );
 
   const handleContinue = React.useCallback(async () => {
@@ -154,6 +203,7 @@ export function useCategorizeListingDetails({
         listingStage: "review",
         lastOpenedAt: new Date().toISOString()
       });
+      await touchListingActivity();
     } catch (error) {
       toast.error(
         error instanceof Error
@@ -174,6 +224,7 @@ export function useCategorizeListingDetails({
     hasPropertyDetailsState,
     listingId,
     persistAddress,
+    touchListingActivity,
     router
   ]);
 

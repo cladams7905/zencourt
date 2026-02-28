@@ -4,6 +4,8 @@ import { roundBathroomsToHalfStep } from "@web/src/components/listings/review/sh
 import type { ListingPropertyDetails } from "@shared/types/models";
 import { saveListingPropertyDetailsForCurrentUser } from "@web/src/server/actions/listings/propertyDetails";
 
+const AUTO_SAVE_DEBOUNCE_MS = 400;
+
 type UseReviewAutoSaveParams = {
   listingId: string;
   detailsRef: React.MutableRefObject<ListingPropertyDetails>;
@@ -21,9 +23,26 @@ export const useReviewAutoSave = ({
 }: UseReviewAutoSaveParams) => {
   const [isSaving, setIsSaving] = React.useState(false);
   const [pendingSave, setPendingSave] = React.useState(false);
+  const autoSaveTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
+  const isSavingRef = React.useRef(false);
+
+  React.useEffect(() => {
+    isSavingRef.current = isSaving;
+  }, [isSaving]);
+
+  const clearAutoSaveTimeout = React.useCallback(() => {
+    if (!autoSaveTimeoutRef.current) {
+      return;
+    }
+    clearTimeout(autoSaveTimeoutRef.current);
+    autoSaveTimeoutRef.current = null;
+  }, []);
 
   const handleSave = React.useCallback(
     async (options?: { silent?: boolean }) => {
+      clearAutoSaveTimeout();
       setIsSaving(true);
       try {
         await saveListingPropertyDetailsForCurrentUser(
@@ -42,7 +61,7 @@ export const useReviewAutoSave = ({
         setIsSaving(false);
       }
     },
-    [detailsRef, dirtyRef, listingId]
+    [clearAutoSaveTimeout, detailsRef, dirtyRef, listingId]
   );
 
   const triggerAutoSave = React.useCallback(() => {
@@ -53,8 +72,19 @@ export const useReviewAutoSave = ({
       setPendingSave(true);
       return;
     }
-    void handleSave({ silent: true });
-  }, [dirtyRef, handleSave, isSaving]);
+    clearAutoSaveTimeout();
+    autoSaveTimeoutRef.current = setTimeout(() => {
+      autoSaveTimeoutRef.current = null;
+      if (!dirtyRef.current) {
+        return;
+      }
+      if (isSavingRef.current) {
+        setPendingSave(true);
+        return;
+      }
+      void handleSave({ silent: true });
+    }, AUTO_SAVE_DEBOUNCE_MS);
+  }, [clearAutoSaveTimeout, dirtyRef, handleSave, isSaving]);
 
   React.useEffect(() => {
     if (!isSaving && pendingSave && dirtyRef.current) {
@@ -62,6 +92,12 @@ export const useReviewAutoSave = ({
       void handleSave({ silent: true });
     }
   }, [dirtyRef, handleSave, isSaving, pendingSave]);
+
+  React.useEffect(() => {
+    return () => {
+      clearAutoSaveTimeout();
+    };
+  }, [clearAutoSaveTimeout]);
 
   const normalizeBathrooms = React.useCallback(() => {
     const current = detailsRef.current.bathrooms;

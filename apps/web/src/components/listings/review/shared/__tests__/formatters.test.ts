@@ -1,9 +1,12 @@
 import {
+  formatDateDisplay,
   formatListingPrice,
+  parseReviewDate,
   roundBathroomsToHalfStep,
   toNullableNumber,
   toNullableString
 } from "@web/src/components/listings/review/shared/formatters";
+import { format } from "date-fns";
 
 describe("review formatters", () => {
   describe("toNullableString", () => {
@@ -38,6 +41,68 @@ describe("review formatters", () => {
 
     it("returns empty string when no digits are present", () => {
       expect(formatListingPrice("abc")).toBe("");
+    });
+  });
+
+  describe("parseReviewDate", () => {
+    it("parses yyyy-MM-dd values", () => {
+      expect(format(parseReviewDate("2026-03-01")!, "yyyy-MM-dd")).toBe(
+        "2026-03-01"
+      );
+    });
+
+    it("parses ISO datetime values by date prefix", () => {
+      expect(
+        format(parseReviewDate("2026-03-01T00:00:00.000Z")!, "yyyy-MM-dd")
+      ).toBe("2026-03-01");
+    });
+
+    it("parses legacy month-name date values", () => {
+      expect(format(parseReviewDate("Mar 1, 2026")!, "yyyy-MM-dd")).toBe(
+        "2026-03-01"
+      );
+    });
+
+    it("parses legacy slash date values", () => {
+      expect(format(parseReviewDate("3/1/2026")!, "yyyy-MM-dd")).toBe(
+        "2026-03-01"
+      );
+    });
+
+    it("parses legacy weekday values without year", () => {
+      expect(format(parseReviewDate("Sunday, Mar 1")!, "MM-dd")).toBe("03-01");
+    });
+
+    it("parses legacy weekday values with no comma and ordinal day", () => {
+      expect(format(parseReviewDate("Sunday Mar 1st")!, "MM-dd")).toBe("03-01");
+    });
+
+    it("returns undefined for invalid values", () => {
+      expect(parseReviewDate("not-a-date")).toBeUndefined();
+    });
+  });
+
+  describe("formatDateDisplay", () => {
+    it("formats yyyy-MM-dd values", () => {
+      expect(formatDateDisplay("2026-03-01")).toBe("Mar 1, 2026");
+    });
+
+    it("formats ISO datetime values", () => {
+      expect(formatDateDisplay("2026-03-01T00:00:00.000Z")).toBe("Mar 1, 2026");
+    });
+
+    it("formats legacy month-name values", () => {
+      expect(formatDateDisplay("Mar 1, 2026")).toBe("Mar 1, 2026");
+    });
+
+    it("formats legacy weekday values without year", () => {
+      expect(formatDateDisplay("Sunday, Mar 1")).toBe(
+        `Mar 1, ${new Date().getFullYear()}`
+      );
+    });
+
+    it("returns original string when date is invalid", () => {
+      expect(formatDateDisplay("not-a-date")).toBe("not-a-date");
     });
   });
 

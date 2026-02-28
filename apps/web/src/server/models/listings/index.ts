@@ -1,6 +1,7 @@
 export {
   createListing,
-  updateListing
+  updateListing,
+  touchListingActivity
 } from "./mutations";
 
 export {
@@ -8,6 +9,7 @@ export {
 } from "./queries";
 
 export {
+  getUserSidebarListings,
   getUserListings,
   getUserListingSummariesPage
 } from "./summaries";

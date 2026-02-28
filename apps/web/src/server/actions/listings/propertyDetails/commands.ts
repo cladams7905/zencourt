@@ -6,7 +6,7 @@ import {
   buildPropertyDetailsRevision,
   getDefaultPropertyDetailsProvider
 } from "@web/src/server/services/propertyDetails";
-import { generateText } from "@web/src/server/services/ai";
+import { generateTextForUseCase } from "@web/src/server/services/ai";
 import type { AITextRequest } from "@web/src/server/services/ai";
 import type { ListingPropertyDetails } from "@shared/types/models";
 import { getListingById, updateListing } from "@web/src/server/models/listings";
@@ -43,8 +43,8 @@ export async function fetchPropertyDetails(
       userPrompt,
       responseFormat
     }) => {
-      const result = await generateText({
-        provider: "perplexity",
+      const result = await generateTextForUseCase({
+        useCase: "listing_property",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt }

@@ -2,7 +2,11 @@
 
 import { withServerActionCaller } from "@web/src/server/infra/logger/callContext";
 import { requireAuthenticatedUser } from "@web/src/server/actions/_auth/api";
-import { createListing, updateListing } from "@web/src/server/models/listings";
+import {
+  createListing,
+  touchListingActivity,
+  updateListing
+} from "@web/src/server/models/listings";
 import { requireListingAccess } from "@web/src/server/models/listings/access";
 import type { UpdateListingInput } from "@web/src/server/models/listings/types";
 import {
@@ -21,6 +25,8 @@ import type {
 } from "@web/src/server/models/listingImages/types";
 import { prepareListingImageUploadUrls } from "@web/src/server/services/storage/uploadPreparation";
 
+const LISTING_ACTIVITY_TOUCH_WINDOW_MINUTES = 10;
+
 export const createListingForCurrentUser = withServerActionCaller(
   "createListingForCurrentUser",
   async () => {
@@ -34,6 +40,18 @@ export const updateListingForCurrentUser = withServerActionCaller(
   async (listingId: string, updates: UpdateListingInput) => {
     const user = await requireAuthenticatedUser();
     return updateListing(user.id, listingId, updates);
+  }
+);
+
+export const touchListingActivityForCurrentUser = withServerActionCaller(
+  "touchListingActivityForCurrentUser",
+  async (listingId: string) => {
+    const user = await requireAuthenticatedUser();
+    return touchListingActivity(
+      user.id,
+      listingId,
+      LISTING_ACTIVITY_TOUCH_WINDOW_MINUTES
+    );
   }
 );
 

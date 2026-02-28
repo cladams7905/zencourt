@@ -122,6 +122,10 @@ export async function requestPerplexity(
     messages: request.messages,
     temperature: request.temperature ?? PERPLEXITY_TEMPERATURE,
     max_tokens: request.max_tokens ?? PERPLEXITY_MAX_TOKENS,
+    search_context_size: request.search_context_size,
+    web_search_options: request.search_context_size
+      ? { search_context_size: request.search_context_size }
+      : undefined,
     response_format: request.response_format
   };
 
@@ -144,7 +148,11 @@ export async function requestPerplexity(
       return null;
     }
 
-    return (await response.json()) as PerplexityChatCompletionResponse;
+    const raw = (await response.json()) as PerplexityChatCompletionResponse;
+    if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+      (raw as Record<string, unknown>)._request = payload;
+    }
+    return raw;
   } catch (error) {
     logger.error(
       { error: error instanceof Error ? error.message : String(error) },

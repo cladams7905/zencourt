@@ -6,6 +6,7 @@ export type ListingSidebarUpdate = {
 };
 
 const LISTING_SIDEBAR_EVENT = "listing-sidebar-update";
+const listingSidebarHeartbeatAt = new Map<string, number>();
 
 export function emitListingSidebarUpdate(update: ListingSidebarUpdate) {
   if (typeof window === "undefined") return;
@@ -14,6 +15,20 @@ export function emitListingSidebarUpdate(update: ListingSidebarUpdate) {
       detail: update
     })
   );
+}
+
+export function emitListingSidebarHeartbeat(
+  update: ListingSidebarUpdate,
+  minIntervalMs = 60_000
+) {
+  if (typeof window === "undefined") return;
+  const now = Date.now();
+  const lastHeartbeatAt = listingSidebarHeartbeatAt.get(update.id) ?? 0;
+  if (now - lastHeartbeatAt < minIntervalMs) {
+    return;
+  }
+  listingSidebarHeartbeatAt.set(update.id, now);
+  emitListingSidebarUpdate(update);
 }
 
 export function addListingSidebarListener(

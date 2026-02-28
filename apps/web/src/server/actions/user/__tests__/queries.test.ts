@@ -1,6 +1,6 @@
 const mockGetUser = jest.fn();
 const mockGetOrCreateUserAdditional = jest.fn();
-const mockGetUserListings = jest.fn();
+const mockGetUserSidebarListings = jest.fn();
 
 jest.mock("@web/src/server/models/users", () => ({
   getUser: (...args: unknown[]) =>
@@ -13,8 +13,8 @@ jest.mock("@web/src/server/models/userAdditional", () => ({
 }));
 
 jest.mock("@web/src/server/models/listings", () => ({
-  getUserListings: (...args: unknown[]) =>
-    (mockGetUserListings as (...a: unknown[]) => unknown)(...args)
+  getUserSidebarListings: (...args: unknown[]) =>
+    (mockGetUserSidebarListings as (...a: unknown[]) => unknown)(...args)
 }));
 
 import { getCurrentUserSidebarData } from "@web/src/server/actions/user/queries";
@@ -23,7 +23,7 @@ describe("user queries", () => {
   beforeEach(() => {
     mockGetUser.mockReset();
     mockGetOrCreateUserAdditional.mockReset();
-    mockGetUserListings.mockReset();
+    mockGetUserSidebarListings.mockReset();
   });
 
   it("returns null when user is not authenticated", async () => {
@@ -33,7 +33,7 @@ describe("user queries", () => {
 
     expect(result).toBeNull();
     expect(mockGetOrCreateUserAdditional).not.toHaveBeenCalled();
-    expect(mockGetUserListings).not.toHaveBeenCalled();
+    expect(mockGetUserSidebarListings).not.toHaveBeenCalled();
   });
 
   it("returns user, userAdditional, and mapped listings when user exists", async () => {
@@ -49,7 +49,7 @@ describe("user queries", () => {
     ] as never[];
     mockGetUser.mockResolvedValueOnce(user);
     mockGetOrCreateUserAdditional.mockResolvedValueOnce(userAdditional);
-    mockGetUserListings.mockResolvedValueOnce(listings);
+    mockGetUserSidebarListings.mockResolvedValueOnce(listings);
 
     const result = await getCurrentUserSidebarData();
 
@@ -66,7 +66,7 @@ describe("user queries", () => {
       ]
     });
     expect(mockGetOrCreateUserAdditional).toHaveBeenCalledWith("user-1");
-    expect(mockGetUserListings).toHaveBeenCalledWith("user-1");
+    expect(mockGetUserSidebarListings).toHaveBeenCalledWith("user-1");
   });
 
   it("maps listing fields with null for missing optional fields", async () => {
@@ -77,7 +77,7 @@ describe("user queries", () => {
     ] as never[];
     mockGetUser.mockResolvedValueOnce(user);
     mockGetOrCreateUserAdditional.mockResolvedValueOnce(userAdditional);
-    mockGetUserListings.mockResolvedValueOnce(listings);
+    mockGetUserSidebarListings.mockResolvedValueOnce(listings);
 
     const result = await getCurrentUserSidebarData();
 

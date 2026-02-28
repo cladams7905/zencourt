@@ -62,8 +62,8 @@ describe("listingProperty/domain/normalize", () => {
       open_house_events: [
         {
           date: "2026-03-07",
-          start_time: "7:00 AM",
-          end_time: "10:00 AM"
+          start_time: "07:00",
+          end_time: "10:00"
         }
       ],
       sale_history: [
@@ -116,9 +116,90 @@ describe("listingProperty/domain/normalize", () => {
     });
   });
 
+  it("infers AM/PM for open house times when not provided (7–11 AM, 12–6 PM)", () => {
+    const result = normalizeListingPropertyDetails(
+      {
+        open_house_events: [
+          { date: "2026-03-10", start_time: "9:00", end_time: "11:30" },
+          { date: "2026-03-11", start_time: "12:00", end_time: "3:00" },
+          { date: "2026-03-12", start_time: "2:30", end_time: "6:45" }
+        ]
+      },
+      "fallback"
+    );
+
+    expect(result?.open_house_events).toEqual([
+      { date: "2026-03-10", start_time: "09:00", end_time: "11:30" },
+      { date: "2026-03-11", start_time: "12:00", end_time: "15:00" },
+      { date: "2026-03-12", start_time: "14:30", end_time: "18:45" }
+    ]);
+  });
+
+  it("normalizes open house event key aliases and time ranges", () => {
+    const result = normalizeListingPropertyDetails(
+      {
+        open_house_events: [
+          {
+            event_date: "2026-03-08",
+            time: "1:00 PM - 4:00 PM"
+          },
+          {
+            date: "2026-03-09",
+            startTime: "11:00 AM",
+            endTime: "2:00 PM"
+          }
+        ]
+      },
+      "fallback"
+    );
+
+    expect(result).toEqual({
+      address: "fallback",
+      open_house_events: [
+        {
+          date: "2026-03-08",
+          start_time: "13:00",
+          end_time: "16:00"
+        },
+        {
+          date: "2026-03-09",
+          start_time: "11:00",
+          end_time: "14:00"
+        }
+      ]
+    });
+  });
+
   it("falls back to null address when no fields are provided", () => {
     expect(normalizeListingPropertyDetails({}, undefined)).toEqual({
       address: null
+    });
+  });
+
+  it("normalizes dropdown 'Other' values to null", () => {
+    const result = normalizeListingPropertyDetails(
+      {
+        property_type: "Other",
+        architecture: "other",
+        location_context: {
+          street_type: "OTHER",
+          lot_type: "other"
+        }
+      },
+      "fallback"
+    );
+
+    expect(result).toEqual({
+      address: "fallback",
+      property_type: null,
+      architecture: null,
+      location_context: {
+        subdivision: undefined,
+        street_type: null,
+        lot_type: null,
+        county: undefined,
+        state: undefined
+      }
     });
   });
 

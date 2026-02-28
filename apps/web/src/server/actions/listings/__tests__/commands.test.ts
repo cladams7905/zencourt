@@ -1,6 +1,7 @@
 /** @jest-environment node */
 const mockCreateListing = jest.fn();
 const mockUpdateListing = jest.fn();
+const mockTouchListingActivity = jest.fn();
 const mockDeleteCachedListingContentItemService = jest.fn();
 const mockPrepareListingImageUploadUrls = jest.fn();
 const mockCreateListingImageRecords = jest.fn();
@@ -16,6 +17,8 @@ const mockIsManagedStorageUrl = jest.fn(() => true);
 jest.mock("@web/src/server/models/listings", () => ({
   createListing: (...args: unknown[]) =>
     (mockCreateListing as (...a: unknown[]) => unknown)(...args),
+  touchListingActivity: (...args: unknown[]) =>
+    (mockTouchListingActivity as (...a: unknown[]) => unknown)(...args),
   updateListing: (...args: unknown[]) =>
     (mockUpdateListing as (...a: unknown[]) => unknown)(...args)
 }));
@@ -80,6 +83,7 @@ import { DomainValidationError } from "@web/src/server/errors/domain";
 import {
   createListingForCurrentUser,
   updateListingForCurrentUser,
+  touchListingActivityForCurrentUser,
   getListingImageUploadUrlsForCurrentUser,
   createListingImageRecordsForCurrentUser,
   updateListingImageAssignmentsForCurrentUser,
@@ -126,6 +130,34 @@ describe("listings commands", () => {
         expect.objectContaining({ title: "New Title" })
       );
       expect(result).toEqual({ id: "listing-1" });
+    });
+  });
+
+  describe("touchListingActivityForCurrentUser", () => {
+    it("skips updates when listing was touched recently", async () => {
+      mockTouchListingActivity.mockResolvedValueOnce({ touched: false });
+
+      const result = await touchListingActivityForCurrentUser("listing-1");
+
+      expect(mockTouchListingActivity).toHaveBeenCalledWith(
+        "user-1",
+        "listing-1",
+        10
+      );
+      expect(result).toEqual({ touched: false });
+    });
+
+    it("updates lastOpenedAt when listing is stale", async () => {
+      mockTouchListingActivity.mockResolvedValueOnce({ touched: true });
+
+      const result = await touchListingActivityForCurrentUser("listing-1");
+
+      expect(mockTouchListingActivity).toHaveBeenCalledWith(
+        "user-1",
+        "listing-1",
+        10
+      );
+      expect(result).toEqual({ touched: true });
     });
   });
 

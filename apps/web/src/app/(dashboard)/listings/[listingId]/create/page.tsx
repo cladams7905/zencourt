@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { runWithCaller } from "@web/src/server/infra/logger/callContext";
-import { getListingById, updateListing } from "@web/src/server/models/listings";
+import { getListingById } from "@web/src/server/models/listings";
 import { requireUserOrRedirect } from "@web/src/app/(dashboard)/_utils/requireUserOrRedirect";
 import { ListingCreateView } from "@web/src/components/listings/create/components";
 import {
@@ -8,7 +8,7 @@ import {
   parseInitialSubcategory
 } from "@web/src/components/listings/create/domain";
 import { redirectToListingStage } from "../_utils/redirectToListingStage";
-import { getListingCreateViewDataForCurrentUser } from "@web/src/server/actions/listings/queries";
+import { getListingCreateViewData } from "@web/src/server/actions/listings/queries";
 
 interface ListingCreatePageProps {
   params: Promise<{ listingId: string }>;
@@ -41,13 +41,8 @@ export default async function ListingCreatePage({
 
     redirectToListingStage(listingId, listing.listingStage, "create");
 
-    await updateListing(user.id, listingId, {
-      lastOpenedAt: new Date(),
-      listingStage: "create"
-    });
-
     const { videoItems, listingPostItems, listingImages } =
-      await getListingCreateViewDataForCurrentUser(listingId);
+      await getListingCreateViewData(user.id, listingId);
     return (
       <ListingCreateView
         listingId={listingId}

@@ -97,7 +97,14 @@ describe("perplexity client", () => {
       messages: [{ role: "user", content: "hello" }]
     });
 
-    expect(result).toEqual(payload);
+    expect(result).toEqual(
+      expect.objectContaining({
+        ...payload,
+        _request: expect.objectContaining({
+          messages: [{ role: "user", content: "hello" }]
+        })
+      })
+    );
   });
 
   it("retries on retryable status then succeeds", async () => {
@@ -118,7 +125,11 @@ describe("perplexity client", () => {
       messages: [{ role: "user", content: "hello" }]
     });
 
-    expect(result).toEqual({ id: "ok" });
+    expect(result).toEqual(
+      expect.objectContaining({
+        id: "ok"
+      })
+    );
     expect(mockSleep).toHaveBeenCalled();
     expect(mockIsRetryable).toHaveBeenCalledWith(503);
   });
@@ -183,5 +194,24 @@ describe("perplexity client", () => {
 
     const callBody = JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body);
     expect(callBody.model).toBe("sonar-reasoning");
+  });
+
+  it("passes search_context_size when provided", async () => {
+    process.env.PERPLEXITY_API_KEY = "test-key";
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ id: "ok" })
+    });
+
+    await requestPerplexity({
+      messages: [{ role: "user", content: "hello" }],
+      search_context_size: "high"
+    });
+
+    const callBody = JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body);
+    expect(callBody.search_context_size).toBe("high");
+    expect(callBody.web_search_options).toEqual({
+      search_context_size: "high"
+    });
   });
 });

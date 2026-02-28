@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { runWithCaller } from "@web/src/server/infra/logger/callContext";
-import { getListingById, updateListing } from "@web/src/server/models/listings";
+import { getListingById } from "@web/src/server/models/listings";
 import {
   getListingImages,
   mapListingImageToDisplayItem
@@ -31,8 +31,6 @@ export default async function ListingCategorizePage({
     }
 
     redirectToListingStage(listingId, listing.listingStage, "categorize");
-
-    await updateListing(user.id, listingId, { lastOpenedAt: new Date() });
 
     const images = await getListingImages(user.id, listingId);
     const imageItems = images.map(mapListingImageToDisplayItem);

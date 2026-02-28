@@ -11,6 +11,14 @@ function hasDefinedValues(value: Record<string, unknown>): boolean {
   return Object.values(value).some((entry) => entry !== undefined);
 }
 
+function normalizeDropdownValue(value: unknown): string | null | undefined {
+  const normalized = normalizeString(value);
+  if (typeof normalized === "string" && normalized.toLowerCase() === "other") {
+    return null;
+  }
+  return normalized;
+}
+
 function normalizeExteriorFeatures(raw: Record<string, unknown>): ListingPropertyDetails["exterior_features"] | undefined {
   if (raw.exterior_features === null) {
     return null;
@@ -91,6 +99,41 @@ function normalizeSaleHistory(raw: Record<string, unknown>): ListingPropertyDeta
   return saleHistory.length > 0 ? saleHistory : null;
 }
 
+/**
+ * Normalizes open house time strings to HH:mm (24h).
+ * When AM/PM is not present, infers based on typical open house hours:
+ * - 7:00–11:59 → AM (morning)
+ * - 12:00–6:59 → PM (noon through early evening)
+ */
+function normalizeOpenHouseTime(value: string | null | undefined): string | null | undefined {
+  const trimmed = typeof value === "string" ? value.trim() : null;
+  if (!trimmed) return value === null ? null : undefined;
+
+  const match = trimmed.match(
+    /^(\d{1,2}):(\d{2})(?:\s*(AM|PM))?$/i
+  );
+  if (!match) return trimmed;
+
+  let hour = parseInt(match[1], 10);
+  const minute = Math.min(59, Math.max(0, parseInt(match[2], 10) || 0));
+  const ampm = match[3]?.toUpperCase();
+
+  if (ampm === "AM" || ampm === "PM") {
+    if (ampm === "AM" && hour === 12) hour = 0;
+    else if (ampm === "PM" && hour !== 12) hour += 12;
+  } else {
+    if (hour >= 1 && hour <= 6) {
+      hour += 12;
+    } else if (hour === 12) {
+      hour = 12;
+    }
+  }
+
+  const h = Math.max(0, Math.min(23, hour));
+  const m = minute;
+  return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
+}
+
 function normalizeOpenHouseEvents(raw: Record<string, unknown>): ListingPropertyDetails["open_house_events"] | undefined {
   const openHouseEventsRaw = raw.open_house_events;
   if (openHouseEventsRaw === null) {
@@ -105,10 +148,35 @@ function normalizeOpenHouseEvents(raw: Record<string, unknown>): ListingProperty
       if (!isRecord(entry)) {
         return null;
       }
+      const timeRange =
+        normalizeString(entry.time_range) ??
+        normalizeString(entry.timeRange) ??
+        normalizeString(entry.time);
+      const splitTimeRange = timeRange
+        ? timeRange.split(/\s*[-\u2013\u2014]\s*/, 2).map((part) => part.trim())
+        : null;
+      const rawStart =
+        normalizeString(entry.start_time) ??
+        normalizeString(entry.startTime) ??
+        normalizeString(entry.start) ??
+        normalizeString(entry.starts_at) ??
+        normalizeString(entry.startsAt) ??
+        splitTimeRange?.[0];
+      const rawEnd =
+        normalizeString(entry.end_time) ??
+        normalizeString(entry.endTime) ??
+        normalizeString(entry.end) ??
+        normalizeString(entry.ends_at) ??
+        normalizeString(entry.endsAt) ??
+        splitTimeRange?.[1];
+
       const item = {
-        date: normalizeString(entry.date),
-        start_time: normalizeString(entry.start_time),
-        end_time: normalizeString(entry.end_time)
+        date:
+          normalizeString(entry.date) ??
+          normalizeString(entry.event_date) ??
+          normalizeString(entry.eventDate),
+        start_time: rawStart !== undefined ? normalizeOpenHouseTime(rawStart) : rawStart,
+        end_time: rawEnd !== undefined ? normalizeOpenHouseTime(rawEnd) : rawEnd
       };
       return hasDefinedValues(item) ? item : null;
     })
@@ -163,8 +231,8 @@ function normalizeLocationContext(raw: Record<string, unknown>): ListingProperty
 
   const location = {
     subdivision: normalizeString(raw.location_context.subdivision),
-    street_type: normalizeString(raw.location_context.street_type),
-    lot_type: normalizeString(raw.location_context.lot_type),
+    street_type: normalizeDropdownValue(raw.location_context.street_type),
+    lot_type: normalizeDropdownValue(raw.location_context.lot_type),
     county: normalizeString(raw.location_context.county),
     state: normalizeString(raw.location_context.state)
   };
@@ -209,7 +277,7 @@ export function normalizeListingPropertyDetails(
     propertyDetails.address = address;
   }
 
-  const propertyType = normalizeString(raw.property_type);
+  const propertyType = normalizeDropdownValue(raw.property_type);
   if (propertyType !== undefined) {
     propertyDetails.property_type = propertyType;
   }
@@ -249,7 +317,7 @@ export function normalizeListingPropertyDetails(
     propertyDetails.stories = stories;
   }
 
-  const architecture = normalizeString(raw.architecture);
+  const architecture = normalizeDropdownValue(raw.architecture);
   if (architecture !== undefined) {
     propertyDetails.architecture = architecture;
   }

@@ -51,3 +51,4 @@ demo-images/
 
 # prompt debug logs
 apps/web/src/lib/prompts/logs/
+apps/web/src/server/services/propertyDetails/logs/

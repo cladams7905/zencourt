@@ -33,6 +33,12 @@ export function ListingProcessingView({
   batchStartedAt
 }: ListingProcessingViewProps) {
   const router = useRouter();
+  const navigate = React.useCallback(
+    (url: string) => {
+      router.replace(url);
+    },
+    [router]
+  );
 
   const {
     copy,
@@ -51,7 +57,7 @@ export function ListingProcessingView({
     listingId,
     address,
     batchStartedAt,
-    navigate: (url) => router.replace(url)
+    navigate
   });
 
   return (

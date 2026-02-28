@@ -16,6 +16,7 @@ export type AIUseCaseConfig = {
   maxTokens: number;
   temperature?: number;
   betaHeader?: string;
+  searchContextSize?: "low" | "medium" | "high";
 };
 
 export const DEFAULT_ANTHROPIC_MODEL = "claude-haiku-4-5-20251001";
@@ -26,6 +27,8 @@ export const DEFAULT_LISTING_PROPERTY_MAX_TOKENS = 900;
 export const DEFAULT_MARKET_DATA_MAX_TOKENS = 900;
 export const DEFAULT_CONTENT_STREAM_BETA_HEADER =
   "structured-outputs-2025-11-13";
+export const DEFAULT_LISTING_PROPERTY_SEARCH_CONTEXT_SIZE = "high";
+export const DEFAULT_LISTING_PROPERTY_MODEL = "sonar-pro";
 
 const DEFAULTS: Record<AIUseCase, AIUseCaseConfig> = {
   content_generation_stream: {
@@ -41,7 +44,9 @@ const DEFAULTS: Record<AIUseCase, AIUseCaseConfig> = {
   },
   listing_property: {
     provider: "perplexity",
-    maxTokens: DEFAULT_LISTING_PROPERTY_MAX_TOKENS
+    model: DEFAULT_LISTING_PROPERTY_MODEL,
+    maxTokens: DEFAULT_LISTING_PROPERTY_MAX_TOKENS,
+    searchContextSize: DEFAULT_LISTING_PROPERTY_SEARCH_CONTEXT_SIZE
   },
   market_data: {
     provider: "perplexity",
@@ -68,6 +73,15 @@ function parseProvider(value: string | undefined): AIProviderName | undefined {
   return undefined;
 }
 
+function parseSearchContextSize(
+  value: string | undefined
+): AIUseCaseConfig["searchContextSize"] | undefined {
+  if (value === "low" || value === "medium" || value === "high") {
+    return value;
+  }
+  return undefined;
+}
+
 function resolveCityDescriptionProviderFallback(): AIProviderName {
   return getCommunityDataProvider() === CommunityDataProvider.Perplexity
     ? "perplexity"
@@ -89,6 +103,10 @@ export function getAiUseCaseConfig(useCase: AIUseCase): AIUseCaseConfig {
   const temperatureOverride = parseOptionalNumber(
     process.env[`AI_${suffix}_TEMPERATURE`] ?? process.env.AI_TEMPERATURE
   );
+  const searchContextSizeOverride = parseSearchContextSize(
+    process.env[`AI_${suffix}_SEARCH_CONTEXT_SIZE`] ??
+      process.env.AI_SEARCH_CONTEXT_SIZE
+  );
   const betaHeaderOverride =
     process.env[`AI_${suffix}_BETA_HEADER`] ?? undefined;
 
@@ -103,6 +121,7 @@ export function getAiUseCaseConfig(useCase: AIUseCase): AIUseCaseConfig {
     model: modelOverride ?? base.model,
     maxTokens: maxTokensOverride ?? base.maxTokens,
     temperature: temperatureOverride ?? base.temperature,
-    betaHeader: betaHeaderOverride ?? base.betaHeader
+    betaHeader: betaHeaderOverride ?? base.betaHeader,
+    searchContextSize: searchContextSizeOverride ?? base.searchContextSize
   };
 }

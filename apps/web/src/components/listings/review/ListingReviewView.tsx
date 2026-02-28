@@ -41,6 +41,12 @@ export function ListingReviewView({
   targetAudiences
 }: ListingReviewViewProps) {
   const router = useRouter();
+  const navigate = React.useCallback(
+    (path: string) => {
+      router.replace(path);
+    },
+    [router]
+  );
   const {
     details,
     setDetails,
@@ -83,7 +89,7 @@ export function ListingReviewView({
   const { isGoingBack, handleConfirmContinue, handleGoBack } =
     useReviewStageActions({
       listingId,
-      navigate: router.push,
+      navigate,
       handleSave
     });
 

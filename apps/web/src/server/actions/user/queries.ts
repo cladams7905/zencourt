@@ -3,7 +3,7 @@
 import { withServerActionCaller } from "@web/src/server/infra/logger/callContext";
 import { getUser } from "@web/src/server/models/users";
 import { getOrCreateUserAdditional } from "@web/src/server/models/userAdditional";
-import { getUserListings } from "@web/src/server/models/listings";
+import { getUserSidebarListings } from "@web/src/server/models/listings";
 
 export const getCurrentUserSidebarData = withServerActionCaller(
   "getCurrentUserSidebarData",
@@ -14,7 +14,7 @@ export const getCurrentUserSidebarData = withServerActionCaller(
     }
 
     const userAdditional = await getOrCreateUserAdditional(user.id);
-    const listings = (await getUserListings(user.id)).map((listing) => ({
+    const listings = (await getUserSidebarListings(user.id)).map((listing) => ({
       id: listing.id,
       title: listing.title ?? null,
       listingStage: listing.listingStage ?? null,

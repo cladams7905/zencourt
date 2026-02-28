@@ -1,7 +1,10 @@
 import * as React from "react";
 import { toast } from "sonner";
-import { emitListingSidebarUpdate } from "@web/src/lib/domain/listing/sidebarEvents";
-import { updateListingForCurrentUser } from "@web/src/server/actions/listings/commands";
+import {
+  emitListingSidebarHeartbeat,
+  emitListingSidebarUpdate
+} from "@web/src/lib/domain/listing/sidebarEvents";
+import { fetchApiData } from "@web/src/lib/core/http/client";
 
 type UseReviewStageActionsParams = {
   listingId: string;
@@ -15,11 +18,23 @@ export const useReviewStageActions = ({
   handleSave
 }: UseReviewStageActionsParams) => {
   const [isGoingBack, setIsGoingBack] = React.useState(false);
+  const isGoingBackRef = React.useRef(false);
+
+  const updateListingStage = React.useCallback(
+    async (listingStage: "categorize" | "generate") => {
+      await fetchApiData(`/api/v1/listings/${listingId}/stage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ listingStage })
+      });
+    },
+    [listingId]
+  );
 
   const handleConfirmContinue = React.useCallback(async () => {
     try {
       await handleSave({ silent: true });
-      await updateListingForCurrentUser(listingId, { listingStage: "generate" });
+      await updateListingStage("generate");
       emitListingSidebarUpdate({
         id: listingId,
         listingStage: "generate",
@@ -33,14 +48,16 @@ export const useReviewStageActions = ({
           : "Failed to continue to generation."
       );
     }
-  }, [handleSave, listingId, navigate]);
+  }, [handleSave, listingId, navigate, updateListingStage]);
 
   const handleGoBack = React.useCallback(async () => {
+    if (isGoingBackRef.current) {
+      return;
+    }
+    isGoingBackRef.current = true;
     setIsGoingBack(true);
     try {
-      await updateListingForCurrentUser(listingId, {
-        listingStage: "categorize"
-      });
+      await updateListingStage("categorize");
       emitListingSidebarUpdate({
         id: listingId,
         listingStage: "categorize",
@@ -53,12 +70,13 @@ export const useReviewStageActions = ({
           ? error.message
           : "Failed to return to categorize stage."
       );
+      isGoingBackRef.current = false;
       setIsGoingBack(false);
     }
-  }, [listingId, navigate]);
+  }, [listingId, navigate, updateListingStage]);
 
   React.useEffect(() => {
-    emitListingSidebarUpdate({
+    emitListingSidebarHeartbeat({
       id: listingId,
       lastOpenedAt: new Date().toISOString()
     });

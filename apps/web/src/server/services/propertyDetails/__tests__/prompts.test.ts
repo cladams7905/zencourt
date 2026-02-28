@@ -1,5 +1,7 @@
 import {
   PROPERTY_DETAILS_PROMPT_VERSION,
+  buildOpenHouseSystemPrompt,
+  buildOpenHouseUserPrompt,
   buildPropertyDetailsSystemPrompt,
   buildPropertyDetailsUserPrompt
 } from "@web/src/server/services/propertyDetails/prompts";
@@ -24,6 +26,7 @@ describe("propertyDetails prompts", () => {
       const prompt = buildPropertyDetailsSystemPrompt();
       expect(prompt).toContain("real estate property data researcher");
       expect(prompt).toContain("Return only JSON");
+      expect(prompt).toContain("2-3 words max");
       expect(prompt).toContain("Do not fabricate");
     });
   });
@@ -45,8 +48,31 @@ describe("propertyDetails prompts", () => {
       const prompt = buildPropertyDetailsUserPrompt("any");
       expect(prompt).toContain("Provide property details in the schema");
       expect(prompt).toContain("US units");
-      expect(prompt).toContain("open house events");
       expect(prompt).toContain("sources.citation");
+    });
+  });
+
+  describe("open house prompts", () => {
+    it("buildOpenHouseSystemPrompt includes active-listing guidance", () => {
+      const prompt = buildOpenHouseSystemPrompt();
+      expect(prompt).toContain("open house schedules");
+      expect(prompt).toContain("active for-sale listing pages");
+      expect(prompt).toContain("Do not fabricate");
+    });
+
+    it("buildOpenHouseUserPrompt includes address and source guidance", () => {
+      const prompt = buildOpenHouseUserPrompt("123 Main St, Austin TX");
+      expect(prompt).toContain("Are there any open houses for 123 Main St, Austin TX?");
+      expect(prompt).toContain("structured output");
+      expect(prompt).toContain("search only zillow.com, redfin.com, and realtor.com");
+    });
+
+    it("buildOpenHouseUserPrompt includes preferred listing URLs when provided", () => {
+      const prompt = buildOpenHouseUserPrompt("123 Main St, Austin TX", [
+        "https://www.zillow.com/homedetails/test"
+      ]);
+      expect(prompt).toContain("Use only these verified listing URLs as evidence");
+      expect(prompt).toContain("https://www.zillow.com/homedetails/test");
     });
   });
 });

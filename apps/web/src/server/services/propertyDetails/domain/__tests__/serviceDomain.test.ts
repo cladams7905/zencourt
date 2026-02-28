@@ -67,4 +67,64 @@ describe("listingProperty/domain", () => {
       fetchPropertyDetails("123 Main St, Austin, TX", mockProvider)
     ).resolves.toBeNull();
   });
+
+  it("drops open house events when no trusted IDX citations are present", async () => {
+    mockFetch.mockResolvedValue({
+      address: "123 Main St",
+      open_house_events: [
+        { date: "2026-03-01", start_time: "1:00 PM", end_time: "3:00 PM" }
+      ],
+      sources: [
+        {
+          site: "example.com",
+          citation: "https://example.com/listing/123-main"
+        }
+      ]
+    });
+
+    await expect(
+      fetchPropertyDetails("123 Main St, Austin, TX", mockProvider)
+    ).resolves.toEqual({
+      address: "123 Main St",
+      open_house_events: null,
+      sources: [
+        {
+          site: "example.com",
+          notes: undefined,
+          citation: "https://example.com/listing/123-main"
+        }
+      ]
+    });
+  });
+
+  it("keeps open house events when trusted IDX citations are present", async () => {
+    mockFetch.mockResolvedValue({
+      address: "123 Main St",
+      open_house_events: [
+        { date: "2026-03-01", start_time: "1:00 PM", end_time: "3:00 PM" }
+      ],
+      sources: [
+        {
+          site: "zillow.com",
+          citation: "https://www.zillow.com/homedetails/123-main/123_zpid/"
+        }
+      ]
+    });
+
+    await expect(
+      fetchPropertyDetails("123 Main St, Austin, TX", mockProvider)
+    ).resolves.toEqual({
+      address: "123 Main St",
+      open_house_events: [
+        { date: "2026-03-01", start_time: "13:00", end_time: "15:00" }
+      ],
+      sources: [
+        {
+          site: "zillow.com",
+          notes: undefined,
+          citation: "https://www.zillow.com/homedetails/123-main/123_zpid/"
+        }
+      ]
+    });
+  });
 });
