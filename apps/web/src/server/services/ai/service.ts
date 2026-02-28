@@ -33,6 +33,7 @@ export async function generateTextForUseCase(args: {
     model: config.model,
     maxTokens: config.maxTokens,
     temperature: config.temperature,
+    searchContextSize: config.searchContextSize,
     system: args.system,
     messages: args.messages,
     responseFormat: args.responseFormat

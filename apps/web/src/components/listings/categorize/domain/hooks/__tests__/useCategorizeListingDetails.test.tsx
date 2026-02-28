@@ -4,6 +4,7 @@ import { useCategorizeListingDetails } from "@web/src/components/listings/catego
 const mockPush = jest.fn();
 const mockToastError = jest.fn();
 const mockUpdateListing = jest.fn();
+const mockTouchListingActivity = jest.fn();
 const mockEmitListingSidebarUpdate = jest.fn();
 
 jest.mock("next/navigation", () => ({
@@ -24,7 +25,9 @@ jest.mock("@web/src/lib/domain/listing/sidebarEvents", () => ({
 }));
 
 jest.mock("@web/src/server/actions/listings/commands", () => ({
-  updateListingForCurrentUser: (...args: unknown[]) => mockUpdateListing(...args)
+  updateListingForCurrentUser: (...args: unknown[]) => mockUpdateListing(...args),
+  touchListingActivityForCurrentUser: (...args: unknown[]) =>
+    mockTouchListingActivity(...args)
 }));
 
 describe("useCategorizeListingDetails", () => {
@@ -32,8 +35,10 @@ describe("useCategorizeListingDetails", () => {
     mockPush.mockReset();
     mockToastError.mockReset();
     mockUpdateListing.mockReset();
+    mockTouchListingActivity.mockReset();
     mockEmitListingSidebarUpdate.mockReset();
     mockUpdateListing.mockResolvedValue(undefined);
+    mockTouchListingActivity.mockResolvedValue({ touched: true });
   });
 
   it("persists title changes and emits sidebar updates", async () => {
@@ -76,11 +81,14 @@ describe("useCategorizeListingDetails", () => {
       expect(mockUpdateListing).toHaveBeenCalledWith(
         "l1",
         expect.objectContaining({
+          title: "456 Pine St",
           address: "456 Pine St, Seattle, WA",
           propertyDetails: null
         })
       );
     });
+
+    expect(mockUpdateListing).toHaveBeenCalledTimes(1);
   });
 
   it("continues to review route when property details already exist", async () => {
@@ -98,6 +106,10 @@ describe("useCategorizeListingDetails", () => {
       await result.current.handleContinue();
     });
 
+    expect(mockUpdateListing).toHaveBeenCalledTimes(1);
+    expect(mockUpdateListing).toHaveBeenCalledWith("l1", {
+      listingStage: "review"
+    });
     expect(mockPush).toHaveBeenCalledWith("/listings/l1/review");
   });
 

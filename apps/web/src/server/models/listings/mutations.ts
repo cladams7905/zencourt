@@ -1,7 +1,7 @@
 "use server";
 
 import { nanoid } from "nanoid";
-import { and, db, eq, listings } from "@db/client";
+import { and, db, eq, listings, sql } from "@db/client";
 import type { DBListing } from "@db/types/models";
 import { withDbErrorHandling } from "@web/src/server/models/shared/dbErrorHandling";
 import { requireListingId, requireUserId } from "@web/src/server/models/shared/validation";
@@ -96,6 +96,42 @@ export async function updateListing(
       actionName: "updateListing",
       context: { listingId },
       errorMessage: "Failed to update listing. Please try again."
+    }
+  );
+}
+
+export async function touchListingActivity(
+  userId: string,
+  listingId: string,
+  touchWindowMinutes: number
+): Promise<{ touched: boolean }> {
+  requireListingId(listingId, "Listing ID is required");
+  requireUserId(userId, "User ID is required to update listing activity");
+
+  return withDbErrorHandling(
+    async () => {
+      const cutoff = new Date(Date.now() - touchWindowMinutes * 60 * 1000);
+      const [updatedListing] = await db
+        .update(listings)
+        .set({
+          lastOpenedAt: new Date(),
+          updatedAt: new Date()
+        })
+        .where(
+          and(
+            eq(listings.id, listingId),
+            eq(listings.userId, userId),
+            sql`(${listings.lastOpenedAt} is null or ${listings.lastOpenedAt} < ${cutoff})`
+          )
+        )
+        .returning({ id: listings.id });
+
+      return { touched: Boolean(updatedListing?.id) };
+    },
+    {
+      actionName: "touchListingActivity",
+      context: { listingId },
+      errorMessage: "Failed to update listing activity. Please try again."
     }
   );
 }

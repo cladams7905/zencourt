@@ -20,37 +20,43 @@ export const getCurrentUserListingSummariesPage = withServerActionCaller(
   }
 );
 
+export async function getListingCreateViewData(
+  userId: string,
+  listingId: string
+) {
+  const [status, listingImages, listingPostItems] = await Promise.all([
+    getListingVideoStatus(listingId),
+    getListingImages(userId, listingId),
+    getAllCachedListingContentForCreate({ userId, listingId })
+  ]);
+
+  const videoItems: ContentItem[] = status.jobs
+    .filter((job) => job.videoUrl || job.thumbnailUrl)
+    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+    .map((job) => ({
+      id: job.jobId,
+      thumbnail: job.thumbnailUrl ?? undefined,
+      videoUrl: job.videoUrl ?? undefined,
+      category: job.category ?? undefined,
+      generationModel: job.generationModel ?? undefined,
+      orientation: job.orientation ?? undefined,
+      isPriorityCategory: job.isPriorityCategory ?? false,
+      aspectRatio: "vertical",
+      alt: job.roomName ? `${job.roomName} clip` : "Generated clip"
+    }));
+
+  return {
+    videoItems,
+    listingPostItems,
+    listingImages: listingImages.map(mapListingImageToDisplayItem)
+  };
+}
+
 export const getListingCreateViewDataForCurrentUser = withServerActionCaller(
   "getListingCreateViewDataForCurrentUser",
   async (listingId: string) => {
     const user = await requireAuthenticatedUser();
     await requireListingAccess(listingId, user.id);
-
-    const [status, listingImages, listingPostItems] = await Promise.all([
-      getListingVideoStatus(listingId),
-      getListingImages(user.id, listingId),
-      getAllCachedListingContentForCreate({ userId: user.id, listingId })
-    ]);
-
-    const videoItems: ContentItem[] = status.jobs
-      .filter((job) => job.videoUrl || job.thumbnailUrl)
-      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
-      .map((job) => ({
-        id: job.jobId,
-        thumbnail: job.thumbnailUrl ?? undefined,
-        videoUrl: job.videoUrl ?? undefined,
-        category: job.category ?? undefined,
-        generationModel: job.generationModel ?? undefined,
-        orientation: job.orientation ?? undefined,
-        isPriorityCategory: job.isPriorityCategory ?? false,
-        aspectRatio: "vertical",
-        alt: job.roomName ? `${job.roomName} clip` : "Generated clip"
-      }));
-
-    return {
-      videoItems,
-      listingPostItems,
-      listingImages: listingImages.map(mapListingImageToDisplayItem)
-    };
+    return getListingCreateViewData(user.id, listingId);
   }
 );

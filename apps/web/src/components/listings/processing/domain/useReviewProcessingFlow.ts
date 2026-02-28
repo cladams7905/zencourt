@@ -12,6 +12,7 @@ export function useReviewProcessingFlow(params: {
   const { mode, listingId, address, navigate, updateStage } = params;
   const [status, setStatus] = React.useState<"loading" | "success" | "error">("loading");
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+  const lastAutoFetchKeyRef = React.useRef<string | null>(null);
 
   const fetchDetails = React.useCallback(async () => {
     if (mode !== "review") return;
@@ -28,10 +29,14 @@ export function useReviewProcessingFlow(params: {
   }, [address, listingId, mode, navigate]);
 
   React.useEffect(() => {
-    if (mode === "review") {
-      void fetchDetails();
-    }
-  }, [fetchDetails, mode]);
+    if (mode !== "review") return;
+
+    const autoFetchKey = `${listingId}:${address ?? ""}`;
+    if (lastAutoFetchKeyRef.current === autoFetchKey) return;
+
+    lastAutoFetchKeyRef.current = autoFetchKey;
+    void fetchDetails();
+  }, [address, fetchDetails, listingId, mode]);
 
   const handleSkip = React.useCallback(async () => {
     try {

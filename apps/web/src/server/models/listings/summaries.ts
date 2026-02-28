@@ -148,6 +148,40 @@ export async function getUserListings(userId: string): Promise<DBListing[]> {
   );
 }
 
+export async function getUserSidebarListings(
+  userId: string
+): Promise<
+  Array<{
+    id: string;
+    title: string | null;
+    listingStage: string | null;
+    lastOpenedAt: Date | string | null;
+  }>
+> {
+  requireUserId(userId, "User ID is required to fetch sidebar listings");
+
+  return withDbErrorHandling(
+    async () => {
+      return db
+        .select({
+          id: listings.id,
+          title: listings.title,
+          listingStage: listings.listingStage,
+          lastOpenedAt: listings.lastOpenedAt
+        })
+        .from(listings)
+        .where(eq(listings.userId, userId))
+        .orderBy(
+          desc(sql`coalesce(${listings.lastOpenedAt}, ${listings.createdAt})`)
+        );
+    },
+    {
+      actionName: "getUserSidebarListings",
+      errorMessage: "Failed to fetch sidebar listings. Please try again."
+    }
+  );
+}
+
 export async function getUserListingSummariesPage(
   userId: string,
   {

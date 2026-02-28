@@ -33,7 +33,8 @@ describe("server/services/ai/config", () => {
       model: "claude-haiku-4-5-20251001",
       maxTokens: 2800,
       temperature: undefined,
-      betaHeader: "structured-outputs-2025-11-13"
+      betaHeader: "structured-outputs-2025-11-13",
+      searchContextSize: undefined
     });
   });
 
@@ -65,6 +66,15 @@ describe("server/services/ai/config", () => {
       expect.objectContaining({
         provider: "perplexity",
         maxTokens: 333
+      })
+    );
+  });
+
+  it("defaults listing property search context size to high", () => {
+    expect(getAiUseCaseConfig("listing_property")).toEqual(
+      expect.objectContaining({
+        model: "sonar-pro",
+        searchContextSize: "high"
       })
     );
   });

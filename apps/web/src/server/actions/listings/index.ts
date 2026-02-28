@@ -1,6 +1,7 @@
 export {
   createListingForCurrentUser,
   updateListingForCurrentUser,
+  touchListingActivityForCurrentUser,
   getListingImageUploadUrlsForCurrentUser,
   createListingImageRecordsForCurrentUser,
   updateListingImageAssignmentsForCurrentUser,

@@ -49,5 +49,32 @@ describe("ai/strategies/perplexity", () => {
         ]
       })
     );
+
+    expect(mockRequestPerplexity).toHaveBeenCalledWith(
+      expect.objectContaining({
+        messages: [{ role: "user", content: "hello" }]
+      })
+    );
+  });
+
+  it("prepends system prompt when provided", async () => {
+    mockRequestPerplexity.mockResolvedValueOnce({
+      choices: [{ message: { content: "json payload" } }]
+    });
+
+    await perplexityTextStrategy.complete({
+      provider: "perplexity",
+      system: "system rules",
+      messages: [{ role: "user", content: "hello" }]
+    });
+
+    expect(mockRequestPerplexity).toHaveBeenCalledWith(
+      expect.objectContaining({
+        messages: [
+          { role: "system", content: "system rules" },
+          { role: "user", content: "hello" }
+        ]
+      })
+    );
   });
 });

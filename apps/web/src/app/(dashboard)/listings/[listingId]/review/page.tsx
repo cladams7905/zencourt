@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { runWithCaller } from "@web/src/server/infra/logger/callContext";
-import { getListingById, updateListing } from "@web/src/server/models/listings";
+import { getListingById } from "@web/src/server/models/listings";
 import { requireUserOrRedirect } from "@web/src/app/(dashboard)/_utils/requireUserOrRedirect";
 import { getOrCreateUserAdditional } from "@web/src/server/models/userAdditional";
 import { ListingReviewView } from "@web/src/components/listings/review";
@@ -29,8 +29,6 @@ export default async function ListingReviewPage({
     redirectToListingStage(listingId, listing.listingStage, "review");
 
     const userAdditional = await getOrCreateUserAdditional(user.id);
-
-    await updateListing(user.id, listingId, { lastOpenedAt: new Date() });
 
     return (
       <ListingReviewView

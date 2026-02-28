@@ -21,4 +21,12 @@ describe("listingProperty/domain/parsing", () => {
       open_house_events: [{ date: "2026-03-01" }]
     });
   });
+
+  it("drops unknown top-level keys, including camelCase variants", () => {
+    const parsed = parseListingPropertyRaw({
+      openHouseEvents: [{ date: "2026-03-01" }]
+    });
+
+    expect(parsed).toEqual({});
+  });
 });

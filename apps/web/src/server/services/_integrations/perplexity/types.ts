@@ -54,10 +54,16 @@ export type PerplexityResponseFormat = {
   };
 };
 
+export type PerplexitySearchContextSize = "low" | "medium" | "high";
+
 export type PerplexityRequest = {
   model: string;
   messages: PerplexityMessage[];
   temperature?: number;
   max_tokens?: number;
+  search_context_size?: PerplexitySearchContextSize;
+  web_search_options?: {
+    search_context_size?: PerplexitySearchContextSize;
+  };
   response_format?: PerplexityResponseFormat;
 };

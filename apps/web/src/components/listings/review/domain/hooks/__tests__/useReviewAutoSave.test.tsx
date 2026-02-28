@@ -135,6 +135,39 @@ describe("useReviewAutoSave", () => {
     expect(mockSaveListingPropertyDetails).not.toHaveBeenCalled();
   });
 
+  it("debounces rapid autosave triggers into a single save", async () => {
+    jest.useFakeTimers();
+    const detailsRef = { current: {} as ListingPropertyDetails };
+    const dirtyRef = { current: true };
+    mockSaveListingPropertyDetails.mockResolvedValue(undefined);
+
+    const { result } = renderHook(() =>
+      useReviewAutoSave({
+        listingId: "listing-1",
+        detailsRef,
+        dirtyRef,
+        updateDetails: jest.fn()
+      })
+    );
+
+    act(() => {
+      result.current.triggerAutoSave();
+      result.current.triggerAutoSave();
+      result.current.triggerAutoSave();
+      jest.advanceTimersByTime(399);
+    });
+
+    expect(mockSaveListingPropertyDetails).not.toHaveBeenCalled();
+
+    await act(async () => {
+      jest.advanceTimersByTime(1);
+      await Promise.resolve();
+    });
+
+    expect(mockSaveListingPropertyDetails).toHaveBeenCalledTimes(1);
+    jest.useRealTimers();
+  });
+
   it("normalizes null bathrooms by only autosaving", async () => {
     const detailsRef = {
       current: { bathrooms: null } as ListingPropertyDetails

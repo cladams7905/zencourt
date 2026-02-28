@@ -37,6 +37,41 @@ describe("useReviewProcessingFlow", () => {
     });
   });
 
+  it("auto-fetches only once for the same listing and address", async () => {
+    mockFetchPropertyDetails.mockResolvedValue(undefined);
+    const navigate = jest.fn();
+
+    const { rerender } = renderHook(
+      ({
+        navigateFn
+      }: {
+        navigateFn: (url: string) => void;
+      }) =>
+        useReviewProcessingFlow({
+          mode: "review",
+          listingId: "l1",
+          address: "123 Main",
+          navigate: navigateFn,
+          updateStage: jest.fn()
+        }),
+      {
+        initialProps: {
+          navigateFn: navigate
+        }
+      }
+    );
+
+    await waitFor(() => {
+      expect(mockFetchPropertyDetails).toHaveBeenCalledTimes(1);
+    });
+
+    rerender({ navigateFn: jest.fn() });
+
+    await waitFor(() => {
+      expect(mockFetchPropertyDetails).toHaveBeenCalledTimes(1);
+    });
+  });
+
   it("handles skip by updating stage and navigating", async () => {
     const navigate = jest.fn();
     const updateStage = jest.fn().mockResolvedValue(undefined);

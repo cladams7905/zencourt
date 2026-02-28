@@ -25,6 +25,10 @@ export default async function ListingPropertyProcessingPage({
       redirect("/listings/sync");
     }
 
+    if (listing.propertyDetails) {
+      redirect(`/listings/${listingId}/review`);
+    }
+
     redirectToListingStage(listingId, listing.listingStage, "review");
 
     return (

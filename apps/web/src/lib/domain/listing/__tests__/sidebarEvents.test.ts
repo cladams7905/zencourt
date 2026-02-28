@@ -1,5 +1,6 @@
 import {
   addListingSidebarListener,
+  emitListingSidebarHeartbeat,
   emitListingSidebarUpdate
 } from "@web/src/lib/domain/listing/sidebarEvents";
 
@@ -26,5 +27,23 @@ describe("sidebarEvents", () => {
 
     expect(handler).not.toHaveBeenCalled();
     remove();
+  });
+
+  it("throttles heartbeat events for the same listing id", () => {
+    jest.useFakeTimers();
+    const handler = jest.fn();
+    const remove = addListingSidebarListener(handler);
+
+    emitListingSidebarHeartbeat({ id: "listing-1" }, 1_000);
+    emitListingSidebarHeartbeat({ id: "listing-1" }, 1_000);
+
+    expect(handler).toHaveBeenCalledTimes(1);
+
+    jest.advanceTimersByTime(1_000);
+    emitListingSidebarHeartbeat({ id: "listing-1" }, 1_000);
+
+    expect(handler).toHaveBeenCalledTimes(2);
+    remove();
+    jest.useRealTimers();
   });
 });
