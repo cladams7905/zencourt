@@ -19,7 +19,9 @@ function normalizeDropdownValue(value: unknown): string | null | undefined {
   return normalized;
 }
 
-function normalizeExteriorFeatures(raw: Record<string, unknown>): ListingPropertyDetails["exterior_features"] | undefined {
+function normalizeExteriorFeatures(
+  raw: Record<string, unknown>
+): ListingPropertyDetails["exterior_features"] | undefined {
   if (raw.exterior_features === null) {
     return null;
   }
@@ -34,7 +36,9 @@ function normalizeExteriorFeatures(raw: Record<string, unknown>): ListingPropert
   return hasDefinedValues(exterior) ? exterior : undefined;
 }
 
-function normalizeInteriorFeatures(raw: Record<string, unknown>): ListingPropertyDetails["interior_features"] | undefined {
+function normalizeInteriorFeatures(
+  raw: Record<string, unknown>
+): ListingPropertyDetails["interior_features"] | undefined {
   if (raw.interior_features === null) {
     return null;
   }
@@ -70,7 +74,9 @@ function normalizeInteriorFeatures(raw: Record<string, unknown>): ListingPropert
   return hasDefinedValues(interior) ? interior : undefined;
 }
 
-function normalizeSaleHistory(raw: Record<string, unknown>): ListingPropertyDetails["sale_history"] | undefined {
+function normalizeSaleHistory(
+  raw: Record<string, unknown>
+): ListingPropertyDetails["sale_history"] | undefined {
   const saleHistoryRaw = raw.sale_history;
   if (saleHistoryRaw === null) {
     return null;
@@ -89,7 +95,9 @@ function normalizeSaleHistory(raw: Record<string, unknown>): ListingPropertyDeta
         close_date: normalizeString(entry.close_date),
         sale_price_usd: normalizeNumber(entry.sale_price_usd),
         price_per_sq_ft_usd: normalizeNumber(entry.price_per_sq_ft_usd),
-        list_to_sale_percent_change: normalizeNumber(entry.list_to_sale_percent_change),
+        list_to_sale_percent_change: normalizeNumber(
+          entry.list_to_sale_percent_change
+        ),
         list_price_usd: normalizeNumber(entry.list_price_usd)
       };
       return hasDefinedValues(item) ? item : null;
@@ -105,13 +113,13 @@ function normalizeSaleHistory(raw: Record<string, unknown>): ListingPropertyDeta
  * - 7:00–11:59 → AM (morning)
  * - 12:00–6:59 → PM (noon through early evening)
  */
-function normalizeOpenHouseTime(value: string | null | undefined): string | null | undefined {
+function normalizeOpenHouseTime(
+  value: string | null | undefined
+): string | null | undefined {
   const trimmed = typeof value === "string" ? value.trim() : null;
   if (!trimmed) return value === null ? null : undefined;
 
-  const match = trimmed.match(
-    /^(\d{1,2}):(\d{2})(?:\s*(AM|PM))?$/i
-  );
+  const match = trimmed.match(/^(\d{1,2}):(\d{2})(?:\s*(AM|PM))?$/i);
   if (!match) return trimmed;
 
   let hour = parseInt(match[1], 10);
@@ -134,7 +142,9 @@ function normalizeOpenHouseTime(value: string | null | undefined): string | null
   return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
 }
 
-function normalizeOpenHouseEvents(raw: Record<string, unknown>): ListingPropertyDetails["open_house_events"] | undefined {
+function normalizeOpenHouseEvents(
+  raw: Record<string, unknown>
+): ListingPropertyDetails["open_house_events"] | undefined {
   const openHouseEventsRaw = raw.open_house_events;
   if (openHouseEventsRaw === null) {
     return null;
@@ -175,7 +185,8 @@ function normalizeOpenHouseEvents(raw: Record<string, unknown>): ListingProperty
           normalizeString(entry.date) ??
           normalizeString(entry.event_date) ??
           normalizeString(entry.eventDate),
-        start_time: rawStart !== undefined ? normalizeOpenHouseTime(rawStart) : rawStart,
+        start_time:
+          rawStart !== undefined ? normalizeOpenHouseTime(rawStart) : rawStart,
         end_time: rawEnd !== undefined ? normalizeOpenHouseTime(rawEnd) : rawEnd
       };
       return hasDefinedValues(item) ? item : null;
@@ -185,7 +196,9 @@ function normalizeOpenHouseEvents(raw: Record<string, unknown>): ListingProperty
   return openHouseEvents.length > 0 ? openHouseEvents : null;
 }
 
-function normalizeValuationEstimates(raw: Record<string, unknown>): ListingPropertyDetails["valuation_estimates"] | undefined {
+function normalizeValuationEstimates(
+  raw: Record<string, unknown>
+): ListingPropertyDetails["valuation_estimates"] | undefined {
   if (raw.valuation_estimates === null) {
     return null;
   }
@@ -221,7 +234,9 @@ function normalizeValuationEstimates(raw: Record<string, unknown>): ListingPrope
   return hasDefinedValues(valuation) ? valuation : undefined;
 }
 
-function normalizeLocationContext(raw: Record<string, unknown>): ListingPropertyDetails["location_context"] | undefined {
+function normalizeLocationContext(
+  raw: Record<string, unknown>
+): ListingPropertyDetails["location_context"] | undefined {
   if (raw.location_context === null) {
     return null;
   }
@@ -240,7 +255,9 @@ function normalizeLocationContext(raw: Record<string, unknown>): ListingProperty
   return hasDefinedValues(location) ? location : undefined;
 }
 
-function normalizeSources(raw: Record<string, unknown>): ListingPropertyDetails["sources"] | undefined {
+function normalizeSources(
+  raw: Record<string, unknown>
+): ListingPropertyDetails["sources"] | undefined {
   const sourcesRaw = raw.sources;
   if (sourcesRaw === null) {
     return null;
@@ -270,7 +287,8 @@ export function normalizeListingPropertyDetails(
   raw: ListingPropertyRaw,
   fallbackAddress?: string
 ): ListingPropertyDetails | null {
-  const address = normalizeString(raw.address) ?? normalizeString(fallbackAddress ?? null);
+  const address =
+    normalizeString(raw.address) ?? normalizeString(fallbackAddress ?? null);
   const propertyDetails: ListingPropertyDetails = {};
 
   if (address !== undefined) {

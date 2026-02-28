@@ -4,9 +4,7 @@ const mockProvider = {
   name: "test",
   fetch: mockFetch
 };
-import {
-  buildPropertyDetailsRevision
-} from "../revision";
+import { buildPropertyDetailsRevision } from "../revision";
 import { fetchPropertyDetails } from "../fetch";
 
 describe("listingProperty/domain", () => {
@@ -29,9 +27,9 @@ describe("listingProperty/domain", () => {
   });
 
   it("throws when address is empty", async () => {
-    await expect(
-      fetchPropertyDetails("   ", mockProvider)
-    ).rejects.toThrow("Address is required to fetch property details");
+    await expect(fetchPropertyDetails("   ", mockProvider)).rejects.toThrow(
+      "Address is required to fetch property details"
+    );
   });
 
   it("returns null when provider returns null", async () => {
