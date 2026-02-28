@@ -121,6 +121,7 @@ describe("videoPreviewViewModel", () => {
       captionItems: [{ id: "cap-1", hook: "Nice home" } as ContentItem],
       listingSubcategory: "status_update",
       listingAddress: null,
+      openHouseContext: null,
       previewFps: 30
     });
 
@@ -142,6 +143,7 @@ describe("videoPreviewViewModel", () => {
       ],
       listingSubcategory: "status_update",
       listingAddress: "123 Main St, Austin, TX 78701",
+      openHouseContext: null,
       previewFps: 30
     });
 
@@ -165,6 +167,7 @@ describe("videoPreviewViewModel", () => {
       ],
       listingSubcategory: "new_listing",
       listingAddress: "123 Main St, Austin, TX 78701",
+      openHouseContext: null,
       previewFps: 30
     });
 
@@ -188,6 +191,7 @@ describe("videoPreviewViewModel", () => {
       ],
       listingSubcategory: "new_listing",
       listingAddress: "123 Main St, Austin, TX 78701",
+      openHouseContext: null,
       previewFps: 30
     });
 
@@ -220,6 +224,7 @@ describe("videoPreviewViewModel", () => {
       ],
       listingSubcategory: "status_update",
       listingAddress: null,
+      openHouseContext: null,
       forceSimpleOverlayTemplate: true,
       previewFps: 30
     });
@@ -227,5 +232,114 @@ describe("videoPreviewViewModel", () => {
     expect(result[0]?.resolvedSegments[0]?.textOverlay?.templatePattern).toBe(
       "simple"
     );
+  });
+
+  it("adds supplemental schedule/address overlay for open_house when slide lacks logistics", () => {
+    const result = buildPlayablePreviews({
+      plans: basePlans,
+      items: baseItems,
+      captionItems: [
+        {
+          id: "cap-1",
+          hook: "Open house this weekend",
+          body: [{ header: "Spacious layout", content: "Updated finishes" }]
+        } as ContentItem
+      ],
+      listingSubcategory: "open_house",
+      listingAddress: "123 Main St, Austin, TX 78701",
+      openHouseContext: {
+        hasAnyEvent: true,
+        hasSchedule: true,
+        selectedEvent: {
+          date: "2026-03-01",
+          startTime: "13:00",
+          endTime: "15:00",
+          dateLabel: "Mar 1st",
+          timeLabel: "1-3PM",
+          dateTimeLabel: "Mar 1st, 1-3PM"
+        },
+        openHouseDateTimeLabel: "Mar 1st, 1-3PM",
+        openHouseOverlayLabel: "Mar 1st, 1-3PM",
+        listingAddressLine: "123 Main St, Austin, TX 78701"
+      },
+      previewFps: 30
+    });
+
+    expect(
+      result[0]?.resolvedSegments[0]?.supplementalAddressOverlay?.overlay.text
+    ).toContain("Mar 1st, 1-3PM");
+    expect(
+      result[0]?.resolvedSegments[0]?.supplementalAddressOverlay?.overlay.text
+    ).toContain("123 Main St");
+  });
+
+  it("does not add open_house supplemental overlay when slide already includes logistics", () => {
+    const result = buildPlayablePreviews({
+      plans: basePlans,
+      items: baseItems,
+      captionItems: [
+        {
+          id: "cap-1",
+          body: [
+            {
+              header: "Join us Mar 1st, 1-3PM at 123 Main St",
+              content: "See you there"
+            }
+          ]
+        } as ContentItem
+      ],
+      listingSubcategory: "open_house",
+      listingAddress: "123 Main St, Austin, TX 78701",
+      openHouseContext: {
+        hasAnyEvent: true,
+        hasSchedule: true,
+        selectedEvent: {
+          date: "2026-03-01",
+          startTime: "13:00",
+          endTime: "15:00",
+          dateLabel: "Mar 1st",
+          timeLabel: "1-3PM",
+          dateTimeLabel: "Mar 1st, 1-3PM"
+        },
+        openHouseDateTimeLabel: "Mar 1st, 1-3PM",
+        openHouseOverlayLabel: "Mar 1st, 1-3PM",
+        listingAddressLine: "123 Main St, Austin, TX 78701"
+      },
+      previewFps: 30
+    });
+
+    expect(
+      result[0]?.resolvedSegments.some(
+        (segment) => segment.supplementalAddressOverlay
+      )
+    ).toBe(false);
+  });
+
+  it("uses address-only supplemental overlay for open_house when schedule is missing", () => {
+    const result = buildPlayablePreviews({
+      plans: basePlans,
+      items: baseItems,
+      captionItems: [
+        {
+          id: "cap-1",
+          body: [{ header: "Tour this home", content: "Open concept" }]
+        } as ContentItem
+      ],
+      listingSubcategory: "open_house",
+      listingAddress: "123 Main St, Austin, TX 78701",
+      openHouseContext: {
+        hasAnyEvent: true,
+        hasSchedule: false,
+        selectedEvent: null,
+        openHouseDateTimeLabel: "",
+        openHouseOverlayLabel: "",
+        listingAddressLine: "123 Main St, Austin, TX 78701"
+      },
+      previewFps: 30
+    });
+
+    expect(
+      result[0]?.resolvedSegments[0]?.supplementalAddressOverlay?.overlay.text
+    ).toBe("📍 123 Main St");
   });
 });

@@ -39,6 +39,23 @@ export const generateListingContentForCurrentUser = withServerActionCaller(
     const listing = await requireListingAccess(listingId, user.id);
     const validated = parseAndValidateParams(body, listingId);
     const context = resolveListingContext(listing, validated);
+    if (context.subcategory === "open_house") {
+      logger.info(
+        {
+          listingId,
+          hasAnyEvent: context.openHouseContext?.hasAnyEvent ?? false,
+          hasSchedule: context.openHouseContext?.hasSchedule ?? false,
+          selectedEventDate: context.openHouseContext?.selectedEvent?.date ?? null
+        },
+        "Resolved open house generation context"
+      );
+      if (!context.openHouseContext?.hasSchedule) {
+        logger.info(
+          { listingId },
+          "Open house generation running without schedule details"
+        );
+      }
+    }
 
     const upstreamBody = buildUpstreamRequestBody(context);
     const upstreamResponse = await runContentGenerationForUser(

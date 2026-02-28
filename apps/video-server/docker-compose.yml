@@ -22,8 +22,6 @@ services:
       VIDEO_SERVER_API_KEY: ${VIDEO_SERVER_API_KEY}
 
       # Processing Configuration
-      MAX_CONCURRENT_JOBS: 1
-      JOB_TIMEOUT_MS: 600000
       TEMP_DIR: /tmp/video-processing
       REMOTION_CACHE_DIR: /tmp/remotion
 

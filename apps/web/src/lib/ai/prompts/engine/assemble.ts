@@ -3,7 +3,12 @@ import { interpolateTemplate, resolveContentMediaType } from "./promptHelpers";
 import { buildCommunityDataPrompt, buildExtraSectionsPrompt } from "./communityPrompt";
 import { loadHookTemplates, formatTemplateList } from "./hookPrompt";
 import { loadAudienceDirectives, buildAudienceSummary } from "./audiencePrompt";
-import { buildMarketDataXml, buildListingDataXml, loadListingSubcategoryDirective } from "./dataPrompt";
+import {
+  buildMarketDataXml,
+  buildListingDataXml,
+  buildOpenHouseContextXml,
+  loadListingSubcategoryDirective
+} from "./dataPrompt";
 import { buildTimeOfYearNote } from "./seasonalPrompt";
 import type { PromptAssemblyInput } from "./types";
 
@@ -135,6 +140,12 @@ export async function buildSystemPrompt(input: PromptAssemblyInput) {
     input.category === "listing"
       ? `\n\n${buildListingDataXml(input.listing_property_details)}`
       : "";
+  const openHouseContextBlock =
+    input.category === "listing" &&
+    input.listing_subcategory === "open_house" &&
+    input.listing_open_house_context
+      ? `\n\n${buildOpenHouseContextXml(input.listing_open_house_context)}`
+      : "";
   const textOverlayTemplatesBlock =
     input.category === "listing" && textOverlayTemplates
       ? `\n\n<text_overlay_templates>\n${textOverlayTemplates}\n</text_overlay_templates>`
@@ -154,7 +165,7 @@ ${formatTemplateList(hookTemplates)}
 </hook_templates>
 </hooks>
 
-${recentHooksBlock}${marketBlock}${communityBlock}${seasonalBlock}${listingSubcategoryBlock}${listingDataBlock}${textOverlayTemplatesBlock}
+${recentHooksBlock}${marketBlock}${communityBlock}${seasonalBlock}${listingSubcategoryBlock}${listingDataBlock}${openHouseContextBlock}${textOverlayTemplatesBlock}
 
 ${complianceQuality}
 

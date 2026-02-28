@@ -7,6 +7,7 @@ import type {
   PreviewTimelinePlan
 } from "@web/src/components/listings/create/domain/previewTimeline";
 import type { ListingContentSubcategory } from "@shared/types/models";
+import type { ListingOpenHouseContext } from "@web/src/lib/domain/listings/openHouse";
 import {
   hashTextOverlaySeed,
   pickPreviewTextOverlayVariant,
@@ -76,11 +77,34 @@ function slideContainsAddress(
   );
 }
 
+function slideContainsAnyTerm(
+  slideData: SlideOverlayData,
+  normalizedTerms: string[]
+): boolean {
+  if (normalizedTerms.length === 0) {
+    return false;
+  }
+
+  const parts = [
+    slideData.plainText,
+    slideData.textOverlay?.headline ?? "",
+    slideData.textOverlay?.accent_top ?? "",
+    slideData.textOverlay?.accent_bottom ?? ""
+  ]
+    .map(normalizeForAddressMatch)
+    .filter(Boolean);
+
+  return normalizedTerms.some((term) =>
+    parts.some((part) => part.includes(term))
+  );
+}
+
 function buildAddressSupplementalOverlay(
   primaryOverlay: PreviewTextOverlay,
-  listingAddress: string
+  listingAddress: string,
+  labelText?: string
 ): TimelinePreviewResolvedSegment["supplementalAddressOverlay"] {
-  const addressText = `${LOCATION_EMOJI} ${listingAddress.trim()}`;
+  const addressText = labelText?.trim() || `${LOCATION_EMOJI} ${listingAddress.trim()}`;
   const shouldPushLower =
     primaryOverlay.templatePattern !== "simple" ||
     primaryOverlay.position === "top-third";
@@ -107,6 +131,24 @@ function buildAddressSupplementalOverlay(
       fontPairing: primaryOverlay.fontPairing
     }
   };
+}
+
+function buildOpenHouseOverlayText(params: {
+  openHouseContext: ListingOpenHouseContext | null;
+  listingStreetAddress: string;
+}): string {
+  const schedule = params.openHouseContext?.openHouseOverlayLabel?.trim() ?? "";
+  const street = params.listingStreetAddress.trim();
+  if (schedule && street) {
+    return `${schedule} • ${LOCATION_EMOJI} ${street}`;
+  }
+  if (schedule) {
+    return schedule;
+  }
+  if (street) {
+    return `${LOCATION_EMOJI} ${street}`;
+  }
+  return "";
 }
 
 function buildRichOverlay(
@@ -214,6 +256,7 @@ export function buildPlayablePreviews(params: {
   captionItems: ContentItem[];
   listingSubcategory: ListingContentSubcategory;
   listingAddress: string | null;
+  openHouseContext: ListingOpenHouseContext | null;
   forceSimpleOverlayTemplate?: boolean;
   previewFps: number;
 }): PlayablePreview[] {
@@ -236,6 +279,20 @@ export function buildPlayablePreviews(params: {
   const shouldEnforceAddressOverlay =
     params.listingSubcategory === "new_listing" &&
     normalizedListingAddress.length > 0;
+  const openHouseOverlayText =
+    params.listingSubcategory === "open_house"
+      ? buildOpenHouseOverlayText({
+          openHouseContext: params.openHouseContext,
+          listingStreetAddress
+        })
+      : "";
+  const openHouseNeedsSupplement =
+    params.listingSubcategory === "open_house" && openHouseOverlayText.length > 0;
+  const normalizedOpenHouseTerms = openHouseNeedsSupplement
+    ? [openHouseOverlayText, listingStreetAddress]
+        .map((value) => normalizeForAddressMatch(value))
+        .filter((value) => value.length > 0)
+    : [];
 
   const resolved = params.plans.map<PlayablePreview | null>((plan, index) => {
     const resolvedSegments: TimelinePreviewResolvedSegment[] = plan.segments
@@ -280,16 +337,23 @@ export function buildPlayablePreviews(params: {
           shouldEnforceAddressOverlay &&
           !slideContainsAddress(data, normalizedListingAddress) &&
           Boolean(params.listingAddress?.trim());
+        const needsOpenHouseSupplement =
+          openHouseNeedsSupplement &&
+          !slideContainsAnyTerm(data, normalizedOpenHouseTerms);
+        const supplementalAddressOverlay = needsAddressSupplement
+          ? buildAddressSupplementalOverlay(primaryOverlay, listingStreetAddress)
+          : needsOpenHouseSupplement
+            ? buildAddressSupplementalOverlay(
+                primaryOverlay,
+                listingStreetAddress,
+                openHouseOverlayText
+              )
+            : undefined;
 
         return {
           ...segment,
           textOverlay: primaryOverlay,
-          supplementalAddressOverlay: needsAddressSupplement
-            ? buildAddressSupplementalOverlay(
-                primaryOverlay,
-                listingStreetAddress
-              )
-            : undefined
+          supplementalAddressOverlay
         };
       }
     );

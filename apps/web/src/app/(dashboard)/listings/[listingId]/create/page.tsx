@@ -3,12 +3,14 @@ import { runWithCaller } from "@web/src/server/infra/logger/callContext";
 import { getListingById } from "@web/src/server/models/listings";
 import { requireUserOrRedirect } from "@web/src/app/(dashboard)/_utils/requireUserOrRedirect";
 import { ListingCreateView } from "@web/src/components/listings/create/components";
+import { resolveListingOpenHouseContext } from "@web/src/lib/domain/listings/openHouse";
 import {
   parseInitialMediaTab,
   parseInitialSubcategory
 } from "@web/src/components/listings/create/domain";
 import { redirectToListingStage } from "../_utils/redirectToListingStage";
 import { getListingCreateViewData } from "@web/src/server/actions/listings/queries";
+import type { ListingPropertyDetails } from "@shared/types/models";
 
 interface ListingCreatePageProps {
   params: Promise<{ listingId: string }>;
@@ -43,11 +45,18 @@ export default async function ListingCreatePage({
 
     const { videoItems, listingPostItems, listingImages } =
       await getListingCreateViewData(user.id, listingId);
+    const openHouseContext = resolveListingOpenHouseContext({
+      listingPropertyDetails:
+        (listing.propertyDetails as ListingPropertyDetails | null) ?? null,
+      listingAddress: listing.address ?? null
+    });
+
     return (
       <ListingCreateView
         listingId={listingId}
         title={listing.title?.trim() || "Listing"}
         listingAddress={listing.address ?? null}
+        openHouseContext={openHouseContext}
         videoItems={videoItems}
         listingPostItems={listingPostItems}
         initialMediaTab={initialMediaTab}

@@ -17,6 +17,9 @@ describe("templateRender/providers/orshot/parameters", () => {
       bathrooms: 3,
       living_area_sq_ft: 2500,
       listing_price: 750000,
+      open_house_events: [
+        { date: "2026-03-01", start_time: "13:00", end_time: "15:00" }
+      ],
       living_spaces: ["Great Room"],
       additional_spaces: ["Office"],
       architecture: "Modern"
@@ -86,7 +89,20 @@ describe("templateRender/providers/orshot/parameters", () => {
     expect(result.agentName).toBe("Agent Jane");
     expect(result.agentProfileImage).toBe("https://cdn.example.com/headshot.jpg");
     expect(result.backgroundImage1).toBe("https://cdn.example.com/1.jpg");
-    expect(result.openHouseDateTime).toMatch(/^Feb \d+(st|nd|rd|th), 7-10AM$/);
+    expect(result.openHouseDateTime).toBe("");
+  });
+
+  it("populates open house date/time from listing schedule for open_house", () => {
+    const result = resolveTemplateParameters({
+      subcategory: "open_house",
+      listing: listingBase as never,
+      listingImages: listingImages as never,
+      userAdditional: userAdditional as never,
+      captionItem,
+      now: new Date("2026-02-21T00:00:00.000Z")
+    });
+
+    expect(result.openHouseDateTime).toBe("Mar 1st, 1-3PM");
   });
 
   it("uses sold label for status updates and falls back values", () => {
@@ -114,6 +130,7 @@ describe("templateRender/providers/orshot/parameters", () => {
     expect(result.socialHandle).toBe("@zencourt_test2");
     expect(result.agentContactInfo).toBe("");
     expect(result.backgroundImage1).toBe("");
+    expect(result.openHouseDateTime).toBe("");
   });
 
   it("uses default header tag for non listing/status subcategories and single-word header splitting", () => {

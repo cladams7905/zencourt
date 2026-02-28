@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import type { ListingPropertyDetails } from "@shared/types/models";
+import { resolveListingOpenHouseContext } from "@web/src/lib/domain/listings/openHouse";
 import type {
   ListingGenerationContext,
   ValidatedGenerateParams
@@ -62,6 +63,13 @@ export function resolveListingContext(
   const locationState = listingDetails?.location_context?.state?.trim() ?? "";
   const resolvedState = locationState || addressParts.state;
   const propertyFingerprint = buildListingPropertyFingerprint(listingDetails);
+  const openHouseContext =
+    params.subcategory === "open_house"
+      ? resolveListingOpenHouseContext({
+          listingPropertyDetails: listingDetails,
+          listingAddress: address
+        })
+      : null;
 
   return {
     listingId: params.listingId,
@@ -70,6 +78,7 @@ export function resolveListingContext(
     addressParts,
     resolvedState,
     propertyFingerprint,
+    openHouseContext,
     subcategory: params.subcategory,
     mediaType: params.mediaType,
     focus: params.focus,

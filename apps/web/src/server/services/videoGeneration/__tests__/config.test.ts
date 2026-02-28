@@ -12,7 +12,7 @@ describe("videoGeneration/config", () => {
     process.env = { ...originalEnv };
     delete process.env.VIDEO_SERVER_URL;
     delete process.env.VIDEO_SERVER_API_KEY;
-    delete process.env.VERCEL_URL;
+    delete process.env.VERCEL_PROJECT_PRODUCTION_URL;
     delete process.env.APP_URL;
   });
 
@@ -35,10 +35,10 @@ describe("videoGeneration/config", () => {
     });
   });
 
-  it("builds config from VERCEL_URL when on Vercel", () => {
+  it("builds config from VERCEL_PROJECT_PRODUCTION_URL when on Vercel", () => {
     process.env.VIDEO_SERVER_URL = "https://video.example.com";
     process.env.VIDEO_SERVER_API_KEY = "test-key";
-    process.env.VERCEL_URL = "my-app.vercel.app";
+    process.env.VERCEL_PROJECT_PRODUCTION_URL = "my-app.vercel.app";
 
     expect(getVideoGenerationConfig()).toEqual({
       model: VIDEO_GENERATION_MODEL,

@@ -1,6 +1,7 @@
 import {
   buildMarketDataXml,
   buildListingDataXml,
+  buildOpenHouseContextXml,
   loadListingSubcategoryDirective
 } from "@web/src/lib/ai/prompts/engine/dataPrompt";
 import { readPromptFile } from "@web/src/lib/ai/prompts/engine/promptFileCache";
@@ -73,5 +74,27 @@ describe("dataPrompt", () => {
     await expect(loadListingSubcategoryDirective("unknown")).resolves.toBe("");
 
     expect(readPromptFile).toHaveBeenCalledWith("listings/new-listing.md");
+  });
+
+  it("builds open house context block", () => {
+    const xml = buildOpenHouseContextXml({
+      hasAnyEvent: true,
+      hasSchedule: true,
+      selectedEvent: {
+        date: "2026-03-01",
+        startTime: "13:00",
+        endTime: "15:00",
+        dateLabel: "Mar 1st",
+        timeLabel: "1-3PM",
+        dateTimeLabel: "Mar 1st, 1-3PM"
+      },
+      openHouseDateTimeLabel: "Mar 1st, 1-3PM",
+      openHouseOverlayLabel: "Mar 1st, 1-3PM",
+      listingAddressLine: "123 Main St"
+    });
+
+    expect(xml).toContain("<open_house_context>");
+    expect(xml).toContain("has_schedule: true");
+    expect(xml).toContain("open_house_date_time_label: Mar 1st, 1-3PM");
   });
 });

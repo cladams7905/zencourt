@@ -25,6 +25,9 @@ export function buildUpstreamRequestBody(
     },
     listing_subcategory: subcategory,
     listing_property_details: listingDetails,
+    ...(subcategory === "open_house"
+      ? { listing_open_house_context: context.openHouseContext }
+      : {}),
     content_request: {
       platform: "instagram",
       content_type: mediaType === "video" ? "listing_reel" : "social_post",

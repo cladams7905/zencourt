@@ -3,6 +3,7 @@ import type {
   ListingContentSubcategory,
   ListingPropertyDetails
 } from "@shared/types/models";
+import type { ListingOpenHouseContext } from "@web/src/lib/domain/listings/openHouse";
 
 export type PromptValues = Record<string, string | number | null | undefined>;
 
@@ -47,6 +48,7 @@ export type PromptAssemblyInput = {
   community_data_extra_sections?: Record<string, string> | null;
   listing_subcategory?: ListingContentSubcategory | null;
   listing_property_details?: ListingPropertyDetails | null;
+  listing_open_house_context?: ListingOpenHouseContext | null;
   content_request?: ContentRequestInput | null;
   recent_hooks?: string[] | null;
 };

@@ -13,6 +13,7 @@ describe("upstream", () => {
         addressParts: { city: "Austin", state: "TX", zipCode: "78701" },
         resolvedState: "TX",
         propertyFingerprint: "fp1",
+        openHouseContext: null,
         subcategory: "new_listing",
         mediaType: "image",
         focus: "pool",
@@ -59,6 +60,21 @@ describe("upstream", () => {
         addressParts: { city: "Austin", state: "TX", zipCode: "78701" },
         resolvedState: "TX",
         propertyFingerprint: "fp1",
+        openHouseContext: {
+          hasAnyEvent: true,
+          hasSchedule: true,
+          selectedEvent: {
+            date: "2026-03-01",
+            startTime: "13:00",
+            endTime: "15:00",
+            dateLabel: "Mar 1st",
+            timeLabel: "1-3PM",
+            dateTimeLabel: "Mar 1st, 1-3PM"
+          },
+          openHouseDateTimeLabel: "Mar 1st, 1-3PM",
+          openHouseOverlayLabel: "Mar 1st, 1-3PM",
+          listingAddressLine: "123 Main St"
+        },
         subcategory: "open_house",
         mediaType: "video",
         focus: "",
@@ -79,6 +95,9 @@ describe("upstream", () => {
         template_id: "template-123"
       });
       expect(body.listing_property_details).toEqual({ bedrooms: 3, bathrooms: 2 });
+      expect(body.listing_open_house_context).toEqual(
+        context.openHouseContext
+      );
     });
   });
 });
