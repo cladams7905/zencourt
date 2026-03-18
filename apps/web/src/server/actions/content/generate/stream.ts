@@ -15,6 +15,7 @@ import {
   validateGeneratedItems
 } from "./domain/parse";
 import type { Redis } from "@web/src/server/infra/cache/redis";
+import { normalizeErrorForLogging } from "@shared/utils/errors";
 
 type Logger = {
   error: (payload: unknown, message: string) => void;
@@ -140,7 +141,10 @@ function parseAndValidateResponse(
   try {
     parsed = parseJsonArray(fullText);
   } catch (error) {
-    logger.error({ error, text: fullText }, "Failed to parse AI response");
+    logger.error(
+      { err: normalizeErrorForLogging(error), text: fullText },
+      "Failed to parse AI response"
+    );
     controller.enqueue(
       encodeSseEvent({
         type: "error",
@@ -224,7 +228,10 @@ export async function createSseResponse(args: {
         await updateRecentHooks(parsed, redis, recentHooksKey, logger);
         sendDoneEvent(parsed, controller, streamConfig.model);
       } catch (error) {
-        logger.error({ error }, "Streaming error");
+        logger.error(
+          { err: normalizeErrorForLogging(error) },
+          "Streaming error"
+        );
         controller.enqueue(
           encodeSseEvent({
             type: "error",

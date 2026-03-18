@@ -31,6 +31,7 @@ import { DomainValidationError } from "@web/src/server/errors/domain";
 import { requireAuthenticatedUser } from "@web/src/server/actions/_auth/api";
 import { requireListingAccess } from "@web/src/server/models/listings/access";
 import { encodeSseEvent } from "@web/src/lib/sse/sseEncoder";
+import { normalizeErrorForLogging } from "@shared/utils/errors";
 
 const logger = createChildLogger(baseLogger, {
   module: "listing-template-render-actions"
@@ -192,7 +193,12 @@ export const renderListingTemplateBatchStream = withServerActionCaller(
                     });
                   } catch (error) {
                     logger.warn(
-                      { error, listingId, cacheKeyTimestamp, cacheKeyId },
+                      {
+                        err: normalizeErrorForLogging(error),
+                        listingId,
+                        cacheKeyTimestamp,
+                        cacheKeyId
+                      },
                       "Failed to persist template render cache item"
                     );
                   }
@@ -207,7 +213,10 @@ export const renderListingTemplateBatchStream = withServerActionCaller(
             })
           );
         } catch (error) {
-          logger.error({ error }, "Template render stream error");
+          logger.error(
+            { err: normalizeErrorForLogging(error) },
+            "Template render stream error"
+          );
           controller.enqueue(
             encodeSseEvent({
               type: "error",

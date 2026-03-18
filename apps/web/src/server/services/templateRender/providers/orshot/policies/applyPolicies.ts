@@ -8,9 +8,12 @@ import { applyHeaderPolicy } from "./header";
 import { applySubheaderPolicy } from "./subheader";
 import { sanitizeAddress } from "./address";
 import { applyFeaturePolicy } from "./feature";
+import { applyPropertyDescriptionPolicy } from "./propertyDescription";
+import { applyPriceDescriptionPolicy } from "./priceDescription";
 import { applyContactPolicy } from "./contact";
 import { applyGarageLabelPolicy } from "./garageLabel";
 import { applySocialHandleIconPolicy } from "./socialHandleIcon";
+import { applyAgentProfileImagePolicy } from "./agentProfileImage";
 import type { TemplateHeaderRotationStore } from "../../../rotation";
 
 const DEFAULT_HEADER_LENGTH: TemplateHeaderLength = "medium";
@@ -28,25 +31,37 @@ export async function applyTemplatePolicies(params: {
   random?: () => number;
 }): Promise<Partial<Record<TemplateRenderParameterKey, string>>> {
   const withParameterPolicies = (() => {
-    if (!params.details && !params.contactSource) {
-      return params.resolvedParameters;
-    }
+    const shouldApplyContactAndFeaturePolicies =
+      Boolean(params.details) || Boolean(params.contactSource);
 
-    const withFeaturePolicy = applyFeaturePolicy({
-      resolvedParameters: params.resolvedParameters,
-      details: params.details ?? null,
-      random: params.random
+    const base = shouldApplyContactAndFeaturePolicies
+      ? (() => {
+          const withFeaturePolicy = applyFeaturePolicy({
+            resolvedParameters: params.resolvedParameters,
+            details: params.details ?? null,
+            random: params.random
+          });
+          const rawAddress = withFeaturePolicy.listingAddress?.trim() ?? "";
+          const withAddressPolicy = {
+            ...withFeaturePolicy,
+            listingAddress: sanitizeAddress(rawAddress)
+          };
+
+          return applyContactPolicy({
+            resolvedParameters: withAddressPolicy,
+            contactSource: params.contactSource ?? {},
+            random: params.random
+          });
+        })()
+      : params.resolvedParameters;
+
+    const withPropertyDescriptionPolicy = applyPropertyDescriptionPolicy({
+      resolvedParameters: base,
+      details: params.details ?? null
     });
-    const rawAddress = withFeaturePolicy.listingAddress?.trim() ?? "";
-    const withAddressPolicy = {
-      ...withFeaturePolicy,
-      listingAddress: sanitizeAddress(rawAddress)
-    };
 
-    return applyContactPolicy({
-      resolvedParameters: withAddressPolicy,
-      contactSource: params.contactSource ?? {},
-      random: params.random
+    return applyPriceDescriptionPolicy({
+      resolvedParameters: withPropertyDescriptionPolicy
     });
   })();
 
@@ -72,7 +87,11 @@ export async function applyTemplatePolicies(params: {
     resolvedParameters: withSubheaderPolicy
   });
 
-  return applySocialHandleIconPolicy({
+  const withAgentProfileImagePolicy = applyAgentProfileImagePolicy({
     resolvedParameters: withGarageLabelPolicy
+  });
+
+  return applySocialHandleIconPolicy({
+    resolvedParameters: withAgentProfileImagePolicy
   });
 }

@@ -1,6 +1,7 @@
 import { pickObservationValue } from "../domain/transforms";
 import { fetchWithTimeout } from "./http";
 import { parseFredObservationResponse } from "./parsers";
+import { normalizeErrorForLogging } from "@shared/utils/errors";
 
 type LoggerLike = {
   warn: (obj: unknown, msg?: string) => void;
@@ -35,7 +36,10 @@ export async function getFredSeriesLatestValue(params: {
       params.timeoutMs
     );
   } catch (error) {
-    params.logger.warn({ error, seriesId: params.seriesId }, "FRED request failed");
+    params.logger.warn(
+      { err: normalizeErrorForLogging(error), seriesId: params.seriesId },
+      "FRED request failed"
+    );
     return null;
   }
 
