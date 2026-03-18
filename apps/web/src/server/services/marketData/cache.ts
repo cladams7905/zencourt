@@ -1,3 +1,4 @@
+import { normalizeErrorForLogging } from "@shared/utils/errors";
 import type { MarketData } from "./types";
 
 export type RedisLike = {
@@ -23,7 +24,10 @@ export async function readMarketCache(params: {
   try {
     return await redis.get<MarketData>(key);
   } catch (error) {
-    logger.warn({ error, key }, errorMessage);
+    logger.warn(
+      { err: normalizeErrorForLogging(error), key },
+      errorMessage
+    );
     return null;
   }
 }
@@ -44,6 +48,9 @@ export async function writeMarketCache(params: {
   try {
     await redis.set(key, value, { ex: ttlSeconds });
   } catch (error) {
-    logger.warn({ error, key }, errorMessage);
+    logger.warn(
+      { err: normalizeErrorForLogging(error), key },
+      errorMessage
+    );
   }
 }

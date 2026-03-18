@@ -1,5 +1,6 @@
 export { createLogger, createChildLogger } from "./logger";
 export type { LoggerOptions } from "./logger";
+export { normalizeErrorForLogging } from "./errors";
 
 export {
   sanitizePathSegment,

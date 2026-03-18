@@ -33,14 +33,18 @@ export function applyFeaturePolicy(params: {
     typeof details?.living_area_sq_ft === "number"
       ? `${formatNumberUs(details.living_area_sq_ft)} sqft`
       : "";
-
-  const featureItems = compactList([
-    bedCount ? `${bedCount} beds` : "",
-    bathCount ? `${bathCount} baths` : "",
-    garageCount ? `${garageCount}-car garage` : "",
+  const beds = bedCount ? `${bedCount} beds` : "";
+  const baths = bathCount ? `${bathCount} baths` : "";
+  const sqft =
     typeof details?.living_area_sq_ft === "number"
       ? `${formatNumberUs(details.living_area_sq_ft)} sq. ft.`
-      : ""
+      : "";
+
+  const featureItems = compactList([
+    beds,
+    baths,
+    garageCount ? `${garageCount}-car garage` : "",
+    sqft
   ]);
   const featureList = featureItems.join(pickFeatureListDelimiter(params.random));
 
@@ -48,8 +52,11 @@ export function applyFeaturePolicy(params: {
   next.bathCount = bathCount;
   next.garageCount = garageCount;
   next.squareFootage = squareFootage;
-  next.feature1 = bedCount ? `${bedCount} beds` : "";
-  next.feature2 = bathCount ? `${bathCount} baths` : "";
+  next.beds = beds;
+  next.baths = baths;
+  next.sqft = sqft;
+  next.feature1 = beds;
+  next.feature2 = baths;
   next.feature3 = squareFootage;
   next.featureList = featureList;
 

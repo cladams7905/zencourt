@@ -19,6 +19,7 @@ import { buildSummary } from "../domain/summary";
 import { getFredSeriesLatestValue } from "./fred";
 import { fetchWithTimeout } from "./http";
 import { parseRentCastMarketResponse } from "./parsers";
+import { normalizeErrorForLogging } from "@shared/utils/errors";
 
 const RENTCAST_API_URL = "https://api.rentcast.io/v1/markets";
 const RENTCAST_DATA_TYPE = "All";
@@ -67,7 +68,10 @@ export async function fetchRentCastMarketData(params: {
       params.timeoutMs
     );
   } catch (error) {
-    params.logger.error({ error }, "RentCast request failed");
+    params.logger.error(
+      { err: normalizeErrorForLogging(error) },
+      "RentCast request failed"
+    );
     return null;
   }
 

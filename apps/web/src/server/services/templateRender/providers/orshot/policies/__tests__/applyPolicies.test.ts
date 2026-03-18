@@ -8,7 +8,9 @@ describe("templateRender/policies/applyTemplatePolicies", () => {
         subheader1Text: "",
         subheader2Text: "",
         listingAddress: "100 State St",
-        feature1: "Garage"
+        feature1: "Garage",
+        priceLabel: "starting from",
+        listingPrice: "$600,000"
       },
       subcategory: "new_listing",
       rotationKey: "apply-default-medium",
@@ -20,6 +22,13 @@ describe("templateRender/policies/applyTemplatePolicies", () => {
     expect(result.subheader1Text?.trim().length).toBeGreaterThan(0);
     expect(result.subheader2Text).toBe("Garage");
     expect(result.garageLabel).toBe("");
+    expect(result.propertyDescription).toBe(
+      "Come see this beautiful home located at 100 State St."
+    );
+    expect(result.priceDescription).toBe("starting from $600,000");
+    expect(result.agentProfileImage).toBe(
+      "https://upload.wikimedia.org/wikipedia/commons/c/ce/Transparent.gif"
+    );
     expect(result.socialHandleIcon).toBe(
       "https://upload.wikimedia.org/wikipedia/commons/c/ce/Transparent.gif"
     );
@@ -48,7 +57,13 @@ describe("templateRender/policies/applyTemplatePolicies", () => {
 
     expect(result.listingAddress).toBe("123 Main St, Austin, TX");
     expect(result.featureList).toBe("4 beds, 3 baths, 2,500 sq. ft.");
+    expect(result.propertyDescription).toBe(
+      "Come see this 4-bed, 3-bath home located at 123 Main St in Austin."
+    );
     expect(result.agentContactInfo).toBe("Realtor | Acme Realty | agent@example.com");
+    expect(result.agentProfileImage).toBe(
+      "https://upload.wikimedia.org/wikipedia/commons/c/ce/Transparent.gif"
+    );
   });
 
   it("applies template flags for uppercase header and address-only subheaders", async () => {

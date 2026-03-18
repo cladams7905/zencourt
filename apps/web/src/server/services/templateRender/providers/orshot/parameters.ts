@@ -188,12 +188,18 @@ export function resolveTemplateParameters(params: {
     typeof details?.living_area_sq_ft === "number"
       ? `${formatNumberUs(details.living_area_sq_ft)} sqft`
       : "";
+  const beds = bedCount ? `${bedCount} beds` : "";
+  const baths = bathCount ? `${bathCount} baths` : "";
+  const sqft =
+    typeof details?.living_area_sq_ft === "number"
+      ? `${formatNumberUs(details.living_area_sq_ft)} sq. ft.`
+      : "";
 
   const listingPrice = formatCurrencyUsd(details?.listing_price ?? null, "$0");
   const priceLabel = params.subcategory === "status_update" ? "sold for" : "starting from";
   const featureItems = compactList([
-    bedCount ? `${bedCount} beds` : "",
-    bathCount ? `${bathCount} baths` : "",
+    beds,
+    baths,
     squareFootageRaw,
     ...(details?.living_spaces ?? []),
     ...(details?.additional_spaces ?? []),
@@ -221,10 +227,13 @@ export function resolveTemplateParameters(params: {
     bathCount,
     garageCount,
     squareFootage: squareFootageRaw,
+    beds,
+    baths,
+    sqft,
     listingPrice,
     priceLabel,
     priceDescription: `${priceLabel} ${listingPrice}`,
-    propertyDescription: params.captionItem.caption?.trim() || "",
+    propertyDescription: "",
     backgroundImage1: images[0] ?? "",
     backgroundImage2: images[1] ?? "",
     backgroundImage3: images[2] ?? "",

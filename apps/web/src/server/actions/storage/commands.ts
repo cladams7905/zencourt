@@ -9,6 +9,7 @@ import {
   logger as baseLogger
 } from "@web/src/lib/core/logging/logger";
 import { requireAuthenticatedUser } from "@web/src/server/actions/_auth/api";
+import { normalizeErrorForLogging } from "@shared/utils/errors";
 
 const logger = createChildLogger(baseLogger, { module: "storage-actions" });
 
@@ -39,12 +40,18 @@ export const uploadFile = withServerActionCaller(
         }
       });
       if (!result.success || !result.url) {
-        logger.error({ error: result.error }, "Error uploading file");
+        logger.error(
+          { err: normalizeErrorForLogging(result.error) },
+          "Error uploading file"
+        );
         throw new Error(result.error || "Upload failed");
       }
       return result.url;
     } catch (error) {
-      logger.error({ error }, "Error uploading file");
+      logger.error(
+        { err: normalizeErrorForLogging(error) },
+        "Error uploading file"
+      );
       throw new Error(
         `Failed to upload ${file.name}: ${formatError(error, "Unknown error").message}`
       );
@@ -123,13 +130,19 @@ export const uploadFilesBatch = withServerActionCaller(
       );
       const result = await storageService.uploadFilesBatch(filesWithBuffers);
       if (!result.success) {
-        logger.error({ error: result.error }, "Error in batch upload");
+        logger.error(
+          { err: normalizeErrorForLogging(result.error) },
+          "Error in batch upload"
+        );
         throw new Error(result.error || "Batch upload failed");
       }
       logger.info(`Batch upload successful for ${files.length} files`);
       return result;
     } catch (error) {
-      logger.error({ error }, "Error in batch upload");
+      logger.error(
+        { err: normalizeErrorForLogging(error) },
+        "Error in batch upload"
+      );
       throw new Error(formatError(error, "Unknown error").message);
     }
   }
@@ -144,11 +157,17 @@ export const deleteFile = withServerActionCaller(
       const result = await storageService.deleteFile(url);
 
       if (!result.success) {
-        logger.error({ error: result.error }, "Error deleting file");
+        logger.error(
+          { err: normalizeErrorForLogging(result.error) },
+          "Error deleting file"
+        );
         throw new Error(result.error || "Delete failed");
       }
     } catch (error) {
-      logger.error({ error }, "Error deleting file");
+      logger.error(
+        { err: normalizeErrorForLogging(error) },
+        "Error deleting file"
+      );
       throw new Error(
         `Failed to delete file: ${formatError(error, "Unknown error").message}`
       );

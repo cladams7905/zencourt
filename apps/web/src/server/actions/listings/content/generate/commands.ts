@@ -18,6 +18,7 @@ import {
 import type { GenerateListingContentBody } from "./types";
 import type { ListingGeneratedItem } from "@web/src/server/infra/cache/listingContent/cache";
 import { requireAuthenticatedUser } from "@web/src/server/actions/_auth/api";
+import { normalizeErrorForLogging } from "@shared/utils/errors";
 
 const logger = createChildLogger(baseLogger, {
   module: "listing-content-generate-actions"
@@ -137,7 +138,10 @@ export const generateListingContentForCurrentUser = withServerActionCaller(
             error instanceof Error
               ? error.message
               : "Failed to generate listing content";
-          logger.error({ error }, "Listing content stream error");
+          logger.error(
+            { err: normalizeErrorForLogging(error) },
+            "Listing content stream error"
+          );
           try {
             controller.enqueue(encodeSseEvent({ type: "error", message }));
           } catch {

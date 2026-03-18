@@ -10,6 +10,7 @@ import {
   StatusCode
 } from "@web/src/app/api/v1/_responses";
 import { parseRequiredRouteParam } from "@shared/utils/api/parsers";
+import { normalizeErrorForLogging } from "@shared/utils/errors";
 import {
   createChildLogger,
   logger as baseLogger
@@ -74,7 +75,10 @@ export async function POST(
           { message: error.body.message }
         );
       }
-      logger.error({ error }, "Template render stream setup failed");
+      logger.error(
+        { err: normalizeErrorForLogging(error) },
+        "Template render stream setup failed"
+      );
       return apiErrorResponse(
         StatusCode.INTERNAL_SERVER_ERROR,
         "INTERNAL_ERROR",

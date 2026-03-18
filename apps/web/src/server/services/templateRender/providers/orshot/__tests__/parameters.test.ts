@@ -80,6 +80,9 @@ describe("templateRender/providers/orshot/parameters", () => {
     expect(result.priceLabel).toBe("starting from");
     expect(result.listingPrice).toBe("$750,000");
     expect(result.squareFootage).toBe("2,500 sqft");
+    expect(result.beds).toBe("4 beds");
+    expect(result.baths).toBe("3 baths");
+    expect(result.sqft).toBe("2,500 sq. ft.");
     expect(result.bedCount).toBe("4");
     expect(result.bathCount).toBe("3");
     expect(result.garageCount).toBe("");

@@ -76,7 +76,7 @@ describe("marketData/cache", () => {
       })
     ).resolves.toBeNull();
     expect(logger.warn).toHaveBeenCalledWith(
-      { error, key: "market:94110" },
+      { err: error, key: "market:94110" },
       "cache read failed"
     );
   });
@@ -119,7 +119,7 @@ describe("marketData/cache", () => {
     });
 
     expect(logger.warn).toHaveBeenCalledWith(
-      { error, key: "market:94110" },
+      { err: error, key: "market:94110" },
       "cache write failed"
     );
   });
