@@ -103,8 +103,8 @@ export function SidebarUserMenu({
         className={collapsed ? "w-52" : isMobile ? "w-64" : "w-52"}
       >
         {displayedEmail ? (
-          <div className="px-3 pb-1">
-            <span className="text-xs text-muted-foreground truncate">
+          <div className="border-b border-border/50 px-4 py-2">
+            <span className="block truncate text-xs text-muted-foreground">
               {displayedEmail}
             </span>
           </div>
@@ -115,7 +115,7 @@ export function SidebarUserMenu({
             <span className="text-sm font-medium">Upgrade plan</span>
           </Link>
         </DropdownMenuItem>
-        <DropdownMenuSeparator className="my-1.5 bg-border/50" />
+        <DropdownMenuSeparator className="bg-border/50" />
         <DropdownMenuItem
           className="transition-all duration-150 group"
           onSelect={onFeedbackOpen}
@@ -129,7 +129,7 @@ export function SidebarUserMenu({
             <span className="text-sm font-medium">Get help</span>
           </a>
         </DropdownMenuItem>
-        <DropdownMenuSeparator className="my-1.5 bg-border/50" />
+        <DropdownMenuSeparator className="bg-border/50" />
         <DropdownMenuItem
           className="transition-all duration-150 group"
           onClick={onLogout}

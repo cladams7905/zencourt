@@ -150,13 +150,13 @@ function ClipManagerWorkspace({
     string | null
   >(items[0]?.currentVersion.clipVersionId ?? null);
   const [draftAiDirections, setDraftAiDirections] = React.useState("");
-  const [isRegenerateOpen, setIsRegenerateOpen] = React.useState(false);
+  const [isRegenerateMenuOpen, setIsRegenerateMenuOpen] = React.useState(false);
+  const [isCustomizeExpanded, setIsCustomizeExpanded] = React.useState(false);
   const [isSubmitting, startTransition] = React.useTransition();
   const previousStatusesRef = React.useRef<Map<string, string>>(new Map());
   const lastSignatureRef = React.useRef(
     serializeClipItems(mergeClipItems(items))
   );
-
   React.useEffect(() => {
     const normalized = mergeClipItems(items);
     const nextSignature = serializeClipItems(normalized);
@@ -263,14 +263,14 @@ function ClipManagerWorkspace({
       (version) => version.clipVersionId === selectedVersionId
     ) ?? selectedItem?.currentVersion;
 
-  const handleRegenerate = () => {
+  const submitRegeneration = (aiDirections: string) => {
     if (!selectedItem) return;
     startTransition(() => {
       void regenerateListingClipVersion({
         listingId,
         clipId:
           selectedItem.currentVersion.clipVersionId ?? selectedItem.clipId,
-        aiDirections: draftAiDirections
+        aiDirections
       })
         .then(() => {
           setClipItems((currentItems) =>
@@ -280,14 +280,15 @@ function ClipManagerWorkspace({
                     ...item,
                     currentVersion: {
                       ...item.currentVersion,
-                      aiDirections: draftAiDirections,
+                      aiDirections,
                       versionStatus: "processing"
                     }
                   }
                 : item
             )
           );
-          setIsRegenerateOpen(false);
+          setIsRegenerateMenuOpen(false);
+          setIsCustomizeExpanded(false);
           toast.success(`Started regenerating ${selectedItem.roomName} clip.`);
         })
         .catch((error) => {
@@ -300,6 +301,24 @@ function ClipManagerWorkspace({
     });
   };
 
+  const handleRegenerate = () => {
+    const savedAiDirections = selectedItem?.currentVersion.aiDirections ?? "";
+    setDraftAiDirections(savedAiDirections);
+    submitRegeneration(savedAiDirections);
+  };
+
+  const handleOpenCustomize = () => {
+    setDraftAiDirections(selectedItem?.currentVersion.aiDirections ?? "");
+    setIsCustomizeExpanded(true);
+  };
+
+  const handleRegenerateMenuOpenChange = (open: boolean) => {
+    setIsRegenerateMenuOpen(open);
+    if (!open) {
+      setIsCustomizeExpanded(false);
+    }
+  };
+
   if (!clipItems.length) {
     return (
       <div className="rounded-2xl border border-border bg-background p-8 text-center text-sm text-muted-foreground">
@@ -309,8 +328,8 @@ function ClipManagerWorkspace({
   }
 
   return (
-    <div className="grid min-h-[max(640px,calc(100vh-220px))] gap-6 overflow-x-hidden overflow-y-auto max-md:grid-rows-[auto_auto] md:grid-cols-[300px_minmax(0,1fr)]">
-      <div className="min-h-0 max-h-[45vh] overflow-y-auto rounded-xl border border-border bg-background md:max-h-none">
+    <div className="grid min-h-[max(640px,calc(100vh-220px))] gap-6 overflow-x-hidden overflow-y-auto max-lg:grid-rows-[auto_auto] lg:grid-cols-[300px_minmax(0,1fr)]">
+      <div className="min-h-0 max-h-[45vh] overflow-y-auto rounded-xl border border-border bg-background lg:max-h-none">
         {clipItems.map((item) => {
           const isSelected = item.clipId === selectedItem?.clipId;
           return (
@@ -359,7 +378,7 @@ function ClipManagerWorkspace({
       <div
         className={cn(
           "relative grid gap-4 rounded-xl border border-border bg-background",
-          "md:min-h-0 md:grid-rows-[minmax(0,1fr)]"
+          "lg:min-h-0 lg:grid-rows-[minmax(0,1fr)]"
         )}
       >
         <div className="absolute inset-x-0 top-0 z-10 rounded-t-xl border-b border-border bg-background px-4 py-4">
@@ -383,12 +402,12 @@ function ClipManagerWorkspace({
 
         <div
           className={cn(
-            "grid min-h-0 min-w-0 gap-3 px-4 pb-4 pt-[88px] max-md:min-h-min",
-            "md:h-full md:grid-rows-[auto_minmax(0,1fr)]"
+            "grid min-h-0 min-w-0 gap-3 px-4 pb-4 pt-[88px] max-lg:min-h-min",
+            "lg:h-full lg:grid-rows-[auto_minmax(0,1fr)]"
           )}
         >
           <div className="flex flex-row items-end justify-between gap-2 sm:gap-3">
-            <div className="min-w-0 flex-1 md:max-w-[280px]">
+            <div className="min-w-0 flex-1 lg:max-w-[280px]">
               <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
                 Version
               </p>
@@ -415,7 +434,10 @@ function ClipManagerWorkspace({
               </Select>
             </div>
 
-            <Popover open={isRegenerateOpen} onOpenChange={setIsRegenerateOpen}>
+            <Popover
+              open={isRegenerateMenuOpen}
+              onOpenChange={handleRegenerateMenuOpenChange}
+            >
               <PopoverTrigger asChild>
                 <Button
                   type="button"
@@ -426,59 +448,116 @@ function ClipManagerWorkspace({
                   Regenerate
                 </Button>
               </PopoverTrigger>
-              <PopoverContent align="end" side="bottom" className="w-[360px]">
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">
-                      Regenerate clip
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Add optional AI directions, then start a new version.
-                    </p>
-                  </div>
-                  <div>
-                    <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      AI Directions
-                    </label>
-                    <textarea
-                      value={draftAiDirections}
-                      onChange={(event) =>
-                        setDraftAiDirections(event.target.value)
-                      }
-                      rows={4}
-                      className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none"
-                      placeholder="Add extra steering for this clip regeneration."
-                    />
-                  </div>
-                  <div className="flex items-center justify-end gap-2">
-                    <Button
+              <PopoverContent
+                align="end"
+                side="bottom"
+                sideOffset={4}
+                className={cn(
+                  "backdrop-blur-xl z-50 overflow-hidden overflow-y-auto rounded-lg border border-border bg-popover p-0 text-popover-foreground shadow-xl",
+                  isCustomizeExpanded
+                    ? "w-[min(28rem,calc(100vw-1.5rem))]"
+                    : "w-72",
+                  "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 animate-duration-200"
+                )}
+                onOpenAutoFocus={
+                  isCustomizeExpanded
+                    ? undefined
+                    : (event) => event.preventDefault()
+                }
+              >
+                {!isCustomizeExpanded ? (
+                  <div className="py-0">
+                    <button
                       type="button"
-                      variant="outline"
-                      onClick={() => setIsRegenerateOpen(false)}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      type="button"
+                      className={cn(
+                        "flex w-full cursor-pointer flex-col items-start gap-1 rounded-none px-4 py-2.5 text-left text-sm outline-none select-none transition-colors",
+                        "hover:bg-secondary hover:text-secondary-foreground",
+                        "focus-visible:bg-secondary focus-visible:text-secondary-foreground"
+                      )}
                       onClick={handleRegenerate}
-                      disabled={isSubmitting || !selectedItem}
-                      className="gap-2"
                     >
-                      <RefreshCw className="h-4 w-4" />
-                      Start regenerate
-                    </Button>
+                      <span className="font-medium text-foreground">
+                        Quick regenerate
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        Start a new version immediately using the current clip
+                        settings.
+                      </span>
+                    </button>
+                    <div className="h-px w-full shrink-0 bg-border/50" />
+                    <button
+                      type="button"
+                      className={cn(
+                        "flex w-full cursor-pointer flex-col items-start gap-1 rounded-none px-4 py-2.5 text-left text-sm outline-none select-none transition-colors",
+                        "hover:bg-secondary hover:text-secondary-foreground",
+                        "focus-visible:bg-secondary focus-visible:text-secondary-foreground"
+                      )}
+                      onClick={handleOpenCustomize}
+                    >
+                      <span className="font-medium text-foreground">
+                        Customize prompt
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        Add additional AI directions before regenerating this
+                        clip.
+                      </span>
+                    </button>
                   </div>
-                </div>
+                ) : (
+                  <div className="space-y-3 px-4 py-3">
+                    <div>
+                      <p className="text-base font-semibold text-foreground">
+                        Customize prompt
+                      </p>
+                    </div>
+                    <div>
+                      <label
+                        htmlFor="clip-manager-ai-directions"
+                        className="mb-2 block text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+                      >
+                        AI Directions
+                      </label>
+                      <textarea
+                        id="clip-manager-ai-directions"
+                        value={draftAiDirections}
+                        onChange={(event) =>
+                          setDraftAiDirections(event.target.value)
+                        }
+                        rows={4}
+                        className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none"
+                        placeholder="Optional: add extra steering for this clip regeneration."
+                      />
+                    </div>
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setIsCustomizeExpanded(false)}
+                      >
+                        Back
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={() => submitRegeneration(draftAiDirections)}
+                        disabled={isSubmitting || !selectedItem}
+                        className="gap-2 shrink-0"
+                      >
+                        <RefreshCw className="h-4 w-4" />
+                        Regenerate
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </PopoverContent>
             </Popover>
           </div>
 
-          <div className="min-h-0 min-w-0">
+          <div className="flex min-h-0 min-w-0 lg:h-full">
             <div
               className={cn(
-                "relative isolate overflow-hidden rounded-xl border border-border bg-black",
-                "aspect-video w-full min-h-[max(12.5rem,56.25vw)] max-md:shrink-0",
-                "md:aspect-auto md:h-full md:min-h-0"
+                "relative isolate min-h-0 w-full min-w-0 overflow-hidden rounded-xl border border-border bg-black",
+                "min-h-[min(70dvh,calc(100dvh-11rem))]",
+                "lg:h-full lg:min-h-0"
               )}
             >
               {selectedVersion?.videoUrl ? (
@@ -487,10 +566,11 @@ function ClipManagerWorkspace({
                   src={selectedVersion.videoUrl}
                   poster={selectedVersion.thumbnail ?? undefined}
                   controls
-                  className="h-full w-full object-contain"
+                  playsInline
+                  className="absolute inset-0 block h-full w-full object-contain"
                 />
               ) : (
-                <div className="flex h-full min-h-50 items-center justify-center text-sm text-white/70">
+                <div className="absolute inset-0 flex items-center justify-center text-sm text-white/70">
                   No playable version available yet.
                 </div>
               )}
@@ -518,11 +598,7 @@ export function ListingClipManager({
   return <ClipManagerCard listingId={listingId} items={items} />;
 }
 
-export function ListingClipManagerBackButton({
-  href
-}: {
-  href: string;
-}) {
+export function ListingClipManagerBackButton({ href }: { href: string }) {
   return (
     <Button
       asChild

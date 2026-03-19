@@ -1,5 +1,6 @@
 import * as React from "react";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 
 const mockUseSWR = jest.fn();
 const mockUseSearchParams = jest.fn();
@@ -97,7 +98,34 @@ describe("ListingClipManager", () => {
     expect(screen.getAllByText("Kitchen").length).toBeGreaterThan(0);
     expect(screen.getByText("Version")).toBeInTheDocument();
     expect(
+      screen.getByRole("button", { name: /^regenerate$/i })
+    ).toBeInTheDocument();
+    expect(
       screen.queryByRole("link", { name: /view generated clips/i })
     ).not.toBeInTheDocument();
+  });
+
+  it("opens regenerate options on click and expands customization in the popup", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <ListingClipManager
+        listingId="listing-1"
+        items={items}
+        mode="workspace"
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: /^regenerate$/i }));
+
+    expect(await screen.findByText("Quick regenerate")).toBeInTheDocument();
+    expect(await screen.findByText("Customize prompt")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /customize prompt/i }));
+
+    expect(await screen.findByLabelText("AI Directions")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Regenerate/i })
+    ).toBeInTheDocument();
   });
 });
