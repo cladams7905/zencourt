@@ -13,6 +13,38 @@ describe("videoGeneration/domain/prompt", () => {
     expect(result.prompt).toContain(
       "No people. No added objects. Keep architecture and materials unchanged."
     );
+    expect(result.prompt).toContain(
+      "No transitions, cuts, fades, dissolves, zoom bursts, or scene changes. Single continuous camera movement only."
+    );
+  });
+
+  it("includes ai directions before hard constraints", () => {
+    const result = buildPrompt({
+      roomName: "Kitchen",
+      category: "kitchen",
+      aiDirections: "Warm morning light. Preserve natural staging.",
+      picker: (templates) => templates[0]
+    });
+
+    expect(result.prompt).toContain(
+      "Forward pan through the Kitchen. Warm morning light. Preserve natural staging."
+    );
+    expect(result.prompt).toContain(
+      "No people. No added objects. Keep architecture and materials unchanged."
+    );
+  });
+
+  it("ignores blank ai directions", () => {
+    const result = buildPrompt({
+      roomName: "Kitchen",
+      category: "kitchen",
+      aiDirections: "   ",
+      picker: (templates) => templates[0]
+    });
+
+    expect(result.prompt).toBe(
+      "Forward pan through the Kitchen. No people. No added objects. Keep architecture and materials unchanged. No transitions, cuts, fades, dissolves, zoom bursts, or scene changes. Single continuous camera movement only."
+    );
   });
 
   it("filters previous template key before selection", () => {
