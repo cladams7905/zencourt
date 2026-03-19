@@ -3,8 +3,15 @@ import type {
   TemplateRenderParameterKey
 } from "@web/src/lib/domain/media/templateRender/types";
 import { TEMPLATE_RENDER_IMAGE_PARAMETER_KEY_SET } from "@web/src/lib/domain/media/templateRender/types";
+import {
+  createChildLogger,
+  logger as baseLogger
+} from "@web/src/lib/core/logging/logger";
 
 const DEFAULT_TEMPLATE_PAGE_LENGTH = 1;
+const logger = createChildLogger(baseLogger, {
+  module: "template-render-orshot-modifications"
+});
 
 function isPublicFetchableImageUrl(value: string): boolean {
   try {
@@ -56,6 +63,14 @@ export function buildModifications(params: {
       TEMPLATE_RENDER_IMAGE_PARAMETER_KEY_SET.has(key) &&
       !isPublicFetchableImageUrl(trimmed)
     ) {
+      logger.warn(
+        {
+          templateId: params.template.id,
+          key,
+          value: trimmed
+        },
+        "Filtered non-public image parameter before Orshot render"
+      );
       continue;
     }
 

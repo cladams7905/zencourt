@@ -1,8 +1,12 @@
 import type { DBListing, DBListingImage, DBUserAdditional } from "@db/types/models";
 import type { ListingContentSubcategory, ListingPropertyDetails } from "@shared/types/models";
-import { PREVIEW_TEXT_OVERLAY_ARROW_PATHS } from "@shared/utils";
+import { PREVIEW_TEXT_OVERLAY_ARROW_PATHS, buildStoragePublicUrl } from "@shared/utils";
 import { isPriorityCategory } from "@shared/utils";
 import { resolveListingOpenHouseContext } from "@web/src/lib/domain/listings/openHouse";
+import {
+  createChildLogger,
+  logger as baseLogger
+} from "@web/src/lib/core/logging/logger";
 import type {
   TemplateRenderCaptionItemInput,
   TemplateRenderParameterKey
@@ -12,6 +16,10 @@ import {
   formatNumberUs
 } from "@web/src/lib/core/formatting/number";
 import type { TemplateImageRotationStore } from "@web/src/server/services/templateRender/rotation";
+
+const logger = createChildLogger(baseLogger, {
+  module: "template-render-orshot-parameters"
+});
 
 function splitHeaderText(headerText: string): {
   headerTextTop: string;
@@ -32,65 +40,94 @@ function splitHeaderText(headerText: string): {
   };
 }
 
-function pickRandomArrowPath(
-  siteOrigin?: string | null,
-  random: () => number = Math.random
-): string {
+function pickRandomArrowPath(random: () => number = Math.random): string {
   const index = Math.floor(random() * PREVIEW_TEXT_OVERLAY_ARROW_PATHS.length);
   const arrowPath = PREVIEW_TEXT_OVERLAY_ARROW_PATHS[index] ?? PREVIEW_TEXT_OVERLAY_ARROW_PATHS[0];
   if (!arrowPath) {
     return "";
   }
-  if (!siteOrigin) {
-    return arrowPath;
+
+  const publicBaseUrl = process.env.STORAGE_PUBLIC_BASE_URL?.trim();
+  const endpoint = process.env.B2_ENDPOINT?.trim();
+  const bucket = process.env.B2_BUCKET_NAME?.trim();
+  const baseUrl = publicBaseUrl || endpoint;
+  const fileName = arrowPath.split("/").filter(Boolean).at(-1) ?? "";
+
+  if (baseUrl && bucket && fileName) {
+    return buildStoragePublicUrl(baseUrl, bucket, `assets/arrows/${fileName}`);
   }
-  try {
-    return new URL(arrowPath, siteOrigin).toString();
-  } catch {
-    return arrowPath;
-  }
+
+  logger.warn(
+    {
+      arrowPath,
+      hasStoragePublicBaseUrl: Boolean(publicBaseUrl),
+      hasB2Endpoint: Boolean(endpoint),
+      hasBucketName: Boolean(bucket)
+    },
+    "Arrow image omitted because no valid storage public URL was available"
+  );
+
+  return "";
 }
 
 function rankListingImagesForTemplate(
   images: DBListingImage[],
   captionItem: TemplateRenderCaptionItemInput
 ): string[] {
-  const primaryImages = images.filter((image) => image.isPrimary);
   const needle = `${captionItem.hook ?? ""} ${captionItem.caption ?? ""} ${captionItem.body
     .map((slide) => `${slide.header} ${slide.content}`)
     .join(" ")}`
     .toLowerCase()
     .replace(/[^\w\s]/g, " ");
 
-  const sorted = [...primaryImages].sort((a, b) => {
-    const aPriority = a.category && isPriorityCategory(a.category) ? 1 : 0;
-    const bPriority = b.category && isPriorityCategory(b.category) ? 1 : 0;
-    if (aPriority !== bPriority) {
-      return bPriority - aPriority;
-    }
+  const sortByRelevance = (items: DBListingImage[]): DBListingImage[] =>
+    [...items].sort((a, b) => {
+      const aPriority = a.category && isPriorityCategory(a.category) ? 1 : 0;
+      const bPriority = b.category && isPriorityCategory(b.category) ? 1 : 0;
+      if (aPriority !== bPriority) {
+        return bPriority - aPriority;
+      }
 
-    const aPrimary = a.isPrimary ? 1 : 0;
-    const bPrimary = b.isPrimary ? 1 : 0;
-    if (aPrimary !== bPrimary) {
-      return bPrimary - aPrimary;
-    }
+      const aPrimary = a.isPrimary ? 1 : 0;
+      const bPrimary = b.isPrimary ? 1 : 0;
+      if (aPrimary !== bPrimary) {
+        return bPrimary - aPrimary;
+      }
 
-    const aCategoryMatch = a.category && needle.includes(a.category.toLowerCase()) ? 1 : 0;
-    const bCategoryMatch = b.category && needle.includes(b.category.toLowerCase()) ? 1 : 0;
-    if (aCategoryMatch !== bCategoryMatch) {
-      return bCategoryMatch - aCategoryMatch;
-    }
+      const aCategoryMatch =
+        a.category && needle.includes(a.category.toLowerCase()) ? 1 : 0;
+      const bCategoryMatch =
+        b.category && needle.includes(b.category.toLowerCase()) ? 1 : 0;
+      if (aCategoryMatch !== bCategoryMatch) {
+        return bCategoryMatch - aCategoryMatch;
+      }
 
-    const aScore = typeof a.primaryScore === "number" ? a.primaryScore : -Infinity;
-    const bScore = typeof b.primaryScore === "number" ? b.primaryScore : -Infinity;
-    if (aScore !== bScore) {
-      return bScore - aScore;
-    }
+      const aScore = typeof a.primaryScore === "number" ? a.primaryScore : -Infinity;
+      const bScore = typeof b.primaryScore === "number" ? b.primaryScore : -Infinity;
+      if (aScore !== bScore) {
+        return bScore - aScore;
+      }
 
-    return b.uploadedAt.getTime() - a.uploadedAt.getTime();
-  });
+      return b.uploadedAt.getTime() - a.uploadedAt.getTime();
+    });
 
-  return sorted.map((image) => image.url);
+  const primaryImages = sortByRelevance(images.filter((image) => image.isPrimary));
+  const secondaryImages = sortByRelevance(
+    images.filter((image) => !image.isPrimary)
+  );
+
+  return [...primaryImages, ...secondaryImages].reduce<string[]>(
+    (urls, image) => {
+      const url = image.url.trim();
+      if (!url || urls.includes(url)) {
+        return urls;
+      }
+
+      urls.push(url);
+      return urls;
+    },
+    []
+  );
 }
 
 function rotateImages(images: string[], startIndex: number): string[] {
@@ -126,7 +163,6 @@ export function resolveTemplateParameters(params: {
   listingImages: DBListingImage[];
   userAdditional: DBUserAdditional;
   captionItem: TemplateRenderCaptionItemInput;
-  siteOrigin?: string | null;
   random?: () => number;
   now?: Date;
   renderIndex?: number;
@@ -222,7 +258,7 @@ export function resolveTemplateParameters(params: {
     headerTextBottom,
     subheader1Text: params.captionItem.body[0]?.header ?? "",
     subheader2Text: params.captionItem.body[1]?.header ?? "",
-    arrowImage: pickRandomArrowPath(params.siteOrigin, random),
+    arrowImage: pickRandomArrowPath(random),
     bedCount,
     bathCount,
     garageCount,

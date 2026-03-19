@@ -59,6 +59,25 @@ describe("templateRender/providers/orshot/modifications", () => {
     });
   });
 
+  it("filters localhost arrow image urls", () => {
+    const result = buildModifications({
+      resolvedParameters: {
+        arrowImage: "http://localhost:3000/overlays/arrows/a.svg",
+        headerText: "Hello"
+      },
+      template: {
+        id: "template-arrow-localhost",
+        name: "Template arrow localhost",
+        subcategories: ["new_listing"],
+        requiredParams: ["arrowImage", "headerText"]
+      }
+    });
+
+    expect(result).toEqual({
+      headerText: "Hello"
+    });
+  });
+
   it("skips socialHandleIcon when empty", () => {
     const result = buildModifications({
       resolvedParameters: {

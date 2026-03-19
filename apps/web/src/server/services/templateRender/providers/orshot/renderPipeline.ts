@@ -25,7 +25,6 @@ export type RenderOrshotTemplateParams = {
   listingImages: DBListingImage[];
   userAdditional: DBUserAdditional;
   captionItem: TemplateRenderCaptionItemInput;
-  siteOrigin?: string | null;
   random?: () => number;
   now?: Date;
   renderIndex: number;
@@ -54,7 +53,6 @@ export async function renderOrshotTemplate(
     listingImages: params.listingImages,
     userAdditional: params.userAdditional,
     captionItem: params.captionItem,
-    siteOrigin: params.siteOrigin,
     random: params.random,
     now: params.now,
     renderIndex: params.renderIndex,

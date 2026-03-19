@@ -40,9 +40,15 @@ function buildParams() {
   };
 }
 
+function buildListingImages(count: number): DBListingImage[] {
+  return Array.from({ length: count }, (_, index) => ({
+    url: `https://cdn.example.com/${index + 1}.jpg`
+  })) as DBListingImage[];
+}
+
 describe("templateRender/service", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    jest.resetAllMocks();
   });
 
   it("returns empty result when caption items are empty", async () => {
@@ -106,6 +112,78 @@ describe("templateRender/service", () => {
     expect(result.failedTemplateIds).toEqual([]);
   });
 
+  it("skips templates that require more listing images than are available", async () => {
+    mockPickRandomTemplatesForSubcategory.mockReturnValue([
+      {
+        id: "template-too-many-images",
+        subcategories: ["new_listing"],
+        requiredParams: [
+          "headerText",
+          "backgroundImage1",
+          "backgroundImage2",
+          "backgroundImage3",
+          "backgroundImage4",
+          "backgroundImage5"
+        ],
+        headerLength: "long"
+      }
+    ]);
+
+    const result = await renderListingTemplateBatch({
+      ...buildParams(),
+      listingImages: buildListingImages(4)
+    });
+
+    expect(mockRenderOrshotTemplate).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      items: [],
+      failedTemplateIds: []
+    });
+  });
+
+  it("does not overcount duplicated background image params when filtering templates", async () => {
+    mockPickRandomTemplatesForSubcategory.mockReturnValue([
+      {
+        id: "template-duplicate-background-params",
+        subcategories: ["new_listing"],
+        requiredParams: [
+          "headerText",
+          "backgroundImage1",
+          "backgroundImage2",
+          "backgroundImage3",
+          "backgroundImage4",
+          "backgroundImage5",
+          "backgroundImage1",
+          "backgroundImage2",
+          "backgroundImage3",
+          "backgroundImage4",
+          "backgroundImage5"
+        ],
+        headerLength: "long"
+      }
+    ]);
+    mockRenderOrshotTemplate.mockResolvedValueOnce({
+      imageUrl: "https://cdn.example.com/render-duplicate-background.jpg",
+      parametersUsed: { headerText: "Dream Home" },
+      modifications: { headerText: "Dream Home" }
+    });
+
+    const result = await renderListingTemplateBatch({
+      ...buildParams(),
+      listingImages: buildListingImages(5)
+    });
+
+    expect(mockRenderOrshotTemplate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        template: expect.objectContaining({
+          id: "template-duplicate-background-params"
+        })
+      })
+    );
+    expect(result.failedTemplateIds).toEqual([]);
+    expect(result.items).toHaveLength(1);
+  });
+
   it("renders templates and records failed template ids", async () => {
     mockPickRandomTemplatesForSubcategory.mockReturnValue([
       {
@@ -136,7 +214,10 @@ describe("templateRender/service", () => {
       })
       .mockRejectedValueOnce(new Error("render failed"));
 
-    const result = await renderListingTemplateBatch(buildParams());
+    const result = await renderListingTemplateBatch({
+      ...buildParams(),
+      listingImages: buildListingImages(1)
+    });
 
     expect(mockRenderOrshotTemplate).toHaveBeenNthCalledWith(
       1,
@@ -144,23 +225,25 @@ describe("templateRender/service", () => {
         template: expect.objectContaining({ id: "template-1" })
       })
     );
-    expect(result).toMatchObject({
-      items: [
-        {
-          templateId: "template-1",
-          imageUrl: "https://cdn.example.com/render-1.jpg",
-          captionItemId: "caption-1",
-          parametersUsed: {
-            headerText: "Dream Home",
-            backgroundImage1: "http://localhost:3000/private.jpg",
-            headerTextTop: "Dream",
-            headerTextBottom: "Home",
-            subheader1Text: "",
-            subheader2Text: ""
-          }
-        }
-      ],
-      failedTemplateIds: ["template-2"]
+    expect(result.failedTemplateIds).toEqual(["template-2"]);
+    expect(result.items[0]).toMatchObject({
+      templateId: "template-1",
+      imageUrl: "https://cdn.example.com/render-1.jpg",
+      captionItemId: "caption-1",
+      parametersUsed: {
+        headerText: "Dream Home",
+        backgroundImage1: "http://localhost:3000/private.jpg",
+        headerTextTop: "Dream",
+        headerTextBottom: "Home",
+        subheader1Text: "",
+        subheader2Text: ""
+      }
+    });
+    expect(result.items[1]).toMatchObject({
+      templateId: "fallback",
+      imageUrl: "https://cdn.example.com/1.jpg",
+      captionItemId: "caption-1",
+      isFallback: true
     });
   });
 
@@ -210,7 +293,10 @@ describe("templateRender/service", () => {
       modifications: { headerText: "Public Image" }
     });
 
-    await renderListingTemplateBatch(buildParams());
+    await renderListingTemplateBatch({
+      ...buildParams(),
+      listingImages: buildListingImages(1)
+    });
 
     expect(mockRenderOrshotTemplate).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -234,7 +320,10 @@ describe("templateRender/service", () => {
       modifications: { headerText: "Title" }
     });
 
-    await renderListingTemplateBatch(buildParams());
+    await renderListingTemplateBatch({
+      ...buildParams(),
+      listingImages: buildListingImages(1)
+    });
 
     expect(mockRenderOrshotTemplate).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -259,7 +348,10 @@ describe("templateRender/service", () => {
       modifications: { "page1@headerText": "Dream Home" }
     });
 
-    await renderListingTemplateBatch(buildParams());
+    await renderListingTemplateBatch({
+      ...buildParams(),
+      listingImages: buildListingImages(1)
+    });
 
     expect(mockRenderOrshotTemplate).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -609,5 +701,42 @@ describe("templateRender/service", () => {
         ]
       })
     );
+  });
+
+  it("skips streaming templates that require more listing images than are available", async () => {
+    mockPickRandomTemplatesForSubcategory.mockReturnValue([
+      {
+        id: "template-too-many-images-stream",
+        subcategories: ["new_listing"],
+        requiredParams: [
+          "headerText",
+          "backgroundImage1",
+          "backgroundImage2",
+          "backgroundImage3",
+          "backgroundImage4",
+          "backgroundImage5"
+        ],
+        headerLength: "long"
+      }
+    ]);
+
+    const onItem = jest.fn().mockResolvedValue(undefined);
+    const onResult = jest.fn().mockResolvedValue(undefined);
+
+    const result = await renderListingTemplateBatchStream(
+      {
+        ...buildParams(),
+        listingImages: buildListingImages(4)
+      },
+      {
+        onItem,
+        onResult
+      }
+    );
+
+    expect(mockRenderOrshotTemplate).not.toHaveBeenCalled();
+    expect(onItem).not.toHaveBeenCalled();
+    expect(onResult).not.toHaveBeenCalled();
+    expect(result).toEqual({ failedTemplateIds: [] });
   });
 });

@@ -12,6 +12,9 @@ export const TEMPLATE_RENDER_PARAMETER_KEYS = [
   "bathCount",
   "garageCount",
   "squareFootage",
+  "beds",
+  "baths",
+  "sqft",
   "listingPrice",
   "priceLabel",
   "garageLabel",
@@ -103,7 +106,6 @@ export type ListingTemplateRenderRequest = {
   subcategory: ListingContentSubcategory;
   captionItems: TemplateRenderCaptionItemInput[];
   templateCount?: number;
-  siteOrigin?: string | null;
 };
 
 export type ListingTemplateRenderedItem = {

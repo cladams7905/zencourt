@@ -31,6 +31,7 @@ import {
   type TemplateHeaderRotationStore,
   type TemplateImageRotationStore
 } from "./rotation";
+import { TEMPLATE_RENDER_IMAGE_PARAMETER_KEY_SET } from "@web/src/lib/domain/media/templateRender/types";
 
 const logger = createChildLogger(baseLogger, {
   module: "template-render-service"
@@ -38,6 +39,78 @@ const logger = createChildLogger(baseLogger, {
 
 const DEFAULT_TEMPLATE_COUNT = 4;
 const OPEN_HOUSE_SCHEDULE_PARAM = "openHouseDateTime";
+const TEMPLATE_BACKGROUND_IMAGE_PARAM_SET = new Set(
+  [
+    "backgroundImage1",
+    "backgroundImage2",
+    "backgroundImage3",
+    "backgroundImage4",
+    "backgroundImage5"
+  ].filter((key) => TEMPLATE_RENDER_IMAGE_PARAMETER_KEY_SET.has(key))
+);
+
+function countRequiredBackgroundImages(template: TemplateRenderConfig): number {
+  return new Set(
+    template.requiredParams.filter((param) =>
+      TEMPLATE_BACKGROUND_IMAGE_PARAM_SET.has(param)
+    )
+  ).size;
+}
+
+function countAvailableListingImages(listingImages: DBListingImage[]): number {
+  return new Set(
+    listingImages
+      .map((image) => image.url?.trim() ?? "")
+      .filter((url) => url.length > 0)
+  ).size;
+}
+
+function filterTemplatesForRender(params: {
+  listingId: string;
+  templates: TemplateRenderConfig[];
+  subcategory: ListingContentSubcategory;
+  hasOpenHouseSchedule: boolean;
+  listingImages: DBListingImage[];
+}): TemplateRenderConfig[] {
+  const afterOpenHouseFilter =
+    params.subcategory === "open_house" && !params.hasOpenHouseSchedule
+      ? params.templates.filter(
+          (template) => !template.requiredParams.includes(OPEN_HOUSE_SCHEDULE_PARAM)
+        )
+      : params.templates;
+
+  if (afterOpenHouseFilter.length !== params.templates.length) {
+    logger.info(
+      {
+        listingId: params.listingId,
+        droppedTemplateCount: params.templates.length - afterOpenHouseFilter.length
+      },
+      "Filtered open house templates requiring schedule parameter"
+    );
+  }
+
+  const availableListingImageCount = countAvailableListingImages(
+    params.listingImages
+  );
+  const afterImageFilter = afterOpenHouseFilter.filter((template) => {
+    const requiredBackgroundImageCount = countRequiredBackgroundImages(template);
+    return requiredBackgroundImageCount <= availableListingImageCount;
+  });
+
+  if (afterImageFilter.length !== afterOpenHouseFilter.length) {
+    logger.info(
+      {
+        listingId: params.listingId,
+        availableListingImageCount,
+        droppedTemplateCount:
+          afterOpenHouseFilter.length - afterImageFilter.length
+      },
+      "Filtered templates requiring more listing images than available"
+    );
+  }
+
+  return afterImageFilter;
+}
 
 function selectCaptionItem(
   captionItems: TemplateRenderCaptionItemInput[],
@@ -55,7 +128,6 @@ export async function renderListingTemplateBatch(params: {
   userAdditional: DBUserAdditional;
   captionItems: TemplateRenderCaptionItemInput[];
   templateCount?: number;
-  siteOrigin?: string | null;
   random?: () => number;
   now?: () => Date;
   headerRotationStore?: TemplateHeaderRotationStore;
@@ -91,22 +163,13 @@ export async function renderListingTemplateBatch(params: {
       "Resolved open house template context"
     );
   }
-  const templatesToRender =
-    params.subcategory === "open_house" && openHouseContext && !openHouseContext.hasSchedule
-      ? selectedTemplates.filter(
-          (template) => !template.requiredParams.includes(OPEN_HOUSE_SCHEDULE_PARAM)
-        )
-      : selectedTemplates;
-
-  if (templatesToRender.length !== selectedTemplates.length) {
-    logger.info(
-      {
-        listingId: params.listing.id,
-        droppedTemplateCount: selectedTemplates.length - templatesToRender.length
-      },
-      "Filtered open house templates requiring schedule parameter"
-    );
-  }
+  const templatesToRender = filterTemplatesForRender({
+    listingId: params.listing.id,
+    templates: selectedTemplates,
+    subcategory: params.subcategory,
+    hasOpenHouseSchedule: openHouseContext?.hasSchedule ?? false,
+    listingImages: params.listingImages
+  });
 
   if (!templatesToRender.length) {
     return { items: [], failedTemplateIds: [] };
@@ -128,7 +191,6 @@ export async function renderListingTemplateBatch(params: {
           listingImages: params.listingImages,
           userAdditional: params.userAdditional,
           captionItem,
-          siteOrigin: params.siteOrigin,
           random: params.random,
           now: params.now?.(),
           renderIndex: index,
@@ -197,7 +259,6 @@ export type RenderListingTemplateBatchStreamParams = {
   templateCount?: number;
   /** When set, render only this template (e.g. for dev single-template preview). */
   templateId?: string;
-  siteOrigin?: string | null;
   random?: () => number;
   now?: () => Date;
   headerRotationStore?: TemplateHeaderRotationStore;
@@ -274,22 +335,13 @@ export async function renderListingTemplateBatchStream(
       "Resolved open house template context"
     );
   }
-  const templatesToRender =
-    params.subcategory === "open_house" && openHouseContext && !openHouseContext.hasSchedule
-      ? selectedTemplates.filter(
-          (template) => !template.requiredParams.includes(OPEN_HOUSE_SCHEDULE_PARAM)
-        )
-      : selectedTemplates;
-
-  if (templatesToRender.length !== selectedTemplates.length) {
-    logger.info(
-      {
-        listingId: params.listing.id,
-        droppedTemplateCount: selectedTemplates.length - templatesToRender.length
-      },
-      "Filtered open house templates requiring schedule parameter"
-    );
-  }
+  const templatesToRender = filterTemplatesForRender({
+    listingId: params.listing.id,
+    templates: selectedTemplates,
+    subcategory: params.subcategory,
+    hasOpenHouseSchedule: openHouseContext?.hasSchedule ?? false,
+    listingImages: params.listingImages
+  });
 
   if (!templatesToRender.length) {
     return { failedTemplateIds };
@@ -333,7 +385,6 @@ export async function renderListingTemplateBatchStream(
           listingImages: params.listingImages,
           userAdditional: params.userAdditional,
           captionItem,
-          siteOrigin: params.siteOrigin,
           random: params.random,
           now: params.now?.(),
           renderIndex: index,

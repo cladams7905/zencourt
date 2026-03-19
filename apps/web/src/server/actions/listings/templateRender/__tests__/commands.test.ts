@@ -148,8 +148,7 @@ describe("listing templateRender commands", () => {
         expect.objectContaining({
           subcategory: "new_listing",
           listing: mockListing,
-          captionItems,
-          siteOrigin: "https://site.com"
+          captionItems
         })
       );
       expect(result).toEqual({
@@ -244,8 +243,7 @@ describe("listing templateRender commands", () => {
           userId: "user-1",
           listingId: "listing-1",
           subcategory: "new_listing",
-          captionItems,
-          siteOrigin: "https://site.com"
+          captionItems
         }),
         expect.any(Object)
       );
