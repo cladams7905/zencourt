@@ -31,7 +31,10 @@ import {
   type TemplateHeaderRotationStore,
   type TemplateImageRotationStore
 } from "./rotation";
-import { TEMPLATE_RENDER_IMAGE_PARAMETER_KEY_SET } from "@web/src/lib/domain/media/templateRender/types";
+import {
+  TEMPLATE_RENDER_IMAGE_PARAMETER_KEY_SET,
+  type TemplateRenderParameterKey
+} from "@web/src/lib/domain/media/templateRender/types";
 
 const logger = createChildLogger(baseLogger, {
   module: "template-render-service"
@@ -39,14 +42,18 @@ const logger = createChildLogger(baseLogger, {
 
 const DEFAULT_TEMPLATE_COUNT = 4;
 const OPEN_HOUSE_SCHEDULE_PARAM = "openHouseDateTime";
-const TEMPLATE_BACKGROUND_IMAGE_PARAM_SET = new Set(
-  [
-    "backgroundImage1",
-    "backgroundImage2",
-    "backgroundImage3",
-    "backgroundImage4",
-    "backgroundImage5"
-  ].filter((key) => TEMPLATE_RENDER_IMAGE_PARAMETER_KEY_SET.has(key))
+const TEMPLATE_BACKGROUND_IMAGE_PARAM_KEYS = [
+  "backgroundImage1",
+  "backgroundImage2",
+  "backgroundImage3",
+  "backgroundImage4",
+  "backgroundImage5"
+] as const satisfies readonly TemplateRenderParameterKey[];
+
+const TEMPLATE_BACKGROUND_IMAGE_PARAM_SET = new Set<TemplateRenderParameterKey>(
+  TEMPLATE_BACKGROUND_IMAGE_PARAM_KEYS.filter((key) =>
+    TEMPLATE_RENDER_IMAGE_PARAMETER_KEY_SET.has(key)
+  )
 );
 
 function countRequiredBackgroundImages(template: TemplateRenderConfig): number {

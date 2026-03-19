@@ -4,7 +4,7 @@ import {
 } from "@web/src/lib/domain/listing/roomCategories";
 
 const PROMPT_CONSTRAINTS =
-  "No people. No added objects. Keep architecture and materials unchanged.";
+  "No people. No added objects. Keep architecture and materials unchanged. No transitions, cuts, fades, dissolves, zoom bursts, or scene changes. Single continuous camera movement only.";
 
 type PromptTemplate = {
   key: string;
@@ -12,6 +12,11 @@ type PromptTemplate = {
 };
 
 type PromptTemplatePicker = (templates: PromptTemplate[]) => PromptTemplate;
+
+function normalizeAiDirections(aiDirections?: string): string | null {
+  const normalized = aiDirections?.trim();
+  return normalized ? normalized : null;
+}
 
 const INTERIOR_TEMPLATES: PromptTemplate[] = [
   {
@@ -112,11 +117,19 @@ function pickPromptTemplate(args: {
 export function buildPrompt(args: {
   roomName: string;
   category: string;
+  aiDirections?: string;
   perspective?: "aerial" | "ground";
   previousTemplateKey?: string | null;
   picker?: PromptTemplatePicker;
 }): { prompt: string; templateKey: string } {
-  const { roomName, category, perspective, previousTemplateKey, picker } = args;
+  const {
+    roomName,
+    category,
+    aiDirections,
+    perspective,
+    previousTemplateKey,
+    picker
+  } = args;
 
   const baseCategory = category.replace(/-\d+$/, "");
   const metadata = ROOM_CATEGORIES[baseCategory as RoomCategory];
@@ -140,9 +153,12 @@ export function buildPrompt(args: {
   const motionPrompt = promptInfo.template
     .replace(/\{roomName\}/g, displayRoomName)
     .trim();
+  const directionPrompt = normalizeAiDirections(aiDirections);
 
   return {
-    prompt: `${motionPrompt} ${PROMPT_CONSTRAINTS}`,
+    prompt: [motionPrompt, directionPrompt, PROMPT_CONSTRAINTS]
+      .filter(Boolean)
+      .join(" "),
     templateKey: promptInfo.key
   };
 }

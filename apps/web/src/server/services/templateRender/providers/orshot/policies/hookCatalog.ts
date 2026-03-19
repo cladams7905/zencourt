@@ -1,6 +1,7 @@
 import { readFileSync } from "fs";
 import { existsSync } from "fs";
-import { join } from "path";
+import { dirname, join, resolve } from "path";
+import { fileURLToPath } from "node:url";
 import type { ListingContentSubcategory } from "@shared/types/models";
 import type { TemplateHeaderLength } from "@web/src/lib/domain/media/templateRender/types";
 
@@ -34,10 +35,12 @@ const HOOK_FILE_BY_SUBCATEGORY: Record<
   property_features: {}
 };
 
-const HOOKS_BASE_DIR_CANDIDATES = [
-  ["apps", "web", "src", "lib", "ai", "prompts", "content", "listings", "hooks"],
-  ["src", "lib", "ai", "prompts", "content", "listings", "hooks"]
-];
+// Resolve hooks dir statically from this file's location (avoid `process.cwd()`
+// which Turbopack treats as a dynamic filesystem access pattern).
+const HOOKS_BASE_DIR = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  "../../../../../../lib/ai/prompts/content/listings/hooks"
+);
 
 const hookCache = new Map<string, HeaderHook[]>();
 
@@ -60,13 +63,8 @@ function parseHookLine(rawLine: string): HeaderHook | null {
 }
 
 function resolveHooksFilePath(filename: string): string | null {
-  for (const segments of HOOKS_BASE_DIR_CANDIDATES) {
-    const candidate = join(process.cwd(), ...segments, filename);
-    if (existsSync(candidate)) {
-      return candidate;
-    }
-  }
-  return null;
+  const candidate = join(HOOKS_BASE_DIR, filename);
+  return existsSync(candidate) ? candidate : null;
 }
 
 function loadHooksFromFile(filename: string): HeaderHook[] {

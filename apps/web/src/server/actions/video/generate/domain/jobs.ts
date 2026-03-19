@@ -75,6 +75,7 @@ async function buildPrimaryJobRecord(args: {
   const primaryPrompt = buildPrompt({
     roomName: room.name,
     category,
+    aiDirections,
     perspective: primaryImage?.metadata?.perspective,
     previousTemplateKey
   });
@@ -149,6 +150,7 @@ async function buildSecondaryJobRecord(args: {
   const secondaryPrompt = buildPrompt({
     roomName: room.name,
     category,
+    aiDirections,
     perspective: secondaryImage?.metadata?.perspective,
     previousTemplateKey
   });

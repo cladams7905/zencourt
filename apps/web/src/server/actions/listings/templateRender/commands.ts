@@ -45,6 +45,7 @@ export const renderListingTemplateBatch = withServerActionCaller(
     body: RenderListingTemplateBatchBody | null,
     _siteOrigin: string
   ): Promise<ListingTemplateRenderResult> => {
+    void _siteOrigin; // site origin is currently unused but part of the action signature
     const user = await requireAuthenticatedUser();
     const listing = await requireListingAccess(listingId, user.id);
 
@@ -96,6 +97,7 @@ export const renderListingTemplateBatchStream = withServerActionCaller(
     body: RenderListingTemplateBatchStreamBody | null,
     _siteOrigin: string
   ): Promise<{ stream: ReadableStream }> => {
+    void _siteOrigin; // site origin is currently unused but part of the action signature
     const user = await requireAuthenticatedUser();
     const listing = await requireListingAccess(listingId, user.id);
 

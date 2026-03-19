@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { StackProvider, StackTheme } from "@stackframe/stack";
-import { stackClientApp } from "@web/src/lib/core/auth/stack/client";
+import { getStackClientApp } from "@web/src/lib/core/auth/stack/client";
 import { Toaster } from "../components/ui/sonner";
 import {
   Playfair_Display,
@@ -85,16 +85,24 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const hasStackProjectId = Boolean(process.env.NEXT_PUBLIC_STACK_PROJECT_ID);
   return (
     <html
       lang="en"
       className={`${body.variable} ${header.variable} ${italiana.variable} ${rougeScript.variable} ${gwendolyn.variable} ${tikTokSans.variable} ${dmSerif.variable} ${onest.variable}`}
     >
       <body className="antialiased">
-        <StackProvider app={stackClientApp}>
-          <StackTheme>{children}</StackTheme>
-          <Toaster />
-        </StackProvider>
+        {hasStackProjectId ? (
+          <StackProvider app={getStackClientApp()}>
+            <StackTheme>{children}</StackTheme>
+            <Toaster />
+          </StackProvider>
+        ) : (
+          <>
+            {children}
+            <Toaster />
+          </>
+        )}
       </body>
     </html>
   );
