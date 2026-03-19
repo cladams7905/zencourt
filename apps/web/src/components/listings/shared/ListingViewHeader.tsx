@@ -45,7 +45,7 @@ export function ListingViewHeader({
     <header
       ref={ref}
       className={cn(
-        "top-0 z-30 bg-background/90 shadow-xs backdrop-blur-md px-4 md:px-8 py-4 md:py-5 border-b border-border md:rounded-t-xl",
+        "top-0 z-30 bg-background/90 shadow-none backdrop-blur-md px-4 md:px-8 py-4 md:py-5 border-b border-border md:rounded-t-xl",
         sticky ? "sticky" : "static",
         className
       )}

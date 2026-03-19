@@ -12,7 +12,9 @@
     "type-check": "tsc --noEmit",
     "test": "jest",
     "test:watch": "jest --watch",
-    "check-coverage": "node scripts/check-coverage.mjs"
+    "check-coverage": "node scripts/check-coverage.mjs",
+    "upload:render-assets": "dotenv -e ../../.env.local -- node scripts/upload-render-assets.mjs",
+    "upload:render-assets:prod": "node scripts/upload-render-assets-prod.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.980.0",

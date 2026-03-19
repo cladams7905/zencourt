@@ -3,10 +3,16 @@ import { createInMemoryTemplateImageRotationStore } from "../../../rotation";
 
 jest.mock("@shared/utils", () => ({
   PREVIEW_TEXT_OVERLAY_ARROW_PATHS: ["/overlays/a.svg", "/overlays/b.svg"],
+  buildStoragePublicUrl: (endpoint: string, bucket: string, key: string) =>
+    `${endpoint.replace(/\/+$/, "")}/${bucket}/${key}`,
   isPriorityCategory: jest.fn().mockReturnValue(false)
 }));
 
 describe("templateRender/providers/orshot/parameters", () => {
+  const originalStoragePublicBaseUrl = process.env.STORAGE_PUBLIC_BASE_URL;
+  const originalB2Endpoint = process.env.B2_ENDPOINT;
+  const originalBucketName = process.env.B2_BUCKET_NAME;
+
   const listingBase = {
     id: "listing-1",
     title: "Title fallback",
@@ -62,14 +68,42 @@ describe("templateRender/providers/orshot/parameters", () => {
     headshotUrl: "https://cdn.example.com/headshot.jpg"
   };
 
+  beforeEach(() => {
+    delete process.env.STORAGE_PUBLIC_BASE_URL;
+    delete process.env.B2_ENDPOINT;
+    delete process.env.B2_BUCKET_NAME;
+  });
+
+  afterAll(() => {
+    if (typeof originalStoragePublicBaseUrl === "string") {
+      process.env.STORAGE_PUBLIC_BASE_URL = originalStoragePublicBaseUrl;
+    } else {
+      delete process.env.STORAGE_PUBLIC_BASE_URL;
+    }
+
+    if (typeof originalB2Endpoint === "string") {
+      process.env.B2_ENDPOINT = originalB2Endpoint;
+    } else {
+      delete process.env.B2_ENDPOINT;
+    }
+
+    if (typeof originalBucketName === "string") {
+      process.env.B2_BUCKET_NAME = originalBucketName;
+    } else {
+      delete process.env.B2_BUCKET_NAME;
+    }
+  });
+
   it("builds parameter map for new listings", () => {
+    process.env.STORAGE_PUBLIC_BASE_URL = "https://cdn.example.com";
+    process.env.B2_BUCKET_NAME = "zencourt-media-dev";
+
     const result = resolveTemplateParameters({
       subcategory: "new_listing",
       listing: listingBase as never,
       listingImages: listingImages as never,
       userAdditional: userAdditional as never,
       captionItem,
-      siteOrigin: "https://app.example.com",
       random: () => 0,
       now: new Date("2026-02-21T00:00:00.000Z")
     });
@@ -86,7 +120,9 @@ describe("templateRender/providers/orshot/parameters", () => {
     expect(result.bedCount).toBe("4");
     expect(result.bathCount).toBe("3");
     expect(result.garageCount).toBe("");
-    expect(result.arrowImage).toContain("/overlays/");
+    expect(result.arrowImage).toBe(
+      "https://cdn.example.com/zencourt-media-dev/assets/arrows/a.svg"
+    );
     expect(result.featureList).toContain("4 beds");
     expect(result.featureList).toContain("3 baths");
     expect(result.agentName).toBe("Agent Jane");
@@ -165,18 +201,54 @@ describe("templateRender/providers/orshot/parameters", () => {
     expect(result.agentName).toBe("");
   });
 
-  it("falls back to raw arrow path when siteOrigin is invalid", () => {
+  it("falls back to B2 endpoint when storage public base url is missing", () => {
+    process.env.B2_ENDPOINT = "https://s3.us-west-002.backblazeb2.com";
+    process.env.B2_BUCKET_NAME = "zencourt-media-dev";
+
     const result = resolveTemplateParameters({
       subcategory: "new_listing",
       listing: listingBase as never,
       listingImages: listingImages as never,
       userAdditional: userAdditional as never,
       captionItem,
-      siteOrigin: "://not-a-valid-origin",
       random: () => 0
     });
 
-    expect(result.arrowImage).toBe("/overlays/a.svg");
+    expect(result.arrowImage).toBe(
+      "https://s3.us-west-002.backblazeb2.com/zencourt-media-dev/assets/arrows/a.svg"
+    );
+  });
+
+  it("prefers storage public base url over raw B2 endpoint", () => {
+    process.env.STORAGE_PUBLIC_BASE_URL = "https://cdn.example.com";
+    process.env.B2_ENDPOINT = "https://s3.us-west-002.backblazeb2.com";
+    process.env.B2_BUCKET_NAME = "zencourt-media-dev";
+
+    const result = resolveTemplateParameters({
+      subcategory: "new_listing",
+      listing: listingBase as never,
+      listingImages: listingImages as never,
+      userAdditional: userAdditional as never,
+      captionItem,
+      random: () => 0
+    });
+
+    expect(result.arrowImage).toBe(
+      "https://cdn.example.com/zencourt-media-dev/assets/arrows/a.svg"
+    );
+  });
+
+  it("returns empty arrow image when no valid storage public url is available", () => {
+    const result = resolveTemplateParameters({
+      subcategory: "new_listing",
+      listing: listingBase as never,
+      listingImages: listingImages as never,
+      userAdditional: userAdditional as never,
+      captionItem,
+      random: () => 0
+    });
+
+    expect(result.arrowImage).toBe("");
   });
 
   it("rotates primary images per render index", () => {
@@ -214,7 +286,7 @@ describe("templateRender/providers/orshot/parameters", () => {
     expect(second.backgroundImage1).toBe("https://cdn.example.com/3.jpg");
   });
 
-  it("uses only primary images for background assignments", () => {
+  it("prefers primary images before non-primary images", () => {
     const mixedImages = [
       {
         id: "img-a",
@@ -244,6 +316,49 @@ describe("templateRender/providers/orshot/parameters", () => {
 
     expect(result.backgroundImage1).toBe("https://cdn.example.com/primary.jpg");
     expect(result.backgroundImage1).not.toBe("https://cdn.example.com/non-primary.jpg");
+  });
+
+  it("backfills extra background slots with non-primary images when primaries run out", () => {
+    const mixedImages = [
+      {
+        id: "img-a",
+        url: "https://cdn.example.com/primary-1.jpg",
+        category: "kitchen",
+        isPrimary: true,
+        primaryScore: 0.9,
+        uploadedAt: new Date("2026-02-19T00:00:00.000Z")
+      },
+      {
+        id: "img-b",
+        url: "https://cdn.example.com/primary-2.jpg",
+        category: "living room",
+        isPrimary: true,
+        primaryScore: 0.8,
+        uploadedAt: new Date("2026-02-18T00:00:00.000Z")
+      },
+      {
+        id: "img-c",
+        url: "https://cdn.example.com/non-primary-1.jpg",
+        category: "bedroom",
+        isPrimary: false,
+        primaryScore: 0.7,
+        uploadedAt: new Date("2026-02-17T00:00:00.000Z")
+      }
+    ];
+
+    const result = resolveTemplateParameters({
+      subcategory: "new_listing",
+      listing: listingBase as never,
+      listingImages: mixedImages as never,
+      userAdditional: userAdditional as never,
+      captionItem
+    });
+
+    expect(result.backgroundImage1).toBe("https://cdn.example.com/primary-1.jpg");
+    expect(result.backgroundImage2).toBe("https://cdn.example.com/primary-2.jpg");
+    expect(result.backgroundImage3).toBe(
+      "https://cdn.example.com/non-primary-1.jpg"
+    );
   });
 
   it("rotates across repeated renders with the same rotation key", () => {
@@ -308,6 +423,6 @@ describe("templateRender/providers/orshot/parameters", () => {
       random: () => 0.99
     });
 
-    expect(first.backgroundImage1).toBe("https://cdn.example.com/3.jpg");
+    expect(first.backgroundImage1).toBe("https://cdn.example.com/2.jpg");
   });
 });

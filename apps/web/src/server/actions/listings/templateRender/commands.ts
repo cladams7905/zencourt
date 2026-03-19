@@ -43,7 +43,7 @@ export const renderListingTemplateBatch = withServerActionCaller(
   async (
     listingId: string,
     body: RenderListingTemplateBatchBody | null,
-    siteOrigin: string
+    _siteOrigin: string
   ): Promise<ListingTemplateRenderResult> => {
     const user = await requireAuthenticatedUser();
     const listing = await requireListingAccess(listingId, user.id);
@@ -83,7 +83,6 @@ export const renderListingTemplateBatch = withServerActionCaller(
         typeof body?.templateCount === "number" && body.templateCount > 0
           ? body.templateCount
           : undefined,
-      siteOrigin,
       headerRotationStore,
       imageRotationStore
     });
@@ -95,7 +94,7 @@ export const renderListingTemplateBatchStream = withServerActionCaller(
   async (
     listingId: string,
     body: RenderListingTemplateBatchStreamBody | null,
-    siteOrigin: string
+    _siteOrigin: string
   ): Promise<{ stream: ReadableStream }> => {
     const user = await requireAuthenticatedUser();
     const listing = await requireListingAccess(listingId, user.id);
@@ -158,7 +157,6 @@ export const renderListingTemplateBatchStream = withServerActionCaller(
                 captionItems,
                 templateCount,
                 templateId,
-                siteOrigin,
                 headerRotationStore,
                 imageRotationStore
               },
