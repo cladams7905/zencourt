@@ -1,3 +1,6 @@
-# Shared project instructions
+# Agent Instructions
 
-For every task in this repository, always read and follow the instructions in the `CLAUDE.md` file at the repository root. Treat `CLAUDE.md` as the primary source of project‑specific guidance, and use it as context for every conversation, code change, or command you run.
+- **Project guidance:** [README.md](./README.md) — layering, conventions, testing, review workflow, refactor philosophy.
+- **High-level directives:** [DIRECTIVES.md](./DIRECTIVES.md) — self-improvement loop, code iteration directive.
+
+Read both. Follow them. When users correct you, update [DIRECTIVES.md](./DIRECTIVES.md) in the Recorded Guidance section.
