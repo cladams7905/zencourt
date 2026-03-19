@@ -1,3 +1,3 @@
 {
-  "setup-worktree": ["npm install", "vercel link --yes --project zencourt"]
+  "setup-worktree": ["npm ci", "cp $ROOT_WORKTREE_PATH/.env.local .env.local"]
 }
