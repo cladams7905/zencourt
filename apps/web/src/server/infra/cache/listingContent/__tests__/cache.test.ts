@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 jest.mock("@web/src/server/infra/cache/redis", () => ({
   getSharedRedisClient: jest.fn()
 }));
@@ -7,6 +8,7 @@ import {
   buildListingContentItemKey,
   deleteCachedListingContentItem,
   getAllCachedListingContentForFilter,
+  getAllCachedListingContentForCreate,
   getCachedListingContentItem,
   getListingContentFilterPrefix,
   LISTING_CONTENT_CACHE_PREFIX,
@@ -55,13 +57,31 @@ describe("listingContent cache", () => {
       ]);
     const get = jest.fn(async (key: string) => {
       if (key.endsWith(":100:1")) {
-        return { hook: "first", broll_query: "", body: null, cta: null, caption: "" };
+        return {
+          hook: "first",
+          broll_query: "",
+          body: null,
+          cta: null,
+          caption: ""
+        };
       }
       if (key.endsWith(":100:3")) {
-        return { hook: "third", broll_query: "", body: null, cta: null, caption: "" };
+        return {
+          hook: "third",
+          broll_query: "",
+          body: null,
+          cta: null,
+          caption: ""
+        };
       }
       if (key.endsWith(":200:2")) {
-        return { hook: "second", broll_query: "", body: null, cta: null, caption: "" };
+        return {
+          hook: "second",
+          broll_query: "",
+          body: null,
+          cta: null,
+          caption: ""
+        };
       }
       return null;
     });
@@ -72,8 +92,14 @@ describe("listingContent cache", () => {
 
     const results = await getAllCachedListingContentForFilter(baseParams);
     expect(scan).toHaveBeenCalled();
-    expect(results.map((item) => item.hook)).toEqual(["first", "third", "second"]);
-    expect(results.map((item) => [item.cacheKeyTimestamp, item.cacheKeyId])).toEqual([
+    expect(results.map((item) => item.hook)).toEqual([
+      "first",
+      "third",
+      "second"
+    ]);
+    expect(
+      results.map((item) => [item.cacheKeyTimestamp, item.cacheKeyId])
+    ).toEqual([
       [100, 1],
       [100, 3],
       [200, 2]
@@ -85,13 +111,64 @@ describe("listingContent cache", () => {
       scan: jest.fn().mockRejectedValue(new Error("scan failed"))
     } as unknown as ReturnType<typeof getSharedRedisClient>);
 
-    await expect(getAllCachedListingContentForFilter(baseParams)).resolves.toEqual([]);
+    await expect(
+      getAllCachedListingContentForFilter(baseParams)
+    ).resolves.toEqual([]);
+  });
+
+  it("no-ops when redis is unavailable", async () => {
+    mockedGetSharedRedisClient.mockReturnValue(null as any);
+
+    await expect(
+      getAllCachedListingContentForFilter(baseParams)
+    ).resolves.toEqual([]);
+    await expect(
+      getCachedListingContentItem({ ...baseParams, timestamp: 1, id: 1 })
+    ).resolves.toBeNull();
+    await expect(
+      setCachedListingContentItem({
+        ...baseParams,
+        timestamp: 50,
+        id: 3,
+        item: {
+          hook: "hook",
+          broll_query: "",
+          body: null,
+          cta: null,
+          caption: "cap",
+          renderedImageUrl: null
+        }
+      })
+    ).resolves.toBeUndefined();
+    await expect(
+      updateRenderedPreviewForItem({
+        ...baseParams,
+        timestamp: 22,
+        id: 9,
+        imageUrl: "https://img",
+        templateId: "tpl",
+        modifications: { headline: "A" }
+      })
+    ).resolves.toBeUndefined();
+    await expect(
+      deleteCachedListingContentItem({
+        ...baseParams,
+        timestamp: 22,
+        id: 9
+      })
+    ).resolves.toBeUndefined();
   });
 
   it("reads one item by key and filters invalid payloads", async () => {
     const get = jest
       .fn()
-      .mockResolvedValueOnce({ hook: "ok", broll_query: "", body: null, cta: null, caption: "" })
+      .mockResolvedValueOnce({
+        hook: "ok",
+        broll_query: "",
+        body: null,
+        cta: null,
+        caption: ""
+      })
       .mockResolvedValueOnce({ invalid: true });
     mockedGetSharedRedisClient.mockReturnValue({
       get
@@ -109,6 +186,20 @@ describe("listingContent cache", () => {
     await expect(
       getCachedListingContentItem({ ...baseParams, timestamp: 1, id: 2 })
     ).resolves.toBeNull();
+  });
+
+  it("returns [] when redis.get throws during scan iteration", async () => {
+    const prefix = getListingContentFilterPrefix(baseParams);
+    const scan = jest.fn().mockResolvedValue([0, [`${prefix}:100:1`]]);
+    const get = jest.fn().mockRejectedValue(new Error("get failed"));
+    mockedGetSharedRedisClient.mockReturnValue({
+      scan,
+      get
+    } as unknown as ReturnType<typeof getSharedRedisClient>);
+
+    await expect(
+      getAllCachedListingContentForFilter(baseParams)
+    ).resolves.toEqual([]);
   });
 
   it("updates rendered preview for an existing cached item", async () => {
@@ -146,6 +237,44 @@ describe("listingContent cache", () => {
     );
   });
 
+  it("does not update rendered preview when existing item is missing", async () => {
+    const get = jest.fn().mockResolvedValue(null);
+    const set = jest.fn().mockResolvedValue("OK");
+    mockedGetSharedRedisClient.mockReturnValue({
+      get,
+      set
+    } as unknown as ReturnType<typeof getSharedRedisClient>);
+
+    await updateRenderedPreviewForItem({
+      ...baseParams,
+      timestamp: 22,
+      id: 9,
+      imageUrl: "https://img",
+      templateId: "tpl",
+      modifications: { headline: "A" }
+    });
+
+    expect(set).not.toHaveBeenCalled();
+  });
+
+  it("warns and no-ops when update rendered preview fails", async () => {
+    const get = jest.fn().mockRejectedValue(new Error("update get failed"));
+    mockedGetSharedRedisClient.mockReturnValue({
+      get
+    } as unknown as ReturnType<typeof getSharedRedisClient>);
+
+    await expect(
+      updateRenderedPreviewForItem({
+        ...baseParams,
+        timestamp: 22,
+        id: 9,
+        imageUrl: "https://img",
+        templateId: "tpl",
+        modifications: { headline: "A" }
+      })
+    ).resolves.toBeUndefined();
+  });
+
   it("sets and deletes per-item cache entries", async () => {
     const set = jest.fn().mockResolvedValue("OK");
     const del = jest.fn().mockResolvedValue(1);
@@ -181,5 +310,80 @@ describe("listingContent cache", () => {
     expect(del).toHaveBeenCalledWith(
       `${LISTING_CONTENT_CACHE_PREFIX}:user-1:listing-1:new_listing:video:50:3`
     );
+  });
+
+  it("warns and no-ops when set/delete throw", async () => {
+    const set = jest.fn().mockRejectedValue(new Error("set failed"));
+    const del = jest.fn().mockRejectedValue(new Error("del failed"));
+    mockedGetSharedRedisClient.mockReturnValue({
+      set,
+      del
+    } as unknown as ReturnType<typeof getSharedRedisClient>);
+
+    await expect(
+      setCachedListingContentItem({
+        ...baseParams,
+        timestamp: 50,
+        id: 3,
+        item: {
+          hook: "hook",
+          broll_query: "q",
+          body: null,
+          cta: null,
+          caption: "caption",
+          renderedImageUrl: null
+        }
+      })
+    ).resolves.toBeUndefined();
+
+    await expect(
+      deleteCachedListingContentItem({
+        ...baseParams,
+        timestamp: 50,
+        id: 3
+      })
+    ).resolves.toBeUndefined();
+  });
+
+  it("creates cached preview fields when rendered preview exists", async () => {
+    const prefixForTarget = `${LISTING_CONTENT_CACHE_PREFIX}:user-1:listing-1:new_listing:video`;
+
+    mockedGetSharedRedisClient.mockReturnValue({
+      scan: jest.fn(async (_cursor: number, { match }: { match: string }) => {
+        if (!match.startsWith(prefixForTarget)) {
+          return [0, []];
+        }
+        return [0, [`${prefixForTarget}:123:7`]];
+      }),
+      get: jest.fn(async (key: string) => {
+        if (key.endsWith(`${prefixForTarget}:123:7`)) {
+          return {
+            hook: "hook",
+            broll_query: "",
+            body: null,
+            cta: null,
+            caption: "caption",
+            renderedImageUrl: "https://rendered/image.png",
+            renderedTemplateId: "tpl",
+            renderedModifications: { headline: "A" }
+          };
+        }
+        return null;
+      })
+    } as unknown as ReturnType<typeof getSharedRedisClient>);
+
+    const result = await getAllCachedListingContentForCreate({
+      userId: baseParams.userId,
+      listingId: baseParams.listingId
+    });
+
+    const created = result.find((r) =>
+      r.id.includes("new_listing-video-123-7")
+    );
+    expect(created?.cachedRenderedPreview).toEqual({
+      imageUrl: "https://rendered/image.png",
+      templateId: "tpl",
+      modifications: { headline: "A" }
+    });
   });
 });
