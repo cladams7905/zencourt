@@ -1,4 +1,5 @@
 import {
+  clipVersions,
   content,
   contentStatusEnum,
   contentTypeEnum,
@@ -44,3 +45,6 @@ export type InsertDBVideoGenBatch = typeof videoGenBatch.$inferInsert;
 export type DBVideoGenJob = typeof videoGenJobs.$inferSelect;
 export type InsertDBVideoGenJob = typeof videoGenJobs.$inferInsert;
 export type VideoStatus = (typeof videoStatusEnum.enumValues)[number];
+
+export type DBClipVersion = typeof clipVersions.$inferSelect;
+export type InsertDBClipVersion = typeof clipVersions.$inferInsert;

@@ -7,6 +7,9 @@ const mockGetListingVideoStatus = jest.fn();
 const mockGetListingImages = jest.fn();
 const mockMapListingImageToDisplayItem = jest.fn((item) => item);
 const mockGetAllCachedListingContentForCreate = jest.fn();
+const mockGetCurrentClipVersionsByListingId = jest.fn();
+const mockGetSuccessfulClipVersionsByClipId = jest.fn();
+const mockCreateClipVersion = jest.fn();
 
 jest.mock("@web/src/server/actions/_auth/api", () => ({
   requireAuthenticatedUser: (...args: unknown[]) =>
@@ -42,6 +45,19 @@ jest.mock("@web/src/server/infra/cache/listingContent/cache", () => ({
     )
 }));
 
+jest.mock("@web/src/server/models/videoGen", () => ({
+  getCurrentClipVersionsByListingId: (...args: unknown[]) =>
+    (mockGetCurrentClipVersionsByListingId as (...a: unknown[]) => unknown)(
+      ...args
+    ),
+  getSuccessfulClipVersionsByClipId: (...args: unknown[]) =>
+    (mockGetSuccessfulClipVersionsByClipId as (...a: unknown[]) => unknown)(
+      ...args
+    ),
+  createClipVersion: (...args: unknown[]) =>
+    (mockCreateClipVersion as (...a: unknown[]) => unknown)(...args)
+}));
+
 import {
   getCurrentUserListingSummariesPage,
   getListingCreateViewDataForCurrentUser
@@ -51,6 +67,9 @@ describe("listings queries", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockRequireAuthenticatedUser.mockResolvedValue({ id: "user-1" });
+    mockGetCurrentClipVersionsByListingId.mockResolvedValue([]);
+    mockGetSuccessfulClipVersionsByClipId.mockResolvedValue([]);
+    mockCreateClipVersion.mockResolvedValue(undefined);
   });
 
   it("delegates to getUserListingSummariesPage with current user id", async () => {
@@ -81,10 +100,54 @@ describe("listings queries", () => {
           jobId: "job-1",
           videoUrl: "https://v",
           thumbnailUrl: "https://t",
+          roomName: "Kitchen",
+          clipIndex: 0,
           sortOrder: 1
         }
       ]
     });
+    mockGetCurrentClipVersionsByListingId
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        {
+          id: "clip-version-1",
+          clipId: "listing-1:kitchen:0",
+          thumbnailUrl: "https://t",
+          videoUrl: "https://v",
+          roomName: "Kitchen",
+          roomId: null,
+          clipIndex: 0,
+          sortOrder: 1,
+          aiDirections: "",
+          versionNumber: 1,
+          isCurrent: true,
+          status: "completed",
+          category: "kitchen",
+          durationSeconds: 4,
+          orientation: "vertical",
+          generationModel: "veo3.1_fast"
+        }
+      ]);
+    mockGetSuccessfulClipVersionsByClipId.mockResolvedValueOnce([
+      {
+        id: "clip-version-1",
+        clipId: "listing-1:kitchen:0",
+        thumbnailUrl: "https://t",
+        videoUrl: "https://v",
+        roomName: "Kitchen",
+        roomId: null,
+        clipIndex: 0,
+        sortOrder: 1,
+        aiDirections: "",
+        versionNumber: 1,
+        isCurrent: true,
+        status: "completed",
+        category: "kitchen",
+        durationSeconds: 4,
+        orientation: "vertical",
+        generationModel: "veo3.1_fast"
+      }
+    ]);
     mockGetListingImages.mockResolvedValueOnce([{ id: "img-1" }]);
     mockGetAllCachedListingContentForCreate.mockResolvedValueOnce([
       { id: "cached-1" }
@@ -95,6 +158,7 @@ describe("listings queries", () => {
 
     expect(mockRequireListingAccess).toHaveBeenCalledWith("listing-1", "user-1");
     expect(mockGetListingVideoStatus).toHaveBeenCalledWith("listing-1");
+    expect(mockCreateClipVersion).toHaveBeenCalledTimes(1);
     expect(mockGetListingImages).toHaveBeenCalledWith("user-1", "listing-1");
     expect(mockGetAllCachedListingContentForCreate).toHaveBeenCalledWith({
       userId: "user-1",
@@ -103,9 +167,17 @@ describe("listings queries", () => {
     expect(result).toEqual({
       videoItems: [
         expect.objectContaining({
-          id: "job-1",
+          id: "listing-1:kitchen:0",
+          clipVersionId: "clip-version-1",
           videoUrl: "https://v",
-          thumbnail: "https://t"
+          thumbnail: "https://t",
+          roomName: "Kitchen"
+        })
+      ],
+      clipVersionItems: [
+        expect.objectContaining({
+          clipId: "listing-1:kitchen:0",
+          roomName: "Kitchen"
         })
       ],
       listingPostItems: [{ id: "cached-1" }],

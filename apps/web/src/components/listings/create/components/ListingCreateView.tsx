@@ -6,6 +6,7 @@ import { type ContentItem } from "@web/src/components/dashboard/components/Conte
 import { usePathname } from "next/navigation";
 import type { ListingOpenHouseContext } from "@web/src/lib/domain/listings/openHouse";
 import {
+  ListingClipManager,
   ListingVideoPreviewGrid,
   ListingImagePreviewGrid,
   DevSingleTemplateRender
@@ -22,6 +23,7 @@ import {
   SUBCATEGORY_LABELS,
   type ListingCreateMediaTab
 } from "@web/src/components/listings/create/shared/constants";
+import type { ListingClipVersionItem } from "@web/src/components/listings/create/shared/types";
 import { cn } from "@web/src/components/ui/utils";
 import { Button } from "@web/src/components/ui/button";
 import {
@@ -53,6 +55,7 @@ type ListingCreateViewProps = {
   listingAddress?: string | null;
   openHouseContext?: ListingOpenHouseContext | null;
   videoItems: ContentItem[];
+  clipVersionItems: ListingClipVersionItem[];
   listingPostItems: ContentItem[];
   listingImages: ListingCreateImage[];
   initialMediaTab?: ListingCreateMediaTab;
@@ -67,6 +70,7 @@ export function ListingCreateView({
   listingAddress,
   openHouseContext,
   videoItems,
+  clipVersionItems,
   listingPostItems,
   listingImages,
   initialMediaTab = "videos",
@@ -229,6 +233,12 @@ export function ListingCreateView({
               generateSubcategoryContent={generateSubcategoryContent}
             />
           )}
+          {activeMediaTab === "videos" ? (
+            <ListingClipManager
+              listingId={listingId}
+              items={clipVersionItems}
+            />
+          ) : null}
           {activeMediaTab === "videos" &&
           (activePreviewPlans.length > 0 || isGenerating) ? (
             <ListingVideoPreviewGrid

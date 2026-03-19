@@ -13,6 +13,10 @@ export type VideoMetadata = {
   checksumSha256?: string;
 };
 
+export type ClipVersionMetadata = VideoMetadata & {
+  versionLabel?: string;
+};
+
 export type GENERATION_MODELS =
   | "veo3.1_fast"
   | "runway-gen4-turbo"
@@ -30,4 +34,31 @@ export type JobGenerationSettings = {
   roomName?: string;
   roomNumber?: number;
   clipIndex?: number;
+};
+
+export type ClipVersionRecord = {
+  id: string;
+  clipId: string;
+  listingId: string;
+  roomId?: string | null;
+  roomName: string;
+  category: string;
+  clipIndex: number;
+  sortOrder: number;
+  versionNumber: number;
+  status: "pending" | "processing" | "completed" | "failed" | "canceled";
+  isCurrent: boolean;
+  videoUrl?: string | null;
+  thumbnailUrl?: string | null;
+  durationSeconds?: number | null;
+  metadata?: ClipVersionMetadata | null;
+  errorMessage?: string | null;
+  orientation: VideoOrientation;
+  generationModel: GENERATION_MODELS;
+  imageUrls: string[];
+  prompt: string;
+  aiDirections: string;
+  sourceVideoGenJobId?: string | null;
+  createdAt: string | Date;
+  updatedAt: string | Date;
 };

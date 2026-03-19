@@ -37,6 +37,7 @@ export type CarouselSlide = {
 
 export type DashboardContentItem = {
   id: string;
+  clipVersionId?: string;
   thumbnail?: string;
   videoUrl?: string | null;
   aspectRatio?: AspectRatio;
@@ -53,6 +54,15 @@ export type DashboardContentItem = {
   isPriorityCategory?: boolean;
   listingSubcategory?: ListingContentSubcategory | null;
   mediaType?: ListingMediaType | null;
+  roomId?: string | null;
+  roomName?: string | null;
+  clipIndex?: number | null;
+  sortOrder?: number | null;
+  aiDirections?: string | null;
+  versionNumber?: number | null;
+  isCurrentVersion?: boolean;
+  versionStatus?: "pending" | "processing" | "completed" | "failed" | "canceled";
+  generatedAt?: string | Date | null;
 };
 
 export type GeneratedContentState = Record<

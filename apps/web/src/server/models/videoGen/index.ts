@@ -1,9 +1,22 @@
 export {
+  createClipVersion,
   createVideoGenBatch,
   createVideoGenJob,
   createVideoGenJobsBatch,
+  markClipVersionAsCurrent,
+  updateClipVersion,
   updateVideoGenBatch,
   updateVideoGenJob
 } from "./mutations";
-export { getVideoGenJobById } from "./queries";
-export type { VideoGenBatchUpdates, VideoGenJobUpdates } from "./types";
+export {
+  getClipVersionById,
+  getClipVersionBySourceVideoGenJobId,
+  getCurrentClipVersionsByListingId,
+  getSuccessfulClipVersionsByClipId,
+  getVideoGenJobById
+} from "./queries";
+export type {
+  ClipVersionUpdates,
+  VideoGenBatchUpdates,
+  VideoGenJobUpdates
+} from "./types";

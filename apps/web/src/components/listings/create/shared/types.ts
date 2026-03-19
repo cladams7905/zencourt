@@ -36,3 +36,13 @@ export type PlayablePreview = {
   captionItem: ContentItem | null;
   variationNumber: number;
 };
+
+export type ListingClipVersionItem = {
+  clipId: string;
+  roomName: string;
+  roomId?: string | null;
+  clipIndex: number;
+  sortOrder: number;
+  currentVersion: ContentItem;
+  versions: ContentItem[];
+};

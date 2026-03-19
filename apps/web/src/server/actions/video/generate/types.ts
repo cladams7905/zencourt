@@ -23,6 +23,21 @@ export type CancelListingVideoGenerationResult = {
   canceledJobs: number;
 };
 
+export type RegenerateListingClipVersionArgs = {
+  listingId: string;
+  userId: string;
+  clipId: string;
+  aiDirections?: string;
+  resolvePublicDownloadUrls: ResolvePublicDownloadUrls;
+};
+
+export type RegenerateListingClipVersionResult = {
+  clipId: string;
+  clipVersionId: string;
+  jobId: string;
+  videoId: string;
+};
+
 export type ListingRoom = {
   id: string;
   name: string;

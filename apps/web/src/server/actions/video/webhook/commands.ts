@@ -1,5 +1,8 @@
 import { revalidatePath } from "next/cache";
 import {
+  getClipVersionBySourceVideoGenJobId,
+  markClipVersionAsCurrent,
+  updateClipVersion,
   updateVideoGenJob,
   getVideoGenJobById
 } from "@web/src/server/models/videoGen";
@@ -146,6 +149,27 @@ async function processWebhookUpdate(
       errorMessage: normalized.errorMessage,
       metadata: normalized.metadata
     });
+
+    const clipVersion = await getClipVersionBySourceVideoGenJobId(payload.jobId);
+    if (clipVersion) {
+      await updateClipVersion(clipVersion.id, {
+        status: payload.status,
+        videoUrl: normalized.videoUrl,
+        thumbnailUrl: normalized.thumbnailUrl,
+        errorMessage: normalized.errorMessage,
+        durationSeconds: payload.result?.duration ?? normalized.metadata?.duration ?? null,
+        metadata: normalized.metadata
+      });
+
+      if (payload.status === "completed") {
+        await markClipVersionAsCurrent({
+          clipVersionId: clipVersion.id,
+          listingId: clipVersion.listingId,
+          clipId: clipVersion.clipId
+        });
+      }
+    }
+
     const updated = await getVideoGenJobById(payload.jobId);
     return updated
       ? { outcome: "ok", job: updated }

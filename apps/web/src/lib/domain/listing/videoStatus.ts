@@ -13,6 +13,8 @@ export interface VideoJobUpdateEvent {
   roomId?: string | null;
   roomName?: string | null;
   category?: string | null;
+  clipIndex?: number | null;
+  durationSeconds?: number | null;
   orientation?: VideoOrientation | null;
   generationModel?: GENERATION_MODELS | null;
   isPriorityCategory?: boolean;

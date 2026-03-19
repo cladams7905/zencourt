@@ -1,4 +1,5 @@
 const mockStartListingVideoGenerationHelper = jest.fn();
+const mockRegenerateListingClipVersionHelper = jest.fn();
 const mockCancelListingVideoGenerationHelper = jest.fn();
 const mockRequireAuthenticatedUser = jest.fn();
 const mockRequireListingAccess = jest.fn();
@@ -7,6 +8,10 @@ const mockGetPublicDownloadUrls = jest.fn();
 jest.mock("@web/src/server/actions/video/generate/helpers", () => ({
   startListingVideoGeneration: (...args: unknown[]) =>
     (mockStartListingVideoGenerationHelper as (...a: unknown[]) => unknown)(
+      ...args
+    ),
+  regenerateListingClipVersion: (...args: unknown[]) =>
+    (mockRegenerateListingClipVersionHelper as (...a: unknown[]) => unknown)(
       ...args
     ),
   cancelListingVideoGeneration: (...args: unknown[]) =>
@@ -31,6 +36,7 @@ jest.mock("@web/src/server/services/storage/urlResolution", () => ({
 }));
 
 import {
+  regenerateListingClipVersion,
   startListingVideoGeneration,
   cancelListingVideoGeneration
 } from "@web/src/server/actions/video/generate/commands";
@@ -41,6 +47,7 @@ describe("video commands", () => {
 
   beforeEach(() => {
     mockStartListingVideoGenerationHelper.mockReset();
+    mockRegenerateListingClipVersionHelper.mockReset();
     mockCancelListingVideoGenerationHelper.mockReset();
     mockRequireAuthenticatedUser.mockReset();
     mockRequireAuthenticatedUser.mockResolvedValue(mockUser);
@@ -136,6 +143,51 @@ describe("video commands", () => {
       expect(mockCancelListingVideoGenerationHelper).toHaveBeenCalledWith({
         listingId: "listing-1",
         reason: undefined
+      });
+    });
+  });
+
+  describe("regenerateListingClipVersion", () => {
+    it("throws when body is missing required fields", async () => {
+      await expect(regenerateListingClipVersion({})).rejects.toThrow(
+        "listingId is required"
+      );
+      await expect(
+        regenerateListingClipVersion({ listingId: "listing-1" })
+      ).rejects.toThrow("clipId is required");
+    });
+
+    it("validates access and delegates clip regeneration", async () => {
+      mockRegenerateListingClipVersionHelper.mockResolvedValueOnce({
+        clipId: "clip-1",
+        clipVersionId: "clip-version-2",
+        jobId: "job-2",
+        videoId: "video-2"
+      });
+
+      const result = await regenerateListingClipVersion({
+        listingId: " listing-1 ",
+        clipId: " clip-1 ",
+        aiDirections: " Preserve window light "
+      });
+
+      expect(mockRequireListingAccess).toHaveBeenCalledWith(
+        "listing-1",
+        "user-1"
+      );
+      expect(mockRegenerateListingClipVersionHelper).toHaveBeenCalledWith({
+        listingId: "listing-1",
+        userId: "user-1",
+        clipId: "clip-1",
+        aiDirections: " Preserve window light ",
+        resolvePublicDownloadUrls: expect.any(Function)
+      });
+      expect(result).toEqual({
+        clipId: "clip-1",
+        clipVersionId: "clip-version-2",
+        jobId: "job-2",
+        videoId: "video-2",
+        listingId: "listing-1"
       });
     });
   });

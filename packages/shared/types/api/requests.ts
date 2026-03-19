@@ -25,3 +25,9 @@ export interface VideoGenerateRequest {
   orientation?: VideoOrientation;
   aiDirections?: string;
 }
+
+export interface ClipVersionRegenerateRequest {
+  listingId: string;
+  clipId: string;
+  aiDirections?: string;
+}

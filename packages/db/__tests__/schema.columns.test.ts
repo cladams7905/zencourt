@@ -1,5 +1,6 @@
 import { getTableColumns } from "drizzle-orm";
 import {
+  clipVersions,
   content,
   listingImages,
   listings,
@@ -135,6 +136,34 @@ describe("db schema column contracts", () => {
         "thumbnailUrl",
         "updatedAt",
         "videoGenBatchId",
+        "videoUrl"
+      ].sort()
+    );
+    expect(columnKeys(clipVersions)).toEqual(
+      [
+        "aiDirections",
+        "category",
+        "clipId",
+        "clipIndex",
+        "createdAt",
+        "durationSeconds",
+        "errorMessage",
+        "generationModel",
+        "id",
+        "imageUrls",
+        "isCurrent",
+        "listingId",
+        "metadata",
+        "orientation",
+        "prompt",
+        "roomId",
+        "roomName",
+        "sortOrder",
+        "sourceVideoGenJobId",
+        "status",
+        "thumbnailUrl",
+        "updatedAt",
+        "versionNumber",
         "videoUrl"
       ].sort()
     );

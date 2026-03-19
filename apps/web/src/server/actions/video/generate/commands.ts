@@ -1,12 +1,16 @@
 "use server";
 
 import { withServerActionCaller } from "@web/src/server/infra/logger/callContext";
-import type { VideoGenerateRequest } from "@shared/types/api";
+import type {
+  ClipVersionRegenerateRequest,
+  VideoGenerateRequest
+} from "@shared/types/api";
 import { DomainValidationError } from "@web/src/server/errors/domain";
 import { requireAuthenticatedUser } from "@web/src/server/actions/_auth/api";
 import { requireListingAccess } from "@web/src/server/models/listings/access";
 import {
   cancelListingVideoGeneration as cancelListingVideoGenerationHelper,
+  regenerateListingClipVersion as regenerateListingClipVersionHelper,
   startListingVideoGeneration as startListingVideoGenerationHelper
 } from "./helpers";
 import { getPublicDownloadUrls } from "@web/src/server/services/storage/urlResolution";
@@ -19,6 +23,25 @@ function parseVideoGenerateRequest(body: unknown): VideoGenerateRequest {
   return {
     listingId: input.listingId.trim(),
     orientation: input.orientation,
+    aiDirections:
+      typeof input.aiDirections === "string" ? input.aiDirections : undefined
+  };
+}
+
+function parseClipVersionRegenerateRequest(
+  body: unknown
+): ClipVersionRegenerateRequest {
+  const input = (body || {}) as Partial<ClipVersionRegenerateRequest>;
+  if (!input.listingId || typeof input.listingId !== "string") {
+    throw new DomainValidationError("listingId is required");
+  }
+  if (!input.clipId || typeof input.clipId !== "string") {
+    throw new DomainValidationError("clipId is required");
+  }
+
+  return {
+    listingId: input.listingId.trim(),
+    clipId: input.clipId.trim(),
     aiDirections:
       typeof input.aiDirections === "string" ? input.aiDirections : undefined
   };
@@ -50,5 +73,23 @@ export const cancelListingVideoGeneration = withServerActionCaller(
       listingId,
       reason
     });
+  }
+);
+
+export const regenerateListingClipVersion = withServerActionCaller(
+  "regenerateListingClipVersion",
+  async (body: unknown) => {
+    const user = await requireAuthenticatedUser();
+    const parsed = parseClipVersionRegenerateRequest(body);
+    const listing = await requireListingAccess(parsed.listingId, user.id);
+    const result = await regenerateListingClipVersionHelper({
+      listingId: listing.id,
+      userId: user.id,
+      clipId: parsed.clipId,
+      aiDirections: parsed.aiDirections,
+      resolvePublicDownloadUrls: getPublicDownloadUrls
+    });
+
+    return { ...result, listingId: listing.id };
   }
 );

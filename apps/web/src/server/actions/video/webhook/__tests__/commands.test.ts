@@ -2,12 +2,23 @@
 
 const mockGetVideoGenJobById = jest.fn();
 const mockUpdateVideoGenJob = jest.fn();
+const mockGetClipVersionBySourceVideoGenJobId = jest.fn();
+const mockUpdateClipVersion = jest.fn();
+const mockMarkClipVersionAsCurrent = jest.fn();
 
 jest.mock("@web/src/server/models/videoGen", () => ({
   getVideoGenJobById: (...args: unknown[]) =>
     (mockGetVideoGenJobById as (...a: unknown[]) => unknown)(...args),
   updateVideoGenJob: (...args: unknown[]) =>
-    (mockUpdateVideoGenJob as (...a: unknown[]) => unknown)(...args)
+    (mockUpdateVideoGenJob as (...a: unknown[]) => unknown)(...args),
+  getClipVersionBySourceVideoGenJobId: (...args: unknown[]) =>
+    (mockGetClipVersionBySourceVideoGenJobId as (...a: unknown[]) => unknown)(
+      ...args
+    ),
+  updateClipVersion: (...args: unknown[]) =>
+    (mockUpdateClipVersion as (...a: unknown[]) => unknown)(...args),
+  markClipVersionAsCurrent: (...args: unknown[]) =>
+    (mockMarkClipVersionAsCurrent as (...a: unknown[]) => unknown)(...args)
 }));
 
 jest.mock("@web/src/lib/core/logging/logger", () => ({
@@ -38,6 +49,9 @@ function minimalPayload(overrides: Partial<VideoWebhookPayload> = {}): VideoWebh
 describe("video webhook commands", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockGetClipVersionBySourceVideoGenJobId.mockResolvedValue(null);
+    mockUpdateClipVersion.mockResolvedValue(undefined);
+    mockMarkClipVersionAsCurrent.mockResolvedValue(undefined);
   });
 
   describe("normalizeWebhookResult", () => {
@@ -137,6 +151,87 @@ describe("video webhook commands", () => {
         errorMessage: null,
         metadata: undefined
       });
+    });
+
+    it("updates matching clip version and promotes it on success", async () => {
+      const currentJob = {
+        id: "job-1",
+        status: "pending",
+        listingId: "listing-1",
+        videoUrl: null,
+        thumbnailUrl: null,
+        errorMessage: null
+      };
+      const clipVersion = {
+        id: "clip-version-2",
+        clipId: "clip-1",
+        listingId: "listing-1"
+      };
+      mockGetVideoGenJobById
+        .mockResolvedValueOnce(currentJob)
+        .mockResolvedValueOnce({ ...currentJob, status: "completed" });
+      mockGetClipVersionBySourceVideoGenJobId.mockResolvedValueOnce(clipVersion);
+
+      await processVideoWebhookPayload(
+        minimalPayload({
+          status: "completed",
+          result: {
+            videoUrl: "https://v",
+            thumbnailUrl: "https://t",
+            duration: 5
+          }
+        })
+      );
+
+      expect(mockUpdateClipVersion).toHaveBeenCalledWith("clip-version-2", {
+        status: "completed",
+        videoUrl: "https://v",
+        thumbnailUrl: "https://t",
+        errorMessage: null,
+        durationSeconds: 5,
+        metadata: undefined
+      });
+      expect(mockMarkClipVersionAsCurrent).toHaveBeenCalledWith({
+        clipVersionId: "clip-version-2",
+        listingId: "listing-1",
+        clipId: "clip-1"
+      });
+    });
+
+    it("updates matching clip version without promoting it on failure", async () => {
+      const currentJob = {
+        id: "job-1",
+        status: "pending",
+        listingId: "listing-1",
+        videoUrl: null,
+        thumbnailUrl: null,
+        errorMessage: null
+      };
+      mockGetVideoGenJobById
+        .mockResolvedValueOnce(currentJob)
+        .mockResolvedValueOnce({ ...currentJob, status: "failed" });
+      mockGetClipVersionBySourceVideoGenJobId.mockResolvedValueOnce({
+        id: "clip-version-2",
+        clipId: "clip-1",
+        listingId: "listing-1"
+      });
+
+      await processVideoWebhookPayload(
+        minimalPayload({
+          status: "failed",
+          error: { message: "provider failed" }
+        })
+      );
+
+      expect(mockUpdateClipVersion).toHaveBeenCalledWith("clip-version-2", {
+        status: "failed",
+        videoUrl: null,
+        thumbnailUrl: null,
+        errorMessage: "provider failed",
+        durationSeconds: null,
+        metadata: undefined
+      });
+      expect(mockMarkClipVersionAsCurrent).not.toHaveBeenCalled();
     });
 
     it("returns update_failed when update throws", async () => {

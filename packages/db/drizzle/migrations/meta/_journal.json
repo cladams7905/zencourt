@@ -260,6 +260,13 @@
       "when": 1771344205833,
       "tag": "0036_polite_rocket_racer",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1773940506232,
+      "tag": "0037_wide_mandroid",
+      "breakpoints": true
     }
   ]
 }

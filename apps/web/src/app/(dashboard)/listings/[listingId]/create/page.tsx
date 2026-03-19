@@ -43,7 +43,7 @@ export default async function ListingCreatePage({
 
     redirectToListingStage(listingId, listing.listingStage, "create");
 
-    const { videoItems, listingPostItems, listingImages } =
+    const { videoItems, clipVersionItems, listingPostItems, listingImages } =
       await getListingCreateViewData(user.id, listingId);
     const openHouseContext = resolveListingOpenHouseContext({
       listingPropertyDetails:
@@ -58,6 +58,7 @@ export default async function ListingCreatePage({
         listingAddress={listing.address ?? null}
         openHouseContext={openHouseContext}
         videoItems={videoItems}
+        clipVersionItems={clipVersionItems}
         listingPostItems={listingPostItems}
         initialMediaTab={initialMediaTab}
         initialSubcategory={initialSubcategory}

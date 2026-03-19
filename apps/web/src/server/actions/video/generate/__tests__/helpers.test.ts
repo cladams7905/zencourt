@@ -1,6 +1,8 @@
 const mockNanoid = jest.fn();
 const mockCreateVideoGenBatch = jest.fn();
 const mockCreateVideoGenJobsBatch = jest.fn();
+const mockCreateClipVersion = jest.fn();
+const mockGetClipVersionById = jest.fn();
 const mockGroupImagesByCategory = jest.fn();
 const mockSelectListingPrimaryImage = jest.fn();
 const mockBuildRoomsFromImages = jest.fn();
@@ -33,7 +35,9 @@ jest.mock("@db/client", () => ({
 jest.mock("@web/src/server/models/videoGen", () => ({
   createVideoGenBatch: (...args: unknown[]) => mockCreateVideoGenBatch(...args),
   createVideoGenJobsBatch: (...args: unknown[]) =>
-    mockCreateVideoGenJobsBatch(...args)
+    mockCreateVideoGenJobsBatch(...args),
+  createClipVersion: (...args: unknown[]) => mockCreateClipVersion(...args),
+  getClipVersionById: (...args: unknown[]) => mockGetClipVersionById(...args)
 }));
 
 jest.mock("@web/src/server/services/videoGeneration/domain/rooms", () => ({
@@ -84,7 +88,10 @@ jest.mock("@web/src/server/errors/api", () => {
   };
 });
 
-import { startListingVideoGeneration } from "../helpers";
+import {
+  regenerateListingClipVersion,
+  startListingVideoGeneration
+} from "../helpers";
 
 function makeSelectBuilder(rows: unknown[]) {
   const builder = {
@@ -105,6 +112,7 @@ describe("video actions/helpers", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockNanoid.mockReset();
     global.fetch = mockFetch as unknown as typeof fetch;
     mockGetVideoGenerationConfig.mockReturnValue({
       model: "veo3.1_fast",
@@ -114,6 +122,7 @@ describe("video actions/helpers", () => {
       videoServerApiKey: "secret",
       appUrl: "https://example.vercel.app"
     });
+    mockCreateClipVersion.mockResolvedValue(undefined);
   });
 
   it("creates jobs in batch and enqueues video server request", async () => {
@@ -348,5 +357,75 @@ describe("video actions/helpers", () => {
       ])
     );
     expect(result.jobCount).toBe(2);
+  });
+
+  it("creates one pending clip version and one queued job for regeneration", async () => {
+    mockNanoid
+      .mockReturnValueOnce("video-2")
+      .mockReturnValueOnce("job-2")
+      .mockReturnValueOnce("clip-version-2");
+    mockGetClipVersionById.mockResolvedValueOnce({
+      id: "clip-version-1",
+      clipId: "clip-1",
+      listingId: "listing-1",
+      roomId: "room-1",
+      roomName: "Kitchen",
+      category: "kitchen",
+      clipIndex: 0,
+      sortOrder: 1,
+      versionNumber: 1,
+      status: "completed",
+      isCurrent: true,
+      videoUrl: "https://old/video.mp4",
+      thumbnailUrl: "https://old/thumb.jpg",
+      durationSeconds: 4,
+      metadata: { duration: 4, orientation: "vertical" },
+      errorMessage: null,
+      orientation: "vertical",
+      generationModel: "veo3.1_fast",
+      imageUrls: ["https://signed/kitchen.jpg"],
+      prompt: "Forward pan through the Kitchen.",
+      aiDirections: "Old directions",
+      sourceVideoGenJobId: "job-1"
+    });
+    mockCreateVideoGenBatch.mockResolvedValue(undefined);
+    mockCreateVideoGenJobsBatch.mockResolvedValue(undefined);
+    mockFetch.mockResolvedValue({ ok: true });
+
+    const result = await regenerateListingClipVersion({
+      listingId: "listing-1",
+      userId: "user-1",
+      clipId: "clip-version-1",
+      aiDirections: "Use warmer late afternoon light",
+      resolvePublicDownloadUrls
+    });
+
+    expect(mockCreateClipVersion).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "clip-version-2",
+        clipId: "clip-1",
+        listingId: "listing-1",
+        versionNumber: 2,
+        status: "pending",
+        isCurrent: false,
+        aiDirections: "Use warmer late afternoon light"
+      })
+    );
+    expect(mockCreateVideoGenJobsBatch).toHaveBeenCalledWith([
+      expect.objectContaining({
+        id: "job-2",
+        generationSettings: expect.objectContaining({
+          roomName: "Kitchen",
+          clipIndex: 0,
+          aiDirections: "Use warmer late afternoon light"
+        })
+      })
+    ]);
+    expect(result).toEqual({
+      clipId: "clip-1",
+      clipVersionId: "clip-version-2",
+      jobId: "job-2",
+      videoId: "video-2"
+    });
   });
 });

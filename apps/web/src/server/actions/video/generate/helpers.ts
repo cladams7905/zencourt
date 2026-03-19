@@ -1,11 +1,16 @@
 import { db, listingImages, eq, asc } from "@db/client";
+import { nanoid } from "nanoid";
 import { ApiError } from "@web/src/server/errors/api";
 import {
   createChildLogger,
   logger as baseLogger
 } from "@web/src/lib/core/logging/logger";
-import { createVideoGenBatch } from "@web/src/server/models/videoGen";
-import { createVideoGenJobsBatch } from "@web/src/server/models/videoGen";
+import {
+  createClipVersion,
+  createVideoGenBatch,
+  createVideoGenJobsBatch,
+  getClipVersionById
+} from "@web/src/server/models/videoGen";
 import { getVideoGenerationConfig } from "@web/src/server/services/videoGeneration/config";
 import {
   groupImagesByCategory,
@@ -24,6 +29,8 @@ import type { DBListingImage } from "@db/types/models";
 import type {
   CancelListingVideoGenerationArgs,
   CancelListingVideoGenerationResult,
+  RegenerateListingClipVersionArgs,
+  RegenerateListingClipVersionResult,
   StartListingVideoGenerationArgs
 } from "./types";
 
@@ -120,6 +127,101 @@ export async function cancelListingVideoGeneration(
   );
 
   return result;
+}
+
+export async function regenerateListingClipVersion(
+  args: RegenerateListingClipVersionArgs
+): Promise<RegenerateListingClipVersionResult> {
+  const { listingId, userId, clipId, aiDirections } = args;
+  const currentClipVersion = await getClipVersionById(clipId);
+
+  if (!currentClipVersion) {
+    throw new ApiError(404, {
+      error: "Clip not found",
+      message: "Clip version not found"
+    });
+  }
+
+  const parentVideoId = nanoid();
+  const jobId = nanoid();
+  const nextClipVersionId = nanoid();
+  const resolvedAiDirections =
+    typeof aiDirections === "string"
+      ? aiDirections
+      : currentClipVersion.aiDirections;
+
+  await createVideoGenBatch({
+    id: parentVideoId,
+    listingId,
+    status: "pending",
+    errorMessage: null
+  });
+
+  await createClipVersion({
+    id: nextClipVersionId,
+    clipId: currentClipVersion.clipId,
+    listingId,
+    roomId: currentClipVersion.roomId,
+    roomName: currentClipVersion.roomName,
+    category: currentClipVersion.category,
+    clipIndex: currentClipVersion.clipIndex,
+    sortOrder: currentClipVersion.sortOrder,
+    versionNumber: currentClipVersion.versionNumber + 1,
+    status: "pending",
+    isCurrent: false,
+    videoUrl: null,
+    thumbnailUrl: null,
+    durationSeconds: null,
+    metadata: currentClipVersion.metadata ?? null,
+    errorMessage: null,
+    orientation: currentClipVersion.orientation,
+    generationModel: currentClipVersion.generationModel,
+    imageUrls: currentClipVersion.imageUrls,
+    prompt: currentClipVersion.prompt,
+    aiDirections: resolvedAiDirections ?? "",
+    sourceVideoGenJobId: jobId
+  });
+
+  await createVideoGenJobsBatch([
+    {
+      id: jobId,
+      videoGenBatchId: parentVideoId,
+      requestId: null,
+      status: "pending",
+      videoUrl: null,
+      thumbnailUrl: null,
+      generationSettings: {
+        model: currentClipVersion.generationModel,
+        orientation: currentClipVersion.orientation,
+        aiDirections: resolvedAiDirections ?? "",
+        imageUrls: args.resolvePublicDownloadUrls(currentClipVersion.imageUrls),
+        prompt: currentClipVersion.prompt,
+        category: currentClipVersion.category,
+        sortOrder: currentClipVersion.sortOrder,
+        roomId: currentClipVersion.roomId ?? undefined,
+        roomName: currentClipVersion.roomName,
+        clipIndex: currentClipVersion.clipIndex
+      },
+      metadata: {
+        orientation: currentClipVersion.orientation
+      },
+      errorMessage: null
+    }
+  ]);
+
+  await enqueueVideoServerJobs({
+    parentVideoId,
+    jobIds: [jobId],
+    listingId,
+    userId
+  });
+
+  return {
+    clipId: currentClipVersion.clipId,
+    clipVersionId: nextClipVersionId,
+    jobId,
+    videoId: parentVideoId
+  };
 }
 
 export type { CancelListingVideoGenerationResult } from "./types";
