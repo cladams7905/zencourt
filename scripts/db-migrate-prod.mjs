@@ -39,6 +39,7 @@ async function main() {
   const envFile = path.join(tempDir, ".env.production");
 
   const drizzleCwd = path.join(repoRoot, "packages", "db");
+  const webAppCwd = path.join(repoRoot, "apps", "web");
   const drizzleConfigPath = "drizzle/drizzle.config.ts";
 
   try {
@@ -47,7 +48,7 @@ async function main() {
     await runCommand(
       "vercel",
       ["env", "pull", envFile, "--environment=production", "--yes"],
-      { cwd: repoRoot }
+      { cwd: webAppCwd }
     );
 
     await runCommand(
@@ -65,4 +66,3 @@ main().catch((error) => {
   console.error("[db-migrate-prod] Failed", error);
   process.exitCode = 1;
 });
-

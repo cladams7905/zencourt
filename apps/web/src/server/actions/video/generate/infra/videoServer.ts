@@ -15,7 +15,7 @@ function buildVideoServerGenerateRequestBody(args: {
   const callbackUrl = `${config.appUrl}/api/v1/webhooks/video`;
 
   return JSON.stringify({
-    videoId: args.parentVideoId,
+    batchId: args.parentVideoId,
     jobIds: args.jobIds,
     listingId: args.listingId,
     userId: args.userId,
@@ -60,7 +60,7 @@ export async function enqueueVideoServerJobs(args: {
 export async function cancelVideoServerGeneration(
   args: CancelListingVideoGenerationArgs
 ): Promise<CancelListingVideoGenerationResult> {
-  const { listingId, reason } = args;
+  const { batchId, reason } = args;
   const config = getVideoGenerationConfig();
 
   const response = await fetch(`${config.videoServerBaseUrl}/video/cancel`, {
@@ -70,7 +70,7 @@ export async function cancelVideoServerGeneration(
       "X-API-Key": config.videoServerApiKey
     },
     body: JSON.stringify({
-      listingId,
+      batchId,
       reason: reason ?? "Canceled via workflow"
     })
   });
@@ -88,8 +88,8 @@ export async function cancelVideoServerGeneration(
 
   return {
     success: true,
-    listingId,
-    canceledVideos: payload?.canceledVideos ?? 0,
+    batchId,
+    canceledBatches: payload?.canceledBatches ?? 0,
     canceledJobs: payload?.canceledJobs ?? 0
   };
 }

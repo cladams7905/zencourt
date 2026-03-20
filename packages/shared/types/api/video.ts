@@ -25,7 +25,7 @@ export type VideoJobWebhookStatus = "completed" | "failed";
 
 export interface VideoJobWebhookPayload {
   jobId: string;
-  videoId?: string;
+  batchId?: string;
   listingId: string;
   userId?: string;
   status: VideoJobWebhookStatus;
@@ -36,10 +36,10 @@ export interface VideoJobWebhookPayload {
 
 /**
  * Job-based video generation request for video server
- * Accepts parent videoId and array of jobIds to process
+ * Accepts parent batchId and array of jobIds to process
  */
 export interface VideoServerGenerateRequest {
-  videoId: string; // Parent video_assets ID
+  batchId: string; // Parent video_gen_batch ID
   jobIds: string[]; // Array of video_asset_jobs IDs to process
   listingId: string;
   userId: string;
@@ -57,7 +57,7 @@ export interface VideoServerRenderRequest {
 export interface VideoServerGenerateResponse {
   success: boolean;
   message: string;
-  videoId: string;
+  batchId: string;
   jobsStarted: number;
 }
 
@@ -72,8 +72,7 @@ export interface HealthCheckResponse {
 export type WebhookPayload = VideoJobWebhookPayload;
 
 export interface CancelVideoRequest {
-  listingId: string;
-  videoIds?: string[];
+  batchId: string;
   reason?: string;
 }
 

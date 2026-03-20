@@ -121,11 +121,15 @@ describe("videoGeneration/status/service", () => {
           videoUrl: "signed-video",
           thumbnailUrl: "signed-thumb",
           generationModel: "kling",
+          prompt: null,
+          imageUrls: null,
           orientation: "portrait",
           errorMessage: null,
           roomId: "room-1",
           roomName: "Kitchen",
           category: "kitchen",
+          clipIndex: null,
+          durationSeconds: null,
           isPriorityCategory: true,
           sortOrder: 2
         }
@@ -173,11 +177,15 @@ describe("videoGeneration/status/service", () => {
           videoUrl: "raw-video",
           thumbnailUrl: "raw-thumb",
           generationModel: null,
+          prompt: null,
+          imageUrls: null,
           orientation: null,
           errorMessage: "failed",
           roomId: undefined,
           roomName: undefined,
           category: null,
+          clipIndex: null,
+          durationSeconds: null,
           isPriorityCategory: false,
           sortOrder: null
         }

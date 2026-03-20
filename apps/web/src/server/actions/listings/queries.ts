@@ -13,11 +13,15 @@ import {
 import { getAllCachedListingContentForCreate } from "@web/src/server/infra/cache/listingContent/cache";
 import type { ContentItem } from "@web/src/components/dashboard/components/ContentGrid";
 import {
-  createClipVersion,
-  getCurrentClipVersionsByListingId,
-  getSuccessfulClipVersionsByClipId
+  createVideoClip,
+  createVideoClipVersion,
+  getCurrentVideoClipVersionsByListingId,
+  getSuccessfulVideoClipVersionsByClipId,
+  getVideoClipById,
+  getVideoClipVersionBySourceVideoGenJobId,
+  updateVideoClip
 } from "@web/src/server/models/videoGen";
-import type { DBClipVersion } from "@db/types/models";
+import type { DBVideoClip, DBVideoClipVersion } from "@db/types/models";
 
 function buildStableClipId(args: {
   listingId: string;
@@ -33,34 +37,36 @@ function buildStableClipId(args: {
   return `${args.listingId}:${roomKey}:${clipIndex}`;
 }
 
-function mapClipVersionToVideoItem(clipVersion: DBClipVersion): ContentItem {
+function mapClipVersionToVideoItem(
+  clip: DBVideoClip,
+  clipVersion: DBVideoClipVersion
+): ContentItem {
   return {
-    id: clipVersion.clipId,
+    id: clip.id,
     clipVersionId: clipVersion.id,
     thumbnail: clipVersion.thumbnailUrl ?? undefined,
     videoUrl: clipVersion.videoUrl ?? undefined,
-    category: clipVersion.category ?? undefined,
+    category: clip.category ?? undefined,
     durationSeconds: clipVersion.durationSeconds ?? undefined,
     generationModel: clipVersion.generationModel ?? undefined,
     orientation: clipVersion.orientation ?? undefined,
     aspectRatio: "vertical",
-    alt: clipVersion.roomName ? `${clipVersion.roomName} clip` : "Generated clip",
-    roomId: clipVersion.roomId ?? undefined,
-    roomName: clipVersion.roomName,
-    clipIndex: clipVersion.clipIndex,
-    sortOrder: clipVersion.sortOrder,
+    alt: clip.roomName ? `${clip.roomName} clip` : "Generated clip",
+    roomId: clip.roomId ?? undefined,
+    roomName: clip.roomName,
+    clipIndex: clip.clipIndex,
+    sortOrder: clip.sortOrder,
     aiDirections: clipVersion.aiDirections,
     versionNumber: clipVersion.versionNumber,
-    isCurrentVersion: clipVersion.isCurrent,
     versionStatus: clipVersion.status,
     generatedAt: clipVersion.createdAt
   };
 }
 
-async function seedMissingClipVersions(listingId: string) {
+async function seedMissingVideoClips(listingId: string) {
   const [status, currentClipVersions] = await Promise.all([
     getListingVideoStatus(listingId),
-    getCurrentClipVersionsByListingId(listingId)
+    getCurrentVideoClipVersionsByListingId(listingId)
   ]);
 
   const existingSourceJobIds = new Set(
@@ -68,31 +74,60 @@ async function seedMissingClipVersions(listingId: string) {
       .map((clipVersion) => clipVersion.sourceVideoGenJobId)
       .filter((value): value is string => Boolean(value))
   );
+  const currentVersionNumbersByClipId = new Map(
+    currentClipVersions.map((clipVersion) => [
+      clipVersion.videoClipId,
+      clipVersion.versionNumber
+    ])
+  );
 
   const jobsToSeed = status.jobs.filter(
     (job) =>
       (job.videoUrl || job.thumbnailUrl) && !existingSourceJobIds.has(job.jobId)
   );
 
-  await Promise.all(
-    jobsToSeed.map((job) =>
-      createClipVersion({
-        id: nanoid(),
-        clipId: buildStableClipId({
-          listingId,
-          roomId: job.roomId,
-          roomName: job.roomName,
-          clipIndex: job.clipIndex
-        }),
+  for (const job of jobsToSeed) {
+    const alreadySeededVersion = await getVideoClipVersionBySourceVideoGenJobId(
+      job.jobId
+    );
+
+    if (alreadySeededVersion) {
+      currentVersionNumbersByClipId.set(
+        alreadySeededVersion.videoClipId,
+        alreadySeededVersion.versionNumber
+      );
+      continue;
+    }
+
+      const clipId = buildStableClipId({
         listingId,
-        roomId: job.roomId ?? null,
-        roomName: job.roomName?.trim() || "Generated Clip",
-        category: job.category ?? "uncategorized",
-        clipIndex: job.clipIndex ?? 0,
-        sortOrder: job.sortOrder ?? 0,
-        versionNumber: 1,
+        roomId: job.roomId,
+        roomName: job.roomName,
+        clipIndex: job.clipIndex
+      });
+      const existingClip = await getVideoClipById(clipId);
+      const initialVersionId = nanoid();
+      const nextVersionNumber =
+        (currentVersionNumbersByClipId.get(clipId) ?? 0) + 1;
+
+      if (!existingClip) {
+        await createVideoClip({
+          id: clipId,
+          listingId,
+          roomId: job.roomId ?? null,
+          roomName: job.roomName?.trim() || "Generated Clip",
+          category: job.category ?? "uncategorized",
+          clipIndex: job.clipIndex ?? 0,
+          sortOrder: job.sortOrder ?? 0,
+          currentVideoClipVersionId: null
+        });
+      }
+
+      await createVideoClipVersion({
+        id: initialVersionId,
+        videoClipId: clipId,
+        versionNumber: nextVersionNumber,
         status: job.status,
-        isCurrent: true,
         videoUrl: job.videoUrl ?? null,
         thumbnailUrl: job.thumbnailUrl ?? null,
         durationSeconds: job.durationSeconds
@@ -105,33 +140,43 @@ async function seedMissingClipVersions(listingId: string) {
         errorMessage: job.errorMessage ?? null,
         orientation: job.orientation ?? "vertical",
         generationModel: job.generationModel ?? "veo3.1_fast",
-        imageUrls: [],
-        prompt: "",
+        imageUrls: job.imageUrls ?? [],
+        prompt: job.prompt ?? "",
         aiDirections: "",
         sourceVideoGenJobId: job.jobId
-      })
-    )
-  );
+      });
+
+      await updateVideoClip(clipId, {
+        currentVideoClipVersionId: initialVersionId
+      });
+      currentVersionNumbersByClipId.set(clipId, nextVersionNumber);
+  }
 }
 
 async function getListingClipVersionItems(listingId: string) {
-  await seedMissingClipVersions(listingId);
-  const currentClipVersions = await getCurrentClipVersionsByListingId(listingId);
+  await seedMissingVideoClips(listingId);
+  const currentClipVersions = await getCurrentVideoClipVersionsByListingId(listingId);
 
   return await Promise.all(
-    currentClipVersions
-      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
-      .map(async (clipVersion) => ({
-        clipId: clipVersion.clipId,
-        roomName: clipVersion.roomName,
-        roomId: clipVersion.roomId ?? null,
-        clipIndex: clipVersion.clipIndex,
-        sortOrder: clipVersion.sortOrder,
-        currentVersion: mapClipVersionToVideoItem(clipVersion),
-        versions: (await getSuccessfulClipVersionsByClipId(clipVersion.id)).map(
-          (version) => mapClipVersionToVideoItem(version)
-        )
-      }))
+    currentClipVersions.map(async (clipVersion) => {
+      const clip = await getVideoClipById(clipVersion.videoClipId);
+
+      if (!clip) {
+        throw new Error(`Video clip ${clipVersion.videoClipId} not found`);
+      }
+
+      return {
+        clipId: clip.id,
+        roomName: clip.roomName,
+        roomId: clip.roomId ?? null,
+        clipIndex: clip.clipIndex,
+        sortOrder: clip.sortOrder,
+        currentVersion: mapClipVersionToVideoItem(clip, clipVersion),
+        versions: (
+          await getSuccessfulVideoClipVersionsByClipId(clip.id)
+        ).map((version) => mapClipVersionToVideoItem(clip, version))
+      };
+    })
   );
 }
 

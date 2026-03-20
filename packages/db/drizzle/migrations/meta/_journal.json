@@ -267,6 +267,20 @@
       "when": 1773940506232,
       "tag": "0037_wide_mandroid",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1773951084036,
+      "tag": "0038_jazzy_bucky",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1774020988539,
+      "tag": "0039_goofy_killmonger",
+      "breakpoints": true
     }
   ]
 }

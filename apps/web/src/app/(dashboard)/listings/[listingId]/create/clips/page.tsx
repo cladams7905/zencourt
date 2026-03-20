@@ -49,23 +49,14 @@ export default async function ListingCreateClipsPage({
     return (
       <>
         <ListingViewHeader title={listingTitle} />
-        <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-4 px-4 py-6 md:px-8">
-          <ListingClipManagerBackButton href={backHref} />
-          <section className="space-y-2">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-xl font-header text-foreground">
-                Generated Clips
-              </h2>
-              <div className="inline-flex shrink-0 items-center gap-2 rounded-full border border-border px-3 py-1 text-xs text-muted-foreground">
-                <Clapperboard className="h-3.5 w-3.5" aria-hidden />
-                {clipVersionItems.length} clips
-              </div>
+        <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-4 px-4 py-8 space-y-4 md:px-8">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <ListingClipManagerBackButton href={backHref} />
+            <div className="inline-flex shrink-0 items-center gap-2 rounded-full border border-border px-3 py-1 text-xs text-muted-foreground">
+              <Clapperboard className="h-3.5 w-3.5" aria-hidden />
+              {clipVersionItems.length} clips
             </div>
-            <p className="max-w-3xl text-sm text-muted-foreground">
-              Review each generated room clip and regenerate individual clips to
-              better match your desired style.
-            </p>
-          </section>
+          </div>
           <ListingClipManager
             listingId={listingId}
             items={clipVersionItems}

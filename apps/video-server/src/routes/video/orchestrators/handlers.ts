@@ -14,9 +14,7 @@ type GenerateService = {
 };
 
 type CancelDeps = {
-  cancelVideosByListing: (listingId: string, reason: string) => Promise<number>;
-  cancelVideosByIds: (videoIds: string[], reason: string) => Promise<number>;
-  cancelJobsByListingId: (listingId: string, reason: string) => Promise<number>;
+  cancelBatchById: (batchId: string, reason: string) => Promise<number>;
 };
 
 type GenerateDeps = {
@@ -29,7 +27,7 @@ export async function handleGenerateVideo(
 ): Promise<{ status: 202; body: VideoServerGenerateResponse }> {
   logger.info(
     {
-      videoId: request.videoId,
+      batchId: request.batchId,
       listingId: request.listingId,
       jobCount: request.jobIds.length,
       jobIds: request.jobIds
@@ -43,7 +41,7 @@ export async function handleGenerateVideo(
     body: {
       success: true,
       message: "Video generation started",
-      videoId: request.videoId,
+      batchId: request.batchId,
       jobsStarted: result.jobsStarted
     }
   };
@@ -52,30 +50,23 @@ export async function handleGenerateVideo(
 export async function handleCancelVideo(
   request: CancelVideoRequest,
   deps: CancelDeps
-): Promise<{ status: 200; body: { success: true; canceledVideos: number; canceledJobs: number } }> {
-  const canceledVideos =
-    Array.isArray(request.videoIds) && request.videoIds.length > 0
-      ? await deps.cancelVideosByIds(request.videoIds, request.reason || "Canceled by user")
-      : await deps.cancelVideosByListing(
-          request.listingId,
-          request.reason || "Canceled by user"
-        );
-
-  const canceledJobs = await deps.cancelJobsByListingId(
-    request.listingId,
+): Promise<{ status: 200; body: { success: true; canceledBatches: number; canceledJobs: number } }> {
+  const canceledBatches = await deps.cancelBatchById(
+    request.batchId,
     request.reason || "Canceled by user"
   );
+  const canceledJobs = canceledBatches > 0 ? 1 : 0;
 
   logger.info(
-    { listingId: request.listingId, canceledVideos, canceledJobs },
-    "Canceled video generation for listing"
+    { batchId: request.batchId, canceledBatches, canceledJobs },
+    "Canceled video generation batch"
   );
 
   return {
     status: 200,
     body: {
       success: true,
-      canceledVideos,
+      canceledBatches,
       canceledJobs
     }
   };

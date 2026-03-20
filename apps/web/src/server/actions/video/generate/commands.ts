@@ -8,8 +8,9 @@ import type {
 import { DomainValidationError } from "@web/src/server/errors/domain";
 import { requireAuthenticatedUser } from "@web/src/server/actions/_auth/api";
 import { requireListingAccess } from "@web/src/server/models/listings/access";
+import { getVideoGenBatchById } from "@web/src/server/models/videoGen";
 import {
-  cancelListingVideoGeneration as cancelListingVideoGenerationHelper,
+  cancelVideoGenerationBatch as cancelVideoGenerationBatchHelper,
   regenerateListingClipVersion as regenerateListingClipVersionHelper,
   startListingVideoGeneration as startListingVideoGenerationHelper
 } from "./helpers";
@@ -64,13 +65,17 @@ export const startListingVideoGeneration = withServerActionCaller(
   }
 );
 
-export const cancelListingVideoGeneration = withServerActionCaller(
-  "cancelListingVideoGeneration",
-  async (listingId: string, reason?: string) => {
+export const cancelVideoGenerationBatch = withServerActionCaller(
+  "cancelVideoGenerationBatch",
+  async (batchId: string, reason?: string) => {
     const user = await requireAuthenticatedUser();
-    await requireListingAccess(listingId, user.id);
-    return cancelListingVideoGenerationHelper({
-      listingId,
+    const batch = await getVideoGenBatchById(batchId);
+    if (!batch) {
+      throw new DomainValidationError("batchId is invalid");
+    }
+    await requireListingAccess(batch.listingId, user.id);
+    return cancelVideoGenerationBatchHelper({
+      batchId,
       reason
     });
   }

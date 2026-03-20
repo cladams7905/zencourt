@@ -22,7 +22,7 @@ describe("videoGeneration service wiring", () => {
     });
 
     const result = await videoGenerationService.startGeneration({
-      videoId: "video-1",
+      batchId: "video-1",
       listingId: "listing-1",
       userId: "user-1",
       jobIds: ["job-1"],

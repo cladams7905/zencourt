@@ -58,7 +58,7 @@ export function ListingViewHeader({
             : "grid-cols-[minmax(0,1fr)_auto]"
         )}
       >
-        <div>
+        <div className="space-y-1">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Listing name
           </p>

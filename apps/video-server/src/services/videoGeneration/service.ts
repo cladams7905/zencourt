@@ -111,8 +111,8 @@ class VideoGenerationService {
   ): Promise<GenerationResult> {
     // Seed the context cache with the per-request callbackUrl so webhook
     // delivery uses the caller's URL.
-    this.videoContextCache.set(request.videoId, {
-      videoId: request.videoId,
+    this.videoContextCache.set(request.batchId, {
+      videoId: request.batchId,
       listingId: request.listingId,
       userId: request.userId,
       callbackUrl: request.callbackUrl

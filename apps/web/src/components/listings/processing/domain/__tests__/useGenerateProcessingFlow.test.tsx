@@ -29,7 +29,16 @@ import { useGenerateProcessingFlow } from "@web/src/components/listings/processi
 describe("useGenerateProcessingFlow", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockFetchVideoStatus.mockResolvedValue({ jobs: [] });
+    mockFetchVideoStatus.mockResolvedValue({
+      batchId: "batch-1",
+      status: "processing",
+      totalJobs: 1,
+      completedJobs: 0,
+      failedJobs: 0,
+      canceledJobs: 0,
+      isTerminal: false,
+      allSucceeded: false
+    });
   });
 
   it("cancels generation and navigates to review", async () => {
@@ -40,6 +49,7 @@ describe("useGenerateProcessingFlow", () => {
       useGenerateProcessingFlow({
         mode: "generate",
         listingId: "l1",
+        initialBatchId: "batch-1",
         navigate,
         updateStage,
         goToStage: jest.fn().mockResolvedValue(undefined)
@@ -54,7 +64,7 @@ describe("useGenerateProcessingFlow", () => {
       await result.current.handleCancelGeneration();
     });
 
-    expect(mockCancelVideoGeneration).toHaveBeenCalledWith("l1");
+    expect(mockCancelVideoGeneration).toHaveBeenCalledWith("batch-1");
     expect(updateStage).toHaveBeenCalledWith("review");
     expect(navigate).toHaveBeenCalledWith("/listings/l1/review");
   });

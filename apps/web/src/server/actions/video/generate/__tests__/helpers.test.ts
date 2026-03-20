@@ -1,8 +1,12 @@
 const mockNanoid = jest.fn();
 const mockCreateVideoGenBatch = jest.fn();
 const mockCreateVideoGenJobsBatch = jest.fn();
-const mockCreateClipVersion = jest.fn();
-const mockGetClipVersionById = jest.fn();
+const mockCreateVideoClipVersion = jest.fn();
+const mockGetVideoClipById = jest.fn();
+const mockGetVideoClipVersionById = jest.fn();
+const mockGetLatestVideoClipVersionByClipId = jest.fn();
+const mockUpdateVideoClip = jest.fn();
+const mockUpdateVideoGenJob = jest.fn();
 const mockGroupImagesByCategory = jest.fn();
 const mockSelectListingPrimaryImage = jest.fn();
 const mockBuildRoomsFromImages = jest.fn();
@@ -14,6 +18,8 @@ const mockGetVideoGenerationConfig = jest.fn();
 const mockIsPriorityCategory = jest.fn();
 const mockFetch = jest.fn();
 const mockSelect = jest.fn();
+var mockLoggerInfo = jest.fn();
+var mockLoggerError = jest.fn();
 
 jest.mock("nanoid", () => ({
   nanoid: (...args: unknown[]) => mockNanoid(...args)
@@ -36,8 +42,15 @@ jest.mock("@web/src/server/models/videoGen", () => ({
   createVideoGenBatch: (...args: unknown[]) => mockCreateVideoGenBatch(...args),
   createVideoGenJobsBatch: (...args: unknown[]) =>
     mockCreateVideoGenJobsBatch(...args),
-  createClipVersion: (...args: unknown[]) => mockCreateClipVersion(...args),
-  getClipVersionById: (...args: unknown[]) => mockGetClipVersionById(...args)
+  createVideoClipVersion: (...args: unknown[]) =>
+    mockCreateVideoClipVersion(...args),
+  updateVideoGenJob: (...args: unknown[]) => mockUpdateVideoGenJob(...args),
+  getVideoClipById: (...args: unknown[]) => mockGetVideoClipById(...args),
+  getVideoClipVersionById: (...args: unknown[]) =>
+    mockGetVideoClipVersionById(...args),
+  getLatestVideoClipVersionByClipId: (...args: unknown[]) =>
+    mockGetLatestVideoClipVersionByClipId(...args),
+  updateVideoClip: (...args: unknown[]) => mockUpdateVideoClip(...args)
 }));
 
 jest.mock("@web/src/server/services/videoGeneration/domain/rooms", () => ({
@@ -69,7 +82,10 @@ jest.mock("@shared/utils", () => ({
 
 jest.mock("@web/src/lib/core/logging/logger", () => ({
   logger: { info: jest.fn(), error: jest.fn() },
-  createChildLogger: () => ({ info: jest.fn(), error: jest.fn() })
+  createChildLogger: () => ({
+    info: (...args: unknown[]) => mockLoggerInfo(...args),
+    error: (...args: unknown[]) => mockLoggerError(...args)
+  })
 }));
 
 jest.mock("@web/src/server/errors/api", () => {
@@ -122,7 +138,10 @@ describe("video actions/helpers", () => {
       videoServerApiKey: "secret",
       appUrl: "https://example.vercel.app"
     });
-    mockCreateClipVersion.mockResolvedValue(undefined);
+    mockCreateVideoClipVersion.mockResolvedValue(undefined);
+    mockUpdateVideoClip.mockResolvedValue(undefined);
+    mockUpdateVideoGenJob.mockResolvedValue(undefined);
+    mockGetLatestVideoClipVersionByClipId.mockResolvedValue(null);
   });
 
   it("creates jobs in batch and enqueues video server request", async () => {
@@ -187,8 +206,7 @@ describe("video actions/helpers", () => {
       })
     );
     expect(result).toEqual({
-      videoId: "video-1",
-      jobIds: ["job-1"],
+      batchId: "video-1",
       jobCount: 1
     });
   });
@@ -364,18 +382,23 @@ describe("video actions/helpers", () => {
       .mockReturnValueOnce("video-2")
       .mockReturnValueOnce("job-2")
       .mockReturnValueOnce("clip-version-2");
-    mockGetClipVersionById.mockResolvedValueOnce({
-      id: "clip-version-1",
-      clipId: "clip-1",
+    mockGetVideoClipById.mockResolvedValueOnce({
+      id: "clip-1",
       listingId: "listing-1",
+      currentVideoClipVersionId: "clip-version-1",
       roomId: "room-1",
       roomName: "Kitchen",
       category: "kitchen",
       clipIndex: 0,
       sortOrder: 1,
+      createdAt: new Date("2026-01-01T00:00:00.000Z"),
+      updatedAt: new Date("2026-01-01T00:00:00.000Z")
+    });
+    mockGetVideoClipVersionById.mockResolvedValueOnce({
+      id: "clip-version-1",
+      videoClipId: "clip-1",
       versionNumber: 1,
       status: "completed",
-      isCurrent: true,
       videoUrl: "https://old/video.mp4",
       thumbnailUrl: "https://old/thumb.jpg",
       durationSeconds: 4,
@@ -395,25 +418,24 @@ describe("video actions/helpers", () => {
     const result = await regenerateListingClipVersion({
       listingId: "listing-1",
       userId: "user-1",
-      clipId: "clip-version-1",
+      clipId: "clip-1",
       aiDirections: "Use warmer late afternoon light",
       resolvePublicDownloadUrls
     });
 
-    expect(mockCreateClipVersion).toHaveBeenCalledWith(
+    expect(mockCreateVideoClipVersion).toHaveBeenCalledWith(
       expect.objectContaining({
         id: "clip-version-2",
-        clipId: "clip-1",
-        listingId: "listing-1",
+        videoClipId: "clip-1",
         versionNumber: 2,
         status: "pending",
-        isCurrent: false,
         aiDirections: "Use warmer late afternoon light"
       })
     );
     expect(mockCreateVideoGenJobsBatch).toHaveBeenCalledWith([
       expect.objectContaining({
         id: "job-2",
+        videoClipVersionId: null,
         generationSettings: expect.objectContaining({
           roomName: "Kitchen",
           clipIndex: 0,
@@ -421,11 +443,203 @@ describe("video actions/helpers", () => {
         })
       })
     ]);
+    expect(mockUpdateVideoGenJob).toHaveBeenCalledWith("job-2", {
+      videoClipVersionId: "clip-version-2"
+    });
+    expect(
+      mockCreateVideoGenJobsBatch.mock.invocationCallOrder[0]
+    ).toBeLessThan(mockCreateVideoClipVersion.mock.invocationCallOrder[0]);
     expect(result).toEqual({
       clipId: "clip-1",
       clipVersionId: "clip-version-2",
-      jobId: "job-2",
-      videoId: "video-2"
+      batchId: "video-2"
+    });
+  });
+
+  it("logs and rethrows regenerate failures", async () => {
+    mockNanoid
+      .mockReturnValueOnce("video-2")
+      .mockReturnValueOnce("job-2")
+      .mockReturnValueOnce("clip-version-2");
+    mockGetVideoClipById.mockResolvedValueOnce({
+      id: "clip-1",
+      listingId: "listing-1",
+      currentVideoClipVersionId: "clip-version-1",
+      roomId: "room-1",
+      roomName: "Kitchen",
+      category: "kitchen",
+      clipIndex: 0,
+      sortOrder: 1,
+      createdAt: new Date("2026-01-01T00:00:00.000Z"),
+      updatedAt: new Date("2026-01-01T00:00:00.000Z")
+    });
+    mockGetVideoClipVersionById.mockResolvedValueOnce({
+      id: "clip-version-1",
+      videoClipId: "clip-1",
+      versionNumber: 1,
+      status: "completed",
+      videoUrl: "https://old/video.mp4",
+      thumbnailUrl: "https://old/thumb.jpg",
+      durationSeconds: 4,
+      metadata: { duration: 4, orientation: "vertical" },
+      errorMessage: null,
+      orientation: "vertical",
+      generationModel: "veo3.1_fast",
+      imageUrls: ["https://signed/kitchen.jpg"],
+      prompt: "Forward pan through the Kitchen.",
+      aiDirections: "Old directions",
+      sourceVideoGenJobId: "job-1"
+    });
+    mockCreateVideoGenBatch.mockResolvedValue(undefined);
+    mockCreateVideoGenJobsBatch.mockResolvedValue(undefined);
+    mockFetch.mockRejectedValue(new Error("video server down"));
+
+    await expect(
+      regenerateListingClipVersion({
+        listingId: "listing-1",
+        userId: "user-1",
+        clipId: "clip-1",
+        aiDirections: "Use warmer late afternoon light",
+        resolvePublicDownloadUrls
+      })
+    ).rejects.toThrow("video server down");
+
+    expect(mockLoggerError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        listingId: "listing-1",
+        userId: "user-1",
+        clipId: "clip-1",
+        error: expect.any(Error)
+      }),
+      "Failed to regenerate listing clip version"
+    );
+  });
+
+  it("fails early when regenerate inputs are missing", async () => {
+    mockGetVideoClipById.mockResolvedValueOnce({
+      id: "clip-1",
+      listingId: "listing-1",
+      currentVideoClipVersionId: "clip-version-1",
+      roomId: "room-1",
+      roomName: "Kitchen",
+      category: "kitchen",
+      clipIndex: 0,
+      sortOrder: 1,
+      createdAt: new Date("2026-01-01T00:00:00.000Z"),
+      updatedAt: new Date("2026-01-01T00:00:00.000Z")
+    });
+    mockGetVideoClipVersionById.mockResolvedValueOnce({
+      id: "clip-version-1",
+      videoClipId: "clip-1",
+      versionNumber: 1,
+      status: "completed",
+      videoUrl: "https://old/video.mp4",
+      thumbnailUrl: "https://old/thumb.jpg",
+      durationSeconds: 4,
+      metadata: { duration: 4, orientation: "vertical" },
+      errorMessage: null,
+      orientation: "vertical",
+      generationModel: "veo3.1_fast",
+      imageUrls: [],
+      prompt: "",
+      aiDirections: "Old directions",
+      sourceVideoGenJobId: "job-1"
+    });
+
+    await expect(
+      regenerateListingClipVersion({
+        listingId: "listing-1",
+        userId: "user-1",
+        clipId: "clip-1",
+        resolvePublicDownloadUrls
+      })
+    ).rejects.toEqual(
+      expect.objectContaining({
+        status: 400,
+        body: expect.objectContaining({
+          message:
+            "This clip cannot be regenerated yet because its original generation inputs are missing."
+        })
+      })
+    );
+
+    expect(mockCreateVideoGenBatch).not.toHaveBeenCalled();
+    expect(mockCreateVideoGenJobsBatch).not.toHaveBeenCalled();
+    expect(mockCreateVideoClipVersion).not.toHaveBeenCalled();
+  });
+
+  it("uses the latest existing version number when the current clip pointer is stale", async () => {
+    mockNanoid
+      .mockReturnValueOnce("video-2")
+      .mockReturnValueOnce("job-2")
+      .mockReturnValueOnce("clip-version-3");
+    mockGetVideoClipById.mockResolvedValueOnce({
+      id: "clip-1",
+      listingId: "listing-1",
+      currentVideoClipVersionId: "clip-version-1",
+      roomId: "room-1",
+      roomName: "Kitchen",
+      category: "kitchen",
+      clipIndex: 0,
+      sortOrder: 1,
+      createdAt: new Date("2026-01-01T00:00:00.000Z"),
+      updatedAt: new Date("2026-01-01T00:00:00.000Z")
+    });
+    mockGetVideoClipVersionById.mockResolvedValueOnce({
+      id: "clip-version-1",
+      videoClipId: "clip-1",
+      versionNumber: 1,
+      status: "completed",
+      videoUrl: "https://old/video.mp4",
+      thumbnailUrl: "https://old/thumb.jpg",
+      durationSeconds: 4,
+      metadata: { duration: 4, orientation: "vertical" },
+      errorMessage: null,
+      orientation: "vertical",
+      generationModel: "veo3.1_fast",
+      imageUrls: ["https://signed/kitchen.jpg"],
+      prompt: "Forward pan through the Kitchen.",
+      aiDirections: "Old directions",
+      sourceVideoGenJobId: "job-1"
+    });
+    mockGetLatestVideoClipVersionByClipId.mockResolvedValueOnce({
+      id: "clip-version-2",
+      videoClipId: "clip-1",
+      versionNumber: 2,
+      status: "completed",
+      videoUrl: "https://newer/video.mp4",
+      thumbnailUrl: "https://newer/thumb.jpg",
+      durationSeconds: 4,
+      metadata: { duration: 4, orientation: "vertical" },
+      errorMessage: null,
+      orientation: "vertical",
+      generationModel: "veo3.1_fast",
+      imageUrls: ["https://signed/kitchen.jpg"],
+      prompt: "Forward pan through the Kitchen.",
+      aiDirections: "Old directions",
+      sourceVideoGenJobId: "job-older"
+    });
+    mockCreateVideoGenBatch.mockResolvedValue(undefined);
+    mockCreateVideoGenJobsBatch.mockResolvedValue(undefined);
+    mockFetch.mockResolvedValue({ ok: true });
+
+    await regenerateListingClipVersion({
+      listingId: "listing-1",
+      userId: "user-1",
+      clipId: "clip-1",
+      aiDirections: "Use warmer late afternoon light",
+      resolvePublicDownloadUrls
+    });
+
+    expect(mockCreateVideoClipVersion).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "clip-version-3",
+        videoClipId: "clip-1",
+        versionNumber: 3
+      })
+    );
+    expect(mockUpdateVideoClip).toHaveBeenCalledWith("clip-1", {
+      currentVideoClipVersionId: "clip-version-3"
     });
   });
 });

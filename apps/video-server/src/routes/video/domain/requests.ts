@@ -15,8 +15,8 @@ export function parseGenerateVideoRequest(
     );
   }
   if (
-    typeof input.videoId !== "string" ||
-    input.videoId.trim().length === 0 ||
+    typeof input.batchId !== "string" ||
+    input.batchId.trim().length === 0 ||
     typeof input.listingId !== "string" ||
     input.listingId.trim().length === 0 ||
     typeof input.userId !== "string" ||
@@ -39,7 +39,7 @@ export function parseGenerateVideoRequest(
     );
   }
   return {
-    videoId: input.videoId.trim(),
+    batchId: input.batchId.trim(),
     jobIds,
     listingId: input.listingId.trim(),
     userId: input.userId.trim(),
@@ -49,24 +49,18 @@ export function parseGenerateVideoRequest(
 
 export function parseCancelVideoRequest(body: unknown): CancelVideoRequest {
   const input = (body || {}) as Partial<CancelVideoRequest>;
-  if (typeof input.listingId !== "string" || input.listingId.trim().length === 0) {
+  if (typeof input.batchId !== "string" || input.batchId.trim().length === 0) {
     throw new VideoProcessingError(
-      "listingId is required",
+      "batchId is required",
       VideoProcessingErrorType.INVALID_INPUT
     );
   }
-  const videoIds = Array.isArray(input.videoIds)
-    ? input.videoIds
-        .map((id) => (typeof id === "string" ? id.trim() : ""))
-        .filter((id) => id.length > 0)
-    : undefined;
   const reason =
     typeof input.reason === "string" && input.reason.trim().length > 0
       ? input.reason.trim().slice(0, 200)
       : "Canceled by user";
   return {
-    listingId: input.listingId.trim(),
-    videoIds,
+    batchId: input.batchId.trim(),
     reason
   };
 }

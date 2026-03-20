@@ -30,6 +30,7 @@ jest.mock("@web/src/components/ui/loading-image", () => ({
 
 import { ListingClipManager } from "@web/src/components/listings/create/components/ListingClipManager";
 import type { ListingClipVersionItem } from "@web/src/components/listings/create/shared/types";
+import { regenerateListingClipVersion } from "@web/src/server/actions/video/generate";
 
 describe("ListingClipManager", () => {
   const items: ListingClipVersionItem[] = [
@@ -125,7 +126,104 @@ describe("ListingClipManager", () => {
 
     expect(await screen.findByLabelText("AI Directions")).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /Regenerate/i })
-    ).toBeInTheDocument();
+      screen.getAllByRole("button", { name: /Regenerate/i }).length
+    ).toBeGreaterThan(0);
+  });
+
+  it("shows an always-visible download control for the selected clip and opens its video url", async () => {
+    const user = userEvent.setup();
+    const openSpy = jest
+      .spyOn(window, "open")
+      .mockImplementation(() => null);
+
+    render(
+      <ListingClipManager
+        listingId="listing-1"
+        items={items}
+        mode="workspace"
+      />
+    );
+
+    const downloadButton = screen.getByRole("button", {
+      name: /download clip/i
+    });
+
+    expect(downloadButton).toBeInTheDocument();
+    expect(downloadButton.className).not.toMatch(/opacity-0/);
+
+    await user.click(downloadButton);
+
+    expect(openSpy).toHaveBeenCalledWith(
+      "https://video",
+      "_blank",
+      "noopener,noreferrer"
+    );
+
+    openSpy.mockRestore();
+  });
+
+  it("quick regenerate sends the clip id instead of the clip version id", async () => {
+    const user = userEvent.setup();
+    const mockRegenerateListingClipVersion = jest.mocked(
+      regenerateListingClipVersion
+    );
+    mockRegenerateListingClipVersion.mockResolvedValue({
+      listingId: "listing-1",
+      clipId: "clip-1",
+      clipVersionId: "clip-version-2",
+      batchId: "batch-1"
+    });
+
+    render(
+      <ListingClipManager
+        listingId="listing-1"
+        items={items}
+        mode="workspace"
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: /^regenerate$/i }));
+    await user.click(screen.getByRole("button", { name: /quick regenerate/i }));
+
+    expect(mockRegenerateListingClipVersion).toHaveBeenCalledWith({
+      listingId: "listing-1",
+      clipId: "clip-1",
+      aiDirections: "Warm light"
+    });
+  });
+
+  it("shows loading spinners and disables regenerate for the selected clip while regeneration is in progress", () => {
+    const processingItems: ListingClipVersionItem[] = [
+      {
+        ...items[0],
+        currentVersion: {
+          ...items[0].currentVersion,
+          versionStatus: "processing",
+          durationSeconds: 4
+        },
+        versions: [
+          {
+            ...items[0].versions[0],
+            versionStatus: "processing",
+            durationSeconds: 4
+          }
+        ]
+      }
+    ] as never;
+
+    render(
+      <ListingClipManager
+        listingId="listing-1"
+        items={processingItems}
+        mode="workspace"
+      />
+    );
+
+    expect(
+      screen.getAllByLabelText(/clip regeneration in progress/i)
+    ).toHaveLength(2);
+    expect(screen.getByText("Regenerating")).toBeInTheDocument();
+    expect(screen.queryByText("4s")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^regenerate$/i })).toBeDisabled();
   });
 });

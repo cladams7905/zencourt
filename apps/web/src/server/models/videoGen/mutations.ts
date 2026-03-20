@@ -1,18 +1,28 @@
 "use server";
 
-import { and, db, eq, videoGenBatch, videoGenJobs, clipVersions } from "@db/client";
+import {
+  db,
+  eq,
+  videoClipVersions,
+  videoClips,
+  videoGenBatch,
+  videoGenJobs
+} from "@db/client";
 import type {
-  DBClipVersion,
+  DBVideoClip,
+  DBVideoClipVersion,
   DBVideoGenBatch,
   DBVideoGenJob,
-  InsertDBClipVersion,
+  InsertDBVideoClip,
+  InsertDBVideoClipVersion,
   InsertDBVideoGenBatch,
   InsertDBVideoGenJob
 } from "@db/types/models";
 import { requireNonEmptyString } from "../shared/validation";
 import { withDbErrorHandling } from "../shared/dbErrorHandling";
 import type {
-  ClipVersionUpdates,
+  VideoClipUpdates,
+  VideoClipVersionUpdates,
   VideoGenBatchUpdates,
   VideoGenJobUpdates
 } from "./types";
@@ -129,36 +139,77 @@ export async function updateVideoGenJob(
   );
 }
 
-export async function createClipVersion(
-  clipVersion: InsertDBClipVersion
-): Promise<void> {
+export async function createVideoClip(videoClip: InsertDBVideoClip): Promise<void> {
   return withDbErrorHandling(
     async () => {
-      await db.insert(clipVersions).values(clipVersion);
+      await db.insert(videoClips).values(videoClip);
     },
     {
-      actionName: "createClipVersion",
-      context: { clipVersionId: clipVersion.id, listingId: clipVersion.listingId },
-      errorMessage: "Failed to create clip version. Please try again."
+      actionName: "createVideoClip",
+      context: { videoClipId: videoClip.id, listingId: videoClip.listingId },
+      errorMessage: "Failed to create video clip. Please try again."
     }
   );
 }
 
-export async function updateClipVersion(
+export async function updateVideoClip(
+  videoClipId: string,
+  updates: VideoClipUpdates
+): Promise<DBVideoClip[]> {
+  requireNonEmptyString(videoClipId, "videoClipId is required");
+
+  return withDbErrorHandling(
+    async () => {
+      return await db
+        .update(videoClips)
+        .set({
+          ...updates,
+          updatedAt: new Date()
+        })
+        .where(eq(videoClips.id, videoClipId))
+        .returning();
+    },
+    {
+      actionName: "updateVideoClip",
+      context: { videoClipId },
+      errorMessage: "Failed to update video clip. Please try again."
+    }
+  );
+}
+
+export async function createVideoClipVersion(
+  clipVersion: InsertDBVideoClipVersion
+): Promise<void> {
+  return withDbErrorHandling(
+    async () => {
+      await db.insert(videoClipVersions).values(clipVersion);
+    },
+    {
+      actionName: "createVideoClipVersion",
+      context: {
+        clipVersionId: clipVersion.id,
+        videoClipId: clipVersion.videoClipId
+      },
+      errorMessage: "Failed to create video clip version. Please try again."
+    }
+  );
+}
+
+export async function updateVideoClipVersion(
   clipVersionId: string,
-  updates: ClipVersionUpdates
-): Promise<DBClipVersion> {
+  updates: VideoClipVersionUpdates
+): Promise<DBVideoClipVersion> {
   requireNonEmptyString(clipVersionId, "clipVersionId is required");
 
   return withDbErrorHandling(
     async () => {
       const [updated] = await db
-        .update(clipVersions)
+        .update(videoClipVersions)
         .set({
           ...updates,
           updatedAt: new Date()
         })
-        .where(eq(clipVersions.id, clipVersionId))
+        .where(eq(videoClipVersions.id, clipVersionId))
         .returning();
 
       if (!updated) {
@@ -168,52 +219,9 @@ export async function updateClipVersion(
       return updated;
     },
     {
-      actionName: "updateClipVersion",
+      actionName: "updateVideoClipVersion",
       context: { clipVersionId },
-      errorMessage: "Failed to update clip version. Please try again."
-    }
-  );
-}
-
-export async function markClipVersionAsCurrent(args: {
-  clipVersionId: string;
-  listingId: string;
-  clipId: string;
-}): Promise<DBClipVersion[]> {
-  const { clipVersionId, listingId, clipId } = args;
-  requireNonEmptyString(clipVersionId, "clipVersionId is required");
-  requireNonEmptyString(listingId, "listingId is required");
-  requireNonEmptyString(clipId, "clipId is required");
-
-  return withDbErrorHandling(
-    async () => {
-      await db
-        .update(clipVersions)
-        .set({
-          isCurrent: false,
-          updatedAt: new Date()
-        })
-        .where(
-          and(
-            eq(clipVersions.listingId, listingId),
-            eq(clipVersions.clipId, clipId),
-            eq(clipVersions.isCurrent, true)
-          )
-        );
-
-      return await db
-        .update(clipVersions)
-        .set({
-          isCurrent: true,
-          updatedAt: new Date()
-        })
-        .where(eq(clipVersions.id, clipVersionId))
-        .returning();
-    },
-    {
-      actionName: "markClipVersionAsCurrent",
-      context: { clipVersionId, listingId, clipId },
-      errorMessage: "Failed to mark clip version as current. Please try again."
+      errorMessage: "Failed to update video clip version. Please try again."
     }
   );
 }

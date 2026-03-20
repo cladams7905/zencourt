@@ -1,22 +1,28 @@
 export {
-  createClipVersion,
+  createVideoClip,
+  createVideoClipVersion,
   createVideoGenBatch,
   createVideoGenJob,
   createVideoGenJobsBatch,
-  markClipVersionAsCurrent,
-  updateClipVersion,
+  updateVideoClip,
+  updateVideoClipVersion,
   updateVideoGenBatch,
   updateVideoGenJob
 } from "./mutations";
 export {
-  getClipVersionById,
-  getClipVersionBySourceVideoGenJobId,
-  getCurrentClipVersionsByListingId,
-  getSuccessfulClipVersionsByClipId,
+  getVideoGenBatchById,
+  getLatestVideoGenBatchByListingId,
+  getCurrentVideoClipVersionsByListingId,
+  getLatestVideoClipVersionByClipId,
+  getSuccessfulVideoClipVersionsByClipId,
+  getVideoClipById,
+  getVideoClipVersionById,
+  getVideoClipVersionBySourceVideoGenJobId,
   getVideoGenJobById
 } from "./queries";
 export type {
-  ClipVersionUpdates,
+  VideoClipUpdates,
+  VideoClipVersionUpdates,
   VideoGenBatchUpdates,
   VideoGenJobUpdates
 } from "./types";

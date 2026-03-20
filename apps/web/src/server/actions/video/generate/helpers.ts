@@ -6,10 +6,14 @@ import {
   logger as baseLogger
 } from "@web/src/lib/core/logging/logger";
 import {
-  createClipVersion,
+  createVideoClipVersion,
   createVideoGenBatch,
   createVideoGenJobsBatch,
-  getClipVersionById
+  getVideoClipById,
+  getLatestVideoClipVersionByClipId,
+  getVideoClipVersionById,
+  updateVideoClip,
+  updateVideoGenJob
 } from "@web/src/server/models/videoGen";
 import { getVideoGenerationConfig } from "@web/src/server/services/videoGeneration/config";
 import {
@@ -59,7 +63,7 @@ function validateImagesExist(listingImageRows: DBListingImage[]): void {
 
 export async function startListingVideoGeneration(
   args: StartListingVideoGenerationArgs
-): Promise<{ videoId: string; jobIds: string[]; jobCount: number }> {
+): Promise<{ batchId: string; jobCount: number }> {
   const { listingId, userId, aiDirections, resolvePublicDownloadUrls } = args;
   const config = getVideoGenerationConfig();
   const orientation = args.orientation ?? config.defaultOrientation;
@@ -106,24 +110,23 @@ export async function startListingVideoGeneration(
   );
 
   return {
-    videoId: parentVideoId,
-    jobIds,
+    batchId: parentVideoId,
     jobCount: records.length
   };
 }
 
-export async function cancelListingVideoGeneration(
+export async function cancelVideoGenerationBatch(
   args: CancelListingVideoGenerationArgs
 ): Promise<CancelListingVideoGenerationResult> {
   const result = await cancelVideoServerGeneration(args);
 
   logger.info(
     {
-      listingId: result.listingId,
-      canceledVideos: result.canceledVideos,
+      batchId: result.batchId,
+      canceledBatches: result.canceledBatches,
       canceledJobs: result.canceledJobs
     },
-    "Canceled generation via video server"
+    "Canceled video generation batch via video server"
   );
 
   return result;
@@ -133,95 +136,144 @@ export async function regenerateListingClipVersion(
   args: RegenerateListingClipVersionArgs
 ): Promise<RegenerateListingClipVersionResult> {
   const { listingId, userId, clipId, aiDirections } = args;
-  const currentClipVersion = await getClipVersionById(clipId);
 
-  if (!currentClipVersion) {
-    throw new ApiError(404, {
-      error: "Clip not found",
-      message: "Clip version not found"
+  try {
+    const currentClip = await getVideoClipById(clipId);
+
+    if (!currentClip) {
+      throw new ApiError(404, {
+        error: "Clip not found",
+        message: "Video clip not found"
+      });
+    }
+
+    const currentClipVersionId = currentClip.currentVideoClipVersionId;
+    if (!currentClipVersionId) {
+      throw new ApiError(400, {
+        error: "Missing current clip version",
+        message: "This clip does not have a current version to regenerate."
+      });
+    }
+
+    const currentClipVersion =
+      await getVideoClipVersionById(currentClipVersionId);
+
+    if (!currentClipVersion) {
+      throw new ApiError(404, {
+        error: "Clip version not found",
+        message: "Current clip version not found"
+      });
+    }
+
+    const latestClipVersion =
+      await getLatestVideoClipVersionByClipId(currentClip.id);
+    const nextVersionNumber =
+      (latestClipVersion?.versionNumber ?? currentClipVersion.versionNumber) + 1;
+
+    const parentVideoId = nanoid();
+    const jobId = nanoid();
+    const nextClipVersionId = nanoid();
+    const resolvedAiDirections =
+      typeof aiDirections === "string"
+        ? aiDirections
+        : currentClipVersion.aiDirections;
+    const resolvedImageUrls = currentClipVersion.imageUrls ?? [];
+    const resolvedPrompt = currentClipVersion.prompt?.trim() ?? "";
+
+    if (!resolvedImageUrls.length || !resolvedPrompt) {
+      throw new ApiError(400, {
+        error: "Missing regeneration inputs",
+        message:
+          "This clip cannot be regenerated yet because its original generation inputs are missing."
+      });
+    }
+
+    await createVideoGenBatch({
+      id: parentVideoId,
+      listingId,
+      status: "pending",
+      errorMessage: null
     });
-  }
 
-  const parentVideoId = nanoid();
-  const jobId = nanoid();
-  const nextClipVersionId = nanoid();
-  const resolvedAiDirections =
-    typeof aiDirections === "string"
-      ? aiDirections
-      : currentClipVersion.aiDirections;
+    await createVideoGenJobsBatch([
+      {
+        id: jobId,
+        videoGenBatchId: parentVideoId,
+        requestId: null,
+        videoClipId: currentClip.id,
+        videoClipVersionId: null,
+        status: "pending",
+        videoUrl: null,
+        thumbnailUrl: null,
+        generationSettings: {
+          model: currentClipVersion.generationModel,
+          orientation: currentClipVersion.orientation,
+          aiDirections: resolvedAiDirections ?? "",
+          imageUrls: args.resolvePublicDownloadUrls(resolvedImageUrls),
+          prompt: resolvedPrompt,
+          category: currentClip.category,
+          sortOrder: currentClip.sortOrder,
+          roomId: currentClip.roomId ?? undefined,
+          roomName: currentClip.roomName,
+          clipIndex: currentClip.clipIndex
+        },
+        metadata: {
+          orientation: currentClipVersion.orientation
+        },
+        errorMessage: null
+      }
+    ]);
 
-  await createVideoGenBatch({
-    id: parentVideoId,
-    listingId,
-    status: "pending",
-    errorMessage: null
-  });
-
-  await createClipVersion({
-    id: nextClipVersionId,
-    clipId: currentClipVersion.clipId,
-    listingId,
-    roomId: currentClipVersion.roomId,
-    roomName: currentClipVersion.roomName,
-    category: currentClipVersion.category,
-    clipIndex: currentClipVersion.clipIndex,
-    sortOrder: currentClipVersion.sortOrder,
-    versionNumber: currentClipVersion.versionNumber + 1,
-    status: "pending",
-    isCurrent: false,
-    videoUrl: null,
-    thumbnailUrl: null,
-    durationSeconds: null,
-    metadata: currentClipVersion.metadata ?? null,
-    errorMessage: null,
-    orientation: currentClipVersion.orientation,
-    generationModel: currentClipVersion.generationModel,
-    imageUrls: currentClipVersion.imageUrls,
-    prompt: currentClipVersion.prompt,
-    aiDirections: resolvedAiDirections ?? "",
-    sourceVideoGenJobId: jobId
-  });
-
-  await createVideoGenJobsBatch([
-    {
-      id: jobId,
-      videoGenBatchId: parentVideoId,
-      requestId: null,
+    await createVideoClipVersion({
+      id: nextClipVersionId,
+      videoClipId: currentClip.id,
+      versionNumber: nextVersionNumber,
       status: "pending",
       videoUrl: null,
       thumbnailUrl: null,
-      generationSettings: {
-        model: currentClipVersion.generationModel,
-        orientation: currentClipVersion.orientation,
-        aiDirections: resolvedAiDirections ?? "",
-        imageUrls: args.resolvePublicDownloadUrls(currentClipVersion.imageUrls),
-        prompt: currentClipVersion.prompt,
-        category: currentClipVersion.category,
-        sortOrder: currentClipVersion.sortOrder,
-        roomId: currentClipVersion.roomId ?? undefined,
-        roomName: currentClipVersion.roomName,
-        clipIndex: currentClipVersion.clipIndex
-      },
-      metadata: {
-        orientation: currentClipVersion.orientation
-      },
-      errorMessage: null
-    }
-  ]);
+      durationSeconds: null,
+      metadata: currentClipVersion.metadata ?? null,
+      errorMessage: null,
+      orientation: currentClipVersion.orientation,
+      generationModel: currentClipVersion.generationModel,
+      imageUrls: resolvedImageUrls,
+      prompt: resolvedPrompt,
+      aiDirections: resolvedAiDirections ?? "",
+      sourceVideoGenJobId: jobId
+    });
 
-  await enqueueVideoServerJobs({
-    parentVideoId,
-    jobIds: [jobId],
-    listingId,
-    userId
-  });
+    await updateVideoClip(currentClip.id, {
+      currentVideoClipVersionId: nextClipVersionId
+    });
 
-  return {
-    clipId: currentClipVersion.clipId,
-    clipVersionId: nextClipVersionId,
-    jobId,
-    videoId: parentVideoId
-  };
+    await updateVideoGenJob(jobId, {
+      videoClipVersionId: nextClipVersionId
+    });
+
+    await enqueueVideoServerJobs({
+      parentVideoId,
+      jobIds: [jobId],
+      listingId,
+      userId
+    });
+
+    return {
+      clipId: currentClip.id,
+      clipVersionId: nextClipVersionId,
+      batchId: parentVideoId
+    };
+  } catch (error) {
+    logger.error(
+      {
+        listingId,
+        userId,
+        clipId,
+        error
+      },
+      "Failed to regenerate listing clip version"
+    );
+    throw error;
+  }
 }
 
 export type { CancelListingVideoGenerationResult } from "./types";

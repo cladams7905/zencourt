@@ -14,6 +14,7 @@
     "build:local": "npm run build:local --workspace=@zencourt/web",
     "build:web": "npm run build --workspace=@zencourt/web",
     "build:video": "npm run build --workspace=@zencourt/video-server",
+    "test": "npm run test --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
     "type-check": "npm run type-check --workspaces --if-present",
     "env:pull": "cd apps/web && vercel env pull ../../.env.local",

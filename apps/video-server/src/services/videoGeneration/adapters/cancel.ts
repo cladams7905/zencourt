@@ -60,6 +60,33 @@ export async function cancelVideosByIds(
   return canceled.length;
 }
 
+export async function cancelBatchById(
+  batchId: string,
+  reason?: string
+): Promise<number> {
+  const canceledBatches = await cancelVideosByIds([batchId], reason);
+
+  if (canceledBatches === 0) {
+    return 0;
+  }
+
+  await db
+    .update(videoGenJobs)
+    .set({
+      status: "canceled",
+      errorMessage: resolveCancelReason(reason),
+      updatedAt: new Date()
+    })
+    .where(
+      and(
+        eq(videoGenJobs.videoGenBatchId, batchId),
+        inArray(videoGenJobs.status, CANCELABLE_STATUSES)
+      )
+    );
+
+  return canceledBatches;
+}
+
 export async function cancelJobsByListingId(
   listingId: string,
   reason?: string

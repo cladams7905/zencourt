@@ -1,9 +1,10 @@
 const mockStartListingVideoGenerationHelper = jest.fn();
 const mockRegenerateListingClipVersionHelper = jest.fn();
-const mockCancelListingVideoGenerationHelper = jest.fn();
+const mockCancelVideoGenerationBatchHelper = jest.fn();
 const mockRequireAuthenticatedUser = jest.fn();
 const mockRequireListingAccess = jest.fn();
 const mockGetPublicDownloadUrls = jest.fn();
+const mockGetVideoGenBatchById = jest.fn();
 
 jest.mock("@web/src/server/actions/video/generate/helpers", () => ({
   startListingVideoGeneration: (...args: unknown[]) =>
@@ -14,8 +15,8 @@ jest.mock("@web/src/server/actions/video/generate/helpers", () => ({
     (mockRegenerateListingClipVersionHelper as (...a: unknown[]) => unknown)(
       ...args
     ),
-  cancelListingVideoGeneration: (...args: unknown[]) =>
-    (mockCancelListingVideoGenerationHelper as (...a: unknown[]) => unknown)(
+  cancelVideoGenerationBatch: (...args: unknown[]) =>
+    (mockCancelVideoGenerationBatchHelper as (...a: unknown[]) => unknown)(
       ...args
     )
 }));
@@ -30,6 +31,11 @@ jest.mock("@web/src/server/models/listings/access", () => ({
     (mockRequireListingAccess as (...a: unknown[]) => unknown)(...args)
 }));
 
+jest.mock("@web/src/server/models/videoGen", () => ({
+  getVideoGenBatchById: (...args: unknown[]) =>
+    (mockGetVideoGenBatchById as (...a: unknown[]) => unknown)(...args)
+}));
+
 jest.mock("@web/src/server/services/storage/urlResolution", () => ({
   getPublicDownloadUrls: (...args: unknown[]) =>
     (mockGetPublicDownloadUrls as (...a: unknown[]) => unknown)(...args)
@@ -38,7 +44,7 @@ jest.mock("@web/src/server/services/storage/urlResolution", () => ({
 import {
   regenerateListingClipVersion,
   startListingVideoGeneration,
-  cancelListingVideoGeneration
+  cancelVideoGenerationBatch
 } from "@web/src/server/actions/video/generate/commands";
 
 describe("video commands", () => {
@@ -48,11 +54,16 @@ describe("video commands", () => {
   beforeEach(() => {
     mockStartListingVideoGenerationHelper.mockReset();
     mockRegenerateListingClipVersionHelper.mockReset();
-    mockCancelListingVideoGenerationHelper.mockReset();
+    mockCancelVideoGenerationBatchHelper.mockReset();
     mockRequireAuthenticatedUser.mockReset();
     mockRequireAuthenticatedUser.mockResolvedValue(mockUser);
     mockRequireListingAccess.mockReset();
     mockRequireListingAccess.mockResolvedValue(mockListing);
+    mockGetVideoGenBatchById.mockReset();
+    mockGetVideoGenBatchById.mockResolvedValue({
+      id: "batch-1",
+      listingId: "listing-1"
+    });
   });
 
   describe("startListingVideoGeneration", () => {
@@ -71,7 +82,7 @@ describe("video commands", () => {
     it("trims listingId and passes through to service", async () => {
       mockStartListingVideoGenerationHelper.mockResolvedValueOnce({
         batchId: "b1",
-        jobIds: ["j1"]
+        jobCount: 1
       });
 
       const result = await startListingVideoGeneration({
@@ -91,7 +102,7 @@ describe("video commands", () => {
       });
       expect(result).toEqual({
         batchId: "b1",
-        jobIds: ["j1"],
+        jobCount: 1,
         listingId: "listing-1"
       });
     });
@@ -99,7 +110,7 @@ describe("video commands", () => {
     it("passes orientation and aiDirections when provided", async () => {
       mockStartListingVideoGenerationHelper.mockResolvedValueOnce({
         batchId: "b1",
-        jobIds: []
+        jobCount: 0
       });
 
       await startListingVideoGeneration({
@@ -118,30 +129,31 @@ describe("video commands", () => {
     });
   });
 
-  describe("cancelListingVideoGeneration", () => {
+  describe("cancelVideoGenerationBatch", () => {
     it("delegates to helper with optional reason", async () => {
-      mockCancelListingVideoGenerationHelper.mockResolvedValueOnce(undefined);
+      mockCancelVideoGenerationBatchHelper.mockResolvedValueOnce(undefined);
 
-      await cancelListingVideoGeneration("listing-1", "user cancelled");
+      await cancelVideoGenerationBatch("batch-1", "user cancelled");
 
       expect(mockRequireAuthenticatedUser).toHaveBeenCalled();
+      expect(mockGetVideoGenBatchById).toHaveBeenCalledWith("batch-1");
       expect(mockRequireListingAccess).toHaveBeenCalledWith(
         "listing-1",
         "user-1"
       );
-      expect(mockCancelListingVideoGenerationHelper).toHaveBeenCalledWith({
-        listingId: "listing-1",
+      expect(mockCancelVideoGenerationBatchHelper).toHaveBeenCalledWith({
+        batchId: "batch-1",
         reason: "user cancelled"
       });
     });
 
     it("calls helper without reason when not provided", async () => {
-      mockCancelListingVideoGenerationHelper.mockResolvedValueOnce(undefined);
+      mockCancelVideoGenerationBatchHelper.mockResolvedValueOnce(undefined);
 
-      await cancelListingVideoGeneration("listing-1");
+      await cancelVideoGenerationBatch("batch-1");
 
-      expect(mockCancelListingVideoGenerationHelper).toHaveBeenCalledWith({
-        listingId: "listing-1",
+      expect(mockCancelVideoGenerationBatchHelper).toHaveBeenCalledWith({
+        batchId: "batch-1",
         reason: undefined
       });
     });
@@ -161,8 +173,7 @@ describe("video commands", () => {
       mockRegenerateListingClipVersionHelper.mockResolvedValueOnce({
         clipId: "clip-1",
         clipVersionId: "clip-version-2",
-        jobId: "job-2",
-        videoId: "video-2"
+        batchId: "batch-2"
       });
 
       const result = await regenerateListingClipVersion({
@@ -185,8 +196,7 @@ describe("video commands", () => {
       expect(result).toEqual({
         clipId: "clip-1",
         clipVersionId: "clip-version-2",
-        jobId: "job-2",
-        videoId: "video-2",
+        batchId: "batch-2",
         listingId: "listing-1"
       });
     });

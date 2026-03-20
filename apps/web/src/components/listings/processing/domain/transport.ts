@@ -2,10 +2,10 @@ import { updateListingForCurrentUser } from "@web/src/server/actions/listings/co
 import { fetchPropertyDetailsForCurrentUser } from "@web/src/server/actions/listings/propertyDetails";
 import { categorizeListingImagesForCurrentUser } from "@web/src/server/actions/listings/image/categorize";
 import {
-  cancelListingVideoGeneration,
+  cancelVideoGenerationBatch,
   startListingVideoGeneration
 } from "@web/src/server/actions/video/generate";
-import type { VideoJobUpdateEvent } from "@web/src/lib/domain/listing/videoStatus";
+import type { VideoGenerationBatchStatusPayload } from "@web/src/lib/domain/listing/videoStatus";
 import {
   fetchApiData,
   fetchStreamResponse
@@ -25,16 +25,15 @@ export async function fetchPropertyDetails(
   await fetchPropertyDetailsForCurrentUser(listingId, address ?? null);
 }
 
-export async function fetchVideoStatus(listingId: string): Promise<{
-  jobs: VideoJobUpdateEvent[];
-}> {
+export async function fetchVideoStatus(
+  batchId: string
+): Promise<VideoGenerationBatchStatusPayload | null> {
   try {
-    const data = await fetchApiData<{ jobs?: VideoJobUpdateEvent[] }>(
-      `/api/v1/video/status/${listingId}`
+    return await fetchApiData<VideoGenerationBatchStatusPayload>(
+      `/api/v1/video/status/${batchId}`
     );
-    return { jobs: data?.jobs ?? [] };
   } catch {
-    return { jobs: [] };
+    return null;
   }
 }
 
@@ -73,9 +72,9 @@ export async function startListingContentGeneration(listingId: string) {
 }
 
 export async function startVideoGeneration(listingId: string) {
-  await startListingVideoGeneration({ listingId });
+  return await startListingVideoGeneration({ listingId });
 }
 
-export async function cancelVideoGeneration(listingId: string) {
-  await cancelListingVideoGeneration(listingId, "Canceled by user");
+export async function cancelVideoGeneration(batchId: string) {
+  await cancelVideoGenerationBatch(batchId, "Canceled by user");
 }

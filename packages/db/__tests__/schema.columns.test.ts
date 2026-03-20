@@ -1,11 +1,12 @@
 import { getTableColumns } from "drizzle-orm";
 import {
-  clipVersions,
   content,
   listingImages,
   listings,
   userAdditional,
   userMedia,
+  videoClips,
+  videoClipVersions,
   videoGenBatch,
   videoGenJobs
 } from "../drizzle/schema";
@@ -135,35 +136,44 @@ describe("db schema column contracts", () => {
         "status",
         "thumbnailUrl",
         "updatedAt",
+        "videoClipId",
+        "videoClipVersionId",
         "videoGenBatchId",
         "videoUrl"
       ].sort()
     );
-    expect(columnKeys(clipVersions)).toEqual(
+    expect(columnKeys(videoClips)).toEqual(
+      [
+        "category",
+        "clipIndex",
+        "createdAt",
+        "currentVideoClipVersionId",
+        "id",
+        "listingId",
+        "roomId",
+        "roomName",
+        "sortOrder",
+        "updatedAt",
+      ].sort()
+    );
+    expect(columnKeys(videoClipVersions)).toEqual(
       [
         "aiDirections",
-        "category",
-        "clipId",
-        "clipIndex",
         "createdAt",
         "durationSeconds",
         "errorMessage",
         "generationModel",
         "id",
         "imageUrls",
-        "isCurrent",
-        "listingId",
         "metadata",
         "orientation",
         "prompt",
-        "roomId",
-        "roomName",
-        "sortOrder",
         "sourceVideoGenJobId",
         "status",
         "thumbnailUrl",
         "updatedAt",
         "versionNumber",
+        "videoClipId",
         "videoUrl"
       ].sort()
     );

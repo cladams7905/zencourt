@@ -18,6 +18,7 @@ import { useListingProcessingWorkflow } from "@web/src/components/listings/proce
 type ListingProcessingViewProps = {
   mode: "categorize" | "review" | "generate";
   listingId: string;
+  initialBatchId?: string | null;
   userId: string;
   title: string;
   address?: string | null;
@@ -28,6 +29,7 @@ type ListingProcessingViewProps = {
 export function ListingProcessingView({
   mode,
   listingId,
+  initialBatchId,
   title,
   address,
   batchStartedAt
@@ -55,6 +57,7 @@ export function ListingProcessingView({
   } = useListingProcessingWorkflow({
     mode,
     listingId,
+    initialBatchId,
     address,
     batchStartedAt,
     navigate
@@ -115,8 +118,8 @@ export function ListingProcessingView({
           <DialogHeader>
             <DialogTitle>Cancel video generation?</DialogTitle>
             <DialogDescription>
-              This will stop all in-flight video jobs for this listing. You can
-              restart generation later.
+              This will stop the active video generation batch. You can restart
+              generation later.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

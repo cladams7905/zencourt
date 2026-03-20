@@ -37,7 +37,9 @@ describe("video server infra", () => {
       expect.objectContaining({
         method: "POST",
         headers: expect.objectContaining({ "X-API-Key": "secret" }),
-        body: expect.stringContaining('"callbackUrl":"https://app.example/api/v1/webhooks/video"')
+        body: expect.stringMatching(
+          /"batchId":"video-1".*"callbackUrl":"https:\/\/app\.example\/api\/v1\/webhooks\/video"|\"callbackUrl\":\"https:\/\/app\.example\/api\/v1\/webhooks\/video\".*\"batchId\":\"video-1\"/
+        )
       })
     );
   });
@@ -67,23 +69,25 @@ describe("video server infra", () => {
   it("cancels jobs and normalizes counts", async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ canceledVideos: 2, canceledJobs: 4 })
+      json: async () => ({ canceledBatches: 2, canceledJobs: 4 })
     });
 
     const result = await cancelVideoServerGeneration({
-      listingId: "listing-1"
+      batchId: "batch-1"
     });
 
     expect(result).toEqual({
       success: true,
-      listingId: "listing-1",
-      canceledVideos: 2,
+      batchId: "batch-1",
+      canceledBatches: 2,
       canceledJobs: 4
     });
     expect(mockFetch).toHaveBeenCalledWith(
       "http://video-server/video/cancel",
       expect.objectContaining({
-        body: expect.stringContaining('"reason":"Canceled via workflow"')
+        body: expect.stringMatching(
+          /"batchId":"batch-1".*"reason":"Canceled via workflow"|"reason":"Canceled via workflow".*"batchId":"batch-1"/
+        )
       })
     );
   });
@@ -96,7 +100,7 @@ describe("video server infra", () => {
     });
 
     await expect(
-      cancelVideoServerGeneration({ listingId: "listing-1", reason: "manual" })
+      cancelVideoServerGeneration({ batchId: "batch-1", reason: "manual" })
     ).rejects.toEqual(
       expect.objectContaining({
         status: 500,

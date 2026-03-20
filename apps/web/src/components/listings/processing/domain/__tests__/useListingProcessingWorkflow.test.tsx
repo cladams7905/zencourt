@@ -63,12 +63,22 @@ describe("useListingProcessingWorkflow", () => {
 
   it("cancels generation and navigates to review", async () => {
     const navigate = jest.fn();
-    mockFetchVideoStatus.mockResolvedValue({ jobs: [] });
+    mockFetchVideoStatus.mockResolvedValue({
+      batchId: "batch-1",
+      status: "processing",
+      totalJobs: 1,
+      completedJobs: 0,
+      failedJobs: 0,
+      canceledJobs: 0,
+      isTerminal: false,
+      allSucceeded: false
+    });
 
     const { result } = renderHook(() =>
       useListingProcessingWorkflow({
         mode: "generate",
         listingId: "l1",
+        initialBatchId: "batch-1",
         navigate
       })
     );
@@ -81,7 +91,7 @@ describe("useListingProcessingWorkflow", () => {
       await result.current.handleCancelGeneration();
     });
 
-    expect(mockCancelVideoGeneration).toHaveBeenCalledWith("l1");
+    expect(mockCancelVideoGeneration).toHaveBeenCalledWith("batch-1");
     expect(mockUpdateListingStage).toHaveBeenCalledWith("l1", "review");
     expect(navigate).toHaveBeenCalledWith("/listings/l1/review");
   });

@@ -7,9 +7,7 @@ import { Router, Request, Response } from "express";
 import { validateApiKey } from "@/middleware/auth";
 import { asyncHandler } from "@/middleware/errorHandler";
 import {
-  cancelVideosByListing,
-  cancelVideosByIds,
-  cancelJobsByListingId
+  cancelBatchById
 } from "@/services/videoGeneration/adapters/cancel";
 import {
   parseCancelVideoRequest,
@@ -51,9 +49,7 @@ router.post(
   asyncHandler(async (req: Request, res: Response) => {
     const requestData = parseCancelVideoRequest(req.body);
     const result = await handleCancelVideo(requestData, {
-      cancelVideosByListing,
-      cancelVideosByIds,
-      cancelJobsByListingId
+      cancelBatchById
     });
     res.status(200).json(result.body);
   })

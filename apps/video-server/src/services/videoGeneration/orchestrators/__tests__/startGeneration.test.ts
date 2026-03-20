@@ -2,7 +2,7 @@ import { startGenerationOrchestrator } from "@/services/videoGeneration/orchestr
 
 describe("startGenerationOrchestrator", () => {
   const baseRequest = {
-    videoId: "video-1",
+    batchId: "video-1",
     jobIds: ["job-1", "job-2"],
     listingId: "listing-1",
     userId: "user-1",
@@ -86,7 +86,7 @@ describe("startGenerationOrchestrator", () => {
     };
 
     await expect(startGenerationOrchestrator(baseRequest, deps)).rejects.toThrow(
-      "Jobs do not belong to video"
+      "Jobs do not belong to batch"
     );
   });
 

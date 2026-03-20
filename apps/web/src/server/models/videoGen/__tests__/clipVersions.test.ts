@@ -22,17 +22,20 @@ jest.mock("@db/client", () => ({
     insert: (...args: unknown[]) =>
       (mockInsert as (...a: unknown[]) => unknown)(...args)
   },
-  clipVersions: {
+  videoClips: {
     id: "id",
-    clipId: "clipId",
     listingId: "listingId",
-    isCurrent: "isCurrent",
-    roomName: "roomName",
-    clipIndex: "clipIndex",
+    currentVideoClipVersionId: "currentVideoClipVersionId",
+    sortOrder: "sortOrder",
+    createdAt: "createdAt"
+  },
+  videoClipVersions: {
+    id: "id",
+    videoClipId: "videoClipId",
     versionNumber: "versionNumber",
     status: "status",
     createdAt: "createdAt",
-    sortOrder: "sortOrder"
+    sourceVideoGenJobId: "sourceVideoGenJobId"
   },
   and: (...args: unknown[]) => args,
   asc: (...args: unknown[]) => args,
@@ -46,14 +49,17 @@ jest.mock("@web/src/server/models/shared/dbErrorHandling", () => ({
 }));
 
 import {
-  createClipVersion,
-  getClipVersionById,
-  getCurrentClipVersionsByListingId,
-  getSuccessfulClipVersionsByClipId,
-  markClipVersionAsCurrent
+  createVideoClip,
+  createVideoClipVersion,
+  getCurrentVideoClipVersionsByListingId,
+  getVideoClipById,
+  getVideoClipVersionById,
+  getVideoClipVersionBySourceVideoGenJobId,
+  getSuccessfulVideoClipVersionsByClipId,
+  updateVideoClip
 } from "@web/src/server/models/videoGen";
 
-describe("clipVersions model", () => {
+describe("video clip models", () => {
   beforeEach(() => {
     mockSelect.mockReset();
     mockFrom.mockReset();
@@ -69,24 +75,40 @@ describe("clipVersions model", () => {
     mockWithDbErrorHandling.mockClear();
   });
 
-  it("creates clip version rows", async () => {
+  it("creates video clip rows", async () => {
     mockInsert.mockReturnValue({ values: mockValues });
     mockValues.mockResolvedValue(undefined);
 
-    await createClipVersion({ id: "clip-version-1" } as never);
+    await createVideoClip({ id: "clip-1" } as never);
+
+    expect(mockValues).toHaveBeenCalledWith({ id: "clip-1" });
+  });
+
+  it("creates video clip version rows", async () => {
+    mockInsert.mockReturnValue({ values: mockValues });
+    mockValues.mockResolvedValue(undefined);
+
+    await createVideoClipVersion({ id: "clip-version-1" } as never);
 
     expect(mockValues).toHaveBeenCalledWith({ id: "clip-version-1" });
   });
 
-  it("loads current clip versions for a listing", async () => {
-    const rows = [{ id: "clip-1", isCurrent: true }];
-    mockSelect.mockReturnValue({ from: mockFrom });
-    mockFrom.mockReturnValue({ where: mockWhere });
-    mockWhere.mockReturnValue({ orderBy: mockOrderBy });
-    mockOrderBy.mockResolvedValue(rows);
+  it("loads current video clip versions for a listing", async () => {
+    const rows = [{ id: "clip-version-1", versionNumber: 1 }];
+    mockSelect.mockReturnValueOnce({ from: mockFrom });
+    mockFrom.mockReturnValueOnce({ where: mockWhere });
+    mockWhere.mockReturnValueOnce({ orderBy: mockOrderBy });
+    mockOrderBy.mockResolvedValueOnce([
+      { id: "clip-1", currentVideoClipVersionId: "clip-version-1" }
+    ]);
+
+    mockSelect.mockReturnValueOnce({ from: mockFrom });
+    mockFrom.mockReturnValueOnce({ where: mockWhere });
+    mockWhere.mockReturnValueOnce({ limit: mockLimit });
+    mockLimit.mockResolvedValueOnce(rows);
 
     await expect(
-      getCurrentClipVersionsByListingId("listing-1")
+      getCurrentVideoClipVersionsByListingId("listing-1")
     ).resolves.toEqual(rows);
   });
 
@@ -94,58 +116,61 @@ describe("clipVersions model", () => {
     const rows = [{ id: "clip-v2", versionNumber: 2 }];
     mockSelect.mockReturnValueOnce({ from: mockFrom });
     mockFrom.mockReturnValueOnce({ where: mockWhere });
-    mockWhere.mockReturnValueOnce({ limit: mockLimit });
-    mockLimit.mockResolvedValueOnce([
-      {
-        id: "clip-1",
-        clipId: "clip-1",
-        listingId: "listing-1",
-        roomName: "Kitchen",
-        clipIndex: 0
-      }
-    ]);
-
-    mockSelect.mockReturnValueOnce({ from: mockFrom });
-    mockFrom.mockReturnValueOnce({ where: mockWhere });
     mockWhere.mockReturnValueOnce({ orderBy: mockOrderBy });
     mockOrderBy.mockResolvedValueOnce(rows);
 
-    await expect(getSuccessfulClipVersionsByClipId("clip-1")).resolves.toEqual(
-      rows
-    );
+    await expect(
+      getSuccessfulVideoClipVersionsByClipId("clip-1")
+    ).resolves.toEqual(rows);
   });
 
-  it("loads a clip version by id", async () => {
+  it("loads a video clip by id", async () => {
+    mockSelect.mockReturnValue({ from: mockFrom });
+    mockFrom.mockReturnValue({ where: mockWhere });
+    mockWhere.mockReturnValue({ limit: mockLimit });
+    mockLimit.mockResolvedValue([{ id: "clip-1" }]);
+
+    await expect(getVideoClipById("clip-1")).resolves.toEqual({
+      id: "clip-1"
+    });
+  });
+
+  it("loads a video clip version by id", async () => {
     mockSelect.mockReturnValue({ from: mockFrom });
     mockFrom.mockReturnValue({ where: mockWhere });
     mockWhere.mockReturnValue({ limit: mockLimit });
     mockLimit.mockResolvedValue([{ id: "clip-v1" }]);
 
-    await expect(getClipVersionById("clip-v1")).resolves.toEqual({
+    await expect(getVideoClipVersionById("clip-v1")).resolves.toEqual({
       id: "clip-v1"
     });
   });
 
-  it("promotes a version to current and clears prior current flag", async () => {
-    mockUpdate.mockReturnValue({ set: mockSet });
-    mockSet.mockReturnValue({ where: mockUpdateWhere });
-    mockUpdateWhere.mockResolvedValue(undefined);
-
-    mockUpdate.mockReturnValueOnce({ set: mockSet });
-    mockSet.mockReturnValueOnce({ where: mockUpdateWhere });
-    mockUpdateWhere.mockResolvedValueOnce(undefined);
-
-    mockUpdate.mockReturnValueOnce({ set: mockSet });
-    mockSet.mockReturnValueOnce({ where: mockUpdateWhere });
-    mockUpdateWhere.mockReturnValueOnce({ returning: mockReturning });
-    mockReturning.mockResolvedValueOnce([{ id: "clip-v2", isCurrent: true }]);
+  it("loads a version by source job id", async () => {
+    mockSelect.mockReturnValue({ from: mockFrom });
+    mockFrom.mockReturnValue({ where: mockWhere });
+    mockWhere.mockReturnValue({ limit: mockLimit });
+    mockLimit.mockResolvedValue([{ id: "clip-v2" }]);
 
     await expect(
-      markClipVersionAsCurrent({
-        clipVersionId: "clip-v2",
-        listingId: "listing-1",
-        clipId: "clip-1"
+      getVideoClipVersionBySourceVideoGenJobId("job-1")
+    ).resolves.toEqual({
+      id: "clip-v2"
+    });
+  });
+
+  it("updates a clip current version pointer", async () => {
+    mockUpdate.mockReturnValue({ set: mockSet });
+    mockSet.mockReturnValue({ where: mockUpdateWhere });
+    mockUpdateWhere.mockReturnValueOnce({ returning: mockReturning });
+    mockReturning.mockResolvedValueOnce([
+      { id: "clip-1", currentVideoClipVersionId: "clip-v2" }
+    ]);
+
+    await expect(
+      updateVideoClip("clip-1", {
+        currentVideoClipVersionId: "clip-v2"
       })
-    ).resolves.toEqual([{ id: "clip-v2", isCurrent: true }]);
+    ).resolves.toEqual([{ id: "clip-1", currentVideoClipVersionId: "clip-v2" }]);
   });
 });

@@ -6,7 +6,7 @@ import {
 describe("video route request parsers", () => {
   it("parses generate request with required fields", () => {
     const parsed = parseGenerateVideoRequest({
-      videoId: "video-1",
+      batchId: "batch-1",
       jobIds: ["job-1", "job-2"],
       listingId: "listing-1",
       userId: "user-1",
@@ -14,7 +14,7 @@ describe("video route request parsers", () => {
     });
 
     expect(parsed).toEqual({
-      videoId: "video-1",
+      batchId: "batch-1",
       jobIds: ["job-1", "job-2"],
       listingId: "listing-1",
       userId: "user-1",
@@ -25,14 +25,14 @@ describe("video route request parsers", () => {
   it("throws when generate request is missing required fields", () => {
     expect(() =>
       parseGenerateVideoRequest({
-        videoId: "video-1",
+        batchId: "batch-1",
         jobIds: []
       })
     ).toThrow("jobIds must be a non-empty array");
 
     expect(() =>
       parseGenerateVideoRequest({
-        videoId: "video-1",
+        batchId: "batch-1",
         jobIds: ["job-1"],
         listingId: "listing-1",
         userId: "user-1"
@@ -43,21 +43,19 @@ describe("video route request parsers", () => {
 
   it("parses cancel request and normalizes reason", () => {
     const parsed = parseCancelVideoRequest({
-      listingId: "listing-1",
-      videoIds: ["video-1", " ", "video-2"],
+      batchId: "batch-1",
       reason: "  user canceled  "
     });
 
     expect(parsed).toEqual({
-      listingId: "listing-1",
-      videoIds: ["video-1", "video-2"],
+      batchId: "batch-1",
       reason: "user canceled"
     });
   });
 
   it("uses default reason for cancel request", () => {
     const parsed = parseCancelVideoRequest({
-      listingId: "listing-1"
+      batchId: "batch-1"
     });
 
     expect(parsed.reason).toBe("Canceled by user");

@@ -7,7 +7,7 @@ describe("video route orchestrators", () => {
   it("starts generation and returns accepted response payload", async () => {
     const result = await handleGenerateVideo(
       {
-        videoId: "video-1",
+        batchId: "batch-1",
         jobIds: ["job-1"],
         listingId: "listing-1",
         userId: "user-1",
@@ -24,53 +24,29 @@ describe("video route orchestrators", () => {
     expect(result.body).toEqual({
       success: true,
       message: "Video generation started",
-      videoId: "video-1",
+      batchId: "batch-1",
       jobsStarted: 1
     });
   });
 
-  it("cancels by explicit video IDs when provided", async () => {
-    const cancelVideosByIds = jest.fn().mockResolvedValue(2);
-    const cancelVideosByListing = jest.fn().mockResolvedValue(0);
-    const cancelJobsByListingId = jest.fn().mockResolvedValue(3);
+  it("cancels by batch id", async () => {
+    const cancelBatchById = jest.fn().mockResolvedValue(1);
 
     const result = await handleCancelVideo(
       {
-        listingId: "listing-1",
-        videoIds: ["video-1", "video-2"],
+        batchId: "batch-1",
         reason: "Canceled by user"
       },
       {
-        cancelVideosByIds,
-        cancelVideosByListing,
-        cancelJobsByListingId
+        cancelBatchById
       }
     );
 
-    expect(cancelVideosByIds).toHaveBeenCalledWith(
-      ["video-1", "video-2"],
-      "Canceled by user"
-    );
-    expect(cancelVideosByListing).not.toHaveBeenCalled();
+    expect(cancelBatchById).toHaveBeenCalledWith("batch-1", "Canceled by user");
     expect(result.body).toEqual({
       success: true,
-      canceledVideos: 2,
-      canceledJobs: 3
+      canceledBatches: 1,
+      canceledJobs: 1
     });
-  });
-
-  it("falls back to listing cancel when videoIds is empty", async () => {
-    const cancelVideosByIds = jest.fn();
-    const cancelVideosByListing = jest.fn().mockResolvedValue(5);
-    const cancelJobsByListingId = jest.fn().mockResolvedValue(2);
-
-    const result = await handleCancelVideo(
-      { listingId: "listing-1", videoIds: [], reason: "Canceled by user" },
-      { cancelVideosByIds, cancelVideosByListing, cancelJobsByListingId }
-    );
-
-    expect(cancelVideosByListing).toHaveBeenCalledWith("listing-1", "Canceled by user");
-    expect(cancelVideosByIds).not.toHaveBeenCalled();
-    expect(result.body.canceledVideos).toBe(5);
   });
 });

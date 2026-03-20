@@ -12,14 +12,14 @@ export type StartListingVideoGenerationArgs = {
 };
 
 export type CancelListingVideoGenerationArgs = {
-  listingId: string;
+  batchId: string;
   reason?: string;
 };
 
 export type CancelListingVideoGenerationResult = {
   success: true;
-  listingId: string;
-  canceledVideos: number;
+  batchId: string;
+  canceledBatches: number;
   canceledJobs: number;
 };
 
@@ -34,8 +34,7 @@ export type RegenerateListingClipVersionArgs = {
 export type RegenerateListingClipVersionResult = {
   clipId: string;
   clipVersionId: string;
-  jobId: string;
-  videoId: string;
+  batchId: string;
 };
 
 export type ListingRoom = {

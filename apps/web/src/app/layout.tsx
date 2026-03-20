@@ -4,7 +4,7 @@ import { getStackClientApp } from "@web/src/lib/core/auth/stack/client";
 import { Toaster } from "../components/ui/sonner";
 import {
   Playfair_Display,
-  Mulish,
+  Plus_Jakarta_Sans,
   Italiana,
   Rouge_Script,
   Open_Sans,
@@ -14,9 +14,9 @@ import {
 } from "next/font/google";
 import "./globals.css";
 
-const body = Mulish({
+const body = Plus_Jakarta_Sans({
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600"],
+  weight: ["200", "300", "400", "500", "600", "700", "800"],
   variable: "--font-body",
   display: "swap"
 });

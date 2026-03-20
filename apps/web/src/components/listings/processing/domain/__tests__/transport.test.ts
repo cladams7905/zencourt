@@ -2,7 +2,7 @@ const mockUpdateListingForCurrentUser = jest.fn();
 const mockFetchPropertyDetailsForCurrentUser = jest.fn();
 const mockCategorizeListingImagesForCurrentUser = jest.fn();
 const mockStartListingVideoGeneration = jest.fn();
-const mockCancelListingVideoGeneration = jest.fn();
+const mockCancelVideoGenerationBatch = jest.fn();
 
 jest.mock("@web/src/server/actions/listings/commands", () => ({
   updateListingForCurrentUser: (...args: unknown[]) =>
@@ -22,8 +22,8 @@ jest.mock("@web/src/server/actions/listings/image/categorize", () => ({
 jest.mock("@web/src/server/actions/video/generate", () => ({
   startListingVideoGeneration: (...args: unknown[]) =>
     mockStartListingVideoGeneration(...args),
-  cancelListingVideoGeneration: (...args: unknown[]) =>
-    mockCancelListingVideoGeneration(...args)
+  cancelVideoGenerationBatch: (...args: unknown[]) =>
+    mockCancelVideoGenerationBatch(...args)
 }));
 
 import {
@@ -52,15 +52,15 @@ describe("processing transport", () => {
     await updateListingStage("l1", "review");
     await triggerCategorization("l1");
     await startVideoGeneration("l1");
-    await cancelVideoGeneration("l1");
+    await cancelVideoGeneration("batch-1");
 
     expect(mockUpdateListingForCurrentUser).toHaveBeenCalledWith("l1", {
       listingStage: "review"
     });
     expect(mockCategorizeListingImagesForCurrentUser).toHaveBeenCalledWith("l1");
     expect(mockStartListingVideoGeneration).toHaveBeenCalledWith({ listingId: "l1" });
-    expect(mockCancelListingVideoGeneration).toHaveBeenCalledWith(
-      "l1",
+    expect(mockCancelVideoGenerationBatch).toHaveBeenCalledWith(
+      "batch-1",
       "Canceled by user"
     );
   });
@@ -69,15 +69,34 @@ describe("processing transport", () => {
     (global.fetch as jest.Mock)
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ success: true, data: { jobs: [{ id: "j1" }] } })
+        json: async () => ({
+          success: true,
+          data: {
+            batchId: "batch-1",
+            status: "processing",
+            totalJobs: 1,
+            completedJobs: 0,
+            failedJobs: 0,
+            canceledJobs: 0,
+            isTerminal: false,
+            allSucceeded: false
+          }
+        })
       })
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({ success: true, data: [{ category: null }] })
       });
 
-    await expect(fetchVideoStatus("l1")).resolves.toEqual({
-      jobs: [{ id: "j1" }]
+    await expect(fetchVideoStatus("batch-1")).resolves.toEqual({
+      batchId: "batch-1",
+      status: "processing",
+      totalJobs: 1,
+      completedJobs: 0,
+      failedJobs: 0,
+      canceledJobs: 0,
+      isTerminal: false,
+      allSucceeded: false
     });
     await expect(fetchListingImages("l1")).resolves.toEqual([{ category: null }]);
   });

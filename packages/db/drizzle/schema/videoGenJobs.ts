@@ -16,6 +16,7 @@ import type {
 import { videoGenBatch } from "./videoGenBatch";
 import { videoStatusEnum } from "./enums";
 import { listings } from "./listings";
+import { videoClips, videoClipVersions } from "./videoClips";
 
 type VideoStatus = (typeof videoStatusEnum.enumValues)[number];
 
@@ -26,6 +27,13 @@ export const videoGenJobs = pgTable(
     videoGenBatchId: text("video_gen_batch_id")
       .notNull()
       .references(() => videoGenBatch.id, { onDelete: "cascade" }),
+    videoClipId: text("video_clip_id").references(() => videoClips.id, {
+      onDelete: "set null"
+    }),
+    videoClipVersionId: text("video_clip_version_id").references(
+      () => videoClipVersions.id,
+      { onDelete: "set null" }
+    ),
     requestId: text("request_id"),
     status: videoStatusEnum("status")
       .notNull()
@@ -43,6 +51,8 @@ export const videoGenJobs = pgTable(
   },
   (table) => [
     index("video_gen_jobs_video_gen_batch_id_idx").on(table.videoGenBatchId),
+    index("video_gen_jobs_video_clip_id_idx").on(table.videoClipId),
+    index("video_gen_jobs_video_clip_version_id_idx").on(table.videoClipVersionId),
     index("video_gen_jobs_status_idx").on(table.status),
     index("video_gen_jobs_video_gen_batch_status_idx").on(
       table.videoGenBatchId,

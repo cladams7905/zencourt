@@ -4,7 +4,7 @@ import {
 } from "@web/src/lib/domain/listing/roomCategories";
 
 const PROMPT_CONSTRAINTS =
-  "No people. No added objects. Keep architecture and materials unchanged. No transitions, cuts, fades, dissolves, zoom bursts, or scene changes. Single continuous camera movement only.";
+  "No people. No added objects. Keep architecture and materials unchanged. Single continuous camera movement only. Full-bleed, edge-to-edge composition from the first frame, filling the entire video frame at all times. Start already full-screen. No framed or inset opening, no letterboxing or pillarboxing, and no fades, transitions, cuts, or scene changes.";
 
 type PromptTemplate = {
   key: string;
@@ -24,12 +24,12 @@ const INTERIOR_TEMPLATES: PromptTemplate[] = [
     template: "Forward pan through the {roomName}."
   },
   {
-    key: "interior-center-push",
-    template: "Steady push-in toward the center of the {roomName}."
+    key: "interior-lateral-track",
+    template: "Steady lateral tracking shot across the {roomName}."
   },
   {
-    key: "interior-corner-reveal",
-    template: "Gentle corner reveal into the {roomName}."
+    key: "interior-straight-glide",
+    template: "Straight-on glide through the {roomName}."
   }
 ];
 
@@ -71,14 +71,14 @@ const EXTERIOR_GROUND_TEMPLATES: PromptTemplate[] = [
 const CATEGORY_TEMPLATES: Partial<Record<RoomCategory, PromptTemplate[]>> = {
   bathroom: [
     {
-      key: "bathroom-slow-push",
-      template: "Slow camera pan into the {roomName}."
+      key: "bathroom-slow-glide",
+      template: "Slow glide across the {roomName}."
     }
   ],
   bedroom: [
     {
-      key: "bedroom-center-push",
-      template: "Steady camera movement toward the center of the {roomName}."
+      key: "bedroom-lateral-track",
+      template: "Steady lateral camera move across the {roomName}."
     }
   ]
 };

@@ -1,5 +1,4 @@
 import {
-  clipVersions,
   content,
   contentStatusEnum,
   contentTypeEnum,
@@ -10,6 +9,8 @@ import {
   socialPlatformEnum,
   userAdditional,
   userMedia,
+  videoClips,
+  videoClipVersions,
   videoGenBatch,
   videoGenJobs,
   videoStatusEnum
@@ -46,5 +47,8 @@ export type DBVideoGenJob = typeof videoGenJobs.$inferSelect;
 export type InsertDBVideoGenJob = typeof videoGenJobs.$inferInsert;
 export type VideoStatus = (typeof videoStatusEnum.enumValues)[number];
 
-export type DBClipVersion = typeof clipVersions.$inferSelect;
-export type InsertDBClipVersion = typeof clipVersions.$inferInsert;
+export type DBVideoClip = typeof videoClips.$inferSelect;
+export type InsertDBVideoClip = typeof videoClips.$inferInsert;
+
+export type DBVideoClipVersion = typeof videoClipVersions.$inferSelect;
+export type InsertDBVideoClipVersion = typeof videoClipVersions.$inferInsert;

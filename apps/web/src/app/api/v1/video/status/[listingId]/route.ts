@@ -11,7 +11,7 @@ import {
   logger as baseLogger
 } from "@web/src/lib/core/logging/logger";
 import { runWithCaller } from "@web/src/server/infra/logger/callContext";
-import { getListingVideoStatus } from "@web/src/server/actions/video/generate";
+import { getVideoGenerationStatus } from "@web/src/server/actions/video/generate";
 
 export const runtime = "nodejs";
 
@@ -27,22 +27,22 @@ export async function GET(
 ) {
   return runWithCaller(ROUTE_CALLER, async () => {
     try {
-      let listingId: string;
+      let batchId: string;
       try {
-        listingId = parseRequiredRouteParam(
+        batchId = parseRequiredRouteParam(
           (await params).listingId,
-          "listingId"
+          "batchId"
         );
       } catch {
         return apiErrorResponse(
           StatusCode.BAD_REQUEST,
           "INVALID_REQUEST",
-          "listingId path parameter is required",
-          { message: "listingId path parameter is required" }
+          "batchId path parameter is required",
+          { message: "batchId path parameter is required" }
         );
       }
 
-      const payload = await getListingVideoStatus(listingId);
+      const payload = await getVideoGenerationStatus(batchId);
       return NextResponse.json({
         success: true,
         data: payload

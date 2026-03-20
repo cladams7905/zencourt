@@ -2,7 +2,7 @@ export * from "./enums";
 export * from "./listings";
 export * from "./content";
 export * from "./listingImages";
-export * from "./clipVersions";
+export * from "./videoClips";
 export * from "./videoGenBatch";
 export * from "./videoGenJobs";
 export * from "./userAdditional";

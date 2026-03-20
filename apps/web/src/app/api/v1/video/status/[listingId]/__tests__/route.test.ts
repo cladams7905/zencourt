@@ -19,7 +19,7 @@ describe("video status route", () => {
   }) {
     jest.resetModules();
 
-    const mockGetListingVideoStatus = jest.fn().mockImplementation(async () => {
+    const mockGetVideoGenerationStatus = jest.fn().mockImplementation(async () => {
       if (options?.statusError) {
         throw options.statusError;
       }
@@ -29,14 +29,14 @@ describe("video status route", () => {
       if (options?.listingAccessError) {
         throw options.listingAccessError;
       }
-      return { jobs: [{ id: "job-1" }] };
+      return { batchId: "batch-1", status: "processing" };
     });
     jest.doMock("@web/src/app/api/v1/_utils", () => ({
       ApiError: TestApiError
     }));
     jest.doMock("@web/src/server/actions/video/generate", () => ({
-      getListingVideoStatus: (...args: unknown[]) =>
-        mockGetListingVideoStatus(...args)
+      getVideoGenerationStatus: (...args: unknown[]) =>
+        mockGetVideoGenerationStatus(...args)
     }));
     jest.doMock("@web/src/lib/core/logging/logger", () => ({
       logger: { error: jest.fn() },
@@ -47,7 +47,7 @@ describe("video status route", () => {
     return { GET: routeModule.GET };
   }
 
-  it("returns 400 when listingId is missing", async () => {
+  it("returns 400 when batchId is missing", async () => {
     const { GET } = await loadRoute();
     const request = {} as unknown as Request;
     const response = await GET(request as never, {
@@ -67,7 +67,7 @@ describe("video status route", () => {
     expect(response.status).toBe(200);
     expect(payload).toEqual({
       success: true,
-      data: { jobs: [{ id: "job-1" }] }
+      data: { batchId: "batch-1", status: "processing" }
     });
   });
 

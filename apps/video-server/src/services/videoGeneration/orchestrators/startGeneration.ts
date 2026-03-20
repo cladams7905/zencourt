@@ -21,10 +21,10 @@ type StartGenerationDeps = {
 };
 
 function logStartGeneration(request: VideoServerGenerateRequest): void {
-  const { videoId, listingId, userId, jobIds } = request;
+  const { batchId, listingId, userId, jobIds } = request;
   logger.info(
     {
-      videoId,
+      batchId,
       listingId,
       userId,
       jobCount: jobIds.length,
@@ -36,7 +36,7 @@ function logStartGeneration(request: VideoServerGenerateRequest): void {
 
 async function loadAndValidateJobs(
   jobIds: string[],
-  videoId: string,
+  batchId: string,
   deps: StartGenerationDeps
 ): Promise<DBVideoGenJob[]> {
   const jobs = await deps.findJobsByIds(jobIds);
@@ -56,10 +56,10 @@ async function loadAndValidateJobs(
     );
   }
 
-  const invalidJobs = jobs.filter((job) => job.videoGenBatchId !== videoId);
+  const invalidJobs = jobs.filter((job) => job.videoGenBatchId !== batchId);
   if (invalidJobs.length > 0) {
     throw new Error(
-      `Jobs do not belong to video ${videoId}: ${invalidJobs
+      `Jobs do not belong to batch ${batchId}: ${invalidJobs
         .map((j) => j.id)
         .join(", ")}`
     );
@@ -162,25 +162,25 @@ export async function startGenerationOrchestrator(
   request: VideoServerGenerateRequest,
   deps: StartGenerationDeps
 ): Promise<GenerationResult> {
-  const { videoId, jobIds } = request;
+  const { batchId, jobIds } = request;
 
   logStartGeneration(request);
 
-  const jobs = await loadAndValidateJobs(jobIds, videoId, deps);
+  const jobs = await loadAndValidateJobs(jobIds, batchId, deps);
 
-  await markVideoProcessingAndLog(videoId, deps);
+  await markVideoProcessingAndLog(batchId, deps);
 
   const concurrency = getConcurrency();
   const { successCount, failedJobs } = await dispatchJobsWithConcurrency(
     jobs,
     concurrency,
-    videoId,
+    batchId,
     deps
   );
 
-  await ensureAtLeastOneJobSucceeded(successCount, videoId, deps);
+  await ensureAtLeastOneJobSucceeded(successCount, batchId, deps);
 
-  logDispatchCompleted(videoId, jobs.length, successCount, failedJobs.length);
+  logDispatchCompleted(batchId, jobs.length, successCount, failedJobs.length);
 
   return buildGenerationResult(successCount, failedJobs);
 }

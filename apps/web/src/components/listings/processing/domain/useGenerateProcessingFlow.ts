@@ -2,7 +2,7 @@ import * as React from "react";
 import useSWR from "swr";
 import { toast } from "sonner";
 import { emitListingSidebarUpdate } from "@web/src/lib/domain/listing/sidebarEvents";
-import type { VideoJobUpdateEvent } from "@web/src/lib/domain/listing/videoStatus";
+import type { VideoGenerationBatchStatusPayload } from "@web/src/lib/domain/listing/videoStatus";
 import {
   cancelVideoGeneration,
   fetchVideoStatus,
@@ -13,12 +13,18 @@ import {
 export function useGenerateProcessingFlow(params: {
   mode: "categorize" | "review" | "generate";
   listingId: string;
+  initialBatchId?: string | null;
   navigate: (url: string) => void;
   goToStage: (stage: "review" | "create", path: string) => Promise<void>;
   updateStage: (stage: "review" | "create") => Promise<void>;
 }) {
-  const { mode, listingId, navigate, goToStage, updateStage } = params;
-  const [generationJobs, setGenerationJobs] = React.useState<VideoJobUpdateEvent[]>([]);
+  const { mode, listingId, initialBatchId, navigate, goToStage, updateStage } =
+    params;
+  const [activeBatchId, setActiveBatchId] = React.useState<string | null>(
+    initialBatchId ?? null
+  );
+  const [generationStatus, setGenerationStatus] =
+    React.useState<VideoGenerationBatchStatusPayload | null>(null);
   const [canPollGeneration, setCanPollGeneration] = React.useState(mode !== "generate");
   const [listingContentStatus, setListingContentStatus] = React.useState<
     "idle" | "running" | "succeeded" | "failed"
@@ -41,21 +47,21 @@ export function useGenerateProcessingFlow(params: {
         allSucceeded: false
       };
     }
-    const total = generationJobs.length;
-    const terminal = generationJobs.filter((job) =>
-      ["completed", "failed", "canceled"].includes(job.status)
-    ).length;
-    const failed = generationJobs.filter((job) => job.status === "failed").length;
-    const canceled = generationJobs.filter((job) => job.status === "canceled").length;
+    const total = generationStatus?.totalJobs ?? 0;
+    const failed = generationStatus?.failedJobs ?? 0;
+    const canceled = generationStatus?.canceledJobs ?? 0;
     return {
       total,
-      terminal,
+      terminal:
+        (generationStatus?.completedJobs ?? 0) +
+        failed +
+        canceled,
       failed,
       canceled,
-      isTerminal: total > 0 && terminal >= total,
-      allSucceeded: total > 0 && generationJobs.every((job) => job.status === "completed")
+      isTerminal: generationStatus?.isTerminal ?? false,
+      allSucceeded: generationStatus?.allSucceeded ?? false
     };
-  }, [generationJobs, mode]);
+  }, [generationStatus, mode]);
 
   const estimatedTotalSeconds = React.useMemo(() => {
     if (mode !== "generate") {
@@ -71,10 +77,10 @@ export function useGenerateProcessingFlow(params: {
   }, [remainingEstimateSeconds]);
 
   const { data: videoStatus } = useSWR(
-    mode === "generate" && canPollGeneration
-      ? `/api/v1/video/status/${listingId}`
+    mode === "generate" && canPollGeneration && activeBatchId
+      ? `/api/v1/video/status/${activeBatchId}`
       : null,
-    () => fetchVideoStatus(listingId),
+    () => fetchVideoStatus(activeBatchId as string),
     {
       refreshInterval: 2000,
       revalidateOnFocus: false
@@ -83,9 +89,8 @@ export function useGenerateProcessingFlow(params: {
 
   React.useEffect(() => {
     if (mode !== "generate") return;
-    const jobs = videoStatus?.jobs ?? [];
-    if (jobs.length > 0) {
-      setGenerationJobs(jobs);
+    if (videoStatus) {
+      setGenerationStatus(videoStatus);
     }
   }, [mode, videoStatus]);
 
@@ -105,47 +110,77 @@ export function useGenerateProcessingFlow(params: {
     };
 
     try {
-      const { jobs } = await fetchVideoStatus(listingId);
-      const hasFailedJob = jobs.some((job) => job.status === "failed");
-      const hasActiveJob = jobs.some((job) => ["pending", "processing"].includes(job.status));
-      const allCompleted = jobs.length > 0 && jobs.every((job) => job.status === "completed");
+      if (activeBatchId) {
+        const status = await fetchVideoStatus(activeBatchId);
+        if (status) {
+          setGenerationStatus(status);
 
-      if (hasFailedJob) {
-        await goToStage("review", `/listings/${listingId}/review`);
-        return;
-      }
+          if (status.failedJobs > 0 || status.canceledJobs > 0) {
+            await goToStage("review", `/listings/${listingId}/review`);
+            return;
+          }
 
-      if (allCompleted) {
-        try {
-          await runContent();
-        } catch (error) {
-          toast.error(error instanceof Error ? error.message : "Failed to generate listing content.");
-          await goToStage("review", `/listings/${listingId}/review`);
-          return;
+          if (status.allSucceeded && status.isTerminal) {
+            try {
+              await runContent();
+            } catch (error) {
+              toast.error(
+                error instanceof Error
+                  ? error.message
+                  : "Failed to generate listing content."
+              );
+              await goToStage("review", `/listings/${listingId}/review`);
+              return;
+            }
+            await goToStage(
+              "create",
+              `/listings/${listingId}/create?mediaType=videos&filter=new_listing`
+            );
+            return;
+          }
+
+          if (!status.isTerminal) {
+            void runContent().catch((error) => {
+              toast.error(
+                error instanceof Error
+                  ? error.message
+                  : "Failed to generate listing content."
+              );
+            });
+            return;
+          }
         }
-        await goToStage("create", `/listings/${listingId}/create?mediaType=videos&filter=new_listing`);
-        return;
-      }
-
-      if (hasActiveJob) {
-        setGenerationJobs(jobs);
-        void runContent().catch((error) => {
-          toast.error(error instanceof Error ? error.message : "Failed to generate listing content.");
-        });
-        return;
       }
 
       const contentPromise = runContent().catch((error) => {
-        toast.error(error instanceof Error ? error.message : "Failed to generate listing content.");
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Failed to generate listing content."
+        );
       });
 
-      await startVideoGeneration(listingId);
+      const startResult = await startVideoGeneration(listingId);
+      setActiveBatchId(startResult.batchId);
+      setGenerationStatus({
+        batchId: startResult.batchId,
+        status: "pending",
+        errorMessage: null,
+        totalJobs: startResult.jobCount,
+        completedJobs: 0,
+        failedJobs: 0,
+        canceledJobs: 0,
+        processingJobs: 0,
+        pendingJobs: startResult.jobCount,
+        isTerminal: false,
+        allSucceeded: false
+      });
       void contentPromise;
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to start generation.");
       await goToStage("review", `/listings/${listingId}/review`);
     }
-  }, [goToStage, listingId, mode]);
+  }, [activeBatchId, goToStage, listingId, mode]);
 
   React.useEffect(() => {
     if (mode === "generate") {
@@ -209,10 +244,10 @@ export function useGenerateProcessingFlow(params: {
   }, [listingId, mode]);
 
   const handleCancelGeneration = React.useCallback(async () => {
-    if (mode !== "generate") return;
+    if (mode !== "generate" || !activeBatchId) return;
     setIsCanceling(true);
     try {
-      await cancelVideoGeneration(listingId);
+      await cancelVideoGeneration(activeBatchId);
       await updateStage("review");
       emitListingSidebarUpdate({
         id: listingId,
@@ -227,7 +262,7 @@ export function useGenerateProcessingFlow(params: {
       setIsCanceling(false);
       setIsCancelOpen(false);
     }
-  }, [listingId, mode, navigate, updateStage]);
+  }, [activeBatchId, listingId, mode, navigate, updateStage]);
 
   return {
     isCancelOpen,

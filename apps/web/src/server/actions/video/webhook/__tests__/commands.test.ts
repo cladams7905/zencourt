@@ -2,23 +2,28 @@
 
 const mockGetVideoGenJobById = jest.fn();
 const mockUpdateVideoGenJob = jest.fn();
-const mockGetClipVersionBySourceVideoGenJobId = jest.fn();
-const mockUpdateClipVersion = jest.fn();
-const mockMarkClipVersionAsCurrent = jest.fn();
+const mockGetVideoClipVersionById = jest.fn();
+const mockGetVideoClipVersionBySourceVideoGenJobId = jest.fn();
+const mockUpdateVideoClipVersion = jest.fn();
+const mockUpdateVideoClip = jest.fn();
 
 jest.mock("@web/src/server/models/videoGen", () => ({
   getVideoGenJobById: (...args: unknown[]) =>
     (mockGetVideoGenJobById as (...a: unknown[]) => unknown)(...args),
   updateVideoGenJob: (...args: unknown[]) =>
     (mockUpdateVideoGenJob as (...a: unknown[]) => unknown)(...args),
-  getClipVersionBySourceVideoGenJobId: (...args: unknown[]) =>
-    (mockGetClipVersionBySourceVideoGenJobId as (...a: unknown[]) => unknown)(
+  getVideoClipVersionById: (...args: unknown[]) =>
+    (mockGetVideoClipVersionById as (...a: unknown[]) => unknown)(...args),
+  getVideoClipVersionBySourceVideoGenJobId: (...args: unknown[]) =>
+    (mockGetVideoClipVersionBySourceVideoGenJobId as (
+      ...a: unknown[]
+    ) => unknown)(
       ...args
     ),
-  updateClipVersion: (...args: unknown[]) =>
-    (mockUpdateClipVersion as (...a: unknown[]) => unknown)(...args),
-  markClipVersionAsCurrent: (...args: unknown[]) =>
-    (mockMarkClipVersionAsCurrent as (...a: unknown[]) => unknown)(...args)
+  updateVideoClipVersion: (...args: unknown[]) =>
+    (mockUpdateVideoClipVersion as (...a: unknown[]) => unknown)(...args),
+  updateVideoClip: (...args: unknown[]) =>
+    (mockUpdateVideoClip as (...a: unknown[]) => unknown)(...args)
 }));
 
 jest.mock("@web/src/lib/core/logging/logger", () => ({
@@ -49,9 +54,10 @@ function minimalPayload(overrides: Partial<VideoWebhookPayload> = {}): VideoWebh
 describe("video webhook commands", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockGetClipVersionBySourceVideoGenJobId.mockResolvedValue(null);
-    mockUpdateClipVersion.mockResolvedValue(undefined);
-    mockMarkClipVersionAsCurrent.mockResolvedValue(undefined);
+    mockGetVideoClipVersionById.mockResolvedValue(null);
+    mockGetVideoClipVersionBySourceVideoGenJobId.mockResolvedValue(null);
+    mockUpdateVideoClipVersion.mockResolvedValue(undefined);
+    mockUpdateVideoClip.mockResolvedValue(undefined);
   });
 
   describe("normalizeWebhookResult", () => {
@@ -126,6 +132,7 @@ describe("video webhook commands", () => {
         id: "job-1",
         status: "pending",
         listingId: "listing-1",
+        videoClipVersionId: null,
         videoUrl: null,
         thumbnailUrl: null,
         errorMessage: null
@@ -158,19 +165,19 @@ describe("video webhook commands", () => {
         id: "job-1",
         status: "pending",
         listingId: "listing-1",
+        videoClipVersionId: "clip-version-2",
         videoUrl: null,
         thumbnailUrl: null,
         errorMessage: null
       };
       const clipVersion = {
         id: "clip-version-2",
-        clipId: "clip-1",
-        listingId: "listing-1"
+        videoClipId: "clip-1"
       };
       mockGetVideoGenJobById
         .mockResolvedValueOnce(currentJob)
         .mockResolvedValueOnce({ ...currentJob, status: "completed" });
-      mockGetClipVersionBySourceVideoGenJobId.mockResolvedValueOnce(clipVersion);
+      mockGetVideoClipVersionById.mockResolvedValueOnce(clipVersion);
 
       await processVideoWebhookPayload(
         minimalPayload({
@@ -183,7 +190,7 @@ describe("video webhook commands", () => {
         })
       );
 
-      expect(mockUpdateClipVersion).toHaveBeenCalledWith("clip-version-2", {
+      expect(mockUpdateVideoClipVersion).toHaveBeenCalledWith("clip-version-2", {
         status: "completed",
         videoUrl: "https://v",
         thumbnailUrl: "https://t",
@@ -191,10 +198,8 @@ describe("video webhook commands", () => {
         durationSeconds: 5,
         metadata: undefined
       });
-      expect(mockMarkClipVersionAsCurrent).toHaveBeenCalledWith({
-        clipVersionId: "clip-version-2",
-        listingId: "listing-1",
-        clipId: "clip-1"
+      expect(mockUpdateVideoClip).toHaveBeenCalledWith("clip-1", {
+        currentVideoClipVersionId: "clip-version-2"
       });
     });
 
@@ -203,6 +208,7 @@ describe("video webhook commands", () => {
         id: "job-1",
         status: "pending",
         listingId: "listing-1",
+        videoClipVersionId: "clip-version-2",
         videoUrl: null,
         thumbnailUrl: null,
         errorMessage: null
@@ -210,10 +216,9 @@ describe("video webhook commands", () => {
       mockGetVideoGenJobById
         .mockResolvedValueOnce(currentJob)
         .mockResolvedValueOnce({ ...currentJob, status: "failed" });
-      mockGetClipVersionBySourceVideoGenJobId.mockResolvedValueOnce({
+      mockGetVideoClipVersionById.mockResolvedValueOnce({
         id: "clip-version-2",
-        clipId: "clip-1",
-        listingId: "listing-1"
+        videoClipId: "clip-1"
       });
 
       await processVideoWebhookPayload(
@@ -223,7 +228,7 @@ describe("video webhook commands", () => {
         })
       );
 
-      expect(mockUpdateClipVersion).toHaveBeenCalledWith("clip-version-2", {
+      expect(mockUpdateVideoClipVersion).toHaveBeenCalledWith("clip-version-2", {
         status: "failed",
         videoUrl: null,
         thumbnailUrl: null,
@@ -231,7 +236,7 @@ describe("video webhook commands", () => {
         durationSeconds: null,
         metadata: undefined
       });
-      expect(mockMarkClipVersionAsCurrent).not.toHaveBeenCalled();
+      expect(mockUpdateVideoClip).not.toHaveBeenCalled();
     });
 
     it("returns update_failed when update throws", async () => {
@@ -239,6 +244,7 @@ describe("video webhook commands", () => {
         id: "job-1",
         status: "pending",
         listingId: "listing-1",
+        videoClipVersionId: null,
         videoUrl: null,
         thumbnailUrl: null,
         errorMessage: null
@@ -258,6 +264,7 @@ describe("video webhook commands", () => {
         id: "job-1",
         status: "completed",
         listingId: "listing-1",
+        videoClipVersionId: null,
         videoUrl: "https://same",
         thumbnailUrl: "https://thumb",
         errorMessage: null
@@ -284,6 +291,7 @@ describe("video webhook commands", () => {
         id: "job-1",
         status: "completed",
         listingId: "listing-1",
+        videoClipVersionId: null,
         videoUrl: "https://done",
         thumbnailUrl: null,
         errorMessage: null

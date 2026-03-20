@@ -6,11 +6,12 @@ import {
 } from "../drizzle/schema/enums";
 import {
   content,
-  clipVersions,
   listingImages,
   listings,
   userAdditional,
   userMedia,
+  videoClips,
+  videoClipVersions,
   videoGenBatch,
   videoGenJobs
 } from "../drizzle/schema";
@@ -38,7 +39,8 @@ describe("db schema contracts", () => {
     expect(listings).toBeDefined();
     expect(content).toBeDefined();
     expect(listingImages).toBeDefined();
-    expect(clipVersions).toBeDefined();
+    expect(videoClips).toBeDefined();
+    expect(videoClipVersions).toBeDefined();
     expect(videoGenBatch).toBeDefined();
     expect(videoGenJobs).toBeDefined();
     expect(userAdditional).toBeDefined();

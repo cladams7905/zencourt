@@ -17,10 +17,26 @@ export interface VideoJobUpdateEvent {
   durationSeconds?: number | null;
   orientation?: VideoOrientation | null;
   generationModel?: GENERATION_MODELS | null;
+  prompt?: string | null;
+  imageUrls?: string[] | null;
   isPriorityCategory?: boolean;
   sortOrder?: number | null;
 }
 
 export interface InitialVideoStatusPayload {
   jobs: VideoJobUpdateEvent[];
+}
+
+export interface VideoGenerationBatchStatusPayload {
+  batchId: string;
+  status: VideoStatus;
+  errorMessage?: string | null;
+  totalJobs: number;
+  completedJobs: number;
+  failedJobs: number;
+  canceledJobs: number;
+  processingJobs: number;
+  pendingJobs: number;
+  isTerminal: boolean;
+  allSucceeded: boolean;
 }

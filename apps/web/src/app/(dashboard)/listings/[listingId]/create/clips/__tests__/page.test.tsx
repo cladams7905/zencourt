@@ -101,7 +101,6 @@ describe("ListingCreateClipsPage", () => {
         title: "123 Main"
       })
     );
-    expect(screen.getByRole("heading", { name: /generated clips/i })).toBeInTheDocument();
     expect(screen.getByText("0 clips")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /back to create/i })).toHaveAttribute(
       "href",

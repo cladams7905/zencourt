@@ -10,11 +10,13 @@ type Mode = "categorize" | "review" | "generate";
 export function useListingProcessingWorkflow(params: {
   mode: Mode;
   listingId: string;
+  initialBatchId?: string | null;
   address?: string | null;
   batchStartedAt?: number | null;
   navigate: (url: string) => void;
 }) {
-  const { mode, listingId, address, batchStartedAt, navigate } = params;
+  const { mode, listingId, initialBatchId, address, batchStartedAt, navigate } =
+    params;
 
   const updateStage = React.useCallback(
     async (listingStage: "review" | "create") => {
@@ -65,6 +67,7 @@ export function useListingProcessingWorkflow(params: {
   } = useGenerateProcessingFlow({
     mode,
     listingId,
+    initialBatchId,
     navigate,
     goToStage,
     updateStage

@@ -12,6 +12,6 @@ Use this loop to avoid repeating mistakes and to align with the user's preferenc
 
 ### Recorded Guidance
 
-(record project-level guidance here)
+- For video generation workflows, target specific workflow instances by batch id rather than listing id when creating, reading, updating, or canceling jobs; reserve listing-scoped actions for explicitly whole-listing operations.
 
 ---

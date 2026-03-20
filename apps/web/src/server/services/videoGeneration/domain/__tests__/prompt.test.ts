@@ -14,7 +14,13 @@ describe("videoGeneration/domain/prompt", () => {
       "No people. No added objects. Keep architecture and materials unchanged."
     );
     expect(result.prompt).toContain(
-      "No transitions, cuts, fades, dissolves, zoom bursts, or scene changes. Single continuous camera movement only."
+      "Single continuous camera movement only."
+    );
+    expect(result.prompt).toContain(
+      "Full-bleed, edge-to-edge composition from the first frame, filling the entire video frame at all times."
+    );
+    expect(result.prompt).toContain(
+      "Start already full-screen. No framed or inset opening, no letterboxing or pillarboxing, and no fades, transitions, cuts, or scene changes."
     );
   });
 
@@ -43,7 +49,7 @@ describe("videoGeneration/domain/prompt", () => {
     });
 
     expect(result.prompt).toBe(
-      "Forward pan through the Kitchen. No people. No added objects. Keep architecture and materials unchanged. No transitions, cuts, fades, dissolves, zoom bursts, or scene changes. Single continuous camera movement only."
+      "Forward pan through the Kitchen. No people. No added objects. Keep architecture and materials unchanged. Single continuous camera movement only. Full-bleed, edge-to-edge composition from the first frame, filling the entire video frame at all times. Start already full-screen. No framed or inset opening, no letterboxing or pillarboxing, and no fades, transitions, cuts, or scene changes."
     );
   });
 
@@ -61,6 +67,26 @@ describe("videoGeneration/domain/prompt", () => {
 
     expect(seenKeys).not.toContain("bedroom-center-push");
     expect(result.templateKey).not.toBe("bedroom-center-push");
+  });
+
+  it("uses non-reveal non-push interior motion templates", () => {
+    const seenTemplates: string[] = [];
+
+    buildPrompt({
+      roomName: "Kitchen",
+      category: "kitchen",
+      picker: (templates) => {
+        seenTemplates.push(...templates.map((template) => template.template));
+        return templates[0];
+      }
+    });
+
+    expect(seenTemplates).not.toContain(
+      "Steady push-in toward the center of the {roomName}."
+    );
+    expect(seenTemplates).not.toContain(
+      "Gentle corner reveal into the {roomName}."
+    );
   });
 
   it("normalizes exterior room names in prompt output", () => {

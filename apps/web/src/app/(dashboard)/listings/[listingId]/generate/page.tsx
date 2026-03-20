@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { runWithCaller } from "@web/src/server/infra/logger/callContext";
 import { getListingById } from "@web/src/server/models/listings";
+import { getLatestVideoGenBatchByListingId } from "@web/src/server/models/videoGen";
 import { requireUserOrRedirect } from "@web/src/app/(dashboard)/_utils/requireUserOrRedirect";
 import { ListingProcessingView } from "@web/src/components/listings/processing";
 import { redirectToListingStage } from "../_utils/redirectToListingStage";
@@ -21,6 +22,7 @@ export default async function ListingGeneratePage({
     }
 
     const listing = await getListingById(user.id, listingId);
+    const latestBatch = await getLatestVideoGenBatchByListingId(listingId);
     if (!listing) {
       redirect("/listings/sync");
     }
@@ -36,6 +38,7 @@ export default async function ListingGeneratePage({
       <ListingProcessingView
         mode="generate"
         listingId={listingId}
+        initialBatchId={latestBatch?.id ?? null}
         userId={user.id}
         title={listing.title?.trim() || "Listing"}
       />
