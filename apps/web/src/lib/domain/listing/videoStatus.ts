@@ -30,6 +30,7 @@ export interface InitialVideoStatusPayload {
 export interface VideoGenerationBatchStatusPayload {
   batchId: string;
   status: VideoStatus;
+  createdAt: string;
   errorMessage?: string | null;
   totalJobs: number;
   completedJobs: number;

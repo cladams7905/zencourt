@@ -4,6 +4,11 @@ import { toast } from "sonner";
 import { emitListingSidebarUpdate } from "@web/src/lib/domain/listing/sidebarEvents";
 import type { VideoGenerationBatchStatusPayload } from "@web/src/lib/domain/listing/videoStatus";
 import {
+  getBatchGenerationSoftTimeoutMs,
+  isPastTimeout,
+  VIDEO_GENERATION_TIMEOUT_MESSAGE
+} from "@web/src/lib/domain/listing/videoGenerationTimeouts";
+import {
   cancelVideoGeneration,
   fetchVideoStatus,
   startListingContentGeneration,
@@ -35,6 +40,7 @@ export function useGenerateProcessingFlow(params: {
 
   const hasNavigatedRef = React.useRef(false);
   const hasInitializedGenerationRef = React.useRef(false);
+  const hasShownTimeoutRef = React.useRef(false);
 
   const generationSummary = React.useMemo(() => {
     if (mode !== "generate") {
@@ -165,6 +171,7 @@ export function useGenerateProcessingFlow(params: {
       setGenerationStatus({
         batchId: startResult.batchId,
         status: "pending",
+        createdAt: new Date().toISOString(),
         errorMessage: null,
         totalJobs: startResult.jobCount,
         completedJobs: 0,
@@ -181,6 +188,26 @@ export function useGenerateProcessingFlow(params: {
       await goToStage("review", `/listings/${listingId}/review`);
     }
   }, [activeBatchId, goToStage, listingId, mode]);
+
+  React.useEffect(() => {
+    if (mode !== "generate" || !generationStatus || generationStatus.isTerminal) {
+      return;
+    }
+
+    if (
+      hasShownTimeoutRef.current ||
+      !isPastTimeout(
+        generationStatus.createdAt,
+        getBatchGenerationSoftTimeoutMs(generationStatus.totalJobs)
+      )
+    ) {
+      return;
+    }
+
+    hasShownTimeoutRef.current = true;
+    setCanPollGeneration(false);
+    toast.error(VIDEO_GENERATION_TIMEOUT_MESSAGE);
+  }, [generationStatus, mode]);
 
   React.useEffect(() => {
     if (mode === "generate") {

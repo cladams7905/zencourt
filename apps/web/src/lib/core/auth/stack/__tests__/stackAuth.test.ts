@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 const ORIGINAL_ENV = process.env;
 
 jest.mock("@stackframe/stack", () => {
@@ -20,9 +21,8 @@ describe("stack auth core", () => {
   it("throws when NEXT_PUBLIC_STACK_PROJECT_ID is missing (client)", async () => {
     delete process.env.NEXT_PUBLIC_STACK_PROJECT_ID;
 
-    const { getStackClientApp } = await import(
-      "@web/src/lib/core/auth/stack/client"
-    );
+    const { getStackClientApp } =
+      await import("@web/src/lib/core/auth/stack/client");
 
     expect(() => getStackClientApp()).toThrow(/NEXT_PUBLIC_STACK_PROJECT_ID/);
   });
@@ -34,9 +34,8 @@ describe("stack auth core", () => {
     process.env.NEXT_PUBLIC_STACK_PROJECT_ID = "proj-1";
     stackClientAppMock.mockImplementation(() => ({ kind: "client" }));
 
-    const { getStackClientApp } = await import(
-      "@web/src/lib/core/auth/stack/client"
-    );
+    const { getStackClientApp } =
+      await import("@web/src/lib/core/auth/stack/client");
 
     const first = getStackClientApp();
     const second = getStackClientApp();
@@ -57,7 +56,8 @@ describe("stack auth core", () => {
   });
 
   it("creates and caches StackServerApp and delegates getUser (server)", async () => {
-    const { StackClientApp, StackServerApp } = await import("@stackframe/stack");
+    const { StackClientApp, StackServerApp } =
+      await import("@stackframe/stack");
     const stackClientAppMock = StackClientApp as unknown as jest.Mock;
     const stackServerAppMock = StackServerApp as unknown as jest.Mock;
 
@@ -71,9 +71,8 @@ describe("stack auth core", () => {
       getUser: getUserMock
     }));
 
-    const { stackServerApp } = await import(
-      "@web/src/lib/core/auth/stack/server"
-    );
+    const { stackServerApp } =
+      await import("@web/src/lib/core/auth/stack/server");
 
     const first = await stackServerApp.getUser("auth-token-1" as any);
     const second = await stackServerApp.getUser("auth-token-2" as any);
@@ -93,4 +92,3 @@ describe("stack auth core", () => {
     });
   });
 });
-

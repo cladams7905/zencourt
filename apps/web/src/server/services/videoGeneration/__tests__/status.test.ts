@@ -1,5 +1,7 @@
 const mockSelect = jest.fn();
 const mockGetPublicDownloadUrlSafe = jest.fn();
+const mockUpdateVideoGenBatch = jest.fn();
+const mockUpdateVideoGenJob = jest.fn();
 
 jest.mock("@db/client", () => ({
   db: {
@@ -29,7 +31,14 @@ jest.mock("@db/client", () => ({
   eq: (...args: unknown[]) => args
 }));
 
-import { getListingVideoStatus } from "../status";
+jest.mock("@web/src/server/models/videoGen", () => ({
+  updateVideoGenBatch: (...args: unknown[]) =>
+    (mockUpdateVideoGenBatch as (...a: unknown[]) => unknown)(...args),
+  updateVideoGenJob: (...args: unknown[]) =>
+    (mockUpdateVideoGenJob as (...a: unknown[]) => unknown)(...args)
+}));
+
+import { getListingVideoStatus, getVideoGenerationStatus } from "../status";
 
 function makeLatestBatchBuilder(rows: unknown[]) {
   const builder = {
@@ -64,6 +73,8 @@ function makeJobsBuilder(rows: unknown[]) {
 describe("videoGeneration/status/service", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockUpdateVideoGenBatch.mockResolvedValue(undefined);
+    mockUpdateVideoGenJob.mockResolvedValue(undefined);
   });
 
   it("returns empty jobs when no video batch exists", async () => {
@@ -191,5 +202,65 @@ describe("videoGeneration/status/service", () => {
         }
       ]
     });
+  });
+
+  it("fails a stale batch when the hard timeout is exceeded", async () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date("2026-03-20T10:17:00.000Z"));
+
+    mockSelect
+      .mockReturnValueOnce(
+        makeLatestBatchBuilder([
+          {
+            id: "batch-3",
+            status: "processing",
+            errorMessage: null,
+            createdAt: new Date("2026-03-20T10:00:00.000Z")
+          }
+        ])
+      )
+      .mockReturnValueOnce(
+        makeJobsBuilder([
+          {
+            id: "job-3",
+            status: "processing",
+            videoUrl: null,
+            thumbnailUrl: null,
+            metadata: null,
+            errorMessage: null,
+            generationSettings: null
+          }
+        ])
+      );
+
+    const result = await getVideoGenerationStatus(
+      "batch-3",
+      mockGetPublicDownloadUrlSafe
+    );
+
+    expect(mockUpdateVideoGenJob).toHaveBeenCalledWith("job-3", {
+      status: "failed",
+      errorMessage: "Generation timed out, please try again later."
+    });
+    expect(mockUpdateVideoGenBatch).toHaveBeenCalledWith("batch-3", {
+      status: "failed",
+      errorMessage: "Generation timed out, please try again later."
+    });
+    expect(result).toEqual({
+      batchId: "batch-3",
+      status: "failed",
+      createdAt: "2026-03-20T10:00:00.000Z",
+      errorMessage: "Generation timed out, please try again later.",
+      totalJobs: 1,
+      completedJobs: 0,
+      failedJobs: 1,
+      canceledJobs: 0,
+      processingJobs: 0,
+      pendingJobs: 0,
+      isTerminal: true,
+      allSucceeded: false
+    });
+
+    jest.useRealTimers();
   });
 });

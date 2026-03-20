@@ -4,6 +4,8 @@ import userEvent from "@testing-library/user-event";
 
 const mockUseSWR = jest.fn();
 const mockUseSearchParams = jest.fn();
+const mockToastError = jest.fn();
+const mockToastSuccess = jest.fn();
 
 jest.mock("swr", () => ({
   __esModule: true,
@@ -12,6 +14,13 @@ jest.mock("swr", () => ({
 
 jest.mock("next/navigation", () => ({
   useSearchParams: () => mockUseSearchParams()
+}));
+
+jest.mock("sonner", () => ({
+  toast: {
+    error: (...args: unknown[]) => mockToastError(...args),
+    success: (...args: unknown[]) => mockToastSuccess(...args)
+  }
 }));
 
 jest.mock("@web/src/server/actions/video/generate", () => ({
@@ -225,5 +234,37 @@ describe("ListingClipManager", () => {
     expect(screen.getByText("Regenerating")).toBeInTheDocument();
     expect(screen.queryByText("4s")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^regenerate$/i })).toBeDisabled();
+  });
+
+  it("stops polling and shows a timeout toast when clip regeneration exceeds the soft timeout", () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date("2026-03-20T10:03:00.000Z"));
+
+    const processingItems: ListingClipVersionItem[] = [
+      {
+        ...items[0],
+        currentVersion: {
+          ...items[0].currentVersion,
+          versionStatus: "processing",
+          generatedAt: "2026-03-20T10:00:00.000Z"
+        }
+      }
+    ] as never;
+
+    render(
+      <ListingClipManager
+        listingId="listing-1"
+        items={processingItems}
+        mode="workspace"
+      />
+    );
+
+    expect(mockToastError).toHaveBeenCalledWith(
+      "Generation timed out, please try again later."
+    );
+    const lastCall = mockUseSWR.mock.calls.at(-1);
+    expect(lastCall?.[2]).toMatchObject({ refreshInterval: 0 });
+
+    jest.useRealTimers();
   });
 });

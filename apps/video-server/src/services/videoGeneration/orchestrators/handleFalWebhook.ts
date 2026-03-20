@@ -60,11 +60,12 @@ async function resolveJob(
   return job;
 }
 
-type IgnoreReason = "completed" | "canceled";
+type IgnoreReason = "completed" | "canceled" | "failed";
 
 function getIgnoreReason(job: DBVideoGenJob): IgnoreReason | null {
   if (job.status === "completed") return "completed";
   if (job.status === "canceled") return "canceled";
+  if (job.status === "failed") return "failed";
   return null;
 }
 
@@ -76,7 +77,9 @@ function logIgnoreReason(
   const message =
     reason === "completed"
       ? "[VideoGenerationService] Ignoring duplicate webhook for completed job"
-      : "[VideoGenerationService] Ignoring webhook for canceled job";
+      : reason === "canceled"
+        ? "[VideoGenerationService] Ignoring webhook for canceled job"
+        : "[VideoGenerationService] Ignoring webhook for failed job";
   logger.info({ jobId: job.id, requestId }, message);
 }
 

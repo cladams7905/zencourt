@@ -1,23 +1,24 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 let lastContext: Record<string, unknown> | undefined;
 
-const createLoggerMock = jest.fn((opts: {
-  contextMixin?: () => Record<string, unknown>;
-}) => {
-  return {
-    debug: () => {
-      lastContext = opts.contextMixin?.();
-    },
-    info: () => {
-      lastContext = opts.contextMixin?.();
-    },
-    warn: () => {
-      lastContext = opts.contextMixin?.();
-    },
-    error: () => {
-      lastContext = opts.contextMixin?.();
-    }
-  };
-});
+const createLoggerMock = jest.fn(
+  (opts: { contextMixin?: () => Record<string, unknown> }) => {
+    return {
+      debug: () => {
+        lastContext = opts.contextMixin?.();
+      },
+      info: () => {
+        lastContext = opts.contextMixin?.();
+      },
+      warn: () => {
+        lastContext = opts.contextMixin?.();
+      },
+      error: () => {
+        lastContext = opts.contextMixin?.();
+      }
+    };
+  }
+);
 
 describe("core/logging logger", () => {
   const originalEnv = process.env;
@@ -250,4 +251,3 @@ describe("core/logging logger", () => {
     expect(lastContext?.invokedByURI).toBeUndefined();
   });
 });
-

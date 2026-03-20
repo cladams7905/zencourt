@@ -18,8 +18,8 @@ const mockGetVideoGenerationConfig = jest.fn();
 const mockIsPriorityCategory = jest.fn();
 const mockFetch = jest.fn();
 const mockSelect = jest.fn();
-var mockLoggerInfo = jest.fn();
-var mockLoggerError = jest.fn();
+const mockLoggerInfo = jest.fn();
+const mockLoggerError = jest.fn();
 
 jest.mock("nanoid", () => ({
   nanoid: (...args: unknown[]) => mockNanoid(...args)

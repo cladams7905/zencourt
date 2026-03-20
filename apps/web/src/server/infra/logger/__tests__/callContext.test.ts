@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import {
   runWithCaller,
   getCallContext,
@@ -128,9 +129,7 @@ describe("callContext", () => {
         const ctx = getCallContextDev();
         expect(ctx?.caller).toBe("test"); // strips prefix after ":"
         expect(ctx?.requestId).toBe("req-123");
-        expect(ctx?.callerURI).toBe(
-          "uri:src/app/(dashboard)/page.tsx"
-        );
+        expect(ctx?.callerURI).toBe("uri:src/app/(dashboard)/page.tsx");
       });
     });
 
@@ -169,8 +168,10 @@ describe("callContext", () => {
         };
       });
 
-      const { runWithCaller: runWithCallerDev, getCallContext: getCallContextDev } =
-        await import("@web/src/server/infra/logger/callContext");
+      const {
+        runWithCaller: runWithCallerDev,
+        getCallContext: getCallContextDev
+      } = await import("@web/src/server/infra/logger/callContext");
 
       await runWithCallerDev("caller", async () => {
         const ctx = getCallContextDev();
@@ -194,8 +195,10 @@ describe("callContext", () => {
         };
       });
 
-      const { runWithCaller: runWithCallerDev, getCallContext: getCallContextDev } =
-        await import("@web/src/server/infra/logger/callContext");
+      const {
+        runWithCaller: runWithCallerDev,
+        getCallContext: getCallContextDev
+      } = await import("@web/src/server/infra/logger/callContext");
 
       await runWithCallerDev("caller", async () => {
         const ctx = getCallContextDev();
@@ -297,8 +300,10 @@ describe("callContext", () => {
         };
       });
 
-      const { runWithCaller: runWithCallerDev, getCallContext: getCallContextDev } =
-        await import("@web/src/server/infra/logger/callContext");
+      const {
+        runWithCaller: runWithCallerDev,
+        getCallContext: getCallContextDev
+      } = await import("@web/src/server/infra/logger/callContext");
 
       await runWithCallerDev("caller", async () => {
         const ctx = getCallContextDev();
@@ -306,7 +311,7 @@ describe("callContext", () => {
       });
     });
 
-    it('covers normalizeToSourcePath for webpack:// and returns extracted src path', async () => {
+    it("covers normalizeToSourcePath for webpack:// and returns extracted src path", async () => {
       jest.resetModules();
       (process.env as any).NODE_ENV = "development";
 
@@ -342,8 +347,10 @@ describe("callContext", () => {
         };
       });
 
-      const { runWithCaller: runWithCallerDev, getCallContext: getCallContextDev } =
-        await import("@web/src/server/infra/logger/callContext");
+      const {
+        runWithCaller: runWithCallerDev,
+        getCallContext: getCallContextDev
+      } = await import("@web/src/server/infra/logger/callContext");
 
       await runWithCallerDev("caller", async () => {
         const ctx = getCallContextDev();
@@ -353,7 +360,7 @@ describe("callContext", () => {
       });
     });
 
-    it('covers normalizeToSourcePath for webpack-internal: and returns extracted src path', async () => {
+    it("covers normalizeToSourcePath for webpack-internal: and returns extracted src path", async () => {
       jest.resetModules();
       (process.env as any).NODE_ENV = "development";
 
@@ -388,14 +395,14 @@ describe("callContext", () => {
         };
       });
 
-      const { runWithCaller: runWithCallerDev, getCallContext: getCallContextDev } =
-        await import("@web/src/server/infra/logger/callContext");
+      const {
+        runWithCaller: runWithCallerDev,
+        getCallContext: getCallContextDev
+      } = await import("@web/src/server/infra/logger/callContext");
 
       await runWithCallerDev("caller", async () => {
         const ctx = getCallContextDev();
-        expect(ctx?.callerURI).toBe(
-          "uri:src/server/infra/logger/other.ts"
-        );
+        expect(ctx?.callerURI).toBe("uri:src/server/infra/logger/other.ts");
       });
     });
   });

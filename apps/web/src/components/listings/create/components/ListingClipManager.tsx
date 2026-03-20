@@ -21,6 +21,11 @@ import { cn } from "@web/src/components/ui/utils";
 import { fetchApiData } from "@web/src/lib/core/http/client";
 import { regenerateListingClipVersion } from "@web/src/server/actions/video/generate";
 import {
+  getClipRegenerationSoftTimeoutMs,
+  isPastTimeout,
+  VIDEO_GENERATION_TIMEOUT_MESSAGE
+} from "@web/src/lib/domain/listing/videoGenerationTimeouts";
+import {
   Popover,
   PopoverContent,
   PopoverTrigger
@@ -47,6 +52,17 @@ type ListingClipManagerProps = {
 function hasPendingItems(items: ListingClipVersionItem[]) {
   return items.some((item) =>
     isClipRegenerating(item.currentVersion.versionStatus)
+  );
+}
+
+function hasPollablePendingItems(
+  items: ListingClipVersionItem[],
+  timedOutClipIds: Set<string>
+) {
+  return items.some(
+    (item) =>
+      isClipRegenerating(item.currentVersion.versionStatus) &&
+      !timedOutClipIds.has(item.clipId)
   );
 }
 
@@ -176,6 +192,9 @@ function ClipManagerWorkspace({
   const [isRegenerateMenuOpen, setIsRegenerateMenuOpen] = React.useState(false);
   const [isCustomizeExpanded, setIsCustomizeExpanded] = React.useState(false);
   const [isSubmitting, startTransition] = React.useTransition();
+  const [timedOutClipIds, setTimedOutClipIds] = React.useState<Set<string>>(
+    () => new Set()
+  );
   const previousStatusesRef = React.useRef<Map<string, string>>(new Map());
   const lastSignatureRef = React.useRef(
     serializeClipItems(mergeClipItems(items))
@@ -200,7 +219,9 @@ function ClipManagerWorkspace({
         "Failed to load clip versions."
       ),
     {
-      refreshInterval: hasPendingItems(clipItems) ? 2000 : 0,
+      refreshInterval: hasPollablePendingItems(clipItems, timedOutClipIds)
+        ? 2000
+        : 0,
       revalidateOnFocus: false
     }
   );
@@ -241,6 +262,38 @@ function ClipManagerWorkspace({
       setClipItems(normalized);
     }
   }, [data]);
+
+  React.useEffect(() => {
+    const nextTimedOutClipIds = new Set(timedOutClipIds);
+    let didChange = false;
+
+    for (const item of clipItems) {
+      const isRegenerating = isClipRegenerating(item.currentVersion.versionStatus);
+
+      if (!isRegenerating) {
+        if (nextTimedOutClipIds.delete(item.clipId)) {
+          didChange = true;
+        }
+        continue;
+      }
+
+      if (
+        !nextTimedOutClipIds.has(item.clipId) &&
+        isPastTimeout(
+          item.currentVersion.generatedAt,
+          getClipRegenerationSoftTimeoutMs()
+        )
+      ) {
+        nextTimedOutClipIds.add(item.clipId);
+        didChange = true;
+        toast.error(VIDEO_GENERATION_TIMEOUT_MESSAGE);
+      }
+    }
+
+    if (didChange) {
+      setTimedOutClipIds(nextTimedOutClipIds);
+    }
+  }, [clipItems, timedOutClipIds]);
 
   React.useEffect(() => {
     if (!clipItems.length) {
@@ -297,7 +350,7 @@ function ClipManagerWorkspace({
         clipId: selectedItem.clipId,
         aiDirections
       })
-        .then(() => {
+        .then((result) => {
           setClipItems((currentItems) =>
             currentItems.map((item) =>
               item.clipId === selectedItem.clipId
@@ -305,13 +358,20 @@ function ClipManagerWorkspace({
                     ...item,
                     currentVersion: {
                       ...item.currentVersion,
+                      clipVersionId: result.clipVersionId,
                       aiDirections,
+                      generatedAt: new Date().toISOString(),
                       versionStatus: "processing"
                     }
                   }
                 : item
             )
           );
+          setTimedOutClipIds((currentTimedOutClipIds) => {
+            const nextTimedOutClipIds = new Set(currentTimedOutClipIds);
+            nextTimedOutClipIds.delete(selectedItem.clipId);
+            return nextTimedOutClipIds;
+          });
           setIsRegenerateMenuOpen(false);
           setIsCustomizeExpanded(false);
           toast.success(`Started regenerating ${selectedItem.roomName} clip.`);

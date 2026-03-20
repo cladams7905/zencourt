@@ -1,11 +1,21 @@
 import { db, videoGenJobs, videoGenBatch } from "@db/client";
 import { asc, desc, eq } from "@db/client";
+import {
+  updateVideoGenBatch,
+  updateVideoGenJob
+} from "@web/src/server/models/videoGen";
+import type { VideoStatus } from "@db/types/models";
 import type {
   InitialVideoStatusPayload,
   VideoGenerationBatchStatusPayload,
   VideoJobUpdateEvent
 } from "@web/src/lib/domain/listing/videoStatus";
 import { isPriorityCategory } from "@shared/utils";
+import {
+  getBatchGenerationHardTimeoutMs,
+  isPastTimeout,
+  VIDEO_GENERATION_TIMEOUT_MESSAGE
+} from "@web/src/lib/domain/listing/videoGenerationTimeouts";
 
 function countJobsByStatus(jobs: Array<{ status: string }>) {
   const completedJobs = jobs.filter((job) => job.status === "completed").length;
@@ -27,6 +37,69 @@ function countJobsByStatus(jobs: Array<{ status: string }>) {
   };
 }
 
+function isNonTerminalStatus(status: string): boolean {
+  return ["pending", "processing"].includes(status);
+}
+
+async function failTimedOutBatch<
+  T extends {
+    id: string;
+    status: VideoStatus;
+    errorMessage?: string | null;
+  }
+>(args: {
+  batchId: string;
+  createdAt: Date;
+  status: VideoStatus;
+  errorMessage: string | null;
+  jobs: T[];
+}): Promise<{
+  batchStatus: VideoStatus;
+  batchErrorMessage: string | null;
+  jobs: T[];
+}> {
+  const { batchId, createdAt, status, errorMessage, jobs } = args;
+  if (
+    !isNonTerminalStatus(status) ||
+    !isPastTimeout(createdAt, getBatchGenerationHardTimeoutMs(jobs.length))
+  ) {
+    return {
+      batchStatus: status,
+      batchErrorMessage: errorMessage,
+      jobs
+    };
+  }
+
+  const timedOutJobs = jobs.filter((job) => isNonTerminalStatus(job.status));
+
+  await Promise.all(
+    timedOutJobs.map((job) =>
+      updateVideoGenJob(job.id, {
+        status: "failed",
+        errorMessage: VIDEO_GENERATION_TIMEOUT_MESSAGE
+      })
+    )
+  );
+  await updateVideoGenBatch(batchId, {
+    status: "failed",
+    errorMessage: VIDEO_GENERATION_TIMEOUT_MESSAGE
+  });
+
+  return {
+    batchStatus: "failed",
+    batchErrorMessage: VIDEO_GENERATION_TIMEOUT_MESSAGE,
+    jobs: jobs.map((job) =>
+      isNonTerminalStatus(job.status)
+        ? {
+          ...job,
+          status: "failed",
+          errorMessage: VIDEO_GENERATION_TIMEOUT_MESSAGE
+        }
+        : job
+    )
+  };
+}
+
 export async function getListingVideoStatus(
   listingId: string,
   resolvePublicDownloadUrlSafe: (
@@ -37,7 +110,8 @@ export async function getListingVideoStatus(
     .select({
       id: videoGenBatch.id,
       status: videoGenBatch.status,
-      errorMessage: videoGenBatch.errorMessage
+      errorMessage: videoGenBatch.errorMessage,
+      createdAt: videoGenBatch.createdAt
     })
     .from(videoGenBatch)
     .where(eq(videoGenBatch.listingId, listingId))
@@ -63,7 +137,15 @@ export async function getListingVideoStatus(
       .where(eq(videoGenJobs.videoGenBatchId, latestVideo.id))
       .orderBy(asc(videoGenJobs.createdAt));
 
-    jobs = jobRows.map((job) => {
+    const resolvedBatch = await failTimedOutBatch({
+      batchId: latestVideo.id,
+      createdAt: latestVideo.createdAt,
+      status: latestVideo.status,
+      errorMessage: latestVideo.errorMessage,
+      jobs: jobRows
+    });
+
+    jobs = resolvedBatch.jobs.map((job) => {
       const videoUrl =
         resolvePublicDownloadUrlSafe(job.videoUrl) ?? job.videoUrl;
       const thumbnailUrl =
@@ -107,7 +189,8 @@ export async function getVideoGenerationStatus(
     .select({
       id: videoGenBatch.id,
       status: videoGenBatch.status,
-      errorMessage: videoGenBatch.errorMessage
+      errorMessage: videoGenBatch.errorMessage,
+      createdAt: videoGenBatch.createdAt
     })
     .from(videoGenBatch)
     .where(eq(videoGenBatch.id, batchId))
@@ -137,10 +220,19 @@ export async function getVideoGenerationStatus(
     resolvePublicDownloadUrlSafe(job.thumbnailUrl);
   }
 
-  return {
+  const resolvedBatch = await failTimedOutBatch({
     batchId: batch.id,
+    createdAt: batch.createdAt,
     status: batch.status,
     errorMessage: batch.errorMessage,
-    ...countJobsByStatus(jobRows)
+    jobs: jobRows
+  });
+
+  return {
+    batchId: batch.id,
+    status: resolvedBatch.batchStatus,
+    createdAt: batch.createdAt.toISOString(),
+    errorMessage: resolvedBatch.batchErrorMessage,
+    ...countJobsByStatus(resolvedBatch.jobs)
   };
 }

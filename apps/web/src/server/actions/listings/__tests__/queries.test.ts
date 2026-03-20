@@ -14,6 +14,11 @@ const mockCreateVideoClipVersion = jest.fn();
 const mockGetVideoClipById = jest.fn();
 const mockGetVideoClipVersionBySourceVideoGenJobId = jest.fn();
 const mockUpdateVideoClip = jest.fn();
+const mockGetVideoGenJobById = jest.fn();
+const mockGetVideoGenBatchById = jest.fn();
+const mockUpdateVideoGenBatch = jest.fn();
+const mockUpdateVideoGenJob = jest.fn();
+const mockUpdateVideoClipVersion = jest.fn();
 
 jest.mock("@web/src/server/actions/_auth/api", () => ({
   requireAuthenticatedUser: (...args: unknown[]) =>
@@ -72,13 +77,24 @@ jest.mock("@web/src/server/models/videoGen", () => ({
     (mockGetVideoClipVersionBySourceVideoGenJobId as (
       ...a: unknown[]
     ) => unknown)(...args),
+  getVideoGenJobById: (...args: unknown[]) =>
+    (mockGetVideoGenJobById as (...a: unknown[]) => unknown)(...args),
+  getVideoGenBatchById: (...args: unknown[]) =>
+    (mockGetVideoGenBatchById as (...a: unknown[]) => unknown)(...args),
   updateVideoClip: (...args: unknown[]) =>
-    (mockUpdateVideoClip as (...a: unknown[]) => unknown)(...args)
+    (mockUpdateVideoClip as (...a: unknown[]) => unknown)(...args),
+  updateVideoGenBatch: (...args: unknown[]) =>
+    (mockUpdateVideoGenBatch as (...a: unknown[]) => unknown)(...args),
+  updateVideoGenJob: (...args: unknown[]) =>
+    (mockUpdateVideoGenJob as (...a: unknown[]) => unknown)(...args),
+  updateVideoClipVersion: (...args: unknown[]) =>
+    (mockUpdateVideoClipVersion as (...a: unknown[]) => unknown)(...args)
 }));
 
 import {
   getCurrentUserListingSummariesPage,
-  getListingCreateViewDataForCurrentUser
+  getListingCreateViewDataForCurrentUser,
+  getListingClipVersionItemsForCurrentUser
 } from "@web/src/server/actions/listings/queries";
 
 describe("listings queries", () => {
@@ -92,6 +108,11 @@ describe("listings queries", () => {
     mockGetVideoClipById.mockResolvedValue(null);
     mockGetVideoClipVersionBySourceVideoGenJobId.mockResolvedValue(null);
     mockUpdateVideoClip.mockResolvedValue(undefined);
+    mockGetVideoGenJobById.mockResolvedValue(null);
+    mockGetVideoGenBatchById.mockResolvedValue(null);
+    mockUpdateVideoGenBatch.mockResolvedValue(undefined);
+    mockUpdateVideoGenJob.mockResolvedValue(undefined);
+    mockUpdateVideoClipVersion.mockResolvedValue(undefined);
   });
 
   it("delegates to getUserListingSummariesPage with current user id", async () => {
@@ -132,6 +153,26 @@ describe("listings queries", () => {
     });
     mockGetCurrentVideoClipVersionsByListingId
       .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        {
+          id: "clip-version-1",
+          videoClipId: "listing-1:kitchen:0",
+          thumbnailUrl: "https://t",
+          videoUrl: "https://v",
+          createdAt: new Date("2026-01-01T00:00:00.000Z"),
+          roomName: "Kitchen",
+          roomId: null,
+          category: "kitchen",
+          clipIndex: 0,
+          sortOrder: 1,
+          aiDirections: "",
+          versionNumber: 1,
+          status: "completed",
+          durationSeconds: 4,
+          orientation: "vertical",
+          generationModel: "veo3.1_fast"
+        }
+      ])
       .mockResolvedValueOnce([
         {
           id: "clip-version-1",
@@ -322,5 +363,91 @@ describe("listings queries", () => {
         sourceVideoGenJobId: "job-2"
       })
     );
+  });
+
+  it("fails a stale regenerating clip version when the hard timeout is exceeded", async () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date("2026-03-20T10:05:00.000Z"));
+
+    mockGetListingVideoStatus.mockResolvedValueOnce({ jobs: [] });
+    mockGetCurrentVideoClipVersionsByListingId
+      .mockResolvedValueOnce([
+        {
+          id: "clip-version-2",
+          videoClipId: "clip-1",
+          sourceVideoGenJobId: "job-2",
+          status: "processing",
+          createdAt: new Date("2026-03-20T10:00:00.000Z")
+        }
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: "clip-version-2",
+          videoClipId: "clip-1",
+          sourceVideoGenJobId: "job-2",
+          status: "processing",
+          createdAt: new Date("2026-03-20T10:00:00.000Z")
+        }
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: "clip-version-2",
+          videoClipId: "clip-1",
+          sourceVideoGenJobId: "job-2",
+          status: "failed",
+          createdAt: new Date("2026-03-20T10:00:00.000Z"),
+          thumbnailUrl: null,
+          videoUrl: null,
+          aiDirections: "",
+          versionNumber: 2
+        }
+      ]);
+    mockGetVideoGenJobById.mockResolvedValue({
+      id: "job-2",
+      videoGenBatchId: "batch-2",
+      status: "processing"
+    });
+    mockGetVideoGenBatchById.mockResolvedValue({
+      id: "batch-2",
+      status: "processing"
+    });
+    mockGetVideoClipById.mockResolvedValue({
+      id: "clip-1",
+      listingId: "listing-1",
+      roomId: "room-1",
+      roomName: "Kitchen",
+      category: "kitchen",
+      clipIndex: 0,
+      sortOrder: 0,
+      currentVideoClipVersionId: "clip-version-2"
+    });
+    mockGetSuccessfulVideoClipVersionsByClipId.mockResolvedValue([]);
+
+    const result = await getListingClipVersionItemsForCurrentUser("listing-1");
+
+    expect(mockUpdateVideoClipVersion).toHaveBeenCalledWith("clip-version-2", {
+      status: "failed",
+      errorMessage: "Generation timed out, please try again later."
+    });
+    expect(mockUpdateVideoGenJob).toHaveBeenCalledWith("job-2", {
+      status: "failed",
+      errorMessage: "Generation timed out, please try again later."
+    });
+    expect(mockUpdateVideoGenBatch).toHaveBeenCalledWith("batch-2", {
+      status: "failed",
+      errorMessage: "Generation timed out, please try again later."
+    });
+    expect(result).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          currentVersion: expect.objectContaining({
+            clipVersionId: "clip-version-2",
+            versionStatus: "failed"
+          })
+        })
+      ])
+    );
+
+    jest.useRealTimers();
   });
 });

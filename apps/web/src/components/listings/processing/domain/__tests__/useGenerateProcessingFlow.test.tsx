@@ -5,6 +5,8 @@ const mockToastSuccess = jest.fn();
 const mockEmitListingSidebarUpdate = jest.fn();
 const mockFetchVideoStatus = jest.fn();
 const mockCancelVideoGeneration = jest.fn();
+const mockStartListingContentGeneration = jest.fn();
+const mockStartVideoGeneration = jest.fn();
 
 jest.mock("sonner", () => ({
   toast: {
@@ -20,8 +22,9 @@ jest.mock("@web/src/lib/domain/listing/sidebarEvents", () => ({
 jest.mock("@web/src/components/listings/processing/domain/transport", () => ({
   fetchVideoStatus: (...args: unknown[]) => mockFetchVideoStatus(...args),
   cancelVideoGeneration: (...args: unknown[]) => mockCancelVideoGeneration(...args),
-  startListingContentGeneration: jest.fn().mockResolvedValue(undefined),
-  startVideoGeneration: jest.fn().mockResolvedValue(undefined)
+  startListingContentGeneration: (...args: unknown[]) =>
+    mockStartListingContentGeneration(...args),
+  startVideoGeneration: (...args: unknown[]) => mockStartVideoGeneration(...args)
 }));
 
 import { useGenerateProcessingFlow } from "@web/src/components/listings/processing/domain/useGenerateProcessingFlow";
@@ -29,13 +32,18 @@ import { useGenerateProcessingFlow } from "@web/src/components/listings/processi
 describe("useGenerateProcessingFlow", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockStartListingContentGeneration.mockResolvedValue(undefined);
+    mockStartVideoGeneration.mockResolvedValue(undefined);
     mockFetchVideoStatus.mockResolvedValue({
       batchId: "batch-1",
       status: "processing",
+      createdAt: "2026-03-20T10:00:00.000Z",
       totalJobs: 1,
       completedJobs: 0,
       failedJobs: 0,
       canceledJobs: 0,
+      processingJobs: 1,
+      pendingJobs: 0,
       isTerminal: false,
       allSucceeded: false
     });
@@ -67,5 +75,33 @@ describe("useGenerateProcessingFlow", () => {
     expect(mockCancelVideoGeneration).toHaveBeenCalledWith("batch-1");
     expect(updateStage).toHaveBeenCalledWith("review");
     expect(navigate).toHaveBeenCalledWith("/listings/l1/review");
+  });
+
+  it("stops polling and shows a timeout toast when batch generation exceeds the soft timeout", async () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date("2026-03-20T10:08:00.000Z"));
+
+    const navigate = jest.fn();
+    const updateStage = jest.fn().mockResolvedValue(undefined);
+    const goToStage = jest.fn().mockResolvedValue(undefined);
+
+    renderHook(() =>
+      useGenerateProcessingFlow({
+        mode: "generate",
+        listingId: "l1",
+        initialBatchId: "batch-1",
+        navigate,
+        updateStage,
+        goToStage
+      })
+    );
+
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith(
+        "Generation timed out, please try again later."
+      );
+    });
+
+    jest.useRealTimers();
   });
 });

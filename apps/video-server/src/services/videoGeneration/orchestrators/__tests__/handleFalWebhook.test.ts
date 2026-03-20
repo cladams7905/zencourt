@@ -104,6 +104,23 @@ describe("handleFalWebhookOrchestrator", () => {
     expect(baseDeps.handleProviderSuccess).not.toHaveBeenCalled();
   });
 
+  it("returns early for already-failed job", async () => {
+    baseDeps.findJobByRequestId.mockResolvedValue({
+      id: "job-1",
+      videoGenBatchId: "video-1",
+      status: "failed"
+    });
+
+    await handleFalWebhookOrchestrator(
+      { request_id: "req-1", status: "COMPLETED" } as never,
+      undefined,
+      baseDeps
+    );
+
+    expect(baseDeps.handleProviderSuccess).not.toHaveBeenCalled();
+    expect(baseDeps.markJobFailed).not.toHaveBeenCalled();
+  });
+
   it("looks up by fallbackJobId and attaches requestId when not found by requestId", async () => {
     baseDeps.findJobByRequestId.mockResolvedValue(null);
     baseDeps.findJobById.mockResolvedValue({
