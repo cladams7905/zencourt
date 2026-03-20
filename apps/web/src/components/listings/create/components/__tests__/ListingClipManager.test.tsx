@@ -6,6 +6,7 @@ const mockUseSWR = jest.fn();
 const mockUseSearchParams = jest.fn();
 const mockToastError = jest.fn();
 const mockToastSuccess = jest.fn();
+const mockMatchMedia = jest.fn();
 
 jest.mock("swr", () => ({
   __esModule: true,
@@ -24,7 +25,8 @@ jest.mock("sonner", () => ({
 }));
 
 jest.mock("@web/src/server/actions/video/generate", () => ({
-  regenerateListingClipVersion: jest.fn()
+  regenerateListingClipVersion: jest.fn(),
+  cancelVideoGenerationBatch: jest.fn()
 }));
 
 jest.mock("@web/src/components/ui/loading-image", () => ({
@@ -39,7 +41,10 @@ jest.mock("@web/src/components/ui/loading-image", () => ({
 
 import { ListingClipManager } from "@web/src/components/listings/create/components/ListingClipManager";
 import type { ListingClipVersionItem } from "@web/src/components/listings/create/shared/types";
-import { regenerateListingClipVersion } from "@web/src/server/actions/video/generate";
+import {
+  cancelVideoGenerationBatch,
+  regenerateListingClipVersion
+} from "@web/src/server/actions/video/generate";
 
 describe("ListingClipManager", () => {
   const items: ListingClipVersionItem[] = [
@@ -78,6 +83,19 @@ describe("ListingClipManager", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      value: mockMatchMedia.mockImplementation(() => ({
+        matches: true,
+        media: "(min-width: 1024px)",
+        onchange: null,
+        addEventListener: jest.fn(),
+        removeEventListener: jest.fn(),
+        addListener: jest.fn(),
+        removeListener: jest.fn(),
+        dispatchEvent: jest.fn()
+      }))
+    });
     mockUseSWR.mockReturnValue({ data: undefined });
     mockUseSearchParams.mockReturnValue({
       toString: () => "mediaType=videos&filter=property_features&page=2"
@@ -113,6 +131,33 @@ describe("ListingClipManager", () => {
     expect(
       screen.queryByRole("link", { name: /view generated clips/i })
     ).not.toBeInTheDocument();
+  });
+
+  it("renders the selected clip details inline on mobile instead of the desktop detail pane", () => {
+    mockMatchMedia.mockImplementation(() => ({
+      matches: false,
+      media: "(min-width: 1024px)",
+      onchange: null,
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+      addListener: jest.fn(),
+      removeListener: jest.fn(),
+      dispatchEvent: jest.fn()
+    }));
+
+    render(
+      <ListingClipManager
+        listingId="listing-1"
+        items={items}
+        mode="workspace"
+      />
+    );
+
+    expect(screen.getByTestId("mobile-clip-detail-clip-1")).toBeInTheDocument();
+    expect(screen.queryByTestId("desktop-clip-detail")).not.toBeInTheDocument();
+    expect(
+      screen.getByTestId("mobile-clip-detail-clip-1")
+    ).toHaveTextContent("Version");
   });
 
   it("opens regenerate options on click and expands customization in the popup", async () => {
@@ -199,6 +244,75 @@ describe("ListingClipManager", () => {
       clipId: "clip-1",
       aiDirections: "Warm light"
     });
+  });
+
+  it("replaces regenerate with cancel after quick regenerate starts", async () => {
+    const user = userEvent.setup();
+    jest.mocked(regenerateListingClipVersion).mockResolvedValue({
+      listingId: "listing-1",
+      clipId: "clip-1",
+      clipVersionId: "clip-version-2",
+      batchId: "batch-1"
+    });
+
+    render(
+      <ListingClipManager
+        listingId="listing-1"
+        items={items}
+        mode="workspace"
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: /^regenerate$/i }));
+    await user.click(screen.getByRole("button", { name: /quick regenerate/i }));
+
+    expect(
+      await screen.findByRole("button", { name: /cancel generation/i })
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /^regenerate$/i })
+    ).not.toBeInTheDocument();
+  });
+
+  it("confirms cancel and calls cancelVideoGenerationBatch for the active clip batch", async () => {
+    const user = userEvent.setup();
+    jest.mocked(regenerateListingClipVersion).mockResolvedValue({
+      listingId: "listing-1",
+      clipId: "clip-1",
+      clipVersionId: "clip-version-2",
+      batchId: "batch-1"
+    });
+    jest.mocked(cancelVideoGenerationBatch).mockResolvedValue({
+      success: true,
+      batchId: "batch-1",
+      canceledBatches: 1,
+      canceledJobs: 1
+    });
+
+    render(
+      <ListingClipManager
+        listingId="listing-1"
+        items={items}
+        mode="workspace"
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: /^regenerate$/i }));
+    await user.click(screen.getByRole("button", { name: /quick regenerate/i }));
+    await user.click(
+      await screen.findByRole("button", { name: /cancel generation/i })
+    );
+
+    expect(
+      await screen.findByRole("heading", { name: /cancel clip generation\?/i })
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /^cancel generation$/i }));
+
+    expect(cancelVideoGenerationBatch).toHaveBeenCalledWith(
+      "batch-1",
+      "Canceled by user"
+    );
   });
 
   it("shows loading spinners and disables regenerate for the selected clip while regeneration is in progress", () => {

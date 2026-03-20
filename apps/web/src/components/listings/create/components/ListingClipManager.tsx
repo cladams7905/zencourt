@@ -19,12 +19,25 @@ import { Button } from "@web/src/components/ui/button";
 import { LoadingImage } from "@web/src/components/ui/loading-image";
 import { cn } from "@web/src/components/ui/utils";
 import { fetchApiData } from "@web/src/lib/core/http/client";
-import { regenerateListingClipVersion } from "@web/src/server/actions/video/generate";
+import {
+  cancelVideoGenerationBatch,
+  regenerateListingClipVersion
+} from "@web/src/server/actions/video/generate";
 import {
   getClipRegenerationSoftTimeoutMs,
   isPastTimeout,
   VIDEO_GENERATION_TIMEOUT_MESSAGE
 } from "@web/src/lib/domain/listing/videoGenerationTimeouts";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from "@web/src/components/ui/alert-dialog";
 import {
   Popover,
   PopoverContent,
@@ -80,6 +93,33 @@ function RegenerationSpinner({ label }: { label: string }) {
       <Loader2 className="h-4 w-4 animate-spin" />
     </span>
   );
+}
+
+function useIsDesktopLayout() {
+  const [isDesktop, setIsDesktop] = React.useState(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+      return true;
+    }
+    return window.matchMedia("(min-width: 1024px)").matches;
+  });
+
+  React.useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+      return;
+    }
+
+    const mediaQuery = window.matchMedia("(min-width: 1024px)");
+    const handleChange = (event: MediaQueryListEvent) => {
+      setIsDesktop(event.matches);
+    };
+
+    setIsDesktop(mediaQuery.matches);
+    mediaQuery.addEventListener("change", handleChange);
+
+    return () => mediaQuery.removeEventListener("change", handleChange);
+  }, []);
+
+  return isDesktop;
 }
 
 function formatDuration(durationSeconds?: number | null) {
@@ -181,6 +221,7 @@ function ClipManagerWorkspace({
   listingId,
   items
 }: Pick<ListingClipManagerProps, "listingId" | "items">) {
+  const isDesktopLayout = useIsDesktopLayout();
   const [clipItems, setClipItems] = React.useState(() => mergeClipItems(items));
   const [selectedClipId, setSelectedClipId] = React.useState<string | null>(
     items[0]?.clipId ?? null
@@ -192,9 +233,14 @@ function ClipManagerWorkspace({
   const [isRegenerateMenuOpen, setIsRegenerateMenuOpen] = React.useState(false);
   const [isCustomizeExpanded, setIsCustomizeExpanded] = React.useState(false);
   const [isSubmitting, startTransition] = React.useTransition();
+  const [isCancelDialogOpen, setIsCancelDialogOpen] = React.useState(false);
+  const [isCanceling, startCancelTransition] = React.useTransition();
   const [timedOutClipIds, setTimedOutClipIds] = React.useState<Set<string>>(
     () => new Set()
   );
+  const [pendingBatchIdByClipId, setPendingBatchIdByClipId] = React.useState<
+    Record<string, string>
+  >({});
   const previousStatusesRef = React.useRef<Map<string, string>>(new Map());
   const lastSignatureRef = React.useRef(
     serializeClipItems(mergeClipItems(items))
@@ -243,6 +289,11 @@ function ClipManagerWorkspace({
           ["pending", "processing"].includes(previousStatus) &&
           status === "completed"
         ) {
+          setPendingBatchIdByClipId((currentPendingBatchIdByClipId) => {
+            const nextPendingBatchIdByClipId = { ...currentPendingBatchIdByClipId };
+            delete nextPendingBatchIdByClipId[item.clipId];
+            return nextPendingBatchIdByClipId;
+          });
           toast.success(`${item.roomName} clip regenerated.`);
           setSelectedClipId(item.clipId);
           setSelectedVersionId(item.currentVersion.clipVersionId ?? null);
@@ -250,6 +301,11 @@ function ClipManagerWorkspace({
           ["pending", "processing"].includes(previousStatus) &&
           status === "failed"
         ) {
+          setPendingBatchIdByClipId((currentPendingBatchIdByClipId) => {
+            const nextPendingBatchIdByClipId = { ...currentPendingBatchIdByClipId };
+            delete nextPendingBatchIdByClipId[item.clipId];
+            return nextPendingBatchIdByClipId;
+          });
           toast.error(`Failed to regenerate ${item.roomName} clip.`);
         }
       }
@@ -286,6 +342,11 @@ function ClipManagerWorkspace({
       ) {
         nextTimedOutClipIds.add(item.clipId);
         didChange = true;
+        setPendingBatchIdByClipId((currentPendingBatchIdByClipId) => {
+          const nextPendingBatchIdByClipId = { ...currentPendingBatchIdByClipId };
+          delete nextPendingBatchIdByClipId[item.clipId];
+          return nextPendingBatchIdByClipId;
+        });
         toast.error(VIDEO_GENERATION_TIMEOUT_MESSAGE);
       }
     }
@@ -341,6 +402,9 @@ function ClipManagerWorkspace({
   const selectedClipIsRegenerating = isClipRegenerating(
     selectedItem?.currentVersion.versionStatus
   );
+  const selectedClipBatchId = selectedItem
+    ? pendingBatchIdByClipId[selectedItem.clipId]
+    : undefined;
 
   const submitRegeneration = (aiDirections: string) => {
     if (!selectedItem) return;
@@ -367,6 +431,10 @@ function ClipManagerWorkspace({
                 : item
             )
           );
+          setPendingBatchIdByClipId((currentPendingBatchIdByClipId) => ({
+            ...currentPendingBatchIdByClipId,
+            [selectedItem.clipId]: result.batchId
+          }));
           setTimedOutClipIds((currentTimedOutClipIds) => {
             const nextTimedOutClipIds = new Set(currentTimedOutClipIds);
             nextTimedOutClipIds.delete(selectedItem.clipId);
@@ -414,6 +482,258 @@ function ClipManagerWorkspace({
     window.open(videoUrl, "_blank", "noopener,noreferrer");
   };
 
+  const handleConfirmCancel = () => {
+    if (!selectedItem || !selectedClipBatchId) {
+      return;
+    }
+
+    startCancelTransition(() => {
+      void cancelVideoGenerationBatch(selectedClipBatchId, "Canceled by user")
+        .then(() => {
+          setPendingBatchIdByClipId((currentPendingBatchIdByClipId) => {
+            const nextPendingBatchIdByClipId = { ...currentPendingBatchIdByClipId };
+            delete nextPendingBatchIdByClipId[selectedItem.clipId];
+            return nextPendingBatchIdByClipId;
+          });
+          setIsCancelDialogOpen(false);
+          toast.success(`Canceled ${selectedItem.roomName} clip generation.`);
+        })
+        .catch((error) => {
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : "Failed to cancel clip generation."
+          );
+        });
+    });
+  };
+
+  const renderClipActionControls = (options?: {
+    controlsClassName?: string;
+    selectClassName?: string;
+    textareaIdSuffix?: string;
+  }) => (
+    <div className={cn("flex flex-row items-end justify-between gap-2 sm:gap-3", options?.controlsClassName)}>
+      <div className={cn("min-w-0 flex-1", options?.selectClassName)}>
+        <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+          Version
+        </p>
+        <Select
+          value={selectedVersion?.clipVersionId ?? undefined}
+          onValueChange={(value) => setSelectedVersionId(value)}
+        >
+          <SelectTrigger className="w-full min-w-0 text-sm">
+            <SelectValue placeholder="Choose a version" />
+          </SelectTrigger>
+          <SelectContent>
+            {selectedItem?.versions.map((version) => (
+              <SelectItem
+                key={
+                  version.clipVersionId ??
+                  `${selectedItem.clipId}-${version.versionNumber}`
+                }
+                value={version.clipVersionId ?? ""}
+              >
+                {formatGeneratedAt(version.generatedAt)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="flex shrink-0 items-center gap-2">
+        {selectedVersion?.videoUrl ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                size="icon"
+                variant="outline"
+                onClick={handleDownloadClip}
+                className="h-9 w-9"
+                aria-label="Download clip"
+              >
+                <Download className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top">Download clip</TooltipContent>
+          </Tooltip>
+        ) : null}
+
+        {selectedClipIsRegenerating && selectedClipBatchId ? (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setIsCancelDialogOpen(true)}
+            disabled={isCanceling}
+            className="shrink-0"
+            aria-label="Cancel generation"
+          >
+            {isCanceling ? "Canceling..." : "Cancel"}
+          </Button>
+        ) : (
+          <Popover
+            open={isRegenerateMenuOpen}
+            onOpenChange={handleRegenerateMenuOpenChange}
+          >
+            <PopoverTrigger asChild>
+              <Button
+                type="button"
+                disabled={
+                  isSubmitting ||
+                  !selectedItem ||
+                  selectedClipIsRegenerating
+                }
+                className="shrink-0 gap-2"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Regenerate
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent
+              align="end"
+              side="bottom"
+              sideOffset={4}
+              className={cn(
+                "backdrop-blur-xl z-50 overflow-hidden overflow-y-auto rounded-lg border border-border bg-popover p-0 text-popover-foreground shadow-xl",
+                isCustomizeExpanded
+                  ? "w-[min(28rem,calc(100vw-1.5rem))]"
+                  : "w-72",
+                "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 animate-duration-200"
+              )}
+              onOpenAutoFocus={
+                isCustomizeExpanded
+                  ? undefined
+                  : (event) => event.preventDefault()
+              }
+            >
+              {!isCustomizeExpanded ? (
+                <div className="py-0">
+                  <button
+                    type="button"
+                    className={cn(
+                      "flex w-full cursor-pointer flex-col items-start gap-1 rounded-none px-4 py-2.5 text-left text-sm outline-none select-none transition-colors",
+                      "hover:bg-secondary hover:text-secondary-foreground",
+                      "focus-visible:bg-secondary focus-visible:text-secondary-foreground",
+                      selectedClipIsRegenerating &&
+                        "pointer-events-none opacity-50"
+                    )}
+                    onClick={handleRegenerate}
+                    disabled={selectedClipIsRegenerating}
+                  >
+                    <span className="font-medium text-foreground">
+                      Quick regenerate
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      Start a new version immediately using the current clip
+                      settings.
+                    </span>
+                  </button>
+                  <div className="h-px w-full shrink-0 bg-border/50" />
+                  <button
+                    type="button"
+                    className={cn(
+                      "flex w-full cursor-pointer flex-col items-start gap-1 rounded-none px-4 py-2.5 text-left text-sm outline-none select-none transition-colors",
+                      "hover:bg-secondary hover:text-secondary-foreground",
+                      "focus-visible:bg-secondary focus-visible:text-secondary-foreground",
+                      selectedClipIsRegenerating &&
+                        "pointer-events-none opacity-50"
+                    )}
+                    onClick={handleOpenCustomize}
+                    disabled={selectedClipIsRegenerating}
+                  >
+                    <span className="font-medium text-foreground">
+                      Customize prompt
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      Add additional AI directions before regenerating this
+                      clip.
+                    </span>
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3 px-4 py-3">
+                  <div>
+                    <p className="text-base font-semibold text-foreground">
+                      Customize prompt
+                    </p>
+                  </div>
+                  <div>
+                    <label
+                      htmlFor={`clip-manager-ai-directions-${options?.textareaIdSuffix ?? "desktop"}`}
+                      className="mb-2 block text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+                    >
+                      AI Directions
+                    </label>
+                    <textarea
+                      id={`clip-manager-ai-directions-${options?.textareaIdSuffix ?? "desktop"}`}
+                      value={draftAiDirections}
+                      onChange={(event) =>
+                        setDraftAiDirections(event.target.value)
+                      }
+                      rows={4}
+                      className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none"
+                      placeholder="Optional: add extra steering for this clip regeneration."
+                    />
+                  </div>
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setIsCustomizeExpanded(false)}
+                    >
+                      Back
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={() => submitRegeneration(draftAiDirections)}
+                      disabled={
+                        isSubmitting ||
+                        !selectedItem ||
+                        selectedClipIsRegenerating
+                      }
+                      className="gap-2 shrink-0"
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                      Regenerate
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </PopoverContent>
+          </Popover>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderVideoPlayer = () => (
+    <div className="flex min-h-0 min-w-0 lg:h-full">
+      <div
+        className={cn(
+          "relative isolate min-h-0 w-full min-w-0 overflow-hidden rounded-xl border border-border bg-black",
+          "min-h-[min(70dvh,calc(100dvh-11rem))]",
+          "lg:h-full lg:min-h-0"
+        )}
+      >
+        {selectedVersion?.videoUrl ? (
+          <video
+            key={selectedVersion.videoUrl}
+            src={selectedVersion.videoUrl}
+            poster={selectedVersion.thumbnail ?? undefined}
+            controls
+            playsInline
+            className="absolute inset-0 block h-full w-full object-contain"
+          />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center text-sm text-white/70">
+            No playable version available yet.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
   if (!clipItems.length) {
     return (
       <div className="rounded-2xl border border-border bg-background p-8 text-center text-sm text-muted-foreground">
@@ -431,52 +751,67 @@ function ClipManagerWorkspace({
             item.currentVersion.versionStatus
           );
           return (
-            <button
-              key={item.clipId}
-              type="button"
-              onClick={() => {
-                setSelectedClipId(item.clipId);
-                setSelectedVersionId(item.currentVersion.clipVersionId ?? null);
-              }}
-              className={cn(
-                "flex w-full items-center gap-3 border-b border-border px-4 py-3 text-left transition-colors hover:bg-muted/60 last:border-b-0",
-                isSelected && "bg-muted"
-              )}
-            >
-              <div className="relative h-21 w-18 shrink-0 overflow-hidden rounded-lg bg-muted">
-                {item.currentVersion.thumbnail ? (
-                  <LoadingImage
-                    src={item.currentVersion.thumbnail}
-                    alt={item.roomName}
-                    fill
-                    className="object-cover"
-                  />
-                ) : null}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-foreground">
-                  {item.roomName}
-                </p>
-                <p className="mt-1 inline-flex items-center gap-1 text-[11px] text-muted-foreground">
-                  <CalendarClock className="h-3 w-3" />
-                  {itemIsRegenerating
-                    ? "Regenerating now"
-                    : formatGeneratedAt(item.currentVersion.generatedAt)}
-                </p>
-              </div>
-              {itemIsRegenerating ? (
-                <RegenerationSpinner label="Clip regeneration in progress" />
-              ) : (
-                <span className="shrink-0 self-center text-xs text-muted-foreground tabular-nums">
-                  {formatDuration(item.currentVersion.durationSeconds)}
-                </span>
-              )}
-            </button>
+            <div key={item.clipId} className="border-b border-border last:border-b-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedClipId(item.clipId);
+                  setSelectedVersionId(item.currentVersion.clipVersionId ?? null);
+                }}
+                className={cn(
+                  "flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/60",
+                  isSelected && "bg-muted"
+                )}
+              >
+                <div className="relative h-21 w-18 shrink-0 overflow-hidden rounded-lg bg-muted">
+                  {item.currentVersion.thumbnail ? (
+                    <LoadingImage
+                      src={item.currentVersion.thumbnail}
+                      alt={item.roomName}
+                      fill
+                      className="object-cover"
+                    />
+                  ) : null}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-foreground">
+                    {item.roomName}
+                  </p>
+                  <p className="mt-1 inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                    <CalendarClock className="h-3 w-3" />
+                    {itemIsRegenerating
+                      ? "Regenerating now"
+                      : formatGeneratedAt(item.currentVersion.generatedAt)}
+                  </p>
+                </div>
+                {itemIsRegenerating ? (
+                  <RegenerationSpinner label="Clip regeneration in progress" />
+                ) : (
+                  <span className="shrink-0 self-center text-xs text-muted-foreground tabular-nums">
+                    {formatDuration(item.currentVersion.durationSeconds)}
+                  </span>
+                )}
+              </button>
+              {!isDesktopLayout && isSelected ? (
+                <div
+                  data-testid={`mobile-clip-detail-${item.clipId}`}
+                  className="space-y-3 border-t border-border bg-background px-4 py-4"
+                >
+                  {renderClipActionControls({
+                    controlsClassName: "items-end",
+                    textareaIdSuffix: "mobile"
+                  })}
+                  {renderVideoPlayer()}
+                </div>
+              ) : null}
+            </div>
           );
         })}
       </div>
 
+      {isDesktopLayout ? (
       <div
+        data-testid="desktop-clip-detail"
         className={cn(
           "relative grid gap-4 rounded-xl border border-border bg-background",
           "lg:min-h-0 lg:grid-rows-[minmax(0,1fr)]"
@@ -513,212 +848,43 @@ function ClipManagerWorkspace({
             "lg:h-full lg:grid-rows-[auto_minmax(0,1fr)]"
           )}
         >
-          <div className="flex flex-row items-end justify-between gap-2 sm:gap-3">
-            <div className="min-w-0 flex-1 lg:max-w-[280px]">
-              <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                Version
-              </p>
-              <Select
-                value={selectedVersion?.clipVersionId ?? undefined}
-                onValueChange={(value) => setSelectedVersionId(value)}
-              >
-                <SelectTrigger className="w-full min-w-0 text-sm">
-                  <SelectValue placeholder="Choose a version" />
-                </SelectTrigger>
-                <SelectContent>
-                  {selectedItem?.versions.map((version) => (
-                    <SelectItem
-                      key={
-                        version.clipVersionId ??
-                        `${selectedItem.clipId}-${version.versionNumber}`
-                      }
-                      value={version.clipVersionId ?? ""}
-                    >
-                      {formatGeneratedAt(version.generatedAt)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          {renderClipActionControls({
+            selectClassName: "lg:max-w-[280px]",
+            textareaIdSuffix: "desktop"
+          })}
 
-            <div className="flex shrink-0 items-center gap-2">
-              {selectedVersion?.videoUrl ? (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="outline"
-                      onClick={handleDownloadClip}
-                      className="h-9 w-9"
-                      aria-label="Download clip"
-                    >
-                      <Download className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top">Download clip</TooltipContent>
-                </Tooltip>
-              ) : null}
-
-              <Popover
-                open={isRegenerateMenuOpen}
-                onOpenChange={handleRegenerateMenuOpenChange}
-              >
-                <PopoverTrigger asChild>
-                  <Button
-                    type="button"
-                    disabled={
-                      isSubmitting ||
-                      !selectedItem ||
-                      selectedClipIsRegenerating
-                    }
-                    className="shrink-0 gap-2"
-                  >
-                    <RefreshCw className="h-4 w-4" />
-                    Regenerate
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent
-                  align="end"
-                  side="bottom"
-                  sideOffset={4}
-                  className={cn(
-                    "backdrop-blur-xl z-50 overflow-hidden overflow-y-auto rounded-lg border border-border bg-popover p-0 text-popover-foreground shadow-xl",
-                    isCustomizeExpanded
-                      ? "w-[min(28rem,calc(100vw-1.5rem))]"
-                      : "w-72",
-                    "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 animate-duration-200"
-                  )}
-                  onOpenAutoFocus={
-                    isCustomizeExpanded
-                      ? undefined
-                      : (event) => event.preventDefault()
-                  }
-                >
-                  {!isCustomizeExpanded ? (
-                    <div className="py-0">
-                      <button
-                        type="button"
-                        className={cn(
-                          "flex w-full cursor-pointer flex-col items-start gap-1 rounded-none px-4 py-2.5 text-left text-sm outline-none select-none transition-colors",
-                          "hover:bg-secondary hover:text-secondary-foreground",
-                          "focus-visible:bg-secondary focus-visible:text-secondary-foreground",
-                          selectedClipIsRegenerating &&
-                            "pointer-events-none opacity-50"
-                        )}
-                        onClick={handleRegenerate}
-                        disabled={selectedClipIsRegenerating}
-                      >
-                        <span className="font-medium text-foreground">
-                          Quick regenerate
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          Start a new version immediately using the current clip
-                          settings.
-                        </span>
-                      </button>
-                      <div className="h-px w-full shrink-0 bg-border/50" />
-                      <button
-                        type="button"
-                        className={cn(
-                          "flex w-full cursor-pointer flex-col items-start gap-1 rounded-none px-4 py-2.5 text-left text-sm outline-none select-none transition-colors",
-                          "hover:bg-secondary hover:text-secondary-foreground",
-                          "focus-visible:bg-secondary focus-visible:text-secondary-foreground",
-                          selectedClipIsRegenerating &&
-                            "pointer-events-none opacity-50"
-                        )}
-                        onClick={handleOpenCustomize}
-                        disabled={selectedClipIsRegenerating}
-                      >
-                        <span className="font-medium text-foreground">
-                          Customize prompt
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          Add additional AI directions before regenerating this
-                          clip.
-                        </span>
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="space-y-3 px-4 py-3">
-                      <div>
-                        <p className="text-base font-semibold text-foreground">
-                          Customize prompt
-                        </p>
-                      </div>
-                      <div>
-                        <label
-                          htmlFor="clip-manager-ai-directions"
-                          className="mb-2 block text-xs font-semibold uppercase tracking-wide text-muted-foreground"
-                        >
-                          AI Directions
-                        </label>
-                        <textarea
-                          id="clip-manager-ai-directions"
-                          value={draftAiDirections}
-                          onChange={(event) =>
-                            setDraftAiDirections(event.target.value)
-                          }
-                          rows={4}
-                          className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none"
-                          placeholder="Optional: add extra steering for this clip regeneration."
-                        />
-                      </div>
-                      <div className="flex flex-wrap items-center justify-end gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => setIsCustomizeExpanded(false)}
-                        >
-                          Back
-                        </Button>
-                        <Button
-                          type="button"
-                          onClick={() => submitRegeneration(draftAiDirections)}
-                          disabled={
-                            isSubmitting ||
-                            !selectedItem ||
-                            selectedClipIsRegenerating
-                          }
-                          className="gap-2 shrink-0"
-                        >
-                          <RefreshCw className="h-4 w-4" />
-                          Regenerate
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </PopoverContent>
-              </Popover>
-            </div>
-          </div>
-
-          <div className="flex min-h-0 min-w-0 lg:h-full">
-            <div
-              className={cn(
-                "relative isolate min-h-0 w-full min-w-0 overflow-hidden rounded-xl border border-border bg-black",
-                "min-h-[min(70dvh,calc(100dvh-11rem))]",
-                "lg:h-full lg:min-h-0"
-              )}
-            >
-              {selectedVersion?.videoUrl ? (
-                <video
-                  key={selectedVersion.videoUrl}
-                  src={selectedVersion.videoUrl}
-                  poster={selectedVersion.thumbnail ?? undefined}
-                  controls
-                  playsInline
-                  className="absolute inset-0 block h-full w-full object-contain"
-                />
-              ) : (
-                <div className="absolute inset-0 flex items-center justify-center text-sm text-white/70">
-                  No playable version available yet.
-                </div>
-              )}
-            </div>
-          </div>
+          {renderVideoPlayer()}
         </div>
       </div>
+      ) : null}
+      <AlertDialog
+        open={isCancelDialogOpen}
+        onOpenChange={setIsCancelDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Cancel clip generation?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This will stop the active generation batch for this
+              clip. You can start a new regeneration later.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isCanceling}>
+              Keep running
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmCancel}
+              disabled={isCanceling}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isCanceling ? "Canceling..." : "Cancel generation"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
