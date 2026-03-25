@@ -77,9 +77,9 @@ describe("useGenerateProcessingFlow", () => {
     expect(navigate).toHaveBeenCalledWith("/listings/l1/review");
   });
 
-  it("stops polling and shows a timeout toast when batch generation exceeds the soft timeout", async () => {
+  it("keeps polling and shows a delayed-generation toast when batch generation exceeds the soft timeout", async () => {
     jest.useFakeTimers();
-    jest.setSystemTime(new Date("2026-03-20T10:08:00.000Z"));
+    jest.setSystemTime(new Date("2026-03-20T10:16:00.000Z"));
 
     const navigate = jest.fn();
     const updateStage = jest.fn().mockResolvedValue(undefined);
@@ -98,7 +98,7 @@ describe("useGenerateProcessingFlow", () => {
 
     await waitFor(() => {
       expect(mockToastError).toHaveBeenCalledWith(
-        "Generation timed out, please try again later."
+        "Generation is taking longer than usual because the queue is busy. We'll keep trying."
       );
     });
 

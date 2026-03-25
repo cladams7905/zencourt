@@ -64,12 +64,10 @@ type ListingClipManagerProps = {
 
 function hasPollablePendingItems(
   items: ListingClipVersionItem[],
-  timedOutClipIds: Set<string>
+  _slowClipIds: Set<string>
 ) {
-  return items.some(
-    (item) =>
-      isClipRegenerating(getRegeneratingVersion(item)?.versionStatus) &&
-      !timedOutClipIds.has(item.clipId)
+  return items.some((item) =>
+    isClipRegenerating(getRegeneratingVersion(item)?.versionStatus)
   );
 }
 
@@ -405,11 +403,6 @@ function ClipManagerWorkspace({
       ) {
         nextTimedOutClipIds.add(item.clipId);
         didChange = true;
-        setPendingBatchIdByClipId((currentPendingBatchIdByClipId) => {
-          const nextPendingBatchIdByClipId = { ...currentPendingBatchIdByClipId };
-          delete nextPendingBatchIdByClipId[item.clipId];
-          return nextPendingBatchIdByClipId;
-        });
         toast.error(VIDEO_GENERATION_TIMEOUT_MESSAGE);
       }
     }

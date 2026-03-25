@@ -16,25 +16,15 @@ import {
   createVideoClip,
   createVideoClipVersion,
   getCurrentVideoClipVersionsByListingId,
-  getVideoGenBatchById,
-  getVideoGenJobById,
   getSuccessfulVideoClipVersionsByClipId,
   getVideoClipById,
   getVideoClipVersionById,
   getVideoClipVersionBySourceVideoGenJobId,
-  updateVideoClipVersion,
-  updateVideoGenBatch,
-  updateVideoGenJob,
   updateVideoClip
 } from "@web/src/server/models/videoGen";
 import type { DBVideoClip, DBVideoClipVersion } from "@db/types/models";
 import { ApiError } from "@web/src/server/errors/api";
 import { StatusCode } from "@shared/types/api";
-import {
-  getClipRegenerationHardTimeoutMs,
-  isPastTimeout,
-  VIDEO_GENERATION_TIMEOUT_MESSAGE
-} from "@web/src/lib/domain/listing/videoGenerationTimeouts";
 
 function buildStableClipId(args: {
   listingId: string;
@@ -179,51 +169,10 @@ async function seedMissingVideoClips(listingId: string) {
   }
 }
 
-async function expireTimedOutClipRegenerations(
-  clipVersions: DBVideoClipVersion[]
-): Promise<void> {
-  const timedOutClipVersions = clipVersions.filter(
-    (clipVersion) =>
-      ["pending", "processing"].includes(clipVersion.status) &&
-      isPastTimeout(clipVersion.createdAt, getClipRegenerationHardTimeoutMs())
-  );
-
-  await Promise.all(
-    timedOutClipVersions.map(async (clipVersion) => {
-      await updateVideoClipVersion(clipVersion.id, {
-        status: "failed",
-        errorMessage: VIDEO_GENERATION_TIMEOUT_MESSAGE
-      });
-
-      if (!clipVersion.sourceVideoGenJobId) {
-        return;
-      }
-
-      const job = await getVideoGenJobById(clipVersion.sourceVideoGenJobId);
-      if (job && ["pending", "processing"].includes(job.status)) {
-        await updateVideoGenJob(job.id, {
-          status: "failed",
-          errorMessage: VIDEO_GENERATION_TIMEOUT_MESSAGE
-        });
-
-        const batch = await getVideoGenBatchById(job.videoGenBatchId);
-        if (batch && ["pending", "processing"].includes(batch.status)) {
-          await updateVideoGenBatch(batch.id, {
-            status: "failed",
-            errorMessage: VIDEO_GENERATION_TIMEOUT_MESSAGE
-          });
-        }
-      }
-    })
-  );
-}
-
 async function getListingClipVersionItems(listingId: string) {
   await seedMissingVideoClips(listingId);
   const currentClipVersions = await getCurrentVideoClipVersionsByListingId(listingId);
-  await expireTimedOutClipRegenerations(currentClipVersions);
-  const refreshedClipVersions =
-    await getCurrentVideoClipVersionsByListingId(listingId);
+  const refreshedClipVersions = currentClipVersions;
 
   return await Promise.all(
     refreshedClipVersions.map(async (clipVersion) => {

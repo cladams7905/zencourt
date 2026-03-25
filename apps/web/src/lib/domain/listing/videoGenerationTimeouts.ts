@@ -2,14 +2,14 @@ const MINUTE_MS = 60 * 1000;
 
 export const VIDEO_GENERATION_CONCURRENCY = 3;
 export const VIDEO_GENERATION_TIMEOUT_MESSAGE =
-  "Generation timed out, please try again later.";
+  "Generation is taking longer than usual because the queue is busy. We'll keep trying.";
 
 export function getClipRegenerationSoftTimeoutMs(): number {
-  return 2 * MINUTE_MS;
+  return 3 * MINUTE_MS;
 }
 
 export function getClipRegenerationHardTimeoutMs(): number {
-  return 3 * MINUTE_MS;
+  return 30 * MINUTE_MS;
 }
 
 function getBatchWaveCount(jobCount: number): number {
@@ -17,11 +17,12 @@ function getBatchWaveCount(jobCount: number): number {
 }
 
 export function getBatchGenerationSoftTimeoutMs(jobCount: number): number {
-  return (2 + getBatchWaveCount(jobCount) * 5) * MINUTE_MS;
+  void jobCount;
+  return 5 * MINUTE_MS;
 }
 
 export function getBatchGenerationHardTimeoutMs(jobCount: number): number {
-  return (4 + getBatchWaveCount(jobCount) * 6) * MINUTE_MS;
+  return (15 + getBatchWaveCount(jobCount) * 15) * MINUTE_MS;
 }
 
 export function isPastTimeout(

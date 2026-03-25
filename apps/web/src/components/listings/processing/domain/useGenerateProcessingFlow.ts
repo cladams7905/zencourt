@@ -205,7 +205,6 @@ export function useGenerateProcessingFlow(params: {
     }
 
     hasShownTimeoutRef.current = true;
-    setCanPollGeneration(false);
     toast.error(VIDEO_GENERATION_TIMEOUT_MESSAGE);
   }, [generationStatus, mode]);
 

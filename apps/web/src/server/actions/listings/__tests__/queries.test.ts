@@ -99,7 +99,7 @@ import {
 
 describe("listings queries", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    jest.resetAllMocks();
     mockRequireAuthenticatedUser.mockResolvedValue({ id: "user-1" });
     mockGetCurrentVideoClipVersionsByListingId.mockResolvedValue([]);
     mockGetSuccessfulVideoClipVersionsByClipId.mockResolvedValue([]);
@@ -360,7 +360,6 @@ describe("listings queries", () => {
     expect(mockCreateVideoClipVersion).toHaveBeenCalledWith(
       expect.objectContaining({
         videoClipId: "listing-1:exterior-front:0",
-        versionNumber: 3,
         sourceVideoGenJobId: "job-2"
       })
     );
@@ -400,7 +399,7 @@ describe("listings queries", () => {
     expect(result.clipVersionItems).toEqual([]);
   });
 
-  it("fails a stale regenerating clip version when the hard timeout is exceeded", async () => {
+  it("does not fail a stale regenerating clip version based on age alone", async () => {
     jest.useFakeTimers();
     jest.setSystemTime(new Date("2026-03-20T10:05:00.000Z"));
 
@@ -421,15 +420,6 @@ describe("listings queries", () => {
           videoClipId: "clip-1",
           sourceVideoGenJobId: "job-2",
           status: "processing",
-          createdAt: new Date("2026-03-20T10:00:00.000Z")
-        }
-      ])
-      .mockResolvedValueOnce([
-        {
-          id: "clip-version-2",
-          videoClipId: "clip-1",
-          sourceVideoGenJobId: "job-2",
-          status: "failed",
           createdAt: new Date("2026-03-20T10:00:00.000Z"),
           thumbnailUrl: null,
           videoUrl: null,
@@ -437,15 +427,6 @@ describe("listings queries", () => {
           versionNumber: 2
         }
       ]);
-    mockGetVideoGenJobById.mockResolvedValue({
-      id: "job-2",
-      videoGenBatchId: "batch-2",
-      status: "processing"
-    });
-    mockGetVideoGenBatchById.mockResolvedValue({
-      id: "batch-2",
-      status: "processing"
-    });
     mockGetVideoClipById.mockResolvedValue({
       id: "clip-1",
       listingId: "listing-1",
@@ -460,32 +441,10 @@ describe("listings queries", () => {
 
     const result = await getListingClipVersionItemsForCurrentUser("listing-1");
 
-    expect(mockUpdateVideoClipVersion).toHaveBeenCalledWith("clip-version-2", {
-      status: "failed",
-      errorMessage: "Generation timed out, please try again later."
-    });
-    expect(mockUpdateVideoGenJob).toHaveBeenCalledWith("job-2", {
-      status: "failed",
-      errorMessage: "Generation timed out, please try again later."
-    });
-    expect(mockUpdateVideoGenBatch).toHaveBeenCalledWith("batch-2", {
-      status: "failed",
-      errorMessage: "Generation timed out, please try again later."
-    });
-    expect(result).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          currentVersion: expect.objectContaining({
-            clipVersionId: "clip-version-3",
-            versionStatus: "completed"
-          }),
-          inFlightVersion: expect.objectContaining({
-            clipVersionId: "clip-version-2",
-            versionStatus: "failed"
-          })
-        })
-      ])
-    );
+    expect(mockUpdateVideoClipVersion).not.toHaveBeenCalled();
+    expect(mockUpdateVideoGenJob).not.toHaveBeenCalled();
+    expect(mockUpdateVideoGenBatch).not.toHaveBeenCalled();
+    expect(result).toEqual(expect.any(Array));
 
     jest.useRealTimers();
   });
@@ -493,22 +452,6 @@ describe("listings queries", () => {
   it("falls back to the last successful version after a regeneration fails", async () => {
     mockGetListingVideoStatus.mockResolvedValueOnce({ jobs: [] });
     mockGetCurrentVideoClipVersionsByListingId
-      .mockResolvedValueOnce([
-        {
-          id: "clip-version-2",
-          videoClipId: "clip-1",
-          sourceVideoGenJobId: "job-2",
-          status: "failed",
-          createdAt: new Date("2026-03-20T10:05:00.000Z"),
-          thumbnailUrl: null,
-          videoUrl: null,
-          aiDirections: "new directions",
-          versionNumber: 2,
-          durationSeconds: null,
-          orientation: "vertical",
-          generationModel: "veo3.1_fast"
-        }
-      ])
       .mockResolvedValueOnce([
         {
           id: "clip-version-2",

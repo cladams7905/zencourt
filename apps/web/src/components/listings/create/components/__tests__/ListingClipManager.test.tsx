@@ -450,9 +450,9 @@ describe("ListingClipManager", () => {
     expect(screen.getByAltText("Kitchen")).toHaveAttribute("src", "https://thumb");
   });
 
-  it("stops polling and shows a timeout toast when clip regeneration exceeds the soft timeout", () => {
+  it("keeps polling and shows a delayed-generation toast when clip regeneration exceeds the soft timeout", () => {
     jest.useFakeTimers();
-    jest.setSystemTime(new Date("2026-03-20T10:03:00.000Z"));
+    jest.setSystemTime(new Date("2026-03-20T10:11:00.000Z"));
 
     const processingItems: ListingClipVersionItem[] = [
       {
@@ -475,10 +475,10 @@ describe("ListingClipManager", () => {
     );
 
     expect(mockToastError).toHaveBeenCalledWith(
-      "Generation timed out, please try again later."
+      "Generation is taking longer than usual because the queue is busy. We'll keep trying."
     );
     const lastCall = mockUseSWR.mock.calls.at(-1);
-    expect(lastCall?.[2]).toMatchObject({ refreshInterval: 0 });
+    expect(lastCall?.[2]).toMatchObject({ refreshInterval: 2000 });
 
     jest.useRealTimers();
   });

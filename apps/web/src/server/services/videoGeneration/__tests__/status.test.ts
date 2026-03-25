@@ -206,7 +206,7 @@ describe("videoGeneration/status/service", () => {
 
   it("fails a stale batch when the hard timeout is exceeded", async () => {
     jest.useFakeTimers();
-    jest.setSystemTime(new Date("2026-03-20T10:17:00.000Z"));
+    jest.setSystemTime(new Date("2026-03-20T10:31:00.000Z"));
 
     mockSelect
       .mockReturnValueOnce(
@@ -240,17 +240,20 @@ describe("videoGeneration/status/service", () => {
 
     expect(mockUpdateVideoGenJob).toHaveBeenCalledWith("job-3", {
       status: "failed",
-      errorMessage: "Generation timed out, please try again later."
+      errorMessage:
+        "Generation is taking longer than usual because the queue is busy. We'll keep trying."
     });
     expect(mockUpdateVideoGenBatch).toHaveBeenCalledWith("batch-3", {
       status: "failed",
-      errorMessage: "Generation timed out, please try again later."
+      errorMessage:
+        "Generation is taking longer than usual because the queue is busy. We'll keep trying."
     });
     expect(result).toEqual({
       batchId: "batch-3",
       status: "failed",
       createdAt: "2026-03-20T10:00:00.000Z",
-      errorMessage: "Generation timed out, please try again later.",
+      errorMessage:
+        "Generation is taking longer than usual because the queue is busy. We'll keep trying.",
       totalJobs: 1,
       completedJobs: 0,
       failedJobs: 1,
