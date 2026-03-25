@@ -70,6 +70,11 @@ export function useContentGeneration(params: {
     options?: { forceNewBatch?: boolean; generationCount?: number; templateId?: string }
   ) => Promise<void>;
   removeContentItem: (contentItemId: string) => void;
+  updateContentItemText: (params: {
+    contentItemId: string;
+    hook: string;
+    caption: string;
+  }) => void;
 } {
   const { listingId, listingPostItems, activeMediaTab, activeSubcategory } =
     params;
@@ -255,6 +260,23 @@ export function useContentGeneration(params: {
     setLocalPostItems((prev) => prev.filter((item) => item.id !== contentItemId));
   }, []);
 
+  const updateContentItemText = React.useCallback(
+    (params: { contentItemId: string; hook: string; caption: string }) => {
+      setLocalPostItems((prev) =>
+        prev.map((item) =>
+          item.id === params.contentItemId
+            ? {
+                ...item,
+                hook: params.hook,
+                caption: params.caption
+              }
+            : item
+        )
+      );
+    },
+    []
+  );
+
   const loadingCount = isGenerating
     ? activeGenerationCountRef.current
     : incompleteBatchSkeletonCount;
@@ -265,6 +287,7 @@ export function useContentGeneration(params: {
     generationError,
     loadingCount,
     generateSubcategoryContent,
-    removeContentItem
+    removeContentItem,
+    updateContentItemText
   };
 }

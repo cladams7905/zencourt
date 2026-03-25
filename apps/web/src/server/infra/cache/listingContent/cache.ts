@@ -319,6 +319,56 @@ export async function updateRenderedPreviewForItem(params: {
 }
 
 /**
+ * Updates the top-level hook and caption fields for one cached item.
+ * Returns the updated item, or null when the cache entry does not exist.
+ */
+export async function updateCachedListingContentText(params: {
+  userId: string;
+  listingId: string;
+  subcategory: ListingContentSubcategory;
+  mediaType: ListingMediaType;
+  timestamp: number;
+  id: number;
+  hook: string;
+  caption: string;
+}): Promise<ListingContentItem | null> {
+  const redis = getSharedRedisClient();
+  if (!redis) return null;
+  const key = buildListingContentItemKey({
+    userId: params.userId,
+    listingId: params.listingId,
+    subcategory: params.subcategory,
+    mediaType: params.mediaType,
+    timestamp: params.timestamp,
+    id: params.id
+  });
+  try {
+    const existing = await redis.get<ListingContentItem>(key);
+    if (!existing || typeof existing !== "object") {
+      return null;
+    }
+
+    const updated: ListingContentItem = {
+      ...existing,
+      hook: params.hook,
+      caption: params.caption
+    };
+
+    await redis.set(key, updated, {
+      ex: LISTING_CONTENT_CACHE_TTL_SECONDS
+    });
+
+    return updated;
+  } catch (error) {
+    logger.warn(
+      { err: normalizeErrorForLogging(error), cacheKey: key },
+      "Failed updating listing content item text"
+    );
+    return null;
+  }
+}
+
+/**
  * Deletes one cached listing content item by its key. No-op if Redis is unavailable.
  */
 export async function deleteCachedListingContentItem(params: {

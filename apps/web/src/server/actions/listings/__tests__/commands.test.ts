@@ -3,6 +3,7 @@ const mockCreateListing = jest.fn();
 const mockUpdateListing = jest.fn();
 const mockTouchListingActivity = jest.fn();
 const mockDeleteCachedListingContentItemService = jest.fn();
+const mockUpdateCachedListingContentTextService = jest.fn();
 const mockPrepareListingImageUploadUrls = jest.fn();
 const mockCreateListingImageRecords = jest.fn();
 const mockUpdateListingImageAssignments = jest.fn();
@@ -59,6 +60,10 @@ jest.mock("@web/src/server/infra/cache/listingContent/cache", () => ({
   deleteCachedListingContentItem: (...args: unknown[]) =>
     (mockDeleteCachedListingContentItemService as (...a: unknown[]) => unknown)(
       ...args
+    ),
+  updateCachedListingContentText: (...args: unknown[]) =>
+    (mockUpdateCachedListingContentTextService as (...a: unknown[]) => unknown)(
+      ...args
     )
 }));
 
@@ -91,7 +96,10 @@ import {
   deleteListingImageUploadsForCurrentUser,
   getListingImagesForCurrentUser
 } from "@web/src/server/actions/listings/commands";
-import { deleteCachedListingContentItem } from "@web/src/server/actions/listings/cache";
+import {
+  deleteCachedListingContentItem,
+  updateCachedListingVideoText
+} from "@web/src/server/actions/listings/cache";
 
 describe("listings commands", () => {
   const mockUser = { id: "user-1" } as never;
@@ -249,6 +257,66 @@ describe("listings commands", () => {
         mediaType: "image",
         timestamp: 123,
         id: 0
+      });
+    });
+  });
+
+  describe("updateCachedListingVideoText", () => {
+    it("throws DomainValidationError when cache identity is invalid", async () => {
+      await expect(
+        updateCachedListingVideoText("listing-1", {
+          cacheKeyTimestamp: 0,
+          cacheKeyId: 1,
+          subcategory: "new_listing",
+          hook: "Hook",
+          caption: "Caption"
+        })
+      ).rejects.toThrow(DomainValidationError);
+    });
+
+    it("throws DomainValidationError when text fields are missing", async () => {
+      await expect(
+        updateCachedListingVideoText("listing-1", {
+          cacheKeyTimestamp: 1,
+          cacheKeyId: 1,
+          subcategory: "new_listing",
+          hook: "",
+          caption: "Caption"
+        })
+      ).rejects.toThrow(DomainValidationError);
+    });
+
+    it("calls updateCachedListingContentText service with valid params", async () => {
+      mockUpdateCachedListingContentTextService.mockResolvedValueOnce({
+        hook: "Updated hook",
+        caption: "Updated caption"
+      });
+
+      const result = await updateCachedListingVideoText("listing-1", {
+        cacheKeyTimestamp: 123,
+        cacheKeyId: 456,
+        subcategory: "new_listing",
+        hook: "Updated hook",
+        caption: "Updated caption"
+      });
+
+      expect(mockRequireListingAccess).toHaveBeenCalledWith(
+        "listing-1",
+        "user-1"
+      );
+      expect(mockUpdateCachedListingContentTextService).toHaveBeenCalledWith({
+        userId: "user-1",
+        listingId: "listing-1",
+        subcategory: "new_listing",
+        mediaType: "video",
+        timestamp: 123,
+        id: 456,
+        hook: "Updated hook",
+        caption: "Updated caption"
+      });
+      expect(result).toEqual({
+        hook: "Updated hook",
+        caption: "Updated caption"
       });
     });
   });

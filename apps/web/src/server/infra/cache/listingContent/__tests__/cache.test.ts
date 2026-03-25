@@ -14,6 +14,7 @@ import {
   LISTING_CONTENT_CACHE_PREFIX,
   LISTING_CONTENT_CACHE_TTL_SECONDS,
   setCachedListingContentItem,
+  updateCachedListingContentText,
   updateRenderedPreviewForItem
 } from "../cache";
 
@@ -254,6 +255,73 @@ describe("listingContent cache", () => {
       modifications: { headline: "A" }
     });
 
+    expect(set).not.toHaveBeenCalled();
+  });
+
+  it("updates hook and caption for an existing cached item while preserving other fields", async () => {
+    const get = jest.fn().mockResolvedValue({
+      hook: "Original hook",
+      broll_query: "q",
+      body: [{ header: "Slide 1", content: "Body", broll_query: "b" }],
+      cta: null,
+      caption: "Original caption",
+      renderedImageUrl: "https://rendered/image.png",
+      renderedTemplateId: "tpl",
+      renderedModifications: { headline: "A" }
+    });
+    const set = jest.fn().mockResolvedValue("OK");
+    mockedGetSharedRedisClient.mockReturnValue({
+      get,
+      set
+    } as unknown as ReturnType<typeof getSharedRedisClient>);
+
+    const result = await updateCachedListingContentText({
+      ...baseParams,
+      timestamp: 22,
+      id: 9,
+      hook: "Updated hook",
+      caption: "Updated caption"
+    });
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        hook: "Updated hook",
+        caption: "Updated caption",
+        body: [{ header: "Slide 1", content: "Body", broll_query: "b" }],
+        renderedImageUrl: "https://rendered/image.png",
+        renderedTemplateId: "tpl",
+        renderedModifications: { headline: "A" }
+      })
+    );
+    expect(set).toHaveBeenCalledWith(
+      `${LISTING_CONTENT_CACHE_PREFIX}:user-1:listing-1:new_listing:video:22:9`,
+      expect.objectContaining({
+        hook: "Updated hook",
+        caption: "Updated caption",
+        body: [{ header: "Slide 1", content: "Body", broll_query: "b" }],
+        renderedImageUrl: "https://rendered/image.png"
+      }),
+      { ex: LISTING_CONTENT_CACHE_TTL_SECONDS }
+    );
+  });
+
+  it("returns null when text update target is missing", async () => {
+    const get = jest.fn().mockResolvedValue(null);
+    const set = jest.fn().mockResolvedValue("OK");
+    mockedGetSharedRedisClient.mockReturnValue({
+      get,
+      set
+    } as unknown as ReturnType<typeof getSharedRedisClient>);
+
+    const result = await updateCachedListingContentText({
+      ...baseParams,
+      timestamp: 22,
+      id: 9,
+      hook: "Updated hook",
+      caption: "Updated caption"
+    });
+
+    expect(result).toBeNull();
     expect(set).not.toHaveBeenCalled();
   });
 

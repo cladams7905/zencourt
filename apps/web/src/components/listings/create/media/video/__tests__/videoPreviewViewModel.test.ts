@@ -146,6 +146,8 @@ describe("videoPreviewViewModel", () => {
         {
           id: "cap-1",
           hook: "Luxury home",
+          cacheKeyTimestamp: 123,
+          cacheKeyId: 4,
           body: [
             { header: "Fresh interiors", content: "Bright and open spaces" }
           ]
@@ -162,6 +164,11 @@ describe("videoPreviewViewModel", () => {
     expect(result[0]?.resolvedSegments).toHaveLength(2);
     expect(result[0]?.thumbnailOverlay).not.toBeNull();
     expect(result[0]?.firstThumb).toBe("https://img/1.jpg");
+    expect(result[0]?.captionItemKey).toEqual({
+      cacheKeyTimestamp: 123,
+      cacheKeyId: 4,
+      mediaType: "video"
+    });
   });
 
   it("adds supplemental address overlay for new listings when slide lacks address", () => {

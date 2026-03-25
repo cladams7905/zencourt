@@ -14,6 +14,7 @@ import {
 
 export interface TimelinePreviewResolvedSegment extends PreviewTimelineSegment {
   src: string;
+  thumbnailSrc?: string | null;
   supplementalAddressOverlay?: {
     overlay: PreviewTextOverlay;
     placement: "bottom-third" | "below-primary" | "low-bottom";

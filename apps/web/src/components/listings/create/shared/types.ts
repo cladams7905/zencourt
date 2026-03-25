@@ -24,6 +24,18 @@ export type ListingImagePreviewItem = {
   captionItemId?: string;
 };
 
+export type PlayablePreviewCaptionItemKey = {
+  cacheKeyTimestamp: number;
+  cacheKeyId: number;
+  mediaType: "video";
+};
+
+export type PlayablePreviewTextUpdate = {
+  hook: string;
+  caption: string;
+  captionItemKey: PlayablePreviewCaptionItemKey;
+};
+
 export type PlayablePreview = {
   id: string;
   resolvedSegments: TimelinePreviewResolvedSegment[];
@@ -34,6 +46,7 @@ export type PlayablePreview = {
   firstThumb: string | null;
   durationInFrames: number;
   captionItem: ContentItem | null;
+  captionItemKey?: PlayablePreviewCaptionItemKey;
   variationNumber: number;
 };
 

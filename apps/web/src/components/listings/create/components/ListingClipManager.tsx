@@ -258,7 +258,7 @@ function ClipManagerCard({
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-3">
           <p className="inline-flex min-w-0 items-center gap-1 self-center text-sm font-semibold text-foreground">
-            View Generated Clips
+            View Room by Room Generated Clips
             <ChevronRight
               className="h-3.5 w-3.5 shrink-0 text-muted-foreground"
               aria-hidden

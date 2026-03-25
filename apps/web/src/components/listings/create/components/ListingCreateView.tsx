@@ -95,7 +95,8 @@ export function ListingCreateView({
     activeImagePreviewItems,
     imageLoadingCount,
     activePreviewPlans,
-    handleDeleteImagePreviewItem
+    handleDeleteImagePreviewItem,
+    updateContentItemText
   } = useListingCreateWorkflow({
     listingId,
     listingPostItems,
@@ -244,6 +245,7 @@ export function ListingCreateView({
           {activeMediaTab === "videos" &&
           (activePreviewPlans.length > 0 || isGenerating) ? (
             <ListingVideoPreviewGrid
+              listingId={listingId}
               plans={activePreviewPlans}
               items={videoItems}
               captionItems={activeMediaItems}
@@ -253,6 +255,7 @@ export function ListingCreateView({
               openHouseContext={openHouseContext ?? null}
               forceSimpleOverlayTemplate
               loadingCount={loadingCount}
+              onUpdatePreviewText={updateContentItemText}
             />
           ) : activeMediaTab === "images" &&
             (activeImagePreviewItems.length > 0 ||

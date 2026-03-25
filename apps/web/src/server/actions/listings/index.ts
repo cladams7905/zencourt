@@ -10,7 +10,10 @@ export {
   getListingImagesForCurrentUser
 } from "./commands";
 
-export { deleteCachedListingContentItem } from "./cache";
+export {
+  deleteCachedListingContentItem,
+  updateCachedListingVideoText
+} from "./cache";
 export {
   getCurrentUserListingSummariesPage,
   getListingCreateViewDataForCurrentUser

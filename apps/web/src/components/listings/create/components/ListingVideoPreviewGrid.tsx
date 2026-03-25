@@ -5,14 +5,17 @@ import type { ContentItem } from "@web/src/components/dashboard/components/Conte
 import type { PreviewTimelinePlan } from "@web/src/components/listings/create/domain/previewTimeline";
 import type { ListingContentSubcategory } from "@shared/types/models";
 import type { ListingOpenHouseContext } from "@web/src/lib/domain/listings/openHouse";
+import { updateCachedListingVideoText } from "@web/src/server/actions/listings/cache";
 import { buildPlayablePreviews } from "@web/src/components/listings/create/media/video/videoPreviewViewModel";
 import { PREVIEW_FPS } from "@web/src/components/listings/create/media/video/previewConstants";
 import { useHoverReveal } from "@web/src/components/listings/create/media/video/useHoverReveal";
 import { VideoPreviewCard } from "@web/src/components/listings/create/media/video/components/VideoPreviewCard";
 import { VideoPreviewModal } from "@web/src/components/listings/create/media/video/components/VideoPreviewModal";
 import { VideoPreviewSkeletonCard } from "@web/src/components/listings/create/media/video/components/VideoPreviewSkeletonCard";
+import type { PlayablePreviewTextUpdate } from "@web/src/components/listings/create/shared/types";
 
 type ListingVideoPreviewGridProps = {
+  listingId: string;
   plans: PreviewTimelinePlan[];
   items: ContentItem[];
   captionItems: ContentItem[];
@@ -22,9 +25,15 @@ type ListingVideoPreviewGridProps = {
   openHouseContext: ListingOpenHouseContext | null;
   forceSimpleOverlayTemplate?: boolean;
   loadingCount?: number;
+  onUpdatePreviewText: (params: {
+    contentItemId: string;
+    hook: string;
+    caption: string;
+  }) => void;
 };
 
 export function ListingVideoPreviewGrid({
+  listingId,
   plans,
   items,
   captionItems,
@@ -33,7 +42,8 @@ export function ListingVideoPreviewGrid({
   listingAddress,
   openHouseContext,
   forceSimpleOverlayTemplate = false,
-  loadingCount = 0
+  loadingCount = 0,
+  onUpdatePreviewText
 }: ListingVideoPreviewGridProps) {
   const [selectedPlanId, setSelectedPlanId] = React.useState<string | null>(
     null
@@ -74,6 +84,29 @@ export function ListingVideoPreviewGrid({
 
   const selectedPreview =
     playablePlans.find((preview) => preview.id === selectedPlanId) ?? null;
+
+  const handleSavePreviewText = React.useCallback(
+    async (params: PlayablePreviewTextUpdate) => {
+      if (!selectedPreview?.captionItem || !selectedPreview.captionItemKey) {
+        throw new Error("This preview cannot be edited yet.");
+      }
+
+      await updateCachedListingVideoText(listingId, {
+        cacheKeyTimestamp: params.captionItemKey.cacheKeyTimestamp,
+        cacheKeyId: params.captionItemKey.cacheKeyId,
+        subcategory: selectedPreview.captionItem.listingSubcategory ?? "",
+        hook: params.hook,
+        caption: params.caption
+      });
+
+      onUpdatePreviewText({
+        contentItemId: selectedPreview.captionItem.id,
+        hook: params.hook,
+        caption: params.caption
+      });
+    },
+    [listingId, onUpdatePreviewText, selectedPreview]
+  );
 
   return (
     <>
@@ -116,6 +149,7 @@ export function ListingVideoPreviewGrid({
             setSelectedPlanId(null);
           }
         }}
+        onSavePreviewText={handleSavePreviewText}
       />
     </>
   );

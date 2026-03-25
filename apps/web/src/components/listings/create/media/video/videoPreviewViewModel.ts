@@ -302,11 +302,14 @@ export function buildPlayablePreviews(params: {
         }
         return {
           ...segment,
-          src: source.videoUrl
+          src: source.videoUrl,
+          thumbnailSrc: source.thumbnail
         };
       })
-      .filter((segment): segment is TimelinePreviewResolvedSegment =>
-        Boolean(segment)
+      .filter(
+        (
+          segment
+        ): segment is NonNullable<typeof segment> => segment !== null
       );
 
     if (resolvedSegments.length < 2) {
@@ -314,6 +317,20 @@ export function buildPlayablePreviews(params: {
     }
 
     const captionItem = params.captionItems.at(index) ?? null;
+    const captionItemKey =
+      captionItem &&
+      typeof (captionItem as ContentItem & { cacheKeyTimestamp?: number }).cacheKeyTimestamp ===
+        "number" &&
+      typeof (captionItem as ContentItem & { cacheKeyId?: number }).cacheKeyId ===
+        "number"
+        ? {
+            cacheKeyTimestamp: (
+              captionItem as ContentItem & { cacheKeyTimestamp: number }
+            ).cacheKeyTimestamp,
+            cacheKeyId: (captionItem as ContentItem & { cacheKeyId: number }).cacheKeyId,
+            mediaType: "video" as const
+          }
+        : undefined;
     const slideOverlayData = getSlideOverlayData(captionItem);
     const seed = `${plan.id}:${captionItem?.id ?? "no-caption"}`;
     const overlayVariant = pickPreviewTextOverlayVariant(seed);
@@ -378,6 +395,7 @@ export function buildPlayablePreviews(params: {
       firstThumb,
       durationInFrames,
       captionItem,
+      captionItemKey,
       variationNumber: index + 1
     };
   });

@@ -41,7 +41,8 @@ export function useListingCreateWorkflow(params: {
     generationError,
     loadingCount,
     generateSubcategoryContent: generateSubcategoryContentRaw,
-    removeContentItem
+    removeContentItem,
+    updateContentItemText
   } = useContentGeneration({
     listingId,
     listingPostItems,
@@ -132,6 +133,7 @@ export function useListingCreateWorkflow(params: {
     activeImagePreviewItems,
     imageLoadingCount,
     activePreviewPlans,
-    handleDeleteImagePreviewItem
+    handleDeleteImagePreviewItem,
+    updateContentItemText
   };
 }
