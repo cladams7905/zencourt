@@ -62,19 +62,13 @@ type ListingClipManagerProps = {
   mode?: "card" | "workspace";
 };
 
-function hasPendingItems(items: ListingClipVersionItem[]) {
-  return items.some((item) =>
-    isClipRegenerating(item.currentVersion.versionStatus)
-  );
-}
-
 function hasPollablePendingItems(
   items: ListingClipVersionItem[],
   timedOutClipIds: Set<string>
 ) {
   return items.some(
     (item) =>
-      isClipRegenerating(item.currentVersion.versionStatus) &&
+      isClipRegenerating(getRegeneratingVersion(item)?.versionStatus) &&
       !timedOutClipIds.has(item.clipId)
   );
 }
@@ -83,12 +77,62 @@ function isClipRegenerating(status?: string | null) {
   return ["pending", "processing"].includes(status ?? "");
 }
 
+function getRegeneratingVersion(item?: ListingClipVersionItem | null) {
+  if (!item) {
+    return null;
+  }
+
+  if (isClipRegenerating(item.currentVersion.versionStatus)) {
+    return item.currentVersion;
+  }
+
+  if (isClipRegenerating(item.inFlightVersion?.versionStatus)) {
+    return item.inFlightVersion;
+  }
+
+  return null;
+}
+
+function getLatestAttemptVersion(item?: ListingClipVersionItem | null) {
+  return item?.inFlightVersion ?? item?.currentVersion ?? null;
+}
+
+function getDisplayThumbnail(item?: ListingClipVersionItem | null) {
+  if (!item) {
+    return null;
+  }
+
+  if (isClipRegenerating(getRegeneratingVersion(item)?.versionStatus)) {
+    return item.currentVersion.thumbnail ?? item.versions[0]?.thumbnail ?? null;
+  }
+
+  return item.currentVersion.thumbnail ?? null;
+}
+
+function getDisplayDuration(item?: ListingClipVersionItem | null) {
+  if (!item) {
+    return null;
+  }
+
+  const latestAttemptVersion = getLatestAttemptVersion(item);
+  if (isClipRegenerating(latestAttemptVersion?.versionStatus)) {
+    return (
+      latestAttemptVersion?.durationSeconds ??
+      item.currentVersion.durationSeconds ??
+      item.versions[0]?.durationSeconds ??
+      null
+    );
+  }
+
+  return latestAttemptVersion?.durationSeconds ?? item.currentVersion.durationSeconds ?? null;
+}
+
 function RegenerationSpinner({ label }: { label: string }) {
   return (
     <span
       role="status"
       aria-label={label}
-      className="inline-flex items-center justify-center text-muted-foreground"
+      className="inline-flex items-center justify-center text-white/85"
     >
       <Loader2 className="h-4 w-4 animate-spin" />
     </span>
@@ -166,6 +210,14 @@ function serializeClipItems(itemsToSerialize: ListingClipVersionItem[]) {
         videoUrl: item.currentVersion.videoUrl ?? null,
         thumbnail: item.currentVersion.thumbnail ?? null,
         generatedAt: item.currentVersion.generatedAt ?? null
+      },
+      inFlightVersion: {
+        clipVersionId: item.inFlightVersion?.clipVersionId ?? null,
+        versionStatus: item.inFlightVersion?.versionStatus ?? null,
+        aiDirections: item.inFlightVersion?.aiDirections ?? null,
+        videoUrl: item.inFlightVersion?.videoUrl ?? null,
+        thumbnail: item.inFlightVersion?.thumbnail ?? null,
+        generatedAt: item.inFlightVersion?.generatedAt ?? null
       },
       versions: item.versions.map((version) => ({
         clipVersionId: version.clipVersionId ?? null,
@@ -280,7 +332,9 @@ function ClipManagerWorkspace({
     const nextStatuses = new Map<string, string>();
 
     for (const item of normalized) {
-      const status = item.currentVersion.versionStatus ?? "";
+      const latestAttemptVersion = getLatestAttemptVersion(item);
+      const status =
+        latestAttemptVersion?.versionStatus ?? item.currentVersion.versionStatus ?? "";
       nextStatuses.set(item.clipId, status);
       const previousStatus = previousStatusesRef.current.get(item.clipId);
 
@@ -324,7 +378,8 @@ function ClipManagerWorkspace({
     let didChange = false;
 
     for (const item of clipItems) {
-      const isRegenerating = isClipRegenerating(item.currentVersion.versionStatus);
+      const regeneratingVersion = getRegeneratingVersion(item);
+      const isRegenerating = isClipRegenerating(regeneratingVersion?.versionStatus);
 
       if (!isRegenerating) {
         if (nextTimedOutClipIds.delete(item.clipId)) {
@@ -336,7 +391,7 @@ function ClipManagerWorkspace({
       if (
         !nextTimedOutClipIds.has(item.clipId) &&
         isPastTimeout(
-          item.currentVersion.generatedAt,
+          regeneratingVersion?.generatedAt,
           getClipRegenerationSoftTimeoutMs()
         )
       ) {
@@ -399,8 +454,10 @@ function ClipManagerWorkspace({
     selectedItem?.versions.find(
       (version) => version.clipVersionId === selectedVersionId
     ) ?? selectedItem?.currentVersion;
+  const selectedRegeneratingVersion = getRegeneratingVersion(selectedItem);
+  const selectedDisplayThumbnail = getDisplayThumbnail(selectedItem);
   const selectedClipIsRegenerating = isClipRegenerating(
-    selectedItem?.currentVersion.versionStatus
+    selectedRegeneratingVersion?.versionStatus
   );
   const selectedClipBatchId = selectedItem
     ? pendingBatchIdByClipId[selectedItem.clipId]
@@ -720,7 +777,7 @@ function ClipManagerWorkspace({
           <video
             key={selectedVersion.videoUrl}
             src={selectedVersion.videoUrl}
-            poster={selectedVersion.thumbnail ?? undefined}
+            poster={selectedDisplayThumbnail ?? undefined}
             controls
             playsInline
             className="absolute inset-0 block h-full w-full object-contain"
@@ -748,7 +805,7 @@ function ClipManagerWorkspace({
         {clipItems.map((item) => {
           const isSelected = item.clipId === selectedItem?.clipId;
           const itemIsRegenerating = isClipRegenerating(
-            item.currentVersion.versionStatus
+            getRegeneratingVersion(item)?.versionStatus
           );
           return (
             <div key={item.clipId} className="border-b border-border last:border-b-0">
@@ -764,13 +821,18 @@ function ClipManagerWorkspace({
                 )}
               >
                 <div className="relative h-21 w-18 shrink-0 overflow-hidden rounded-lg bg-muted">
-                  {item.currentVersion.thumbnail ? (
+                  {getDisplayThumbnail(item) ? (
                     <LoadingImage
-                      src={item.currentVersion.thumbnail}
+                      src={getDisplayThumbnail(item) ?? ""}
                       alt={item.roomName}
                       fill
                       className="object-cover"
                     />
+                  ) : null}
+                  {itemIsRegenerating ? (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/45 backdrop-blur-[1px]">
+                      <RegenerationSpinner label="Clip regeneration in progress" />
+                    </div>
                   ) : null}
                 </div>
                 <div className="min-w-0 flex-1">
@@ -784,13 +846,9 @@ function ClipManagerWorkspace({
                       : formatGeneratedAt(item.currentVersion.generatedAt)}
                   </p>
                 </div>
-                {itemIsRegenerating ? (
-                  <RegenerationSpinner label="Clip regeneration in progress" />
-                ) : (
-                  <span className="shrink-0 self-center text-xs text-muted-foreground tabular-nums">
-                    {formatDuration(item.currentVersion.durationSeconds)}
-                  </span>
-                )}
+                <span className="shrink-0 self-center text-xs text-muted-foreground tabular-nums">
+                  {formatDuration(getDisplayDuration(item))}
+                </span>
               </button>
               {!isDesktopLayout && isSelected ? (
                 <div

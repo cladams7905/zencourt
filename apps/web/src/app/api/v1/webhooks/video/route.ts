@@ -42,11 +42,29 @@ export async function POST(request: NextRequest) {
       }
 
       if (result.status === "update_failed") {
-        return NextResponse.json({
-          success: false,
-          message: "Video job webhook processed without DB update"
-        });
+        logger.error(
+          {
+            listingId: payload.listingId,
+            jobId: payload.jobId,
+            status: payload.status
+          },
+          "Video job webhook failed to persist update"
+        );
+        return apiErrorResponse(
+          StatusCode.INTERNAL_SERVER_ERROR,
+          "DATABASE_ERROR",
+          "Video job webhook failed to persist update"
+        );
       }
+
+      logger.info(
+        {
+          listingId: payload.listingId,
+          jobId: payload.jobId,
+          status: payload.status
+        },
+        "Video job webhook processed successfully"
+      );
 
       return NextResponse.json({
         success: true,

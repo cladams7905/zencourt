@@ -11,6 +11,7 @@ import {
   recordProviderFailure,
   recordProviderSuccess
 } from "@/services/videoGeneration/metrics";
+import type { GENERATION_MODELS } from "@shared/types/models";
 
 export type ProviderDispatchInput = {
   jobId: string;
@@ -20,6 +21,7 @@ export type ProviderDispatchInput = {
   orientation: "vertical" | "landscape";
   durationSeconds: number;
   webhookUrl: string;
+  model?: GENERATION_MODELS;
 };
 
 export type ProviderDispatchResult = {

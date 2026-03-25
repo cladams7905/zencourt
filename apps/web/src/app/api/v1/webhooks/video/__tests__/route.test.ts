@@ -64,17 +64,18 @@ describe("video webhook route", () => {
     });
   });
 
-  it("returns success false when action returns update_failed", async () => {
+  it("returns 500 when action returns update_failed", async () => {
     mockParseVerifiedWebhook.mockResolvedValue({ listingId: "listing-1", jobId: "job-1" });
     mockProcessVideoWebhookPayload.mockResolvedValue({ status: "update_failed" });
 
     const response = await POST({} as never);
     const payload = await response.json();
 
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(500);
     expect(payload).toEqual({
       success: false,
-      message: "Video job webhook processed without DB update"
+      code: "DATABASE_ERROR",
+      error: "Video job webhook failed to persist update"
     });
   });
 

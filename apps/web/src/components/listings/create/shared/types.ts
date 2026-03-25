@@ -44,5 +44,6 @@ export type ListingClipVersionItem = {
   clipIndex: number;
   sortOrder: number;
   currentVersion: ContentItem;
+  inFlightVersion?: ContentItem | null;
   versions: ContentItem[];
 };

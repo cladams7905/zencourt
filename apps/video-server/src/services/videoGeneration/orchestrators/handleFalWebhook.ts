@@ -1,5 +1,5 @@
 import logger from "@/config/logger";
-import type { FalWebhookPayload } from "@shared/types/api";
+import type { FalWebhookPayload } from "@/routes/webhooks/domain/requests";
 import type { DBVideoGenJob } from "@db/types/models";
 
 type HandleFalWebhookDeps = {
@@ -194,12 +194,6 @@ export async function handleFalWebhookOrchestrator(
   try {
     await applyProviderSuccess(job, payload, deps);
   } catch (error) {
-    await handleSuccessProcessingError(
-      job,
-      error,
-      requestId,
-      deps,
-      startTime
-    );
+    await handleSuccessProcessingError(job, error, requestId, deps, startTime);
   }
 }

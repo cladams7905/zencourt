@@ -30,13 +30,17 @@ jest.mock("@web/src/server/actions/video/generate", () => ({
 }));
 
 jest.mock("@web/src/components/ui/loading-image", () => ({
-  LoadingImage: ({ fill: _fill, ...props }: Record<string, unknown>) => (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      {...(props as React.ComponentProps<"img">)}
-      alt={(props.alt as string) ?? ""}
-    />
-  )
+  LoadingImage: (props: Record<string, unknown>) => {
+    const rest = { ...props };
+    delete rest.fill;
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        {...(rest as React.ComponentProps<"img">)}
+        alt={(rest.alt as string) ?? ""}
+      />
+    );
+  }
 }));
 
 import { ListingClipManager } from "@web/src/components/listings/create/components/ListingClipManager";
@@ -61,6 +65,7 @@ describe("ListingClipManager", () => {
         thumbnail: "https://thumb",
         videoUrl: "https://video",
         aiDirections: "Warm light",
+        durationSeconds: 4,
         versionNumber: 1,
         versionStatus: "completed",
         generatedAt: "2026-03-19T12:30:00.000Z"
@@ -73,6 +78,7 @@ describe("ListingClipManager", () => {
           thumbnail: "https://thumb",
           videoUrl: "https://video",
           aiDirections: "Warm light",
+          durationSeconds: 4,
           versionNumber: 1,
           versionStatus: "completed",
           generatedAt: "2026-03-19T12:30:00.000Z"
@@ -274,6 +280,39 @@ describe("ListingClipManager", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("falls back to the last successful thumbnail and duration after a regeneration fails", () => {
+    const failedItems: ListingClipVersionItem[] = [
+      {
+        ...items[0],
+        inFlightVersion: {
+          ...items[0].currentVersion,
+          clipVersionId: "clip-version-2",
+          thumbnail: undefined,
+          videoUrl: undefined,
+          aiDirections: "new directions",
+          versionNumber: 2,
+          versionStatus: "failed",
+          generatedAt: "2026-03-20T10:00:00.000Z",
+          durationSeconds: undefined
+        }
+      }
+    ] as never;
+
+    render(
+      <ListingClipManager
+        listingId="listing-1"
+        items={failedItems}
+        mode="workspace"
+      />
+    );
+
+    expect(screen.getByAltText("Kitchen")).toHaveAttribute("src", "https://thumb");
+    expect(screen.getAllByText("4s")).toHaveLength(2);
+    expect(
+      screen.queryAllByLabelText(/clip regeneration in progress/i)
+    ).toHaveLength(0);
+  });
+
   it("confirms cancel and calls cancelVideoGenerationBatch for the active clip batch", async () => {
     const user = userEvent.setup();
     jest.mocked(regenerateListingClipVersion).mockResolvedValue({
@@ -321,16 +360,12 @@ describe("ListingClipManager", () => {
         ...items[0],
         currentVersion: {
           ...items[0].currentVersion,
+          clipVersionId: "clip-version-2",
           versionStatus: "processing",
-          durationSeconds: 4
-        },
-        versions: [
-          {
-            ...items[0].versions[0],
-            versionStatus: "processing",
-            durationSeconds: 4
-          }
-        ]
+          durationSeconds: undefined,
+          thumbnail: undefined,
+          videoUrl: undefined
+        }
       }
     ] as never;
 
@@ -346,8 +381,36 @@ describe("ListingClipManager", () => {
       screen.getAllByLabelText(/clip regeneration in progress/i)
     ).toHaveLength(2);
     expect(screen.getByText("Regenerating")).toBeInTheDocument();
-    expect(screen.queryByText("4s")).not.toBeInTheDocument();
+    expect(screen.getByText("4s")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^regenerate$/i })).toBeDisabled();
+    expect(
+      screen.queryByRole("button", { name: /cancel generation/i })
+    ).not.toBeInTheDocument();
+  });
+
+  it("keeps showing the latest successful thumbnail while regeneration is in progress", () => {
+    const processingItems: ListingClipVersionItem[] = [
+      {
+        ...items[0],
+        currentVersion: {
+          ...items[0].currentVersion,
+          clipVersionId: "clip-version-2",
+          thumbnail: undefined,
+          videoUrl: undefined,
+          versionStatus: "processing"
+        }
+      }
+    ] as never;
+
+    render(
+      <ListingClipManager
+        listingId="listing-1"
+        items={processingItems}
+        mode="workspace"
+      />
+    );
+
+    expect(screen.getByAltText("Kitchen")).toHaveAttribute("src", "https://thumb");
   });
 
   it("stops polling and shows a timeout toast when clip regeneration exceeds the soft timeout", () => {
@@ -359,6 +422,7 @@ describe("ListingClipManager", () => {
         ...items[0],
         currentVersion: {
           ...items[0].currentVersion,
+          clipVersionId: "clip-version-2",
           versionStatus: "processing",
           generatedAt: "2026-03-20T10:00:00.000Z"
         }

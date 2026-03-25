@@ -44,7 +44,8 @@ function parseJobInput(job: DBVideoGenJob): ProviderDispatchInput {
     imageUrls,
     orientation: settings.orientation ?? "vertical",
     durationSeconds: job.metadata?.duration ?? 4,
-    webhookUrl: ""
+    webhookUrl: "",
+    model: settings.model
   };
 }
 

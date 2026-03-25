@@ -1,5 +1,6 @@
 import logger from "@/config/logger";
 import type { DBVideoGenJob } from "@db/types/models";
+import { DEFAULT_RUNWAY_MODEL } from "@/services/videoGeneration/domain/runwayModels";
 import {
   getVideoJobThumbnailPath,
   getVideoJobVideoPath
@@ -97,7 +98,7 @@ export async function handleProviderSuccessOrchestrator(
       videoId: job.videoGenBatchId,
       listingId: videoContext.listingId,
       userId: videoContext.userId,
-      generationModel: job.generationSettings?.model || "veo3.1_fast"
+      generationModel: job.generationSettings?.model || DEFAULT_RUNWAY_MODEL
     }
   });
 

@@ -6,6 +6,7 @@ import {
 jest.mock("@/config/logger", () => ({
   __esModule: true,
   default: {
+    info: jest.fn(),
     warn: jest.fn(),
     error: jest.fn()
   }
@@ -13,6 +14,7 @@ jest.mock("@/config/logger", () => ({
 
 describe("webhookDelivery orchestrators", () => {
   beforeEach(() => {
+    jest.clearAllMocks();
     process.env.VERCEL_WEBHOOK_SECRET = "secret";
   });
 
@@ -129,7 +131,11 @@ describe("webhookDelivery orchestrators", () => {
 
     expect(sendWebhook).not.toHaveBeenCalled();
     expect(logger.warn).toHaveBeenCalledWith(
-      { jobId: "job-1", videoId: "video-1" },
+      expect.objectContaining({
+        jobId: "job-1",
+        videoId: "video-1",
+        listingId: "listing-1"
+      }),
       expect.stringContaining("callbackUrl empty")
     );
   });
@@ -152,7 +158,11 @@ describe("webhookDelivery orchestrators", () => {
 
     expect(sendWebhook).not.toHaveBeenCalled();
     expect(logger.warn).toHaveBeenCalledWith(
-      { jobId: "job-1", videoId: "video-1" },
+      expect.objectContaining({
+        jobId: "job-1",
+        videoId: "video-1",
+        listingId: "listing-1"
+      }),
       expect.stringContaining("callbackUrl empty")
     );
   });

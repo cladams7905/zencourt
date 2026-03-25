@@ -19,7 +19,11 @@ export type DashboardFilterLabel =
   | "Seasonal";
 
 export type AspectRatio = "square" | "vertical" | "horizontal";
-export type GenerationModel = "veo3.1_fast" | "runway-gen4-turbo" | "kling1.6";
+export type GenerationModel =
+  | "gen4.5"
+  | "veo3.1_fast"
+  | "runway-gen4-turbo"
+  | "kling1.6";
 export type ListingMediaType = "video" | "image";
 
 export type TextOverlayInput = {

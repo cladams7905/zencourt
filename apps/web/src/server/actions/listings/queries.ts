@@ -93,7 +93,9 @@ async function seedMissingVideoClips(listingId: string) {
 
   const jobsToSeed = status.jobs.filter(
     (job) =>
-      (job.videoUrl || job.thumbnailUrl) && !existingSourceJobIds.has(job.jobId)
+      job.status === "completed" &&
+      (job.videoUrl || job.thumbnailUrl) &&
+      !existingSourceJobIds.has(job.jobId)
   );
 
   for (const job of jobsToSeed) {
@@ -217,16 +219,26 @@ async function getListingClipVersionItems(listingId: string) {
         throw new Error(`Video clip ${clipVersion.videoClipId} not found`);
       }
 
+      const successfulVersions = (
+        await getSuccessfulVideoClipVersionsByClipId(clip.id)
+      ).map((version) => mapClipVersionToVideoItem(clip, version));
+      const latestVersion = mapClipVersionToVideoItem(clip, clipVersion);
+      const shouldFallbackToPreviousSuccessful =
+        clipVersion.status === "failed" && Boolean(successfulVersions[0]);
+
       return {
         clipId: clip.id,
         roomName: clip.roomName,
         roomId: clip.roomId ?? null,
         clipIndex: clip.clipIndex,
         sortOrder: clip.sortOrder,
-        currentVersion: mapClipVersionToVideoItem(clip, clipVersion),
-        versions: (
-          await getSuccessfulVideoClipVersionsByClipId(clip.id)
-        ).map((version) => mapClipVersionToVideoItem(clip, version))
+        currentVersion: shouldFallbackToPreviousSuccessful
+          ? successfulVersions[0]
+          : latestVersion,
+        inFlightVersion: shouldFallbackToPreviousSuccessful
+          ? latestVersion
+          : null,
+        versions: successfulVersions
       };
     })
   );

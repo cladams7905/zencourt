@@ -18,6 +18,7 @@ export type ClipVersionMetadata = VideoMetadata & {
 };
 
 export type GENERATION_MODELS =
+  | "gen4.5"
   | "veo3.1_fast"
   | "runway-gen4-turbo"
   | "kling1.6";

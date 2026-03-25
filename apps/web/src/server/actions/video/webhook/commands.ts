@@ -51,6 +51,12 @@ export function normalizeWebhookResult(
 
 function shouldIgnoreWebhookUpdate(args: {
   currentJob: DBVideoGenJob;
+  currentClipVersion?: {
+    status: VideoStatus | null;
+    videoUrl: string | null;
+    thumbnailUrl: string | null;
+    errorMessage: string | null;
+  } | null;
   incomingStatus: VideoStatus;
   incomingVideoUrl: string | null;
   incomingThumbnailUrl: string | null;
@@ -58,6 +64,7 @@ function shouldIgnoreWebhookUpdate(args: {
 }): { ignore: boolean; reason?: string } {
   const {
     currentJob,
+    currentClipVersion,
     incomingStatus,
     incomingVideoUrl,
     incomingThumbnailUrl,
@@ -78,7 +85,16 @@ function shouldIgnoreWebhookUpdate(args: {
     (currentJob.thumbnailUrl ?? null) === incomingThumbnailUrl &&
     (currentJob.errorMessage ?? null) === incomingErrorMessage
   ) {
-    return { ignore: true, reason: "idempotent_replay" };
+    const clipVersionIsAligned =
+      !currentClipVersion ||
+      (currentClipVersion.status ?? null) === incomingStatus &&
+        currentClipVersion.videoUrl === incomingVideoUrl &&
+        currentClipVersion.thumbnailUrl === incomingThumbnailUrl &&
+        currentClipVersion.errorMessage === incomingErrorMessage;
+
+    if (clipVersionIsAligned) {
+      return { ignore: true, reason: "idempotent_replay" };
+    }
   }
 
   return { ignore: false };
@@ -121,8 +137,22 @@ async function processWebhookUpdate(
     return { outcome: "not_found" };
   }
 
+  const clipVersion =
+    (currentJob.videoClipVersionId
+      ? await getVideoClipVersionById(currentJob.videoClipVersionId)
+      : null) ??
+    (await getVideoClipVersionBySourceVideoGenJobId(payload.jobId));
+
   const ignoreDecision = shouldIgnoreWebhookUpdate({
     currentJob,
+    currentClipVersion: clipVersion
+      ? {
+          status: clipVersion.status as VideoStatus,
+          videoUrl: clipVersion.videoUrl ?? null,
+          thumbnailUrl: clipVersion.thumbnailUrl ?? null,
+          errorMessage: clipVersion.errorMessage ?? null
+        }
+      : null,
     incomingStatus: payload.status as VideoStatus,
     incomingVideoUrl: normalized.videoUrl,
     incomingThumbnailUrl: normalized.thumbnailUrl,
@@ -150,12 +180,6 @@ async function processWebhookUpdate(
       errorMessage: normalized.errorMessage,
       metadata: normalized.metadata
     });
-
-    const clipVersion =
-      (currentJob.videoClipVersionId
-        ? await getVideoClipVersionById(currentJob.videoClipVersionId)
-        : null) ??
-      (await getVideoClipVersionBySourceVideoGenJobId(payload.jobId));
 
     if (clipVersion) {
       await updateVideoClipVersion(clipVersion.id, {

@@ -1,4 +1,4 @@
-import type { KlingAspectRatio } from "@shared/types/api";
+export type KlingAspectRatio = "16:9" | "9:16" | "1:1";
 
 export type KlingSubmitInput = {
   prompt: string;

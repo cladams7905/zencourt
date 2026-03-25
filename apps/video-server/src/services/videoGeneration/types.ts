@@ -1,5 +1,5 @@
+import { FalWebhookPayload } from "@/routes/webhooks/domain/requests";
 import type {
-  FalWebhookPayload,
   VideoJobResult,
   VideoServerGenerateRequest
 } from "@shared/types/api";

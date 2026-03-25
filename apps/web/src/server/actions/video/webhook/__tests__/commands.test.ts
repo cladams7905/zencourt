@@ -53,7 +53,7 @@ function minimalPayload(overrides: Partial<VideoWebhookPayload> = {}): VideoWebh
 
 describe("video webhook commands", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    jest.resetAllMocks();
     mockGetVideoClipVersionById.mockResolvedValue(null);
     mockGetVideoClipVersionBySourceVideoGenJobId.mockResolvedValue(null);
     mockUpdateVideoClipVersion.mockResolvedValue(undefined);
@@ -239,7 +239,61 @@ describe("video webhook commands", () => {
       expect(mockUpdateVideoClip).not.toHaveBeenCalled();
     });
 
-    it("returns update_failed when update throws", async () => {
+    it("replays completion updates when the job row is current but the clip version is still stale", async () => {
+      const currentJob = {
+        id: "job-1",
+        status: "completed",
+        listingId: "listing-1",
+        videoClipVersionId: "clip-version-2",
+        videoUrl: "https://v",
+        thumbnailUrl: "https://t",
+        errorMessage: null
+      };
+      mockGetVideoGenJobById
+        .mockResolvedValueOnce(currentJob)
+        .mockResolvedValueOnce(currentJob);
+      mockGetVideoClipVersionById.mockResolvedValueOnce({
+        id: "clip-version-2",
+        videoClipId: "clip-1",
+        status: "pending",
+        videoUrl: null,
+        thumbnailUrl: null,
+        errorMessage: null
+      });
+
+      const result = await processVideoWebhookPayload(
+        minimalPayload({
+          status: "completed",
+          result: {
+            videoUrl: "https://v",
+            thumbnailUrl: "https://t",
+            duration: 5
+          }
+        })
+      );
+
+      expect(result).toEqual({ status: "ok" });
+      expect(mockUpdateVideoGenJob).toHaveBeenCalledWith("job-1", {
+        status: "completed",
+        videoUrl: "https://v",
+        thumbnailUrl: "https://t",
+        errorMessage: null,
+        metadata: undefined
+      });
+      expect(mockUpdateVideoClipVersion).toHaveBeenCalledWith("clip-version-2", {
+        status: "completed",
+        videoUrl: "https://v",
+        thumbnailUrl: "https://t",
+        errorMessage: null,
+        durationSeconds: 5,
+        metadata: undefined
+      });
+      expect(mockUpdateVideoClip).toHaveBeenCalledWith("clip-1", {
+        currentVideoClipVersionId: "clip-version-2"
+      });
+    });
+
+    it("returns update_failed when persistence fails", async () => {
       const currentJob = {
         id: "job-1",
         status: "pending",

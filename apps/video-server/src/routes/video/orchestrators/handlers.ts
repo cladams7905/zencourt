@@ -14,7 +14,10 @@ type GenerateService = {
 };
 
 type CancelDeps = {
-  cancelBatchById: (batchId: string, reason: string) => Promise<number>;
+  cancelGenerationBatch: (
+    batchId: string,
+    reason: string
+  ) => Promise<{ canceledBatches: number; canceledJobs: number }>;
 };
 
 type GenerateDeps = {
@@ -51,14 +54,17 @@ export async function handleCancelVideo(
   request: CancelVideoRequest,
   deps: CancelDeps
 ): Promise<{ status: 200; body: { success: true; canceledBatches: number; canceledJobs: number } }> {
-  const canceledBatches = await deps.cancelBatchById(
+  const result = await deps.cancelGenerationBatch(
     request.batchId,
     request.reason || "Canceled by user"
   );
-  const canceledJobs = canceledBatches > 0 ? 1 : 0;
 
   logger.info(
-    { batchId: request.batchId, canceledBatches, canceledJobs },
+    {
+      batchId: request.batchId,
+      canceledBatches: result.canceledBatches,
+      canceledJobs: result.canceledJobs
+    },
     "Canceled video generation batch"
   );
 
@@ -66,8 +72,8 @@ export async function handleCancelVideo(
     status: 200,
     body: {
       success: true,
-      canceledBatches,
-      canceledJobs
+      canceledBatches: result.canceledBatches,
+      canceledJobs: result.canceledJobs
     }
   };
 }

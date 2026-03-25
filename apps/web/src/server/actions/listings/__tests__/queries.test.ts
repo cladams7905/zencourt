@@ -141,6 +141,7 @@ describe("listings queries", () => {
       jobs: [
         {
           jobId: "job-1",
+          status: "completed",
           videoUrl: "https://v",
           thumbnailUrl: "https://t",
           roomName: "Kitchen",
@@ -365,6 +366,40 @@ describe("listings queries", () => {
     );
   });
 
+  it("does not seed failed jobs as clip versions even when they have partial media fields", async () => {
+    mockGetListingVideoStatus.mockResolvedValueOnce({
+      jobs: [
+        {
+          jobId: "job-failed",
+          status: "failed",
+          videoUrl: null,
+          thumbnailUrl: "https://partial-thumb",
+          roomName: "Kitchen",
+          category: "kitchen",
+          clipIndex: 0,
+          sortOrder: 1,
+          prompt: "Forward pan through the Kitchen.",
+          imageUrls: ["https://signed/kitchen.jpg"],
+          errorMessage: "provider failed"
+        }
+      ]
+    });
+    mockGetCurrentVideoClipVersionsByListingId
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
+    mockGetListingImages.mockResolvedValueOnce([]);
+    mockGetAllCachedListingContentForCreate.mockResolvedValueOnce([]);
+
+    const result = await getListingCreateViewDataForCurrentUser("listing-1");
+
+    expect(mockCreateVideoClip).not.toHaveBeenCalled();
+    expect(mockCreateVideoClipVersion).not.toHaveBeenCalled();
+    expect(mockUpdateVideoClip).not.toHaveBeenCalled();
+    expect(result.videoItems).toEqual([]);
+    expect(result.clipVersionItems).toEqual([]);
+  });
+
   it("fails a stale regenerating clip version when the hard timeout is exceeded", async () => {
     jest.useFakeTimers();
     jest.setSystemTime(new Date("2026-03-20T10:05:00.000Z"));
@@ -441,6 +476,10 @@ describe("listings queries", () => {
       expect.arrayContaining([
         expect.objectContaining({
           currentVersion: expect.objectContaining({
+            clipVersionId: "clip-version-3",
+            versionStatus: "completed"
+          }),
+          inFlightVersion: expect.objectContaining({
             clipVersionId: "clip-version-2",
             versionStatus: "failed"
           })
@@ -449,5 +488,102 @@ describe("listings queries", () => {
     );
 
     jest.useRealTimers();
+  });
+
+  it("falls back to the last successful version after a regeneration fails", async () => {
+    mockGetListingVideoStatus.mockResolvedValueOnce({ jobs: [] });
+    mockGetCurrentVideoClipVersionsByListingId
+      .mockResolvedValueOnce([
+        {
+          id: "clip-version-2",
+          videoClipId: "clip-1",
+          sourceVideoGenJobId: "job-2",
+          status: "failed",
+          createdAt: new Date("2026-03-20T10:05:00.000Z"),
+          thumbnailUrl: null,
+          videoUrl: null,
+          aiDirections: "new directions",
+          versionNumber: 2,
+          durationSeconds: null,
+          orientation: "vertical",
+          generationModel: "veo3.1_fast"
+        }
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: "clip-version-2",
+          videoClipId: "clip-1",
+          sourceVideoGenJobId: "job-2",
+          status: "failed",
+          createdAt: new Date("2026-03-20T10:05:00.000Z"),
+          thumbnailUrl: null,
+          videoUrl: null,
+          aiDirections: "new directions",
+          versionNumber: 2,
+          durationSeconds: null,
+          orientation: "vertical",
+          generationModel: "veo3.1_fast"
+        }
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: "clip-version-2",
+          videoClipId: "clip-1",
+          sourceVideoGenJobId: "job-2",
+          status: "failed",
+          createdAt: new Date("2026-03-20T10:05:00.000Z"),
+          thumbnailUrl: null,
+          videoUrl: null,
+          aiDirections: "new directions",
+          versionNumber: 2,
+          durationSeconds: null,
+          orientation: "vertical",
+          generationModel: "veo3.1_fast"
+        }
+      ]);
+    mockGetVideoClipById.mockResolvedValue({
+      id: "clip-1",
+      listingId: "listing-1",
+      roomId: "room-1",
+      roomName: "Kitchen",
+      category: "kitchen",
+      clipIndex: 0,
+      sortOrder: 0,
+      currentVideoClipVersionId: "clip-version-2"
+    });
+    mockGetSuccessfulVideoClipVersionsByClipId.mockResolvedValue([
+      {
+        id: "clip-version-1",
+        videoClipId: "clip-1",
+        thumbnailUrl: "https://thumb-success",
+        videoUrl: "https://video-success",
+        createdAt: new Date("2026-03-20T10:00:00.000Z"),
+        aiDirections: "old directions",
+        versionNumber: 1,
+        status: "completed",
+        durationSeconds: 4,
+        orientation: "vertical",
+        generationModel: "veo3.1_fast"
+      }
+    ]);
+
+    const result = await getListingClipVersionItemsForCurrentUser("listing-1");
+
+    expect(result).toEqual([
+      expect.objectContaining({
+        clipId: "clip-1",
+        currentVersion: expect.objectContaining({
+          clipVersionId: "clip-version-1",
+          versionStatus: "completed",
+          thumbnail: "https://thumb-success",
+          durationSeconds: 4
+        }),
+        inFlightVersion: expect.objectContaining({
+          clipVersionId: "clip-version-2",
+          versionStatus: "failed",
+          aiDirections: "new directions"
+        })
+      })
+    ]);
   });
 });

@@ -1,4 +1,6 @@
 import { runwayService } from "@/services/providers/runway";
+import { resolveRunwayGenerationModel } from "@/services/videoGeneration/domain/runwayModels";
+import { runwayTaskSlots } from "@/services/videoGeneration/domain/runwayTaskSlots";
 import type { VideoGenerationStrategy } from "@/services/videoGeneration/ports";
 import type {
   ProviderDispatchInput,
@@ -33,31 +35,44 @@ export const runwayStrategy: VideoGenerationStrategy<
     );
     const runwayRatio =
       input.orientation === "vertical" ? "720:1280" : "1280:720";
+    const runwayModel = resolveRunwayGenerationModel(input.model);
+    const lease = await runwayTaskSlots.acquire();
 
-    const task = await runwayService.submitImageToVideo({
-      promptImage: input.imageUrls[0],
-      promptText: input.prompt,
-      ratio: runwayRatio,
-      duration: runwayDurationSeconds
-    });
+    try {
+      const task = await runwayService.submitImageToVideo({
+        model: runwayModel,
+        promptImage: input.imageUrls[0],
+        promptText: input.prompt,
+        ratio: runwayRatio,
+        duration: runwayDurationSeconds
+      });
+      lease.bind(task.id);
 
-    return {
-      provider: "runway",
-      model: "veo3.1_fast",
-      requestId: task.id,
-      waitForOutput: async () => {
-        const result = await task.waitForTaskOutput();
-        const outputUrl = result?.output?.[0]?.uri;
-        if (!outputUrl) {
-          throw new VideoGenerationServiceError(
-            "Provider output URL missing",
-            ProviderErrorCode.PROVIDER_OUTPUT_MISSING,
-            false,
-            { provider: "runway", jobId: input.jobId }
-          );
+      return {
+        provider: "runway",
+        model: runwayModel,
+        requestId: task.id,
+        waitForOutput: async () => {
+          try {
+            const result = await task.waitForTaskOutput();
+            const outputUrl = result?.output?.[0]?.uri;
+            if (!outputUrl) {
+              throw new VideoGenerationServiceError(
+                "Provider output URL missing",
+                ProviderErrorCode.PROVIDER_OUTPUT_MISSING,
+                false,
+                { provider: "runway", jobId: input.jobId }
+              );
+            }
+            return { outputUrl };
+          } finally {
+            lease.release();
+          }
         }
-        return { outputUrl };
-      }
-    };
+      };
+    } catch (error) {
+      lease.release();
+      throw error;
+    }
   }
 };

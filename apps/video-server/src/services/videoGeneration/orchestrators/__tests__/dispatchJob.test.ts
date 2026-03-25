@@ -14,7 +14,7 @@ describe("dispatchJobOrchestrator", () => {
       imageUrls: ["https://image.jpg"],
       orientation: "vertical"
     }
-  } as never;
+  } as any;
 
   it("falls back when primary dispatch fails", async () => {
     const primaryProviderFacade: any = {
@@ -107,7 +107,7 @@ describe("dispatchJobOrchestrator", () => {
         imageUrls: [],
         orientation: "vertical"
       }
-    } as never;
+    } as any;
 
     await expect(
       dispatchJobOrchestrator(jobWithoutImages, {
@@ -126,7 +126,7 @@ describe("dispatchJobOrchestrator", () => {
     const jobWithoutSettings = {
       ...(baseJob as object),
       generationSettings: null
-    } as never;
+    } as any;
 
     await expect(
       dispatchJobOrchestrator(jobWithoutSettings, {
@@ -149,7 +149,7 @@ describe("dispatchJobOrchestrator", () => {
         imageUrls: ["https://image.jpg"],
         orientation: "vertical"
       }
-    } as never;
+    } as any;
 
     await expect(
       dispatchJobOrchestrator(jobWithoutPrompt, {
@@ -255,6 +255,67 @@ describe("dispatchJobOrchestrator", () => {
     expect(onProviderOutputFailure).toHaveBeenCalledWith(
       "job-1",
       "provider task failed"
+    );
+  });
+
+  it("defaults the stored model to gen4.5 when the job does not specify one", async () => {
+    const primaryProviderFacade: any = {
+      dispatch: jest.fn().mockResolvedValue({
+        provider: "primary",
+        model: "gen4.5",
+        requestId: "req-1"
+      })
+    };
+    const markJobProcessing = jest.fn().mockResolvedValue(undefined);
+
+    await dispatchJobOrchestrator(baseJob, {
+      primaryProviderFacade,
+      fallbackProviderFacade: { dispatch: jest.fn() } as any,
+      markJobProcessing,
+      onProviderOutputReady: jest.fn(),
+      onProviderOutputFailure: jest.fn(),
+      buildWebhookUrl: () => "https://webhook",
+      getJobDurationSeconds: () => 4
+    });
+
+    expect(markJobProcessing).toHaveBeenCalledWith(
+      "job-1",
+      "req-1",
+      expect.objectContaining({ model: "gen4.5" })
+    );
+  });
+
+  it("preserves an explicitly selected legacy runway model", async () => {
+    const primaryProviderFacade: any = {
+      dispatch: jest.fn().mockResolvedValue({
+        provider: "primary",
+        model: "veo3.1_fast",
+        requestId: "req-legacy"
+      })
+    };
+    const markJobProcessing = jest.fn().mockResolvedValue(undefined);
+    const legacyModelJob = {
+      ...baseJob,
+      generationSettings: {
+        ...baseJob.generationSettings,
+        model: "veo3.1_fast"
+      }
+    } as any;
+
+    await dispatchJobOrchestrator(legacyModelJob, {
+      primaryProviderFacade,
+      fallbackProviderFacade: { dispatch: jest.fn() } as any,
+      markJobProcessing,
+      onProviderOutputReady: jest.fn(),
+      onProviderOutputFailure: jest.fn(),
+      buildWebhookUrl: () => "https://webhook",
+      getJobDurationSeconds: () => 4
+    });
+
+    expect(markJobProcessing).toHaveBeenCalledWith(
+      "job-1",
+      "req-legacy",
+      expect.objectContaining({ model: "veo3.1_fast" })
     );
   });
 });

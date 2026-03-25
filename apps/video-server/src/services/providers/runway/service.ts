@@ -1,23 +1,11 @@
 import RunwayML from "@runwayml/sdk";
+import type { TaskRetrieveResponse } from "@runwayml/sdk/resources/tasks";
 import logger from "@/config/logger";
-
-type RunwayImageToVideoRatio =
-  | "1280:720"
-  | "720:1280"
-  | "1080:1920"
-  | "1920:1080";
-
-type SubmitRunwayJobOptions = {
-  promptImage: string;
-  promptText: string;
-  ratio: RunwayImageToVideoRatio;
-  duration?: 4 | 6 | 8;
-  audio?: boolean;
-};
+import { toRunwayApiModel } from "@/services/videoGeneration/domain/runwayModels";
+import type { RunwaySubmitInput } from "./types";
 
 const DEFAULT_API_BASE = "https://api.dev.runwayml.com";
 const DEFAULT_API_VERSION = "2024-11-06";
-const MODEL_ID = "veo3.1_fast" as const;
 
 class RunwayService {
   private client: RunwayML | null = null;
@@ -54,23 +42,25 @@ class RunwayService {
     return this.client;
   }
 
-  async submitImageToVideo(options: SubmitRunwayJobOptions): Promise<{
+  async submitImageToVideo(options: RunwaySubmitInput): Promise<{
     id: string;
     waitForTaskOutput: () => Promise<{ output?: Array<{ uri?: string }> }>;
   }> {
-    const { promptImage, promptText, ratio, duration, audio = false } = options;
+    const { model, promptImage, promptText, ratio, duration, audio = false } = options;
     const client = this.getClient();
     const boundedPrompt = promptText.slice(0, 1000);
 
     try {
-      const taskPromise = client.imageToVideo.create({
-        model: MODEL_ID,
+      const request = {
+        model: toRunwayApiModel(model),
         promptText: boundedPrompt,
         promptImage: [{ uri: promptImage, position: "first" }],
         ratio,
         duration,
         audio
-      });
+      };
+      // The installed SDK types lag the live API and do not yet include gen4.5.
+      const taskPromise = client.imageToVideo.create(request as never);
 
       const task = await taskPromise;
       if (!task?.id) {
@@ -93,6 +83,16 @@ class RunwayService {
       );
       throw error;
     }
+  }
+
+  async retrieveTask(taskId: string): Promise<TaskRetrieveResponse> {
+    const client = this.getClient();
+    return client.tasks.retrieve(taskId);
+  }
+
+  async cancelTask(taskId: string): Promise<void> {
+    const client = this.getClient();
+    await client.tasks.delete(taskId);
   }
 }
 

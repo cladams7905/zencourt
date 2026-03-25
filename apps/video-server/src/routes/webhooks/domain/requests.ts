@@ -1,5 +1,20 @@
 import { Request } from "express";
-import type { FalWebhookPayload } from "@shared/types/api";
+
+export interface FalWebhookPayload {
+  request_id: string;
+  status: "OK" | "ERROR";
+  payload?: {
+    video?: {
+      url: string;
+      file_size?: number;
+      content_type?: string;
+      metadata?: {
+        duration?: number;
+      };
+    };
+  };
+  error?: string;
+}
 
 export interface FalWebhookHeaders {
   requestId: string | undefined;

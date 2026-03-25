@@ -27,15 +27,36 @@ export async function sendJobCompletionWebhookOrchestrator(
   const webhookUrl = videoContext.callbackUrl;
   const webhookSecret = process.env.VERCEL_WEBHOOK_SECRET;
 
+  logger.info(
+    {
+      jobId: job.id,
+      videoId: job.videoGenBatchId,
+      listingId: videoContext.listingId,
+      hasCallbackUrl: Boolean(webhookUrl),
+      hasWebhookSecret: Boolean(webhookSecret)
+    },
+    "[VideoGenerationService] Resolved completion webhook context"
+  );
+
   if (!webhookUrl || !webhookSecret) {
     if (!webhookSecret) {
       logger.warn(
-        { jobId: job.id },
+        {
+          jobId: job.id,
+          videoId: job.videoGenBatchId,
+          listingId: videoContext.listingId,
+          hasCallbackUrl: Boolean(webhookUrl)
+        },
         "[VideoGenerationService] VERCEL_WEBHOOK_SECRET not configured, skipping webhook delivery"
       );
     } else if (!webhookUrl) {
       logger.warn(
-        { jobId: job.id, videoId: job.videoGenBatchId },
+        {
+          jobId: job.id,
+          videoId: job.videoGenBatchId,
+          listingId: videoContext.listingId,
+          hasWebhookSecret: Boolean(webhookSecret)
+        },
         "[VideoGenerationService] callbackUrl empty (cache cold or server restart), skipping webhook delivery"
       );
     }
@@ -51,6 +72,16 @@ export async function sendJobCompletionWebhookOrchestrator(
   };
 
   try {
+    logger.info(
+      {
+        jobId: job.id,
+        videoId: job.videoGenBatchId,
+        listingId: videoContext.listingId,
+        webhookUrl
+      },
+      "[VideoGenerationService] Sending completion webhook"
+    );
+
     await deps.sendWebhook({
       url: webhookUrl,
       secret: webhookSecret,
@@ -58,6 +89,16 @@ export async function sendJobCompletionWebhookOrchestrator(
       maxRetries: 5,
       backoffMs: 1000
     });
+
+    logger.info(
+      {
+        jobId: job.id,
+        videoId: job.videoGenBatchId,
+        listingId: videoContext.listingId,
+        webhookUrl
+      },
+      "[VideoGenerationService] Completion webhook delivered"
+    );
   } catch (error) {
     logger.error(
       {
@@ -81,15 +122,36 @@ export async function sendJobFailureWebhookOrchestrator(
   const webhookUrl = videoContext.callbackUrl;
   const webhookSecret = process.env.VERCEL_WEBHOOK_SECRET;
 
+  logger.info(
+    {
+      jobId: job.id,
+      videoId: job.videoGenBatchId,
+      listingId: videoContext.listingId,
+      hasCallbackUrl: Boolean(webhookUrl),
+      hasWebhookSecret: Boolean(webhookSecret)
+    },
+    "[VideoGenerationService] Resolved failure webhook context"
+  );
+
   if (!webhookUrl || !webhookSecret) {
     if (!webhookSecret) {
       logger.warn(
-        { jobId: job.id },
+        {
+          jobId: job.id,
+          videoId: job.videoGenBatchId,
+          listingId: videoContext.listingId,
+          hasCallbackUrl: Boolean(webhookUrl)
+        },
         "[VideoGenerationService] VERCEL_WEBHOOK_SECRET not configured, skipping failure webhook delivery"
       );
     } else if (!webhookUrl) {
       logger.warn(
-        { jobId: job.id, videoId: job.videoGenBatchId },
+        {
+          jobId: job.id,
+          videoId: job.videoGenBatchId,
+          listingId: videoContext.listingId,
+          hasWebhookSecret: Boolean(webhookSecret)
+        },
         "[VideoGenerationService] callbackUrl empty (cache cold or server restart), skipping failure webhook delivery"
       );
     }
@@ -110,6 +172,16 @@ export async function sendJobFailureWebhookOrchestrator(
   };
 
   try {
+    logger.info(
+      {
+        jobId: job.id,
+        videoId: job.videoGenBatchId,
+        listingId: videoContext.listingId,
+        webhookUrl
+      },
+      "[VideoGenerationService] Sending failure webhook"
+    );
+
     await deps.sendWebhook({
       url: webhookUrl,
       secret: webhookSecret,
@@ -117,6 +189,16 @@ export async function sendJobFailureWebhookOrchestrator(
       maxRetries: 3,
       backoffMs: 1000
     });
+
+    logger.info(
+      {
+        jobId: job.id,
+        videoId: job.videoGenBatchId,
+        listingId: videoContext.listingId,
+        webhookUrl
+      },
+      "[VideoGenerationService] Failure webhook delivered"
+    );
   } catch (error) {
     logger.error(
       {

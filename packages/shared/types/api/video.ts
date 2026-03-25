@@ -1,7 +1,5 @@
 import type { PreviewTextOverlay } from "../video";
 
-export type KlingAspectRatio = "16:9" | "9:16" | "1:1";
-
 export interface VideoJobResult {
   videoUrl: string;
   thumbnailUrl?: string;
@@ -74,20 +72,4 @@ export type WebhookPayload = VideoJobWebhookPayload;
 export interface CancelVideoRequest {
   batchId: string;
   reason?: string;
-}
-
-export interface FalWebhookPayload {
-  request_id: string;
-  status: "OK" | "ERROR";
-  payload?: {
-    video?: {
-      url: string;
-      file_size?: number;
-      content_type?: string;
-      metadata?: {
-        duration?: number;
-      };
-    };
-  };
-  error?: string;
 }

@@ -1,6 +1,8 @@
 import logger from "@/config/logger";
-import type { FalWebhookPayload } from "@shared/types/api";
-import type { FalWebhookRequestContext } from "@/routes/webhooks/domain/requests";
+import type {
+  FalWebhookPayload,
+  FalWebhookRequestContext
+} from "@/routes/webhooks/domain/requests";
 
 type VerifySignatureDeps = {
   verifyFalWebhookSignature: (args: {

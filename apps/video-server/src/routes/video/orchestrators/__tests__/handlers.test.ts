@@ -30,7 +30,10 @@ describe("video route orchestrators", () => {
   });
 
   it("cancels by batch id", async () => {
-    const cancelBatchById = jest.fn().mockResolvedValue(1);
+    const cancelGenerationBatch = jest.fn().mockResolvedValue({
+      canceledBatches: 1,
+      canceledJobs: 2
+    });
 
     const result = await handleCancelVideo(
       {
@@ -38,15 +41,18 @@ describe("video route orchestrators", () => {
         reason: "Canceled by user"
       },
       {
-        cancelBatchById
+        cancelGenerationBatch
       }
     );
 
-    expect(cancelBatchById).toHaveBeenCalledWith("batch-1", "Canceled by user");
+    expect(cancelGenerationBatch).toHaveBeenCalledWith(
+      "batch-1",
+      "Canceled by user"
+    );
     expect(result.body).toEqual({
       success: true,
       canceledBatches: 1,
-      canceledJobs: 1
+      canceledJobs: 2
     });
   });
 });
