@@ -190,11 +190,46 @@ describe("ListingClipManager", () => {
     ).toBeGreaterThan(0);
   });
 
-  it("shows an always-visible download control for the selected clip and opens its video url", async () => {
+  it("lets the user type custom ai directions for a clip regeneration", async () => {
     const user = userEvent.setup();
-    const openSpy = jest
-      .spyOn(window, "open")
-      .mockImplementation(() => null);
+
+    render(
+      <ListingClipManager
+        listingId="listing-1"
+        items={items}
+        mode="workspace"
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: /^regenerate$/i }));
+    await user.click(screen.getByRole("button", { name: /customize prompt/i }));
+
+    const textarea = await screen.findByLabelText("AI Directions");
+    await user.clear(textarea);
+    await user.type(textarea, "Brighter kitchen, cleaner counters");
+
+    expect(textarea).toHaveValue("Brighter kitchen, cleaner counters");
+  });
+
+  it("shows an always-visible download control for the selected clip and downloads its video file", async () => {
+    const user = userEvent.setup();
+    const anchorClick = jest.fn();
+    const createElementSpy = jest
+      .spyOn(document, "createElement")
+      .mockImplementation((tagName: string) => {
+        const element = document.createElementNS(
+          "http://www.w3.org/1999/xhtml",
+          tagName
+        ) as HTMLElement;
+
+        if (tagName === "a") {
+          Object.defineProperty(element, "click", {
+            value: anchorClick
+          });
+        }
+
+        return element;
+      });
 
     render(
       <ListingClipManager
@@ -213,13 +248,15 @@ describe("ListingClipManager", () => {
 
     await user.click(downloadButton);
 
-    expect(openSpy).toHaveBeenCalledWith(
-      "https://video",
-      "_blank",
-      "noopener,noreferrer"
+    const anchor = createElementSpy.mock.results.find(
+      (result) => result.value instanceof HTMLAnchorElement
+    )?.value as HTMLAnchorElement | undefined;
+    expect(anchor?.href).toContain(
+      "/api/v1/listings/listing-1/clip-versions/clip-version-1/download"
     );
+    expect(anchorClick).toHaveBeenCalled();
 
-    openSpy.mockRestore();
+    createElementSpy.mockRestore();
   });
 
   it("quick regenerate sends the clip id instead of the clip version id", async () => {

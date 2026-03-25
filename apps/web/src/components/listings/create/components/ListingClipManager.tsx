@@ -189,6 +189,10 @@ function formatGeneratedAt(value?: string | Date | null) {
   }).format(date);
 }
 
+function buildClipDownloadHref(listingId: string, clipVersionId: string) {
+  return `/api/v1/listings/${listingId}/clip-versions/${clipVersionId}/download`;
+}
+
 function mergeClipItems(nextItems: ListingClipVersionItem[]) {
   return nextItems.map((item) => ({
     ...item,
@@ -294,6 +298,10 @@ function ClipManagerWorkspace({
     Record<string, string>
   >({});
   const previousStatusesRef = React.useRef<Map<string, string>>(new Map());
+  const previousDraftSelectionRef = React.useRef<{
+    clipId: string | null;
+    versionId: string | null;
+  } | null>(null);
   const lastSignatureRef = React.useRef(
     serializeClipItems(mergeClipItems(items))
   );
@@ -442,11 +450,21 @@ function ClipManagerWorkspace({
       setSelectedVersionId(nextSelectedVersionId);
     }
 
-    const nextAiDirections = selectedItem.currentVersion.aiDirections ?? "";
-    if (nextAiDirections !== draftAiDirections) {
+    const previousDraftSelection = previousDraftSelectionRef.current;
+    const didSelectionChange =
+      previousDraftSelection?.clipId !== selectedItem.clipId ||
+      previousDraftSelection?.versionId !== nextSelectedVersionId;
+
+    if (didSelectionChange) {
+      const nextAiDirections = selectedItem.currentVersion.aiDirections ?? "";
       setDraftAiDirections(nextAiDirections);
     }
-  }, [clipItems, draftAiDirections, selectedClipId, selectedVersionId]);
+
+    previousDraftSelectionRef.current = {
+      clipId: selectedItem.clipId,
+      versionId: nextSelectedVersionId
+    };
+  }, [clipItems, selectedClipId, selectedVersionId]);
 
   const selectedItem =
     clipItems.find((item) => item.clipId === selectedClipId) ?? clipItems[0];
@@ -529,14 +547,24 @@ function ClipManagerWorkspace({
     }
   };
 
-  const handleDownloadClip = () => {
-    const videoUrl = selectedVersion?.videoUrl;
-    if (!videoUrl) {
+  const handleDownloadClip = async () => {
+    const clipVersionId = selectedVersion?.clipVersionId;
+    if (!clipVersionId) {
       toast.error("No clip available to download.");
       return;
     }
 
-    window.open(videoUrl, "_blank", "noopener,noreferrer");
+    try {
+      const link = document.createElement("a");
+      link.href = buildClipDownloadHref(listingId, clipVersionId);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to download clip."
+      );
+    }
   };
 
   const handleConfirmCancel = () => {

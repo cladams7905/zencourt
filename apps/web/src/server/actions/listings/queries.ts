@@ -20,6 +20,7 @@ import {
   getVideoGenJobById,
   getSuccessfulVideoClipVersionsByClipId,
   getVideoClipById,
+  getVideoClipVersionById,
   getVideoClipVersionBySourceVideoGenJobId,
   updateVideoClipVersion,
   updateVideoGenBatch,
@@ -27,6 +28,8 @@ import {
   updateVideoClip
 } from "@web/src/server/models/videoGen";
 import type { DBVideoClip, DBVideoClipVersion } from "@db/types/models";
+import { ApiError } from "@web/src/server/errors/api";
+import { StatusCode } from "@shared/types/api";
 import {
   getClipRegenerationHardTimeoutMs,
   isPastTimeout,
@@ -45,6 +48,17 @@ function buildStableClipId(args: {
     "clip";
   const clipIndex = args.clipIndex ?? 0;
   return `${args.listingId}:${roomKey}:${clipIndex}`;
+}
+
+function buildClipDownloadFilename(
+  roomName?: string | null,
+  versionNumber?: number | null
+) {
+  const roomSegment =
+    roomName?.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") ||
+    "clip";
+  const versionSegment = versionNumber ? `-v${versionNumber}` : "";
+  return `${roomSegment}${versionSegment}.mp4`;
 }
 
 function mapClipVersionToVideoItem(
@@ -289,5 +303,41 @@ export const getListingClipVersionItemsForCurrentUser = withServerActionCaller(
     const user = await requireAuthenticatedUser();
     await requireListingAccess(listingId, user.id);
     return getListingClipVersionItems(listingId);
+  }
+);
+
+export const getListingClipDownloadForCurrentUser = withServerActionCaller(
+  "getListingClipDownloadForCurrentUser",
+  async (listingId: string, clipVersionId: string) => {
+    const user = await requireAuthenticatedUser();
+    await requireListingAccess(listingId, user.id);
+
+    const clipVersion = await getVideoClipVersionById(clipVersionId);
+    if (!clipVersion) {
+      throw new ApiError(StatusCode.NOT_FOUND, {
+        error: "Not found",
+        message: "Clip version not found"
+      });
+    }
+
+    const clip = await getVideoClipById(clipVersion.videoClipId);
+    if (!clip || clip.listingId !== listingId) {
+      throw new ApiError(StatusCode.NOT_FOUND, {
+        error: "Not found",
+        message: "Clip version not found"
+      });
+    }
+
+    if (!clipVersion.videoUrl) {
+      throw new ApiError(StatusCode.BAD_REQUEST, {
+        error: "Invalid request",
+        message: "No clip available to download"
+      });
+    }
+
+    return {
+      videoUrl: clipVersion.videoUrl,
+      filename: buildClipDownloadFilename(clip.roomName, clipVersion.versionNumber)
+    };
   }
 );
