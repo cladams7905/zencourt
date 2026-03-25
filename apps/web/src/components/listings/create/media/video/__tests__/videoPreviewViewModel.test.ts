@@ -2,54 +2,60 @@ import type { ContentItem } from "@web/src/components/dashboard/components/Conte
 import type { PreviewTimelinePlan } from "@web/src/components/listings/create/domain/previewTimeline";
 import { buildPlayablePreviews } from "@web/src/components/listings/create/media/video/videoPreviewViewModel";
 
+var mockAppendRandomHeaderSuffix: jest.Mock;
+
 jest.mock(
   "@shared/utils",
-  () => ({
-    hashTextOverlaySeed: (value: string) =>
-      Array.from(value).reduce((acc, char) => acc + char.charCodeAt(0), 0),
-    pickPreviewTextOverlayVariant: () => ({
-      position: "center",
-      background: "black",
-      font: "serif-classic",
-      fontPairing: "classic-clean"
-    }),
-    pickRichOverlayFontPairing: () => "classic-clean",
-    pickRichOverlayPosition: () => "center",
-    appendRandomHeaderSuffix: (text: string) => text,
-    buildOverlayTemplateLines: (
-      textOverlay:
-        | {
-            headline?: string | null;
-            accent_top?: string | null;
-            accent_bottom?: string | null;
-          }
-        | null
-        | undefined,
-      plainText: string,
-      forcePattern?: "simple"
-    ) => {
-      const pattern =
-        forcePattern ??
-        (textOverlay?.accent_top || textOverlay?.accent_bottom
-          ? "sandwich"
-          : "simple");
-      const headline = textOverlay?.headline ?? plainText;
-      if (pattern === "sandwich") {
+  () => {
+    mockAppendRandomHeaderSuffix = jest.fn((text: string) => text);
+
+    return {
+      hashTextOverlaySeed: (value: string) =>
+        Array.from(value).reduce((acc, char) => acc + char.charCodeAt(0), 0),
+      pickPreviewTextOverlayVariant: () => ({
+        position: "center",
+        background: "black",
+        font: "serif-classic",
+        fontPairing: "classic-clean"
+      }),
+      pickRichOverlayFontPairing: () => "classic-clean",
+      pickRichOverlayPosition: () => "center",
+      appendRandomHeaderSuffix: mockAppendRandomHeaderSuffix,
+      buildOverlayTemplateLines: (
+        textOverlay:
+          | {
+              headline?: string | null;
+              accent_top?: string | null;
+              accent_bottom?: string | null;
+            }
+          | null
+          | undefined,
+        plainText: string,
+        forcePattern?: "simple"
+      ) => {
+        const pattern =
+          forcePattern ??
+          (textOverlay?.accent_top || textOverlay?.accent_bottom
+            ? "sandwich"
+            : "simple");
+        const headline = textOverlay?.headline ?? plainText;
+        if (pattern === "sandwich") {
+          return {
+            pattern,
+            lines: [
+              { text: textOverlay?.accent_top ?? "", fontRole: "accent" },
+              { text: headline, fontRole: "headline" },
+              { text: textOverlay?.accent_bottom ?? "", fontRole: "accent" }
+            ]
+          };
+        }
         return {
-          pattern,
-          lines: [
-            { text: textOverlay?.accent_top ?? "", fontRole: "accent" },
-            { text: headline, fontRole: "headline" },
-            { text: textOverlay?.accent_bottom ?? "", fontRole: "accent" }
-          ]
+          pattern: "simple",
+          lines: [{ text: headline, fontRole: "body" }]
         };
       }
-      return {
-        pattern: "simple",
-        lines: [{ text: headline, fontRole: "body" }]
-      };
-    }
-  }),
+    };
+  },
   { virtual: true }
 );
 
@@ -126,6 +132,10 @@ describe("videoPreviewViewModel", () => {
     });
 
     expect(result).toEqual([]);
+  });
+
+  beforeEach(() => {
+    mockAppendRandomHeaderSuffix.mockClear();
   });
 
   it("builds preview overlays and computes timeline duration", () => {
@@ -231,6 +241,55 @@ describe("videoPreviewViewModel", () => {
 
     expect(result[0]?.resolvedSegments[0]?.textOverlay?.templatePattern).toBe(
       "simple"
+    );
+  });
+
+  it("does not default auto-generated simple overlays to a transparent background", () => {
+    const result = buildPlayablePreviews({
+      plans: basePlans,
+      items: baseItems,
+      captionItems: [
+        {
+          id: "cap-1",
+          body: [{ header: "B", content: "Body" }]
+        } as ContentItem
+      ],
+      listingSubcategory: "status_update",
+      listingAddress: null,
+      openHouseContext: null,
+      previewFps: 30
+    });
+
+    expect(result[0]?.resolvedSegments[0]?.textOverlay?.templatePattern).toBe(
+      "simple"
+    );
+    expect(result[0]?.resolvedSegments[0]?.textOverlay?.background).not.toBe(
+      "none"
+    );
+  });
+
+  it("does not append emoji suffixes to auto-generated video headers", () => {
+    const result = buildPlayablePreviews({
+      plans: basePlans,
+      items: baseItems,
+      captionItems: [
+        {
+          id: "cap-1",
+          body: [{ header: "Headline", content: "Body" }]
+        } as ContentItem
+      ],
+      listingSubcategory: "status_update",
+      listingAddress: null,
+      openHouseContext: null,
+      previewFps: 30
+    });
+
+    expect(result[0]?.resolvedSegments[0]?.textOverlay?.templatePattern).toBe(
+      "simple"
+    );
+    expect(mockAppendRandomHeaderSuffix).toHaveBeenCalledWith(
+      "Headline",
+      expect.objectContaining({ emojis: [] })
     );
   });
 

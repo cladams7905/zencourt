@@ -119,7 +119,11 @@ function getDisplayDuration(item?: ListingClipVersionItem | null) {
     );
   }
 
-  return latestAttemptVersion?.durationSeconds ?? item.currentVersion.durationSeconds ?? null;
+  return (
+    latestAttemptVersion?.durationSeconds ??
+    item.currentVersion.durationSeconds ??
+    null
+  );
 }
 
 function RegenerationSpinner({ label }: { label: string }) {
@@ -136,14 +140,20 @@ function RegenerationSpinner({ label }: { label: string }) {
 
 function useIsDesktopLayout() {
   const [isDesktop, setIsDesktop] = React.useState(() => {
-    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+    if (
+      typeof window === "undefined" ||
+      typeof window.matchMedia !== "function"
+    ) {
       return true;
     }
     return window.matchMedia("(min-width: 1024px)").matches;
   });
 
   React.useEffect(() => {
-    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+    if (
+      typeof window === "undefined" ||
+      typeof window.matchMedia !== "function"
+    ) {
       return;
     }
 
@@ -261,8 +271,8 @@ function ClipManagerCard({
         </div>
         <div>
           <p className="text-xs text-muted-foreground">
-            Open the clip manager to review each room clip and regenerate one
-            without changing older reel cards.
+            Open the clip manager to review, download, and regenerate individual
+            video clips.
           </p>
         </div>
       </div>
@@ -337,7 +347,9 @@ function ClipManagerWorkspace({
     for (const item of normalized) {
       const latestAttemptVersion = getLatestAttemptVersion(item);
       const status =
-        latestAttemptVersion?.versionStatus ?? item.currentVersion.versionStatus ?? "";
+        latestAttemptVersion?.versionStatus ??
+        item.currentVersion.versionStatus ??
+        "";
       nextStatuses.set(item.clipId, status);
       const previousStatus = previousStatusesRef.current.get(item.clipId);
 
@@ -347,7 +359,9 @@ function ClipManagerWorkspace({
           status === "completed"
         ) {
           setPendingBatchIdByClipId((currentPendingBatchIdByClipId) => {
-            const nextPendingBatchIdByClipId = { ...currentPendingBatchIdByClipId };
+            const nextPendingBatchIdByClipId = {
+              ...currentPendingBatchIdByClipId
+            };
             delete nextPendingBatchIdByClipId[item.clipId];
             return nextPendingBatchIdByClipId;
           });
@@ -359,7 +373,9 @@ function ClipManagerWorkspace({
           status === "failed"
         ) {
           setPendingBatchIdByClipId((currentPendingBatchIdByClipId) => {
-            const nextPendingBatchIdByClipId = { ...currentPendingBatchIdByClipId };
+            const nextPendingBatchIdByClipId = {
+              ...currentPendingBatchIdByClipId
+            };
             delete nextPendingBatchIdByClipId[item.clipId];
             return nextPendingBatchIdByClipId;
           });
@@ -382,7 +398,9 @@ function ClipManagerWorkspace({
 
     for (const item of clipItems) {
       const regeneratingVersion = getRegeneratingVersion(item);
-      const isRegenerating = isClipRegenerating(regeneratingVersion?.versionStatus);
+      const isRegenerating = isClipRegenerating(
+        regeneratingVersion?.versionStatus
+      );
 
       if (!isRegenerating) {
         if (nextTimedOutClipIds.delete(item.clipId)) {
@@ -566,7 +584,9 @@ function ClipManagerWorkspace({
       void cancelVideoGenerationBatch(selectedClipBatchId, "Canceled by user")
         .then(() => {
           setPendingBatchIdByClipId((currentPendingBatchIdByClipId) => {
-            const nextPendingBatchIdByClipId = { ...currentPendingBatchIdByClipId };
+            const nextPendingBatchIdByClipId = {
+              ...currentPendingBatchIdByClipId
+            };
             delete nextPendingBatchIdByClipId[selectedItem.clipId];
             return nextPendingBatchIdByClipId;
           });
@@ -588,7 +608,12 @@ function ClipManagerWorkspace({
     selectClassName?: string;
     textareaIdSuffix?: string;
   }) => (
-    <div className={cn("flex flex-row items-end justify-between gap-2 sm:gap-3", options?.controlsClassName)}>
+    <div
+      className={cn(
+        "flex flex-row items-end justify-between gap-2 sm:gap-3",
+        options?.controlsClassName
+      )}
+    >
       <div className={cn("min-w-0 flex-1", options?.selectClassName)}>
         <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
           Version
@@ -655,9 +680,7 @@ function ClipManagerWorkspace({
               <Button
                 type="button"
                 disabled={
-                  isSubmitting ||
-                  !selectedItem ||
-                  selectedClipIsRegenerating
+                  isSubmitting || !selectedItem || selectedClipIsRegenerating
                 }
                 className="shrink-0 gap-2"
               >
@@ -826,12 +849,17 @@ function ClipManagerWorkspace({
             getRegeneratingVersion(item)?.versionStatus
           );
           return (
-            <div key={item.clipId} className="border-b border-border last:border-b-0">
+            <div
+              key={item.clipId}
+              className="border-b border-border last:border-b-0"
+            >
               <button
                 type="button"
                 onClick={() => {
                   setSelectedClipId(item.clipId);
-                  setSelectedVersionId(item.currentVersion.clipVersionId ?? null);
+                  setSelectedVersionId(
+                    item.currentVersion.clipVersionId ?? null
+                  );
                 }}
                 className={cn(
                   "flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/60",
@@ -886,52 +914,52 @@ function ClipManagerWorkspace({
       </div>
 
       {isDesktopLayout ? (
-      <div
-        data-testid="desktop-clip-detail"
-        className={cn(
-          "relative grid gap-4 rounded-xl border border-border bg-background",
-          "lg:min-h-0 lg:grid-rows-[minmax(0,1fr)]"
-        )}
-      >
-        <div className="absolute inset-x-0 top-0 z-10 rounded-t-xl border-b border-border bg-background px-4 py-4">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-base font-medium text-foreground">
-                {selectedItem?.roomName ?? "Selected clip"}
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {selectedClipIsRegenerating
-                  ? "Regenerating now"
-                  : formatGeneratedAt(selectedVersion?.generatedAt)}
-              </p>
-            </div>
-            {selectedClipIsRegenerating ? (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-muted border border-border px-2.5 py-1 text-xs font-medium text-muted-foreground">
-                <span>Regenerating</span>
-                <RegenerationSpinner label="Clip regeneration in progress" />
-              </span>
-            ) : (
-              <p className="text-xs text-muted-foreground">
-                {formatDuration(selectedVersion?.durationSeconds)}
-              </p>
-            )}
-          </div>
-        </div>
-
         <div
+          data-testid="desktop-clip-detail"
           className={cn(
-            "grid min-h-0 min-w-0 gap-3 px-4 pb-4 pt-[88px] max-lg:min-h-min",
-            "lg:h-full lg:grid-rows-[auto_minmax(0,1fr)]"
+            "relative grid gap-4 rounded-xl border border-border bg-background",
+            "lg:min-h-0 lg:grid-rows-[minmax(0,1fr)]"
           )}
         >
-          {renderClipActionControls({
-            selectClassName: "lg:max-w-[280px]",
-            textareaIdSuffix: "desktop"
-          })}
+          <div className="absolute inset-x-0 top-0 z-10 rounded-t-xl border-b border-border bg-background px-4 py-4">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-base font-medium text-foreground">
+                  {selectedItem?.roomName ?? "Selected clip"}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {selectedClipIsRegenerating
+                    ? "Regenerating now"
+                    : formatGeneratedAt(selectedVersion?.generatedAt)}
+                </p>
+              </div>
+              {selectedClipIsRegenerating ? (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-muted border border-border px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                  <span>Regenerating</span>
+                  <RegenerationSpinner label="Clip regeneration in progress" />
+                </span>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  {formatDuration(selectedVersion?.durationSeconds)}
+                </p>
+              )}
+            </div>
+          </div>
 
-          {renderVideoPlayer()}
+          <div
+            className={cn(
+              "grid min-h-0 min-w-0 gap-3 px-4 pb-4 pt-[88px] max-lg:min-h-min",
+              "lg:h-full lg:grid-rows-[auto_minmax(0,1fr)]"
+            )}
+          >
+            {renderClipActionControls({
+              selectClassName: "lg:max-w-[280px]",
+              textareaIdSuffix: "desktop"
+            })}
+
+            {renderVideoPlayer()}
+          </div>
         </div>
-      </div>
       ) : null}
       <AlertDialog
         open={isCancelDialogOpen}
@@ -939,12 +967,10 @@ function ClipManagerWorkspace({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              Cancel clip generation?
-            </AlertDialogTitle>
+            <AlertDialogTitle>Cancel clip generation?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will stop the active generation batch for this
-              clip. You can start a new regeneration later.
+              This will stop the active generation batch for this clip. You can
+              start a new regeneration later.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

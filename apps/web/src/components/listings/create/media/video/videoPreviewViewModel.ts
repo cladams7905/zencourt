@@ -184,16 +184,14 @@ function buildRichOverlay(
   ];
 
   const simpleBackgroundBucket =
-    hashTextOverlaySeed(`${simpleSeedBase}:bg-bucket`) % 3;
+    hashTextOverlaySeed(`${simpleSeedBase}:bg-bucket`) % 2;
   const simpleBackground: PreviewTextOverlay["background"] =
     simpleBackgroundBucket === 0
-      ? "none"
-      : simpleBackgroundBucket === 1
-        ? "black"
-        : (brownBackgroundOptions[
-            hashTextOverlaySeed(`${simpleSeedBase}:bg-brown`) %
-              brownBackgroundOptions.length
-          ] ?? "brown");
+      ? "black"
+      : (brownBackgroundOptions[
+          hashTextOverlaySeed(`${simpleSeedBase}:bg-brown`) %
+            brownBackgroundOptions.length
+        ] ?? "brown");
 
   const simplePositionOptions: PreviewTextOverlay["position"][] = [
     "top-third",
@@ -223,12 +221,13 @@ function buildRichOverlay(
     templatePattern === "simple"
       ? lines.map((line, index) =>
           index === 0
-            ? {
-                ...line,
-                text: appendRandomHeaderSuffix(line.text, {
-                  random: makeSimpleSuffixRandom()
-                })
-              }
+              ? {
+                  ...line,
+                  text: appendRandomHeaderSuffix(line.text, {
+                    emojis: [],
+                    random: makeSimpleSuffixRandom()
+                  })
+                }
             : line
         )
       : lines;

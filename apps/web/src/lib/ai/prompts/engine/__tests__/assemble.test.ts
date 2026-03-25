@@ -121,4 +121,5 @@ describe("assemble", () => {
 
     expect(prompt).toContain("<open_house_context>xml</open_house_context>");
   });
+
 });

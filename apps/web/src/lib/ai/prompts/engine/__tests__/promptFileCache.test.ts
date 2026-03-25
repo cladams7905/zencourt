@@ -23,4 +23,12 @@ describe("promptFileCache", () => {
 
     expect(second).toBe(first);
   });
+
+  it("loads listing base prompt with fair housing guidance", async () => {
+    const prompt = await readPromptFile("basePrompts/listing-base-prompt.md");
+
+    expect(prompt).toContain("Avoid fair housing risk language");
+    expect(prompt).toContain('"perfect for families,"');
+    expect(prompt).toContain("FHA");
+  });
 });
