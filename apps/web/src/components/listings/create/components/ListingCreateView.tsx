@@ -36,8 +36,7 @@ import {
   Camera,
   ChevronDown,
   Clapperboard,
-  RefreshCw,
-  Settings
+  RefreshCw
 } from "lucide-react";
 import {
   Tooltip,
@@ -203,6 +202,8 @@ export function ListingCreateView({
                 );
               })}
             </div>
+            {/* TODO: Restore generation settings controls in a future update. */}
+            {/*
             <div className="ml-auto flex items-center gap-3">
               <div className="h-6 w-px bg-border/70" />
               <Tooltip>
@@ -221,6 +222,7 @@ export function ListingCreateView({
                 </TooltipContent>
               </Tooltip>
             </div>
+            */}
           </div>
         </div>
       </div>
