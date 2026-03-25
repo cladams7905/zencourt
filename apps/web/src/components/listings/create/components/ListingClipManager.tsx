@@ -62,10 +62,7 @@ type ListingClipManagerProps = {
   mode?: "card" | "workspace";
 };
 
-function hasPollablePendingItems(
-  items: ListingClipVersionItem[],
-  _slowClipIds: Set<string>
-) {
+function hasPollablePendingItems(items: ListingClipVersionItem[]) {
   return items.some((item) =>
     isClipRegenerating(getRegeneratingVersion(item)?.versionStatus)
   );
@@ -246,25 +243,27 @@ function ClipManagerCard({
   return (
     <Link
       href={buildClipsHref(listingId, searchParams.toString())}
-      className="block w-full rounded-2xl border border-border bg-card p-4 text-left shadow-xs transition-colors hover:border-foreground/20"
+      className="block w-full rounded-2xl border border-border bg-card p-4 text-left shadow-xs transition-colors hover:border-foreground/20 lg:max-w-md"
     >
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <p className="inline-flex items-center gap-1 text-sm font-semibold text-foreground">
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between gap-3">
+          <p className="inline-flex min-w-0 items-center gap-1 self-center text-sm font-semibold text-foreground">
             View Generated Clips
             <ChevronRight
               className="h-3.5 w-3.5 shrink-0 text-muted-foreground"
               aria-hidden
             />
           </p>
+          <div className="inline-flex h-7 w-22 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-border px-3 py-1 text-xs text-muted-foreground">
+            <Clapperboard className="h-3.5 w-3.5 shrink-0" />
+            {items.length} clips
+          </div>
+        </div>
+        <div>
           <p className="text-xs text-muted-foreground">
             Open the clip manager to review each room clip and regenerate one
             without changing older reel cards.
           </p>
-        </div>
-        <div className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1 text-xs text-muted-foreground">
-          <Clapperboard className="h-3.5 w-3.5" />
-          {items.length} clips
         </div>
       </div>
     </Link>
@@ -323,9 +322,7 @@ function ClipManagerWorkspace({
         "Failed to load clip versions."
       ),
     {
-      refreshInterval: hasPollablePendingItems(clipItems, timedOutClipIds)
-        ? 2000
-        : 0,
+      refreshInterval: hasPollablePendingItems(clipItems) ? 2000 : 0,
       revalidateOnFocus: false
     }
   );
@@ -457,7 +454,7 @@ function ClipManagerWorkspace({
       clipId: selectedItem.clipId,
       versionId: nextSelectedVersionId
     };
-  }, [clipItems, selectedClipId, selectedVersionId]);
+  }, [clipItems, selectedClipId, selectedVersionId, draftAiDirections]);
 
   const selectedItem =
     clipItems.find((item) => item.clipId === selectedClipId) ?? clipItems[0];

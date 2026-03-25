@@ -13,6 +13,6 @@ Use this loop to avoid repeating mistakes and to align with the user's preferenc
 ### Recorded Guidance
 
 - For video generation workflows, target specific workflow instances by batch id rather than listing id when creating, reading, updating, or canceling jobs; reserve listing-scoped actions for explicitly whole-listing operations.
-- Do not write brittle front end tests. Focus on tests that directly influence domain logic, not UI layout.
+- For small front end layout-only tweaks, implement the UI change directly unless a test adds clear behavioral value beyond asserting presentation.
 
 ---
