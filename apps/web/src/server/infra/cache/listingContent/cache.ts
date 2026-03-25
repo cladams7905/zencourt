@@ -26,7 +26,7 @@ const logger = createChildLogger(baseLogger, {
 });
 
 export const LISTING_CONTENT_CACHE_PREFIX = "listing-content";
-export const LISTING_CONTENT_CACHE_TTL_SECONDS = 60 * 60 * 24;
+export const LISTING_CONTENT_CACHE_TTL_SECONDS = 60 * 60 * 48;
 const LISTING_MEDIA_TYPES: readonly ListingMediaType[] = ["image", "video"];
 
 export type ListingCreateCachedContentItem = {
