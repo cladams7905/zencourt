@@ -56,10 +56,7 @@ npm run dev:video
 npm run build
 npm run build:web
 npm run build:video
-npm run build:local
 ```
-
-Important note: when trying to build `apps/web` in the dev environment, prefer `npm run build:local`.
 
 ### Testing and Type Checking
 

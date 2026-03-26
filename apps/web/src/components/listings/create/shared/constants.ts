@@ -16,3 +16,4 @@ export const SUBCATEGORY_LABELS: Record<ListingContentSubcategory, string> = {
 };
 
 export const GENERATED_BATCH_SIZE = 4;
+export const LISTING_CREATE_INITIAL_PAGE_SIZE = 8;

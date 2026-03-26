@@ -10,6 +10,7 @@ import {
 import { requireListingAccess } from "@web/src/server/models/listings/access";
 import { setCachedListingContentItem } from "@web/src/server/infra/cache/listingContent/cache";
 import { runContentGenerationForUser } from "@web/src/server/actions/content/generate/helpers";
+import { getCurrentVideoClipsWithCurrentVersionsByListingId } from "@web/src/server/models/videoGen";
 import {
   buildUpstreamRequestBody,
   parseAndValidateParams,
@@ -19,6 +20,7 @@ import type { GenerateListingContentBody } from "./types";
 import type { ListingGeneratedItem } from "@web/src/server/infra/cache/listingContent/cache";
 import { requireAuthenticatedUser } from "@web/src/server/actions/_auth/api";
 import { normalizeErrorForLogging } from "@shared/utils/errors";
+import { addGeneratedVideoTimelines } from "./timeline";
 
 const logger = createChildLogger(baseLogger, {
   module: "listing-content-generate-actions"
@@ -63,6 +65,22 @@ export const generateListingContentForCurrentUser = withServerActionCaller(
     }
 
     const upstreamBody = buildUpstreamRequestBody(context);
+    const listingVideoItems =
+      context.mediaType === "video"
+        ? (
+            await getCurrentVideoClipsWithCurrentVersionsByListingId(listingId)
+          )
+            .map(({ clip, clipVersion }) => ({
+              id: clip.id,
+              videoUrl: clipVersion.videoUrl ?? undefined,
+              thumbnail: clipVersion.thumbnailUrl ?? undefined,
+              category: clip.category ?? undefined,
+              durationSeconds: clipVersion.durationSeconds ?? undefined,
+              roomName: clip.roomName,
+              reelClipSource: "listing_clip" as const
+            }))
+            .filter((item) => Boolean(item.videoUrl))
+        : [];
     const upstreamResponse = await runContentGenerationForUser(
       user.id,
       upstreamBody
@@ -99,10 +117,21 @@ export const generateListingContentForCurrentUser = withServerActionCaller(
                 doneItems = event.items;
                 if (!errored && doneItems && doneItems.length > 0) {
                   const timestamp = cacheKeyTimestamp ?? Date.now();
+                  const resolvedDoneItems =
+                    context.mediaType === "video"
+                      ? addGeneratedVideoTimelines({
+                          listingId: context.listingId,
+                          subcategory: context.subcategory,
+                          items: doneItems,
+                          videoItems: listingVideoItems,
+                          cacheKeyTimestamp: timestamp
+                        })
+                      : doneItems;
+                  doneItems = resolvedDoneItems;
 
                   if (context.mediaType === "video") {
-                    for (let id = 0; id < doneItems.length; id += 1) {
-                      const item = doneItems[id];
+                    for (let id = 0; id < resolvedDoneItems.length; id += 1) {
+                      const item = resolvedDoneItems[id];
                       if (!item) continue;
                       await setCachedListingContentItem({
                         userId: context.userId,
@@ -124,10 +153,10 @@ export const generateListingContentForCurrentUser = withServerActionCaller(
                   controller.enqueue(
                     encodeSseEvent({
                       type: "done",
-                      items: doneItems,
+                      items: resolvedDoneItems,
                       meta: {
                         model: "generated",
-                        batch_size: doneItems.length,
+                        batch_size: resolvedDoneItems.length,
                         cache_key_timestamp: timestamp
                       }
                     })

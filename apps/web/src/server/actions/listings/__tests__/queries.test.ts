@@ -10,7 +10,8 @@ const mockGetAllCachedListingContentForCreate = jest.fn();
 const mockGetContentByListingId = jest.fn();
 const mockGetUserMedia = jest.fn();
 const mockGetCurrentVideoClipVersionsByListingId = jest.fn();
-const mockGetSuccessfulVideoClipVersionsByClipId = jest.fn();
+const mockGetCurrentVideoClipsWithCurrentVersionsByListingId = jest.fn();
+const mockGetSuccessfulVideoClipVersionsByClipIds = jest.fn();
 const mockCreateVideoClip = jest.fn();
 const mockCreateVideoClipVersion = jest.fn();
 const mockGetVideoClipById = jest.fn();
@@ -50,10 +51,8 @@ jest.mock("@web/src/server/models/listingImages", () => ({
 }));
 
 jest.mock("@web/src/server/infra/cache/listingContent/cache", () => ({
-  getAllCachedListingContentForCreate: (...args: unknown[]) =>
-    (mockGetAllCachedListingContentForCreate as (...a: unknown[]) => unknown)(
-      ...args
-    )
+  getCachedListingContentForCreateFilter: (...args: unknown[]) =>
+    (mockGetAllCachedListingContentForCreate as (...a: unknown[]) => unknown)(...args)
 }));
 
 jest.mock("@web/src/server/models/content", () => ({
@@ -68,15 +67,15 @@ jest.mock("@web/src/server/models/userMedia/queries", () => ({
 
 jest.mock("@web/src/server/models/videoGen", () => ({
   getCurrentVideoClipVersionsByListingId: (...args: unknown[]) =>
-    (mockGetCurrentVideoClipVersionsByListingId as (
-      ...a: unknown[]
-    ) => unknown)(
+    (mockGetCurrentVideoClipVersionsByListingId as (...a: unknown[]) => unknown)(
       ...args
     ),
-  getSuccessfulVideoClipVersionsByClipId: (...args: unknown[]) =>
-    (mockGetSuccessfulVideoClipVersionsByClipId as (
+  getCurrentVideoClipsWithCurrentVersionsByListingId: (...args: unknown[]) =>
+    (mockGetCurrentVideoClipsWithCurrentVersionsByListingId as (
       ...a: unknown[]
-    ) => unknown)(
+    ) => unknown)(...args),
+  getSuccessfulVideoClipVersionsByClipIds: (...args: unknown[]) =>
+    (mockGetSuccessfulVideoClipVersionsByClipIds as (...a: unknown[]) => unknown)(
       ...args
     ),
   createVideoClip: (...args: unknown[]) =>
@@ -114,7 +113,8 @@ describe("listings queries", () => {
     jest.resetAllMocks();
     mockRequireAuthenticatedUser.mockResolvedValue({ id: "user-1" });
     mockGetCurrentVideoClipVersionsByListingId.mockResolvedValue([]);
-    mockGetSuccessfulVideoClipVersionsByClipId.mockResolvedValue([]);
+    mockGetCurrentVideoClipsWithCurrentVersionsByListingId.mockResolvedValue([]);
+    mockGetSuccessfulVideoClipVersionsByClipIds.mockResolvedValue(new Map());
     mockGetContentByListingId.mockResolvedValue([]);
     mockGetUserMedia.mockResolvedValue([]);
     mockCreateVideoClip.mockResolvedValue(undefined);
@@ -172,40 +172,35 @@ describe("listings queries", () => {
         {
           id: "clip-version-1",
           videoClipId: "listing-1:kitchen:0",
-          thumbnailUrl: "https://t",
-          videoUrl: "https://v",
-          createdAt: new Date("2026-01-01T00:00:00.000Z"),
-          roomName: "Kitchen",
-          roomId: null,
-          category: "kitchen",
-          clipIndex: 0,
-          sortOrder: 1,
-          aiDirections: "",
-          versionNumber: 1,
-          status: "completed",
-          durationSeconds: 4,
-          orientation: "vertical",
-          generationModel: "veo3.1_fast"
+          versionNumber: 1
         }
-      ])
+      ]);
+    mockGetCurrentVideoClipsWithCurrentVersionsByListingId
       .mockResolvedValueOnce([
         {
-          id: "clip-version-1",
-          videoClipId: "listing-1:kitchen:0",
-          thumbnailUrl: "https://t",
-          videoUrl: "https://v",
-          createdAt: new Date("2026-01-01T00:00:00.000Z"),
-          roomName: "Kitchen",
-          roomId: null,
-          category: "kitchen",
-          clipIndex: 0,
-          sortOrder: 1,
-          aiDirections: "",
-          versionNumber: 1,
-          status: "completed",
-          durationSeconds: 4,
-          orientation: "vertical",
-          generationModel: "veo3.1_fast"
+          clip: {
+            id: "listing-1:kitchen:0",
+            listingId: "listing-1",
+            roomId: null,
+            roomName: "Kitchen",
+            category: "kitchen",
+            clipIndex: 0,
+            sortOrder: 1,
+            currentVideoClipVersionId: "clip-version-1"
+          },
+          clipVersion: {
+            id: "clip-version-1",
+            videoClipId: "listing-1:kitchen:0",
+            thumbnailUrl: "https://t",
+            videoUrl: "https://v",
+            createdAt: new Date("2026-01-01T00:00:00.000Z"),
+            aiDirections: "",
+            versionNumber: 1,
+            status: "completed",
+            durationSeconds: 4,
+            orientation: "vertical",
+            generationModel: "veo3.1_fast"
+          }
         }
       ]);
     mockGetVideoClipById
@@ -220,26 +215,28 @@ describe("listings queries", () => {
         sortOrder: 1,
         currentVideoClipVersionId: "clip-version-1"
       });
-    mockGetSuccessfulVideoClipVersionsByClipId.mockResolvedValueOnce([
-      {
-        id: "clip-version-1",
-        videoClipId: "listing-1:kitchen:0",
-        thumbnailUrl: "https://t",
-        videoUrl: "https://v",
-        createdAt: new Date("2026-01-01T00:00:00.000Z"),
-        roomName: "Kitchen",
-        roomId: null,
-        category: "kitchen",
-        clipIndex: 0,
-        sortOrder: 1,
-        aiDirections: "",
-        versionNumber: 1,
-        status: "completed",
-        durationSeconds: 4,
-        orientation: "vertical",
-        generationModel: "veo3.1_fast"
-      }
-    ]);
+    mockGetSuccessfulVideoClipVersionsByClipIds.mockResolvedValueOnce(
+      new Map([
+        [
+          "listing-1:kitchen:0",
+          [
+            {
+              id: "clip-version-1",
+              videoClipId: "listing-1:kitchen:0",
+              thumbnailUrl: "https://t",
+              videoUrl: "https://v",
+              createdAt: new Date("2026-01-01T00:00:00.000Z"),
+              aiDirections: "",
+              versionNumber: 1,
+              status: "completed",
+              durationSeconds: 4,
+              orientation: "vertical",
+              generationModel: "veo3.1_fast"
+            }
+          ]
+        ]
+      ])
+    );
     mockGetListingImages.mockResolvedValueOnce([{ id: "img-1" }]);
     mockGetAllCachedListingContentForCreate.mockResolvedValueOnce([
       { id: "cached-1" }
@@ -267,7 +264,9 @@ describe("listings queries", () => {
     expect(mockGetListingImages).toHaveBeenCalledWith("user-1", "listing-1");
     expect(mockGetAllCachedListingContentForCreate).toHaveBeenCalledWith({
       userId: "user-1",
-      listingId: "listing-1"
+      listingId: "listing-1",
+      subcategory: "new_listing",
+      mediaType: "video"
     });
     expect(result).toEqual({
       videoItems: [
@@ -295,33 +294,68 @@ describe("listings queries", () => {
     });
   });
 
+  it("limits create-view post items to the first eight items for the active filter", async () => {
+    mockGetListingVideoStatus.mockResolvedValueOnce({ jobs: [] });
+    mockRequireListingAccess.mockResolvedValueOnce({ id: "listing-1" });
+    mockGetListingImages.mockResolvedValueOnce([]);
+    mockGetUserMedia.mockResolvedValueOnce([]);
+    mockGetAllCachedListingContentForCreate.mockResolvedValueOnce(
+      Array.from({ length: 10 }, (_, index) => ({
+        id: `cached-${index + 1}`,
+        hook: `Cached ${index + 1}`,
+        listingSubcategory: "new_listing",
+        mediaType: "video"
+      }))
+    );
+
+    const result = await getListingCreateViewDataForCurrentUser("listing-1");
+
+    expect(result.listingPostItems).toHaveLength(8);
+    expect(result.listingPostItems.map((item) => item.id)).toEqual([
+      "cached-1",
+      "cached-2",
+      "cached-3",
+      "cached-4",
+      "cached-5",
+      "cached-6",
+      "cached-7",
+      "cached-8"
+    ]);
+  });
+
   it("returns persisted saved reels alongside cached reels and user media videos", async () => {
     mockGetListingVideoStatus.mockResolvedValueOnce({ jobs: [] });
-    mockGetCurrentVideoClipVersionsByListingId
+    mockGetCurrentVideoClipVersionsByListingId.mockResolvedValueOnce([
+      {
+        id: "clip-version-1",
+        videoClipId: "listing-1:kitchen:0",
+        versionNumber: 1
+      }
+    ]);
+    mockGetCurrentVideoClipsWithCurrentVersionsByListingId
       .mockResolvedValueOnce([
         {
-          id: "clip-version-1",
-          videoClipId: "listing-1:kitchen:0",
-          thumbnailUrl: "https://thumb/clip.jpg",
-          videoUrl: "https://video/clip.mp4",
-          createdAt: new Date("2026-01-01T00:00:00.000Z"),
-          durationSeconds: 4,
-          orientation: "vertical",
-          generationModel: "veo3.1_fast",
-          status: "completed"
-        }
-      ])
-      .mockResolvedValueOnce([
-        {
-          id: "clip-version-1",
-          videoClipId: "listing-1:kitchen:0",
-          thumbnailUrl: "https://thumb/clip.jpg",
-          videoUrl: "https://video/clip.mp4",
-          createdAt: new Date("2026-01-01T00:00:00.000Z"),
-          durationSeconds: 4,
-          orientation: "vertical",
-          generationModel: "veo3.1_fast",
-          status: "completed"
+          clip: {
+            id: "listing-1:kitchen:0",
+            listingId: "listing-1",
+            roomId: null,
+            roomName: "Kitchen",
+            category: "kitchen",
+            clipIndex: 0,
+            sortOrder: 1,
+            currentVideoClipVersionId: "clip-version-1"
+          },
+          clipVersion: {
+            id: "clip-version-1",
+            videoClipId: "listing-1:kitchen:0",
+            thumbnailUrl: "https://thumb/clip.jpg",
+            videoUrl: "https://video/clip.mp4",
+            createdAt: new Date("2026-01-01T00:00:00.000Z"),
+            durationSeconds: 4,
+            orientation: "vertical",
+            generationModel: "veo3.1_fast",
+            status: "completed"
+          }
         }
       ]);
     mockGetVideoClipById.mockResolvedValue({
@@ -334,19 +368,26 @@ describe("listings queries", () => {
       sortOrder: 1,
       currentVideoClipVersionId: "clip-version-1"
     });
-    mockGetSuccessfulVideoClipVersionsByClipId.mockResolvedValueOnce([
-      {
-        id: "clip-version-1",
-        videoClipId: "listing-1:kitchen:0",
-        thumbnailUrl: "https://thumb/clip.jpg",
-        videoUrl: "https://video/clip.mp4",
-        createdAt: new Date("2026-01-01T00:00:00.000Z"),
-        durationSeconds: 4,
-        orientation: "vertical",
-        generationModel: "veo3.1_fast",
-        status: "completed"
-      }
-    ]);
+    mockGetSuccessfulVideoClipVersionsByClipIds.mockResolvedValueOnce(
+      new Map([
+        [
+          "listing-1:kitchen:0",
+          [
+            {
+              id: "clip-version-1",
+              videoClipId: "listing-1:kitchen:0",
+              thumbnailUrl: "https://thumb/clip.jpg",
+              videoUrl: "https://video/clip.mp4",
+              createdAt: new Date("2026-01-01T00:00:00.000Z"),
+              durationSeconds: 4,
+              orientation: "vertical",
+              generationModel: "veo3.1_fast",
+              status: "completed"
+            }
+          ]
+        ]
+      ])
+    );
     mockGetListingImages.mockResolvedValueOnce([]);
     mockGetAllCachedListingContentForCreate.mockResolvedValueOnce([
       {
@@ -491,15 +532,55 @@ describe("listings queries", () => {
         {
           id: "clip-version-3",
           videoClipId: "listing-1:exterior-front:0",
-          thumbnailUrl: "https://t2",
-          videoUrl: "https://v2",
-          createdAt: new Date("2026-01-02T00:00:00.000Z"),
-          aiDirections: "",
-          versionNumber: 3,
-          status: "completed",
-          durationSeconds: 4,
-          orientation: "vertical",
-          generationModel: "veo3.1_fast"
+          versionNumber: 3
+        }
+      ]);
+    mockGetCurrentVideoClipsWithCurrentVersionsByListingId
+      .mockResolvedValueOnce([
+        {
+          clip: {
+            id: "listing-1:exterior-front:0",
+            listingId: "listing-1",
+            roomId: null,
+            roomName: "Exterior Front",
+            category: "exterior-front",
+            clipIndex: 0,
+            sortOrder: 0,
+            currentVideoClipVersionId: "clip-version-2"
+          },
+          clipVersion: {
+            id: "clip-version-2",
+            videoClipId: "listing-1:exterior-front:0",
+            sourceVideoGenJobId: "job-1",
+            versionNumber: 2
+          }
+        }
+      ])
+      .mockResolvedValueOnce([
+        {
+          clip: {
+            id: "listing-1:exterior-front:0",
+            listingId: "listing-1",
+            roomId: null,
+            roomName: "Exterior Front",
+            category: "exterior-front",
+            clipIndex: 0,
+            sortOrder: 0,
+            currentVideoClipVersionId: "clip-version-3"
+          },
+          clipVersion: {
+            id: "clip-version-3",
+            videoClipId: "listing-1:exterior-front:0",
+            thumbnailUrl: "https://t2",
+            videoUrl: "https://v2",
+            createdAt: new Date("2026-01-02T00:00:00.000Z"),
+            aiDirections: "",
+            versionNumber: 3,
+            status: "completed",
+            durationSeconds: 4,
+            orientation: "vertical",
+            generationModel: "veo3.1_fast"
+          }
         }
       ]);
     mockGetVideoClipById
@@ -523,21 +604,28 @@ describe("listings queries", () => {
         sortOrder: 0,
         currentVideoClipVersionId: "clip-version-3"
       });
-    mockGetSuccessfulVideoClipVersionsByClipId.mockResolvedValueOnce([
-      {
-        id: "clip-version-3",
-        videoClipId: "listing-1:exterior-front:0",
-        thumbnailUrl: "https://t2",
-        videoUrl: "https://v2",
-        createdAt: new Date("2026-01-02T00:00:00.000Z"),
-        aiDirections: "",
-        versionNumber: 3,
-        status: "completed",
-        durationSeconds: 4,
-        orientation: "vertical",
-        generationModel: "veo3.1_fast"
-      }
-    ]);
+    mockGetSuccessfulVideoClipVersionsByClipIds.mockResolvedValueOnce(
+      new Map([
+        [
+          "listing-1:exterior-front:0",
+          [
+            {
+              id: "clip-version-3",
+              videoClipId: "listing-1:exterior-front:0",
+              thumbnailUrl: "https://t2",
+              videoUrl: "https://v2",
+              createdAt: new Date("2026-01-02T00:00:00.000Z"),
+              aiDirections: "",
+              versionNumber: 3,
+              status: "completed",
+              durationSeconds: 4,
+              orientation: "vertical",
+              generationModel: "veo3.1_fast"
+            }
+          ]
+        ]
+      ])
+    );
     mockGetListingImages.mockResolvedValueOnce([]);
     mockGetAllCachedListingContentForCreate.mockResolvedValueOnce([]);
 
@@ -572,6 +660,8 @@ describe("listings queries", () => {
     });
     mockGetCurrentVideoClipVersionsByListingId
       .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
+    mockGetCurrentVideoClipsWithCurrentVersionsByListingId
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([]);
     mockGetListingImages.mockResolvedValueOnce([]);
@@ -591,40 +681,42 @@ describe("listings queries", () => {
     jest.setSystemTime(new Date("2026-03-20T10:05:00.000Z"));
 
     mockGetListingVideoStatus.mockResolvedValueOnce({ jobs: [] });
-    mockGetCurrentVideoClipVersionsByListingId
+    mockGetCurrentVideoClipVersionsByListingId.mockResolvedValueOnce([
+      {
+        id: "clip-version-2",
+        videoClipId: "clip-1",
+        sourceVideoGenJobId: "job-2",
+        status: "processing",
+        createdAt: new Date("2026-03-20T10:00:00.000Z")
+      }
+    ]);
+    mockGetCurrentVideoClipsWithCurrentVersionsByListingId
       .mockResolvedValueOnce([
         {
-          id: "clip-version-2",
-          videoClipId: "clip-1",
-          sourceVideoGenJobId: "job-2",
-          status: "processing",
-          createdAt: new Date("2026-03-20T10:00:00.000Z")
-        }
-      ])
-      .mockResolvedValueOnce([
-        {
-          id: "clip-version-2",
-          videoClipId: "clip-1",
-          sourceVideoGenJobId: "job-2",
-          status: "processing",
-          createdAt: new Date("2026-03-20T10:00:00.000Z"),
-          thumbnailUrl: null,
-          videoUrl: null,
-          aiDirections: "",
-          versionNumber: 2
+          clip: {
+            id: "clip-1",
+            listingId: "listing-1",
+            roomId: "room-1",
+            roomName: "Kitchen",
+            category: "kitchen",
+            clipIndex: 0,
+            sortOrder: 0,
+            currentVideoClipVersionId: "clip-version-2"
+          },
+          clipVersion: {
+            id: "clip-version-2",
+            videoClipId: "clip-1",
+            sourceVideoGenJobId: "job-2",
+            status: "processing",
+            createdAt: new Date("2026-03-20T10:00:00.000Z"),
+            thumbnailUrl: null,
+            videoUrl: null,
+            aiDirections: "",
+            versionNumber: 2
+          }
         }
       ]);
-    mockGetVideoClipById.mockResolvedValue({
-      id: "clip-1",
-      listingId: "listing-1",
-      roomId: "room-1",
-      roomName: "Kitchen",
-      category: "kitchen",
-      clipIndex: 0,
-      sortOrder: 0,
-      currentVideoClipVersionId: "clip-version-2"
-    });
-    mockGetSuccessfulVideoClipVersionsByClipId.mockResolvedValue([]);
+    mockGetSuccessfulVideoClipVersionsByClipIds.mockResolvedValue(new Map());
 
     const result = await getListingClipVersionItemsForCurrentUser("listing-1");
 
@@ -638,64 +730,67 @@ describe("listings queries", () => {
 
   it("falls back to the last successful version after a regeneration fails", async () => {
     mockGetListingVideoStatus.mockResolvedValueOnce({ jobs: [] });
-    mockGetCurrentVideoClipVersionsByListingId
-      .mockResolvedValueOnce([
-        {
-          id: "clip-version-2",
-          videoClipId: "clip-1",
-          sourceVideoGenJobId: "job-2",
-          status: "failed",
-          createdAt: new Date("2026-03-20T10:05:00.000Z"),
-          thumbnailUrl: null,
-          videoUrl: null,
-          aiDirections: "new directions",
-          versionNumber: 2,
-          durationSeconds: null,
-          orientation: "vertical",
-          generationModel: "veo3.1_fast"
-        }
-      ])
-      .mockResolvedValueOnce([
-        {
-          id: "clip-version-2",
-          videoClipId: "clip-1",
-          sourceVideoGenJobId: "job-2",
-          status: "failed",
-          createdAt: new Date("2026-03-20T10:05:00.000Z"),
-          thumbnailUrl: null,
-          videoUrl: null,
-          aiDirections: "new directions",
-          versionNumber: 2,
-          durationSeconds: null,
-          orientation: "vertical",
-          generationModel: "veo3.1_fast"
-        }
-      ]);
-    mockGetVideoClipById.mockResolvedValue({
-      id: "clip-1",
-      listingId: "listing-1",
-      roomId: "room-1",
-      roomName: "Kitchen",
-      category: "kitchen",
-      clipIndex: 0,
-      sortOrder: 0,
-      currentVideoClipVersionId: "clip-version-2"
-    });
-    mockGetSuccessfulVideoClipVersionsByClipId.mockResolvedValue([
+    mockGetCurrentVideoClipVersionsByListingId.mockResolvedValueOnce([
       {
-        id: "clip-version-1",
+        id: "clip-version-2",
         videoClipId: "clip-1",
-        thumbnailUrl: "https://thumb-success",
-        videoUrl: "https://video-success",
-        createdAt: new Date("2026-03-20T10:00:00.000Z"),
-        aiDirections: "old directions",
-        versionNumber: 1,
-        status: "completed",
-        durationSeconds: 4,
-        orientation: "vertical",
-        generationModel: "veo3.1_fast"
+        sourceVideoGenJobId: "job-2",
+        status: "failed",
+        createdAt: new Date("2026-03-20T10:05:00.000Z"),
+        versionNumber: 2
       }
     ]);
+    mockGetCurrentVideoClipsWithCurrentVersionsByListingId
+      .mockResolvedValueOnce([
+        {
+          clip: {
+            id: "clip-1",
+            listingId: "listing-1",
+            roomId: "room-1",
+            roomName: "Kitchen",
+            category: "kitchen",
+            clipIndex: 0,
+            sortOrder: 0,
+            currentVideoClipVersionId: "clip-version-2"
+          },
+          clipVersion: {
+            id: "clip-version-2",
+            videoClipId: "clip-1",
+            sourceVideoGenJobId: "job-2",
+            status: "failed",
+            createdAt: new Date("2026-03-20T10:05:00.000Z"),
+            thumbnailUrl: null,
+            videoUrl: null,
+            aiDirections: "new directions",
+            versionNumber: 2,
+            durationSeconds: null,
+            orientation: "vertical",
+            generationModel: "veo3.1_fast"
+          }
+        }
+      ]);
+    mockGetSuccessfulVideoClipVersionsByClipIds.mockResolvedValue(
+      new Map([
+        [
+          "clip-1",
+          [
+            {
+              id: "clip-version-1",
+              videoClipId: "clip-1",
+              thumbnailUrl: "https://thumb-success",
+              videoUrl: "https://video-success",
+              createdAt: new Date("2026-03-20T10:00:00.000Z"),
+              aiDirections: "old directions",
+              versionNumber: 1,
+              status: "completed",
+              durationSeconds: 4,
+              orientation: "vertical",
+              generationModel: "veo3.1_fast"
+            }
+          ]
+        ]
+      ])
+    );
 
     const result = await getListingClipVersionItemsForCurrentUser("listing-1");
 
@@ -715,5 +810,20 @@ describe("listings queries", () => {
         })
       })
     ]);
+  });
+
+  it("requests only the active create filter from the cache layer", async () => {
+    mockGetListingVideoStatus.mockResolvedValueOnce({ jobs: [] });
+    mockGetListingImages.mockResolvedValueOnce([]);
+    mockGetAllCachedListingContentForCreate.mockResolvedValueOnce([]);
+
+    await getListingCreateViewDataForCurrentUser("listing-1");
+
+    expect(mockGetAllCachedListingContentForCreate).toHaveBeenCalledWith({
+      userId: "user-1",
+      listingId: "listing-1",
+      subcategory: "new_listing",
+      mediaType: "video"
+    });
   });
 });

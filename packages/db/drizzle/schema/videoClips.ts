@@ -1,8 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
-  type AnyPgColumn,
   type PgTableExtraConfigValue,
-  foreignKey,
   index,
   integer,
   pgTable,
@@ -13,19 +11,6 @@ import {
 import { authenticatedRole, crudPolicy } from "drizzle-orm/neon";
 
 import { listings } from "./listings";
-
-function getVideoClipCurrentVersionForeignColumns(): [
-  AnyPgColumn<{ tableName: string }>,
-  AnyPgColumn<{ tableName: string }>
-] {
-  const { videoClipVersions } =
-    require("./videoClipVersions") as typeof import("./videoClipVersions");
-
-  return [
-    videoClipVersions.videoClipId,
-    videoClipVersions.id
-  ] as [AnyPgColumn<{ tableName: string }>, AnyPgColumn<{ tableName: string }>];
-}
 
 export const videoClips = pgTable(
   "video_clips",
@@ -52,11 +37,6 @@ export const videoClips = pgTable(
       table.roomName,
       table.clipIndex
     ),
-    foreignKey({
-      name: "video_clips_current_video_clip_version_owner_fk",
-      columns: [table.id, table.currentVideoClipVersionId],
-      foreignColumns: getVideoClipCurrentVersionForeignColumns()
-    }),
     crudPolicy({
       role: authenticatedRole,
       read: sql`(select ${listings.userId} = auth.user_id() from ${listings}

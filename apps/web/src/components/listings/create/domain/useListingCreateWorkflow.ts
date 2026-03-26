@@ -40,12 +40,15 @@ export function useListingCreateWorkflow(params: {
     isGenerating,
     generationError,
     loadingCount,
+    initialPageLoadingCount,
     generateSubcategoryContent: generateSubcategoryContentRaw,
     removeContentItem,
     replaceContentItem
   } = useContentGeneration({
     listingId,
     listingPostItems,
+    initialMediaTab,
+    initialSubcategory,
     activeMediaTab,
     activeSubcategory,
     videoItems
@@ -96,12 +99,13 @@ export function useListingCreateWorkflow(params: {
   const { activeImagePreviewItems, imageLoadingCount } = useListingCreateMediaItems({
     activeMediaTab,
     activeMediaItems,
-    listingImages,
-    isGenerating,
-    loadingCount,
-    isTemplateRendering,
-    isTemplateRenderingUnavailable,
-    templatePreviewItems
+      listingImages,
+      isGenerating,
+      loadingCount,
+      initialPageLoadingCount,
+      isTemplateRendering,
+      isTemplateRenderingUnavailable,
+      templatePreviewItems
   });
 
   const activePreviewPlans = useListingCreatePreviewPlans({
@@ -127,6 +131,7 @@ export function useListingCreateWorkflow(params: {
     isGenerating,
     generationError,
     loadingCount,
+    initialPageLoadingCount,
     generateSubcategoryContent,
     activeMediaItems,
     templateRenderError,

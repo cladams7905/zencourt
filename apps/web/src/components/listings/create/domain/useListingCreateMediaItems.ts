@@ -13,6 +13,7 @@ export function useListingCreateMediaItems(params: {
   listingImages: ListingCreateImage[];
   isGenerating: boolean;
   loadingCount: number;
+  initialPageLoadingCount: number;
   isTemplateRendering: boolean;
   isTemplateRenderingUnavailable: boolean;
   templatePreviewItems: ListingImagePreviewItem[];
@@ -23,6 +24,7 @@ export function useListingCreateMediaItems(params: {
     listingImages,
     isGenerating,
     loadingCount,
+    initialPageLoadingCount,
     isTemplateRendering,
     isTemplateRenderingUnavailable,
     templatePreviewItems
@@ -92,6 +94,9 @@ export function useListingCreateMediaItems(params: {
     if (activeMediaTab !== "images") {
       return 0;
     }
+    if (initialPageLoadingCount > 0 && activeMediaItems.length === 0) {
+      return initialPageLoadingCount;
+    }
     if (isTemplateRenderingUnavailable) {
       return 0;
     }
@@ -107,6 +112,7 @@ export function useListingCreateMediaItems(params: {
   }, [
     activeMediaItems.length,
     activeMediaTab,
+    initialPageLoadingCount,
     isGenerating,
     loadingCount,
     isTemplateRendering,

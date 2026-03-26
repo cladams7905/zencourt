@@ -10,7 +10,10 @@ import {
   getListingImages,
   mapListingImageToDisplayItem
 } from "@web/src/server/models/listingImages";
-import { getAllCachedListingContentForCreate } from "@web/src/server/infra/cache/listingContent/cache";
+import {
+  getCachedListingContentForCreateFilter,
+  type ListingMediaType
+} from "@web/src/server/infra/cache/listingContent/cache";
 import { getContentByListingId } from "@web/src/server/models/content";
 import type { ContentItem } from "@web/src/components/dashboard/components/ContentGrid";
 import { getUserMedia } from "@web/src/server/models/userMedia/queries";
@@ -18,7 +21,8 @@ import {
   createVideoClip,
   createVideoClipVersion,
   getCurrentVideoClipVersionsByListingId,
-  getSuccessfulVideoClipVersionsByClipId,
+  getCurrentVideoClipsWithCurrentVersionsByListingId,
+  getSuccessfulVideoClipVersionsByClipIds,
   getVideoClipById,
   getVideoClipVersionById,
   getVideoClipVersionBySourceVideoGenJobId,
@@ -33,6 +37,11 @@ import {
   mapUserMediaToVideoItem
 } from "./reelContent";
 import { isSavedListingReelMetadata } from "@web/src/components/listings/create/shared/reels";
+import {
+  LISTING_CREATE_INITIAL_PAGE_SIZE,
+  type ListingCreateMediaTab
+} from "@web/src/components/listings/create/shared/constants";
+import type { ListingContentSubcategory } from "@shared/types/models";
 
 function buildStableClipId(args: {
   listingId: string;
@@ -90,14 +99,18 @@ async function seedMissingVideoClips(listingId: string) {
     getListingVideoStatus(listingId),
     getCurrentVideoClipVersionsByListingId(listingId)
   ]);
+  const resolvedCurrentClipVersions = currentClipVersions.filter(
+    (clipVersion): clipVersion is NonNullable<(typeof currentClipVersions)[number]> =>
+      Boolean(clipVersion)
+  );
 
   const existingSourceJobIds = new Set(
-    currentClipVersions
+    resolvedCurrentClipVersions
       .map((clipVersion) => clipVersion.sourceVideoGenJobId)
       .filter((value): value is string => Boolean(value))
   );
   const currentVersionNumbersByClipId = new Map(
-    currentClipVersions.map((clipVersion) => [
+    resolvedCurrentClipVersions.map((clipVersion) => [
       clipVersion.videoClipId,
       clipVersion.versionNumber
     ])
@@ -179,19 +192,23 @@ async function seedMissingVideoClips(listingId: string) {
 
 async function getListingClipVersionItems(listingId: string) {
   await seedMissingVideoClips(listingId);
-  const currentClipVersions = await getCurrentVideoClipVersionsByListingId(listingId);
-  const refreshedClipVersions = currentClipVersions;
+  const currentClipRows = (
+    await getCurrentVideoClipsWithCurrentVersionsByListingId(listingId)
+  ).filter(
+    (
+      row
+    ): row is NonNullable<
+      Awaited<ReturnType<typeof getCurrentVideoClipsWithCurrentVersionsByListingId>>[number]
+    > => Boolean(row?.clip && row?.clipVersion)
+  );
+  const successfulVersionsByClipId = await getSuccessfulVideoClipVersionsByClipIds(
+    currentClipRows.map(({ clip }) => clip.id)
+  );
 
   return await Promise.all(
-    refreshedClipVersions.map(async (clipVersion) => {
-      const clip = await getVideoClipById(clipVersion.videoClipId);
-
-      if (!clip) {
-        throw new Error(`Video clip ${clipVersion.videoClipId} not found`);
-      }
-
+    currentClipRows.map(async ({ clip, clipVersion }) => {
       const successfulVersions = (
-        await getSuccessfulVideoClipVersionsByClipId(clip.id)
+        successfulVersionsByClipId.get(clip.id) ?? []
       ).map((version) => mapClipVersionToVideoItem(clip, version));
       const latestVersion = mapClipVersionToVideoItem(clip, clipVersion);
       const shouldFallbackToPreviousSuccessful =
@@ -215,6 +232,58 @@ async function getListingClipVersionItems(listingId: string) {
   );
 }
 
+export async function getListingCreatePostItems(params: {
+  userId: string;
+  listingId: string;
+  mediaTab?: ListingCreateMediaTab;
+  subcategory?: ListingContentSubcategory;
+}) {
+  const activeMediaType: ListingMediaType =
+    params.mediaTab === "images" ? "image" : "video";
+  const activeSubcategory: ListingContentSubcategory =
+    params.subcategory ?? "new_listing";
+  const [cachedListingPostItems, savedContentRows] = await Promise.all([
+    getCachedListingContentForCreateFilter({
+      userId: params.userId,
+      listingId: params.listingId,
+      subcategory: activeSubcategory,
+      mediaType: activeMediaType
+    }),
+    getContentByListingId(params.userId, params.listingId)
+  ]);
+
+  const savedReelItems = savedContentRows
+    .map(mapSavedReelContentToCreateItem)
+    .filter((item): item is ContentItem => Boolean(item))
+    .filter(
+      (item) =>
+        item.listingSubcategory === activeSubcategory &&
+        (item.mediaType ?? "video") === activeMediaType
+    );
+  const staleCacheKeys = new Set(
+    savedContentRows
+      .map((row) =>
+        isSavedListingReelMetadata(row.metadata)
+          ? buildSavedReelDedupKey(row.metadata)
+          : null
+      )
+      .filter((value): value is string => Boolean(value))
+  );
+
+  return [
+    ...savedReelItems,
+    ...cachedListingPostItems
+      .filter(
+        (item) =>
+          !staleCacheKeys.has(`${item.cacheKeyTimestamp}:${item.cacheKeyId}`)
+      )
+      .map((item) => ({
+        ...item,
+        contentSource: "cached_create" as const
+      }))
+  ].slice(0, LISTING_CREATE_INITIAL_PAGE_SIZE);
+}
+
 export const getCurrentUserListingSummariesPage = withServerActionCaller(
   "getCurrentUserListingSummariesPage",
   async (params: { limit: number; offset: number }) => {
@@ -225,13 +294,21 @@ export const getCurrentUserListingSummariesPage = withServerActionCaller(
 
 export async function getListingCreateViewData(
   userId: string,
-  listingId: string
+  listingId: string,
+  options?: {
+    initialMediaTab?: ListingCreateMediaTab;
+    initialSubcategory?: ListingContentSubcategory;
+  }
 ) {
-  const [clipVersionItems, listingImages, cachedListingPostItems, savedContentRows, userMediaRows] = await Promise.all([
+  const [clipVersionItems, listingImages, listingPostItems, userMediaRows] = await Promise.all([
     getListingClipVersionItems(listingId),
     getListingImages(userId, listingId),
-    getAllCachedListingContentForCreate({ userId, listingId }),
-    getContentByListingId(userId, listingId),
+    getListingCreatePostItems({
+      userId,
+      listingId,
+      mediaTab: options?.initialMediaTab,
+      subcategory: options?.initialSubcategory
+    }),
     getUserMedia(userId)
   ]);
 
@@ -242,29 +319,6 @@ export async function getListingCreateViewData(
       ...clipVersion,
       reelClipSource: "listing_clip" as const
     }));
-
-  const savedReelItems = savedContentRows
-    .map(mapSavedReelContentToCreateItem)
-    .filter((item): item is ContentItem => Boolean(item));
-  const staleCacheKeys = new Set(
-    savedContentRows
-      .map((row) =>
-        isSavedListingReelMetadata(row.metadata)
-          ? buildSavedReelDedupKey(row.metadata)
-          : null
-      )
-      .filter((value): value is string => Boolean(value))
-  );
-  const listingPostItems = [
-    ...savedReelItems,
-    ...cachedListingPostItems.filter(
-      (item) =>
-        !staleCacheKeys.has(`${item.cacheKeyTimestamp}:${item.cacheKeyId}`)
-    ).map((item) => ({
-      ...item,
-      contentSource: "cached_create" as const
-    }))
-  ];
 
   const userMediaVideoItems = userMediaRows
     .map(mapUserMediaToVideoItem)
@@ -286,6 +340,7 @@ export const getListingCreateViewDataForCurrentUser = withServerActionCaller(
     return getListingCreateViewData(user.id, listingId);
   }
 );
+
 
 export const getListingClipVersionItemsForCurrentUser = withServerActionCaller(
   "getListingClipVersionItemsForCurrentUser",

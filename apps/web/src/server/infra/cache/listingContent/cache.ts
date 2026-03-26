@@ -250,6 +250,25 @@ export async function getAllCachedListingContentForCreate(params: {
   return groups.flat();
 }
 
+export async function getCachedListingContentForCreateFilter(params: {
+  userId: string;
+  listingId: string;
+  subcategory: ListingContentSubcategory;
+  mediaType: ListingMediaType;
+}): Promise<ListingCreateCachedContentItem[]> {
+  const { userId, listingId, subcategory, mediaType } = params;
+  const items = await getAllCachedListingContentForFilter({
+    userId,
+    listingId,
+    subcategory,
+    mediaType
+  });
+
+  return items.map((item) =>
+    mapCachedListingItemToCreateContent({ item, subcategory, mediaType })
+  );
+}
+
 /**
  * Returns one cached listing content item by its key (timestamp + id). Null if missing or invalid.
  */

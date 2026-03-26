@@ -12,8 +12,10 @@ export {
 export {
   getVideoGenBatchById,
   getLatestVideoGenBatchByListingId,
+  getCurrentVideoClipsWithCurrentVersionsByListingId,
   getCurrentVideoClipVersionsByListingId,
   getLatestVideoClipVersionByClipId,
+  getSuccessfulVideoClipVersionsByClipIds,
   getSuccessfulVideoClipVersionsByClipId,
   getVideoClipById,
   getVideoClipVersionById,

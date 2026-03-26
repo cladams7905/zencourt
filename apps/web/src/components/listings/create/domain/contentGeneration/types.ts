@@ -3,6 +3,8 @@ export type StreamedContentItem = {
   body?: { header: string; content: string; broll_query?: string }[] | null;
   caption?: string | null;
   broll_query?: string | null;
+  orderedClipIds?: string[] | null;
+  clipDurationOverrides?: Record<string, number> | null;
 };
 
 export type FinalContentItem = {
@@ -16,6 +18,8 @@ export type FinalContentItem = {
     | null;
   caption?: string | null;
   broll_query?: string | null;
+  orderedClipIds?: string[] | null;
+  clipDurationOverrides?: Record<string, number> | null;
 };
 
 export type ContentGenerationEvent =

@@ -10,6 +10,8 @@ export type ListingGeneratedItem = {
   }>;
   cta: string | null;
   caption: string;
+  orderedClipIds?: string[] | null;
+  clipDurationOverrides?: Record<string, number> | null;
 };
 
 /**

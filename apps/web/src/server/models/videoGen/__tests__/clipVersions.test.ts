@@ -1,6 +1,7 @@
 const mockSelect = jest.fn();
 const mockFrom = jest.fn();
 const mockInnerJoin = jest.fn();
+const mockLeftJoin = jest.fn();
 const mockWhere = jest.fn();
 const mockOrderBy = jest.fn();
 const mockLimit = jest.fn();
@@ -26,8 +27,12 @@ jest.mock("@db/client", () => ({
   videoClips: {
     id: "id",
     listingId: "listingId",
-    currentVideoClipVersionId: "currentVideoClipVersionId",
+    roomId: "roomId",
+    roomName: "roomName",
+    category: "category",
+    clipIndex: "clipIndex",
     sortOrder: "sortOrder",
+    currentVideoClipVersionId: "currentVideoClipVersionId",
     createdAt: "createdAt"
   },
   videoClipVersions: {
@@ -41,7 +46,8 @@ jest.mock("@db/client", () => ({
   and: (...args: unknown[]) => args,
   asc: (...args: unknown[]) => args,
   desc: (...args: unknown[]) => args,
-  eq: (...args: unknown[]) => args
+  eq: (...args: unknown[]) => args,
+  inArray: (...args: unknown[]) => args
 }));
 
 jest.mock("@web/src/server/models/shared/dbErrorHandling", () => ({
@@ -52,11 +58,11 @@ jest.mock("@web/src/server/models/shared/dbErrorHandling", () => ({
 import {
   createVideoClip,
   createVideoClipVersion,
-  getCurrentVideoClipVersionsByListingId,
+  getCurrentVideoClipsWithCurrentVersionsByListingId,
   getVideoClipById,
   getVideoClipVersionById,
   getVideoClipVersionBySourceVideoGenJobId,
-  getSuccessfulVideoClipVersionsByClipId,
+  getSuccessfulVideoClipVersionsByClipIds,
   updateVideoClip
 } from "@web/src/server/models/videoGen";
 
@@ -65,6 +71,7 @@ describe("video clip models", () => {
     mockSelect.mockReset();
     mockFrom.mockReset();
     mockInnerJoin.mockReset();
+    mockLeftJoin.mockReset();
     mockWhere.mockReset();
     mockOrderBy.mockReset();
     mockLimit.mockReset();
@@ -95,9 +102,10 @@ describe("video clip models", () => {
     expect(mockValues).toHaveBeenCalledWith({ id: "clip-version-1" });
   });
 
-  it("loads current video clip versions for a listing", async () => {
+  it("loads current video clips with current versions for a listing", async () => {
     const rows = [
       {
+        clip: { id: "clip-1", roomName: "Kitchen" },
         clipVersion: { id: "clip-version-1", versionNumber: 1 }
       }
     ];
@@ -108,20 +116,28 @@ describe("video clip models", () => {
     mockOrderBy.mockResolvedValueOnce(rows);
 
     await expect(
-      getCurrentVideoClipVersionsByListingId("listing-1")
-    ).resolves.toEqual([{ id: "clip-version-1", versionNumber: 1 }]);
+      getCurrentVideoClipsWithCurrentVersionsByListingId("listing-1")
+    ).resolves.toEqual(rows);
   });
 
-  it("loads successful versions for a clip in descending version order", async () => {
-    const rows = [{ id: "clip-v2", versionNumber: 2 }];
+  it("loads successful versions for multiple clips in descending version order", async () => {
+    const rows = [
+      { id: "clip-v2", videoClipId: "clip-1", versionNumber: 2 },
+      { id: "clip-v1", videoClipId: "clip-2", versionNumber: 1 }
+    ];
     mockSelect.mockReturnValueOnce({ from: mockFrom });
     mockFrom.mockReturnValueOnce({ where: mockWhere });
     mockWhere.mockReturnValueOnce({ orderBy: mockOrderBy });
     mockOrderBy.mockResolvedValueOnce(rows);
 
     await expect(
-      getSuccessfulVideoClipVersionsByClipId("clip-1")
-    ).resolves.toEqual(rows);
+      getSuccessfulVideoClipVersionsByClipIds(["clip-1", "clip-2"])
+    ).resolves.toEqual(
+      new Map([
+        ["clip-1", [{ id: "clip-v2", videoClipId: "clip-1", versionNumber: 2 }]],
+        ["clip-2", [{ id: "clip-v1", videoClipId: "clip-2", versionNumber: 1 }]]
+      ])
+    );
   });
 
   it("loads a video clip by id", async () => {

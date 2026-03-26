@@ -17,7 +17,9 @@ function buildGeneratedContentItem(params: {
     body: params.item.body ?? null,
     brollQuery: params.item.broll_query ?? null,
     listingSubcategory: params.subcategory,
-    mediaType: params.mediaType
+    mediaType: params.mediaType,
+    orderedClipIds: params.item.orderedClipIds ?? undefined,
+    clipDurationOverrides: params.item.clipDurationOverrides ?? undefined
   };
 }
 

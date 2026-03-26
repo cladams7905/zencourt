@@ -75,10 +75,6 @@ export function ListingVideoPreviewGrid({
 
   const skeletonCount = Math.max(0, loadingCount);
 
-  if (playablePlans.length === 0 && skeletonCount === 0) {
-    return null;
-  }
-
   const selectedPreview =
     playablePlans.find((preview) => preview.id === selectedPlanId) ?? null;
 
@@ -97,6 +93,10 @@ export function ListingVideoPreviewGrid({
     },
     [listingId, onReplacePreviewItem, selectedPreview]
   );
+
+  if (playablePlans.length === 0 && skeletonCount === 0) {
+    return null;
+  }
 
   return (
     <>

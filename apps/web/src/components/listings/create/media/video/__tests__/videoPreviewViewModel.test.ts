@@ -2,7 +2,7 @@ import type { ContentItem } from "@web/src/components/dashboard/components/Conte
 import type { PreviewTimelinePlan } from "@web/src/components/listings/create/domain/previewTimeline";
 import { buildPlayablePreviews } from "@web/src/components/listings/create/media/video/videoPreviewViewModel";
 
-var mockAppendRandomHeaderSuffix: jest.Mock;
+let mockAppendRandomHeaderSuffix: jest.Mock;
 
 jest.mock(
   "@shared/utils",

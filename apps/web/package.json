@@ -4,8 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "dotenv -e ../../.env.local -- next dev",
-    "build": "next build",
-    "build:local": "dotenv -e ../../.env.local -- next build",
+    "build": "dotenv -e ../../.env.local -- sh -c 'DATABASE_URL=\"${DATABASE_URL:-postgresql://postgres:postgres@127.0.0.1:5432/zencourt_dummy}\" next build'",
     "env:pull": "vercel env pull ../../.env.local",
     "start": "next start",
     "lint": "eslint",

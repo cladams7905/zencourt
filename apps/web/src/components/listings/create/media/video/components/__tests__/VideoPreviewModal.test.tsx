@@ -22,29 +22,36 @@ function emitPlayerEvent(name: string, detail: unknown) {
   listeners?.forEach((listener) => listener({ detail }));
 }
 
-jest.mock("@remotion/player", () => ({
-  Player: React.forwardRef((props: unknown, ref: React.ForwardedRef<unknown>) => {
-    React.useImperativeHandle(ref, () => ({
-      seekTo: mockSeekTo,
-      pause: mockPause,
-      getCurrentFrame: () => mockCurrentFrame,
-      addEventListener: (name: string, callback: (event: { detail: unknown }) => void) => {
-        mockAddEventListener(name, callback);
-        const listeners = playerListeners.get(name) ?? new Set();
-        listeners.add(callback);
-        playerListeners.set(name, listeners);
-      },
-      removeEventListener: (
-        name: string,
-        callback: (event: { detail: unknown }) => void
-      ) => {
-        mockRemoveEventListener(name, callback);
-        playerListeners.get(name)?.delete(callback);
-      }
-    }));
-    return mockPlayer(props);
-  })
-}));
+jest.mock("@remotion/player", () => {
+  const MockPlayer = React.forwardRef(
+    (props: unknown, ref: React.ForwardedRef<unknown>) => {
+      React.useImperativeHandle(ref, () => ({
+        seekTo: mockSeekTo,
+        pause: mockPause,
+        getCurrentFrame: () => mockCurrentFrame,
+        addEventListener: (
+          name: string,
+          callback: (event: { detail: unknown }) => void
+        ) => {
+          mockAddEventListener(name, callback);
+          const listeners = playerListeners.get(name) ?? new Set();
+          listeners.add(callback);
+          playerListeners.set(name, listeners);
+        },
+        removeEventListener: (
+          name: string,
+          callback: (event: { detail: unknown }) => void
+        ) => {
+          mockRemoveEventListener(name, callback);
+          playerListeners.get(name)?.delete(callback);
+        }
+      }));
+      return mockPlayer(props);
+    }
+  );
+  MockPlayer.displayName = "MockRemotionPlayer";
+  return { Player: MockPlayer };
+});
 
 jest.mock("@web/src/components/ui/dialog", () => ({
   Dialog: ({

@@ -1,10 +1,14 @@
 import * as React from "react";
 import { toast } from "sonner";
 import type { ContentItem } from "@web/src/components/dashboard/components/ContentGrid";
-import type { ListingContentSubcategory } from "@shared/types/models";
+import {
+  LISTING_CONTENT_SUBCATEGORIES,
+  type ListingContentSubcategory
+} from "@shared/types/models";
 import { extractJsonItemsFromStream } from "@web/src/lib/sse/contentExtractor";
 import {
   GENERATED_BATCH_SIZE,
+  LISTING_CREATE_INITIAL_PAGE_SIZE,
   SUBCATEGORY_LABELS,
   type ListingCreateMediaTab
 } from "@web/src/components/listings/create/shared/constants";
@@ -21,9 +25,19 @@ import {
 } from "./stream";
 import type { StreamedContentItem } from "./types";
 import { buildListingCreatePreviewPlans } from "@web/src/components/listings/create/domain/useListingCreatePreviewPlans";
-import { updateCachedListingVideoTimeline } from "@web/src/server/actions/listings/cache";
+import { getListingCreatePostItemsForCurrentUser } from "@web/src/server/actions/listings/createPostItems";
 
 const DEFAULT_GENERATION_COUNT = GENERATED_BATCH_SIZE;
+const EMPTY_ITEMS: ContentItem[] = [];
+
+type FilterBucket = {
+  items: ContentItem[];
+  isLoadingInitialPage: boolean;
+  hasFetchedInitialPage: boolean;
+  loadedCount: number;
+};
+
+type FilterBuckets = Record<string, FilterBucket>;
 
 function buildContentItemRevision(item: ContentItem): string {
   const cacheIdentity = item as ContentItem & {
@@ -55,16 +69,55 @@ function buildListingPostItemsRevision(items: ContentItem[]): string {
   return items.map(buildContentItemRevision).join("###");
 }
 
-const generateUUID = () => {
+function generateUUID() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return crypto.randomUUID();
   }
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-};
+}
+
+function buildFilterKey(
+  mediaTab: ListingCreateMediaTab,
+  subcategory: ListingContentSubcategory
+) {
+  return `${mediaTab}:${subcategory}`;
+}
+
+function buildInitialBucket(items: ContentItem[]): FilterBucket {
+  return {
+    items,
+    isLoadingInitialPage: false,
+    hasFetchedInitialPage: true,
+    loadedCount: items.length
+  };
+}
+
+function getEmptyBucket(): FilterBucket {
+  return {
+    items: EMPTY_ITEMS,
+    isLoadingInitialPage: false,
+    hasFetchedInitialPage: false,
+    loadedCount: 0
+  };
+}
+
+function getSiblingSubcategories(activeSubcategory: ListingContentSubcategory) {
+  return LISTING_CONTENT_SUBCATEGORIES.filter(
+    (subcategory) => subcategory !== activeSubcategory
+  );
+}
+
+function getOppositeMediaTab(
+  activeMediaTab: ListingCreateMediaTab
+): ListingCreateMediaTab {
+  return activeMediaTab === "videos" ? "images" : "videos";
+}
 
 export function useContentGeneration(params: {
   listingId: string;
   listingPostItems: ContentItem[];
+  initialMediaTab: ListingCreateMediaTab;
+  initialSubcategory: ListingContentSubcategory;
   activeMediaTab: ListingCreateMediaTab;
   activeSubcategory: ListingContentSubcategory;
   videoItems: ContentItem[];
@@ -73,9 +126,14 @@ export function useContentGeneration(params: {
   isGenerating: boolean;
   generationError: string | null;
   loadingCount: number;
+  initialPageLoadingCount: number;
   generateSubcategoryContent: (
     subcategory: ListingContentSubcategory,
-    options?: { forceNewBatch?: boolean; generationCount?: number; templateId?: string }
+    options?: {
+      forceNewBatch?: boolean;
+      generationCount?: number;
+      templateId?: string;
+    }
   ) => Promise<void>;
   removeContentItem: (contentItemId: string) => void;
   replaceContentItem: (params: {
@@ -83,12 +141,29 @@ export function useContentGeneration(params: {
     nextItem: ContentItem;
   }) => void;
 } {
-  const { listingId, listingPostItems, activeMediaTab, activeSubcategory } =
-    params;
-  const { videoItems } = params;
+  const {
+    listingId,
+    listingPostItems,
+    initialMediaTab,
+    initialSubcategory,
+    activeMediaTab,
+    activeSubcategory,
+    videoItems
+  } = params;
 
-  const [localPostItems, setLocalPostItems] =
-    React.useState<ContentItem[]>(listingPostItems);
+  const initialServerFilterKey = React.useMemo(
+    () => buildFilterKey(initialMediaTab, initialSubcategory),
+    [initialMediaTab, initialSubcategory]
+  );
+  const currentFilterKey = React.useMemo(
+    () => buildFilterKey(activeMediaTab, activeSubcategory),
+    [activeMediaTab, activeSubcategory]
+  );
+  const [filterBuckets, setFilterBuckets] = React.useState<FilterBuckets>(
+    () => ({
+      [initialServerFilterKey]: buildInitialBucket(listingPostItems)
+    })
+  );
   const [isGenerating, setIsGenerating] = React.useState(false);
   const [incompleteBatchSkeletonCount, setIncompleteBatchSkeletonCount] =
     React.useState(0);
@@ -101,41 +176,201 @@ export function useContentGeneration(params: {
   const activeControllerRef = React.useRef<AbortController | null>(null);
   const activeBatchIdRef = React.useRef<string>("");
   const activeBatchItemIdsRef = React.useRef<string[]>([]);
-  const activeGenerationCountRef = React.useRef<number>(DEFAULT_GENERATION_COUNT);
+  const activeGenerationCountRef = React.useRef<number>(
+    DEFAULT_GENERATION_COUNT
+  );
   const activeCacheKeyTimestampRef = React.useRef<number | null>(null);
   const lastSyncedServerRevisionRef = React.useRef<string>("");
+  const filterBucketsRef = React.useRef<FilterBuckets>(filterBuckets);
+  const inFlightWarmupsRef = React.useRef<Map<string, Promise<void>>>(
+    new Map()
+  );
   const listingPostItemsSnapshot = React.useMemo(
     () => buildListingPostItemsRevision(listingPostItems),
     [listingPostItems]
   );
 
   React.useEffect(() => {
+    filterBucketsRef.current = filterBuckets;
+  }, [filterBuckets]);
+
+  React.useEffect(() => {
     setIncompleteBatchSkeletonCount(0);
   }, [activeSubcategory, activeMediaTab]);
 
   React.useEffect(() => {
-    const nextRevision = `${listingId}::${listingPostItemsSnapshot}`;
+    inFlightWarmupsRef.current.clear();
+    lastSyncedServerRevisionRef.current = "";
+    setFilterBuckets({
+      [initialServerFilterKey]: buildInitialBucket(listingPostItems)
+    });
+  }, [listingId]);
+
+  React.useEffect(() => {
+    const nextRevision = `${listingId}::${initialServerFilterKey}::${listingPostItemsSnapshot}`;
     if (nextRevision === lastSyncedServerRevisionRef.current) {
       return;
     }
     lastSyncedServerRevisionRef.current = nextRevision;
-    setLocalPostItems(listingPostItems);
-  }, [listingId, listingPostItems, listingPostItemsSnapshot]);
+
+    setFilterBuckets((prev) => ({
+      ...prev,
+      [initialServerFilterKey]: buildInitialBucket(listingPostItems)
+    }));
+  }, [
+    initialServerFilterKey,
+    listingId,
+    listingPostItems,
+    listingPostItemsSnapshot
+  ]);
+
+  const updateBucket = React.useCallback(
+    (filterKey: string, updater: (bucket: FilterBucket) => FilterBucket) => {
+      setFilterBuckets((prev) => {
+        const current = prev[filterKey] ?? getEmptyBucket();
+        const next = updater(current);
+        if (next === current) {
+          return prev;
+        }
+        return {
+          ...prev,
+          [filterKey]: next
+        };
+      });
+    },
+    []
+  );
+
+  const fetchFirstPageForFilter = React.useCallback(
+    async (
+      mediaTab: ListingCreateMediaTab,
+      subcategory: ListingContentSubcategory
+    ) => {
+      const filterKey = buildFilterKey(mediaTab, subcategory);
+      const existingBucket = filterBucketsRef.current[filterKey];
+      if (existingBucket?.hasFetchedInitialPage) {
+        return;
+      }
+
+      const inFlight = inFlightWarmupsRef.current.get(filterKey);
+      if (inFlight) {
+        return inFlight;
+      }
+
+      updateBucket(filterKey, (bucket) => {
+        if (bucket.isLoadingInitialPage || bucket.hasFetchedInitialPage) {
+          return bucket;
+        }
+        return {
+          ...bucket,
+          isLoadingInitialPage: true
+        };
+      });
+
+      const promise = getListingCreatePostItemsForCurrentUser(listingId, {
+        mediaTab,
+        subcategory
+      })
+        .then((items) => {
+          updateBucket(filterKey, () => ({
+            items,
+            isLoadingInitialPage: false,
+            hasFetchedInitialPage: true,
+            loadedCount: items.length
+          }));
+        })
+        .catch(() => {
+          updateBucket(filterKey, (bucket) => ({
+            ...bucket,
+            isLoadingInitialPage: false
+          }));
+        })
+        .finally(() => {
+          inFlightWarmupsRef.current.delete(filterKey);
+        });
+
+      inFlightWarmupsRef.current.set(filterKey, promise);
+      return promise;
+    },
+    [listingId, updateBucket]
+  );
+
+  React.useEffect(() => {
+    const currentBucket = filterBuckets[currentFilterKey];
+    if (
+      currentBucket?.hasFetchedInitialPage ||
+      currentBucket?.isLoadingInitialPage
+    ) {
+      return;
+    }
+
+    void fetchFirstPageForFilter(activeMediaTab, activeSubcategory);
+  }, [
+    activeMediaTab,
+    activeSubcategory,
+    currentFilterKey,
+    fetchFirstPageForFilter,
+    filterBuckets
+  ]);
+
+  React.useEffect(() => {
+    let cancelled = false;
+
+    const warmCurrentMediaSiblings = async () => {
+      await Promise.all(
+        getSiblingSubcategories(activeSubcategory).map((subcategory) =>
+          fetchFirstPageForFilter(activeMediaTab, subcategory)
+        )
+      );
+    };
+
+    const warmOppositeMedia = async () => {
+      const oppositeMediaTab = getOppositeMediaTab(activeMediaTab);
+      await Promise.all(
+        LISTING_CONTENT_SUBCATEGORIES.map((subcategory) =>
+          fetchFirstPageForFilter(oppositeMediaTab, subcategory)
+        )
+      );
+    };
+
+    void warmCurrentMediaSiblings().then(() => {
+      if (cancelled) {
+        return;
+      }
+
+      setTimeout(() => {
+        if (cancelled) {
+          return;
+        }
+        void warmOppositeMedia();
+      }, 0);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeMediaTab, activeSubcategory, fetchFirstPageForFilter, listingId]);
 
   const generateSubcategoryContent = React.useCallback(
     async (
       subcategory: ListingContentSubcategory,
-      options?: { forceNewBatch?: boolean; generationCount?: number; templateId?: string }
+      options?: {
+        forceNewBatch?: boolean;
+        generationCount?: number;
+        templateId?: string;
+      }
     ) => {
       if (activeControllerRef.current) {
         activeControllerRef.current.abort();
       }
       const controller = new AbortController();
+      const targetFilterKey = buildFilterKey(activeMediaTab, subcategory);
       activeControllerRef.current = controller;
       activeBatchIdRef.current = generateUUID();
       activeBatchItemIdsRef.current = [];
       activeGenerationCountRef.current =
-        typeof options?.generationCount === "number" && options.generationCount > 0
+        typeof options?.generationCount === "number" &&
+        options.generationCount > 0
           ? options.generationCount
           : DEFAULT_GENERATION_COUNT;
       setIsGenerating(true);
@@ -192,14 +427,25 @@ export function useContentGeneration(params: {
                 mediaType: resolvedMediaType,
                 cacheKeyTimestamp:
                   resolvedMediaType === "video"
-                    ? activeCacheKeyTimestampRef.current ?? undefined
+                    ? (activeCacheKeyTimestampRef.current ?? undefined)
                     : undefined
               });
 
-              setLocalPostItems((prev) => [
-                ...removeCurrentBatchItems(prev, activeBatchItemIdsRef.current),
-                ...streamedContentItems
-              ]);
+              updateBucket(targetFilterKey, (bucket) => {
+                const nextItems = [
+                  ...removeCurrentBatchItems(
+                    bucket.items,
+                    activeBatchItemIdsRef.current
+                  ),
+                  ...streamedContentItems
+                ];
+                return {
+                  items: nextItems,
+                  isLoadingInitialPage: false,
+                  hasFetchedInitialPage: true,
+                  loadedCount: nextItems.length
+                };
+              });
             }
           }
 
@@ -236,6 +482,10 @@ export function useContentGeneration(params: {
             const resolvedFinalItems =
               resolvedMediaType === "video"
                 ? finalItems.map((item) => {
+                    if (item.orderedClipIds?.length) {
+                      return item;
+                    }
+
                     const [plan] = buildListingCreatePreviewPlans({
                       listingId,
                       activeMediaTab: "videos",
@@ -261,37 +511,21 @@ export function useContentGeneration(params: {
                   })
                 : finalItems;
 
-            setLocalPostItems((prev) =>
-              mergeBatchItems({
-                previousItems: prev,
+            updateBucket(targetFilterKey, (bucket) => {
+              const nextItems = mergeBatchItems({
+                previousItems: bucket.items,
                 finalItems: resolvedFinalItems,
                 batchItemIds: activeBatchItemIdsRef.current,
                 forceNewBatch: options?.forceNewBatch
-              })
-            );
+              });
 
-            if (resolvedMediaType === "video") {
-              void Promise.allSettled(
-                resolvedFinalItems.map(async (item) => {
-                  if (
-                    typeof item.cacheKeyTimestamp !== "number" ||
-                    typeof item.cacheKeyId !== "number" ||
-                    !item.orderedClipIds?.length
-                  ) {
-                    return;
-                  }
-
-                  await updateCachedListingVideoTimeline(listingId, {
-                    cacheKeyTimestamp: item.cacheKeyTimestamp,
-                    cacheKeyId: item.cacheKeyId,
-                    subcategory,
-                    orderedClipIds: item.orderedClipIds,
-                    clipDurationOverrides:
-                      item.clipDurationOverrides ?? undefined
-                  });
-                })
-              );
-            }
+              return {
+                items: nextItems,
+                isLoadingInitialPage: false,
+                hasFetchedInitialPage: true,
+                loadedCount: nextItems.length
+              };
+            });
           }
         }
 
@@ -300,9 +534,17 @@ export function useContentGeneration(params: {
         }
       } catch (error) {
         if ((error as Error).name === "AbortError") {
-          setLocalPostItems((prev) =>
-            removeCurrentBatchItems(prev, activeBatchItemIdsRef.current)
-          );
+          updateBucket(targetFilterKey, (bucket) => {
+            const nextItems = removeCurrentBatchItems(
+              bucket.items,
+              activeBatchItemIdsRef.current
+            );
+            return {
+              ...bucket,
+              items: nextItems,
+              loadedCount: nextItems.length
+            };
+          });
           return;
         }
         const message =
@@ -312,9 +554,17 @@ export function useContentGeneration(params: {
         setGenerationError(message);
         toast.error(message);
         setIncompleteBatchSkeletonCount(activeGenerationCountRef.current);
-        setLocalPostItems((prev) =>
-          removeCurrentBatchItems(prev, activeBatchItemIdsRef.current)
-        );
+        updateBucket(targetFilterKey, (bucket) => {
+          const nextItems = removeCurrentBatchItems(
+            bucket.items,
+            activeBatchItemIdsRef.current
+          );
+          return {
+            ...bucket,
+            items: nextItems,
+            loadedCount: nextItems.length
+          };
+        });
       } finally {
         if (activeControllerRef.current === controller) {
           activeControllerRef.current = null;
@@ -326,39 +576,82 @@ export function useContentGeneration(params: {
         activeCacheKeyTimestampRef.current = null;
       }
     },
-    [activeMediaTab, listingId, videoItems]
+    [activeMediaTab, listingId, updateBucket, videoItems]
   );
 
   const removeContentItem = React.useCallback((contentItemId: string) => {
-    setLocalPostItems((prev) => prev.filter((item) => item.id !== contentItemId));
+    setFilterBuckets((prev) => {
+      let didChange = false;
+      const next: FilterBuckets = {};
+
+      for (const [filterKey, bucket] of Object.entries(prev)) {
+        const nextItems = bucket.items.filter(
+          (item) => item.id !== contentItemId
+        );
+        if (nextItems.length !== bucket.items.length) {
+          didChange = true;
+          next[filterKey] = {
+            ...bucket,
+            items: nextItems,
+            loadedCount: nextItems.length
+          };
+          continue;
+        }
+        next[filterKey] = bucket;
+      }
+
+      return didChange ? next : prev;
+    });
   }, []);
 
   const replaceContentItem = React.useCallback(
-    (params: {
-      previousContentItemId: string;
-      nextItem: ContentItem;
-    }) => {
-      setLocalPostItems((prev) =>
-        prev.map((item) =>
-          item.id === params.previousContentItemId ? params.nextItem : item
-        )
-      );
+    (params: { previousContentItemId: string; nextItem: ContentItem }) => {
+      setFilterBuckets((prev) => {
+        let didReplace = false;
+        const next: FilterBuckets = {};
+
+        for (const [filterKey, bucket] of Object.entries(prev)) {
+          const nextItems = bucket.items.map((item) => {
+            if (item.id !== params.previousContentItemId) {
+              return item;
+            }
+            didReplace = true;
+            return params.nextItem;
+          });
+
+          next[filterKey] = didReplace
+            ? {
+                ...bucket,
+                items: nextItems,
+                loadedCount: nextItems.length
+              }
+            : bucket;
+        }
+
+        return didReplace ? next : prev;
+      });
     },
     []
   );
 
+  const currentBucket = filterBuckets[currentFilterKey] ?? getEmptyBucket();
   const loadingCount = isGenerating
     ? Math.max(
         0,
         activeGenerationCountRef.current - activeBatchItemIdsRef.current.length
       )
     : incompleteBatchSkeletonCount;
+  const initialPageLoadingCount =
+    currentBucket.isLoadingInitialPage && currentBucket.items.length === 0
+      ? LISTING_CREATE_INITIAL_PAGE_SIZE
+      : 0;
 
   return {
-    localPostItems,
+    localPostItems: currentBucket.items,
     isGenerating,
     generationError,
     loadingCount,
+    initialPageLoadingCount,
     generateSubcategoryContent,
     removeContentItem,
     replaceContentItem

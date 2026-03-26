@@ -88,6 +88,7 @@ export function ListingCreateView({
     isGenerating,
     generationError,
     loadingCount,
+    initialPageLoadingCount,
     generateSubcategoryContent,
     activeMediaItems,
     templateRenderError,
@@ -243,7 +244,9 @@ export function ListingCreateView({
             />
           ) : null}
           {activeMediaTab === "videos" &&
-          (activePreviewPlans.length > 0 || isGenerating) ? (
+          (activePreviewPlans.length > 0 ||
+            isGenerating ||
+            initialPageLoadingCount > 0) ? (
             <ListingVideoPreviewGrid
               listingId={listingId}
               plans={activePreviewPlans}
@@ -253,7 +256,7 @@ export function ListingCreateView({
               listingAddress={listingAddress ?? null}
               openHouseContext={openHouseContext ?? null}
               forceSimpleOverlayTemplate
-              loadingCount={loadingCount}
+              loadingCount={loadingCount + initialPageLoadingCount}
               onReplacePreviewItem={replaceContentItem}
             />
           ) : activeMediaTab === "images" &&
