@@ -26,6 +26,10 @@ type VideoPreviewModalProps = {
   onSavePreviewText: (params: PlayablePreviewTextUpdate) => Promise<void>;
 };
 
+function cloneSegments(segments: TimelinePreviewResolvedSegment[]) {
+  return segments.map((segment) => ({ ...segment }));
+}
+
 export function VideoPreviewModal({
   selectedPreview,
   previewFps,
@@ -41,19 +45,29 @@ export function VideoPreviewModal({
   const [segmentDraft, setSegmentDraft] = React.useState<
     TimelinePreviewResolvedSegment[]
   >([]);
+  const [undoStack, setUndoStack] = React.useState<
+    TimelinePreviewResolvedSegment[][]
+  >([]);
+  const [redoStack, setRedoStack] = React.useState<
+    TimelinePreviewResolvedSegment[][]
+  >([]);
   const [currentFrame, setCurrentFrame] = React.useState(0);
   const pendingSeekFrameRef = React.useRef<number | null>(null);
+  const resizeHistoryCapturedRef = React.useRef(false);
   const [isSaving, setIsSaving] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     setHookDraft(selectedPreview?.captionItem?.hook ?? "");
     setCaptionDraft(selectedPreview?.captionItem?.caption ?? "");
-    setSegmentDraft(selectedPreview?.resolvedSegments ?? []);
+    setSegmentDraft(cloneSegments(selectedPreview?.resolvedSegments ?? []));
+    setUndoStack([]);
+    setRedoStack([]);
     setCurrentFrame(0);
     setPlayerInstance(null);
     setIsSaving(false);
     setErrorMessage(null);
+    resizeHistoryCapturedRef.current = false;
   }, [selectedPreview]);
 
   const handlePlayerRef = React.useCallback((player: PlayerRef | null) => {
@@ -94,9 +108,20 @@ export function VideoPreviewModal({
   const handleCancel = React.useCallback(() => {
     setHookDraft(selectedPreview?.captionItem?.hook ?? "");
     setCaptionDraft(selectedPreview?.captionItem?.caption ?? "");
-    setSegmentDraft(selectedPreview?.resolvedSegments ?? []);
+    setSegmentDraft(cloneSegments(selectedPreview?.resolvedSegments ?? []));
+    setUndoStack([]);
+    setRedoStack([]);
     setErrorMessage(null);
+    resizeHistoryCapturedRef.current = false;
   }, [selectedPreview]);
+
+  const pushTimelineHistory = React.useCallback(
+    (currentSegments: TimelinePreviewResolvedSegment[]) => {
+      setUndoStack((prev) => [...prev, cloneSegments(currentSegments)]);
+      setRedoStack([]);
+    },
+    []
+  );
 
   const handleSegmentsReorder = React.useCallback(
     (fromIndex: number, toIndex: number) => {
@@ -111,6 +136,7 @@ export function VideoPreviewModal({
           return prev;
         }
 
+        pushTimelineHistory(prev);
         const next = [...prev];
         const [movedSegment] = next.splice(fromIndex, 1);
         if (!movedSegment) {
@@ -120,7 +146,7 @@ export function VideoPreviewModal({
         return next;
       });
     },
-    []
+    [pushTimelineHistory]
   );
 
   const handleSave = React.useCallback(async () => {
@@ -170,14 +196,62 @@ export function VideoPreviewModal({
   const handleSegmentDurationChange = React.useCallback(
     (index: number, durationSeconds: number) => {
       pendingSeekFrameRef.current = currentFrame;
-      setSegmentDraft((prev) =>
-        prev.map((segment, segmentIndex) =>
+      setSegmentDraft((prev) => {
+        const currentSegment = prev[index];
+        if (!currentSegment || currentSegment.durationSeconds === durationSeconds) {
+          return prev;
+        }
+
+        if (!resizeHistoryCapturedRef.current) {
+          pushTimelineHistory(prev);
+          resizeHistoryCapturedRef.current = true;
+        }
+
+        return prev.map((segment, segmentIndex) =>
           segmentIndex === index ? { ...segment, durationSeconds } : segment
-        )
-      );
+        );
+      });
     },
-    [currentFrame]
+    [currentFrame, pushTimelineHistory]
   );
+
+  const handleDurationChangeStart = React.useCallback(() => {
+    resizeHistoryCapturedRef.current = false;
+  }, []);
+
+  const handleDurationChangeEnd = React.useCallback(() => {
+    resizeHistoryCapturedRef.current = false;
+  }, []);
+
+  const handleUndoTimelineChange = React.useCallback(() => {
+    setUndoStack((prevUndoStack) => {
+      const previousSegments = prevUndoStack[prevUndoStack.length - 1];
+      if (!previousSegments) {
+        return prevUndoStack;
+      }
+
+      pendingSeekFrameRef.current = currentFrame;
+      setRedoStack((prevRedoStack) => [...prevRedoStack, cloneSegments(segmentDraft)]);
+      setSegmentDraft(cloneSegments(previousSegments));
+      resizeHistoryCapturedRef.current = false;
+      return prevUndoStack.slice(0, -1);
+    });
+  }, [currentFrame, segmentDraft]);
+
+  const handleRedoTimelineChange = React.useCallback(() => {
+    setRedoStack((prevRedoStack) => {
+      const nextSegments = prevRedoStack[prevRedoStack.length - 1];
+      if (!nextSegments) {
+        return prevRedoStack;
+      }
+
+      pendingSeekFrameRef.current = currentFrame;
+      setUndoStack((prevUndoStack) => [...prevUndoStack, cloneSegments(segmentDraft)]);
+      setSegmentDraft(cloneSegments(nextSegments));
+      resizeHistoryCapturedRef.current = false;
+      return prevRedoStack.slice(0, -1);
+    });
+  }, [currentFrame, segmentDraft]);
 
   const handleSeekFrame = React.useCallback((frame: number) => {
     playerRef.current?.pause();
@@ -301,7 +375,13 @@ export function VideoPreviewModal({
                     totalFrames={draftDurationInFrames}
                     onSeekFrame={handleSeekFrame}
                     onReorder={handleSegmentsReorder}
+                    onDurationChangeStart={handleDurationChangeStart}
+                    onDurationChangeEnd={handleDurationChangeEnd}
                     onDurationChange={handleSegmentDurationChange}
+                    canUndo={undoStack.length > 0}
+                    canRedo={redoStack.length > 0}
+                    onUndo={handleUndoTimelineChange}
+                    onRedo={handleRedoTimelineChange}
                   />
                 </div>
               </div>

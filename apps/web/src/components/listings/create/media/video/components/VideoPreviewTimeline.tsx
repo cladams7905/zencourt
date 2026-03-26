@@ -1,6 +1,12 @@
 import * as React from "react";
-import { Clapperboard } from "lucide-react";
+import { Clapperboard, Redo2, Undo2 } from "lucide-react";
 import { LoadingImage } from "@web/src/components/ui/loading-image";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger
+} from "@web/src/components/ui/tooltip";
+import { Button } from "@web/src/components/ui/button";
 import type { TimelinePreviewResolvedSegment } from "@web/src/components/listings/create/media/video/components/ListingTimelinePreviewComposition";
 import { useScrollFade } from "@web/src/components/listings/create/shared/hooks/useScrollFade";
 import { useHorizontalDragAutoScroll } from "@web/src/components/listings/create/shared/hooks/useHorizontalDragAutoScroll";
@@ -21,7 +27,13 @@ type VideoPreviewTimelineProps = {
   totalFrames: number;
   onSeekFrame?: (frame: number) => void;
   onReorder?: (fromIndex: number, toIndex: number) => void;
+  onDurationChangeStart?: () => void;
+  onDurationChangeEnd?: () => void;
   onDurationChange?: (index: number, durationSeconds: number) => void;
+  canUndo?: boolean;
+  canRedo?: boolean;
+  onUndo?: () => void;
+  onRedo?: () => void;
 };
 
 const MIN_CLIP_DURATION_SECONDS = 0.5;
@@ -42,7 +54,13 @@ export function VideoPreviewTimeline({
   totalFrames,
   onSeekFrame,
   onReorder,
-  onDurationChange
+  onDurationChangeStart,
+  onDurationChangeEnd,
+  onDurationChange,
+  canUndo = false,
+  canRedo = false,
+  onUndo,
+  onRedo
 }: VideoPreviewTimelineProps) {
   const items = React.useMemo(
     () => buildVideoPreviewTimelineItems(segments),
@@ -82,8 +100,9 @@ export function VideoPreviewTimeline({
         startDurationSeconds: params.startDurationSeconds,
         maxDurationSeconds: params.maxDurationSeconds
       });
+      onDurationChangeStart?.();
     },
-    []
+    [onDurationChangeStart]
   );
   useHorizontalDragAutoScroll({
     enabled: Boolean(onReorder && draggedItemId),
@@ -115,6 +134,7 @@ export function VideoPreviewTimeline({
 
     const handleMouseUp = () => {
       setResizeState(null);
+      onDurationChangeEnd?.();
     };
 
     window.addEventListener("mousemove", handleMouseMove);
@@ -124,7 +144,7 @@ export function VideoPreviewTimeline({
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [onDurationChange, resizeState]);
+  }, [onDurationChange, onDurationChangeEnd, resizeState]);
 
   const playheadOffsetPx = React.useMemo(
     () =>
@@ -186,9 +206,43 @@ export function VideoPreviewTimeline({
     >
       <div className="mb-4 flex items-center justify-between px-1 xl:shrink-0">
         <p className="text-sm font-semibold text-foreground">Timeline</p>
-        <div className="inline-flex h-7 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-border px-3 py-1 text-xs text-muted-foreground">
-          <Clapperboard className="h-3.5 w-3.5 shrink-0" aria-hidden />
-          {items.length} clips
+        <div className="flex items-center gap-2">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                aria-label="Undo timeline change"
+                className="h-7 w-7 rounded-full"
+                disabled={!canUndo}
+                onClick={onUndo}
+              >
+                <Undo2 className="h-3.5 w-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top">Undo</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                aria-label="Redo timeline change"
+                className="h-7 w-7 rounded-full"
+                disabled={!canRedo}
+                onClick={onRedo}
+              >
+                <Redo2 className="h-3.5 w-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top">Redo</TooltipContent>
+          </Tooltip>
+          <div className="inline-flex h-7 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-border px-3 py-1 text-xs text-muted-foreground">
+            <Clapperboard className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            {items.length} clips
+          </div>
         </div>
       </div>
       <div

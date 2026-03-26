@@ -161,6 +161,12 @@ describe("VideoPreviewModal", () => {
       screen.getAllByAltText("Kitchen clip thumbnail").length
     );
     expect(screen.getByText("Timeline")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Undo timeline change" })
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Redo timeline change" })
+    ).toBeDisabled();
   });
 
   it("keeps the player shell above a minimum desktop size", () => {
@@ -336,6 +342,125 @@ describe("VideoPreviewModal", () => {
     expect(screen.getByTestId("timeline-clip-clip-1-0")).toHaveStyle({
       cursor: "grab"
     });
+  });
+
+  it("supports undo and redo for reorder changes", async () => {
+    render(
+      <VideoPreviewModal
+        selectedPreview={createSelectedPreview()}
+        previewFps={30}
+        onOpenChange={mockOnOpenChange}
+        onSavePreviewText={mockOnSave}
+      />
+    );
+
+    const undoButton = screen.getByRole("button", {
+      name: "Undo timeline change"
+    });
+    const redoButton = screen.getByRole("button", {
+      name: "Redo timeline change"
+    });
+
+    fireEvent.dragStart(screen.getByTestId("timeline-clip-clip-2-1"));
+    fireEvent.dragOver(screen.getByTestId("timeline-clip-clip-1-0"));
+    fireEvent.drop(screen.getByTestId("timeline-clip-clip-1-0"));
+
+    expect(undoButton).toBeEnabled();
+    expect(redoButton).toBeDisabled();
+
+    fireEvent.click(undoButton);
+
+    await waitFor(() =>
+      expect(mockPlayer).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          inputProps: expect.objectContaining({
+            segments: expect.arrayContaining([
+              expect.objectContaining({ clipId: "clip-1" }),
+              expect.objectContaining({ clipId: "clip-2" })
+            ])
+          })
+        })
+      )
+    );
+
+    expect(redoButton).toBeEnabled();
+
+    fireEvent.click(redoButton);
+
+    await waitFor(() =>
+      expect(mockPlayer).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          inputProps: expect.objectContaining({
+            segments: expect.arrayContaining([
+              expect.objectContaining({ clipId: "clip-2" }),
+              expect.objectContaining({ clipId: "clip-1" })
+            ])
+          })
+        })
+      )
+    );
+  });
+
+  it("supports undo and redo for resize changes", async () => {
+    render(
+      <VideoPreviewModal
+        selectedPreview={createSelectedPreview()}
+        previewFps={30}
+        onOpenChange={mockOnOpenChange}
+        onSavePreviewText={mockOnSave}
+      />
+    );
+
+    const undoButton = screen.getByRole("button", {
+      name: "Undo timeline change"
+    });
+    const redoButton = screen.getByRole("button", {
+      name: "Redo timeline change"
+    });
+
+    fireEvent.mouseDown(screen.getByTestId("timeline-resize-strip-clip-1-0"), {
+      clientX: 100
+    });
+    fireEvent.mouseMove(window, { clientX: 220 });
+    fireEvent.mouseUp(window);
+
+    expect(undoButton).toBeEnabled();
+
+    fireEvent.click(undoButton);
+
+    await waitFor(() =>
+      expect(mockPlayer).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          inputProps: expect.objectContaining({
+            segments: expect.arrayContaining([
+              expect.objectContaining({
+                clipId: "clip-1",
+                durationSeconds: 2.5
+              })
+            ])
+          })
+        })
+      )
+    );
+
+    expect(redoButton).toBeEnabled();
+
+    fireEvent.click(redoButton);
+
+    await waitFor(() =>
+      expect(mockPlayer).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          inputProps: expect.objectContaining({
+            segments: expect.arrayContaining([
+              expect.objectContaining({
+                clipId: "clip-1",
+                durationSeconds: 4
+              })
+            ])
+          })
+        })
+      )
+    );
   });
 
   it("resizes a clip from the right edge, updates the player input, and caps at the max duration", async () => {
