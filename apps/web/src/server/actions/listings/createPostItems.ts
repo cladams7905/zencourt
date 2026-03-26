@@ -14,6 +14,8 @@ export const getListingCreatePostItemsForCurrentUser = withServerActionCaller(
     params: {
       mediaTab?: ListingCreateMediaTab;
       subcategory?: ListingContentSubcategory;
+      limit?: number;
+      offset?: number;
     }
   ) => {
     const user = await requireAuthenticatedUser();
@@ -22,7 +24,9 @@ export const getListingCreatePostItemsForCurrentUser = withServerActionCaller(
       userId: user.id,
       listingId,
       mediaTab: params.mediaTab,
-      subcategory: params.subcategory
+      subcategory: params.subcategory,
+      limit: params.limit,
+      offset: params.offset
     });
   }
 );

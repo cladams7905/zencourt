@@ -27,6 +27,7 @@ describe("useListingCreateMediaItems", () => {
         isGenerating: false,
         loadingCount: 0,
         initialPageLoadingCount: 0,
+        loadingMoreCount: 0,
         isTemplateRendering: false,
         isTemplateRenderingUnavailable: true,
         templatePreviewItems: []

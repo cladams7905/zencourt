@@ -7,7 +7,7 @@ import { resolveListingOpenHouseContext } from "@web/src/lib/domain/listings/ope
 import {
   parseInitialMediaTab,
   parseInitialSubcategory
-} from "@web/src/components/listings/create/domain";
+} from "@web/src/components/listings/create/domain/listingCreateQueryParams";
 import { redirectToListingStage } from "../_utils/redirectToListingStage";
 import { getListingCreateViewData } from "@web/src/server/actions/listings/queries";
 import type { ListingPropertyDetails } from "@shared/types/models";

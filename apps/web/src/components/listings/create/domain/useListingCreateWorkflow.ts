@@ -1,3 +1,5 @@
+"use client";
+
 import * as React from "react";
 import type { ListingContentSubcategory } from "@shared/types/models";
 import type { ContentItem } from "@web/src/components/dashboard/components/ContentGrid";
@@ -41,8 +43,11 @@ export function useListingCreateWorkflow(params: {
     generationError,
     loadingCount,
     initialPageLoadingCount,
+    loadingMoreCount,
+    hasMoreForActiveFilter,
     generateSubcategoryContent: generateSubcategoryContentRaw,
     removeContentItem,
+    loadMoreForActiveFilter,
     replaceContentItem
   } = useContentGeneration({
     listingId,
@@ -99,13 +104,14 @@ export function useListingCreateWorkflow(params: {
   const { activeImagePreviewItems, imageLoadingCount } = useListingCreateMediaItems({
     activeMediaTab,
     activeMediaItems,
-      listingImages,
-      isGenerating,
-      loadingCount,
-      initialPageLoadingCount,
-      isTemplateRendering,
-      isTemplateRenderingUnavailable,
-      templatePreviewItems
+    listingImages,
+    isGenerating,
+    loadingCount,
+    initialPageLoadingCount,
+    loadingMoreCount,
+    isTemplateRendering,
+    isTemplateRenderingUnavailable,
+    templatePreviewItems
   });
 
   const activePreviewPlans = useListingCreatePreviewPlans({
@@ -132,12 +138,15 @@ export function useListingCreateWorkflow(params: {
     generationError,
     loadingCount,
     initialPageLoadingCount,
+    loadingMoreCount,
+    hasMoreForActiveFilter,
     generateSubcategoryContent,
     activeMediaItems,
     templateRenderError,
     isTemplateRendering,
     activeImagePreviewItems,
     imageLoadingCount,
+    loadMoreForActiveFilter,
     activePreviewPlans,
     handleDeleteImagePreviewItem,
     replaceContentItem

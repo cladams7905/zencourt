@@ -76,6 +76,9 @@ export function ListingCreateView({
   initialSubcategory = LISTING_CONTENT_SUBCATEGORIES[0]
 }: ListingCreateViewProps) {
   const pathname = usePathname();
+  const [loadMoreNode, setLoadMoreNode] = React.useState<HTMLDivElement | null>(
+    null
+  );
   const { sentinelRef: filterSentinelRef, isSticky: isFilterStickyActive } =
     useStickyHeader();
   const { containerRef: filterTagsRef, maskImage: tagFadeMask } =
@@ -89,12 +92,15 @@ export function ListingCreateView({
     generationError,
     loadingCount,
     initialPageLoadingCount,
+    loadingMoreCount,
+    hasMoreForActiveFilter,
     generateSubcategoryContent,
     activeMediaItems,
     templateRenderError,
     isTemplateRendering,
     activeImagePreviewItems,
     imageLoadingCount,
+    loadMoreForActiveFilter,
     activePreviewPlans,
     handleDeleteImagePreviewItem,
     replaceContentItem
@@ -120,6 +126,27 @@ export function ListingCreateView({
     templateRenderError,
     generateSubcategoryContent
   });
+
+  React.useEffect(() => {
+    const node = loadMoreNode;
+    if (!node || !hasMoreForActiveFilter) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            void loadMoreForActiveFilter();
+          }
+        });
+      },
+      { rootMargin: "200px" }
+    );
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [hasMoreForActiveFilter, loadMoreForActiveFilter, loadMoreNode]);
 
   return (
     <>
@@ -256,7 +283,9 @@ export function ListingCreateView({
               listingAddress={listingAddress ?? null}
               openHouseContext={openHouseContext ?? null}
               forceSimpleOverlayTemplate
-              loadingCount={loadingCount + initialPageLoadingCount}
+              loadingCount={
+                loadingCount + initialPageLoadingCount + loadingMoreCount
+              }
               onReplacePreviewItem={replaceContentItem}
             />
           ) : activeMediaTab === "images" &&
@@ -276,6 +305,14 @@ export function ListingCreateView({
                 : "No image post drafts yet for this subcategory."}
             </div>
           )}
+          {hasMoreForActiveFilter ? (
+            <div
+              ref={setLoadMoreNode}
+              className="h-0"
+              aria-hidden
+              data-testid="listing-create-load-more-sentinel"
+            />
+          ) : null}
           <div className="mt-6 flex justify-center">
             <Tooltip>
               <TooltipTrigger asChild>

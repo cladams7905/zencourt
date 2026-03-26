@@ -105,7 +105,8 @@ jest.mock("@web/src/server/models/videoGen", () => ({
 import {
   getCurrentUserListingSummariesPage,
   getListingCreateViewDataForCurrentUser,
-  getListingClipVersionItemsForCurrentUser
+  getListingClipVersionItemsForCurrentUser,
+  getListingCreatePostItems
 } from "@web/src/server/actions/listings/queries";
 
 describe("listings queries", () => {
@@ -294,7 +295,7 @@ describe("listings queries", () => {
     });
   });
 
-  it("limits create-view post items to the first eight items for the active filter", async () => {
+  it("returns the first paged slice for the active filter with hasMore metadata", async () => {
     mockGetListingVideoStatus.mockResolvedValueOnce({ jobs: [] });
     mockRequireListingAccess.mockResolvedValueOnce({ id: "listing-1" });
     mockGetListingImages.mockResolvedValueOnce([]);
@@ -308,10 +309,17 @@ describe("listings queries", () => {
       }))
     );
 
-    const result = await getListingCreateViewDataForCurrentUser("listing-1");
+    const result = await getListingCreatePostItems({
+      userId: "user-1",
+      listingId: "listing-1",
+      mediaTab: "videos",
+      subcategory: "new_listing",
+      limit: 8,
+      offset: 0
+    });
 
-    expect(result.listingPostItems).toHaveLength(8);
-    expect(result.listingPostItems.map((item) => item.id)).toEqual([
+    expect(result.items).toHaveLength(8);
+    expect(result.items.map((item) => item.id)).toEqual([
       "cached-1",
       "cached-2",
       "cached-3",
@@ -321,6 +329,32 @@ describe("listings queries", () => {
       "cached-7",
       "cached-8"
     ]);
+    expect(result.hasMore).toBe(true);
+    expect(result.nextOffset).toBe(8);
+  });
+
+  it("returns subsequent pages using offset after merge ordering", async () => {
+    mockGetAllCachedListingContentForCreate.mockResolvedValueOnce(
+      Array.from({ length: 10 }, (_, index) => ({
+        id: `cached-${index + 1}`,
+        hook: `Cached ${index + 1}`,
+        listingSubcategory: "new_listing",
+        mediaType: "video"
+      }))
+    );
+
+    const result = await getListingCreatePostItems({
+      userId: "user-1",
+      listingId: "listing-1",
+      mediaTab: "videos",
+      subcategory: "new_listing",
+      limit: 8,
+      offset: 8
+    });
+
+    expect(result.items.map((item) => item.id)).toEqual(["cached-9", "cached-10"]);
+    expect(result.hasMore).toBe(false);
+    expect(result.nextOffset).toBe(10);
   });
 
   it("returns persisted saved reels alongside cached reels and user media videos", async () => {

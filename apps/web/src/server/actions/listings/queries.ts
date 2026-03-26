@@ -43,6 +43,8 @@ import {
 } from "@web/src/components/listings/create/shared/constants";
 import type { ListingContentSubcategory } from "@shared/types/models";
 
+const MAX_LISTING_CREATE_PAGE_SIZE = LISTING_CREATE_INITIAL_PAGE_SIZE;
+
 function buildStableClipId(args: {
   listingId: string;
   roomId?: string | null;
@@ -205,8 +207,7 @@ async function getListingClipVersionItems(listingId: string) {
     currentClipRows.map(({ clip }) => clip.id)
   );
 
-  return await Promise.all(
-    currentClipRows.map(async ({ clip, clipVersion }) => {
+  return currentClipRows.map(({ clip, clipVersion }) => {
       const successfulVersions = (
         successfulVersionsByClipId.get(clip.id) ?? []
       ).map((version) => mapClipVersionToVideoItem(clip, version));
@@ -228,8 +229,57 @@ async function getListingClipVersionItems(listingId: string) {
           : null,
         versions: successfulVersions
       };
-    })
-  );
+    });
+}
+
+function normalizeListingCreatePageParams(params: {
+  limit?: number;
+  offset?: number;
+}) {
+  return {
+    offset: Math.max(0, params.offset ?? 0),
+    limit: Math.min(
+      MAX_LISTING_CREATE_PAGE_SIZE,
+      Math.max(1, params.limit ?? LISTING_CREATE_INITIAL_PAGE_SIZE)
+    )
+  };
+}
+
+function buildSavedCreatePageData(params: {
+  savedContentRows: Awaited<ReturnType<typeof getContentByListingId>>;
+  activeSubcategory: ListingContentSubcategory;
+  activeMediaType: ListingMediaType;
+}) {
+  const staleCacheKeys = new Set<string>();
+  const savedItems: ContentItem[] = [];
+
+  for (const row of params.savedContentRows) {
+    if (!isSavedListingReelMetadata(row.metadata)) {
+      continue;
+    }
+
+    if (
+      row.metadata.listingSubcategory !== params.activeSubcategory ||
+      (row.contentType ?? "video") !== params.activeMediaType
+    ) {
+      continue;
+    }
+
+    const staleCacheKey = buildSavedReelDedupKey(row.metadata);
+    if (staleCacheKey) {
+      staleCacheKeys.add(staleCacheKey);
+    }
+
+    const savedItem = mapSavedReelContentToCreateItem(row);
+    if (savedItem) {
+      savedItems.push(savedItem);
+    }
+  }
+
+  return {
+    savedItems,
+    staleCacheKeys
+  };
 }
 
 export async function getListingCreatePostItems(params: {
@@ -237,6 +287,8 @@ export async function getListingCreatePostItems(params: {
   listingId: string;
   mediaTab?: ListingCreateMediaTab;
   subcategory?: ListingContentSubcategory;
+  limit?: number;
+  offset?: number;
 }) {
   const activeMediaType: ListingMediaType =
     params.mediaTab === "images" ? "image" : "video";
@@ -251,27 +303,14 @@ export async function getListingCreatePostItems(params: {
     }),
     getContentByListingId(params.userId, params.listingId)
   ]);
+  const { savedItems, staleCacheKeys } = buildSavedCreatePageData({
+    savedContentRows,
+    activeSubcategory,
+    activeMediaType
+  });
 
-  const savedReelItems = savedContentRows
-    .map(mapSavedReelContentToCreateItem)
-    .filter((item): item is ContentItem => Boolean(item))
-    .filter(
-      (item) =>
-        item.listingSubcategory === activeSubcategory &&
-        (item.mediaType ?? "video") === activeMediaType
-    );
-  const staleCacheKeys = new Set(
-    savedContentRows
-      .map((row) =>
-        isSavedListingReelMetadata(row.metadata)
-          ? buildSavedReelDedupKey(row.metadata)
-          : null
-      )
-      .filter((value): value is string => Boolean(value))
-  );
-
-  return [
-    ...savedReelItems,
+  const allItems = [
+    ...savedItems,
     ...cachedListingPostItems
       .filter(
         (item) =>
@@ -281,7 +320,16 @@ export async function getListingCreatePostItems(params: {
         ...item,
         contentSource: "cached_create" as const
       }))
-  ].slice(0, LISTING_CREATE_INITIAL_PAGE_SIZE);
+  ];
+  const { offset, limit } = normalizeListingCreatePageParams(params);
+  const items = allItems.slice(offset, offset + limit);
+  const nextOffset = offset + items.length;
+
+  return {
+    items,
+    hasMore: nextOffset < allItems.length,
+    nextOffset
+  };
 }
 
 export const getCurrentUserListingSummariesPage = withServerActionCaller(
@@ -307,7 +355,9 @@ export async function getListingCreateViewData(
       userId,
       listingId,
       mediaTab: options?.initialMediaTab,
-      subcategory: options?.initialSubcategory
+      subcategory: options?.initialSubcategory,
+      limit: LISTING_CREATE_INITIAL_PAGE_SIZE,
+      offset: 0
     }),
     getUserMedia(userId)
   ]);
@@ -327,7 +377,7 @@ export async function getListingCreateViewData(
   return {
     videoItems: [...listingClipItems, ...userMediaVideoItems],
     clipVersionItems,
-    listingPostItems,
+    listingPostItems: listingPostItems.items,
     listingImages: listingImages.map(mapListingImageToDisplayItem)
   };
 }

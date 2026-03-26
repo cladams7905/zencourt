@@ -1,3 +1,5 @@
+"use client";
+
 import * as React from "react";
 import { toast } from "sonner";
 import type { ContentItem } from "@web/src/components/dashboard/components/ContentGrid";
@@ -25,20 +27,17 @@ import {
 } from "./stream";
 import type { StreamedContentItem } from "./types";
 import { buildListingCreatePreviewPlans } from "@web/src/components/listings/create/domain/useListingCreatePreviewPlans";
-import { getListingCreatePostItemsForCurrentUser } from "@web/src/server/actions/listings/createPostItems";
+import {
+  buildFetchedBucket,
+  buildFilterKey,
+  buildInitialBucket,
+  getEmptyBucket,
+  type FilterBucket,
+  type FilterBuckets
+} from "./filterBuckets";
+import { fetchListingCreatePostItemsPageCached } from "./postItemsTransport";
 
 const DEFAULT_GENERATION_COUNT = GENERATED_BATCH_SIZE;
-const EMPTY_ITEMS: ContentItem[] = [];
-
-type FilterBucket = {
-  items: ContentItem[];
-  isLoadingInitialPage: boolean;
-  hasFetchedInitialPage: boolean;
-  loadedCount: number;
-};
-
-type FilterBuckets = Record<string, FilterBucket>;
-
 function buildContentItemRevision(item: ContentItem): string {
   const cacheIdentity = item as ContentItem & {
     cacheKeyTimestamp?: number;
@@ -76,31 +75,6 @@ function generateUUID() {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
-function buildFilterKey(
-  mediaTab: ListingCreateMediaTab,
-  subcategory: ListingContentSubcategory
-) {
-  return `${mediaTab}:${subcategory}`;
-}
-
-function buildInitialBucket(items: ContentItem[]): FilterBucket {
-  return {
-    items,
-    isLoadingInitialPage: false,
-    hasFetchedInitialPage: true,
-    loadedCount: items.length
-  };
-}
-
-function getEmptyBucket(): FilterBucket {
-  return {
-    items: EMPTY_ITEMS,
-    isLoadingInitialPage: false,
-    hasFetchedInitialPage: false,
-    loadedCount: 0
-  };
-}
-
 function getSiblingSubcategories(activeSubcategory: ListingContentSubcategory) {
   return LISTING_CONTENT_SUBCATEGORIES.filter(
     (subcategory) => subcategory !== activeSubcategory
@@ -127,6 +101,8 @@ export function useContentGeneration(params: {
   generationError: string | null;
   loadingCount: number;
   initialPageLoadingCount: number;
+  loadingMoreCount: number;
+  hasMoreForActiveFilter: boolean;
   generateSubcategoryContent: (
     subcategory: ListingContentSubcategory,
     options?: {
@@ -136,6 +112,7 @@ export function useContentGeneration(params: {
     }
   ) => Promise<void>;
   removeContentItem: (contentItemId: string) => void;
+  loadMoreForActiveFilter: () => Promise<void>;
   replaceContentItem: (params: {
     previousContentItemId: string;
     nextItem: ContentItem;
@@ -180,8 +157,10 @@ export function useContentGeneration(params: {
     DEFAULT_GENERATION_COUNT
   );
   const activeCacheKeyTimestampRef = React.useRef<number | null>(null);
+  const activeGeneratingFilterKeyRef = React.useRef<string | null>(null);
   const lastSyncedServerRevisionRef = React.useRef<string>("");
   const filterBucketsRef = React.useRef<FilterBuckets>(filterBuckets);
+  const listingRequestVersionRef = React.useRef(0);
   const inFlightWarmupsRef = React.useRef<Map<string, Promise<void>>>(
     new Map()
   );
@@ -199,12 +178,14 @@ export function useContentGeneration(params: {
   }, [activeSubcategory, activeMediaTab]);
 
   React.useEffect(() => {
+    listingRequestVersionRef.current += 1;
+    activeControllerRef.current?.abort();
     inFlightWarmupsRef.current.clear();
     lastSyncedServerRevisionRef.current = "";
     setFilterBuckets({
       [initialServerFilterKey]: buildInitialBucket(listingPostItems)
     });
-  }, [listingId]);
+  }, [initialServerFilterKey, listingId, listingPostItems]);
 
   React.useEffect(() => {
     const nextRevision = `${listingId}::${initialServerFilterKey}::${listingPostItemsSnapshot}`;
@@ -241,12 +222,18 @@ export function useContentGeneration(params: {
     []
   );
 
+  const isCurrentListingRequestVersion = React.useCallback(
+    (version: number) => listingRequestVersionRef.current === version,
+    []
+  );
+
   const fetchFirstPageForFilter = React.useCallback(
     async (
       mediaTab: ListingCreateMediaTab,
       subcategory: ListingContentSubcategory
     ) => {
       const filterKey = buildFilterKey(mediaTab, subcategory);
+      const requestVersion = listingRequestVersionRef.current;
       const existingBucket = filterBucketsRef.current[filterKey];
       if (existingBucket?.hasFetchedInitialPage) {
         return;
@@ -267,19 +254,22 @@ export function useContentGeneration(params: {
         };
       });
 
-      const promise = getListingCreatePostItemsForCurrentUser(listingId, {
+      const promise = fetchListingCreatePostItemsPageCached(listingId, {
         mediaTab,
-        subcategory
+        subcategory,
+        limit: LISTING_CREATE_INITIAL_PAGE_SIZE,
+        offset: 0
       })
-        .then((items) => {
-          updateBucket(filterKey, () => ({
-            items,
-            isLoadingInitialPage: false,
-            hasFetchedInitialPage: true,
-            loadedCount: items.length
-          }));
+        .then((page) => {
+          if (!isCurrentListingRequestVersion(requestVersion)) {
+            return;
+          }
+          updateBucket(filterKey, () => buildFetchedBucket(page));
         })
         .catch(() => {
+          if (!isCurrentListingRequestVersion(requestVersion)) {
+            return;
+          }
           updateBucket(filterKey, (bucket) => ({
             ...bucket,
             isLoadingInitialPage: false
@@ -292,7 +282,7 @@ export function useContentGeneration(params: {
       inFlightWarmupsRef.current.set(filterKey, promise);
       return promise;
     },
-    [listingId, updateBucket]
+    [isCurrentListingRequestVersion, listingId, updateBucket]
   );
 
   React.useEffect(() => {
@@ -351,6 +341,76 @@ export function useContentGeneration(params: {
     };
   }, [activeMediaTab, activeSubcategory, fetchFirstPageForFilter, listingId]);
 
+  const loadMoreForActiveFilter = React.useCallback(async () => {
+    const currentBucket =
+      filterBucketsRef.current[currentFilterKey] ?? getEmptyBucket();
+    if (
+      !currentBucket.hasFetchedInitialPage ||
+      currentBucket.isLoadingInitialPage ||
+      currentBucket.isLoadingMore ||
+      !currentBucket.hasMore ||
+      (isGenerating &&
+        activeGeneratingFilterKeyRef.current === currentFilterKey)
+    ) {
+      return;
+    }
+
+    updateBucket(currentFilterKey, (bucket) => ({
+      ...bucket,
+      isLoadingMore: true
+    }));
+
+    try {
+      const requestVersion = listingRequestVersionRef.current;
+      const page = await fetchListingCreatePostItemsPageCached(listingId, {
+        mediaTab: activeMediaTab,
+        subcategory: activeSubcategory,
+        limit: LISTING_CREATE_INITIAL_PAGE_SIZE,
+        offset: currentBucket.offset
+      });
+      if (!isCurrentListingRequestVersion(requestVersion)) {
+        return;
+      }
+
+      updateBucket(currentFilterKey, (bucket) => {
+        const existingIds = new Set(bucket.items.map((item) => item.id));
+        const appendedItems = page.items.filter(
+          (item) => !existingIds.has(item.id)
+        );
+        const nextItems =
+          appendedItems.length > 0
+            ? [...bucket.items, ...appendedItems]
+            : bucket.items;
+
+        return {
+          ...bucket,
+          items: nextItems,
+          isLoadingMore: false,
+          hasMore: page.hasMore,
+          offset: page.nextOffset,
+          loadedCount: nextItems.length
+        };
+      });
+    } catch {
+      if (!isCurrentListingRequestVersion(listingRequestVersionRef.current)) {
+        return;
+      }
+      updateBucket(currentFilterKey, (bucket) => ({
+        ...bucket,
+        isLoadingMore: false
+      }));
+      toast.error("Failed to load more content.");
+    }
+  }, [
+    activeMediaTab,
+    activeSubcategory,
+    currentFilterKey,
+    isCurrentListingRequestVersion,
+    isGenerating,
+    listingId,
+    updateBucket
+  ]);
+
   const generateSubcategoryContent = React.useCallback(
     async (
       subcategory: ListingContentSubcategory,
@@ -365,6 +425,7 @@ export function useContentGeneration(params: {
       }
       const controller = new AbortController();
       const targetFilterKey = buildFilterKey(activeMediaTab, subcategory);
+      activeGeneratingFilterKeyRef.current = targetFilterKey;
       activeControllerRef.current = controller;
       activeBatchIdRef.current = generateUUID();
       activeBatchItemIdsRef.current = [];
@@ -442,7 +503,10 @@ export function useContentGeneration(params: {
                 return {
                   items: nextItems,
                   isLoadingInitialPage: false,
+                  isLoadingMore: false,
                   hasFetchedInitialPage: true,
+                  hasMore: bucket.hasMore,
+                  offset: nextItems.length,
                   loadedCount: nextItems.length
                 };
               });
@@ -522,7 +586,10 @@ export function useContentGeneration(params: {
               return {
                 items: nextItems,
                 isLoadingInitialPage: false,
+                isLoadingMore: false,
                 hasFetchedInitialPage: true,
+                hasMore: bucket.hasMore,
+                offset: nextItems.length,
                 loadedCount: nextItems.length
               };
             });
@@ -574,6 +641,7 @@ export function useContentGeneration(params: {
         activeBatchItemIdsRef.current = [];
         activeGenerationCountRef.current = DEFAULT_GENERATION_COUNT;
         activeCacheKeyTimestampRef.current = null;
+        activeGeneratingFilterKeyRef.current = null;
       }
     },
     [activeMediaTab, listingId, updateBucket, videoItems]
@@ -645,6 +713,9 @@ export function useContentGeneration(params: {
     currentBucket.isLoadingInitialPage && currentBucket.items.length === 0
       ? LISTING_CREATE_INITIAL_PAGE_SIZE
       : 0;
+  const loadingMoreCount = currentBucket.isLoadingMore
+    ? LISTING_CREATE_INITIAL_PAGE_SIZE
+    : 0;
 
   return {
     localPostItems: currentBucket.items,
@@ -652,8 +723,11 @@ export function useContentGeneration(params: {
     generationError,
     loadingCount,
     initialPageLoadingCount,
+    loadingMoreCount,
+    hasMoreForActiveFilter: currentBucket.hasMore,
     generateSubcategoryContent,
     removeContentItem,
+    loadMoreForActiveFilter,
     replaceContentItem
   };
 }
