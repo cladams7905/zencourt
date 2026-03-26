@@ -166,6 +166,31 @@ export function VideoPreviewModal({
     [currentFrame, pushTimelineHistory]
   );
 
+  const deletedClipOptions = React.useMemo(() => {
+    const currentClipIds = new Set(segmentDraft.map((segment) => segment.clipId));
+    return (selectedPreview?.resolvedSegments ?? []).filter(
+      (segment) => !currentClipIds.has(segment.clipId)
+    );
+  }, [segmentDraft, selectedPreview]);
+
+  const handleAddSegment = React.useCallback(
+    (clipId: string) => {
+      pendingSeekFrameRef.current = currentFrame;
+      setSegmentDraft((prev) => {
+        const nextSegment = (selectedPreview?.resolvedSegments ?? []).find(
+          (segment) => segment.clipId === clipId
+        );
+        if (!nextSegment || prev.some((segment) => segment.clipId === clipId)) {
+          return prev;
+        }
+
+        pushTimelineHistory(prev);
+        return [...prev, { ...nextSegment }];
+      });
+    },
+    [currentFrame, pushTimelineHistory, selectedPreview]
+  );
+
   const handleSave = React.useCallback(async () => {
     if (!selectedPreview?.captionItemKey) {
       setErrorMessage("This preview cannot be edited yet.");
@@ -388,6 +413,7 @@ export function VideoPreviewModal({
                   <VideoPreviewTimeline
                     segments={segmentDraft}
                     totalClipCount={selectedPreview.resolvedSegments.length}
+                    deletedClipOptions={deletedClipOptions}
                     previewFps={previewFps}
                     currentFrame={currentFrame}
                     totalFrames={draftDurationInFrames}
@@ -397,6 +423,7 @@ export function VideoPreviewModal({
                     onDurationChangeEnd={handleDurationChangeEnd}
                     onDurationChange={handleSegmentDurationChange}
                     onDeleteClip={handleDeleteSegment}
+                    onAddClip={handleAddSegment}
                     canUndo={undoStack.length > 0}
                     canRedo={redoStack.length > 0}
                     onUndo={handleUndoTimelineChange}

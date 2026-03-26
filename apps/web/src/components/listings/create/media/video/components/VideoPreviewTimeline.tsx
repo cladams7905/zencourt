@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Clapperboard, Redo2, Trash2, Undo2 } from "lucide-react";
+import { Clapperboard, Plus, Redo2, Trash2, Undo2 } from "lucide-react";
 import { LoadingImage } from "@web/src/components/ui/loading-image";
 import {
   Tooltip,
@@ -7,6 +7,11 @@ import {
   TooltipTrigger
 } from "@web/src/components/ui/tooltip";
 import { Button } from "@web/src/components/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger
+} from "@web/src/components/ui/popover";
 import type { TimelinePreviewResolvedSegment } from "@web/src/components/listings/create/media/video/components/ListingTimelinePreviewComposition";
 import { useScrollFade } from "@web/src/components/listings/create/shared/hooks/useScrollFade";
 import { useHorizontalDragAutoScroll } from "@web/src/components/listings/create/shared/hooks/useHorizontalDragAutoScroll";
@@ -23,6 +28,7 @@ import {
 type VideoPreviewTimelineProps = {
   segments: TimelinePreviewResolvedSegment[];
   totalClipCount: number;
+  deletedClipOptions: TimelinePreviewResolvedSegment[];
   previewFps: number;
   currentFrame: number;
   totalFrames: number;
@@ -32,6 +38,7 @@ type VideoPreviewTimelineProps = {
   onDurationChangeEnd?: () => void;
   onDurationChange?: (index: number, durationSeconds: number) => void;
   onDeleteClip?: (index: number) => void;
+  onAddClip?: (clipId: string) => void;
   canUndo?: boolean;
   canRedo?: boolean;
   onUndo?: () => void;
@@ -52,6 +59,7 @@ type ResizeState = {
 export function VideoPreviewTimeline({
   segments,
   totalClipCount,
+  deletedClipOptions,
   previewFps,
   currentFrame,
   totalFrames,
@@ -61,11 +69,19 @@ export function VideoPreviewTimeline({
   onDurationChangeEnd,
   onDurationChange,
   onDeleteClip,
+  onAddClip,
   canUndo = false,
   canRedo = false,
   onUndo,
   onRedo
 }: VideoPreviewTimelineProps) {
+  const formatClipLabel = React.useCallback((value: string) => {
+    return value
+      .split(/[\s_-]+/)
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ");
+  }, []);
   const items = React.useMemo(
     () => buildVideoPreviewTimelineItems(segments),
     [segments]
@@ -83,6 +99,7 @@ export function VideoPreviewTimeline({
     null
   );
   const [isScrubbing, setIsScrubbing] = React.useState(false);
+  const [isAddClipOpen, setIsAddClipOpen] = React.useState(false);
   const startResize = React.useCallback(
     (
       event: React.MouseEvent<HTMLElement>,
@@ -243,6 +260,56 @@ export function VideoPreviewTimeline({
             </TooltipTrigger>
             <TooltipContent side="top">Redo</TooltipContent>
           </Tooltip>
+          <Popover open={isAddClipOpen} onOpenChange={setIsAddClipOpen}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    aria-label="Add clip to timeline"
+                    className="h-7 w-7 rounded-full"
+                    disabled={deletedClipOptions.length === 0}
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                  </Button>
+                </PopoverTrigger>
+              </TooltipTrigger>
+              <TooltipContent side="top">Add clip</TooltipContent>
+            </Tooltip>
+            <PopoverContent align="end" className="w-64 p-0">
+              <div className="flex flex-col">
+                {deletedClipOptions.map((clipOption, optionIndex) => (
+                  <button
+                    key={`${clipOption.clipId}-${optionIndex}`}
+                    type="button"
+                    className="flex items-center gap-3 border-b border-border px-2 py-2 text-left transition-colors last:border-b-0 hover:bg-muted"
+                    onClick={() => {
+                      onAddClip?.(clipOption.clipId);
+                      setIsAddClipOpen(false);
+                    }}
+                  >
+                    <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md bg-muted">
+                      {clipOption.thumbnailSrc ? (
+                        <LoadingImage
+                          src={clipOption.thumbnailSrc}
+                          alt={`${clipOption.category ?? clipOption.clipId} clip thumbnail`}
+                          fill
+                          className="object-cover"
+                        />
+                      ) : null}
+                    </div>
+                    <span className="truncate text-sm font-medium text-foreground">
+                      {formatClipLabel(
+                        clipOption.category ?? clipOption.clipId
+                      )}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
           <div className="inline-flex h-7 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-border px-3 py-1 text-xs text-muted-foreground">
             <Clapperboard className="h-3.5 w-3.5 shrink-0" aria-hidden />
             {items.length}/{totalClipCount}

@@ -167,6 +167,9 @@ describe("VideoPreviewModal", () => {
     expect(
       screen.getByRole("button", { name: "Redo timeline change" })
     ).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Add clip to timeline" })
+    ).toBeDisabled();
     expect(screen.getByText("2/2")).toBeInTheDocument();
   });
 
@@ -491,6 +494,9 @@ describe("VideoPreviewModal", () => {
     );
 
     expect(screen.getByText("1/2")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Add clip to timeline" })
+    ).toBeEnabled();
 
     fireEvent.click(
       screen.getByRole("button", { name: "Undo timeline change" })
@@ -510,6 +516,46 @@ describe("VideoPreviewModal", () => {
     );
 
     expect(screen.getByText("2/2")).toBeInTheDocument();
+  });
+
+  it("adds a deleted clip back to the end of the timeline and supports undo", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <VideoPreviewModal
+        selectedPreview={createSelectedPreview()}
+        previewFps={30}
+        onOpenChange={mockOnOpenChange}
+        onSavePreviewText={mockOnSave}
+      />
+    );
+
+    fireEvent.click(screen.getByTestId("timeline-delete-clip-1-0"));
+    await waitFor(() => expect(screen.getByText("1/2")).toBeInTheDocument());
+
+    await user.click(screen.getByRole("button", { name: "Add clip to timeline" }));
+    await user.click(screen.getByRole("button", { name: /kitchen/i }));
+
+    await waitFor(() =>
+      expect(mockPlayer).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          inputProps: expect.objectContaining({
+            segments: expect.arrayContaining([
+              expect.objectContaining({ clipId: "clip-2" }),
+              expect.objectContaining({ clipId: "clip-1" })
+            ])
+          })
+        })
+      )
+    );
+
+    expect(screen.getByText("2/2")).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Undo timeline change" })
+    );
+
+    await waitFor(() => expect(screen.getByText("1/2")).toBeInTheDocument());
   });
 
   it("resizes a clip from the right edge, updates the player input, and caps at the max duration", async () => {
