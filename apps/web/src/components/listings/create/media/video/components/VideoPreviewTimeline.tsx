@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Clapperboard, Redo2, Undo2 } from "lucide-react";
+import { Clapperboard, Redo2, Trash2, Undo2 } from "lucide-react";
 import { LoadingImage } from "@web/src/components/ui/loading-image";
 import {
   Tooltip,
@@ -22,6 +22,7 @@ import {
 
 type VideoPreviewTimelineProps = {
   segments: TimelinePreviewResolvedSegment[];
+  totalClipCount: number;
   previewFps: number;
   currentFrame: number;
   totalFrames: number;
@@ -30,6 +31,7 @@ type VideoPreviewTimelineProps = {
   onDurationChangeStart?: () => void;
   onDurationChangeEnd?: () => void;
   onDurationChange?: (index: number, durationSeconds: number) => void;
+  onDeleteClip?: (index: number) => void;
   canUndo?: boolean;
   canRedo?: boolean;
   onUndo?: () => void;
@@ -49,6 +51,7 @@ type ResizeState = {
 
 export function VideoPreviewTimeline({
   segments,
+  totalClipCount,
   previewFps,
   currentFrame,
   totalFrames,
@@ -57,6 +60,7 @@ export function VideoPreviewTimeline({
   onDurationChangeStart,
   onDurationChangeEnd,
   onDurationChange,
+  onDeleteClip,
   canUndo = false,
   canRedo = false,
   onUndo,
@@ -121,12 +125,12 @@ export function VideoPreviewTimeline({
       const nextDuration = Number(
         Math.min(
           resizeState.maxDurationSeconds,
-            Math.max(
-              MIN_CLIP_DURATION_SECONDS,
-              resizeState.startDurationSeconds +
+          Math.max(
+            MIN_CLIP_DURATION_SECONDS,
+            resizeState.startDurationSeconds +
               directionalDelta / TIMELINE_PIXELS_PER_SECOND
-            )
-          ).toFixed(2)
+          )
+        ).toFixed(2)
       );
 
       onDurationChange(resizeState.index, nextDuration);
@@ -241,7 +245,7 @@ export function VideoPreviewTimeline({
           </Tooltip>
           <div className="inline-flex h-7 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-border px-3 py-1 text-xs text-muted-foreground">
             <Clapperboard className="h-3.5 w-3.5 shrink-0" aria-hidden />
-            {items.length} clips
+            {items.length}/{totalClipCount}
           </div>
         </div>
       </div>
@@ -353,6 +357,20 @@ export function VideoPreviewTimeline({
                       : undefined
                 }}
               >
+                <button
+                  type="button"
+                  aria-label={`Remove ${item.label} clip`}
+                  data-testid={`timeline-delete-${item.id}`}
+                  className="absolute right-6 top-2 z-10 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-background/70 text-foreground opacity-0 shadow-sm backdrop-blur-sm transition-opacity hover:bg-background/85 group-hover:opacity-100 disabled:pointer-events-none disabled:opacity-30"
+                  disabled={!onDeleteClip || items.length <= 1}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    onDeleteClip?.(index);
+                  }}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
                 <button
                   type="button"
                   data-testid={`timeline-resize-left-${item.id}`}

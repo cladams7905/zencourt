@@ -72,7 +72,9 @@ export function VideoPreviewModal({
 
   const handlePlayerRef = React.useCallback((player: PlayerRef | null) => {
     playerRef.current = player;
-    setPlayerInstance(player);
+    setPlayerInstance((currentPlayer) =>
+      currentPlayer === player ? currentPlayer : player
+    );
   }, []);
 
   const normalizedHook = hookDraft.trim();
@@ -147,6 +149,21 @@ export function VideoPreviewModal({
       });
     },
     [pushTimelineHistory]
+  );
+
+  const handleDeleteSegment = React.useCallback(
+    (index: number) => {
+      pendingSeekFrameRef.current = currentFrame;
+      setSegmentDraft((prev) => {
+        if (prev.length <= 1 || index < 0 || index >= prev.length) {
+          return prev;
+        }
+
+        pushTimelineHistory(prev);
+        return prev.filter((_, segmentIndex) => segmentIndex !== index);
+      });
+    },
+    [currentFrame, pushTimelineHistory]
   );
 
   const handleSave = React.useCallback(async () => {
@@ -370,6 +387,7 @@ export function VideoPreviewModal({
                 <div className="px-4 py-3 xl:flex xl:h-[248px] xl:min-h-[248px] xl:flex-col xl:overflow-hidden">
                   <VideoPreviewTimeline
                     segments={segmentDraft}
+                    totalClipCount={selectedPreview.resolvedSegments.length}
                     previewFps={previewFps}
                     currentFrame={currentFrame}
                     totalFrames={draftDurationInFrames}
@@ -378,6 +396,7 @@ export function VideoPreviewModal({
                     onDurationChangeStart={handleDurationChangeStart}
                     onDurationChangeEnd={handleDurationChangeEnd}
                     onDurationChange={handleSegmentDurationChange}
+                    onDeleteClip={handleDeleteSegment}
                     canUndo={undoStack.length > 0}
                     canRedo={redoStack.length > 0}
                     onUndo={handleUndoTimelineChange}
