@@ -11,7 +11,9 @@ import {
   mapListingImageToDisplayItem
 } from "@web/src/server/models/listingImages";
 import { getAllCachedListingContentForCreate } from "@web/src/server/infra/cache/listingContent/cache";
+import { getContentByListingId } from "@web/src/server/models/content";
 import type { ContentItem } from "@web/src/components/dashboard/components/ContentGrid";
+import { getUserMedia } from "@web/src/server/models/userMedia/queries";
 import {
   createVideoClip,
   createVideoClipVersion,
@@ -25,6 +27,12 @@ import {
 import type { DBVideoClip, DBVideoClipVersion } from "@db/types/models";
 import { ApiError } from "@web/src/server/errors/api";
 import { StatusCode } from "@shared/types/api";
+import {
+  buildSavedReelDedupKey,
+  mapSavedReelContentToCreateItem,
+  mapUserMediaToVideoItem
+} from "./reelContent";
+import { isSavedListingReelMetadata } from "@web/src/components/listings/create/shared/reels";
 
 function buildStableClipId(args: {
   listingId: string;
@@ -219,18 +227,51 @@ export async function getListingCreateViewData(
   userId: string,
   listingId: string
 ) {
-  const [clipVersionItems, listingImages, listingPostItems] = await Promise.all([
+  const [clipVersionItems, listingImages, cachedListingPostItems, savedContentRows, userMediaRows] = await Promise.all([
     getListingClipVersionItems(listingId),
     getListingImages(userId, listingId),
-    getAllCachedListingContentForCreate({ userId, listingId })
+    getAllCachedListingContentForCreate({ userId, listingId }),
+    getContentByListingId(userId, listingId),
+    getUserMedia(userId)
   ]);
 
-  const videoItems: ContentItem[] = clipVersionItems
+  const listingClipItems: ContentItem[] = clipVersionItems
     .map((clipItem) => clipItem.currentVersion)
-    .filter((clipVersion) => clipVersion.videoUrl || clipVersion.thumbnail);
+    .filter((clipVersion) => clipVersion.videoUrl || clipVersion.thumbnail)
+    .map((clipVersion) => ({
+      ...clipVersion,
+      reelClipSource: "listing_clip" as const
+    }));
+
+  const savedReelItems = savedContentRows
+    .map(mapSavedReelContentToCreateItem)
+    .filter((item): item is ContentItem => Boolean(item));
+  const staleCacheKeys = new Set(
+    savedContentRows
+      .map((row) =>
+        isSavedListingReelMetadata(row.metadata)
+          ? buildSavedReelDedupKey(row.metadata)
+          : null
+      )
+      .filter((value): value is string => Boolean(value))
+  );
+  const listingPostItems = [
+    ...savedReelItems,
+    ...cachedListingPostItems.filter(
+      (item) =>
+        !staleCacheKeys.has(`${item.cacheKeyTimestamp}:${item.cacheKeyId}`)
+    ).map((item) => ({
+      ...item,
+      contentSource: "cached_create" as const
+    }))
+  ];
+
+  const userMediaVideoItems = userMediaRows
+    .map(mapUserMediaToVideoItem)
+    .filter((item): item is ContentItem => Boolean(item));
 
   return {
-    videoItems,
+    videoItems: [...listingClipItems, ...userMediaVideoItems],
     clipVersionItems,
     listingPostItems,
     listingImages: listingImages.map(mapListingImageToDisplayItem)

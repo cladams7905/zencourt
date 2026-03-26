@@ -5,7 +5,7 @@ import type { ContentItem } from "@web/src/components/dashboard/components/Conte
 import type { PreviewTimelinePlan } from "@web/src/components/listings/create/domain/previewTimeline";
 import type { ListingContentSubcategory } from "@shared/types/models";
 import type { ListingOpenHouseContext } from "@web/src/lib/domain/listings/openHouse";
-import { updateCachedListingVideoText } from "@web/src/server/actions/listings/cache";
+import { saveListingVideoReel } from "@web/src/server/actions/listings/reels";
 import { buildPlayablePreviews } from "@web/src/components/listings/create/media/video/videoPreviewViewModel";
 import { PREVIEW_FPS } from "@web/src/components/listings/create/media/video/previewConstants";
 import { useHoverReveal } from "@web/src/components/listings/create/media/video/useHoverReveal";
@@ -24,12 +24,9 @@ type ListingVideoPreviewGridProps = {
   openHouseContext: ListingOpenHouseContext | null;
   forceSimpleOverlayTemplate?: boolean;
   loadingCount?: number;
-  onUpdatePreviewText: (params: {
-    contentItemId: string;
-    hook: string;
-    caption: string;
-    orderedClipIds: string[];
-    clipDurationOverrides: Record<string, number>;
+  onReplacePreviewItem: (params: {
+    previousContentItemId: string;
+    nextItem: ContentItem;
   }) => void;
 };
 
@@ -43,7 +40,7 @@ export function ListingVideoPreviewGrid({
   openHouseContext,
   forceSimpleOverlayTemplate = false,
   loadingCount = 0,
-  onUpdatePreviewText
+  onReplacePreviewItem
 }: ListingVideoPreviewGridProps) {
   const [selectedPlanId, setSelectedPlanId] = React.useState<string | null>(
     null
@@ -91,25 +88,14 @@ export function ListingVideoPreviewGrid({
         throw new Error("This preview cannot be edited yet.");
       }
 
-      await updateCachedListingVideoText(listingId, {
-        cacheKeyTimestamp: params.captionItemKey.cacheKeyTimestamp,
-        cacheKeyId: params.captionItemKey.cacheKeyId,
-        subcategory: selectedPreview.captionItem.listingSubcategory ?? "",
-        hook: params.hook,
-        caption: params.caption,
-        orderedClipIds: params.orderedClipIds,
-        clipDurationOverrides: params.clipDurationOverrides
-      });
+      const savedItem = await saveListingVideoReel(listingId, params);
 
-      onUpdatePreviewText({
-        contentItemId: selectedPreview.captionItem.id,
-        hook: params.hook,
-        caption: params.caption,
-        orderedClipIds: params.orderedClipIds,
-        clipDurationOverrides: params.clipDurationOverrides
+      onReplacePreviewItem({
+        previousContentItemId: selectedPreview.captionItem.id,
+        nextItem: savedItem
       });
     },
-    [listingId, onUpdatePreviewText, selectedPreview]
+    [listingId, onReplacePreviewItem, selectedPreview]
   );
 
   return (
@@ -146,6 +132,7 @@ export function ListingVideoPreviewGrid({
 
       <VideoPreviewModal
         selectedPreview={selectedPreview}
+        userMediaItems={items.filter((item) => item.reelClipSource === "user_media")}
         previewFps={PREVIEW_FPS}
         onOpenChange={(open) => {
           if (!open) {

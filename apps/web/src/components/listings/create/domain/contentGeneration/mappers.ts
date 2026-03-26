@@ -38,15 +38,24 @@ export function mapStreamedItemsToContentItems(params: {
   batchItemIds: string[];
   subcategory: ListingContentSubcategory;
   mediaType: "video" | "image";
+  cacheKeyTimestamp?: number;
 }): ContentItem[] {
-  return params.items.map((item, index) =>
-    buildGeneratedContentItem({
+  return params.items.map((item, index) => {
+    const base = buildGeneratedContentItem({
       id: params.batchItemIds[index]!,
       item,
       subcategory: params.subcategory,
       mediaType: params.mediaType
-    })
-  );
+    });
+    if (typeof params.cacheKeyTimestamp === "number") {
+      return {
+        ...base,
+        cacheKeyTimestamp: params.cacheKeyTimestamp,
+        cacheKeyId: index
+      };
+    }
+    return base;
+  });
 }
 
 export type ContentItemWithCacheKey = ContentItem & {

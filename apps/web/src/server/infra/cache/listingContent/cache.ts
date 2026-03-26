@@ -377,6 +377,56 @@ export async function updateCachedListingContentText(params: {
 }
 
 /**
+ * Updates the clip timeline state for one cached video item.
+ * Returns the updated item, or null when the cache entry does not exist.
+ */
+export async function updateCachedListingContentTimeline(params: {
+  userId: string;
+  listingId: string;
+  subcategory: ListingContentSubcategory;
+  mediaType: ListingMediaType;
+  timestamp: number;
+  id: number;
+  orderedClipIds: string[];
+  clipDurationOverrides?: Record<string, number> | null;
+}): Promise<ListingContentItem | null> {
+  const redis = getSharedRedisClient();
+  if (!redis) return null;
+  const key = buildListingContentItemKey({
+    userId: params.userId,
+    listingId: params.listingId,
+    subcategory: params.subcategory,
+    mediaType: params.mediaType,
+    timestamp: params.timestamp,
+    id: params.id
+  });
+  try {
+    const existing = await redis.get<ListingContentItem>(key);
+    if (!existing || typeof existing !== "object") {
+      return null;
+    }
+
+    const updated: ListingContentItem = {
+      ...existing,
+      orderedClipIds: params.orderedClipIds,
+      clipDurationOverrides: params.clipDurationOverrides ?? null
+    };
+
+    await redis.set(key, updated, {
+      ex: LISTING_CONTENT_CACHE_TTL_SECONDS
+    });
+
+    return updated;
+  } catch (error) {
+    logger.warn(
+      { err: normalizeErrorForLogging(error), cacheKey: key },
+      "Failed updating listing content item timeline"
+    );
+    return null;
+  }
+}
+
+/**
  * Deletes one cached listing content item by its key. No-op if Redis is unavailable.
  */
 export async function deleteCachedListingContentItem(params: {

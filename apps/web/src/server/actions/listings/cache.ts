@@ -4,7 +4,8 @@ import { withServerActionCaller } from "@web/src/server/infra/logger/callContext
 import { LISTING_CONTENT_SUBCATEGORIES } from "@shared/types/models";
 import {
   deleteCachedListingContentItem as deleteCachedListingContentItemService,
-  updateCachedListingContentText as updateCachedListingContentTextService
+  updateCachedListingContentText as updateCachedListingContentTextService,
+  updateCachedListingContentTimeline as updateCachedListingContentTimelineService
 } from "@web/src/server/infra/cache/listingContent/cache";
 import { DomainValidationError } from "@web/src/server/errors/domain";
 import { requireAuthenticatedUser } from "@web/src/server/actions/_auth/api";
@@ -25,6 +26,14 @@ export type UpdateCachedListingVideoTextParams = {
   subcategory: string;
   hook: string;
   caption: string;
+  orderedClipIds: string[];
+  clipDurationOverrides?: Record<string, number>;
+};
+
+export type UpdateCachedListingVideoTimelineParams = {
+  cacheKeyTimestamp: number;
+  cacheKeyId: number;
+  subcategory: string;
   orderedClipIds: string[];
   clipDurationOverrides?: Record<string, number>;
 };
@@ -144,6 +153,84 @@ export const updateCachedListingVideoText = withServerActionCaller(
       id: cacheKeyId,
       hook,
       caption,
+      orderedClipIds,
+      clipDurationOverrides
+    });
+
+    if (!updated) {
+      throw new DomainValidationError("Cached listing content item not found");
+    }
+
+    return updated;
+  }
+);
+
+export const updateCachedListingVideoTimeline = withServerActionCaller(
+  "updateCachedListingVideoTimeline",
+  async (listingId: string, params: UpdateCachedListingVideoTimelineParams) => {
+    const user = await requireAuthenticatedUser();
+    await requireListingAccess(listingId, user.id);
+
+    const {
+      cacheKeyTimestamp,
+      cacheKeyId,
+      subcategory: subcategoryRaw,
+      orderedClipIds: orderedClipIdsRaw,
+      clipDurationOverrides: clipDurationOverridesRaw
+    } = params;
+    const subcategory = subcategoryRaw?.trim();
+    const orderedClipIds = Array.isArray(orderedClipIdsRaw)
+      ? orderedClipIdsRaw
+          .map((clipId) => (typeof clipId === "string" ? clipId.trim() : ""))
+          .filter(Boolean)
+      : [];
+    const clipDurationOverrides =
+      clipDurationOverridesRaw &&
+      typeof clipDurationOverridesRaw === "object" &&
+      !Array.isArray(clipDurationOverridesRaw)
+        ? Object.fromEntries(
+            Object.entries(clipDurationOverridesRaw)
+              .map(
+                ([clipId, duration]): [string, number | null] => [
+                  clipId.trim(),
+                  typeof duration === "number"
+                    ? Number(duration.toFixed(2))
+                    : null
+                ]
+              )
+              .filter(
+                (entry): entry is [string, number] =>
+                  Boolean(entry[0]) && entry[1] !== null && entry[1] > 0
+              )
+          )
+        : {};
+
+    if (
+      typeof cacheKeyTimestamp !== "number" ||
+      !Number.isFinite(cacheKeyTimestamp) ||
+      cacheKeyTimestamp <= 0 ||
+      typeof cacheKeyId !== "number" ||
+      !Number.isFinite(cacheKeyId) ||
+      cacheKeyId < 0 ||
+      !subcategory ||
+      !(LISTING_CONTENT_SUBCATEGORIES as readonly string[]).includes(
+        subcategory
+      ) ||
+      orderedClipIds.length === 0
+    ) {
+      throw new DomainValidationError(
+        "cacheKeyTimestamp, cacheKeyId, valid subcategory, and orderedClipIds are required"
+      );
+    }
+
+    const updated = await updateCachedListingContentTimelineService({
+      userId: user.id,
+      listingId,
+      subcategory:
+        subcategory as (typeof LISTING_CONTENT_SUBCATEGORIES)[number],
+      mediaType: MEDIA_TYPE_VIDEO,
+      timestamp: cacheKeyTimestamp,
+      id: cacheKeyId,
       orderedClipIds,
       clipDurationOverrides
     });

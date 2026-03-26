@@ -11,10 +11,10 @@ jest.mock(
       position: "center",
       background: "black",
       font: "serif-classic",
-      fontPairing: "classic-clean"
+      fontPairing: "editorial-clean"
     }),
-    pickRichOverlayFontPairing: () => "classic-clean",
-    pickRichOverlayFontPairingForVariation: () => "modern-script",
+    pickRichOverlayFontPairing: () => "editorial-clean",
+    pickRichOverlayFontPairingForVariation: () => "contemporary-script",
     pickRichOverlayPosition: () => "top-third",
     buildOverlayTemplateLines: (
       textOverlay: { headline?: string | null; accent_top?: string | null; accent_bottom?: string | null } | null | undefined,
@@ -100,7 +100,7 @@ describe("imagePreviewViewModel", () => {
       templatePattern: "sandwich",
       position: "top-third",
       background: "none",
-      fontPairing: "modern-script"
+      fontPairing: "contemporary-script"
     });
   });
 
@@ -121,7 +121,7 @@ describe("imagePreviewViewModel", () => {
       templatePattern: "simple",
       position: "center",
       background: "black",
-      fontPairing: "classic-clean"
+      fontPairing: "editorial-clean"
     });
   });
 });

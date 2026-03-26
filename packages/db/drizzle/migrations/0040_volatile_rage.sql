@@ -1,0 +1,1 @@
+ALTER TABLE "user_media" ADD COLUMN "duration_seconds" integer;

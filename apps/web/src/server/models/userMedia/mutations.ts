@@ -11,6 +11,7 @@ type UserMediaDbRecordInput = {
   type: "image" | "video";
   url: string;
   thumbnailUrl?: string | null;
+  durationSeconds?: number | null;
 };
 
 export async function createUserMediaRecords(
@@ -32,6 +33,12 @@ export async function createUserMediaRecords(
         type: upload.type,
         url: upload.url,
         thumbnailUrl: upload.thumbnailUrl ?? null,
+        durationSeconds:
+          typeof upload.durationSeconds === "number" &&
+          Number.isFinite(upload.durationSeconds) &&
+          upload.durationSeconds > 0
+            ? Number(upload.durationSeconds.toFixed(2))
+            : null,
         usageCount: 0,
         uploadedAt: now
       }));

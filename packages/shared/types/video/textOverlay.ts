@@ -25,15 +25,15 @@ export type OverlayTemplatePattern =
   | "accent-headline";
 
 export type OverlayFontPairing =
-  | "elegant-script"
-  | "modern-script"
-  | "classic-clean"
-  | "script-forward"
-  | "block-rouge-italiana"
-  | "block-league-dm"
-  | "block-rouge-onest"
-  | "serif-dm-gwendolyn"
-  | "serif-italiana-rouge";
+  | "editorial-script"
+  | "contemporary-script"
+  | "editorial-clean"
+  | "statement-script"
+  | "stacked-accent"
+  | "stacked-serif"
+  | "stacked-modern"
+  | "refined-serif"
+  | "heritage-serif";
 
 export interface OverlayLine {
   text: string;

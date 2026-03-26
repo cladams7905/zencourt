@@ -25,6 +25,14 @@ export type GenerationModel =
   | "runway-gen4-turbo"
   | "kling1.6";
 export type ListingMediaType = "video" | "image";
+export type ReelClipSourceType = "listing_clip" | "user_media";
+export type CreateViewContentSource = "cached_create" | "saved_content";
+
+export type ReelSequenceItem = {
+  sourceType: ReelClipSourceType;
+  sourceId: string;
+  durationSeconds: number;
+};
 
 export type TextOverlayInput = {
   accent_top?: string | null;
@@ -69,6 +77,10 @@ export type DashboardContentItem = {
   generatedAt?: string | Date | null;
   orderedClipIds?: string[] | null;
   clipDurationOverrides?: Record<string, number> | null;
+  contentSource?: CreateViewContentSource;
+  savedContentId?: string;
+  reelSequence?: ReelSequenceItem[] | null;
+  reelClipSource?: ReelClipSourceType;
 };
 
 export type GeneratedContentState = Record<

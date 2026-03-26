@@ -11,6 +11,7 @@ export const userMedia = pgTable(
     type: mediaTypeEnum("type").notNull(),
     url: text("url").notNull(),
     thumbnailUrl: text("thumbnail_url"),
+    durationSeconds: integer("duration_seconds"),
     usageCount: integer("usage_count").default(0).notNull(),
     uploadedAt: timestamp("uploaded_at").defaultNow().notNull()
   },

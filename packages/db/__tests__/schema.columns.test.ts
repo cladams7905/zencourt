@@ -106,6 +106,7 @@ describe("db schema column contracts", () => {
   it("keeps expected user media and video generation columns", () => {
     expect(columnKeys(userMedia)).toEqual(
       [
+        "durationSeconds",
         "id",
         "thumbnailUrl",
         "type",
@@ -136,7 +137,6 @@ describe("db schema column contracts", () => {
         "status",
         "thumbnailUrl",
         "updatedAt",
-        "videoClipId",
         "videoClipVersionId",
         "videoGenBatchId",
         "videoUrl"

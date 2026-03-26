@@ -6,6 +6,7 @@ const mockToastError = jest.fn();
 const mockRequestStream = jest.fn();
 const mockStreamEvents = jest.fn();
 const mockExtractJsonItems = jest.fn();
+const mockUpdateCachedListingVideoTimeline = jest.fn();
 
 jest.mock("sonner", () => ({
   toast: {
@@ -25,10 +26,15 @@ jest.mock("@web/src/lib/sse/contentExtractor", () => ({
   extractJsonItemsFromStream: (...args: unknown[]) => mockExtractJsonItems(...args)
 }));
 
-function eventsGenerator(events: unknown[]) {
+jest.mock("@web/src/server/actions/listings/cache", () => ({
+  updateCachedListingVideoTimeline: (...args: unknown[]) =>
+    mockUpdateCachedListingVideoTimeline(...args)
+}));
+
+function eventsGenerator(events: Array<unknown | Promise<unknown>>) {
   return (async function* () {
     for (const event of events) {
-      yield event;
+      yield await event;
     }
   })();
 }
@@ -38,6 +44,7 @@ describe("useContentGeneration", () => {
     jest.clearAllMocks();
     mockRequestStream.mockResolvedValue({} as ReadableStreamDefaultReader<Uint8Array>);
     mockExtractJsonItems.mockReturnValue([]);
+    mockUpdateCachedListingVideoTimeline.mockResolvedValue(undefined);
   });
 
   it("handles successful generation flow", async () => {
@@ -60,7 +67,8 @@ describe("useContentGeneration", () => {
         listingId: "listing-1",
         listingPostItems: [],
         activeMediaTab: "videos",
-        activeSubcategory: "new_listing"
+        activeSubcategory: "new_listing",
+        videoItems: []
       })
     );
 
@@ -89,7 +97,8 @@ describe("useContentGeneration", () => {
         listingId: "listing-1",
         listingPostItems: [],
         activeMediaTab: "images",
-        activeSubcategory: "new_listing"
+        activeSubcategory: "new_listing",
+        videoItems: []
       })
     );
 
@@ -115,7 +124,8 @@ describe("useContentGeneration", () => {
         listingId: "listing-1",
         listingPostItems: [{ id: "existing-1" }],
         activeMediaTab: "videos",
-        activeSubcategory: "new_listing"
+        activeSubcategory: "new_listing",
+        videoItems: []
       })
     );
 
@@ -140,7 +150,8 @@ describe("useContentGeneration", () => {
         listingId: "listing-1",
         listingPostItems: [],
         activeMediaTab: "videos",
-        activeSubcategory: "new_listing"
+        activeSubcategory: "new_listing",
+        videoItems: []
       })
     );
 
@@ -163,7 +174,8 @@ describe("useContentGeneration", () => {
         listingId: "listing-1",
         listingPostItems: [],
         activeMediaTab: "videos",
-        activeSubcategory: "new_listing"
+        activeSubcategory: "new_listing",
+        videoItems: []
       })
     );
 
@@ -189,7 +201,8 @@ describe("useContentGeneration", () => {
           listingId: "listing-1",
           listingPostItems: props.listingPostItems,
           activeMediaTab: "images",
-          activeSubcategory: "new_listing"
+          activeSubcategory: "new_listing",
+          videoItems: []
         }),
       {
         initialProps: {
@@ -209,6 +222,178 @@ describe("useContentGeneration", () => {
     expect(result.current.localPostItems).toEqual([
       { id: "cached-open-house-1" }
     ]);
+  });
+
+  it("persists initial ordered clip ids and duration overrides for generated cached video reels", async () => {
+    mockStreamEvents.mockReturnValue(
+      eventsGenerator([
+        {
+          type: "done",
+          items: [{ hook: "Hook", caption: "Caption" }],
+          meta: { cache_key_timestamp: 123 }
+        }
+      ])
+    );
+
+    const { result } = renderHook(() =>
+      useContentGeneration({
+        listingId: "listing-1",
+        listingPostItems: [],
+        activeMediaTab: "videos",
+        activeSubcategory: "new_listing",
+        videoItems: [
+          {
+            id: "clip-1",
+            videoUrl: "https://example.com/1.mp4",
+            durationSeconds: 3,
+            category: "kitchen"
+          },
+          {
+            id: "clip-2",
+            videoUrl: "https://example.com/2.mp4",
+            durationSeconds: 4,
+            category: "exterior"
+          }
+        ] as never
+      })
+    );
+
+    await act(async () => {
+      await result.current.generateSubcategoryContent("new_listing");
+    });
+
+    await waitFor(() => {
+      expect(mockUpdateCachedListingVideoTimeline).toHaveBeenCalledTimes(1);
+    });
+
+    const generatedItem = result.current.localPostItems[0] as {
+      orderedClipIds?: string[];
+      clipDurationOverrides?: Record<string, number>;
+    };
+
+    expect(generatedItem.orderedClipIds).toBeDefined();
+    expect(generatedItem.orderedClipIds).toHaveLength(2);
+    expect(generatedItem.clipDurationOverrides).toEqual(
+      expect.objectContaining({
+        [generatedItem.orderedClipIds![0]!]: expect.any(Number),
+        [generatedItem.orderedClipIds![1]!]: expect.any(Number)
+      })
+    );
+    expect(mockUpdateCachedListingVideoTimeline).toHaveBeenCalledWith(
+      "listing-1",
+      expect.objectContaining({
+        cacheKeyTimestamp: 123,
+        cacheKeyId: 0,
+        subcategory: "new_listing",
+        orderedClipIds: generatedItem.orderedClipIds,
+        clipDurationOverrides: generatedItem.clipDurationOverrides
+      })
+    );
+  });
+
+  it("applies cache identity to streamed video items before the final done event", async () => {
+    mockExtractJsonItems.mockReturnValueOnce([{ hook: "Hook", caption: "Caption" }]);
+    mockStreamEvents.mockReturnValue(
+      eventsGenerator([
+        {
+          type: "meta",
+          meta: { cache_key_timestamp: 123 }
+        },
+        {
+          type: "delta",
+          text: '[{"hook":"Hook","caption":"Caption"}'
+        }
+      ])
+    );
+
+    const { result } = renderHook(() =>
+      useContentGeneration({
+        listingId: "listing-1",
+        listingPostItems: [],
+        activeMediaTab: "videos",
+        activeSubcategory: "new_listing",
+        videoItems: [
+          {
+            id: "clip-1",
+            videoUrl: "https://example.com/1.mp4",
+            durationSeconds: 3,
+            category: "kitchen"
+          },
+          {
+            id: "clip-2",
+            videoUrl: "https://example.com/2.mp4",
+            durationSeconds: 4,
+            category: "exterior"
+          }
+        ] as never
+      })
+    );
+
+    await act(async () => {
+      await result.current.generateSubcategoryContent("new_listing");
+    });
+
+    expect(result.current.localPostItems[0]).toEqual(
+      expect.objectContaining({
+        cacheKeyTimestamp: 123,
+        cacheKeyId: 0
+      })
+    );
+  });
+
+  it("reduces loading skeleton count as streamed reel items become visible", async () => {
+    mockExtractJsonItems.mockReturnValueOnce([
+      { hook: "Hook 1", caption: "Caption 1" }
+    ]);
+    let releaseDone!: () => void;
+    const holdDone = new Promise<void>((resolve) => {
+      releaseDone = resolve;
+    });
+    mockStreamEvents.mockReturnValue(
+      eventsGenerator([
+        {
+          type: "meta",
+          meta: { cache_key_timestamp: 123 }
+        },
+        {
+          type: "delta",
+          text: '[{"hook":"Hook 1","caption":"Caption 1"}'
+        },
+        holdDone.then(() => ({
+          type: "done" as const,
+          items: [{ hook: "Hook 1", caption: "Caption 1" }],
+          meta: { cache_key_timestamp: 123 }
+        }))
+      ])
+    );
+
+    const { result } = renderHook(() =>
+      useContentGeneration({
+        listingId: "listing-1",
+        listingPostItems: [],
+        activeMediaTab: "videos",
+        activeSubcategory: "new_listing",
+        videoItems: []
+      })
+    );
+
+    let generationPromise: Promise<void>;
+    act(() => {
+      generationPromise = result.current.generateSubcategoryContent("new_listing", {
+        generationCount: 4
+      });
+    });
+
+    await waitFor(() => {
+      expect(result.current.localPostItems).toHaveLength(1);
+    });
+
+    expect(result.current.loadingCount).toBe(3);
+
+    releaseDone();
+    await act(async () => {
+      await generationPromise;
+    });
   });
 
 });

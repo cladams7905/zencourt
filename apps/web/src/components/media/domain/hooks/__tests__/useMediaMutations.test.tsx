@@ -26,6 +26,7 @@ const initialMedia: DBUserMedia[] = [
     type: "image",
     url: "https://x/image.jpg",
     thumbnailUrl: null,
+    durationSeconds: null,
     usageCount: 0,
     uploadedAt: new Date("2025-01-01T00:00:00.000Z")
   }
@@ -73,7 +74,7 @@ describe("useMediaMutations", () => {
 
     await act(async () => {
       await result.current.handleCreateRecords([
-        { key: "k1", type: "image", thumbnailKey: undefined }
+        { key: "k1", type: "image", thumbnailKey: undefined, durationSeconds: null }
       ]);
     });
 

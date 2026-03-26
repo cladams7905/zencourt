@@ -146,4 +146,58 @@ describe("contentGeneration/commands", () => {
       })
     );
   });
+
+  it("emits cache metadata before video delta events so streamed reels can use stable cache identity", async () => {
+    const upstreamStream = new ReadableStream({
+      start(controller) {
+        controller.close();
+      }
+    });
+    mockRunContentGeneration.mockResolvedValue({
+      stream: upstreamStream,
+      status: 200
+    });
+    mockParseAndValidateParams.mockReturnValue({
+      listingId: "listing-1",
+      subcategory: "new_listing",
+      mediaType: "video",
+      focus: "",
+      notes: "",
+      generationNonce: "",
+      generationCount: 1,
+      templateId: "tpl-1"
+    });
+    mockResolveListingContext.mockReturnValue({
+      userId: "user-1",
+      listingId: "listing-1",
+      subcategory: "new_listing",
+      mediaType: "video"
+    });
+    mockConsumeSseStream.mockImplementation(
+      async (
+        _stream: ReadableStream,
+        onEvent: (event: { type: "delta"; text: string }) => Promise<void>
+      ) => {
+        await onEvent({
+          type: "delta",
+          text: '[{"hook":"Hook"}'
+        });
+      }
+    );
+
+    const result = await generateListingContentForCurrentUser("listing-1", {
+      subcategory: "new_listing"
+    });
+    const reader = result.stream.getReader();
+    await reader.read();
+
+    expect(mockEncodeSseEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "meta",
+        meta: expect.objectContaining({
+          cache_key_timestamp: expect.any(Number)
+        })
+      })
+    );
+  });
 });

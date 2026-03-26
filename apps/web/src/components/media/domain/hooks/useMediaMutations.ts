@@ -27,7 +27,12 @@ export const useMediaMutations = ({
 
   const handleCreateRecords = React.useCallback(
     async (
-      records: Array<{ key: string; type: UserMediaType; thumbnailKey?: string }>
+      records: Array<{
+        key: string;
+        type: UserMediaType;
+        thumbnailKey?: string;
+        durationSeconds?: number | null;
+      }>
     ) => {
       const created = await createUserMediaRecordsForCurrentUser(records);
       setMediaItems((prev) => [...created, ...prev]);

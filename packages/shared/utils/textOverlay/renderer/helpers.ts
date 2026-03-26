@@ -1,4 +1,4 @@
-import { OVERLAY_ITALIANA_FONT_FAMILY } from "../assets/index";
+import { OVERLAY_DISPLAY_SERIF_FONT_FAMILY } from "../assets/index";
 
 export function normalizeOverlayLineText(text: string): string {
   const trimmed = text.trim();
@@ -31,11 +31,11 @@ export function isRougeFont(fontFamily: string): boolean {
   );
 }
 
-export function isItalianaFont(fontFamily: string): boolean {
+export function isDisplaySerifFont(fontFamily: string): boolean {
   return (
-    fontFamily.includes("var(--font-italiana") ||
-    fontFamily.includes("Italiana") ||
-    fontFamily.includes(OVERLAY_ITALIANA_FONT_FAMILY)
+    fontFamily.includes("var(--font-noto-serif-display") ||
+    fontFamily.includes("Noto Serif Display") ||
+    fontFamily.includes(OVERLAY_DISPLAY_SERIF_FONT_FAMILY)
   );
 }
 

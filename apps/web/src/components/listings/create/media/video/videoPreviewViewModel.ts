@@ -30,6 +30,35 @@ interface SlideOverlayData {
   textOverlay?: TextOverlayInput | null;
 }
 
+function buildPreviewStyleSeed(
+  planId: string,
+  captionItem: ContentItem | null
+): string {
+  if (!captionItem) {
+    return `${planId}:no-caption`;
+  }
+
+  if (
+    captionItem.contentSource === "saved_content" &&
+    typeof captionItem.savedContentId === "string"
+  ) {
+    return `${planId}:saved:${captionItem.savedContentId}`;
+  }
+
+  const cachedCaptionItem = captionItem as ContentItem & {
+    cacheKeyTimestamp?: number;
+    cacheKeyId?: number;
+  };
+  if (
+    typeof cachedCaptionItem.cacheKeyTimestamp === "number" &&
+    typeof cachedCaptionItem.cacheKeyId === "number"
+  ) {
+    return `${planId}:cached:${cachedCaptionItem.cacheKeyTimestamp}:${cachedCaptionItem.cacheKeyId}`;
+  }
+
+  return `${planId}:${captionItem.id}`;
+}
+
 function getSlideOverlayData(
   captionItem: ContentItem | null
 ): SlideOverlayData[] {
@@ -312,27 +341,34 @@ export function buildPlayablePreviews(params: {
         ): segment is NonNullable<typeof segment> => segment !== null
       );
 
-    if (resolvedSegments.length < 2) {
-      return null;
-    }
-
     const captionItem = params.captionItems.at(index) ?? null;
     const captionItemKey =
-      captionItem &&
-      typeof (captionItem as ContentItem & { cacheKeyTimestamp?: number }).cacheKeyTimestamp ===
-        "number" &&
-      typeof (captionItem as ContentItem & { cacheKeyId?: number }).cacheKeyId ===
-        "number"
+      captionItem?.contentSource === "saved_content" &&
+      typeof captionItem.savedContentId === "string"
         ? {
+            contentSource: "saved_content" as const,
+            savedContentId: captionItem.savedContentId
+          }
+        : captionItem &&
+            typeof (captionItem as ContentItem & { cacheKeyTimestamp?: number }).cacheKeyTimestamp ===
+              "number" &&
+            typeof (captionItem as ContentItem & { cacheKeyId?: number }).cacheKeyId ===
+              "number"
+          ? {
+            contentSource: "cached_create" as const,
             cacheKeyTimestamp: (
               captionItem as ContentItem & { cacheKeyTimestamp: number }
             ).cacheKeyTimestamp,
             cacheKeyId: (captionItem as ContentItem & { cacheKeyId: number }).cacheKeyId,
+            subcategory: captionItem.listingSubcategory ?? params.listingSubcategory,
             mediaType: "video" as const
           }
-        : undefined;
+          : undefined;
+    if (resolvedSegments.length < 1) {
+      return null;
+    }
     const slideOverlayData = getSlideOverlayData(captionItem);
-    const seed = `${plan.id}:${captionItem?.id ?? "no-caption"}`;
+    const seed = buildPreviewStyleSeed(plan.id, captionItem);
     const overlayVariant = pickPreviewTextOverlayVariant(seed);
 
     const segmentsWithOverlays = resolvedSegments.map(

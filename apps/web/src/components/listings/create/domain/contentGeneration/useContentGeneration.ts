@@ -20,6 +20,8 @@ import {
   streamContentGenerationEvents
 } from "./stream";
 import type { StreamedContentItem } from "./types";
+import { buildListingCreatePreviewPlans } from "@web/src/components/listings/create/domain/useListingCreatePreviewPlans";
+import { updateCachedListingVideoTimeline } from "@web/src/server/actions/listings/cache";
 
 const DEFAULT_GENERATION_COUNT = GENERATED_BATCH_SIZE;
 
@@ -40,9 +42,12 @@ function buildContentItemRevision(item: ContentItem): string {
     item.brollQuery ?? "",
     (item.orderedClipIds ?? []).join("|"),
     JSON.stringify(item.clipDurationOverrides ?? {}),
+    JSON.stringify(item.reelSequence ?? []),
     bodyRevision,
     String(cacheIdentity.cacheKeyTimestamp ?? ""),
-    String(cacheIdentity.cacheKeyId ?? "")
+    String(cacheIdentity.cacheKeyId ?? ""),
+    item.contentSource ?? "",
+    item.savedContentId ?? ""
   ].join("::");
 }
 
@@ -62,6 +67,7 @@ export function useContentGeneration(params: {
   listingPostItems: ContentItem[];
   activeMediaTab: ListingCreateMediaTab;
   activeSubcategory: ListingContentSubcategory;
+  videoItems: ContentItem[];
 }): {
   localPostItems: ContentItem[];
   isGenerating: boolean;
@@ -72,16 +78,14 @@ export function useContentGeneration(params: {
     options?: { forceNewBatch?: boolean; generationCount?: number; templateId?: string }
   ) => Promise<void>;
   removeContentItem: (contentItemId: string) => void;
-  updateContentItemText: (params: {
-    contentItemId: string;
-    hook: string;
-    caption: string;
-    orderedClipIds: string[];
-    clipDurationOverrides: Record<string, number>;
+  replaceContentItem: (params: {
+    previousContentItemId: string;
+    nextItem: ContentItem;
   }) => void;
 } {
   const { listingId, listingPostItems, activeMediaTab, activeSubcategory } =
     params;
+  const { videoItems } = params;
 
   const [localPostItems, setLocalPostItems] =
     React.useState<ContentItem[]>(listingPostItems);
@@ -98,6 +102,7 @@ export function useContentGeneration(params: {
   const activeBatchIdRef = React.useRef<string>("");
   const activeBatchItemIdsRef = React.useRef<string[]>([]);
   const activeGenerationCountRef = React.useRef<number>(DEFAULT_GENERATION_COUNT);
+  const activeCacheKeyTimestampRef = React.useRef<number | null>(null);
   const lastSyncedServerRevisionRef = React.useRef<string>("");
   const listingPostItemsSnapshot = React.useMemo(
     () => buildListingPostItemsRevision(listingPostItems),
@@ -138,6 +143,7 @@ export function useContentGeneration(params: {
       setGenerationError(null);
       streamBufferRef.current = "";
       parsedItemsRef.current = [];
+      activeCacheKeyTimestampRef.current = null;
 
       const resolvedMediaType: "video" | "image" =
         activeMediaTab === "videos" ? "video" : "image";
@@ -157,6 +163,14 @@ export function useContentGeneration(params: {
         let didReceiveDone = false;
 
         for await (const event of streamContentGenerationEvents(reader)) {
+          if (event.type === "meta") {
+            activeCacheKeyTimestampRef.current =
+              typeof event.meta?.cache_key_timestamp === "number"
+                ? event.meta.cache_key_timestamp
+                : null;
+            continue;
+          }
+
           if (event.type === "delta") {
             streamBufferRef.current += event.text;
             const parsedItems = extractJsonItemsFromStream<StreamedContentItem>(
@@ -175,7 +189,11 @@ export function useContentGeneration(params: {
                 items: parsedItems,
                 batchItemIds: activeBatchItemIdsRef.current,
                 subcategory,
-                mediaType: resolvedMediaType
+                mediaType: resolvedMediaType,
+                cacheKeyTimestamp:
+                  resolvedMediaType === "video"
+                    ? activeCacheKeyTimestampRef.current ?? undefined
+                    : undefined
               });
 
               setLocalPostItems((prev) => [
@@ -215,15 +233,65 @@ export function useContentGeneration(params: {
               mediaType: resolvedMediaType,
               cacheKeyTimestamp: event.meta?.cache_key_timestamp
             });
+            const resolvedFinalItems =
+              resolvedMediaType === "video"
+                ? finalItems.map((item) => {
+                    const [plan] = buildListingCreatePreviewPlans({
+                      listingId,
+                      activeMediaTab: "videos",
+                      activeSubcategory: subcategory,
+                      activeMediaItems: [item],
+                      videoItems
+                    });
+
+                    return plan
+                      ? {
+                          ...item,
+                          orderedClipIds: plan.segments.map(
+                            (segment) => segment.clipId
+                          ),
+                          clipDurationOverrides: Object.fromEntries(
+                            plan.segments.map((segment) => [
+                              segment.clipId,
+                              segment.durationSeconds
+                            ])
+                          )
+                        }
+                      : item;
+                  })
+                : finalItems;
 
             setLocalPostItems((prev) =>
               mergeBatchItems({
                 previousItems: prev,
-                finalItems,
+                finalItems: resolvedFinalItems,
                 batchItemIds: activeBatchItemIdsRef.current,
                 forceNewBatch: options?.forceNewBatch
               })
             );
+
+            if (resolvedMediaType === "video") {
+              void Promise.allSettled(
+                resolvedFinalItems.map(async (item) => {
+                  if (
+                    typeof item.cacheKeyTimestamp !== "number" ||
+                    typeof item.cacheKeyId !== "number" ||
+                    !item.orderedClipIds?.length
+                  ) {
+                    return;
+                  }
+
+                  await updateCachedListingVideoTimeline(listingId, {
+                    cacheKeyTimestamp: item.cacheKeyTimestamp,
+                    cacheKeyId: item.cacheKeyId,
+                    subcategory,
+                    orderedClipIds: item.orderedClipIds,
+                    clipDurationOverrides:
+                      item.clipDurationOverrides ?? undefined
+                  });
+                })
+              );
+            }
           }
         }
 
@@ -255,34 +323,24 @@ export function useContentGeneration(params: {
         activeBatchIdRef.current = "";
         activeBatchItemIdsRef.current = [];
         activeGenerationCountRef.current = DEFAULT_GENERATION_COUNT;
+        activeCacheKeyTimestampRef.current = null;
       }
     },
-    [activeMediaTab, listingId]
+    [activeMediaTab, listingId, videoItems]
   );
 
   const removeContentItem = React.useCallback((contentItemId: string) => {
     setLocalPostItems((prev) => prev.filter((item) => item.id !== contentItemId));
   }, []);
 
-  const updateContentItemText = React.useCallback(
+  const replaceContentItem = React.useCallback(
     (params: {
-      contentItemId: string;
-      hook: string;
-      caption: string;
-      orderedClipIds: string[];
-      clipDurationOverrides: Record<string, number>;
+      previousContentItemId: string;
+      nextItem: ContentItem;
     }) => {
       setLocalPostItems((prev) =>
         prev.map((item) =>
-          item.id === params.contentItemId
-            ? {
-                ...item,
-                hook: params.hook,
-                caption: params.caption,
-                orderedClipIds: params.orderedClipIds,
-                clipDurationOverrides: params.clipDurationOverrides
-              }
-            : item
+          item.id === params.previousContentItemId ? params.nextItem : item
         )
       );
     },
@@ -290,7 +348,10 @@ export function useContentGeneration(params: {
   );
 
   const loadingCount = isGenerating
-    ? activeGenerationCountRef.current
+    ? Math.max(
+        0,
+        activeGenerationCountRef.current - activeBatchItemIdsRef.current.length
+      )
     : incompleteBatchSkeletonCount;
 
   return {
@@ -300,6 +361,6 @@ export function useContentGeneration(params: {
     loadingCount,
     generateSubcategoryContent,
     removeContentItem,
-    updateContentItemText
+    replaceContentItem
   };
 }

@@ -3,6 +3,7 @@ export * from "./listings";
 export * from "./content";
 export * from "./listingImages";
 export * from "./videoClips";
+export * from "./videoClipVersions";
 export * from "./videoGenBatch";
 export * from "./videoGenJobs";
 export * from "./userAdditional";

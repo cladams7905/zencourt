@@ -12,6 +12,7 @@ const mediaItems: DBUserMedia[] = [
     type: "image",
     url: "https://x/image-1.jpg",
     thumbnailUrl: null,
+    durationSeconds: null,
     usageCount: 3,
     uploadedAt: new Date("2025-01-01T00:00:00.000Z")
   },
@@ -21,6 +22,7 @@ const mediaItems: DBUserMedia[] = [
     type: "video",
     url: "https://x/video-1.mp4",
     thumbnailUrl: "https://x/video-1.jpg",
+    durationSeconds: 4.25,
     usageCount: 10,
     uploadedAt: new Date("2025-01-02T00:00:00.000Z")
   },
@@ -30,6 +32,7 @@ const mediaItems: DBUserMedia[] = [
     type: "image",
     url: "https://x/image-2.jpg",
     thumbnailUrl: null,
+    durationSeconds: null,
     usageCount: 1,
     uploadedAt: new Date("2025-01-03T00:00:00.000Z")
   }

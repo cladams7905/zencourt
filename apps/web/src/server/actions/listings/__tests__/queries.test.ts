@@ -7,6 +7,8 @@ const mockGetListingVideoStatus = jest.fn();
 const mockGetListingImages = jest.fn();
 const mockMapListingImageToDisplayItem = jest.fn((item) => item);
 const mockGetAllCachedListingContentForCreate = jest.fn();
+const mockGetContentByListingId = jest.fn();
+const mockGetUserMedia = jest.fn();
 const mockGetCurrentVideoClipVersionsByListingId = jest.fn();
 const mockGetSuccessfulVideoClipVersionsByClipId = jest.fn();
 const mockCreateVideoClip = jest.fn();
@@ -52,6 +54,16 @@ jest.mock("@web/src/server/infra/cache/listingContent/cache", () => ({
     (mockGetAllCachedListingContentForCreate as (...a: unknown[]) => unknown)(
       ...args
     )
+}));
+
+jest.mock("@web/src/server/models/content", () => ({
+  getContentByListingId: (...args: unknown[]) =>
+    (mockGetContentByListingId as (...a: unknown[]) => unknown)(...args)
+}));
+
+jest.mock("@web/src/server/models/userMedia/queries", () => ({
+  getUserMedia: (...args: unknown[]) =>
+    (mockGetUserMedia as (...a: unknown[]) => unknown)(...args)
 }));
 
 jest.mock("@web/src/server/models/videoGen", () => ({
@@ -103,6 +115,8 @@ describe("listings queries", () => {
     mockRequireAuthenticatedUser.mockResolvedValue({ id: "user-1" });
     mockGetCurrentVideoClipVersionsByListingId.mockResolvedValue([]);
     mockGetSuccessfulVideoClipVersionsByClipId.mockResolvedValue([]);
+    mockGetContentByListingId.mockResolvedValue([]);
+    mockGetUserMedia.mockResolvedValue([]);
     mockCreateVideoClip.mockResolvedValue(undefined);
     mockCreateVideoClipVersion.mockResolvedValue(undefined);
     mockGetVideoClipById.mockResolvedValue(null);
@@ -230,6 +244,8 @@ describe("listings queries", () => {
     mockGetAllCachedListingContentForCreate.mockResolvedValueOnce([
       { id: "cached-1" }
     ]);
+    mockGetContentByListingId.mockResolvedValueOnce([]);
+    mockGetUserMedia.mockResolvedValueOnce([]);
     mockMapListingImageToDisplayItem.mockReturnValueOnce({ id: "img-1-mapped" });
 
     const result = await getListingCreateViewDataForCurrentUser("listing-1");
@@ -269,9 +285,180 @@ describe("listings queries", () => {
           roomName: "Kitchen"
         })
       ],
-      listingPostItems: [{ id: "cached-1" }],
+      listingPostItems: [
+        expect.objectContaining({
+          id: "cached-1",
+          contentSource: "cached_create"
+        })
+      ],
       listingImages: [{ id: "img-1-mapped" }]
     });
+  });
+
+  it("returns persisted saved reels alongside cached reels and user media videos", async () => {
+    mockGetListingVideoStatus.mockResolvedValueOnce({ jobs: [] });
+    mockGetCurrentVideoClipVersionsByListingId
+      .mockResolvedValueOnce([
+        {
+          id: "clip-version-1",
+          videoClipId: "listing-1:kitchen:0",
+          thumbnailUrl: "https://thumb/clip.jpg",
+          videoUrl: "https://video/clip.mp4",
+          createdAt: new Date("2026-01-01T00:00:00.000Z"),
+          durationSeconds: 4,
+          orientation: "vertical",
+          generationModel: "veo3.1_fast",
+          status: "completed"
+        }
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: "clip-version-1",
+          videoClipId: "listing-1:kitchen:0",
+          thumbnailUrl: "https://thumb/clip.jpg",
+          videoUrl: "https://video/clip.mp4",
+          createdAt: new Date("2026-01-01T00:00:00.000Z"),
+          durationSeconds: 4,
+          orientation: "vertical",
+          generationModel: "veo3.1_fast",
+          status: "completed"
+        }
+      ]);
+    mockGetVideoClipById.mockResolvedValue({
+      id: "listing-1:kitchen:0",
+      listingId: "listing-1",
+      roomId: null,
+      roomName: "Kitchen",
+      category: "kitchen",
+      clipIndex: 0,
+      sortOrder: 1,
+      currentVideoClipVersionId: "clip-version-1"
+    });
+    mockGetSuccessfulVideoClipVersionsByClipId.mockResolvedValueOnce([
+      {
+        id: "clip-version-1",
+        videoClipId: "listing-1:kitchen:0",
+        thumbnailUrl: "https://thumb/clip.jpg",
+        videoUrl: "https://video/clip.mp4",
+        createdAt: new Date("2026-01-01T00:00:00.000Z"),
+        durationSeconds: 4,
+        orientation: "vertical",
+        generationModel: "veo3.1_fast",
+        status: "completed"
+      }
+    ]);
+    mockGetListingImages.mockResolvedValueOnce([]);
+    mockGetAllCachedListingContentForCreate.mockResolvedValueOnce([
+      {
+        id: "cached-keep",
+        hook: "Unsaved reel",
+        caption: "Keep cache",
+        listingSubcategory: "new_listing",
+        mediaType: "video",
+        cacheKeyTimestamp: 456,
+        cacheKeyId: 7
+      },
+      {
+        id: "cached-duplicate",
+        hook: "Duplicate cache reel",
+        caption: "Should be suppressed",
+        listingSubcategory: "new_listing",
+        mediaType: "video",
+        cacheKeyTimestamp: 123,
+        cacheKeyId: 4
+      }
+    ]);
+    mockGetContentByListingId.mockResolvedValueOnce([
+      {
+        id: "saved-reel-1",
+        listingId: "listing-1",
+        userId: "user-1",
+        contentType: "video",
+        status: "draft",
+        contentUrl: null,
+        thumbnailUrl: null,
+        metadata: {
+          source: "listing_reel",
+          version: 1,
+          listingSubcategory: "new_listing",
+          hook: "Saved reel",
+          caption: "Saved caption",
+          body: [{ header: "Saved slide", content: "Saved body" }],
+          sequence: [
+            {
+              sourceType: "listing_clip",
+              sourceId: "listing-1:kitchen:0",
+              durationSeconds: 2.5
+            }
+          ],
+          originCacheKeyTimestamp: 123,
+          originCacheKeyId: 4
+        },
+        isFavorite: false,
+        createdAt: new Date("2026-01-02T00:00:00.000Z"),
+        updatedAt: new Date("2026-01-02T00:00:00.000Z")
+      },
+      {
+        id: "ignored-video-content",
+        listingId: "listing-1",
+        userId: "user-1",
+        contentType: "video",
+        status: "draft",
+        contentUrl: null,
+        thumbnailUrl: null,
+        metadata: { source: "other_video" },
+        isFavorite: false,
+        createdAt: new Date("2026-01-03T00:00:00.000Z"),
+        updatedAt: new Date("2026-01-03T00:00:00.000Z")
+      }
+    ]);
+    mockGetUserMedia.mockResolvedValueOnce([
+      {
+        id: "media-1",
+        userId: "user-1",
+        type: "video",
+        url: "https://user-media/video.mp4",
+        thumbnailUrl: "https://user-media/thumb.jpg",
+        usageCount: 0,
+        uploadedAt: new Date("2026-01-04T00:00:00.000Z")
+      },
+      {
+        id: "media-image",
+        userId: "user-1",
+        type: "image",
+        url: "https://user-media/image.jpg",
+        thumbnailUrl: null,
+        usageCount: 0,
+        uploadedAt: new Date("2026-01-04T00:00:00.000Z")
+      }
+    ]);
+
+    const result = await getListingCreateViewDataForCurrentUser("listing-1");
+
+    expect(result.listingPostItems.map((item) => item.id)).toEqual([
+      "saved-saved-reel-1",
+      "cached-keep"
+    ]);
+    expect(result.listingPostItems[0]).toEqual(
+      expect.objectContaining({
+        contentSource: "saved_content",
+        savedContentId: "saved-reel-1",
+        hook: "Saved reel"
+      })
+    );
+    expect(result.videoItems).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "listing-1:kitchen:0",
+          reelClipSource: "listing_clip"
+        }),
+        expect.objectContaining({
+          id: "user-media:media-1",
+          reelClipSource: "user_media",
+          videoUrl: "https://user-media/video.mp4"
+        })
+      ])
+    );
   });
 
   it("seeds completed regeneration jobs as the next version for an existing clip", async () => {

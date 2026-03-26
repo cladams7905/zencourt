@@ -5,7 +5,7 @@ import { Toaster } from "../components/ui/sonner";
 import {
   Playfair_Display,
   Plus_Jakarta_Sans,
-  Italiana,
+  Noto_Serif_Display,
   Rouge_Script,
   Open_Sans,
   Gwendolyn,
@@ -30,10 +30,10 @@ const header = Playfair_Display({
 
 // |---------- BEGIN Text Overlay Fonts -------------|
 
-const italiana = Italiana({
+const notoSerifDisplay = Noto_Serif_Display({
   subsets: ["latin"],
   weight: ["400"],
-  variable: "--font-italiana",
+  variable: "--font-noto-serif-display",
   display: "swap"
 });
 
@@ -89,7 +89,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${body.variable} ${header.variable} ${italiana.variable} ${rougeScript.variable} ${gwendolyn.variable} ${tikTokSans.variable} ${dmSerif.variable} ${onest.variable}`}
+      className={`${body.variable} ${header.variable} ${notoSerifDisplay.variable} ${rougeScript.variable} ${gwendolyn.variable} ${tikTokSans.variable} ${dmSerif.variable} ${onest.variable}`}
     >
       <body className="antialiased">
         {hasStackProjectId ? (

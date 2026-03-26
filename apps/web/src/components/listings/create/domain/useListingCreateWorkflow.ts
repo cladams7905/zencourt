@@ -42,12 +42,13 @@ export function useListingCreateWorkflow(params: {
     loadingCount,
     generateSubcategoryContent: generateSubcategoryContentRaw,
     removeContentItem,
-    updateContentItemText
+    replaceContentItem
   } = useContentGeneration({
     listingId,
     listingPostItems,
     activeMediaTab,
-    activeSubcategory
+    activeSubcategory,
+    videoItems
   });
 
   const generateSubcategoryContent = React.useCallback(
@@ -134,6 +135,6 @@ export function useListingCreateWorkflow(params: {
     imageLoadingCount,
     activePreviewPlans,
     handleDeleteImagePreviewItem,
-    updateContentItemText
+    replaceContentItem
   };
 }

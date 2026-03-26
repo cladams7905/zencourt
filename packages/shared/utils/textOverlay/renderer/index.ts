@@ -8,7 +8,7 @@ import {
   PREVIEW_TEXT_OVERLAY_NO_BACKGROUND_TEXT_SHADOW
 } from "../assets/index";
 import {
-  isItalianaFont,
+  isDisplaySerifFont,
   isRougeFont,
   resolveDisplayText,
   normalizeOverlayLineText,
@@ -98,7 +98,7 @@ export function computeOverlayLineStyles(
     const marginBottom = templateLayout?.lineMarginBottomByIndex?.[index] ?? 0;
     const roleLetterSpacing =
       templateLayout?.letterSpacingByRole?.[line.fontRole];
-    const resolvedLetterSpacing = isItalianaFont(resolvedFontFamily)
+    const resolvedLetterSpacing = isDisplaySerifFont(resolvedFontFamily)
       ? line.fontRole === "headline"
         ? "-0.05em"
         : PREVIEW_TEXT_OVERLAY_LETTER_SPACING

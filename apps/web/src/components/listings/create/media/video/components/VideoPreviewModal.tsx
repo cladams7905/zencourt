@@ -18,9 +18,11 @@ import type {
   PlayablePreviewTextUpdate
 } from "@web/src/components/listings/create/shared/types";
 import type { TimelinePreviewResolvedSegment } from "@web/src/components/listings/create/media/video/components/ListingTimelinePreviewComposition";
+import type { ContentItem } from "@web/src/components/dashboard/components/ContentGrid";
 
 type VideoPreviewModalProps = {
   selectedPreview: PlayablePreview | null;
+  userMediaItems?: ContentItem[];
   previewFps: number;
   onOpenChange: (open: boolean) => void;
   onSavePreviewText: (params: PlayablePreviewTextUpdate) => Promise<void>;
@@ -30,8 +32,13 @@ function cloneSegments(segments: TimelinePreviewResolvedSegment[]) {
   return segments.map((segment) => ({ ...segment }));
 }
 
+function getSegmentSourceKey(segment: TimelinePreviewResolvedSegment): string {
+  return `${segment.sourceType ?? "listing_clip"}:${segment.sourceId ?? segment.clipId}`;
+}
+
 export function VideoPreviewModal({
   selectedPreview,
+  userMediaItems = [],
   previewFps,
   onOpenChange,
   onSavePreviewText
@@ -167,28 +174,60 @@ export function VideoPreviewModal({
   );
 
   const deletedClipOptions = React.useMemo(() => {
-    const currentClipIds = new Set(segmentDraft.map((segment) => segment.clipId));
+    const currentClipIds = new Set(segmentDraft.map(getSegmentSourceKey));
     return (selectedPreview?.resolvedSegments ?? []).filter(
-      (segment) => !currentClipIds.has(segment.clipId)
+      (segment) => !currentClipIds.has(getSegmentSourceKey(segment))
     );
   }, [segmentDraft, selectedPreview]);
+
+  const userMediaClipOptions = React.useMemo(() => {
+    const currentClipIds = new Set(segmentDraft.map(getSegmentSourceKey));
+    return userMediaItems
+      .filter((item) => Boolean(item.videoUrl))
+      .filter(
+        (item) =>
+          !currentClipIds.has(
+            `user_media:${item.id.replace(/^user-media:/, "")}`
+          )
+      )
+      .map((item, index) => ({
+        clipId: item.id,
+        sourceType: "user_media" as const,
+        sourceId: item.id.replace(/^user-media:/, ""),
+        src: item.videoUrl ?? "",
+        thumbnailSrc: item.thumbnail ?? null,
+        category: item.category ?? null,
+        durationSeconds: Math.min(item.durationSeconds ?? 3, 3),
+        maxDurationSeconds: Math.max(0.5, item.durationSeconds ?? 3),
+        label: item.alt?.trim() || `User Media ${index + 1}`
+      }));
+  }, [segmentDraft, userMediaItems]);
 
   const handleAddSegment = React.useCallback(
     (clipId: string) => {
       pendingSeekFrameRef.current = currentFrame;
       setSegmentDraft((prev) => {
-        const nextSegment = (selectedPreview?.resolvedSegments ?? []).find(
-          (segment) => segment.clipId === clipId
-        );
+        const nextSegment =
+          (selectedPreview?.resolvedSegments ?? []).find(
+            (segment) => segment.clipId === clipId
+          ) ??
+          userMediaClipOptions.find((segment) => segment.clipId === clipId);
         if (!nextSegment || prev.some((segment) => segment.clipId === clipId)) {
           return prev;
         }
 
         pushTimelineHistory(prev);
-        return [...prev, { ...nextSegment }];
+        return [
+          ...prev,
+          {
+            ...nextSegment,
+            sourceType: nextSegment.sourceType ?? "listing_clip",
+            sourceId: nextSegment.sourceId ?? nextSegment.clipId
+          }
+        ];
       });
     },
-    [currentFrame, pushTimelineHistory, selectedPreview]
+    [currentFrame, pushTimelineHistory, selectedPreview, userMediaClipOptions]
   );
 
   const handleSave = React.useCallback(async () => {
@@ -211,7 +250,12 @@ export function VideoPreviewModal({
             segment.durationSeconds
           ])
         ),
-        captionItemKey: selectedPreview.captionItemKey
+        sequence: segmentDraft.map((segment) => ({
+          sourceType: segment.sourceType ?? "listing_clip",
+          sourceId: segment.sourceId ?? segment.clipId,
+          durationSeconds: segment.durationSeconds
+        })),
+        saveTarget: selectedPreview.captionItemKey
       });
       handleCancel();
     } catch (error) {
@@ -414,6 +458,7 @@ export function VideoPreviewModal({
                     segments={segmentDraft}
                     totalClipCount={selectedPreview.resolvedSegments.length}
                     deletedClipOptions={deletedClipOptions}
+                    userMediaClipOptions={userMediaClipOptions}
                     previewFps={previewFps}
                     currentFrame={currentFrame}
                     totalFrames={draftDurationInFrames}

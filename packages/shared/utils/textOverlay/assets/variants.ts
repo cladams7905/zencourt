@@ -14,74 +14,74 @@ export const PREVIEW_TEXT_OVERLAY_VARIANTS: OverlayVariant[] = [
     position: "bottom-third",
     background: "brown-700",
     font: "serif-classic",
-    fontPairing: "elegant-script"
+    fontPairing: "editorial-script"
   },
   {
     position: "bottom-third",
     background: "black",
     font: "serif-elegant",
-    fontPairing: "modern-script"
+    fontPairing: "contemporary-script"
   },
   {
     position: "top-third",
     background: "brown-700",
     font: "serif-elegant",
-    fontPairing: "script-forward"
+    fontPairing: "statement-script"
   },
   {
     position: "bottom-third",
     background: "brown-500",
     font: "serif-classic",
-    fontPairing: "elegant-script"
+    fontPairing: "editorial-script"
   },
   {
     position: "center",
     background: "black",
     font: "serif-classic",
-    fontPairing: "modern-script"
+    fontPairing: "contemporary-script"
   },
   {
     position: "top-third",
     background: "brown-700",
     font: "serif-elegant",
-    fontPairing: "elegant-script"
+    fontPairing: "editorial-script"
   },
   {
     position: "bottom-third",
     background: "brown-500",
     font: "sans-modern",
-    fontPairing: "classic-clean"
+    fontPairing: "editorial-clean"
   },
   {
     position: "center",
     background: "brown-700",
     font: "serif-classic",
-    fontPairing: "script-forward"
+    fontPairing: "statement-script"
   },
   // Lighter options are intentionally fewer.
   {
     position: "top-third",
     background: "brown-300",
     font: "sans-modern",
-    fontPairing: "classic-clean"
+    fontPairing: "editorial-clean"
   },
   {
     position: "center",
     background: "brown-200",
     font: "serif-elegant",
-    fontPairing: "classic-clean"
+    fontPairing: "editorial-clean"
   },
   {
     position: "bottom-third",
     background: "brown-100",
     font: "sans-modern",
-    fontPairing: "modern-script"
+    fontPairing: "contemporary-script"
   },
   {
     position: "center",
     background: "white",
     font: "serif-classic",
-    fontPairing: "elegant-script"
+    fontPairing: "editorial-script"
   }
 ];
 
@@ -117,7 +117,7 @@ export function pickRichOverlayFontPairing(seed: string): OverlayFontPairing {
   const index =
     hashTextOverlaySeed(`${seed}:font-pairing`) %
     RICH_OVERLAY_FONT_PAIRINGS.length;
-  return RICH_OVERLAY_FONT_PAIRINGS[index] ?? "block-rouge-italiana";
+  return RICH_OVERLAY_FONT_PAIRINGS[index] ?? "stacked-accent";
 }
 
 export function pickRichOverlayFontPairingForVariation(
@@ -125,5 +125,5 @@ export function pickRichOverlayFontPairingForVariation(
 ): OverlayFontPairing {
   const normalizedVariation = Math.max(1, Math.floor(variationNumber));
   const index = (normalizedVariation - 1) % RICH_OVERLAY_FONT_PAIRINGS.length;
-  return RICH_OVERLAY_FONT_PAIRINGS[index] ?? "block-rouge-italiana";
+  return RICH_OVERLAY_FONT_PAIRINGS[index] ?? "stacked-accent";
 }

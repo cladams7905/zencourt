@@ -200,7 +200,6 @@ export async function regenerateListingClipVersion(
         id: jobId,
         videoGenBatchId: parentVideoId,
         requestId: null,
-        videoClipId: currentClip.id,
         videoClipVersionId: null,
         status: "pending",
         videoUrl: null,

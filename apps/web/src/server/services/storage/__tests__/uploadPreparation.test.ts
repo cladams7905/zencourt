@@ -69,19 +69,21 @@ describe("storage uploadPreparation", () => {
 
     const mapped = mapUserMediaRecordInputs("u1", [
       { type: "image", key },
-      { type: "video", key: videoKey, thumbnailKey: thumb }
+      { type: "video", key: videoKey, thumbnailKey: thumb, durationSeconds: 4.25 }
     ] as never);
 
     expect(mapped).toEqual([
       {
         type: "image",
         url: `https://public/${key}`,
-        thumbnailUrl: null
+        thumbnailUrl: null,
+        durationSeconds: null
       },
       {
         type: "video",
         url: `https://public/${videoKey}`,
-        thumbnailUrl: `https://public/${thumb}`
+        thumbnailUrl: `https://public/${thumb}`,
+        durationSeconds: 4.25
       }
     ]);
 

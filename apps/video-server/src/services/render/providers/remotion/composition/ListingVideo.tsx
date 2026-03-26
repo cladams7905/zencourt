@@ -4,7 +4,7 @@ import { loadFont as loadRougeScript } from "@remotion/google-fonts/RougeScript"
 import { loadFont as loadGwendolyn } from "@remotion/google-fonts/Gwendolyn";
 import { loadFont as loadTikTokSans } from "@remotion/google-fonts/TikTokSans";
 import { loadFont as loadDMSerifText } from "@remotion/google-fonts/DMSerifText";
-import { loadFont as loadItaliana } from "@remotion/google-fonts/Italiana";
+import { loadFont as loadNotoSerifDisplay } from "@remotion/google-fonts/NotoSerifDisplay";
 import { loadFont as loadOnest } from "@remotion/google-fonts/Onest";
 import type { PreviewTextOverlay } from "@shared/types/video";
 import { PreviewTextOverlayRenderer } from "@shared/utils";
@@ -13,7 +13,7 @@ loadRougeScript();
 loadGwendolyn();
 loadTikTokSans();
 loadDMSerifText();
-loadItaliana();
+loadNotoSerifDisplay();
 loadOnest();
 
 export type ListingClip = {

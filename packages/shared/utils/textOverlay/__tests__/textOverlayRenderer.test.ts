@@ -27,7 +27,7 @@ describe("computeOverlayLineStyles", () => {
         font: "sans-modern",
         position: "center",
         templatePattern: "accent-headline",
-        fontPairing: "block-rouge-italiana",
+        fontPairing: "stacked-accent",
         lines: [
           { text: "Headline", fontRole: "headline" },
           { text: "Accent", fontRole: "accent" }
@@ -43,7 +43,7 @@ describe("computeOverlayLineStyles", () => {
     expect(styles[1]?.fontStyle).toBe("normal");
   });
 
-  it("uses italiana letter spacing override for headline role", () => {
+  it("uses noto serif display letter spacing override for headline role", () => {
     const styles = computeOverlayLineStyles(
       {
         text: "ignored",
@@ -51,7 +51,7 @@ describe("computeOverlayLineStyles", () => {
         font: "serif-classic",
         position: "center",
         templatePattern: "accent-headline",
-        fontPairing: "serif-italiana-rouge",
+        fontPairing: "heritage-serif",
         lines: [{ text: "Headline", fontRole: "headline" }]
       },
       40

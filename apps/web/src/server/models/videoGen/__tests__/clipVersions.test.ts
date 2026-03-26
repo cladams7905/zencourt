@@ -1,5 +1,6 @@
 const mockSelect = jest.fn();
 const mockFrom = jest.fn();
+const mockInnerJoin = jest.fn();
 const mockWhere = jest.fn();
 const mockOrderBy = jest.fn();
 const mockLimit = jest.fn();
@@ -63,6 +64,7 @@ describe("video clip models", () => {
   beforeEach(() => {
     mockSelect.mockReset();
     mockFrom.mockReset();
+    mockInnerJoin.mockReset();
     mockWhere.mockReset();
     mockOrderBy.mockReset();
     mockLimit.mockReset();
@@ -94,22 +96,20 @@ describe("video clip models", () => {
   });
 
   it("loads current video clip versions for a listing", async () => {
-    const rows = [{ id: "clip-version-1", versionNumber: 1 }];
+    const rows = [
+      {
+        clipVersion: { id: "clip-version-1", versionNumber: 1 }
+      }
+    ];
     mockSelect.mockReturnValueOnce({ from: mockFrom });
-    mockFrom.mockReturnValueOnce({ where: mockWhere });
+    mockFrom.mockReturnValueOnce({ innerJoin: mockInnerJoin });
+    mockInnerJoin.mockReturnValueOnce({ where: mockWhere });
     mockWhere.mockReturnValueOnce({ orderBy: mockOrderBy });
-    mockOrderBy.mockResolvedValueOnce([
-      { id: "clip-1", currentVideoClipVersionId: "clip-version-1" }
-    ]);
-
-    mockSelect.mockReturnValueOnce({ from: mockFrom });
-    mockFrom.mockReturnValueOnce({ where: mockWhere });
-    mockWhere.mockReturnValueOnce({ limit: mockLimit });
-    mockLimit.mockResolvedValueOnce(rows);
+    mockOrderBy.mockResolvedValueOnce(rows);
 
     await expect(
       getCurrentVideoClipVersionsByListingId("listing-1")
-    ).resolves.toEqual(rows);
+    ).resolves.toEqual([{ id: "clip-version-1", versionNumber: 1 }]);
   });
 
   it("loads successful versions for a clip in descending version order", async () => {

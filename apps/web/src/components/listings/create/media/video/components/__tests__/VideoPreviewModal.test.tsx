@@ -110,8 +110,10 @@ function createSelectedPreview(overrides?: Partial<ContentItem>): PlayablePrevie
       ...overrides
     } as ContentItem,
     captionItemKey: {
+      contentSource: "cached_create",
       cacheKeyTimestamp: 123,
       cacheKeyId: 4,
+      subcategory: "new_listing",
       mediaType: "video"
     }
   };
@@ -247,9 +249,23 @@ describe("VideoPreviewModal", () => {
       caption: "Updated caption",
       orderedClipIds: ["clip-1", "clip-2"],
       clipDurationOverrides: { "clip-1": 2.5, "clip-2": 5 },
-      captionItemKey: {
+      sequence: [
+        {
+          sourceType: "listing_clip",
+          sourceId: "clip-1",
+          durationSeconds: 2.5
+        },
+        {
+          sourceType: "listing_clip",
+          sourceId: "clip-2",
+          durationSeconds: 5
+        }
+      ],
+      saveTarget: {
+        contentSource: "cached_create",
         cacheKeyTimestamp: 123,
         cacheKeyId: 4,
+        subcategory: "new_listing",
         mediaType: "video"
       }
     });
@@ -325,9 +341,23 @@ describe("VideoPreviewModal", () => {
       caption: "Original caption",
       orderedClipIds: ["clip-2", "clip-1"],
       clipDurationOverrides: { "clip-2": 5, "clip-1": 2.5 },
-      captionItemKey: {
+      sequence: [
+        {
+          sourceType: "listing_clip",
+          sourceId: "clip-2",
+          durationSeconds: 5
+        },
+        {
+          sourceType: "listing_clip",
+          sourceId: "clip-1",
+          durationSeconds: 2.5
+        }
+      ],
+      saveTarget: {
+        contentSource: "cached_create",
         cacheKeyTimestamp: 123,
         cacheKeyId: 4,
+        subcategory: "new_listing",
         mediaType: "video"
       }
     });
@@ -558,6 +588,45 @@ describe("VideoPreviewModal", () => {
     await waitFor(() => expect(screen.getByText("1/2")).toBeInTheDocument());
   });
 
+  it("shows user media in the add-clip popover and appends it to the timeline", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <VideoPreviewModal
+        selectedPreview={createSelectedPreview()}
+        userMediaItems={[
+          {
+            id: "user-media:media-1",
+            reelClipSource: "user_media",
+            videoUrl: "https://user-media/video.mp4",
+            thumbnail: "https://user-media/thumb.jpg",
+            alt: "Uploaded walkthrough",
+            durationSeconds: 3
+          } as ContentItem
+        ]}
+        previewFps={30}
+        onOpenChange={mockOnOpenChange}
+        onSavePreviewText={mockOnSave}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: "Add clip to timeline" }));
+    await user.click(screen.getByRole("button", { name: "User Media" }));
+    await user.click(screen.getByRole("button", { name: /Uploaded walkthrough/i }));
+
+    await waitFor(() =>
+      expect(mockPlayer).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          inputProps: expect.objectContaining({
+            segments: expect.arrayContaining([
+              expect.objectContaining({ clipId: "user-media:media-1" })
+            ])
+          })
+        })
+      )
+    );
+  });
+
   it("resizes a clip from the right edge, updates the player input, and caps at the max duration", async () => {
     const user = userEvent.setup();
 
@@ -598,12 +667,64 @@ describe("VideoPreviewModal", () => {
       caption: "Original caption",
       orderedClipIds: ["clip-1", "clip-2"],
       clipDurationOverrides: { "clip-1": 4, "clip-2": 5 },
-      captionItemKey: {
+      sequence: [
+        {
+          sourceType: "listing_clip",
+          sourceId: "clip-1",
+          durationSeconds: 4
+        },
+        {
+          sourceType: "listing_clip",
+          sourceId: "clip-2",
+          durationSeconds: 5
+        }
+      ],
+      saveTarget: {
+        contentSource: "cached_create",
         cacheKeyTimestamp: 123,
         cacheKeyId: 4,
+        subcategory: "new_listing",
         mediaType: "video"
       }
     });
+  });
+
+  it("saves using the saved-content target when editing a persisted reel", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <VideoPreviewModal
+        selectedPreview={{
+          ...createSelectedPreview(),
+          captionItem: {
+            ...createSelectedPreview().captionItem,
+            id: "saved-saved-reel-1",
+            savedContentId: "saved-reel-1",
+            contentSource: "saved_content"
+          } as ContentItem,
+          captionItemKey: {
+            contentSource: "saved_content",
+            savedContentId: "saved-reel-1"
+          }
+        }}
+        previewFps={30}
+        onOpenChange={mockOnOpenChange}
+        onSavePreviewText={mockOnSave}
+      />
+    );
+
+    await user.clear(screen.getByLabelText("Header"));
+    await user.type(screen.getByLabelText("Header"), "Saved reel updated");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(mockOnSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        saveTarget: {
+          contentSource: "saved_content",
+          savedContentId: "saved-reel-1"
+        }
+      })
+    );
   });
 
   it("treats the hover drag strip as the right-side resize surface", async () => {

@@ -24,11 +24,17 @@ import {
   getFrameFromTimelineOffset,
   getPlayheadOffsetPx
 } from "@web/src/components/listings/create/media/video/components/videoPreviewTimelineViewModel";
+import { cn } from "@web/src/components/ui/utils";
 
 type VideoPreviewTimelineProps = {
   segments: TimelinePreviewResolvedSegment[];
   totalClipCount: number;
   deletedClipOptions: TimelinePreviewResolvedSegment[];
+  userMediaClipOptions: Array<{
+    clipId: string;
+    thumbnailSrc?: string | null;
+    label: string;
+  }>;
   previewFps: number;
   currentFrame: number;
   totalFrames: number;
@@ -60,6 +66,7 @@ export function VideoPreviewTimeline({
   segments,
   totalClipCount,
   deletedClipOptions,
+  userMediaClipOptions,
   previewFps,
   currentFrame,
   totalFrames,
@@ -100,6 +107,9 @@ export function VideoPreviewTimeline({
   );
   const [isScrubbing, setIsScrubbing] = React.useState(false);
   const [isAddClipOpen, setIsAddClipOpen] = React.useState(false);
+  const [activeAddClipTab, setActiveAddClipTab] = React.useState<
+    "listing_clips" | "user_media"
+  >("listing_clips");
   const startResize = React.useCallback(
     (
       event: React.MouseEvent<HTMLElement>,
@@ -219,6 +229,8 @@ export function VideoPreviewTimeline({
   }
 
   const totalDurationSeconds = totalFrames / previewFps;
+  const canAddClip =
+    deletedClipOptions.length > 0 || userMediaClipOptions.length > 0;
 
   return (
     <section
@@ -270,7 +282,7 @@ export function VideoPreviewTimeline({
                     size="icon"
                     aria-label="Add clip to timeline"
                     className="h-7 w-7 rounded-full"
-                    disabled={deletedClipOptions.length === 0}
+                    disabled={!canAddClip}
                   >
                     <Plus className="h-3.5 w-3.5" />
                   </Button>
@@ -278,35 +290,80 @@ export function VideoPreviewTimeline({
               </TooltipTrigger>
               <TooltipContent side="top">Add clip</TooltipContent>
             </Tooltip>
-            <PopoverContent align="end" className="w-64 p-0">
-              <div className="flex flex-col">
-                {deletedClipOptions.map((clipOption, optionIndex) => (
+            <PopoverContent align="end" className="w-[320px] p-0">
+              <div className="flex border-b border-border">
+                <button
+                  type="button"
+                  className={cn(
+                    "flex-1 px-3 py-2 text-sm font-medium",
+                    activeAddClipTab === "listing_clips"
+                      ? "bg-muted text-foreground"
+                      : "text-muted-foreground"
+                  )}
+                  onClick={() => setActiveAddClipTab("listing_clips")}
+                >
+                  Listing Clips
+                </button>
+                <button
+                  type="button"
+                  className={cn(
+                    "flex-1 border-l border-border px-3 py-2 text-sm font-medium",
+                    activeAddClipTab === "user_media"
+                      ? "bg-muted text-foreground"
+                      : "text-muted-foreground"
+                  )}
+                  onClick={() => setActiveAddClipTab("user_media")}
+                >
+                  User Media
+                </button>
+              </div>
+              <div className="grid max-h-72 grid-cols-2 gap-px overflow-y-auto bg-border">
+                {(activeAddClipTab === "listing_clips"
+                  ? deletedClipOptions.map((clipOption) => ({
+                      clipId: clipOption.clipId,
+                      thumbnailSrc: clipOption.thumbnailSrc,
+                      label: formatClipLabel(
+                        clipOption.category ?? clipOption.clipId
+                      )
+                    }))
+                  : userMediaClipOptions
+                ).map((clipOption) => (
                   <button
-                    key={`${clipOption.clipId}-${optionIndex}`}
+                    key={clipOption.clipId}
                     type="button"
-                    className="flex items-center gap-3 border-b border-border px-2 py-2 text-left transition-colors last:border-b-0 hover:bg-muted"
+                    className="bg-background p-2 text-left transition-colors hover:bg-muted"
                     onClick={() => {
                       onAddClip?.(clipOption.clipId);
                       setIsAddClipOpen(false);
                     }}
                   >
-                    <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md bg-muted">
+                    <div className="relative aspect-video overflow-hidden rounded-md bg-muted">
                       {clipOption.thumbnailSrc ? (
                         <LoadingImage
                           src={clipOption.thumbnailSrc}
-                          alt={`${clipOption.category ?? clipOption.clipId} clip thumbnail`}
+                          alt={`${clipOption.label} clip thumbnail`}
                           fill
                           className="object-cover"
                         />
                       ) : null}
                     </div>
-                    <span className="truncate text-sm font-medium text-foreground">
-                      {formatClipLabel(
-                        clipOption.category ?? clipOption.clipId
-                      )}
+                    <span className="mt-2 block truncate text-sm font-medium text-foreground">
+                      {clipOption.label}
                     </span>
                   </button>
                 ))}
+                {activeAddClipTab === "listing_clips" &&
+                deletedClipOptions.length === 0 ? (
+                  <div className="col-span-2 bg-background px-3 py-4 text-sm text-muted-foreground">
+                    No deleted listing clips available.
+                  </div>
+                ) : null}
+                {activeAddClipTab === "user_media" &&
+                userMediaClipOptions.length === 0 ? (
+                  <div className="col-span-2 bg-background px-3 py-4 text-sm text-muted-foreground">
+                    No user media videos available.
+                  </div>
+                ) : null}
               </div>
             </PopoverContent>
           </Popover>

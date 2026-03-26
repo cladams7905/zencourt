@@ -2,6 +2,7 @@ import type {
   ContentItem,
   TextOverlayInput
 } from "@web/src/components/dashboard/components/ContentGrid";
+import type { ReelSequenceItem } from "@web/src/components/dashboard/shared/types";
 import type { PreviewTextOverlay } from "@shared/types/video";
 import type { TimelinePreviewResolvedSegment } from "@web/src/components/listings/create/media/video/components/ListingTimelinePreviewComposition";
 
@@ -25,17 +26,29 @@ export type ListingImagePreviewItem = {
 };
 
 export type PlayablePreviewCaptionItemKey = {
+  contentSource: "cached_create";
   cacheKeyTimestamp: number;
   cacheKeyId: number;
+  subcategory: string;
   mediaType: "video";
 };
+
+export type PlayablePreviewSavedContentKey = {
+  contentSource: "saved_content";
+  savedContentId: string;
+};
+
+export type PlayablePreviewSaveTarget =
+  | PlayablePreviewCaptionItemKey
+  | PlayablePreviewSavedContentKey;
 
 export type PlayablePreviewTextUpdate = {
   hook: string;
   caption: string;
   orderedClipIds: string[];
   clipDurationOverrides: Record<string, number>;
-  captionItemKey: PlayablePreviewCaptionItemKey;
+  sequence: ReelSequenceItem[];
+  saveTarget: PlayablePreviewSaveTarget;
 };
 
 export type PlayablePreview = {
@@ -48,7 +61,7 @@ export type PlayablePreview = {
   firstThumb: string | null;
   durationInFrames: number;
   captionItem: ContentItem | null;
-  captionItemKey?: PlayablePreviewCaptionItemKey;
+  captionItemKey?: PlayablePreviewSaveTarget;
   variationNumber: number;
 };
 

@@ -9,7 +9,7 @@ export const PREVIEW_TEXT_OVERLAY_FONT_FAMILY: Record<
   string
 > = {
   "serif-elegant":
-    'var(--font-italiana, "Italiana"), "Times New Roman", serif',
+    'var(--font-noto-serif-display, "Noto Serif Display"), "Times New Roman", serif',
   "serif-classic": 'Georgia, "Times New Roman", serif',
   "sans-modern":
     'var(--font-body, "Mulish"), "Avenir Next", "Segoe UI", Arial, sans-serif'
@@ -25,17 +25,17 @@ export const OVERLAY_TIKTOK_FONT_FAMILY =
   'var(--font-tiktok, "TikTok Sans"), "Arial Black", "Helvetica Neue", sans-serif';
 export const OVERLAY_DM_SERIF_FONT_FAMILY =
   'var(--font-dm-serif, "DM Serif Text"), "Times New Roman", serif';
-export const OVERLAY_ITALIANA_FONT_FAMILY =
-  'var(--font-italiana, "Italiana"), "Times New Roman", serif';
+export const OVERLAY_DISPLAY_SERIF_FONT_FAMILY =
+  'var(--font-noto-serif-display, "Noto Serif Display"), "Times New Roman", serif';
 export const OVERLAY_ONEST_FONT_FAMILY =
   'var(--font-onest, "Onest"), "Avenir Next", "Segoe UI", Arial, sans-serif';
 
 export const RICH_OVERLAY_FONT_PAIRINGS = [
-  "block-rouge-italiana",
-  "block-league-dm",
-  "block-rouge-onest",
-  "serif-dm-gwendolyn",
-  "serif-italiana-rouge"
+  "stacked-accent",
+  "stacked-serif",
+  "stacked-modern",
+  "refined-serif",
+  "heritage-serif"
 ] as const satisfies readonly OverlayFontPairing[];
 
 export interface FontRoleStyle {
@@ -47,7 +47,7 @@ export const OVERLAY_FONT_PAIRINGS: Record<
   OverlayFontPairing,
   Record<OverlayFontRole, FontRoleStyle>
 > = {
-  "elegant-script": {
+  "editorial-script": {
     headline: {
       fontFamily: PREVIEW_TEXT_OVERLAY_FONT_FAMILY["serif-elegant"],
       fontWeight: 600
@@ -58,7 +58,7 @@ export const OVERLAY_FONT_PAIRINGS: Record<
       fontWeight: 400
     }
   },
-  "modern-script": {
+  "contemporary-script": {
     headline: {
       fontFamily: PREVIEW_TEXT_OVERLAY_FONT_FAMILY["sans-modern"],
       fontWeight: 700
@@ -69,7 +69,7 @@ export const OVERLAY_FONT_PAIRINGS: Record<
       fontWeight: 400
     }
   },
-  "classic-clean": {
+  "editorial-clean": {
     headline: {
       fontFamily: PREVIEW_TEXT_OVERLAY_FONT_FAMILY["serif-classic"],
       fontWeight: 700
@@ -83,7 +83,7 @@ export const OVERLAY_FONT_PAIRINGS: Record<
       fontWeight: 400
     }
   },
-  "script-forward": {
+  "statement-script": {
     headline: { fontFamily: OVERLAY_SCRIPT_FONT_FAMILY, fontWeight: 700 },
     accent: {
       fontFamily: PREVIEW_TEXT_OVERLAY_FONT_FAMILY["sans-modern"],
@@ -94,18 +94,18 @@ export const OVERLAY_FONT_PAIRINGS: Record<
       fontWeight: 400
     }
   },
-  "block-rouge-italiana": {
+  "stacked-accent": {
     headline: {
       fontFamily: OVERLAY_TIKTOK_FONT_FAMILY,
       fontWeight: 700
     },
     accent: { fontFamily: OVERLAY_ROUGE_FONT_FAMILY, fontWeight: 400 },
     body: {
-      fontFamily: OVERLAY_ITALIANA_FONT_FAMILY,
+      fontFamily: OVERLAY_DISPLAY_SERIF_FONT_FAMILY,
       fontWeight: 700
     }
   },
-  "block-league-dm": {
+  "stacked-serif": {
     headline: {
       fontFamily: OVERLAY_TIKTOK_FONT_FAMILY,
       fontWeight: 700
@@ -116,7 +116,7 @@ export const OVERLAY_FONT_PAIRINGS: Record<
       fontWeight: 400
     }
   },
-  "block-rouge-onest": {
+  "stacked-modern": {
     headline: {
       fontFamily: OVERLAY_TIKTOK_FONT_FAMILY,
       fontWeight: 600
@@ -127,7 +127,7 @@ export const OVERLAY_FONT_PAIRINGS: Record<
       fontWeight: 500
     }
   },
-  "serif-dm-gwendolyn": {
+  "refined-serif": {
     headline: {
       fontFamily: OVERLAY_DM_SERIF_FONT_FAMILY,
       fontWeight: 400
@@ -138,9 +138,9 @@ export const OVERLAY_FONT_PAIRINGS: Record<
       fontWeight: 500
     }
   },
-  "serif-italiana-rouge": {
+  "heritage-serif": {
     headline: {
-      fontFamily: OVERLAY_ITALIANA_FONT_FAMILY,
+      fontFamily: OVERLAY_DISPLAY_SERIF_FONT_FAMILY,
       fontWeight: 500
     },
     accent: { fontFamily: OVERLAY_ROUGE_FONT_FAMILY, fontWeight: 400 },

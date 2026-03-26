@@ -12,13 +12,15 @@ jest.mock(
     return {
       hashTextOverlaySeed: (value: string) =>
         Array.from(value).reduce((acc, char) => acc + char.charCodeAt(0), 0),
-      pickPreviewTextOverlayVariant: () => ({
-        position: "center",
+      pickPreviewTextOverlayVariant: (seed: string) => ({
+        position: seed.includes("cached:123:4") ? "top-third" : "center",
         background: "black",
-        font: "serif-classic",
-        fontPairing: "classic-clean"
+        font: seed.includes("cached:123:4") ? "serif-classic" : "sans-modern",
+        fontPairing: seed.includes("cached:123:4")
+          ? "editorial-clean"
+          : "contemporary-script"
       }),
-      pickRichOverlayFontPairing: () => "classic-clean",
+      pickRichOverlayFontPairing: () => "editorial-clean",
       pickRichOverlayPosition: () => "center",
       appendRandomHeaderSuffix: mockAppendRandomHeaderSuffix,
       buildOverlayTemplateLines: (
@@ -109,7 +111,7 @@ describe("videoPreviewViewModel", () => {
     }
   ];
 
-  it("returns playable previews only when at least two video segments resolve", () => {
+  it("returns playable previews when at least one video segment resolves", () => {
     const result = buildPlayablePreviews({
       plans: [
         {
@@ -139,7 +141,8 @@ describe("videoPreviewViewModel", () => {
       previewFps: 30
     });
 
-    expect(result).toEqual([]);
+    expect(result).toHaveLength(1);
+    expect(result[0]?.resolvedSegments).toHaveLength(1);
   });
 
   beforeEach(() => {
@@ -176,8 +179,98 @@ describe("videoPreviewViewModel", () => {
     expect(result[0]?.captionItemKey).toEqual({
       cacheKeyTimestamp: 123,
       cacheKeyId: 4,
-      mediaType: "video"
+      mediaType: "video",
+      subcategory: "status_update",
+      contentSource: "cached_create"
     });
+  });
+
+  it("builds a saved-content save target and allows one resolved segment for saved reels", () => {
+    const result = buildPlayablePreviews({
+      plans: [
+        {
+          id: "saved-plan",
+          totalDurationSeconds: 2,
+          segments: [
+            {
+              clipId: "clip-1",
+              category: "kitchen",
+              durationSeconds: 2,
+              maxDurationSeconds: 3,
+              sourceType: "listing_clip",
+              sourceId: "clip-1"
+            }
+          ]
+        }
+      ],
+      items: baseItems,
+      captionItems: [
+        {
+          id: "saved-saved-reel-1",
+          hook: "Saved hook",
+          savedContentId: "saved-reel-1",
+          contentSource: "saved_content",
+          listingSubcategory: "new_listing"
+        } as ContentItem
+      ],
+      listingSubcategory: "new_listing",
+      listingAddress: null,
+      openHouseContext: null,
+      previewFps: 30
+    });
+
+    expect(result).toHaveLength(1);
+    expect(result[0]?.captionItemKey).toEqual({
+      contentSource: "saved_content",
+      savedContentId: "saved-reel-1"
+    });
+  });
+
+  it("uses stable cache identity for overlay seed so streamed and cached previews match styling", () => {
+    const streamed = buildPlayablePreviews({
+      plans: basePlans,
+      items: baseItems,
+      captionItems: [
+        {
+          id: "generated-batch-1-0",
+          hook: "Luxury home",
+          cacheKeyTimestamp: 123,
+          cacheKeyId: 4,
+          body: [
+            { header: "Fresh interiors", content: "Bright and open spaces" }
+          ]
+        } as ContentItem
+      ],
+      listingSubcategory: "status_update",
+      listingAddress: null,
+      openHouseContext: null,
+      previewFps: 30
+    });
+
+    const cached = buildPlayablePreviews({
+      plans: basePlans,
+      items: baseItems,
+      captionItems: [
+        {
+          id: "cached-new_listing-video-123-4",
+          hook: "Luxury home",
+          cacheKeyTimestamp: 123,
+          cacheKeyId: 4,
+          body: [
+            { header: "Fresh interiors", content: "Bright and open spaces" }
+          ]
+        } as ContentItem
+      ],
+      listingSubcategory: "status_update",
+      listingAddress: null,
+      openHouseContext: null,
+      previewFps: 30
+    });
+
+    expect(streamed[0]?.resolvedSegments[0]?.textOverlay).toEqual(
+      cached[0]?.resolvedSegments[0]?.textOverlay
+    );
+    expect(streamed[0]?.thumbnailOverlay).toEqual(cached[0]?.thumbnailOverlay);
   });
 
   it("adds supplemental address overlay for new listings when slide lacks address", () => {

@@ -25,6 +25,10 @@ const logger = createChildLogger(baseLogger, {
 });
 
 type ContentStreamEvent =
+  | {
+      type: "meta";
+      meta: { cache_key_timestamp?: number };
+    }
   | { type: "delta"; text: string }
   | {
       type: "done";
@@ -69,17 +73,32 @@ export const generateListingContentForCurrentUser = withServerActionCaller(
         try {
           let doneItems: ListingGeneratedItem[] | null = null;
           let errored = false;
+          const cacheKeyTimestamp =
+            context.mediaType === "video" ? Date.now() : undefined;
+
+          if (typeof cacheKeyTimestamp === "number") {
+            controller.enqueue(
+              encodeSseEvent({
+                type: "meta",
+                meta: { cache_key_timestamp: cacheKeyTimestamp }
+              })
+            );
+          }
 
           await consumeSseStream<ContentStreamEvent>(
             upstreamResponse.stream,
             async (event) => {
+              if (event.type === "meta") {
+                return;
+              }
+
               if (event.type === "delta" || event.type === "error") {
                 controller.enqueue(encodeSseEvent(event));
                 if (event.type === "error") errored = true;
               } else if (event.type === "done") {
                 doneItems = event.items;
                 if (!errored && doneItems && doneItems.length > 0) {
-                  const timestamp = Date.now();
+                  const timestamp = cacheKeyTimestamp ?? Date.now();
 
                   if (context.mediaType === "video") {
                     for (let id = 0; id < doneItems.length; id += 1) {

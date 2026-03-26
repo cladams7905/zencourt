@@ -143,22 +143,19 @@ export async function getCurrentVideoClipVersionsByListingId(
 
   return withDbErrorHandling(
     async () => {
-      const clips = await db
-        .select()
+      const rows = await db
+        .select({
+          clipVersion: videoClipVersions
+        })
         .from(videoClips)
+        .innerJoin(
+          videoClipVersions,
+          eq(videoClipVersions.id, videoClips.currentVideoClipVersionId)
+        )
         .where(eq(videoClips.listingId, listingId))
         .orderBy(asc(videoClips.sortOrder), asc(videoClips.createdAt));
 
-      const clipVersions = await Promise.all(
-        clips
-          .map((clip) => clip.currentVideoClipVersionId)
-          .filter((value): value is string => Boolean(value))
-          .map((clipVersionId) => getVideoClipVersionById(clipVersionId))
-      );
-
-      return clipVersions.filter(
-        (clipVersion): clipVersion is DBVideoClipVersion => Boolean(clipVersion)
-      );
+      return rows.map(({ clipVersion }) => clipVersion);
     },
     {
       actionName: "getCurrentVideoClipVersionsByListingId",

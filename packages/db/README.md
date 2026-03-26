@@ -2,6 +2,8 @@
 
 Database schema, migrations, Drizzle client, and DB-owned model types.
 
+- ERD: [ERD.md](./ERD.md)
+
 ## Ownership
 
 - `drizzle/schema/*`: table and enum definitions.

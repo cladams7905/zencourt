@@ -96,7 +96,7 @@ export function ListingCreateView({
     imageLoadingCount,
     activePreviewPlans,
     handleDeleteImagePreviewItem,
-    updateContentItemText
+    replaceContentItem
   } = useListingCreateWorkflow({
     listingId,
     listingPostItems,
@@ -254,7 +254,7 @@ export function ListingCreateView({
               openHouseContext={openHouseContext ?? null}
               forceSimpleOverlayTemplate
               loadingCount={loadingCount}
-              onUpdatePreviewText={updateContentItemText}
+              onReplacePreviewItem={replaceContentItem}
             />
           ) : activeMediaTab === "images" &&
             (activeImagePreviewItems.length > 0 ||

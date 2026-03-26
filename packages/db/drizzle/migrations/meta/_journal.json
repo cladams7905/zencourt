@@ -281,6 +281,20 @@
       "when": 1774020988539,
       "tag": "0039_goofy_killmonger",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1774545902691,
+      "tag": "0040_volatile_rage",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1774547521729,
+      "tag": "0041_early_wendell_rand",
+      "breakpoints": true
     }
   ]
 }

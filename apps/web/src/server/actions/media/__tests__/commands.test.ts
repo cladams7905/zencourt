@@ -148,7 +148,8 @@ describe("media commands", () => {
         {
           id: "m1",
           url: "private://media-1",
-          thumbnailUrl: "private://thumb-1"
+          thumbnailUrl: "private://thumb-1",
+          durationSeconds: 4.25
         }
       ]);
       mockGetPublicDownloadUrlSafe
@@ -162,7 +163,8 @@ describe("media commands", () => {
         expect.objectContaining({
           id: "m1",
           url: "https://public/media-1",
-          thumbnailUrl: "https://public/thumb-1"
+          thumbnailUrl: "https://public/thumb-1",
+          durationSeconds: 4.25
         })
       ]);
     });

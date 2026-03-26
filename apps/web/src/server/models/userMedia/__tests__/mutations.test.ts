@@ -54,12 +54,21 @@ describe("userMedia mutations", () => {
   });
 
   it("creates media records", async () => {
-    const inserted = [{ id: "m1", userId: "u1", type: "image", url: "u", thumbnailUrl: null }];
+    const inserted = [
+      {
+        id: "m1",
+        userId: "u1",
+        type: "image",
+        url: "u",
+        thumbnailUrl: null,
+        durationSeconds: null
+      }
+    ];
     mockInsertReturning.mockResolvedValueOnce(inserted);
     mockInsertOnConflictDoUpdate.mockResolvedValueOnce(undefined);
 
     const result = await createUserMediaRecords("u1", [
-      { type: "image", url: "https://x", thumbnailUrl: null }
+      { type: "image", url: "https://x", thumbnailUrl: null, durationSeconds: null }
     ]);
 
     expect(result).toEqual(inserted);

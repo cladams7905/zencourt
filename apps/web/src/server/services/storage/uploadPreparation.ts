@@ -194,7 +194,12 @@ export async function prepareUserMediaUploadUrls(
 export function mapUserMediaRecordInputs(
   userId: string,
   uploads: UserMediaRecordInput[]
-): Array<{ type: UserMediaRecordInput["type"]; url: string; thumbnailUrl: string | null }> {
+): Array<{
+  type: UserMediaRecordInput["type"];
+  url: string;
+  thumbnailUrl: string | null;
+  durationSeconds?: number | null;
+}> {
   const imagePrefix = `${getUserMediaFolder(userId, "image")}/`;
   const videoPrefix = `${getUserMediaFolder(userId, "video")}/`;
   const thumbnailPrefix = `${getUserMediaThumbnailFolder(userId)}/`;
@@ -214,7 +219,13 @@ export function mapUserMediaRecordInputs(
       url: storageService.buildPublicUrlForKey(upload.key),
       thumbnailUrl: upload.thumbnailKey
         ? storageService.buildPublicUrlForKey(upload.thumbnailKey)
-        : null
+        : null,
+      durationSeconds:
+        typeof upload.durationSeconds === "number" &&
+        Number.isFinite(upload.durationSeconds) &&
+        upload.durationSeconds > 0
+          ? Number(upload.durationSeconds.toFixed(2))
+          : null
     };
   });
 }

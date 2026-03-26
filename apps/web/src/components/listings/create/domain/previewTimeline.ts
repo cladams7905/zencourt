@@ -26,6 +26,8 @@ export interface PreviewTimelineSegment {
   category: string | null;
   durationSeconds: number;
   maxDurationSeconds: number;
+  sourceType?: "listing_clip" | "user_media";
+  sourceId?: string;
   textOverlay?: PreviewTextOverlay;
 }
 

@@ -28,4 +28,5 @@ export type UserMediaRecordInput = {
   key: string;
   type: UserMediaType;
   thumbnailKey?: string;
+  durationSeconds?: number | null;
 };

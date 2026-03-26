@@ -52,10 +52,10 @@ describe("textOverlay variants/templates", () => {
 
   it("maps variation numbers deterministically", () => {
     expect(pickRichOverlayFontPairingForVariation(1)).toBe(
-      "block-rouge-italiana"
+      "stacked-accent"
     );
     expect(pickRichOverlayFontPairingForVariation(6)).toBe(
-      "block-rouge-italiana"
+      "stacked-accent"
     );
     expect(["top-third", "center", "bottom-third"]).toContain(
       pickRichOverlayPosition("seed")
