@@ -25,6 +25,8 @@ export type UpdateCachedListingVideoTextParams = {
   subcategory: string;
   hook: string;
   caption: string;
+  orderedClipIds: string[];
+  clipDurationOverrides?: Record<string, number>;
 };
 
 export const deleteCachedListingContentItem = withServerActionCaller(
@@ -79,11 +81,38 @@ export const updateCachedListingVideoText = withServerActionCaller(
       cacheKeyId,
       subcategory: subcategoryRaw,
       hook: hookRaw,
-      caption: captionRaw
+      caption: captionRaw,
+      orderedClipIds: orderedClipIdsRaw,
+      clipDurationOverrides: clipDurationOverridesRaw
     } = params;
     const subcategory = subcategoryRaw?.trim();
     const hook = hookRaw?.trim();
     const caption = captionRaw?.trim();
+    const orderedClipIds = Array.isArray(orderedClipIdsRaw)
+      ? orderedClipIdsRaw
+          .map((clipId) => (typeof clipId === "string" ? clipId.trim() : ""))
+          .filter(Boolean)
+      : [];
+    const clipDurationOverrides =
+      clipDurationOverridesRaw &&
+      typeof clipDurationOverridesRaw === "object" &&
+      !Array.isArray(clipDurationOverridesRaw)
+        ? Object.fromEntries(
+            Object.entries(clipDurationOverridesRaw)
+              .map(
+                ([clipId, duration]): [string, number | null] => [
+                  clipId.trim(),
+                  typeof duration === "number"
+                    ? Number(duration.toFixed(2))
+                    : null
+                ]
+              )
+              .filter(
+                (entry): entry is [string, number] =>
+                  Boolean(entry[0]) && entry[1] !== null && entry[1] > 0
+              )
+          )
+        : {};
 
     if (
       typeof cacheKeyTimestamp !== "number" ||
@@ -97,10 +126,11 @@ export const updateCachedListingVideoText = withServerActionCaller(
         subcategory
       ) ||
       !hook ||
-      !caption
+      !caption ||
+      orderedClipIds.length === 0
     ) {
       throw new DomainValidationError(
-        "cacheKeyTimestamp, cacheKeyId, valid subcategory, hook, and caption are required"
+        "cacheKeyTimestamp, cacheKeyId, valid subcategory, hook, caption, and orderedClipIds are required"
       );
     }
 
@@ -113,7 +143,9 @@ export const updateCachedListingVideoText = withServerActionCaller(
       timestamp: cacheKeyTimestamp,
       id: cacheKeyId,
       hook,
-      caption
+      caption,
+      orderedClipIds,
+      clipDurationOverrides
     });
 
     if (!updated) {

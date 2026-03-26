@@ -83,12 +83,14 @@ describe("videoPreviewViewModel", () => {
         {
           clipId: "clip-1",
           category: "kitchen",
-          durationSeconds: 2
+          durationSeconds: 2,
+          maxDurationSeconds: 3
         },
         {
           clipId: "clip-2",
           category: "exterior",
-          durationSeconds: 3
+          durationSeconds: 3,
+          maxDurationSeconds: 5
         }
       ]
     }
@@ -114,11 +116,17 @@ describe("videoPreviewViewModel", () => {
           id: "plan-with-missing-video",
           totalDurationSeconds: 4,
           segments: [
-            { clipId: "clip-1", category: "kitchen", durationSeconds: 2 },
+            {
+              clipId: "clip-1",
+              category: "kitchen",
+              durationSeconds: 2,
+              maxDurationSeconds: 3
+            },
             {
               clipId: "clip-missing",
               category: "living room",
-              durationSeconds: 2
+              durationSeconds: 2,
+              maxDurationSeconds: 3
             }
           ]
         }
@@ -162,6 +170,7 @@ describe("videoPreviewViewModel", () => {
     expect(result).toHaveLength(1);
     expect(result[0]?.durationInFrames).toBe(150);
     expect(result[0]?.resolvedSegments).toHaveLength(2);
+    expect(result[0]?.resolvedSegments[0]?.maxDurationSeconds).toBe(3);
     expect(result[0]?.thumbnailOverlay).not.toBeNull();
     expect(result[0]?.firstThumb).toBe("https://img/1.jpg");
     expect(result[0]?.captionItemKey).toEqual({

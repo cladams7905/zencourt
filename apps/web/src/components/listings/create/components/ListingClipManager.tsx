@@ -21,7 +21,8 @@ import { cn } from "@web/src/components/ui/utils";
 import { fetchApiData } from "@web/src/lib/core/http/client";
 import {
   cancelVideoGenerationBatch,
-  regenerateListingClipVersion
+  regenerateListingClipVersion,
+  selectListingClipVersion
 } from "@web/src/server/actions/video/generate";
 import {
   getClipRegenerationSoftTimeoutMs,
@@ -291,7 +292,14 @@ function ClipManagerWorkspace({
   );
   const [selectedVersionId, setSelectedVersionId] = React.useState<
     string | null
-  >(items[0]?.currentVersion.clipVersionId ?? null);
+  >(() => {
+    const initialClipId = items[0]?.clipId;
+    if (!initialClipId) {
+      return null;
+    }
+
+    return items[0]?.currentVersion.clipVersionId ?? null;
+  });
   const [draftAiDirections, setDraftAiDirections] = React.useState("");
   const [isRegenerateMenuOpen, setIsRegenerateMenuOpen] = React.useState(false);
   const [isCustomizeExpanded, setIsCustomizeExpanded] = React.useState(false);
@@ -304,6 +312,8 @@ function ClipManagerWorkspace({
   const [pendingBatchIdByClipId, setPendingBatchIdByClipId] = React.useState<
     Record<string, string>
   >({});
+  const [isSelectingVersion, startSelectVersionTransition] =
+    React.useTransition();
   const previousStatusesRef = React.useRef<Map<string, string>>(new Map());
   const previousDraftSelectionRef = React.useRef<{
     clipId: string | null;
@@ -452,7 +462,8 @@ function ClipManagerWorkspace({
     const selectedVersion =
       selectedItem.versions.find(
         (version) => version.clipVersionId === selectedVersionId
-      ) ?? selectedItem.currentVersion;
+      ) ??
+      selectedItem.currentVersion;
     const nextSelectedVersionId = selectedVersion.clipVersionId ?? null;
     if (nextSelectedVersionId !== selectedVersionId) {
       setSelectedVersionId(nextSelectedVersionId);
@@ -472,7 +483,12 @@ function ClipManagerWorkspace({
       clipId: selectedItem.clipId,
       versionId: nextSelectedVersionId
     };
-  }, [clipItems, selectedClipId, selectedVersionId, draftAiDirections]);
+  }, [
+    clipItems,
+    draftAiDirections,
+    selectedClipId,
+    selectedVersionId
+  ]);
 
   const selectedItem =
     clipItems.find((item) => item.clipId === selectedClipId) ?? clipItems[0];
@@ -603,6 +619,65 @@ function ClipManagerWorkspace({
     });
   };
 
+  const applySelectedVersionLocally = React.useCallback(
+    (clipId: string, clipVersionId: string) => {
+      setClipItems((currentItems) =>
+        currentItems.map((item) => {
+          if (item.clipId !== clipId) {
+            return item;
+          }
+
+          const nextCurrentVersion =
+            item.versions.find(
+              (version) => version.clipVersionId === clipVersionId
+            ) ?? item.currentVersion;
+
+          return {
+            ...item,
+            currentVersion: nextCurrentVersion
+          };
+        })
+      );
+    },
+    []
+  );
+
+  const handleSelectVersion = React.useCallback(
+    (clipVersionId: string) => {
+      if (!selectedItem) {
+        return;
+      }
+
+      const previousVersionId = selectedVersionId;
+      setSelectedVersionId(clipVersionId);
+
+      startSelectVersionTransition(() => {
+        void selectListingClipVersion({
+          listingId,
+          clipId: selectedItem.clipId,
+          clipVersionId
+        })
+          .then(() => {
+            applySelectedVersionLocally(selectedItem.clipId, clipVersionId);
+          })
+          .catch((error) => {
+            setSelectedVersionId(previousVersionId ?? null);
+            toast.error(
+              error instanceof Error
+                ? error.message
+                : "Failed to select clip version."
+            );
+          });
+      });
+    },
+    [
+      applySelectedVersionLocally,
+      listingId,
+      selectedItem,
+      selectedVersionId
+    ]
+  );
+
   const renderClipActionControls = (options?: {
     controlsClassName?: string;
     selectClassName?: string;
@@ -620,7 +695,7 @@ function ClipManagerWorkspace({
         </p>
         <Select
           value={selectedVersion?.clipVersionId ?? undefined}
-          onValueChange={(value) => setSelectedVersionId(value)}
+          onValueChange={handleSelectVersion}
         >
           <SelectTrigger className="w-full min-w-0 text-sm">
             <SelectValue placeholder="Choose a version" />
@@ -680,7 +755,10 @@ function ClipManagerWorkspace({
               <Button
                 type="button"
                 disabled={
-                  isSubmitting || !selectedItem || selectedClipIsRegenerating
+                  isSubmitting ||
+                  isSelectingVersion ||
+                  !selectedItem ||
+                  selectedClipIsRegenerating
                 }
                 className="shrink-0 gap-2"
               >

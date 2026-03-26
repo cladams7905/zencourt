@@ -25,6 +25,7 @@ export interface PreviewTimelineSegment {
   clipId: string;
   category: string | null;
   durationSeconds: number;
+  maxDurationSeconds: number;
   textOverlay?: PreviewTextOverlay;
 }
 
@@ -113,7 +114,11 @@ export function buildPreviewTimelinePlan(
   const segments: PreviewTimelineSegment[] = ordered.map((clip) => ({
     clipId: clip.id,
     category: clip.category ?? null,
-    durationSeconds: getEffectiveDurationSeconds(clip, rng)
+    durationSeconds: getEffectiveDurationSeconds(clip, rng),
+    maxDurationSeconds: Math.max(
+      MIN_CLIP_DURATION_SECONDS,
+      clip.durationSeconds ?? DEFAULT_CLIP_DURATION_SECONDS
+    )
   }));
 
   const totalDurationSeconds = Number(

@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Player } from "@remotion/player";
+import type { PlayerRef } from "@remotion/player";
 import { X } from "lucide-react";
 import {
   Dialog,
@@ -9,18 +9,20 @@ import {
   DialogTitle
 } from "@web/src/components/ui/dialog";
 import { Button } from "@web/src/components/ui/button";
-import { LoadingImage } from "@web/src/components/ui/loading-image";
-import { ListingTimelinePreviewComposition } from "@web/src/components/listings/create/media/video/components/ListingTimelinePreviewComposition";
+import {
+  getTimelineDurationInFrames
+} from "@web/src/components/listings/create/media/video/components/ListingTimelinePreviewComposition";
+import { VideoPreviewPlayer } from "@web/src/components/listings/create/media/video/components/VideoPreviewPlayer";
 import { VideoPreviewTextEditor } from "@web/src/components/listings/create/media/video/components/VideoPreviewTextEditor";
 import { VideoPreviewTimeline } from "@web/src/components/listings/create/media/video/components/VideoPreviewTimeline";
 import type {
   PlayablePreview,
   PlayablePreviewTextUpdate
 } from "@web/src/components/listings/create/shared/types";
+import type { TimelinePreviewResolvedSegment } from "@web/src/components/listings/create/media/video/components/ListingTimelinePreviewComposition";
 
 type VideoPreviewModalProps = {
   selectedPreview: PlayablePreview | null;
-  captionSubcategoryLabel: string;
   previewFps: number;
   onOpenChange: (open: boolean) => void;
   onSavePreviewText: (params: PlayablePreviewTextUpdate) => Promise<void>;
@@ -28,30 +30,60 @@ type VideoPreviewModalProps = {
 
 export function VideoPreviewModal({
   selectedPreview,
-  captionSubcategoryLabel,
   previewFps,
   onOpenChange,
   onSavePreviewText
 }: VideoPreviewModalProps) {
+  const playerRef = React.useRef<PlayerRef | null>(null);
+  const [playerInstance, setPlayerInstance] = React.useState<PlayerRef | null>(
+    null
+  );
   const [hookDraft, setHookDraft] = React.useState("");
   const [captionDraft, setCaptionDraft] = React.useState("");
+  const [segmentDraft, setSegmentDraft] = React.useState<
+    TimelinePreviewResolvedSegment[]
+  >([]);
+  const [currentFrame, setCurrentFrame] = React.useState(0);
+  const pendingSeekFrameRef = React.useRef<number | null>(null);
   const [isSaving, setIsSaving] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     setHookDraft(selectedPreview?.captionItem?.hook ?? "");
     setCaptionDraft(selectedPreview?.captionItem?.caption ?? "");
+    setSegmentDraft(selectedPreview?.resolvedSegments ?? []);
+    setCurrentFrame(0);
+    setPlayerInstance(null);
     setIsSaving(false);
     setErrorMessage(null);
   }, [selectedPreview]);
+
+  const handlePlayerRef = React.useCallback((player: PlayerRef | null) => {
+    playerRef.current = player;
+    setPlayerInstance(player);
+  }, []);
 
   const normalizedHook = hookDraft.trim();
   const normalizedCaption = captionDraft.trim();
   const savedHook = selectedPreview?.captionItem?.hook ?? "";
   const savedCaption = selectedPreview?.captionItem?.caption ?? "";
+  const savedClipOrderSignature = (selectedPreview?.resolvedSegments ?? [])
+    .map((segment) => segment.clipId)
+    .join("::");
+  const draftClipOrderSignature = segmentDraft
+    .map((segment) => segment.clipId)
+    .join("::");
+  const savedDurationSignature = (selectedPreview?.resolvedSegments ?? [])
+    .map((segment) => `${segment.clipId}:${segment.durationSeconds}`)
+    .join("::");
+  const draftDurationSignature = segmentDraft
+    .map((segment) => `${segment.clipId}:${segment.durationSeconds}`)
+    .join("::");
   const isDirty =
     normalizedHook !== savedHook.trim() ||
-    normalizedCaption !== savedCaption.trim();
+    normalizedCaption !== savedCaption.trim() ||
+    draftClipOrderSignature !== savedClipOrderSignature ||
+    draftDurationSignature !== savedDurationSignature;
 
   const slideNotes = (selectedPreview?.captionItem?.body ?? []).map(
     (slide, index) => ({
@@ -64,8 +96,34 @@ export function VideoPreviewModal({
   const handleCancel = React.useCallback(() => {
     setHookDraft(selectedPreview?.captionItem?.hook ?? "");
     setCaptionDraft(selectedPreview?.captionItem?.caption ?? "");
+    setSegmentDraft(selectedPreview?.resolvedSegments ?? []);
     setErrorMessage(null);
   }, [selectedPreview]);
+
+  const handleSegmentsReorder = React.useCallback(
+    (fromIndex: number, toIndex: number) => {
+      setSegmentDraft((prev) => {
+        if (
+          fromIndex === toIndex ||
+          fromIndex < 0 ||
+          toIndex < 0 ||
+          fromIndex >= prev.length ||
+          toIndex >= prev.length
+        ) {
+          return prev;
+        }
+
+        const next = [...prev];
+        const [movedSegment] = next.splice(fromIndex, 1);
+        if (!movedSegment) {
+          return prev;
+        }
+        next.splice(toIndex, 0, movedSegment);
+        return next;
+      });
+    },
+    []
+  );
 
   const handleSave = React.useCallback(async () => {
     if (!selectedPreview?.captionItemKey) {
@@ -80,6 +138,10 @@ export function VideoPreviewModal({
       await onSavePreviewText({
         hook: normalizedHook,
         caption: normalizedCaption,
+        orderedClipIds: segmentDraft.map((segment) => segment.clipId),
+        clipDurationOverrides: Object.fromEntries(
+          segmentDraft.map((segment) => [segment.clipId, segment.durationSeconds])
+        ),
         captionItemKey: selectedPreview.captionItemKey
       });
       handleCancel();
@@ -95,8 +157,100 @@ export function VideoPreviewModal({
     normalizedCaption,
     normalizedHook,
     onSavePreviewText,
+    segmentDraft,
     selectedPreview
   ]);
+
+  const draftDurationInFrames = React.useMemo(
+    () => getTimelineDurationInFrames(segmentDraft, previewFps),
+    [previewFps, segmentDraft]
+  );
+
+  const handleSegmentDurationChange = React.useCallback(
+    (index: number, durationSeconds: number) => {
+      pendingSeekFrameRef.current = currentFrame;
+      setSegmentDraft((prev) =>
+        prev.map((segment, segmentIndex) =>
+          segmentIndex === index ? { ...segment, durationSeconds } : segment
+        )
+      );
+    },
+    [currentFrame]
+  );
+
+  const handleSeekFrame = React.useCallback((frame: number) => {
+    playerRef.current?.pause();
+    playerRef.current?.seekTo(frame);
+    setCurrentFrame(frame);
+  }, []);
+
+  React.useEffect(() => {
+    const pendingFrame = pendingSeekFrameRef.current;
+    if (pendingFrame === null) {
+      return;
+    }
+
+    const nextFrame = Math.min(pendingFrame, draftDurationInFrames);
+    playerRef.current?.seekTo(nextFrame);
+    setCurrentFrame(nextFrame);
+    pendingSeekFrameRef.current = null;
+  }, [draftDurationInFrames, segmentDraft]);
+
+  React.useEffect(() => {
+    const player = playerInstance;
+    if (!player) {
+      return;
+    }
+
+    const syncFrame = (event: { detail: { frame: number } }) => {
+      setCurrentFrame(event.detail.frame);
+    };
+    const handleEnded = () => {
+      setCurrentFrame(draftDurationInFrames);
+    };
+
+    player.addEventListener("frameupdate", syncFrame);
+    player.addEventListener("seeked", syncFrame);
+    player.addEventListener("timeupdate", syncFrame);
+    player.addEventListener("ended", handleEnded);
+
+    return () => {
+      player.removeEventListener("frameupdate", syncFrame);
+      player.removeEventListener("seeked", syncFrame);
+      player.removeEventListener("timeupdate", syncFrame);
+      player.removeEventListener("ended", handleEnded);
+    };
+  }, [draftDurationInFrames, playerInstance, selectedPreview]);
+
+  React.useEffect(() => {
+    const player = playerInstance;
+    if (!player || !selectedPreview) {
+      return;
+    }
+
+    let frameId = 0;
+    let cancelled = false;
+
+    const syncFromPlayer = () => {
+      if (cancelled) {
+        return;
+      }
+
+      const nextFrame = player.getCurrentFrame();
+      if (typeof nextFrame === "number" && Number.isFinite(nextFrame)) {
+        setCurrentFrame(nextFrame);
+      }
+
+      frameId = window.requestAnimationFrame(syncFromPlayer);
+    };
+
+    syncFromPlayer();
+
+    return () => {
+      cancelled = true;
+      window.cancelAnimationFrame(frameId);
+    };
+  }, [playerInstance, selectedPreview]);
 
   return (
     <Dialog open={Boolean(selectedPreview)} onOpenChange={onOpenChange}>
@@ -121,51 +275,32 @@ export function VideoPreviewModal({
         {selectedPreview ? (
           <div className="pb-0 xl:min-h-0 xl:overflow-hidden">
             <div className="grid items-start xl:h-full xl:min-h-0 xl:grid-cols-[minmax(0,1fr)_1px_minmax(0,520px)] xl:items-stretch xl:overflow-hidden">
-              <div className="grid min-w-0 content-start xl:h-full xl:min-h-0 xl:grid-rows-[minmax(0,1fr)_1px_180px] xl:overflow-hidden">
+              <div className="grid min-w-0 content-start xl:h-full xl:min-h-0 xl:grid-rows-[minmax(0,1fr)_1px_248px] xl:overflow-hidden">
                 <div className="flex min-h-0 min-w-0 items-center justify-center overflow-hidden bg-secondary xl:h-full">
                   <div
                     data-testid="video-player-shell"
-                    className="relative aspect-9/16 w-full max-w-[320px] lg:max-w-[360px] xl:h-[92%] xl:max-h-full xl:w-auto xl:max-w-full"
+                    className="relative aspect-9/16 w-full max-w-[320px] lg:max-w-[360px] xl:h-[86%] xl:max-h-full xl:w-auto xl:max-w-full"
                   >
-                    <Player
-                      component={ListingTimelinePreviewComposition}
-                      inputProps={{
-                        segments: selectedPreview.resolvedSegments
-                      }}
-                      durationInFrames={selectedPreview.durationInFrames}
-                      compositionWidth={1080}
-                      compositionHeight={1920}
-                      fps={previewFps}
-                      loop
-                      autoPlay
-                      controls
-                      initiallyMuted
-                      renderPoster={() =>
-                        selectedPreview.firstThumb ? (
-                          <LoadingImage
-                            src={selectedPreview.firstThumb}
-                            alt="Reel preview"
-                            fill
-                            style={{
-                              width: "100%",
-                              height: "100%",
-                              objectFit: "cover"
-                            }}
-                          />
-                        ) : null
-                      }
-                      showPosterWhenUnplayed
-                      showPosterWhenBuffering
-                      showPosterWhenBufferingAndPaused
-                      style={{ width: "100%", height: "100%" }}
-                      acknowledgeRemotionLicense
+                    <VideoPreviewPlayer
+                      key={selectedPreview.id}
+                      playerRef={handlePlayerRef}
+                      segments={segmentDraft}
+                      durationInFrames={draftDurationInFrames}
+                      previewFps={previewFps}
+                      firstThumb={selectedPreview.firstThumb}
                     />
                   </div>
                 </div>
                 <div className="h-px bg-border" aria-hidden />
-                <div className="px-4 py-3 xl:flex xl:h-[180px] xl:min-h-[180px] xl:flex-col xl:overflow-hidden">
+                <div className="px-4 py-3 xl:flex xl:h-[248px] xl:min-h-[248px] xl:flex-col xl:overflow-hidden">
                   <VideoPreviewTimeline
-                    segments={selectedPreview.resolvedSegments}
+                    segments={segmentDraft}
+                    previewFps={previewFps}
+                    currentFrame={currentFrame}
+                    totalFrames={draftDurationInFrames}
+                    onSeekFrame={handleSeekFrame}
+                    onReorder={handleSegmentsReorder}
+                    onDurationChange={handleSegmentDurationChange}
                   />
                 </div>
               </div>
@@ -176,8 +311,6 @@ export function VideoPreviewModal({
               <div className="min-w-0 border-t border-border xl:min-h-0 xl:overflow-hidden xl:border-t-0">
                 <div className="xl:h-full">
                   <VideoPreviewTextEditor
-                    captionSubcategoryLabel={captionSubcategoryLabel}
-                    variationNumber={selectedPreview.variationNumber}
                     hookValue={hookDraft}
                     captionValue={captionDraft}
                     slideNotes={slideNotes}

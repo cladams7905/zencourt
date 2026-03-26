@@ -33,6 +33,8 @@ export type PlayablePreviewCaptionItemKey = {
 export type PlayablePreviewTextUpdate = {
   hook: string;
   caption: string;
+  orderedClipIds: string[];
+  clipDurationOverrides: Record<string, number>;
   captionItemKey: PlayablePreviewCaptionItemKey;
 };
 

@@ -8,7 +8,12 @@ import type {
 import { DomainValidationError } from "@web/src/server/errors/domain";
 import { requireAuthenticatedUser } from "@web/src/server/actions/_auth/api";
 import { requireListingAccess } from "@web/src/server/models/listings/access";
-import { getVideoGenBatchById } from "@web/src/server/models/videoGen";
+import {
+  getVideoClipById,
+  getVideoClipVersionById,
+  getVideoGenBatchById,
+  updateVideoClip
+} from "@web/src/server/models/videoGen";
 import {
   cancelVideoGenerationBatch as cancelVideoGenerationBatchHelper,
   regenerateListingClipVersion as regenerateListingClipVersionHelper,
@@ -45,6 +50,34 @@ function parseClipVersionRegenerateRequest(
     clipId: input.clipId.trim(),
     aiDirections:
       typeof input.aiDirections === "string" ? input.aiDirections : undefined
+  };
+}
+
+function parseSelectCurrentClipVersionRequest(body: unknown): {
+  listingId: string;
+  clipId: string;
+  clipVersionId: string;
+} {
+  const input = (body || {}) as Partial<{
+    listingId: string;
+    clipId: string;
+    clipVersionId: string;
+  }>;
+
+  if (!input.listingId || typeof input.listingId !== "string") {
+    throw new DomainValidationError("listingId is required");
+  }
+  if (!input.clipId || typeof input.clipId !== "string") {
+    throw new DomainValidationError("clipId is required");
+  }
+  if (!input.clipVersionId || typeof input.clipVersionId !== "string") {
+    throw new DomainValidationError("clipVersionId is required");
+  }
+
+  return {
+    listingId: input.listingId.trim(),
+    clipId: input.clipId.trim(),
+    clipVersionId: input.clipVersionId.trim()
   };
 }
 
@@ -96,5 +129,34 @@ export const regenerateListingClipVersion = withServerActionCaller(
     });
 
     return { ...result, listingId: listing.id };
+  }
+);
+
+export const selectListingClipVersion = withServerActionCaller(
+  "selectListingClipVersion",
+  async (body: unknown) => {
+    const user = await requireAuthenticatedUser();
+    const parsed = parseSelectCurrentClipVersionRequest(body);
+    const listing = await requireListingAccess(parsed.listingId, user.id);
+    const clip = await getVideoClipById(parsed.clipId);
+
+    if (!clip || clip.listingId !== listing.id) {
+      throw new DomainValidationError("clipId is invalid");
+    }
+
+    const clipVersion = await getVideoClipVersionById(parsed.clipVersionId);
+    if (!clipVersion || clipVersion.videoClipId !== clip.id) {
+      throw new DomainValidationError("clipVersionId is invalid");
+    }
+
+    await updateVideoClip(clip.id, {
+      currentVideoClipVersionId: clipVersion.id
+    });
+
+    return {
+      listingId: listing.id,
+      clipId: clip.id,
+      clipVersionId: clipVersion.id
+    };
   }
 );

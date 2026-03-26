@@ -5,6 +5,9 @@ const mockRequireAuthenticatedUser = jest.fn();
 const mockRequireListingAccess = jest.fn();
 const mockGetPublicDownloadUrls = jest.fn();
 const mockGetVideoGenBatchById = jest.fn();
+const mockGetVideoClipById = jest.fn();
+const mockGetVideoClipVersionById = jest.fn();
+const mockUpdateVideoClip = jest.fn();
 
 jest.mock("@web/src/server/actions/video/generate/helpers", () => ({
   startListingVideoGeneration: (...args: unknown[]) =>
@@ -33,7 +36,13 @@ jest.mock("@web/src/server/models/listings/access", () => ({
 
 jest.mock("@web/src/server/models/videoGen", () => ({
   getVideoGenBatchById: (...args: unknown[]) =>
-    (mockGetVideoGenBatchById as (...a: unknown[]) => unknown)(...args)
+    (mockGetVideoGenBatchById as (...a: unknown[]) => unknown)(...args),
+  getVideoClipById: (...args: unknown[]) =>
+    (mockGetVideoClipById as (...a: unknown[]) => unknown)(...args),
+  getVideoClipVersionById: (...args: unknown[]) =>
+    (mockGetVideoClipVersionById as (...a: unknown[]) => unknown)(...args),
+  updateVideoClip: (...args: unknown[]) =>
+    (mockUpdateVideoClip as (...a: unknown[]) => unknown)(...args)
 }));
 
 jest.mock("@web/src/server/services/storage/urlResolution", () => ({
@@ -44,7 +53,8 @@ jest.mock("@web/src/server/services/storage/urlResolution", () => ({
 import {
   regenerateListingClipVersion,
   startListingVideoGeneration,
-  cancelVideoGenerationBatch
+  cancelVideoGenerationBatch,
+  selectListingClipVersion
 } from "@web/src/server/actions/video/generate/commands";
 
 describe("video commands", () => {
@@ -64,6 +74,18 @@ describe("video commands", () => {
       id: "batch-1",
       listingId: "listing-1"
     });
+    mockGetVideoClipById.mockReset();
+    mockGetVideoClipById.mockResolvedValue({
+      id: "clip-1",
+      listingId: "listing-1"
+    });
+    mockGetVideoClipVersionById.mockReset();
+    mockGetVideoClipVersionById.mockResolvedValue({
+      id: "clip-version-2",
+      videoClipId: "clip-1"
+    });
+    mockUpdateVideoClip.mockReset();
+    mockUpdateVideoClip.mockResolvedValue(undefined);
   });
 
   describe("startListingVideoGeneration", () => {
@@ -199,6 +221,58 @@ describe("video commands", () => {
         batchId: "batch-2",
         listingId: "listing-1"
       });
+    });
+  });
+
+  describe("selectListingClipVersion", () => {
+    it("throws when body is missing required fields", async () => {
+      await expect(selectListingClipVersion({})).rejects.toThrow(
+        "listingId is required"
+      );
+      await expect(
+        selectListingClipVersion({ listingId: "listing-1" })
+      ).rejects.toThrow("clipId is required");
+      await expect(
+        selectListingClipVersion({ listingId: "listing-1", clipId: "clip-1" })
+      ).rejects.toThrow("clipVersionId is required");
+    });
+
+    it("persists the selected clip version as the current clip version", async () => {
+      const result = await selectListingClipVersion({
+        listingId: " listing-1 ",
+        clipId: " clip-1 ",
+        clipVersionId: " clip-version-2 "
+      });
+
+      expect(mockRequireListingAccess).toHaveBeenCalledWith(
+        "listing-1",
+        "user-1"
+      );
+      expect(mockGetVideoClipById).toHaveBeenCalledWith("clip-1");
+      expect(mockGetVideoClipVersionById).toHaveBeenCalledWith("clip-version-2");
+      expect(mockUpdateVideoClip).toHaveBeenCalledWith("clip-1", {
+        currentVideoClipVersionId: "clip-version-2"
+      });
+      expect(result).toEqual({
+        listingId: "listing-1",
+        clipId: "clip-1",
+        clipVersionId: "clip-version-2"
+      });
+    });
+
+    it("rejects a clip version that does not belong to the clip", async () => {
+      mockGetVideoClipVersionById.mockResolvedValueOnce({
+        id: "clip-version-2",
+        videoClipId: "clip-99"
+      });
+
+      await expect(
+        selectListingClipVersion({
+          listingId: "listing-1",
+          clipId: "clip-1",
+          clipVersionId: "clip-version-2"
+        })
+      ).rejects.toThrow("clipVersionId is invalid");
     });
   });
 });

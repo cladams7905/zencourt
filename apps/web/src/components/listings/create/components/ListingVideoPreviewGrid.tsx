@@ -20,7 +20,6 @@ type ListingVideoPreviewGridProps = {
   items: ContentItem[];
   captionItems: ContentItem[];
   listingSubcategory: ListingContentSubcategory;
-  captionSubcategoryLabel: string;
   listingAddress: string | null;
   openHouseContext: ListingOpenHouseContext | null;
   forceSimpleOverlayTemplate?: boolean;
@@ -29,6 +28,8 @@ type ListingVideoPreviewGridProps = {
     contentItemId: string;
     hook: string;
     caption: string;
+    orderedClipIds: string[];
+    clipDurationOverrides: Record<string, number>;
   }) => void;
 };
 
@@ -38,7 +39,6 @@ export function ListingVideoPreviewGrid({
   items,
   captionItems,
   listingSubcategory,
-  captionSubcategoryLabel,
   listingAddress,
   openHouseContext,
   forceSimpleOverlayTemplate = false,
@@ -96,13 +96,17 @@ export function ListingVideoPreviewGrid({
         cacheKeyId: params.captionItemKey.cacheKeyId,
         subcategory: selectedPreview.captionItem.listingSubcategory ?? "",
         hook: params.hook,
-        caption: params.caption
+        caption: params.caption,
+        orderedClipIds: params.orderedClipIds,
+        clipDurationOverrides: params.clipDurationOverrides
       });
 
       onUpdatePreviewText({
         contentItemId: selectedPreview.captionItem.id,
         hook: params.hook,
-        caption: params.caption
+        caption: params.caption,
+        orderedClipIds: params.orderedClipIds,
+        clipDurationOverrides: params.clipDurationOverrides
       });
     },
     [listingId, onUpdatePreviewText, selectedPreview]
@@ -142,7 +146,6 @@ export function ListingVideoPreviewGrid({
 
       <VideoPreviewModal
         selectedPreview={selectedPreview}
-        captionSubcategoryLabel={captionSubcategoryLabel}
         previewFps={PREVIEW_FPS}
         onOpenChange={(open) => {
           if (!open) {

@@ -67,6 +67,8 @@ export type DashboardContentItem = {
   isCurrentVersion?: boolean;
   versionStatus?: "pending" | "processing" | "completed" | "failed" | "canceled";
   generatedAt?: string | Date | null;
+  orderedClipIds?: string[] | null;
+  clipDurationOverrides?: Record<string, number> | null;
 };
 
 export type GeneratedContentState = Record<

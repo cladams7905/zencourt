@@ -45,6 +45,8 @@ export type ListingCreateCachedContentItem = {
   mediaType: ListingMediaType;
   cacheKeyTimestamp: number;
   cacheKeyId: number;
+  orderedClipIds?: string[] | null;
+  clipDurationOverrides?: Record<string, number> | null;
   cachedRenderedPreview?: {
     imageUrl: string;
     templateId: string;
@@ -69,7 +71,9 @@ function mapCachedListingItemToCreateContent(params: {
     listingSubcategory: subcategory,
     mediaType,
     cacheKeyTimestamp: item.cacheKeyTimestamp,
-    cacheKeyId: item.cacheKeyId
+    cacheKeyId: item.cacheKeyId,
+    orderedClipIds: item.orderedClipIds ?? null,
+    clipDurationOverrides: item.clipDurationOverrides ?? null
   };
   if (
     item.renderedImageUrl &&
@@ -331,6 +335,8 @@ export async function updateCachedListingContentText(params: {
   id: number;
   hook: string;
   caption: string;
+  orderedClipIds?: string[] | null;
+  clipDurationOverrides?: Record<string, number> | null;
 }): Promise<ListingContentItem | null> {
   const redis = getSharedRedisClient();
   if (!redis) return null;
@@ -351,7 +357,9 @@ export async function updateCachedListingContentText(params: {
     const updated: ListingContentItem = {
       ...existing,
       hook: params.hook,
-      caption: params.caption
+      caption: params.caption,
+      orderedClipIds: params.orderedClipIds ?? null,
+      clipDurationOverrides: params.clipDurationOverrides ?? null
     };
 
     await redis.set(key, updated, {

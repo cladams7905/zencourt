@@ -20,6 +20,8 @@ export type ListingContentItem = ListingGeneratedItem & {
   renderedImageUrl: string | null;
   renderedTemplateId?: string;
   renderedModifications?: Record<string, string>;
+  orderedClipIds?: string[] | null;
+  clipDurationOverrides?: Record<string, number> | null;
 };
 
 export type ListingContentItemWithKey = ListingContentItem & {

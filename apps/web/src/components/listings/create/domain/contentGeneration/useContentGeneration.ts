@@ -38,6 +38,8 @@ function buildContentItemRevision(item: ContentItem): string {
     item.hook ?? "",
     item.caption ?? "",
     item.brollQuery ?? "",
+    (item.orderedClipIds ?? []).join("|"),
+    JSON.stringify(item.clipDurationOverrides ?? {}),
     bodyRevision,
     String(cacheIdentity.cacheKeyTimestamp ?? ""),
     String(cacheIdentity.cacheKeyId ?? "")
@@ -74,6 +76,8 @@ export function useContentGeneration(params: {
     contentItemId: string;
     hook: string;
     caption: string;
+    orderedClipIds: string[];
+    clipDurationOverrides: Record<string, number>;
   }) => void;
 } {
   const { listingId, listingPostItems, activeMediaTab, activeSubcategory } =
@@ -261,14 +265,22 @@ export function useContentGeneration(params: {
   }, []);
 
   const updateContentItemText = React.useCallback(
-    (params: { contentItemId: string; hook: string; caption: string }) => {
+    (params: {
+      contentItemId: string;
+      hook: string;
+      caption: string;
+      orderedClipIds: string[];
+      clipDurationOverrides: Record<string, number>;
+    }) => {
       setLocalPostItems((prev) =>
         prev.map((item) =>
           item.id === params.contentItemId
             ? {
                 ...item,
                 hook: params.hook,
-                caption: params.caption
+                caption: params.caption,
+                orderedClipIds: params.orderedClipIds,
+                clipDurationOverrides: params.clipDurationOverrides
               }
             : item
         )

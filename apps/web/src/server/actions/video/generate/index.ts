@@ -1,6 +1,7 @@
 export {
   startListingVideoGeneration,
   regenerateListingClipVersion,
-  cancelVideoGenerationBatch
+  cancelVideoGenerationBatch,
+  selectListingClipVersion
 } from "./commands";
 export { getVideoGenerationStatus } from "./queries";

@@ -5,8 +5,6 @@ import { Label } from "@web/src/components/ui/label";
 import { Textarea } from "@web/src/components/ui/textarea";
 
 type VideoPreviewTextEditorProps = {
-  captionSubcategoryLabel: string;
-  variationNumber: number;
   hookValue: string;
   captionValue: string;
   slideNotes: Array<{ key: string; header: string; content: string }>;
@@ -20,8 +18,6 @@ type VideoPreviewTextEditorProps = {
 };
 
 export function VideoPreviewTextEditor({
-  captionSubcategoryLabel,
-  variationNumber,
   hookValue,
   captionValue,
   slideNotes,
@@ -37,11 +33,7 @@ export function VideoPreviewTextEditor({
     <div className="min-h-0 rounded-lg bg-card xl:flex xl:h-full xl:min-h-0 xl:flex-col">
       <div className="xl:min-h-0 xl:flex-1 xl:overflow-y-auto">
         <div className="p-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            {captionSubcategoryLabel} Caption · Variation {variationNumber}
-          </p>
-
-          <div className="mt-4 space-y-5">
+          <div className="space-y-5">
             <div className="space-y-2">
               <Label htmlFor="video-preview-header">Header</Label>
               <Input

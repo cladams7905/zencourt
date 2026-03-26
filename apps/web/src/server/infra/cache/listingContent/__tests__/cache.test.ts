@@ -265,6 +265,8 @@ describe("listingContent cache", () => {
       body: [{ header: "Slide 1", content: "Body", broll_query: "b" }],
       cta: null,
       caption: "Original caption",
+      orderedClipIds: ["clip-1", "clip-2"],
+      clipDurationOverrides: { "clip-1": 2.5, "clip-2": 5 },
       renderedImageUrl: "https://rendered/image.png",
       renderedTemplateId: "tpl",
       renderedModifications: { headline: "A" }
@@ -280,13 +282,17 @@ describe("listingContent cache", () => {
       timestamp: 22,
       id: 9,
       hook: "Updated hook",
-      caption: "Updated caption"
+      caption: "Updated caption",
+      orderedClipIds: ["clip-2", "clip-1"],
+      clipDurationOverrides: { "clip-2": 4.25, "clip-1": 3.75 }
     });
 
     expect(result).toEqual(
       expect.objectContaining({
         hook: "Updated hook",
         caption: "Updated caption",
+        orderedClipIds: ["clip-2", "clip-1"],
+        clipDurationOverrides: { "clip-2": 4.25, "clip-1": 3.75 },
         body: [{ header: "Slide 1", content: "Body", broll_query: "b" }],
         renderedImageUrl: "https://rendered/image.png",
         renderedTemplateId: "tpl",
@@ -298,6 +304,8 @@ describe("listingContent cache", () => {
       expect.objectContaining({
         hook: "Updated hook",
         caption: "Updated caption",
+        orderedClipIds: ["clip-2", "clip-1"],
+        clipDurationOverrides: { "clip-2": 4.25, "clip-1": 3.75 },
         body: [{ header: "Slide 1", content: "Body", broll_query: "b" }],
         renderedImageUrl: "https://rendered/image.png"
       }),
@@ -318,7 +326,9 @@ describe("listingContent cache", () => {
       timestamp: 22,
       id: 9,
       hook: "Updated hook",
-      caption: "Updated caption"
+      caption: "Updated caption",
+      orderedClipIds: ["clip-2", "clip-1"],
+      clipDurationOverrides: { "clip-2": 4.25, "clip-1": 3.75 }
     });
 
     expect(result).toBeNull();

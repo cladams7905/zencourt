@@ -250,7 +250,6 @@ export function ListingCreateView({
               items={videoItems}
               captionItems={activeMediaItems}
               listingSubcategory={activeSubcategory}
-              captionSubcategoryLabel={SUBCATEGORY_LABELS[activeSubcategory]}
               listingAddress={listingAddress ?? null}
               openHouseContext={openHouseContext ?? null}
               forceSimpleOverlayTemplate

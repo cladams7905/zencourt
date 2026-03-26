@@ -269,7 +269,9 @@ describe("listings commands", () => {
           cacheKeyId: 1,
           subcategory: "new_listing",
           hook: "Hook",
-          caption: "Caption"
+          caption: "Caption",
+          orderedClipIds: ["clip-1", "clip-2"],
+          clipDurationOverrides: { "clip-1": 2.5, "clip-2": 5 }
         })
       ).rejects.toThrow(DomainValidationError);
     });
@@ -281,7 +283,9 @@ describe("listings commands", () => {
           cacheKeyId: 1,
           subcategory: "new_listing",
           hook: "",
-          caption: "Caption"
+          caption: "Caption",
+          orderedClipIds: ["clip-1", "clip-2"],
+          clipDurationOverrides: { "clip-1": 2.5, "clip-2": 5 }
         })
       ).rejects.toThrow(DomainValidationError);
     });
@@ -289,7 +293,9 @@ describe("listings commands", () => {
     it("calls updateCachedListingContentText service with valid params", async () => {
       mockUpdateCachedListingContentTextService.mockResolvedValueOnce({
         hook: "Updated hook",
-        caption: "Updated caption"
+        caption: "Updated caption",
+        orderedClipIds: ["clip-2", "clip-1"],
+        clipDurationOverrides: { "clip-2": 4.25, "clip-1": 3.75 }
       });
 
       const result = await updateCachedListingVideoText("listing-1", {
@@ -297,7 +303,9 @@ describe("listings commands", () => {
         cacheKeyId: 456,
         subcategory: "new_listing",
         hook: "Updated hook",
-        caption: "Updated caption"
+        caption: "Updated caption",
+        orderedClipIds: ["clip-2", "clip-1"],
+        clipDurationOverrides: { "clip-2": 4.25, "clip-1": 3.75 }
       });
 
       expect(mockRequireListingAccess).toHaveBeenCalledWith(
@@ -312,11 +320,15 @@ describe("listings commands", () => {
         timestamp: 123,
         id: 456,
         hook: "Updated hook",
-        caption: "Updated caption"
+        caption: "Updated caption",
+        orderedClipIds: ["clip-2", "clip-1"],
+        clipDurationOverrides: { "clip-2": 4.25, "clip-1": 3.75 }
       });
       expect(result).toEqual({
         hook: "Updated hook",
-        caption: "Updated caption"
+        caption: "Updated caption",
+        orderedClipIds: ["clip-2", "clip-1"],
+        clipDurationOverrides: { "clip-2": 4.25, "clip-1": 3.75 }
       });
     });
   });

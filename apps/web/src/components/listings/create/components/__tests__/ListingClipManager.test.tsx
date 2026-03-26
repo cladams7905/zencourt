@@ -26,7 +26,8 @@ jest.mock("sonner", () => ({
 
 jest.mock("@web/src/server/actions/video/generate", () => ({
   regenerateListingClipVersion: jest.fn(),
-  cancelVideoGenerationBatch: jest.fn()
+  cancelVideoGenerationBatch: jest.fn(),
+  selectListingClipVersion: jest.fn()
 }));
 
 jest.mock("@web/src/components/ui/loading-image", () => ({
@@ -47,7 +48,8 @@ import { ListingClipManager } from "@web/src/components/listings/create/componen
 import type { ListingClipVersionItem } from "@web/src/components/listings/create/shared/types";
 import {
   cancelVideoGenerationBatch,
-  regenerateListingClipVersion
+  regenerateListingClipVersion,
+  selectListingClipVersion
 } from "@web/src/server/actions/video/generate";
 
 describe("ListingClipManager", () => {
@@ -89,6 +91,18 @@ describe("ListingClipManager", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    (selectListingClipVersion as jest.Mock).mockResolvedValue({
+      listingId: "listing-1",
+      clipId: "clip-1",
+      clipVersionId: "clip-version-2"
+    });
+    (regenerateListingClipVersion as jest.Mock).mockResolvedValue({
+      listingId: "listing-1",
+      clipId: "clip-1",
+      clipVersionId: "clip-version-2",
+      batchId: "batch-1"
+    });
+    (cancelVideoGenerationBatch as jest.Mock).mockResolvedValue(undefined);
     Object.defineProperty(window, "matchMedia", {
       writable: true,
       value: mockMatchMedia.mockImplementation(() => ({
@@ -106,12 +120,30 @@ describe("ListingClipManager", () => {
     mockUseSearchParams.mockReturnValue({
       toString: () => "mediaType=videos&filter=property_features&page=2"
     });
+    Object.defineProperty(HTMLElement.prototype, "hasPointerCapture", {
+      configurable: true,
+      value: jest.fn(() => false)
+    });
+    Object.defineProperty(HTMLElement.prototype, "setPointerCapture", {
+      configurable: true,
+      value: jest.fn()
+    });
+    Object.defineProperty(HTMLElement.prototype, "releasePointerCapture", {
+      configurable: true,
+      value: jest.fn()
+    });
+    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
+      configurable: true,
+      value: jest.fn()
+    });
   });
 
   it("links the summary card to the child clips route and preserves query state", () => {
     render(<ListingClipManager listingId="listing-1" items={items} />);
 
-    const link = screen.getByRole("link", { name: /view generated clips/i });
+    const link = screen.getByRole("link", {
+      name: /view room by room generated clips/i
+    });
 
     expect(link).toHaveAttribute(
       "href",
@@ -188,6 +220,48 @@ describe("ListingClipManager", () => {
     expect(
       screen.getAllByRole("button", { name: /Regenerate/i }).length
     ).toBeGreaterThan(0);
+  });
+
+  it("persists the selected clip version for reel preview reuse", async () => {
+    const user = userEvent.setup();
+    const itemsWithAlternateVersion: ListingClipVersionItem[] = [
+      {
+        ...items[0],
+        versions: [
+          ...items[0].versions,
+          {
+            id: "clip-1",
+            clipVersionId: "clip-version-2",
+            roomName: "Kitchen",
+            thumbnail: "https://thumb-2",
+            videoUrl: "https://video-2",
+            aiDirections: "Cooler tone",
+            durationSeconds: 5,
+            versionNumber: 2,
+            versionStatus: "completed",
+            generatedAt: "2026-03-20T12:30:00.000Z"
+          }
+        ] as typeof items[0]["versions"]
+      }
+    ];
+
+    render(
+      <ListingClipManager
+        listingId="listing-1"
+        items={itemsWithAlternateVersion}
+        mode="workspace"
+      />
+    );
+
+    await user.click(screen.getByRole("combobox"));
+    const versionOptions = await screen.findAllByRole("option");
+    await user.click(versionOptions[0]!);
+
+    expect(selectListingClipVersion).toHaveBeenCalledWith({
+      listingId: "listing-1",
+      clipId: "clip-1",
+      clipVersionId: "clip-version-2"
+    });
   });
 
   it("lets the user type custom ai directions for a clip regeneration", async () => {

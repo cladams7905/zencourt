@@ -1,5 +1,5 @@
 import * as React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ContentItem } from "@web/src/components/dashboard/components/ContentGrid";
 import type { PlayablePreview } from "@web/src/components/listings/create/shared/types";
@@ -10,9 +10,40 @@ const mockPlayer = jest.fn<React.ReactNode, [unknown]>(
 );
 const mockOnOpenChange = jest.fn();
 const mockOnSave = jest.fn();
+const mockSeekTo = jest.fn();
+const mockPause = jest.fn();
+const mockAddEventListener = jest.fn();
+const mockRemoveEventListener = jest.fn();
+let mockCurrentFrame = 0;
+const playerListeners = new Map<string, Set<(event: { detail: unknown }) => void>>();
+
+function emitPlayerEvent(name: string, detail: unknown) {
+  const listeners = playerListeners.get(name);
+  listeners?.forEach((listener) => listener({ detail }));
+}
 
 jest.mock("@remotion/player", () => ({
-  Player: (props: unknown) => mockPlayer(props)
+  Player: React.forwardRef((props: unknown, ref: React.ForwardedRef<unknown>) => {
+    React.useImperativeHandle(ref, () => ({
+      seekTo: mockSeekTo,
+      pause: mockPause,
+      getCurrentFrame: () => mockCurrentFrame,
+      addEventListener: (name: string, callback: (event: { detail: unknown }) => void) => {
+        mockAddEventListener(name, callback);
+        const listeners = playerListeners.get(name) ?? new Set();
+        listeners.add(callback);
+        playerListeners.set(name, listeners);
+      },
+      removeEventListener: (
+        name: string,
+        callback: (event: { detail: unknown }) => void
+      ) => {
+        mockRemoveEventListener(name, callback);
+        playerListeners.get(name)?.delete(callback);
+      }
+    }));
+    return mockPlayer(props);
+  })
 }));
 
 jest.mock("@web/src/components/ui/dialog", () => ({
@@ -52,14 +83,16 @@ function createSelectedPreview(overrides?: Partial<ContentItem>): PlayablePrevie
         src: "https://video/1.mp4",
         thumbnailSrc: "https://img/1.jpg",
         category: "kitchen",
-        durationSeconds: 2.5
+        durationSeconds: 2.5,
+        maxDurationSeconds: 4
       },
       {
         clipId: "clip-2",
         src: "https://video/2.mp4",
         thumbnailSrc: "https://img/2.jpg",
         category: "exterior",
-        durationSeconds: 5
+        durationSeconds: 5,
+        maxDurationSeconds: 6
       }
     ],
     thumbnailOverlay: null,
@@ -84,9 +117,25 @@ function createSelectedPreview(overrides?: Partial<ContentItem>): PlayablePrevie
   };
 }
 
+function createSelectedPreviewWithId(
+  previewId: string,
+  overrides?: Partial<ContentItem>
+): PlayablePreview {
+  return {
+    ...createSelectedPreview(overrides),
+    id: previewId,
+    captionItem: {
+      ...createSelectedPreview(overrides).captionItem,
+      id: `${previewId}-caption`
+    }
+  };
+}
+
 describe("VideoPreviewModal", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    playerListeners.clear();
+    mockCurrentFrame = 0;
     mockOnSave.mockResolvedValue(undefined);
   });
 
@@ -94,7 +143,6 @@ describe("VideoPreviewModal", () => {
     render(
       <VideoPreviewModal
         selectedPreview={createSelectedPreview()}
-        captionSubcategoryLabel="New Listing"
         previewFps={30}
         onOpenChange={mockOnOpenChange}
         onSavePreviewText={mockOnSave}
@@ -119,15 +167,14 @@ describe("VideoPreviewModal", () => {
     render(
       <VideoPreviewModal
         selectedPreview={createSelectedPreview()}
-        captionSubcategoryLabel="New Listing"
         previewFps={30}
         onOpenChange={mockOnOpenChange}
         onSavePreviewText={mockOnSave}
       />
     );
 
-    expect(screen.getByTestId("video-player-shell").className).toContain("max-w-[340px]");
-    expect(screen.getByTestId("video-player-shell").className).toContain("xl:h-[min(56vh,680px)]");
+    expect(screen.getByTestId("video-player-shell").className).toContain("max-w-[320px]");
+    expect(screen.getByTestId("video-player-shell").className).toContain("xl:h-[86%]");
   });
 
   it("enables save when fields change and resets draft values on cancel", async () => {
@@ -136,7 +183,6 @@ describe("VideoPreviewModal", () => {
     render(
       <VideoPreviewModal
         selectedPreview={createSelectedPreview()}
-        captionSubcategoryLabel="New Listing"
         previewFps={30}
         onOpenChange={mockOnOpenChange}
         onSavePreviewText={mockOnSave}
@@ -173,7 +219,6 @@ describe("VideoPreviewModal", () => {
     render(
       <VideoPreviewModal
         selectedPreview={createSelectedPreview()}
-        captionSubcategoryLabel="New Listing"
         previewFps={30}
         onOpenChange={mockOnOpenChange}
         onSavePreviewText={mockOnSave}
@@ -190,6 +235,8 @@ describe("VideoPreviewModal", () => {
     expect(mockOnSave).toHaveBeenCalledWith({
       hook: "Updated hook",
       caption: "Updated caption",
+      orderedClipIds: ["clip-1", "clip-2"],
+      clipDurationOverrides: { "clip-1": 2.5, "clip-2": 5 },
       captionItemKey: {
         cacheKeyTimestamp: 123,
         cacheKeyId: 4,
@@ -213,7 +260,6 @@ describe("VideoPreviewModal", () => {
     render(
       <VideoPreviewModal
         selectedPreview={createSelectedPreview()}
-        captionSubcategoryLabel="New Listing"
         previewFps={30}
         onOpenChange={mockOnOpenChange}
         onSavePreviewText={mockOnSave}
@@ -226,5 +272,326 @@ describe("VideoPreviewModal", () => {
 
     expect(await screen.findByText("save failed")).toBeInTheDocument();
     expect(screen.getByLabelText("Header")).toHaveValue("Updated hook");
+  });
+
+  it("reorders timeline clips, updates the player input, and saves the new clip order", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <VideoPreviewModal
+        selectedPreview={createSelectedPreview()}
+        previewFps={30}
+        onOpenChange={mockOnOpenChange}
+        onSavePreviewText={mockOnSave}
+      />
+    );
+
+    fireEvent.dragStart(screen.getByTestId("timeline-clip-clip-2-1"));
+    fireEvent.dragOver(screen.getByTestId("timeline-clip-clip-1-0"));
+    fireEvent.drop(screen.getByTestId("timeline-clip-clip-1-0"));
+
+    await waitFor(() =>
+      expect(mockPlayer).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          inputProps: expect.objectContaining({
+            segments: expect.arrayContaining([
+              expect.objectContaining({ clipId: "clip-2" }),
+              expect.objectContaining({ clipId: "clip-1" })
+            ])
+          })
+        })
+      )
+    );
+
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(mockOnSave).toHaveBeenCalledWith({
+      hook: "Original hook",
+      caption: "Original caption",
+      orderedClipIds: ["clip-2", "clip-1"],
+      clipDurationOverrides: { "clip-2": 5, "clip-1": 2.5 },
+      captionItemKey: {
+        cacheKeyTimestamp: 123,
+        cacheKeyId: 4,
+        mediaType: "video"
+      }
+    });
+  });
+
+  it("resizes a clip from the right edge, updates the player input, and caps at the max duration", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <VideoPreviewModal
+        selectedPreview={createSelectedPreview()}
+        previewFps={30}
+        onOpenChange={mockOnOpenChange}
+        onSavePreviewText={mockOnSave}
+      />
+    );
+
+    fireEvent.mouseDown(screen.getByTestId("timeline-resize-right-clip-1-0"), {
+      clientX: 100
+    });
+    fireEvent.mouseMove(window, { clientX: 220 });
+    fireEvent.mouseUp(window);
+
+    await waitFor(() =>
+      expect(mockPlayer).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          inputProps: expect.objectContaining({
+            segments: expect.arrayContaining([
+              expect.objectContaining({
+                clipId: "clip-1",
+                durationSeconds: 4
+              })
+            ])
+          })
+        })
+      )
+    );
+
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(mockOnSave).toHaveBeenCalledWith({
+      hook: "Original hook",
+      caption: "Original caption",
+      orderedClipIds: ["clip-1", "clip-2"],
+      clipDurationOverrides: { "clip-1": 4, "clip-2": 5 },
+      captionItemKey: {
+        cacheKeyTimestamp: 123,
+        cacheKeyId: 4,
+        mediaType: "video"
+      }
+    });
+  });
+
+  it("syncs the red playhead from player frame updates and seeks the player from ruler clicks", async () => {
+    render(
+      <VideoPreviewModal
+        selectedPreview={createSelectedPreview()}
+        previewFps={30}
+        onOpenChange={mockOnOpenChange}
+        onSavePreviewText={mockOnSave}
+      />
+    );
+
+    const ruler = screen.getByTestId("timeline-ruler");
+    Object.defineProperty(ruler, "getBoundingClientRect", {
+      value: () => ({ left: 0, width: 300 } as DOMRect)
+    });
+
+    act(() => {
+      emitPlayerEvent("frameupdate", { frame: 45 });
+    });
+
+    await waitFor(() =>
+      expect(screen.getByTestId("timeline-playhead")).toHaveAttribute(
+        "data-current-frame",
+        "45"
+      )
+    );
+
+    fireEvent.mouseDown(ruler, { clientX: 150 });
+
+    expect(mockPause).toHaveBeenCalled();
+    expect(mockSeekTo).toHaveBeenCalled();
+  });
+
+  it("preserves the current frame when clip duration changes", async () => {
+    render(
+      <VideoPreviewModal
+        selectedPreview={createSelectedPreview()}
+        previewFps={30}
+        onOpenChange={mockOnOpenChange}
+        onSavePreviewText={mockOnSave}
+      />
+    );
+
+    act(() => {
+      emitPlayerEvent("frameupdate", { frame: 40 });
+    });
+
+    fireEvent.mouseDown(screen.getByTestId("timeline-resize-right-clip-1-0"), {
+      clientX: 100
+    });
+    fireEvent.mouseMove(window, { clientX: 160 });
+    fireEvent.mouseUp(window);
+
+    await waitFor(() => expect(mockSeekTo).toHaveBeenCalledWith(40));
+  });
+
+  it("rebinds player frame listeners when the modal closes and reopens", async () => {
+    const preview = createSelectedPreview();
+    const { rerender } = render(
+      <VideoPreviewModal
+        selectedPreview={preview}
+        previewFps={30}
+        onOpenChange={mockOnOpenChange}
+        onSavePreviewText={mockOnSave}
+      />
+    );
+
+    const initialAddCount = mockAddEventListener.mock.calls.length;
+    const initialRemoveCount = mockRemoveEventListener.mock.calls.length;
+
+    rerender(
+      <VideoPreviewModal
+        selectedPreview={null}
+        previewFps={30}
+        onOpenChange={mockOnOpenChange}
+        onSavePreviewText={mockOnSave}
+      />
+    );
+
+    expect(mockRemoveEventListener.mock.calls.length).toBeGreaterThan(
+      initialRemoveCount
+    );
+
+    rerender(
+      <VideoPreviewModal
+        selectedPreview={preview}
+        previewFps={30}
+        onOpenChange={mockOnOpenChange}
+        onSavePreviewText={mockOnSave}
+      />
+    );
+
+    await waitFor(() =>
+      expect(mockAddEventListener.mock.calls.length).toBeGreaterThan(
+        initialAddCount
+      )
+    );
+
+    act(() => {
+      emitPlayerEvent("frameupdate", { frame: 30 });
+    });
+
+    await waitFor(() =>
+      expect(screen.getByTestId("timeline-playhead")).toHaveAttribute(
+        "data-current-frame",
+        "30"
+      )
+    );
+  });
+
+  it("syncs the playhead immediately from the autoplaying player frame", async () => {
+    jest.useFakeTimers();
+    const requestAnimationFrameSpy = jest
+      .spyOn(window, "requestAnimationFrame")
+      .mockImplementation((callback: FrameRequestCallback) =>
+        window.setTimeout(() => callback(performance.now()), 16)
+      );
+    const cancelAnimationFrameSpy = jest
+      .spyOn(window, "cancelAnimationFrame")
+      .mockImplementation((id: number) => window.clearTimeout(id));
+
+    mockCurrentFrame = 18;
+
+    render(
+      <VideoPreviewModal
+        selectedPreview={createSelectedPreview()}
+        previewFps={30}
+        onOpenChange={mockOnOpenChange}
+        onSavePreviewText={mockOnSave}
+      />
+    );
+
+    act(() => {
+      jest.advanceTimersByTime(20);
+    });
+
+    await waitFor(() =>
+      expect(screen.getByTestId("timeline-playhead")).toHaveAttribute(
+        "data-current-frame",
+        "18"
+      )
+    );
+
+    requestAnimationFrameSpy.mockRestore();
+    cancelAnimationFrameSpy.mockRestore();
+    jest.useRealTimers();
+  });
+
+  it("does not rerender the player when only the playhead frame changes", async () => {
+    render(
+      <VideoPreviewModal
+        selectedPreview={createSelectedPreview()}
+        previewFps={30}
+        onOpenChange={mockOnOpenChange}
+        onSavePreviewText={mockOnSave}
+      />
+    );
+
+    mockPlayer.mockClear();
+
+    act(() => {
+      emitPlayerEvent("frameupdate", { frame: 24 });
+    });
+
+    await waitFor(() =>
+      expect(screen.getByTestId("timeline-playhead")).toHaveAttribute(
+        "data-current-frame",
+        "24"
+      )
+    );
+
+    expect(mockPlayer).not.toHaveBeenCalled();
+  });
+
+  it("starts autoplay sync for a newly selected reel preview", async () => {
+    jest.useFakeTimers();
+    const requestAnimationFrameSpy = jest
+      .spyOn(window, "requestAnimationFrame")
+      .mockImplementation((callback: FrameRequestCallback) =>
+        window.setTimeout(() => callback(performance.now()), 16)
+      );
+    const cancelAnimationFrameSpy = jest
+      .spyOn(window, "cancelAnimationFrame")
+      .mockImplementation((id: number) => window.clearTimeout(id));
+
+    const { rerender } = render(
+      <VideoPreviewModal
+        selectedPreview={createSelectedPreviewWithId("preview-1")}
+        previewFps={30}
+        onOpenChange={mockOnOpenChange}
+        onSavePreviewText={mockOnSave}
+      />
+    );
+
+    rerender(
+      <VideoPreviewModal
+        selectedPreview={null}
+        previewFps={30}
+        onOpenChange={mockOnOpenChange}
+        onSavePreviewText={mockOnSave}
+      />
+    );
+
+    mockCurrentFrame = 14;
+
+    rerender(
+      <VideoPreviewModal
+        selectedPreview={createSelectedPreviewWithId("preview-2")}
+        previewFps={30}
+        onOpenChange={mockOnOpenChange}
+        onSavePreviewText={mockOnSave}
+      />
+    );
+
+    act(() => {
+      jest.advanceTimersByTime(20);
+    });
+
+    await waitFor(() =>
+      expect(screen.getByTestId("timeline-playhead")).toHaveAttribute(
+        "data-current-frame",
+        "14"
+      )
+    );
+
+    requestAnimationFrameSpy.mockRestore();
+    cancelAnimationFrameSpy.mockRestore();
+    jest.useRealTimers();
   });
 });
