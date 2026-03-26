@@ -7,6 +7,7 @@ import { useHorizontalDragAutoScroll } from "@web/src/components/listings/create
 import { VideoPreviewTimelineRuler } from "@web/src/components/listings/create/media/video/components/VideoPreviewTimelineRuler";
 import {
   TIMELINE_CARD_GAP_PX,
+  TIMELINE_PIXELS_PER_SECOND,
   buildVideoPreviewTimelineItems,
   buildVideoPreviewTimelineLayout,
   getFrameFromTimelineOffset,
@@ -23,8 +24,7 @@ type VideoPreviewTimelineProps = {
   onDurationChange?: (index: number, durationSeconds: number) => void;
 };
 
-const MIN_CLIP_DURATION_SECONDS = 2;
-const RESIZE_PIXELS_PER_SECOND = 48;
+const MIN_CLIP_DURATION_SECONDS = 0.5;
 type ResizeEdge = "left" | "right";
 type ResizeState = {
   itemId: string;
@@ -54,10 +54,37 @@ export function VideoPreviewTimeline({
   );
   const { containerRef, maskImage } = useScrollFade();
   const [draggedItemId, setDraggedItemId] = React.useState<string | null>(null);
+  const [dragTargetItemId, setDragTargetItemId] = React.useState<string | null>(
+    null
+  );
   const [resizeState, setResizeState] = React.useState<ResizeState | null>(
     null
   );
   const [isScrubbing, setIsScrubbing] = React.useState(false);
+  const startResize = React.useCallback(
+    (
+      event: React.MouseEvent<HTMLElement>,
+      params: {
+        itemId: string;
+        index: number;
+        edge: ResizeEdge;
+        startDurationSeconds: number;
+        maxDurationSeconds: number;
+      }
+    ) => {
+      event.preventDefault();
+      event.stopPropagation();
+      setResizeState({
+        itemId: params.itemId,
+        index: params.index,
+        edge: params.edge,
+        startClientX: event.clientX,
+        startDurationSeconds: params.startDurationSeconds,
+        maxDurationSeconds: params.maxDurationSeconds
+      });
+    },
+    []
+  );
   useHorizontalDragAutoScroll({
     enabled: Boolean(onReorder && draggedItemId),
     containerRef,
@@ -75,12 +102,12 @@ export function VideoPreviewTimeline({
       const nextDuration = Number(
         Math.min(
           resizeState.maxDurationSeconds,
-          Math.max(
-            MIN_CLIP_DURATION_SECONDS,
-            resizeState.startDurationSeconds +
-              directionalDelta / RESIZE_PIXELS_PER_SECOND
-          )
-        ).toFixed(2)
+            Math.max(
+              MIN_CLIP_DURATION_SECONDS,
+              resizeState.startDurationSeconds +
+              directionalDelta / TIMELINE_PIXELS_PER_SECOND
+            )
+          ).toFixed(2)
       );
 
       onDurationChange(resizeState.index, nextDuration);
@@ -187,6 +214,18 @@ export function VideoPreviewTimeline({
           >
             <button
               type="button"
+              aria-label="Scrub timeline playhead line"
+              data-testid="timeline-playhead-line-hitbox"
+              className="absolute top-0 -left-[6px] h-full w-3 cursor-ew-resize bg-transparent"
+              onMouseDown={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                setIsScrubbing(true);
+                seekFromClientX(event.clientX);
+              }}
+            />
+            <button
+              type="button"
               aria-label="Scrub timeline playhead"
               className="absolute top-0 -left-[5px] h-2.5 w-2.5 cursor-ew-resize rounded-full bg-red-500"
               onMouseDown={(event) => {
@@ -200,27 +239,37 @@ export function VideoPreviewTimeline({
           <div
             className="mt-2 flex items-stretch"
             style={{ gap: `${TIMELINE_CARD_GAP_PX}px` }}
-            onMouseDown={(event) => {
-              if (!(event.target instanceof HTMLElement)) {
-                return;
-              }
-              if (event.target.dataset.resizeHandle === "true") {
-                return;
-              }
-              setIsScrubbing(true);
-              seekFromClientX(event.clientX);
-            }}
           >
             {items.map((item, index) => (
               <div
                 key={item.id}
                 draggable={Boolean(onReorder)}
-                onDragStart={() => setDraggedItemId(item.id)}
-                onDragEnd={() => setDraggedItemId(null)}
+                onDragStart={(event) => {
+                  if (
+                    event.target instanceof HTMLElement &&
+                    event.target.closest("[data-resize-zone='true']")
+                  ) {
+                    event.preventDefault();
+                    return;
+                  }
+
+                  setDraggedItemId(item.id);
+                  setDragTargetItemId(null);
+                }}
+                onDragEnd={() => {
+                  setDraggedItemId(null);
+                  setDragTargetItemId(null);
+                }}
                 onDragOver={(event) => {
                   if (onReorder) {
                     event.preventDefault();
+                    setDragTargetItemId(item.id);
                   }
+                }}
+                onDragLeave={() => {
+                  setDragTargetItemId((currentTargetItemId) =>
+                    currentTargetItemId === item.id ? null : currentTargetItemId
+                  );
                 }}
                 onDrop={(event) => {
                   if (!onReorder || !draggedItemId) {
@@ -232,14 +281,20 @@ export function VideoPreviewTimeline({
                   );
                   onReorder(fromIndex, index);
                   setDraggedItemId(null);
+                  setDragTargetItemId(null);
                 }}
                 data-testid={`timeline-clip-${item.id}`}
                 className="group relative box-border overflow-hidden border border-border bg-background first:rounded-l-lg last:rounded-r-lg not-first:border-l-0"
                 style={{
                   width: `${item.widthPx}px`,
                   flex: "0 0 auto",
+                  cursor: onReorder
+                    ? draggedItemId === item.id
+                      ? "grabbing"
+                      : "grab"
+                    : "default",
                   borderColor:
-                    draggedItemId === item.id
+                    draggedItemId === item.id || dragTargetItemId === item.id
                       ? "hsl(var(--primary))"
                       : undefined
                 }}
@@ -250,20 +305,18 @@ export function VideoPreviewTimeline({
                   aria-label={`Resize ${item.label} from left edge`}
                   className="absolute inset-y-0 left-0 z-10 w-2 cursor-ew-resize bg-transparent"
                   data-resize-handle="true"
-                  onMouseDown={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    setResizeState({
+                  data-resize-zone="true"
+                  onMouseDown={(event) =>
+                    startResize(event, {
                       itemId: item.id,
                       index,
                       edge: "left",
-                      startClientX: event.clientX,
                       startDurationSeconds:
                         segments[index]?.durationSeconds ??
                         MIN_CLIP_DURATION_SECONDS,
                       maxDurationSeconds: item.maxDurationSeconds
-                    });
-                  }}
+                    })
+                  }
                 />
                 <div className="grid grid-cols-[minmax(0,1fr)_0px] transition-[grid-template-columns] duration-150 group-hover:grid-cols-[minmax(0,1fr)_16px]">
                   <div>
@@ -301,7 +354,25 @@ export function VideoPreviewTimeline({
                     </div>
                   </div>
                   <div className="overflow-hidden">
-                    <div className="flex h-full items-center justify-center border-l border-primary bg-primary opacity-0 transition-opacity group-hover:opacity-100">
+                    <button
+                      type="button"
+                      data-testid={`timeline-resize-strip-${item.id}`}
+                      aria-label={`Resize ${item.label} from right strip`}
+                      className="flex h-full w-full cursor-ew-resize items-center justify-center border-l border-primary bg-primary opacity-0 transition-opacity group-hover:opacity-100"
+                      data-resize-handle="true"
+                      data-resize-zone="true"
+                      onMouseDown={(event) =>
+                        startResize(event, {
+                          itemId: item.id,
+                          index,
+                          edge: "right",
+                          startDurationSeconds:
+                            segments[index]?.durationSeconds ??
+                            MIN_CLIP_DURATION_SECONDS,
+                          maxDurationSeconds: item.maxDurationSeconds
+                        })
+                      }
+                    >
                       <div
                         className="grid grid-cols-2 place-items-center gap-x-0.5 gap-y-0.5"
                         aria-hidden
@@ -313,30 +384,9 @@ export function VideoPreviewTimeline({
                           />
                         ))}
                       </div>
-                    </div>
+                    </button>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  data-testid={`timeline-resize-right-${item.id}`}
-                  aria-label={`Resize ${item.label} from right edge`}
-                  className="absolute inset-y-0 right-4 z-10 w-2 cursor-ew-resize bg-transparent"
-                  data-resize-handle="true"
-                  onMouseDown={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    setResizeState({
-                      itemId: item.id,
-                      index,
-                      edge: "right",
-                      startClientX: event.clientX,
-                      startDurationSeconds:
-                        segments[index]?.durationSeconds ??
-                        MIN_CLIP_DURATION_SECONDS,
-                      maxDurationSeconds: item.maxDurationSeconds
-                    });
-                  }}
-                />
               </div>
             ))}
           </div>

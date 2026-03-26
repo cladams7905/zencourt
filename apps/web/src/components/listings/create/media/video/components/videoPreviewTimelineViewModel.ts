@@ -22,6 +22,7 @@ export type VideoPreviewTimelineLayoutItem = VideoPreviewTimelineItem & {
 };
 
 export const TIMELINE_CARD_GAP_PX = 0;
+export const TIMELINE_PIXELS_PER_SECOND = 64;
 
 function toTitleCase(value: string): string {
   return value
@@ -53,7 +54,7 @@ export function buildVideoPreviewTimelineItems(
       durationSeconds: segment.durationSeconds,
       durationLabel: formatDurationLabel(segment.durationSeconds),
       widthPercent,
-      widthPx: Math.max(180, widthPercent * 6),
+      widthPx: Math.round(segment.durationSeconds * TIMELINE_PIXELS_PER_SECOND),
       thumbnailSrc: segment.thumbnailSrc ?? null,
       frameCount: Math.max(2, Math.round(segment.durationSeconds * 1.5)),
       maxDurationSeconds: segment.maxDurationSeconds

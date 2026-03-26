@@ -9,9 +9,7 @@ import {
   DialogTitle
 } from "@web/src/components/ui/dialog";
 import { Button } from "@web/src/components/ui/button";
-import {
-  getTimelineDurationInFrames
-} from "@web/src/components/listings/create/media/video/components/ListingTimelinePreviewComposition";
+import { getTimelineDurationInFrames } from "@web/src/components/listings/create/media/video/components/ListingTimelinePreviewComposition";
 import { VideoPreviewPlayer } from "@web/src/components/listings/create/media/video/components/VideoPreviewPlayer";
 import { VideoPreviewTextEditor } from "@web/src/components/listings/create/media/video/components/VideoPreviewTextEditor";
 import { VideoPreviewTimeline } from "@web/src/components/listings/create/media/video/components/VideoPreviewTimeline";
@@ -140,7 +138,10 @@ export function VideoPreviewModal({
         caption: normalizedCaption,
         orderedClipIds: segmentDraft.map((segment) => segment.clipId),
         clipDurationOverrides: Object.fromEntries(
-          segmentDraft.map((segment) => [segment.clipId, segment.durationSeconds])
+          segmentDraft.map((segment) => [
+            segment.clipId,
+            segment.durationSeconds
+          ])
         ),
         captionItemKey: selectedPreview.captionItemKey
       });

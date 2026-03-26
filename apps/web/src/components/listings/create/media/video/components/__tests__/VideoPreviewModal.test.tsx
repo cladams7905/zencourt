@@ -288,6 +288,11 @@ describe("VideoPreviewModal", () => {
 
     fireEvent.dragStart(screen.getByTestId("timeline-clip-clip-2-1"));
     fireEvent.dragOver(screen.getByTestId("timeline-clip-clip-1-0"));
+
+    expect(screen.getByTestId("timeline-clip-clip-1-0")).toHaveStyle({
+      borderColor: "hsl(var(--primary))"
+    });
+
     fireEvent.drop(screen.getByTestId("timeline-clip-clip-1-0"));
 
     await waitFor(() =>
@@ -318,6 +323,21 @@ describe("VideoPreviewModal", () => {
     });
   });
 
+  it("shows a grab cursor on the card body for reorder interactions", () => {
+    render(
+      <VideoPreviewModal
+        selectedPreview={createSelectedPreview()}
+        previewFps={30}
+        onOpenChange={mockOnOpenChange}
+        onSavePreviewText={mockOnSave}
+      />
+    );
+
+    expect(screen.getByTestId("timeline-clip-clip-1-0")).toHaveStyle({
+      cursor: "grab"
+    });
+  });
+
   it("resizes a clip from the right edge, updates the player input, and caps at the max duration", async () => {
     const user = userEvent.setup();
 
@@ -330,7 +350,7 @@ describe("VideoPreviewModal", () => {
       />
     );
 
-    fireEvent.mouseDown(screen.getByTestId("timeline-resize-right-clip-1-0"), {
+    fireEvent.mouseDown(screen.getByTestId("timeline-resize-strip-clip-1-0"), {
       clientX: 100
     });
     fireEvent.mouseMove(window, { clientX: 220 });
@@ -366,6 +386,38 @@ describe("VideoPreviewModal", () => {
     });
   });
 
+  it("treats the hover drag strip as the right-side resize surface", async () => {
+    render(
+      <VideoPreviewModal
+        selectedPreview={createSelectedPreview()}
+        previewFps={30}
+        onOpenChange={mockOnOpenChange}
+        onSavePreviewText={mockOnSave}
+      />
+    );
+
+    fireEvent.mouseDown(screen.getByTestId("timeline-resize-strip-clip-1-0"), {
+      clientX: 100
+    });
+    fireEvent.mouseMove(window, { clientX: 156 });
+    fireEvent.mouseUp(window);
+
+    await waitFor(() =>
+      expect(mockPlayer).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          inputProps: expect.objectContaining({
+            segments: expect.arrayContaining([
+              expect.objectContaining({
+                clipId: "clip-1",
+                durationSeconds: 3.38
+              })
+            ])
+          })
+        })
+      )
+    );
+  });
+
   it("syncs the red playhead from player frame updates and seeks the player from ruler clicks", async () => {
     render(
       <VideoPreviewModal
@@ -398,6 +450,26 @@ describe("VideoPreviewModal", () => {
     expect(mockSeekTo).toHaveBeenCalled();
   });
 
+  it("allows scrubbing from the playhead line, not just the top pin", async () => {
+    render(
+      <VideoPreviewModal
+        selectedPreview={createSelectedPreview()}
+        previewFps={30}
+        onOpenChange={mockOnOpenChange}
+        onSavePreviewText={mockOnSave}
+      />
+    );
+
+    fireEvent.mouseDown(screen.getByTestId("timeline-playhead-line-hitbox"), {
+      clientX: 120
+    });
+    fireEvent.mouseMove(window, { clientX: 180 });
+    fireEvent.mouseUp(window);
+
+    expect(mockPause).toHaveBeenCalled();
+    expect(mockSeekTo).toHaveBeenCalled();
+  });
+
   it("preserves the current frame when clip duration changes", async () => {
     render(
       <VideoPreviewModal
@@ -412,13 +484,45 @@ describe("VideoPreviewModal", () => {
       emitPlayerEvent("frameupdate", { frame: 40 });
     });
 
-    fireEvent.mouseDown(screen.getByTestId("timeline-resize-right-clip-1-0"), {
+    fireEvent.mouseDown(screen.getByTestId("timeline-resize-strip-clip-1-0"), {
       clientX: 100
     });
     fireEvent.mouseMove(window, { clientX: 160 });
     fireEvent.mouseUp(window);
 
     await waitFor(() => expect(mockSeekTo).toHaveBeenCalledWith(40));
+  });
+
+  it("allows clips to shrink down to a 0.5 second minimum", async () => {
+    render(
+      <VideoPreviewModal
+        selectedPreview={createSelectedPreview()}
+        previewFps={30}
+        onOpenChange={mockOnOpenChange}
+        onSavePreviewText={mockOnSave}
+      />
+    );
+
+    fireEvent.mouseDown(screen.getByTestId("timeline-resize-strip-clip-1-0"), {
+      clientX: 200
+    });
+    fireEvent.mouseMove(window, { clientX: -200 });
+    fireEvent.mouseUp(window);
+
+    await waitFor(() =>
+      expect(mockPlayer).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          inputProps: expect.objectContaining({
+            segments: expect.arrayContaining([
+              expect.objectContaining({
+                clipId: "clip-1",
+                durationSeconds: 0.5
+              })
+            ])
+          })
+        })
+      )
+    );
   });
 
   it("rebinds player frame listeners when the modal closes and reopens", async () => {
