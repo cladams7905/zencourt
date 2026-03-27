@@ -36,22 +36,10 @@ class MockDomainError extends Error {
   }
 }
 
-const mockRequireAuthenticatedUser = jest
-  .fn()
-  .mockResolvedValue({ id: "user-1" });
-const mockRequireListingAccess = jest.fn().mockResolvedValue({
-  id: "listing-1",
-  title: "Listing"
-});
-
 jest.mock("@web/src/app/api/v1/_utils", () => ({
   ApiError: MockApiError,
   DomainError: MockDomainError,
-  mapDomainError: () => ({ status: 400, code: "INVALID_REQUEST" as const }),
-  requireAuthenticatedUser: (...args: unknown[]) =>
-    mockRequireAuthenticatedUser(...args),
-  requireListingAccess: (...args: unknown[]) =>
-    mockRequireListingAccess(...args)
+  mapDomainError: () => ({ status: 400, code: "INVALID_REQUEST" as const })
 }));
 
 const { encodeSseEvent } = jest.requireActual(

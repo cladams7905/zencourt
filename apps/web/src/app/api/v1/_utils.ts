@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import {
-  requireAuthenticatedUser,
-  requireListingAccess
+  withCurrentUser,
+  withCurrentUserListingAccess
 } from "@web/src/server/actions/shared/auth";
 import { ApiError } from "@web/src/server/errors/api";
 import { StatusCode } from "@shared/types/api";
@@ -10,8 +10,8 @@ import { apiErrorCodeFromStatus } from "@shared/utils/api/responses";
 
 export {
   ApiError,
-  requireAuthenticatedUser,
-  requireListingAccess,
+  withCurrentUser,
+  withCurrentUserListingAccess,
   DomainError
 };
 

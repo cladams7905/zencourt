@@ -13,7 +13,7 @@ describe("content generate route", () => {
         this.kind = kind;
       }
     };
-    jest.doMock("@web/src/server/actions/_auth/api", () => ({
+    jest.doMock("@web/src/server/actions/shared/auth", () => ({
       requireAuthenticatedUser: jest.fn()
     }));
     jest.doMock("@web/src/app/api/v1/_utils", () => ({

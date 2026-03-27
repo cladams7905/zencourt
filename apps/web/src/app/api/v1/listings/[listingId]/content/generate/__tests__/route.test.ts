@@ -18,7 +18,7 @@ describe("listing content generate route", () => {
       "@web/src/server/errors/api"
     ) as typeof import("@web/src/server/errors/api");
 
-    jest.doMock("@web/src/server/actions/_auth/api", () => ({
+    jest.doMock("@web/src/server/actions/shared/auth", () => ({
       requireAuthenticatedUser: jest.fn()
     }));
     jest.doMock("@web/src/app/api/v1/_utils", () => ({

@@ -24,7 +24,7 @@ jest.mock("@web/src/server/actions/video/generate/helpers", () => ({
     )
 }));
 
-jest.mock("@web/src/server/actions/_auth/api", () => ({
+jest.mock("@web/src/server/actions/shared/auth", () => ({
   requireAuthenticatedUser: (...args: unknown[]) =>
     (mockRequireAuthenticatedUser as (...a: unknown[]) => unknown)(...args),
   withCurrentUserListingAccess: async (
