@@ -53,4 +53,31 @@ describe("runwayTaskSlots", () => {
 
     lease2.release();
   });
+
+  it("updates task binding and releases only the current task id", async () => {
+    const slots = createRunwayTaskSlots(1);
+
+    const lease1 = await slots.acquire();
+    lease1.bind("task-1");
+    lease1.bind("task-2");
+
+    let acquiredSecond = false;
+    const secondLeasePromise = slots.acquire().then((lease) => {
+      acquiredSecond = true;
+      return lease;
+    });
+
+    await flush();
+    expect(acquiredSecond).toBe(false);
+
+    slots.releaseByTaskId("task-1");
+    await flush();
+    expect(acquiredSecond).toBe(false);
+
+    slots.releaseByTaskId("task-2");
+    const lease2 = await secondLeasePromise;
+    expect(acquiredSecond).toBe(true);
+
+    lease2.release();
+  });
 });

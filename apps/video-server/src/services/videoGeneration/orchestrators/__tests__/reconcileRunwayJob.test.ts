@@ -7,7 +7,7 @@ describe("reconcileRunwayJobOrchestrator", () => {
     status: "processing",
     requestId: "task-1",
     metadata: { duration: 4 }
-  } as never;
+  } as any;
 
   const baseDeps = () => ({
     retrieveTask: jest.fn(),
@@ -75,5 +75,79 @@ describe("reconcileRunwayJobOrchestrator", () => {
     expect(deps.handleProviderSuccess).not.toHaveBeenCalled();
     expect(deps.markJobFailed).not.toHaveBeenCalled();
     expect(deps.sendJobFailureWebhook).not.toHaveBeenCalled();
+  });
+
+  it("returns non-terminal when request id is missing", async () => {
+    const deps = baseDeps();
+    const result = await reconcileRunwayJobOrchestrator(
+      {
+        ...baseJob,
+        requestId: null
+      },
+      deps
+    );
+
+    expect(result).toEqual({ terminal: false });
+    expect(deps.retrieveTask).not.toHaveBeenCalled();
+  });
+
+  it("marks as failed when runway task is cancelled", async () => {
+    const deps = baseDeps();
+    deps.retrieveTask.mockResolvedValue({
+      id: "task-1",
+      status: "CANCELLED",
+      createdAt: "2026-03-20T00:00:00.000Z"
+    });
+
+    await reconcileRunwayJobOrchestrator(baseJob, deps);
+
+    expect(deps.markJobFailed).toHaveBeenCalledWith(
+      "job-1",
+      "Runway task was canceled"
+    );
+    expect(deps.sendJobFailureWebhook).toHaveBeenCalledWith(
+      baseJob,
+      "Runway task was canceled",
+      "PROVIDER_ERROR",
+      false
+    );
+  });
+
+  it("returns non-terminal for unknown non-succeeded terminal states", async () => {
+    const deps = baseDeps();
+    deps.retrieveTask.mockResolvedValue({
+      id: "task-1",
+      status: "PENDING_REVIEW",
+      createdAt: "2026-03-20T00:00:00.000Z"
+    });
+
+    const result = await reconcileRunwayJobOrchestrator(baseJob, deps);
+    expect(result).toEqual({ terminal: false });
+    expect(deps.handleProviderSuccess).not.toHaveBeenCalled();
+    expect(deps.markJobFailed).not.toHaveBeenCalled();
+  });
+
+  it("marks as failed when succeeded task has no output URL", async () => {
+    const deps = baseDeps();
+    deps.retrieveTask.mockResolvedValue({
+      id: "task-1",
+      status: "SUCCEEDED",
+      createdAt: "2026-03-20T00:00:00.000Z",
+      output: []
+    });
+
+    await reconcileRunwayJobOrchestrator(baseJob, deps);
+
+    expect(deps.markJobFailed).toHaveBeenCalledWith(
+      "job-1",
+      "Runway task succeeded without an output URL"
+    );
+    expect(deps.handleProviderSuccess).not.toHaveBeenCalled();
+    expect(deps.sendJobFailureWebhook).toHaveBeenCalledWith(
+      baseJob,
+      "Runway task succeeded without an output URL",
+      "PROVIDER_ERROR",
+      false
+    );
   });
 });

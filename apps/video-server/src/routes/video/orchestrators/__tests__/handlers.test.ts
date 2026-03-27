@@ -55,4 +55,25 @@ describe("video route orchestrators", () => {
       canceledJobs: 2
     });
   });
+
+  it("uses a default cancel reason when request reason is omitted", async () => {
+    const cancelGenerationBatch = jest.fn().mockResolvedValue({
+      canceledBatches: 1,
+      canceledJobs: 1
+    });
+
+    await handleCancelVideo(
+      {
+        batchId: "batch-1"
+      },
+      {
+        cancelGenerationBatch
+      }
+    );
+
+    expect(cancelGenerationBatch).toHaveBeenCalledWith(
+      "batch-1",
+      "Canceled by user"
+    );
+  });
 });
