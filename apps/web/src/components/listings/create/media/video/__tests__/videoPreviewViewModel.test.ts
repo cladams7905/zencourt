@@ -1,13 +1,12 @@
 import type { ContentItem } from "@web/src/components/dashboard/components/ContentGrid";
 import type { PreviewTimelinePlan } from "@web/src/components/listings/create/domain/previewTimeline";
+import { appendRandomHeaderSuffix } from "@shared/utils";
 import { buildPlayablePreviews } from "@web/src/components/listings/create/media/video/videoPreviewViewModel";
-
-let mockAppendRandomHeaderSuffix: jest.Mock;
 
 jest.mock(
   "@shared/utils",
   () => {
-    mockAppendRandomHeaderSuffix = jest.fn((text: string) => text);
+    const appendRandomHeaderSuffix = jest.fn((text: string) => text);
 
     return {
       hashTextOverlaySeed: (value: string) =>
@@ -22,7 +21,7 @@ jest.mock(
       }),
       pickRichOverlayFontPairing: () => "editorial-clean",
       pickRichOverlayPosition: () => "center",
-      appendRandomHeaderSuffix: mockAppendRandomHeaderSuffix,
+      appendRandomHeaderSuffix,
       buildOverlayTemplateLines: (
         textOverlay:
           | {
@@ -60,6 +59,8 @@ jest.mock(
   },
   { virtual: true }
 );
+
+const mockAppendRandomHeaderSuffix = jest.mocked(appendRandomHeaderSuffix);
 
 jest.mock(
   "@web/src/components/listings/create/media/video/components/ListingTimelinePreviewComposition",

@@ -15,6 +15,17 @@ function normalizeRunwayDuration(_durationSeconds: number): 4 | 6 | 8 {
   return 4;
 }
 
+function resolveRunwayRatio(args: {
+  model: "gen4.5" | "veo3.1_fast" | "runway-gen4-turbo";
+  orientation: "vertical" | "landscape";
+}): "720:1280" | "1280:720" {
+  if (args.model === "veo3.1_fast") {
+    return "1280:720";
+  }
+
+  return args.orientation === "vertical" ? "720:1280" : "1280:720";
+}
+
 export const runwayStrategy: VideoGenerationStrategy<
   ProviderDispatchInput,
   ProviderDispatchResult
@@ -33,9 +44,11 @@ export const runwayStrategy: VideoGenerationStrategy<
     const runwayDurationSeconds = normalizeRunwayDuration(
       input.durationSeconds
     );
-    const runwayRatio =
-      input.orientation === "vertical" ? "720:1280" : "1280:720";
     const runwayModel = resolveRunwayGenerationModel(input.model);
+    const runwayRatio = resolveRunwayRatio({
+      model: runwayModel,
+      orientation: input.orientation
+    });
     const lease = await runwayTaskSlots.acquire();
 
     try {

@@ -14,5 +14,6 @@ Use this loop to avoid repeating mistakes and to align with the user's preferenc
 
 - For video generation workflows, target specific workflow instances by batch id rather than listing id when creating, reading, updating, or canceling jobs; reserve listing-scoped actions for explicitly whole-listing operations.
 - For small front end layout-only tweaks, implement the UI change directly unless a test adds clear behavioral value beyond asserting presentation.
+- For optimistic UI around async workflows, never derive the rollback state from a potentially updated live snapshot at cancel time; preserve or reconstruct the last known completed state explicitly.
 
 ---

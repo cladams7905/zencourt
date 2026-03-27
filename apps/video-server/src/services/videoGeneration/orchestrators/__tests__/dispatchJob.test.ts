@@ -258,11 +258,11 @@ describe("dispatchJobOrchestrator", () => {
     );
   });
 
-  it("defaults the stored model to gen4.5 when the job does not specify one", async () => {
+  it("defaults the stored model to veo3.1_fast when the job does not specify one", async () => {
     const primaryProviderFacade: any = {
       dispatch: jest.fn().mockResolvedValue({
         provider: "primary",
-        model: "gen4.5",
+        model: "veo3.1_fast",
         requestId: "req-1"
       })
     };
@@ -281,7 +281,7 @@ describe("dispatchJobOrchestrator", () => {
     expect(markJobProcessing).toHaveBeenCalledWith(
       "job-1",
       "req-1",
-      expect.objectContaining({ model: "gen4.5" })
+      expect.objectContaining({ model: "veo3.1_fast" })
     );
   });
 

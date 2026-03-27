@@ -1,8 +1,9 @@
 import type { GENERATION_MODELS } from "@shared/types/models";
 
-export const DEFAULT_RUNWAY_MODEL = "gen4.5" as const;
+export const DEFAULT_RUNWAY_MODEL = "veo3.1_fast" as const;
 
 export const RUNWAY_MODELS = [
+  "gen4.5",
   DEFAULT_RUNWAY_MODEL,
   "veo3.1_fast",
   "runway-gen4-turbo"

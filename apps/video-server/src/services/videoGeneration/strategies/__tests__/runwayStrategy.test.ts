@@ -75,7 +75,7 @@ describe("runwayStrategy", () => {
     await fourthWait;
   });
 
-  it("defaults runway dispatches to gen4.5", async () => {
+  it("defaults runway dispatches to veo3.1_fast and forces landscape output", async () => {
     submitImageToVideo.mockResolvedValue({
       id: "task-1",
       waitForTaskOutput: () =>
@@ -94,12 +94,37 @@ describe("runwayStrategy", () => {
     });
 
     expect(submitImageToVideo).toHaveBeenCalledWith(
-      expect.objectContaining({ model: "gen4.5" })
+      expect.objectContaining({ model: "veo3.1_fast", ratio: "1280:720" })
+    );
+    expect(result.model).toBe("veo3.1_fast");
+  });
+
+  it("keeps vertical output for gen4.5 requests", async () => {
+    submitImageToVideo.mockResolvedValue({
+      id: "task-gen45",
+      waitForTaskOutput: () =>
+        Promise.resolve({ output: [{ uri: "https://cdn/task-gen45.mp4" }] })
+    });
+
+    const { runwayStrategy } = await import("@/services/videoGeneration/strategies/runwayStrategy");
+    const result = await runwayStrategy.dispatch({
+      jobId: "job-gen45",
+      videoId: "batch-1",
+      prompt: "prompt",
+      imageUrls: ["https://image.jpg"],
+      orientation: "vertical",
+      durationSeconds: 4,
+      webhookUrl: "https://webhook",
+      model: "gen4.5"
+    } as never);
+
+    expect(submitImageToVideo).toHaveBeenCalledWith(
+      expect.objectContaining({ model: "gen4.5", ratio: "720:1280" })
     );
     expect(result.model).toBe("gen4.5");
   });
 
-  it("uses an explicit legacy runway model when provided", async () => {
+  it("forces landscape output for explicit veo3.1_fast requests", async () => {
     submitImageToVideo.mockResolvedValue({
       id: "task-legacy",
       waitForTaskOutput: () =>
@@ -119,7 +144,7 @@ describe("runwayStrategy", () => {
     } as never);
 
     expect(submitImageToVideo).toHaveBeenCalledWith(
-      expect.objectContaining({ model: "veo3.1_fast" })
+      expect.objectContaining({ model: "veo3.1_fast", ratio: "1280:720" })
     );
     expect(result.model).toBe("veo3.1_fast");
   });

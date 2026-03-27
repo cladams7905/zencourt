@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   type PgTableExtraConfigValue,
+  foreignKey,
   index,
   integer,
   pgTable,
@@ -11,6 +12,7 @@ import {
 import { authenticatedRole, crudPolicy } from "drizzle-orm/neon";
 
 import { listings } from "./listings";
+import { videoClipVersions } from "./videoClipVersions";
 
 export const videoClips = pgTable(
   "video_clips",
@@ -37,6 +39,11 @@ export const videoClips = pgTable(
       table.roomName,
       table.clipIndex
     ),
+    foreignKey({
+      name: "video_clips_current_video_clip_version_owner_fk",
+      columns: [table.id, table.currentVideoClipVersionId],
+      foreignColumns: [videoClipVersions.videoClipId, videoClipVersions.id]
+    }),
     crudPolicy({
       role: authenticatedRole,
       read: sql`(select ${listings.userId} = auth.user_id() from ${listings}

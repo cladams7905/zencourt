@@ -1,5 +1,5 @@
 import * as React from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 const mockUseSWR = jest.fn();
@@ -44,7 +44,10 @@ jest.mock("@web/src/components/ui/loading-image", () => ({
   }
 }));
 
-import { ListingClipManager } from "@web/src/components/listings/create/components/ListingClipManager";
+import {
+  ListingClipManager,
+  resetListingClipManagerOptimisticStateForTests
+} from "@web/src/components/listings/create/components/ListingClipManager";
 import type { ListingClipVersionItem } from "@web/src/components/listings/create/shared/types";
 import {
   cancelVideoGenerationBatch,
@@ -91,6 +94,7 @@ describe("ListingClipManager", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    resetListingClipManagerOptimisticStateForTests();
     (selectListingClipVersion as jest.Mock).mockResolvedValue({
       listingId: "listing-1",
       clipId: "clip-1",
@@ -153,7 +157,7 @@ describe("ListingClipManager", () => {
   });
 
   it("renders the inline workspace when requested", () => {
-    render(
+    const { container } = render(
       <ListingClipManager
         listingId="listing-1"
         items={items}
@@ -169,6 +173,11 @@ describe("ListingClipManager", () => {
     expect(
       screen.queryByRole("link", { name: /view generated clips/i })
     ).not.toBeInTheDocument();
+
+    const selectedVideo = container.querySelector("video");
+    const previewViewport = screen.getByTestId("clip-preview-viewport");
+    expect(previewViewport).toHaveClass("aspect-9/16");
+    expect(selectedVideo).toHaveClass("object-cover");
   });
 
   it("renders the selected clip details inline on mobile instead of the desktop detail pane", () => {
@@ -391,6 +400,82 @@ describe("ListingClipManager", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("keeps the clip in regenerating state when stale polling still returns the previous completed version", async () => {
+    const user = userEvent.setup();
+    let swrData: { clipVersionItems: ListingClipVersionItem[] } | undefined;
+    mockUseSWR.mockImplementation(() => ({ data: swrData }));
+    jest.mocked(regenerateListingClipVersion).mockResolvedValue({
+      listingId: "listing-1",
+      clipId: "clip-1",
+      clipVersionId: "clip-version-2",
+      batchId: "batch-1"
+    });
+
+    const view = render(
+      <ListingClipManager
+        listingId="listing-1"
+        items={items}
+        mode="workspace"
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: /^regenerate$/i }));
+    await user.click(screen.getByRole("button", { name: /quick regenerate/i }));
+
+    swrData = { clipVersionItems: items };
+    view.rerender(
+      <ListingClipManager
+        listingId="listing-1"
+        items={items}
+        mode="workspace"
+      />
+    );
+
+    expect(screen.getAllByText("Regenerating now")).toHaveLength(2);
+    expect(
+      screen.getByRole("button", { name: /cancel generation/i })
+    ).toBeInTheDocument();
+  });
+
+  it("keeps the clip in regenerating state after remount while polling is still stale", async () => {
+    const user = userEvent.setup();
+    let swrData: { clipVersionItems: ListingClipVersionItem[] } | undefined;
+    mockUseSWR.mockImplementation(() => ({ data: swrData }));
+    jest.mocked(regenerateListingClipVersion).mockResolvedValue({
+      listingId: "listing-1",
+      clipId: "clip-1",
+      clipVersionId: "clip-version-2",
+      batchId: "batch-1"
+    });
+
+    const firstView = render(
+      <ListingClipManager
+        listingId="listing-1"
+        items={items}
+        mode="workspace"
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: /^regenerate$/i }));
+    await user.click(screen.getByRole("button", { name: /quick regenerate/i }));
+
+    firstView.unmount();
+
+    swrData = { clipVersionItems: items };
+    render(
+      <ListingClipManager
+        listingId="listing-1"
+        items={items}
+        mode="workspace"
+      />
+    );
+
+    expect(screen.getAllByText("Regenerating now")).toHaveLength(2);
+    expect(
+      screen.getByRole("button", { name: /cancel generation/i })
+    ).toBeInTheDocument();
+  });
+
   it("falls back to the last successful thumbnail and duration after a regeneration fails", () => {
     const failedItems: ListingClipVersionItem[] = [
       {
@@ -465,6 +550,305 @@ describe("ListingClipManager", () => {
     );
   });
 
+  it("falls back to the last successful version in the UI after canceling regeneration", async () => {
+    const user = userEvent.setup();
+    jest.mocked(regenerateListingClipVersion).mockResolvedValue({
+      listingId: "listing-1",
+      clipId: "clip-1",
+      clipVersionId: "clip-version-2",
+      batchId: "batch-1"
+    });
+    jest.mocked(cancelVideoGenerationBatch).mockResolvedValue({
+      success: true,
+      batchId: "batch-1",
+      canceledBatches: 1,
+      canceledJobs: 1
+    });
+
+    render(
+      <ListingClipManager
+        listingId="listing-1"
+        items={items}
+        mode="workspace"
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: /^regenerate$/i }));
+    await user.click(screen.getByRole("button", { name: /quick regenerate/i }));
+    await user.click(
+      await screen.findByRole("button", { name: /cancel generation/i })
+    );
+    await user.click(screen.getByRole("button", { name: /^cancel generation$/i }));
+
+    expect(
+      screen.queryByText("Regenerating now")
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Regenerating")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /cancel generation/i })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /^regenerate$/i })
+    ).toBeInTheDocument();
+    expect(screen.getByRole("combobox")).toHaveTextContent("Mar 19, 8:30 AM");
+  });
+
+  it("ignores stale polling data that still marks a canceled clip as processing", async () => {
+    const user = userEvent.setup();
+    const stalePollingItems: ListingClipVersionItem[] = [
+      {
+        ...items[0],
+        currentVersion: {
+          ...items[0].currentVersion,
+          clipVersionId: "clip-version-2",
+          versionStatus: "processing",
+          generatedAt: "2026-03-20T12:30:00.000Z"
+        }
+      }
+    ] as never;
+
+    jest.mocked(regenerateListingClipVersion).mockResolvedValue({
+      listingId: "listing-1",
+      clipId: "clip-1",
+      clipVersionId: "clip-version-2",
+      batchId: "batch-1"
+    });
+    jest.mocked(cancelVideoGenerationBatch).mockResolvedValue({
+      success: true,
+      batchId: "batch-1",
+      canceledBatches: 1,
+      canceledJobs: 1
+    });
+
+    let swrData: { clipVersionItems: ListingClipVersionItem[] } | undefined;
+    mockUseSWR.mockImplementation(() => ({ data: swrData }));
+
+    const view = render(
+      <ListingClipManager
+        listingId="listing-1"
+        items={items}
+        mode="workspace"
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: /^regenerate$/i }));
+    await user.click(screen.getByRole("button", { name: /quick regenerate/i }));
+    await user.click(
+      await screen.findByRole("button", { name: /cancel generation/i })
+    );
+    await user.click(screen.getByRole("button", { name: /^cancel generation$/i }));
+
+    swrData = { clipVersionItems: stalePollingItems };
+    view.rerender(
+      <ListingClipManager
+        listingId="listing-1"
+        items={items}
+        mode="workspace"
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.queryAllByText("Regenerating now")).toHaveLength(0);
+      expect(screen.queryByText("Regenerating")).not.toBeInTheDocument();
+    });
+  });
+
+  it("stops showing regeneration when cancel happens after polling has already switched currentVersion to processing", async () => {
+    const user = userEvent.setup();
+    const processingItems: ListingClipVersionItem[] = [
+      {
+        ...items[0],
+        currentVersion: {
+          ...items[0].currentVersion,
+          clipVersionId: "clip-version-2",
+          versionStatus: "processing",
+          generatedAt: "2026-03-20T12:30:00.000Z"
+        }
+      }
+    ] as never;
+
+    jest.mocked(regenerateListingClipVersion).mockResolvedValue({
+      listingId: "listing-1",
+      clipId: "clip-1",
+      clipVersionId: "clip-version-2",
+      batchId: "batch-1"
+    });
+    jest.mocked(cancelVideoGenerationBatch).mockResolvedValue({
+      success: true,
+      batchId: "batch-1",
+      canceledBatches: 1,
+      canceledJobs: 1
+    });
+
+    let swrData: { clipVersionItems: ListingClipVersionItem[] } | undefined;
+    mockUseSWR.mockImplementation(() => ({ data: swrData }));
+
+    const view = render(
+      <ListingClipManager
+        listingId="listing-1"
+        items={items}
+        mode="workspace"
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: /^regenerate$/i }));
+    await user.click(screen.getByRole("button", { name: /quick regenerate/i }));
+
+    swrData = { clipVersionItems: processingItems };
+    view.rerender(
+      <ListingClipManager
+        listingId="listing-1"
+        items={items}
+        mode="workspace"
+      />
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: /cancel generation/i })
+    );
+    await user.click(screen.getByRole("button", { name: /^cancel generation$/i }));
+
+    expect(screen.queryAllByText("Regenerating now")).toHaveLength(0);
+    expect(screen.queryByText("Regenerating")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /cancel generation/i })
+    ).not.toBeInTheDocument();
+    const lastCall = mockUseSWR.mock.calls.at(-1);
+    expect(lastCall?.[2]).toMatchObject({ refreshInterval: 0 });
+  });
+
+  it("keeps cancel fallback visible when stale polling repeats the same processing version id", async () => {
+    const user = userEvent.setup();
+    const processingItems: ListingClipVersionItem[] = [
+      {
+        ...items[0],
+        currentVersion: {
+          ...items[0].currentVersion,
+          clipVersionId: "clip-version-2",
+          versionStatus: "processing",
+          generatedAt: "2026-03-20T12:30:00.000Z"
+        }
+      }
+    ] as never;
+
+    jest.mocked(regenerateListingClipVersion).mockResolvedValue({
+      listingId: "listing-1",
+      clipId: "clip-1",
+      clipVersionId: "clip-version-2",
+      batchId: "batch-1"
+    });
+    jest.mocked(cancelVideoGenerationBatch).mockResolvedValue({
+      success: true,
+      batchId: "batch-1",
+      canceledBatches: 1,
+      canceledJobs: 1
+    });
+
+    let swrData: { clipVersionItems: ListingClipVersionItem[] } | undefined;
+    mockUseSWR.mockImplementation(() => ({ data: swrData }));
+
+    const view = render(
+      <ListingClipManager
+        listingId="listing-1"
+        items={items}
+        mode="workspace"
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: /^regenerate$/i }));
+    await user.click(screen.getByRole("button", { name: /quick regenerate/i }));
+
+    swrData = { clipVersionItems: processingItems };
+    view.rerender(
+      <ListingClipManager
+        listingId="listing-1"
+        items={items}
+        mode="workspace"
+      />
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: /cancel generation/i })
+    );
+    await user.click(screen.getByRole("button", { name: /^cancel generation$/i }));
+
+    swrData = { clipVersionItems: processingItems };
+    view.rerender(
+      <ListingClipManager
+        listingId="listing-1"
+        items={items}
+        mode="workspace"
+      />
+    );
+
+    expect(screen.queryAllByText("Regenerating now")).toHaveLength(0);
+    expect(screen.queryByText("Regenerating")).not.toBeInTheDocument();
+    const lastCall = mockUseSWR.mock.calls.at(-1);
+    expect(lastCall?.[2]).toMatchObject({ refreshInterval: 0 });
+  });
+
+  it("suppresses processing UI for a canceled clip even when the polled clip payload has no completed fallback version", async () => {
+    const user = userEvent.setup();
+    const processingItemsWithoutHistory: ListingClipVersionItem[] = [
+      {
+        ...items[0],
+        currentVersion: {
+          ...items[0].currentVersion,
+          clipVersionId: "clip-version-2",
+          versionStatus: "processing",
+          generatedAt: "2026-03-20T12:30:00.000Z"
+        },
+        versions: []
+      }
+    ] as never;
+
+    jest.mocked(regenerateListingClipVersion).mockResolvedValue({
+      listingId: "listing-1",
+      clipId: "clip-1",
+      clipVersionId: "clip-version-2",
+      batchId: "batch-1"
+    });
+    jest.mocked(cancelVideoGenerationBatch).mockResolvedValue({
+      success: true,
+      batchId: "batch-1",
+      canceledBatches: 1,
+      canceledJobs: 1
+    });
+
+    let swrData: { clipVersionItems: ListingClipVersionItem[] } | undefined;
+    mockUseSWR.mockImplementation(() => ({ data: swrData }));
+
+    const view = render(
+      <ListingClipManager
+        listingId="listing-1"
+        items={items}
+        mode="workspace"
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: /^regenerate$/i }));
+    await user.click(screen.getByRole("button", { name: /quick regenerate/i }));
+
+    swrData = { clipVersionItems: processingItemsWithoutHistory };
+    view.rerender(
+      <ListingClipManager
+        listingId="listing-1"
+        items={items}
+        mode="workspace"
+      />
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: /cancel generation/i })
+    );
+    await user.click(screen.getByRole("button", { name: /^cancel generation$/i }));
+
+    expect(screen.queryAllByText("Regenerating now")).toHaveLength(0);
+    expect(screen.queryByText("Regenerating")).not.toBeInTheDocument();
+    const lastCall = mockUseSWR.mock.calls.at(-1);
+    expect(lastCall?.[2]).toMatchObject({ refreshInterval: 0 });
+  });
+
   it("shows loading spinners and disables regenerate for the selected clip while regeneration is in progress", () => {
     const processingItems: ListingClipVersionItem[] = [
       {
@@ -490,7 +874,7 @@ describe("ListingClipManager", () => {
 
     expect(
       screen.getAllByLabelText(/clip regeneration in progress/i)
-    ).toHaveLength(2);
+    ).toHaveLength(1);
     expect(screen.getByText("Regenerating")).toBeInTheDocument();
     expect(screen.getByText("4s")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^regenerate$/i })).toBeDisabled();

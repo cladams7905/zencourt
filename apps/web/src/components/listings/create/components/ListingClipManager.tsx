@@ -63,6 +63,22 @@ type ListingClipManagerProps = {
   mode?: "card" | "workspace";
 };
 
+type OptimisticClipRegeneration = {
+  fallbackItem: ListingClipVersionItem;
+  inFlightVersion: ListingClipVersionItem["inFlightVersion"];
+  batchId?: string;
+  canceled?: boolean;
+};
+
+const optimisticClipRegenerationStore = new Map<
+  string,
+  Record<string, OptimisticClipRegeneration>
+>();
+
+export function resetListingClipManagerOptimisticStateForTests() {
+  optimisticClipRegenerationStore.clear();
+}
+
 function hasPollablePendingItems(items: ListingClipVersionItem[]) {
   return items.some((item) =>
     isClipRegenerating(getRegeneratingVersion(item)?.versionStatus)
@@ -91,6 +107,23 @@ function getRegeneratingVersion(item?: ListingClipVersionItem | null) {
 
 function getLatestAttemptVersion(item?: ListingClipVersionItem | null) {
   return item?.inFlightVersion ?? item?.currentVersion ?? null;
+}
+
+function buildCompletedFallbackItem(
+  item: ListingClipVersionItem,
+  optimistic?: OptimisticClipRegeneration
+) {
+  const fallbackCurrentVersion =
+    optimistic?.fallbackItem.currentVersion ??
+    (isClipRegenerating(item.currentVersion.versionStatus)
+      ? (item.versions[0] ?? item.currentVersion)
+      : item.currentVersion);
+
+  return {
+    ...item,
+    currentVersion: fallbackCurrentVersion,
+    inFlightVersion: null
+  };
 }
 
 function getDisplayThumbnail(item?: ListingClipVersionItem | null) {
@@ -240,6 +273,103 @@ function serializeClipItems(itemsToSerialize: ListingClipVersionItem[]) {
   );
 }
 
+function getOptimisticClipRegenerations(listingId: string) {
+  return optimisticClipRegenerationStore.get(listingId) ?? {};
+}
+
+function setOptimisticClipRegeneration(
+  listingId: string,
+  clipId: string,
+  value: OptimisticClipRegeneration | null
+) {
+  const current = getOptimisticClipRegenerations(listingId);
+
+  if (!value) {
+    if (!current[clipId]) {
+      return;
+    }
+
+    const next = { ...current };
+    delete next[clipId];
+
+    if (Object.keys(next).length === 0) {
+      optimisticClipRegenerationStore.delete(listingId);
+      return;
+    }
+
+    optimisticClipRegenerationStore.set(listingId, next);
+    return;
+  }
+
+  optimisticClipRegenerationStore.set(listingId, {
+    ...current,
+    [clipId]: value
+  });
+}
+
+function buildPendingBatchState(listingId: string) {
+  return Object.fromEntries(
+    Object.entries(getOptimisticClipRegenerations(listingId))
+      .filter(([, value]) => Boolean(value.batchId))
+      .map(([clipId, value]) => [clipId, value.batchId as string])
+  );
+}
+
+function buildCanceledClipIdsState(listingId: string) {
+  return new Set(
+    Object.entries(getOptimisticClipRegenerations(listingId))
+      .filter(([, value]) => value.canceled)
+      .map(([clipId]) => clipId)
+  );
+}
+
+function applyOptimisticClipRegenerations(
+  listingId: string,
+  nextItems: ListingClipVersionItem[]
+) {
+  const optimisticByClipId = getOptimisticClipRegenerations(listingId);
+
+  return mergeClipItems(nextItems).map((item) => {
+    const optimistic = optimisticByClipId[item.clipId];
+    if (!optimistic) {
+      return item;
+    }
+
+    const latestAttemptVersion = getLatestAttemptVersion(item);
+    const rawStatus =
+      latestAttemptVersion?.versionStatus ??
+      item.currentVersion.versionStatus ??
+      "";
+    const latestAttemptVersionId = latestAttemptVersion?.clipVersionId ?? null;
+    const optimisticVersionId = optimistic.inFlightVersion?.clipVersionId ?? null;
+
+    if (optimistic.batchId) {
+      if (
+        optimisticVersionId &&
+        latestAttemptVersionId === optimisticVersionId
+      ) {
+        return item;
+      }
+
+      return {
+        ...item,
+        currentVersion: optimistic.fallbackItem.currentVersion,
+        inFlightVersion: optimistic.inFlightVersion
+      };
+    }
+
+    if (
+      optimistic.canceled &&
+      ["pending", "processing"].includes(rawStatus) &&
+      latestAttemptVersionId !== optimistic.fallbackItem.currentVersion.clipVersionId
+    ) {
+      return optimistic.fallbackItem;
+    }
+
+    return item;
+  });
+}
+
 function buildClipsHref(listingId: string, search: string) {
   const query = search ? `?${search}` : "";
   return `/listings/${listingId}/create/clips${query}`;
@@ -286,7 +416,9 @@ function ClipManagerWorkspace({
   items
 }: Pick<ListingClipManagerProps, "listingId" | "items">) {
   const isDesktopLayout = useIsDesktopLayout();
-  const [clipItems, setClipItems] = React.useState(() => mergeClipItems(items));
+  const [clipItems, setClipItems] = React.useState(() =>
+    applyOptimisticClipRegenerations(listingId, items)
+  );
   const [selectedClipId, setSelectedClipId] = React.useState<string | null>(
     items[0]?.clipId ?? null
   );
@@ -309,9 +441,12 @@ function ClipManagerWorkspace({
   const [timedOutClipIds, setTimedOutClipIds] = React.useState<Set<string>>(
     () => new Set()
   );
+  const [canceledClipIds, setCanceledClipIds] = React.useState<Set<string>>(
+    () => buildCanceledClipIdsState(listingId)
+  );
   const [pendingBatchIdByClipId, setPendingBatchIdByClipId] = React.useState<
     Record<string, string>
-  >({});
+  >(() => buildPendingBatchState(listingId));
   const [isSelectingVersion, startSelectVersionTransition] =
     React.useTransition();
   const previousStatusesRef = React.useRef<Map<string, string>>(new Map());
@@ -320,10 +455,10 @@ function ClipManagerWorkspace({
     versionId: string | null;
   } | null>(null);
   const lastSignatureRef = React.useRef(
-    serializeClipItems(mergeClipItems(items))
+    serializeClipItems(applyOptimisticClipRegenerations(listingId, items))
   );
   React.useEffect(() => {
-    const normalized = mergeClipItems(items);
+    const normalized = applyOptimisticClipRegenerations(listingId, items);
     const nextSignature = serializeClipItems(normalized);
     if (nextSignature === lastSignatureRef.current) {
       return;
@@ -331,7 +466,22 @@ function ClipManagerWorkspace({
 
     lastSignatureRef.current = nextSignature;
     setClipItems(normalized);
-  }, [items]);
+  }, [items, listingId]);
+
+  const isLocallyCanceledClip = React.useCallback(
+    (clipId: string) =>
+      canceledClipIds.has(clipId) && !pendingBatchIdByClipId[clipId],
+    [canceledClipIds, pendingBatchIdByClipId]
+  );
+  const hasActivePollableItems = React.useMemo(
+    () =>
+      clipItems.some(
+        (item) =>
+          !isLocallyCanceledClip(item.clipId) &&
+          isClipRegenerating(getRegeneratingVersion(item)?.versionStatus)
+      ),
+    [clipItems, isLocallyCanceledClip]
+  );
 
   const { data } = useSWR(
     `/api/v1/listings/${listingId}/clip-versions`,
@@ -342,7 +492,7 @@ function ClipManagerWorkspace({
         "Failed to load clip versions."
       ),
     {
-      refreshInterval: hasPollablePendingItems(clipItems) ? 2000 : 0,
+      refreshInterval: hasActivePollableItems ? 2000 : 0,
       revalidateOnFocus: false
     }
   );
@@ -351,8 +501,49 @@ function ClipManagerWorkspace({
     const nextItems = data?.clipVersionItems;
     if (!nextItems?.length) return;
 
-    const normalized = mergeClipItems(nextItems);
+    const rawServerItems = mergeClipItems(nextItems);
+    const rawStatusByClipId = new Map(
+      rawServerItems.map((item) => {
+        const latestAttemptVersion = getLatestAttemptVersion(item);
+        return [
+          item.clipId,
+          latestAttemptVersion?.versionStatus ??
+            item.currentVersion.versionStatus ??
+            ""
+        ] as const;
+      })
+    );
+    const rawNormalized = applyOptimisticClipRegenerations(listingId, nextItems);
+    const localItemsByClipId = new Map(
+      clipItems.map((item) => [item.clipId, item] as const)
+    );
+    const optimisticClipRegenerations = getOptimisticClipRegenerations(listingId);
     const nextStatuses = new Map<string, string>();
+    const nextCanceledClipIds = new Set(canceledClipIds);
+    let didCanceledClipIdsChange = false;
+    const normalized = rawNormalized.map((item) => {
+      const rawStatus = rawStatusByClipId.get(item.clipId) ?? "";
+      const localItem = localItemsByClipId.get(item.clipId);
+      const canceledFallbackItem = optimisticClipRegenerations[item.clipId]
+        ?.canceled
+        ? optimisticClipRegenerations[item.clipId]?.fallbackItem
+        : localItem;
+      const shouldIgnoreStaleProcessing =
+        canceledClipIds.has(item.clipId) &&
+        !pendingBatchIdByClipId[item.clipId] &&
+        ["pending", "processing"].includes(rawStatus) &&
+        canceledFallbackItem;
+
+      if (
+        canceledClipIds.has(item.clipId) &&
+        !["pending", "processing"].includes(rawStatus)
+      ) {
+        nextCanceledClipIds.delete(item.clipId);
+        didCanceledClipIdsChange = true;
+      }
+
+      return shouldIgnoreStaleProcessing ? canceledFallbackItem : item;
+    });
 
     for (const item of normalized) {
       const latestAttemptVersion = getLatestAttemptVersion(item);
@@ -368,6 +559,7 @@ function ClipManagerWorkspace({
           ["pending", "processing"].includes(previousStatus) &&
           status === "completed"
         ) {
+          setOptimisticClipRegeneration(listingId, item.clipId, null);
           setPendingBatchIdByClipId((currentPendingBatchIdByClipId) => {
             const nextPendingBatchIdByClipId = {
               ...currentPendingBatchIdByClipId
@@ -382,6 +574,7 @@ function ClipManagerWorkspace({
           ["pending", "processing"].includes(previousStatus) &&
           status === "failed"
         ) {
+          setOptimisticClipRegeneration(listingId, item.clipId, null);
           setPendingBatchIdByClipId((currentPendingBatchIdByClipId) => {
             const nextPendingBatchIdByClipId = {
               ...currentPendingBatchIdByClipId
@@ -395,18 +588,33 @@ function ClipManagerWorkspace({
     }
 
     previousStatusesRef.current = nextStatuses;
+    if (didCanceledClipIdsChange) {
+      for (const clipId of canceledClipIds) {
+        if (!nextCanceledClipIds.has(clipId)) {
+          setOptimisticClipRegeneration(listingId, clipId, null);
+        }
+      }
+      setCanceledClipIds(nextCanceledClipIds);
+    }
     const nextSignature = serializeClipItems(normalized);
     if (nextSignature !== lastSignatureRef.current) {
       lastSignatureRef.current = nextSignature;
       setClipItems(normalized);
     }
-  }, [data]);
+  }, [canceledClipIds, clipItems, data, listingId, pendingBatchIdByClipId]);
 
   React.useEffect(() => {
     const nextTimedOutClipIds = new Set(timedOutClipIds);
     let didChange = false;
 
     for (const item of clipItems) {
+      if (isLocallyCanceledClip(item.clipId)) {
+        if (nextTimedOutClipIds.delete(item.clipId)) {
+          didChange = true;
+        }
+        continue;
+      }
+
       const regeneratingVersion = getRegeneratingVersion(item);
       const isRegenerating = isClipRegenerating(
         regeneratingVersion?.versionStatus
@@ -435,7 +643,7 @@ function ClipManagerWorkspace({
     if (didChange) {
       setTimedOutClipIds(nextTimedOutClipIds);
     }
-  }, [clipItems, timedOutClipIds]);
+  }, [clipItems, isLocallyCanceledClip, timedOutClipIds]);
 
   React.useEffect(() => {
     if (!clipItems.length) {
@@ -462,8 +670,7 @@ function ClipManagerWorkspace({
     const selectedVersion =
       selectedItem.versions.find(
         (version) => version.clipVersionId === selectedVersionId
-      ) ??
-      selectedItem.currentVersion;
+      ) ?? selectedItem.currentVersion;
     const nextSelectedVersionId = selectedVersion.clipVersionId ?? null;
     if (nextSelectedVersionId !== selectedVersionId) {
       setSelectedVersionId(nextSelectedVersionId);
@@ -483,12 +690,7 @@ function ClipManagerWorkspace({
       clipId: selectedItem.clipId,
       versionId: nextSelectedVersionId
     };
-  }, [
-    clipItems,
-    draftAiDirections,
-    selectedClipId,
-    selectedVersionId
-  ]);
+  }, [clipItems, draftAiDirections, selectedClipId, selectedVersionId]);
 
   const selectedItem =
     clipItems.find((item) => item.clipId === selectedClipId) ?? clipItems[0];
@@ -498,9 +700,10 @@ function ClipManagerWorkspace({
     ) ?? selectedItem?.currentVersion;
   const selectedRegeneratingVersion = getRegeneratingVersion(selectedItem);
   const selectedDisplayThumbnail = getDisplayThumbnail(selectedItem);
-  const selectedClipIsRegenerating = isClipRegenerating(
-    selectedRegeneratingVersion?.versionStatus
-  );
+  const selectedClipIsRegenerating =
+    !selectedItem || isLocallyCanceledClip(selectedItem.clipId)
+      ? false
+      : isClipRegenerating(selectedRegeneratingVersion?.versionStatus);
   const selectedClipBatchId = selectedItem
     ? pendingBatchIdByClipId[selectedItem.clipId]
     : undefined;
@@ -514,22 +717,36 @@ function ClipManagerWorkspace({
         aiDirections
       })
         .then((result) => {
+          const optimisticInFlightVersion = {
+            ...selectedItem.currentVersion,
+            clipVersionId: result.clipVersionId,
+            aiDirections,
+            generatedAt: new Date().toISOString(),
+            versionStatus: "processing" as const
+          };
+          setOptimisticClipRegeneration(listingId, selectedItem.clipId, {
+            fallbackItem: {
+              ...selectedItem,
+              inFlightVersion: null
+            },
+            inFlightVersion: optimisticInFlightVersion,
+            batchId: result.batchId
+          });
           setClipItems((currentItems) =>
             currentItems.map((item) =>
               item.clipId === selectedItem.clipId
                 ? {
                     ...item,
-                    currentVersion: {
-                      ...item.currentVersion,
-                      clipVersionId: result.clipVersionId,
-                      aiDirections,
-                      generatedAt: new Date().toISOString(),
-                      versionStatus: "processing"
-                    }
+                    inFlightVersion: optimisticInFlightVersion
                   }
                 : item
             )
           );
+          setCanceledClipIds((currentCanceledClipIds) => {
+            const nextCanceledClipIds = new Set(currentCanceledClipIds);
+            nextCanceledClipIds.delete(selectedItem.clipId);
+            return nextCanceledClipIds;
+          });
           setPendingBatchIdByClipId((currentPendingBatchIdByClipId) => ({
             ...currentPendingBatchIdByClipId,
             [selectedItem.clipId]: result.batchId
@@ -599,12 +816,35 @@ function ClipManagerWorkspace({
     startCancelTransition(() => {
       void cancelVideoGenerationBatch(selectedClipBatchId, "Canceled by user")
         .then(() => {
+          const fallbackItem = buildCompletedFallbackItem(
+            selectedItem,
+            getOptimisticClipRegenerations(listingId)[selectedItem.clipId]
+          );
+          setOptimisticClipRegeneration(listingId, selectedItem.clipId, {
+            fallbackItem,
+            inFlightVersion: null,
+            canceled: true
+          });
           setPendingBatchIdByClipId((currentPendingBatchIdByClipId) => {
             const nextPendingBatchIdByClipId = {
               ...currentPendingBatchIdByClipId
             };
             delete nextPendingBatchIdByClipId[selectedItem.clipId];
             return nextPendingBatchIdByClipId;
+          });
+          setClipItems((currentItems) =>
+            currentItems.map((item) =>
+              item.clipId === selectedItem.clipId
+                ? {
+                    ...fallbackItem
+                  }
+                : item
+            )
+          );
+          setCanceledClipIds((currentCanceledClipIds) => {
+            const nextCanceledClipIds = new Set(currentCanceledClipIds);
+            nextCanceledClipIds.add(selectedItem.clipId);
+            return nextCanceledClipIds;
           });
           setIsCancelDialogOpen(false);
           toast.success(`Canceled ${selectedItem.roomName} clip generation.`);
@@ -670,12 +910,7 @@ function ClipManagerWorkspace({
           });
       });
     },
-    [
-      applySelectedVersionLocally,
-      listingId,
-      selectedItem,
-      selectedVersionId
-    ]
+    [applySelectedVersionLocally, listingId, selectedItem, selectedVersionId]
   );
 
   const renderClipActionControls = (options?: {
@@ -884,12 +1119,13 @@ function ClipManagerWorkspace({
   );
 
   const renderVideoPlayer = () => (
-    <div className="flex min-h-0 min-w-0 lg:h-full">
+    <div className="flex min-h-0 min-w-0 justify-center lg:h-full">
       <div
+        data-testid="clip-preview-viewport"
         className={cn(
-          "relative isolate min-h-0 w-full min-w-0 overflow-hidden rounded-xl border border-border bg-black",
-          "min-h-[min(70dvh,calc(100dvh-11rem))]",
-          "lg:h-full lg:min-h-0"
+          "relative isolate aspect-9/16 w-full max-w-[15rem] overflow-hidden rounded-xl border border-border bg-black",
+          "min-h-[min(52dvh,26rem)]",
+          "lg:h-full lg:min-h-0 lg:w-auto lg:max-w-full"
         )}
       >
         {selectedVersion?.videoUrl ? (
@@ -899,7 +1135,7 @@ function ClipManagerWorkspace({
             poster={selectedDisplayThumbnail ?? undefined}
             controls
             playsInline
-            className="absolute inset-0 block h-full w-full object-contain"
+            className="absolute inset-0 block h-full w-full object-cover"
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center text-sm text-white/70">
@@ -920,12 +1156,12 @@ function ClipManagerWorkspace({
 
   return (
     <div className="grid min-h-[max(640px,calc(100vh-220px))] gap-6 overflow-x-hidden overflow-y-auto max-lg:grid-rows-[auto_auto] lg:grid-cols-[300px_minmax(0,1fr)]">
-      <div className="min-h-0 max-h-[min(70dvh,calc(100dvh-11rem))] self-start overflow-x-hidden overflow-y-auto rounded-xl border border-border bg-background">
+      <div className="min-h-0 overflow-x-hidden rounded-xl border border-border bg-background lg:h-full lg:overflow-y-auto">
         {clipItems.map((item) => {
           const isSelected = item.clipId === selectedItem?.clipId;
-          const itemIsRegenerating = isClipRegenerating(
-            getRegeneratingVersion(item)?.versionStatus
-          );
+          const itemIsRegenerating = isLocallyCanceledClip(item.clipId)
+            ? false
+            : isClipRegenerating(getRegeneratingVersion(item)?.versionStatus);
           return (
             <div
               key={item.clipId}
@@ -1014,7 +1250,7 @@ function ClipManagerWorkspace({
               {selectedClipIsRegenerating ? (
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-muted border border-border px-2.5 py-1 text-xs font-medium text-muted-foreground">
                   <span>Regenerating</span>
-                  <RegenerationSpinner label="Clip regeneration in progress" />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                 </span>
               ) : (
                 <p className="text-xs text-muted-foreground">
