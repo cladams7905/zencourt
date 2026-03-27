@@ -52,6 +52,11 @@ describe("videoGenJobs actions", () => {
     expect(mockValues).toHaveBeenCalledWith([{ id: "j1" }, { id: "j2" }]);
   });
 
+  it("skips batch insert when there are no jobs", async () => {
+    await expect(createVideoGenJobsBatch([])).resolves.toBeUndefined();
+    expect(mockInsert).not.toHaveBeenCalled();
+  });
+
   it("updates and fetches job", async () => {
     mockReturning.mockResolvedValue([{ id: "j1" }]);
     await expect(updateVideoGenJob("j1", {})).resolves.toEqual({ id: "j1" });

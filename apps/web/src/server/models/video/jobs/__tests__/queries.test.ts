@@ -1,5 +1,6 @@
 const mockLimit = jest.fn();
-const mockWhere = jest.fn(() => ({ limit: mockLimit }));
+const mockOrderBy = jest.fn();
+const mockWhere = jest.fn();
 const mockFrom = jest.fn(() => ({ where: mockWhere }));
 const mockSelect = jest.fn(() => ({ from: mockFrom }));
 const mockWithDbErrorHandling = jest.fn(
@@ -12,15 +13,21 @@ jest.mock("@db/client", () => ({
       (mockSelect as (...a: unknown[]) => unknown)(...args)
   },
   videoGenJobs: { id: "id" },
+  videoGenBatch: { id: "id", listingId: "listingId", createdAt: "createdAt" },
+  desc: (...args: unknown[]) => args,
   eq: (...args: unknown[]) => args
 }));
 
-jest.mock("@web/src/server/models/shared/dbErrorHandling", () => ({
+jest.mock("../../../shared/dbErrorHandling", () => ({
   withDbErrorHandling: (...args: unknown[]) =>
     (mockWithDbErrorHandling as (...a: unknown[]) => unknown)(...args)
 }));
 
-import { getVideoGenJobById } from "@web/src/server/models/video";
+import {
+  getLatestVideoGenBatchByListingId,
+  getVideoGenBatchById,
+  getVideoGenJobById
+} from "@web/src/server/models/video";
 
 describe("videoGen queries", () => {
   beforeEach(() => {
@@ -28,6 +35,7 @@ describe("videoGen queries", () => {
     mockWhere.mockReset();
     mockFrom.mockClear();
     mockSelect.mockClear();
+    mockOrderBy.mockReset();
     mockWithDbErrorHandling.mockClear();
   });
 
@@ -59,5 +67,41 @@ describe("videoGen queries", () => {
 
     const result = await getVideoGenJobById("missing-job");
     expect(result).toBeNull();
+  });
+
+  it("loads a batch by id and the latest batch by listing id", async () => {
+    mockWhere
+      .mockImplementationOnce(() => ({ limit: mockLimit }))
+      .mockImplementationOnce(() => ({ orderBy: mockOrderBy }));
+    mockLimit.mockResolvedValueOnce([{ id: "batch-1" }]);
+    mockOrderBy.mockReturnValue({ limit: mockLimit });
+    mockLimit.mockResolvedValueOnce([{ id: "batch-2" }]);
+
+    await expect(getVideoGenBatchById("batch-1")).resolves.toEqual({
+      id: "batch-1"
+    });
+    await expect(
+      getLatestVideoGenBatchByListingId("listing-1")
+    ).resolves.toEqual({ id: "batch-2" });
+  });
+
+  it("returns null or validation errors for missing batch inputs", async () => {
+    mockWhere
+      .mockImplementationOnce(() => ({ limit: mockLimit }))
+      .mockImplementationOnce(() => ({ orderBy: mockOrderBy }));
+    mockLimit.mockResolvedValueOnce([]);
+    mockOrderBy.mockReturnValue({ limit: mockLimit });
+    mockLimit.mockResolvedValueOnce([]);
+
+    await expect(getVideoGenBatchById("batch-missing")).resolves.toBeNull();
+    await expect(
+      getLatestVideoGenBatchByListingId("listing-missing")
+    ).resolves.toBeNull();
+    await expect(getVideoGenBatchById("")).rejects.toThrow(
+      "batchId is required"
+    );
+    await expect(getLatestVideoGenBatchByListingId("")).rejects.toThrow(
+      "listingId is required"
+    );
   });
 });

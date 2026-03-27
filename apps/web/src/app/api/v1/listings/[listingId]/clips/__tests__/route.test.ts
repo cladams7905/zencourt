@@ -74,4 +74,24 @@ describe("listing clips route", () => {
       message: "Listing not found"
     });
   });
+
+  it("maps unexpected errors to internal error responses", async () => {
+    const { GET, mockGetListingClipVersionItemsForCurrentUser } =
+      await loadRoute();
+    mockGetListingClipVersionItemsForCurrentUser.mockRejectedValueOnce(
+      new Error("boom")
+    );
+
+    const response = await GET({} as never, {
+      params: Promise.resolve({ listingId: "listing-1" })
+    });
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toEqual({
+      success: false,
+      code: "INTERNAL_ERROR",
+      error: "boom",
+      message: "boom"
+    });
+  });
 });

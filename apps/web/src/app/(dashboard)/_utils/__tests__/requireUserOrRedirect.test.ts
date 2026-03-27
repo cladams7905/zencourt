@@ -10,7 +10,7 @@ jest.mock("next/navigation", () => ({
 
 import { redirect } from "next/navigation";
 
-jest.mock("@web/src/server/models/users", () => ({
+jest.mock("@web/src/server/models/user/users", () => ({
   getUser: jest.fn()
 }));
 import { getUser } from "@web/src/server/models/user/users";

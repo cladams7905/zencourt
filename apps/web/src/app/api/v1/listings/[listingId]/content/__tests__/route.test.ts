@@ -100,4 +100,61 @@ describe("listing create content items route", () => {
       })
     );
   });
+
+  it("passes through image media requests and maps ApiError responses", async () => {
+    const { GET, mockGetListingContentItemsForCurrentUser } = await loadRoute();
+    mockGetListingContentItemsForCurrentUser.mockRejectedValueOnce(
+      new TestApiError(400, "Bad request")
+    );
+
+    const response = await GET(
+      {
+        nextUrl: new NodeURL(
+          "https://example.com/api/v1/listings/listing-1/content?mediaTab=images"
+        )
+      } as never,
+      {
+        params: Promise.resolve({ listingId: "listing-1" })
+      }
+    );
+
+    expect(mockGetListingContentItemsForCurrentUser).toHaveBeenCalledWith(
+      "listing-1",
+      expect.objectContaining({
+        mediaTab: "images"
+      })
+    );
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({
+      success: false,
+      code: "INVALID_REQUEST",
+      error: "Bad request",
+      message: "Bad request"
+    });
+  });
+
+  it("maps unexpected errors to internal error responses", async () => {
+    const { GET, mockGetListingContentItemsForCurrentUser } = await loadRoute();
+    mockGetListingContentItemsForCurrentUser.mockRejectedValueOnce(
+      new Error("boom")
+    );
+
+    const response = await GET(
+      {
+        nextUrl: new NodeURL(
+          "https://example.com/api/v1/listings/listing-1/content"
+        )
+      } as never,
+      {
+        params: Promise.resolve({ listingId: "listing-1" })
+      }
+    );
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toEqual({
+      success: false,
+      code: "INTERNAL_ERROR",
+      error: "Failed to fetch listing create content"
+    });
+  });
 });
