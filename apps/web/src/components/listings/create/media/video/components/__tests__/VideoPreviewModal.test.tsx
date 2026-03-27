@@ -182,7 +182,7 @@ describe("VideoPreviewModal", () => {
     expect(screen.getByText("2/2")).toBeInTheDocument();
   });
 
-  it("keeps the player shell above a minimum desktop size", () => {
+  it("keeps the player shell sized for mobile and 1050px+ desktop layout", () => {
     render(
       <VideoPreviewModal
         selectedPreview={createSelectedPreview()}
@@ -192,8 +192,13 @@ describe("VideoPreviewModal", () => {
       />
     );
 
-    expect(screen.getByTestId("video-player-shell").className).toContain("max-w-[320px]");
-    expect(screen.getByTestId("video-player-shell").className).toContain("xl:h-[86%]");
+    const shell = screen.getByTestId("video-player-shell").className;
+    expect(shell).toContain("rounded-xl");
+    expect(shell).toContain("border-border");
+    expect(shell).toContain("min-w-[168px]");
+    expect(shell).toContain("max-w-[min(260px");
+    expect(shell).toContain("max-[1049px]:min-h-[min(46dvh,22rem)]");
+    expect(shell).toContain("min-[1050px]:h-[86%]");
   });
 
   it("enables save when fields change and resets draft values on cancel", async () => {
@@ -209,8 +214,8 @@ describe("VideoPreviewModal", () => {
     );
 
     const headerInput = screen.getByLabelText("Header");
-    const saveButton = screen.getByRole("button", { name: "Save" });
-    const cancelButton = screen.getByRole("button", { name: "Cancel" });
+    const saveButton = screen.getByTestId("reel-preview-save");
+    const cancelButton = screen.getByTestId("reel-preview-cancel");
 
     expect(saveButton).toBeDisabled();
 
@@ -249,7 +254,7 @@ describe("VideoPreviewModal", () => {
     await user.clear(screen.getByLabelText("Caption"));
     await user.type(screen.getByLabelText("Caption"), "  Updated caption  ");
 
-    await user.click(screen.getByRole("button", { name: "Save" }));
+    await user.click(screen.getByTestId("reel-preview-save"));
 
     expect(mockOnSave).toHaveBeenCalledWith({
       hook: "Updated hook",
@@ -276,13 +281,15 @@ describe("VideoPreviewModal", () => {
         mediaType: "video"
       }
     });
-    expect(screen.getByRole("button", { name: "Saving..." })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();
+    const savingButton = screen.getByTestId("reel-preview-save");
+    expect(savingButton).toHaveTextContent("Saving...");
+    expect(savingButton).toBeDisabled();
+    expect(screen.getByTestId("reel-preview-cancel")).toBeDisabled();
 
     resolveSave?.();
 
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: "Save" })).toBeDisabled()
+      expect(screen.getByTestId("reel-preview-save")).toBeDisabled()
     );
   });
 
@@ -301,7 +308,7 @@ describe("VideoPreviewModal", () => {
 
     await user.clear(screen.getByLabelText("Header"));
     await user.type(screen.getByLabelText("Header"), "Updated hook");
-    await user.click(screen.getByRole("button", { name: "Save" }));
+    await user.click(screen.getByTestId("reel-preview-save"));
 
     expect(await screen.findByText("save failed")).toBeInTheDocument();
     expect(screen.getByLabelText("Header")).toHaveValue("Updated hook");
@@ -341,7 +348,7 @@ describe("VideoPreviewModal", () => {
       )
     );
 
-    await user.click(screen.getByRole("button", { name: "Save" }));
+    await user.click(screen.getByTestId("reel-preview-save"));
 
     expect(mockOnSave).toHaveBeenCalledWith({
       hook: "Original hook",
@@ -667,7 +674,7 @@ describe("VideoPreviewModal", () => {
       )
     );
 
-    await user.click(screen.getByRole("button", { name: "Save" }));
+    await user.click(screen.getByTestId("reel-preview-save"));
 
     expect(mockOnSave).toHaveBeenCalledWith({
       hook: "Original hook",
@@ -722,7 +729,7 @@ describe("VideoPreviewModal", () => {
 
     await user.clear(screen.getByLabelText("Header"));
     await user.type(screen.getByLabelText("Header"), "Saved reel updated");
-    await user.click(screen.getByRole("button", { name: "Save" }));
+    await user.click(screen.getByTestId("reel-preview-save"));
 
     expect(mockOnSave).toHaveBeenCalledWith(
       expect.objectContaining({

@@ -11,7 +11,10 @@ import {
 import { Button } from "@web/src/components/ui/button";
 import { getTimelineDurationInFrames } from "@web/src/components/listings/create/media/video/components/ListingTimelinePreviewComposition";
 import { VideoPreviewPlayer } from "@web/src/components/listings/create/media/video/components/VideoPreviewPlayer";
-import { VideoPreviewTextEditor } from "@web/src/components/listings/create/media/video/components/VideoPreviewTextEditor";
+import {
+  VideoPreviewEditorActions,
+  VideoPreviewTextEditor
+} from "@web/src/components/listings/create/media/video/components/VideoPreviewTextEditor";
 import { VideoPreviewTimeline } from "@web/src/components/listings/create/media/video/components/VideoPreviewTimeline";
 import type {
   PlayablePreview,
@@ -417,7 +420,7 @@ export function VideoPreviewModal({
     <Dialog open={Boolean(selectedPreview)} onOpenChange={onOpenChange}>
       <DialogContent
         hideCloseButton
-        className="max-h-[88vh] w-[96vw] max-w-[calc(100vw-1rem)] gap-0 overflow-y-auto border-0 p-0 sm:max-w-[calc(100vw-2rem)] xl:h-[88vh] xl:w-[82vw] xl:max-w-[1400px] xl:grid-rows-[auto_minmax(0,1fr)] xl:overflow-hidden"
+        className="grid max-h-[88vh] w-[96vw] max-w-[calc(100vw-1rem)] grid-rows-[auto_minmax(0,1fr)] gap-0 overflow-hidden border-0 p-0 sm:max-w-[calc(100vw-2rem)] min-[1050px]:h-[88vh] min-[1050px]:w-[82vw] min-[1050px]:max-w-[min(1400px,calc(100vw-2rem))]"
       >
         <DialogHeader className="sticky top-0 z-20 flex-row items-center justify-between border-b border-border bg-background/95 px-6 py-4 backdrop-blur supports-backdrop-filter:bg-background/90">
           <DialogTitle>Reel Preview</DialogTitle>
@@ -434,67 +437,79 @@ export function VideoPreviewModal({
           </DialogClose>
         </DialogHeader>
         {selectedPreview ? (
-          <div className="pb-0 xl:min-h-0 xl:overflow-hidden">
-            <div className="grid items-start xl:h-full xl:min-h-0 xl:grid-cols-[minmax(0,1fr)_1px_minmax(0,520px)] xl:items-stretch xl:overflow-hidden">
-              <div className="grid min-w-0 content-start xl:h-full xl:min-h-0 xl:grid-rows-[minmax(0,1fr)_1px_248px] xl:overflow-hidden">
-                <div className="flex min-h-0 min-w-0 items-center justify-center overflow-hidden bg-secondary xl:h-full">
-                  <div
-                    data-testid="video-player-shell"
-                    className="relative aspect-9/16 w-full max-w-[320px] lg:max-w-[360px] xl:h-[86%] xl:max-h-full xl:w-auto xl:max-w-full"
-                  >
-                    <VideoPreviewPlayer
-                      key={selectedPreview.id}
-                      playerRef={handlePlayerRef}
+          <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden max-[1049px]:overflow-x-hidden">
+            <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden max-[1049px]:pb-19 min-[1050px]:flex min-[1050px]:min-h-0 min-[1050px]:flex-col min-[1050px]:overflow-hidden min-[1050px]:pb-0">
+              <div className="grid min-w-0 max-w-full items-start min-[1050px]:h-full min-[1050px]:min-h-0 min-[1050px]:grid-cols-[minmax(0,1fr)_1px_minmax(0,520px)] min-[1050px]:items-stretch min-[1050px]:overflow-hidden">
+                <div className="grid min-w-0 max-w-full content-start min-[1050px]:h-full min-[1050px]:min-h-0 min-[1050px]:grid-rows-[minmax(0,1fr)_1px_248px] min-[1050px]:overflow-hidden">
+                  <div className="flex min-h-0 min-w-0 items-center justify-center overflow-hidden bg-secondary px-3 py-4 min-[1050px]:h-full min-[1050px]:px-0 min-[1050px]:py-0">
+                    <div
+                      data-testid="video-player-shell"
+                      className="relative isolate mx-auto aspect-9/16 w-full min-w-[168px] max-w-[min(260px,calc(100vw-3rem))] overflow-hidden rounded-xl border border-border bg-black max-[1049px]:min-h-[min(46dvh,22rem)] min-[1050px]:h-[86%] min-[1050px]:max-h-full min-[1050px]:w-auto min-[1050px]:max-w-full"
+                    >
+                      <VideoPreviewPlayer
+                        key={selectedPreview.id}
+                        playerRef={handlePlayerRef}
+                        segments={segmentDraft}
+                        durationInFrames={draftDurationInFrames}
+                        previewFps={previewFps}
+                        firstThumb={selectedPreview.firstThumb}
+                      />
+                    </div>
+                  </div>
+                  <div className="h-px bg-border" aria-hidden />
+                  <div className="min-w-0 max-w-full px-3 py-3 min-[1050px]:flex min-[1050px]:h-[248px] min-[1050px]:min-h-[248px] min-[1050px]:flex-col min-[1050px]:overflow-hidden min-[1050px]:px-4">
+                    <VideoPreviewTimeline
                       segments={segmentDraft}
-                      durationInFrames={draftDurationInFrames}
+                      totalClipCount={selectedPreview.resolvedSegments.length}
+                      deletedClipOptions={deletedClipOptions}
+                      userMediaClipOptions={userMediaClipOptions}
                       previewFps={previewFps}
-                      firstThumb={selectedPreview.firstThumb}
+                      currentFrame={currentFrame}
+                      totalFrames={draftDurationInFrames}
+                      onSeekFrame={handleSeekFrame}
+                      onReorder={handleSegmentsReorder}
+                      onDurationChangeStart={handleDurationChangeStart}
+                      onDurationChangeEnd={handleDurationChangeEnd}
+                      onDurationChange={handleSegmentDurationChange}
+                      onDeleteClip={handleDeleteSegment}
+                      onAddClip={handleAddSegment}
+                      canUndo={undoStack.length > 0}
+                      canRedo={redoStack.length > 0}
+                      onUndo={handleUndoTimelineChange}
+                      onRedo={handleRedoTimelineChange}
                     />
                   </div>
                 </div>
-                <div className="h-px bg-border" aria-hidden />
-                <div className="px-4 py-3 xl:flex xl:h-[248px] xl:min-h-[248px] xl:flex-col xl:overflow-hidden">
-                  <VideoPreviewTimeline
-                    segments={segmentDraft}
-                    totalClipCount={selectedPreview.resolvedSegments.length}
-                    deletedClipOptions={deletedClipOptions}
-                    userMediaClipOptions={userMediaClipOptions}
-                    previewFps={previewFps}
-                    currentFrame={currentFrame}
-                    totalFrames={draftDurationInFrames}
-                    onSeekFrame={handleSeekFrame}
-                    onReorder={handleSegmentsReorder}
-                    onDurationChangeStart={handleDurationChangeStart}
-                    onDurationChangeEnd={handleDurationChangeEnd}
-                    onDurationChange={handleSegmentDurationChange}
-                    onDeleteClip={handleDeleteSegment}
-                    onAddClip={handleAddSegment}
-                    canUndo={undoStack.length > 0}
-                    canRedo={redoStack.length > 0}
-                    onUndo={handleUndoTimelineChange}
-                    onRedo={handleRedoTimelineChange}
-                  />
+                <div
+                  className="hidden h-full self-stretch bg-border min-[1050px]:block"
+                  aria-hidden
+                />
+                <div className="min-w-0 max-w-full border-t border-border min-[1050px]:min-h-0 min-[1050px]:overflow-hidden min-[1050px]:border-t-0">
+                  <div className="min-[1050px]:h-full">
+                    <VideoPreviewTextEditor
+                      hookValue={hookDraft}
+                      captionValue={captionDraft}
+                      slideNotes={slideNotes}
+                      isDirty={isDirty}
+                      isSaving={isSaving}
+                      errorMessage={errorMessage}
+                      onHookChange={setHookDraft}
+                      onCaptionChange={setCaptionDraft}
+                      onCancel={handleCancel}
+                      onSave={() => void handleSave()}
+                    />
+                  </div>
                 </div>
               </div>
-              <div
-                className="hidden h-full self-stretch bg-border xl:block"
-                aria-hidden
-              />
-              <div className="min-w-0 border-t border-border xl:min-h-0 xl:overflow-hidden xl:border-t-0">
-                <div className="xl:h-full">
-                  <VideoPreviewTextEditor
-                    hookValue={hookDraft}
-                    captionValue={captionDraft}
-                    slideNotes={slideNotes}
-                    isDirty={isDirty}
-                    isSaving={isSaving}
-                    errorMessage={errorMessage}
-                    onHookChange={setHookDraft}
-                    onCaptionChange={setCaptionDraft}
-                    onCancel={handleCancel}
-                    onSave={() => void handleSave()}
-                  />
-                </div>
+            </div>
+            <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-30 hidden max-[1049px]:block">
+              <div className="pointer-events-auto border-t border-border bg-background/95 px-4 py-3 backdrop-blur supports-backdrop-filter:bg-background/90">
+                <VideoPreviewEditorActions
+                  isDirty={isDirty}
+                  isSaving={isSaving}
+                  onCancel={handleCancel}
+                  onSave={() => void handleSave()}
+                />
               </div>
             </div>
           </div>

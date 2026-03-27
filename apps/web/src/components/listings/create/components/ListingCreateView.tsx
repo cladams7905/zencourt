@@ -13,6 +13,10 @@ import {
 } from "@web/src/components/listings/create/components";
 import { type ListingCreateImage } from "@web/src/components/listings/create/domain";
 import { useStickyHeader } from "@web/src/components/listings/create/shared/hooks/useStickyHeader";
+import {
+  getListingCreateFilterStickyTopOffsets,
+  LISTING_CREATE_FILTER_EXTRA_TOP_BANNER_PX
+} from "@web/src/components/listings/create/shared/listingCreateLayout";
 import { useScrollFade } from "@web/src/components/listings/create/shared/hooks/useScrollFade";
 import {
   useListingCreateEffects,
@@ -54,6 +58,11 @@ type ListingCreateViewProps = {
   listingImages: ListingCreateImage[];
   initialMediaTab?: ListingCreateMediaTab;
   initialSubcategory?: ListingContentSubcategory;
+  /**
+   * Extra px added to the filter bar sticky offset for a banner (or similar)
+   * above the listing header. Defaults to {@link LISTING_CREATE_FILTER_EXTRA_TOP_BANNER_PX}.
+   */
+  stickyFilterExtraTopBannerPx?: number;
 };
 
 export type { ListingCreateMediaTab } from "@web/src/components/listings/create/shared/constants";
@@ -68,14 +77,35 @@ export function ListingCreateView({
   listingContentItems,
   listingImages,
   initialMediaTab = "videos",
-  initialSubcategory = LISTING_CONTENT_SUBCATEGORIES[0]
+  initialSubcategory = LISTING_CONTENT_SUBCATEGORIES[0],
+  stickyFilterExtraTopBannerPx = LISTING_CREATE_FILTER_EXTRA_TOP_BANNER_PX
 }: ListingCreateViewProps) {
   const pathname = usePathname();
   const [loadMoreNode, setLoadMoreNode] = React.useState<HTMLDivElement | null>(
     null
   );
+  const filterStickyTopOffsets = React.useMemo(
+    () => getListingCreateFilterStickyTopOffsets(stickyFilterExtraTopBannerPx),
+    [stickyFilterExtraTopBannerPx]
+  );
+  const [filterStickyTopPx, setFilterStickyTopPx] = React.useState(
+    filterStickyTopOffsets.mobilePx
+  );
+  React.useLayoutEffect(() => {
+    const mq = window.matchMedia("(min-width: 768px)");
+    const sync = () => {
+      setFilterStickyTopPx(
+        mq.matches
+          ? filterStickyTopOffsets.mdPx
+          : filterStickyTopOffsets.mobilePx
+      );
+    };
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, [filterStickyTopOffsets.mobilePx, filterStickyTopOffsets.mdPx]);
   const { sentinelRef: filterSentinelRef, isSticky: isFilterStickyActive } =
-    useStickyHeader();
+    useStickyHeader(filterStickyTopOffsets);
   const { containerRef: filterTagsRef, maskImage: tagFadeMask } =
     useScrollFade();
   const {
@@ -152,9 +182,10 @@ export function ListingCreateView({
       <div ref={filterSentinelRef} className="h-0" aria-hidden />
       <div
         className={cn(
-          "sticky md:top-[88px] top-[80px] z-20 w-full bg-background/90 py-6 backdrop-blur-md supports-backdrop-filter:bg-background/90",
+          "sticky z-20 w-full bg-background/90 py-6 backdrop-blur-md supports-backdrop-filter:bg-background/90",
           isFilterStickyActive ? "shadow-xs border-b border-border" : ""
         )}
+        style={{ top: `${filterStickyTopPx}px` }}
       >
         <div className="mx-auto w-full max-w-[1600px] px-4 md:px-8">
           <div className="flex w-full items-center gap-3">

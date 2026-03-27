@@ -235,9 +235,9 @@ export function VideoPreviewTimeline({
   return (
     <section
       aria-label="Video timeline"
-      className="min-w-0 rounded-xl bg-card/70 xl:flex xl:h-full xl:min-h-0 xl:flex-col"
+      className="min-w-0 w-full max-w-full rounded-xl bg-card/70 min-[1050px]:flex min-[1050px]:h-full min-[1050px]:min-h-0 min-[1050px]:flex-col"
     >
-      <div className="mb-4 flex items-center justify-between px-1 xl:shrink-0">
+      <div className="mb-4 flex items-center justify-between px-1 min-[1050px]:shrink-0">
         <p className="text-sm font-semibold text-foreground">Timeline</p>
         <div className="flex items-center gap-2">
           <Tooltip>
@@ -375,7 +375,7 @@ export function VideoPreviewTimeline({
       </div>
       <div
         ref={containerRef}
-        className="-mx-1 overflow-x-auto overflow-y-hidden pb-2 xl:min-h-0 xl:flex-1"
+        className="min-w-0 w-full max-w-full overflow-x-auto overflow-y-hidden overscroll-x-contain pb-2 min-[1050px]:min-h-0 min-[1050px]:flex-1"
         style={
           maskImage ? { maskImage, WebkitMaskImage: maskImage } : undefined
         }

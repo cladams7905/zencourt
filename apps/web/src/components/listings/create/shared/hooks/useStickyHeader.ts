@@ -1,10 +1,14 @@
 import * as React from "react";
+import type { ListingCreateFilterStickyTopOffsets } from "@web/src/components/listings/create/shared/listingCreateLayout";
 
 /**
  * Detects when a sentinel element scrolls past a sticky offset,
  * indicating the sticky header is actively "stuck".
+ *
+ * `stickyTopOffsets` must match the filter bar’s `sticky top` values
+ * (see {@link getListingCreateFilterStickyTopOffsets}).
  */
-export function useStickyHeader() {
+export function useStickyHeader(stickyTopOffsets: ListingCreateFilterStickyTopOffsets) {
   const sentinelRef = React.useRef<HTMLDivElement | null>(null);
   const [isSticky, setIsSticky] = React.useState(false);
 
@@ -26,21 +30,39 @@ export function useStickyHeader() {
       ancestor = ancestor.parentElement;
     }
 
-    // A negative top rootMargin equal to the sticky offset means the
-    // sentinel is considered "not intersecting" exactly when the sticky
-    // bar starts sticking.
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry) {
-          setIsSticky(!entry.isIntersecting);
-        }
-      },
-      { root, rootMargin: "-88px 0px 0px 0px", threshold: 0 }
-    );
+    const mdQuery = window.matchMedia("(min-width: 768px)");
+    const stickyTopPx = () =>
+      mdQuery.matches
+        ? stickyTopOffsets.mdPx
+        : stickyTopOffsets.mobilePx;
 
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, []);
+    let observer: IntersectionObserver | null = null;
+
+    const attachObserver = () => {
+      observer?.disconnect();
+      observer = new IntersectionObserver(
+        ([entry]) => {
+          if (entry) {
+            setIsSticky(!entry.isIntersecting);
+          }
+        },
+        {
+          root,
+          rootMargin: `-${stickyTopPx()}px 0px 0px 0px`,
+          threshold: 0
+        }
+      );
+      observer.observe(sentinel);
+    };
+
+    attachObserver();
+    mdQuery.addEventListener("change", attachObserver);
+
+    return () => {
+      mdQuery.removeEventListener("change", attachObserver);
+      observer?.disconnect();
+    };
+  }, [stickyTopOffsets.mobilePx, stickyTopOffsets.mdPx]);
 
   return { sentinelRef, isSticky };
 }

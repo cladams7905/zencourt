@@ -3,6 +3,47 @@ import { Button } from "@web/src/components/ui/button";
 import { Input } from "@web/src/components/ui/input";
 import { Label } from "@web/src/components/ui/label";
 import { Textarea } from "@web/src/components/ui/textarea";
+import { cn } from "@web/src/components/ui/utils";
+
+export function VideoPreviewEditorActions({
+  isDirty,
+  isSaving,
+  onCancel,
+  onSave,
+  className,
+  cancelButtonTestId,
+  saveButtonTestId
+}: {
+  isDirty: boolean;
+  isSaving: boolean;
+  onCancel: () => void;
+  onSave: () => void;
+  className?: string;
+  cancelButtonTestId?: string;
+  saveButtonTestId?: string;
+}) {
+  return (
+    <div className={cn("flex items-center justify-end gap-2", className)}>
+      <Button
+        type="button"
+        variant="outline"
+        disabled={isSaving}
+        data-testid={cancelButtonTestId}
+        onClick={onCancel}
+      >
+        Cancel
+      </Button>
+      <Button
+        type="button"
+        disabled={!isDirty || isSaving}
+        data-testid={saveButtonTestId}
+        onClick={onSave}
+      >
+        {isSaving ? "Saving..." : "Save"}
+      </Button>
+    </div>
+  );
+}
 
 type VideoPreviewTextEditorProps = {
   hookValue: string;
@@ -30,8 +71,8 @@ export function VideoPreviewTextEditor({
   onSave
 }: VideoPreviewTextEditorProps) {
   return (
-    <div className="min-h-0 rounded-lg bg-card xl:flex xl:h-full xl:min-h-0 xl:flex-col">
-      <div className="xl:min-h-0 xl:flex-1 xl:overflow-y-auto">
+    <div className="min-h-0 rounded-lg bg-card min-[1050px]:flex min-[1050px]:h-full min-[1050px]:min-h-0 min-[1050px]:flex-col">
+      <div className="min-[1050px]:min-h-0 min-[1050px]:flex-1 min-[1050px]:overflow-y-auto">
         <div className="p-4">
           <div className="space-y-5">
             <div className="space-y-2">
@@ -76,24 +117,15 @@ export function VideoPreviewTextEditor({
           </div>
         </div>
       </div>
-      <div className="sticky bottom-0 border-t border-border bg-background/95 p-4 backdrop-blur supports-backdrop-filter:bg-background/90 xl:shrink-0">
-        <div className="flex items-center justify-end gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            disabled={isSaving}
-            onClick={onCancel}
-          >
-            Cancel
-          </Button>
-          <Button
-            type="button"
-            disabled={!isDirty || isSaving}
-            onClick={onSave}
-          >
-            {isSaving ? "Saving..." : "Save"}
-          </Button>
-        </div>
+      <div className="hidden border-t border-border bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/90 min-[1050px]:sticky min-[1050px]:bottom-0 min-[1050px]:block min-[1050px]:shrink-0 min-[1050px]:p-4">
+        <VideoPreviewEditorActions
+          isDirty={isDirty}
+          isSaving={isSaving}
+          onCancel={onCancel}
+          onSave={onSave}
+          cancelButtonTestId="reel-preview-cancel"
+          saveButtonTestId="reel-preview-save"
+        />
       </div>
     </div>
   );
