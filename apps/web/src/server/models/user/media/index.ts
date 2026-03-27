@@ -1,4 +1,9 @@
-export { getUserMedia, getUserMediaById } from "./queries";
+export {
+  getUserMedia,
+  getUserMediaById,
+  getUserMediaVideoPage,
+  countUserMediaVideos
+} from "./queries";
 export { createUserMediaRecords, deleteUserMedia } from "./mutations";
 
 export type {

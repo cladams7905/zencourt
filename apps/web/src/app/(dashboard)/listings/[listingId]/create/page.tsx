@@ -47,7 +47,8 @@ export default async function ListingCreatePage({
       listingClipItems,
       clipVersionItems,
       listingContentItems,
-      listingImages
+      listingImages,
+      userMediaVideoCount
     } = await getListingCreateViewData(user.id, listingId, {
       initialMediaTab,
       initialSubcategory
@@ -70,6 +71,7 @@ export default async function ListingCreatePage({
         initialMediaTab={initialMediaTab}
         initialSubcategory={initialSubcategory}
         listingImages={listingImages}
+        userMediaVideoCount={userMediaVideoCount}
       />
     );
   });

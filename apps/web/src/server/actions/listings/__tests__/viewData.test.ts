@@ -6,6 +6,7 @@ const mockGetListingImages = jest.fn();
 const mockMapListingImageToDisplayItem = jest.fn((item) => item);
 const mockGetListingContentItems = jest.fn();
 const mockGetUserMedia = jest.fn();
+const mockCountUserMediaVideos = jest.fn();
 const mockMapUserMediaToVideoItem = jest.fn();
 
 jest.mock("@web/src/server/actions/shared/auth", () => ({
@@ -49,7 +50,9 @@ jest.mock("@web/src/server/actions/listings/content/items", () => ({
 
 jest.mock("@web/src/server/models/user", () => ({
   getUserMedia: (...args: unknown[]) =>
-    (mockGetUserMedia as (...a: unknown[]) => unknown)(...args)
+    (mockGetUserMedia as (...a: unknown[]) => unknown)(...args),
+  countUserMediaVideos: (...args: unknown[]) =>
+    (mockCountUserMediaVideos as (...a: unknown[]) => unknown)(...args)
 }));
 
 jest.mock("@web/src/server/actions/listings/content/reels", () => ({
@@ -91,6 +94,7 @@ describe("listings viewData", () => {
       nextOffset: 1
     });
     mockGetUserMedia.mockResolvedValue([{ id: "media-1", type: "video" }]);
+    mockCountUserMediaVideos.mockResolvedValue(2);
     mockMapUserMediaToVideoItem.mockReturnValue({
       id: "user-media:media-1",
       videoUrl: "https://user-media/video-1"
@@ -120,7 +124,8 @@ describe("listings viewData", () => {
         })
       ],
       listingContentItems: [{ id: "content-1" }],
-      listingImages: [{ id: "mapped-img-1" }]
+      listingImages: [{ id: "mapped-img-1" }],
+      userMediaVideoCount: 2
     });
   });
 

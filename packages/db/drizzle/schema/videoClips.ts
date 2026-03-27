@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm";
+import { sql } from "@db/client";
 import {
   type PgTableExtraConfigValue,
   foreignKey,
@@ -32,7 +32,10 @@ export const videoClips = pgTable(
   },
   (table): PgTableExtraConfigValue[] => [
     index("video_clips_listing_id_idx").on(table.listingId),
-    index("video_clips_listing_sort_order_idx").on(table.listingId, table.sortOrder),
+    index("video_clips_listing_sort_order_idx").on(
+      table.listingId,
+      table.sortOrder
+    ),
     uniqueIndex("video_clips_listing_room_clip_index_uidx").on(
       table.listingId,
       table.roomId,

@@ -1,6 +1,13 @@
 import { authenticatedRole, crudPolicy } from "drizzle-orm/neon";
-import { boolean, index, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
-import { sql } from "drizzle-orm";
+import {
+  boolean,
+  index,
+  jsonb,
+  pgTable,
+  text,
+  timestamp
+} from "drizzle-orm/pg-core";
+import { sql } from "@db/client";
 
 import { contentStatusEnum, contentTypeEnum } from "./enums";
 import { listings } from "./listings";
@@ -9,8 +16,9 @@ export const content = pgTable(
   "content",
   {
     id: text("id").primaryKey(),
-    listingId: text("listing_id")
-      .references(() => listings.id, { onDelete: "set null" }),
+    listingId: text("listing_id").references(() => listings.id, {
+      onDelete: "set null"
+    }),
     userId: text("user_id").notNull(),
     contentType: contentTypeEnum("content_type").notNull(),
     status: contentStatusEnum("status").notNull().default("draft"),

@@ -26,6 +26,8 @@ import {
   getPlayheadOffsetPx
 } from "@web/src/components/listings/create/media/video/components/videoPreviewTimelineViewModel";
 import { cn } from "@web/src/components/ui/utils";
+import { VideoPreviewAddClipTileSkeleton } from "@web/src/components/listings/create/media/video/components/VideoPreviewAddClipTileSkeleton";
+import { USER_MEDIA_REEL_PICKER_PAGE_SIZE } from "@web/src/components/listings/create/media/video/userMediaReelPickerConstants";
 
 function ClipThumbnailBadge({ text }: { text: string | null | undefined }) {
   const trimmed = text?.trim();
@@ -51,6 +53,17 @@ type VideoPreviewTimelineProps = {
     label: string;
     fileName?: string | null;
   }>;
+  userMediaVideoCount: number;
+  isAddClipPopoverOpen: boolean;
+  onAddClipPopoverOpenChange: (open: boolean) => void;
+  addClipActiveTab: "room_clips" | "user_media";
+  onAddClipActiveTabChange: (tab: "room_clips" | "user_media") => void;
+  userMediaPickerInitialLoading: boolean;
+  userMediaPickerLoadingMore: boolean;
+  userMediaPickerError: string | null;
+  userMediaPickerOnRetry: () => void;
+  userMediaPickerLoadMoreRef: React.RefCallback<HTMLDivElement | null>;
+  onUserMediaScrollRoot: (element: HTMLDivElement | null) => void;
   previewFps: number;
   currentFrame: number;
   totalFrames: number;
@@ -85,6 +98,17 @@ export function VideoPreviewTimeline({
   segments,
   deletedClipOptions,
   userMediaClipOptions,
+  userMediaVideoCount,
+  isAddClipPopoverOpen,
+  onAddClipPopoverOpenChange,
+  addClipActiveTab,
+  onAddClipActiveTabChange,
+  userMediaPickerInitialLoading,
+  userMediaPickerLoadingMore,
+  userMediaPickerError,
+  userMediaPickerOnRetry,
+  userMediaPickerLoadMoreRef,
+  onUserMediaScrollRoot,
   previewFps,
   currentFrame,
   totalFrames,
@@ -124,10 +148,6 @@ export function VideoPreviewTimeline({
     null
   );
   const [isScrubbing, setIsScrubbing] = React.useState(false);
-  const [isAddClipOpen, setIsAddClipOpen] = React.useState(false);
-  const [activeAddClipTab, setActiveAddClipTab] = React.useState<
-    "room_clips" | "user_media"
-  >("room_clips");
   const startResize = React.useCallback(
     (
       event: React.MouseEvent<HTMLElement>,
@@ -167,9 +187,12 @@ export function VideoPreviewTimeline({
     const handleMouseMove = (event: MouseEvent) => {
       const deltaX = event.clientX - resizeState.startClientX;
       const directionalDelta = resizeState.edge === "left" ? -deltaX : deltaX;
+      const maxCap = Number.isFinite(resizeState.maxDurationSeconds)
+        ? resizeState.maxDurationSeconds
+        : 86_400;
       const nextDuration = Number(
         Math.min(
-          resizeState.maxDurationSeconds,
+          maxCap,
           Math.max(
             MIN_CLIP_DURATION_SECONDS,
             resizeState.startDurationSeconds +
@@ -247,8 +270,7 @@ export function VideoPreviewTimeline({
   }
 
   const totalDurationSeconds = totalFrames / previewFps;
-  const canAddClip =
-    deletedClipOptions.length > 0 || userMediaClipOptions.length > 0;
+  const canAddClip = deletedClipOptions.length > 0 || userMediaVideoCount > 0;
 
   return (
     <section
@@ -290,7 +312,10 @@ export function VideoPreviewTimeline({
             </TooltipTrigger>
             <TooltipContent side="top">Redo</TooltipContent>
           </Tooltip>
-          <Popover open={isAddClipOpen} onOpenChange={setIsAddClipOpen}>
+          <Popover
+            open={isAddClipPopoverOpen}
+            onOpenChange={onAddClipPopoverOpenChange}
+          >
             <Tooltip>
               <TooltipTrigger asChild>
                 <PopoverTrigger asChild>
@@ -322,33 +347,33 @@ export function VideoPreviewTimeline({
                 >
                   <button
                     type="button"
-                    aria-pressed={activeAddClipTab === "room_clips"}
+                    aria-pressed={addClipActiveTab === "room_clips"}
                     className={cn(
                       "rounded-t-lg px-3 py-1.5 text-xs font-semibold tracking-wide transition-colors",
-                      activeAddClipTab === "room_clips"
+                      addClipActiveTab === "room_clips"
                         ? "relative z-30 -mb-px border-x border-t border-border border-b-0 bg-card pb-2 text-card-foreground"
                         : "z-10 border-x border-t border-border border-b-0 bg-muted text-muted-foreground hover:bg-secondary hover:text-card-foreground"
                     )}
-                    onClick={() => setActiveAddClipTab("room_clips")}
+                    onClick={() => onAddClipActiveTabChange("room_clips")}
                   >
                     Room Clips
                   </button>
                   <button
                     type="button"
-                    aria-pressed={activeAddClipTab === "user_media"}
+                    aria-pressed={addClipActiveTab === "user_media"}
                     className={cn(
                       "rounded-t-lg px-3 py-1.5 text-xs font-semibold tracking-wide transition-colors",
-                      activeAddClipTab === "user_media"
+                      addClipActiveTab === "user_media"
                         ? "relative z-30 -mb-px border-x border-t border-border border-b-0 bg-card pb-2 text-card-foreground"
                         : "z-10 border-x border-t border-border border-b-0 bg-muted text-muted-foreground hover:bg-secondary hover:text-card-foreground"
                     )}
-                    onClick={() => setActiveAddClipTab("user_media")}
+                    onClick={() => onAddClipActiveTabChange("user_media")}
                   >
                     User Media
                   </button>
                 </div>
                 <div className="overflow-hidden rounded-b-xl rounded-tr-xl rounded-tl-none border border-border/80 bg-popover text-popover-foreground shadow-lg">
-                  {activeAddClipTab === "room_clips" ? (
+                  {addClipActiveTab === "room_clips" ? (
                     deletedClipOptions.length === 0 ? (
                       <div className="px-3 py-4 text-sm text-muted-foreground">
                         No deleted room clips available.
@@ -360,7 +385,7 @@ export function VideoPreviewTimeline({
                           className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 touch-pan-y [scrollbar-gutter:stable]"
                           onWheel={(event) => event.stopPropagation()}
                         >
-                          <div className="grid grid-cols-3 justify-items-center gap-1.5">
+                          <div className="grid grid-cols-3 items-start justify-items-center gap-1.5">
                             {deletedClipOptions.map((clipOption) => {
                               const label = formatClipLabel(
                                 clipOption.category ?? clipOption.clipId
@@ -379,7 +404,6 @@ export function VideoPreviewTimeline({
                                   className={ADD_CLIP_TILE_CLASS}
                                   onClick={() => {
                                     onAddClip?.(clipOption.clipId);
-                                    setIsAddClipOpen(false);
                                   }}
                                 >
                                   <div className="relative aspect-9/16 w-full">
@@ -411,6 +435,38 @@ export function VideoPreviewTimeline({
                         <div className="shrink-0 h-2" aria-hidden />
                       </div>
                     )
+                  ) : userMediaPickerInitialLoading ? (
+                    <div className="flex max-h-72 min-h-0 flex-col">
+                      <div className="shrink-0 h-4" aria-hidden />
+                      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 touch-pan-y [scrollbar-gutter:stable]">
+                        <div className="grid grid-cols-3 items-start justify-items-center gap-1.5">
+                          {[
+                            ...Array(USER_MEDIA_REEL_PICKER_PAGE_SIZE).keys()
+                          ].map((n) => (
+                            <VideoPreviewAddClipTileSkeleton
+                              key={`user-media-skel-${n}`}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                      <div className="shrink-0 h-2" aria-hidden />
+                    </div>
+                  ) : userMediaPickerError &&
+                    userMediaClipOptions.length === 0 ? (
+                    <div className="space-y-2 px-3 py-4">
+                      <p className="text-sm text-destructive">
+                        {userMediaPickerError}
+                      </p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        onClick={userMediaPickerOnRetry}
+                      >
+                        Retry
+                      </Button>
+                    </div>
                   ) : userMediaClipOptions.length === 0 ? (
                     <div className="px-3 py-4 text-sm text-muted-foreground">
                       No user media videos available.
@@ -418,11 +474,28 @@ export function VideoPreviewTimeline({
                   ) : (
                     <div className="flex max-h-72 min-h-0 flex-col">
                       <div className="shrink-0 h-4" aria-hidden />
+                      {userMediaPickerError ? (
+                        <div className="shrink-0 space-y-2 border-b border-border px-3 py-2">
+                          <p className="text-xs text-destructive">
+                            {userMediaPickerError}
+                          </p>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="w-full"
+                            onClick={userMediaPickerOnRetry}
+                          >
+                            Retry
+                          </Button>
+                        </div>
+                      ) : null}
                       <div
+                        ref={onUserMediaScrollRoot}
                         className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 touch-pan-y [scrollbar-gutter:stable]"
                         onWheel={(event) => event.stopPropagation()}
                       >
-                        <div className="grid grid-cols-3 justify-items-center gap-1.5">
+                        <div className="grid grid-cols-3 h-fit items-start justify-items-center gap-1.5">
                           {userMediaClipOptions.map((clipOption) => (
                             <button
                               key={clipOption.clipId}
@@ -431,7 +504,6 @@ export function VideoPreviewTimeline({
                               className={ADD_CLIP_TILE_CLASS}
                               onClick={() => {
                                 onAddClip?.(clipOption.clipId);
-                                setIsAddClipOpen(false);
                               }}
                             >
                               <div className="relative aspect-9/16 w-full">
@@ -459,9 +531,24 @@ export function VideoPreviewTimeline({
                               </div>
                             </button>
                           ))}
+                          {userMediaPickerLoadingMore
+                            ? [
+                                ...Array(
+                                  USER_MEDIA_REEL_PICKER_PAGE_SIZE
+                                ).keys()
+                              ].map((n) => (
+                                <VideoPreviewAddClipTileSkeleton
+                                  key={`user-media-more-${n}`}
+                                />
+                              ))
+                            : null}
+                          <div
+                            ref={userMediaPickerLoadMoreRef}
+                            className="col-span-3 h-0.5 w-full shrink-0"
+                            aria-hidden
+                          />
                         </div>
                       </div>
-                      <div className="shrink-0 h-2" aria-hidden />
                     </div>
                   )}
                 </div>

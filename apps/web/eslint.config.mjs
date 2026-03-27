@@ -45,7 +45,6 @@ const eslintConfig = [
   ...compat.extends("next/core-web-vitals", "next/typescript"),
   {
     files: ["src/**/*.{ts,tsx}"],
-    ignores: ["**/__tests__/**", "**/*.test.ts", "**/*.spec.ts"],
     rules: {
       "no-restricted-imports": [
         "error",
@@ -54,17 +53,11 @@ const eslintConfig = [
             {
               group: ["drizzle-orm", "drizzle-orm/*"],
               message:
-                "Import Drizzle helpers from @db/client in app code. Avoid direct drizzle-orm imports.",
+                "Import Drizzle helpers from @db/client. drizzle-orm is only allowed in packages/db/client.ts and drizzle/schema/.",
             },
           ],
         },
       ],
-    },
-  },
-  {
-    files: ["src/server/models/shared/dbErrorHandling.ts"],
-    rules: {
-      "no-restricted-imports": "off",
     },
   },
   {

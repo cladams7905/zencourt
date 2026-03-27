@@ -27,6 +27,18 @@ export default [
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/explicit-module-boundary-types': 'off',
       'no-console': 'off',
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['drizzle-orm', 'drizzle-orm/*'],
+              message:
+                'Import Drizzle helpers from @db/client. drizzle-orm is only allowed in packages/db/client.ts and drizzle/schema/.',
+            },
+          ],
+        },
+      ],
     },
   },
   {

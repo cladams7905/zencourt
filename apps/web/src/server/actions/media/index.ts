@@ -2,5 +2,7 @@ export {
   createUserMediaRecordsForCurrentUser,
   deleteUserMediaForCurrentUser,
   getUserMediaUploadUrlsForCurrentUser,
-  getUserMediaForCurrentUser
+  getUserMediaForCurrentUser,
+  getUserMediaPageForReelPicker,
+  getUserMediaVideoCountForCurrentUser
 } from "./commands";

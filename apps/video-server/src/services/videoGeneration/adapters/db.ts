@@ -8,7 +8,7 @@ import {
   videoGenBatch as videos,
   videoGenJobs as videoJobs
 } from "@db/client";
-import { isNotNull, lte } from "drizzle-orm";
+import { isNotNull, lte } from "@db/client";
 import type { DBVideoGenJob } from "@db/types/models";
 import { RUNWAY_MODELS } from "@/services/videoGeneration/domain/runwayModels";
 
@@ -119,7 +119,10 @@ export const videoGenerationDb = {
       .where(eq(videoJobs.id, jobId));
   },
 
-  async markVideoCompleted(videoId: string, errorMessage: string | null): Promise<void> {
+  async markVideoCompleted(
+    videoId: string,
+    errorMessage: string | null
+  ): Promise<void> {
     await db
       .update(videos)
       .set({
@@ -131,7 +134,10 @@ export const videoGenerationDb = {
   },
 
   findJobsByVideoId(videoId: string): Promise<DBVideoGenJob[]> {
-    return db.select().from(videoJobs).where(eq(videoJobs.videoGenBatchId, videoId));
+    return db
+      .select()
+      .from(videoJobs)
+      .where(eq(videoJobs.videoGenBatchId, videoId));
   },
 
   findCancelableJobsByBatchId(batchId: string): Promise<DBVideoGenJob[]> {
@@ -146,8 +152,13 @@ export const videoGenerationDb = {
       );
   },
 
-  findRecoverableRunwayJobs(cutoff: Date, limit: number): Promise<DBVideoGenJob[]> {
-    const runwayModelsSql = RUNWAY_MODELS.map((model) => `'${model}'`).join(", ");
+  findRecoverableRunwayJobs(
+    cutoff: Date,
+    limit: number
+  ): Promise<DBVideoGenJob[]> {
+    const runwayModelsSql = RUNWAY_MODELS.map((model) => `'${model}'`).join(
+      ", "
+    );
 
     return db
       .select()
@@ -157,7 +168,9 @@ export const videoGenerationDb = {
           eq(videoJobs.status, "processing"),
           isNotNull(videoJobs.requestId),
           lte(videoJobs.updatedAt, cutoff),
-          sql.raw(`(${videoJobs.generationSettings.name} ->> 'model') in (${runwayModelsSql})`)
+          sql.raw(
+            `(${videoJobs.generationSettings.name} ->> 'model') in (${runwayModelsSql})`
+          )
         )
       )
       .limit(limit);

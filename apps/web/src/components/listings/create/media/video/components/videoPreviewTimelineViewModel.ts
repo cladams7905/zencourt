@@ -57,7 +57,11 @@ export function buildVideoPreviewTimelineItems(
       widthPx: Math.round(segment.durationSeconds * TIMELINE_PIXELS_PER_SECOND),
       thumbnailSrc: segment.thumbnailSrc ?? null,
       frameCount: Math.max(2, Math.round(segment.durationSeconds * 1.5)),
-      maxDurationSeconds: segment.maxDurationSeconds
+      maxDurationSeconds:
+        typeof segment.maxDurationSeconds === "number" &&
+        Number.isFinite(segment.maxDurationSeconds)
+          ? segment.maxDurationSeconds
+          : Math.max(0.5, segment.durationSeconds)
     };
   });
 }

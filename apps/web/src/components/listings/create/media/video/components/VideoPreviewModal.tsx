@@ -16,16 +16,16 @@ import {
   VideoPreviewTextEditor
 } from "@web/src/components/listings/create/media/video/components/VideoPreviewTextEditor";
 import { VideoPreviewTimeline } from "@web/src/components/listings/create/media/video/components/VideoPreviewTimeline";
+import { useUserMediaReelPickerInfinite } from "@web/src/components/listings/create/media/video/hooks/useUserMediaReelPickerInfinite";
 import type {
   PlayablePreview,
   PlayablePreviewTextUpdate
 } from "@web/src/components/listings/create/shared/types";
 import type { TimelinePreviewResolvedSegment } from "@web/src/components/listings/create/media/video/components/ListingTimelinePreviewComposition";
-import type { ListingContentItem as ContentItem } from "@web/src/lib/domain/listings/content";
-
 type VideoPreviewModalProps = {
   selectedPreview: PlayablePreview | null;
-  userMediaItems?: ContentItem[];
+  /** Count of user-owned video media (for enabling Add clip before picker fetch completes). */
+  userMediaVideoCount: number;
   previewFps: number;
   onOpenChange: (open: boolean) => void;
   onSavePreviewText: (params: PlayablePreviewTextUpdate) => Promise<void>;
@@ -61,7 +61,7 @@ function extractFileNameFromVideoUrl(
 
 export function VideoPreviewModal({
   selectedPreview,
-  userMediaItems = [],
+  userMediaVideoCount,
   previewFps,
   onOpenChange,
   onSavePreviewText
@@ -83,14 +83,54 @@ export function VideoPreviewModal({
   >([]);
   const [currentFrame, setCurrentFrame] = React.useState(0);
   const pendingSeekFrameRef = React.useRef<number | null>(null);
+  const currentFrameRef = React.useRef(currentFrame);
+  currentFrameRef.current = currentFrame;
   const resizeHistoryCapturedRef = React.useRef(false);
   const [isSaving, setIsSaving] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+  const [isAddClipOpen, setIsAddClipOpen] = React.useState(false);
+  const [activeAddClipTab, setActiveAddClipTab] = React.useState<
+    "room_clips" | "user_media"
+  >("room_clips");
+  const [userMediaScrollRoot, setUserMediaScrollRoot] =
+    React.useState<HTMLDivElement | null>(null);
+  const selectedPreviewRef = React.useRef(selectedPreview);
+  selectedPreviewRef.current = selectedPreview;
+
+  const pickerEnabled =
+    Boolean(selectedPreview) &&
+    isAddClipOpen &&
+    activeAddClipTab === "user_media";
+
+  const {
+    items: userMediaPickerItems,
+    errorMessage: userMediaPickerError,
+    isInitialLoading: userMediaPickerInitialLoading,
+    isLoadingMore: userMediaPickerLoadingMore,
+    loadMoreRef: userMediaPickerLoadMoreRef,
+    retry: userMediaPickerRetry
+  } = useUserMediaReelPickerInfinite({
+    enabled: pickerEnabled,
+    scrollRoot: userMediaScrollRoot
+  });
 
   React.useEffect(() => {
-    setHookDraft(selectedPreview?.captionItem?.hook ?? "");
-    setCaptionDraft(selectedPreview?.captionItem?.caption ?? "");
-    setSegmentDraft(cloneSegments(selectedPreview?.resolvedSegments ?? []));
+    setIsAddClipOpen(false);
+    setActiveAddClipTab("room_clips");
+    setUserMediaScrollRoot(null);
+  }, [selectedPreview?.id]);
+
+  // Reset drafts only when the user opens a different preview. `selectedPreview` is a new object
+  // whenever the parent recomputes `playablePlans` (e.g. after a server action / router refresh), so
+  // depending on the whole object would wipe reel state when switching to User Media or paging.
+  React.useEffect(() => {
+    const preview = selectedPreviewRef.current;
+    if (!preview) {
+      return;
+    }
+    setHookDraft(preview.captionItem?.hook ?? "");
+    setCaptionDraft(preview.captionItem?.caption ?? "");
+    setSegmentDraft(cloneSegments(preview.resolvedSegments ?? []));
     setUndoStack([]);
     setRedoStack([]);
     setCurrentFrame(0);
@@ -98,7 +138,7 @@ export function VideoPreviewModal({
     setIsSaving(false);
     setErrorMessage(null);
     resizeHistoryCapturedRef.current = false;
-  }, [selectedPreview]);
+  }, [selectedPreview?.id]);
 
   const handlePlayerRef = React.useCallback((player: PlayerRef | null) => {
     playerRef.current = player;
@@ -138,14 +178,15 @@ export function VideoPreviewModal({
   );
 
   const handleCancel = React.useCallback(() => {
-    setHookDraft(selectedPreview?.captionItem?.hook ?? "");
-    setCaptionDraft(selectedPreview?.captionItem?.caption ?? "");
-    setSegmentDraft(cloneSegments(selectedPreview?.resolvedSegments ?? []));
+    const preview = selectedPreviewRef.current;
+    setHookDraft(preview?.captionItem?.hook ?? "");
+    setCaptionDraft(preview?.captionItem?.caption ?? "");
+    setSegmentDraft(cloneSegments(preview?.resolvedSegments ?? []));
     setUndoStack([]);
     setRedoStack([]);
     setErrorMessage(null);
     resizeHistoryCapturedRef.current = false;
-  }, [selectedPreview]);
+  }, []);
 
   const pushTimelineHistory = React.useCallback(
     (currentSegments: TimelinePreviewResolvedSegment[]) => {
@@ -203,16 +244,10 @@ export function VideoPreviewModal({
     );
   }, [segmentDraft, selectedPreview]);
 
-  const userMediaClipOptions = React.useMemo(() => {
-    const currentClipIds = new Set(segmentDraft.map(getSegmentSourceKey));
-    return userMediaItems
+  /** Full rows for add-segment lookup; not filtered by timeline membership. */
+  const userMediaPickerRows = React.useMemo(() => {
+    return userMediaPickerItems
       .filter((item) => Boolean(item.videoUrl))
-      .filter(
-        (item) =>
-          !currentClipIds.has(
-            `user_media:${item.id.replace(/^user-media:/, "")}`
-          )
-      )
       .map((item, index) => ({
         clipId: item.id,
         sourceType: "user_media" as const,
@@ -225,17 +260,32 @@ export function VideoPreviewModal({
         label: item.alt?.trim() || `User Media ${index + 1}`,
         fileName: extractFileNameFromVideoUrl(item.videoUrl)
       }));
-  }, [segmentDraft, userMediaItems]);
+  }, [userMediaPickerItems]);
+
+  const userMediaClipOptions = React.useMemo(() => {
+    const currentClipIds = new Set(segmentDraft.map(getSegmentSourceKey));
+    return userMediaPickerRows
+      .filter(
+        (row) => !currentClipIds.has(`user_media:${row.sourceId}`)
+      )
+      .map((row) => ({
+        clipId: row.clipId,
+        thumbnailSrc: row.thumbnailSrc,
+        label: row.label,
+        fileName: row.fileName
+      }));
+  }, [segmentDraft, userMediaPickerRows]);
 
   const handleAddSegment = React.useCallback(
     (clipId: string) => {
       pendingSeekFrameRef.current = currentFrame;
       setSegmentDraft((prev) => {
+        const preview = selectedPreviewRef.current;
         const nextSegment =
-          (selectedPreview?.resolvedSegments ?? []).find(
+          (preview?.resolvedSegments ?? []).find(
             (segment) => segment.clipId === clipId
           ) ??
-          userMediaClipOptions.find((segment) => segment.clipId === clipId);
+          userMediaPickerRows.find((segment) => segment.clipId === clipId);
         if (!nextSegment || prev.some((segment) => segment.clipId === clipId)) {
           return prev;
         }
@@ -251,11 +301,12 @@ export function VideoPreviewModal({
         ];
       });
     },
-    [currentFrame, pushTimelineHistory, selectedPreview, userMediaClipOptions]
+    [currentFrame, pushTimelineHistory, userMediaPickerRows]
   );
 
   const handleSave = React.useCallback(async () => {
-    if (!selectedPreview?.captionItemKey) {
+    const preview = selectedPreviewRef.current;
+    if (!preview?.captionItemKey) {
       setErrorMessage("This preview cannot be edited yet.");
       return;
     }
@@ -279,7 +330,7 @@ export function VideoPreviewModal({
           sourceId: segment.sourceId ?? segment.clipId,
           durationSeconds: segment.durationSeconds
         })),
-        saveTarget: selectedPreview.captionItemKey
+        saveTarget: preview.captionItemKey
       });
       handleCancel();
     } catch (error) {
@@ -294,8 +345,7 @@ export function VideoPreviewModal({
     normalizedCaption,
     normalizedHook,
     onSavePreviewText,
-    segmentDraft,
-    selectedPreview
+    segmentDraft
   ]);
 
   const draftDurationInFrames = React.useMemo(
@@ -303,9 +353,16 @@ export function VideoPreviewModal({
     [previewFps, segmentDraft]
   );
 
+  /** Clip identity + order; excludes duration-only edits (resize) so pending-seek effect does not run every drag tick. */
+  const segmentClipIdsKey = React.useMemo(
+    () => segmentDraft.map((s) => s.clipId).join("::"),
+    [segmentDraft]
+  );
+
   const handleSegmentDurationChange = React.useCallback(
     (index: number, durationSeconds: number) => {
-      pendingSeekFrameRef.current = currentFrame;
+      // Do not set pendingSeekFrameRef here: resize fires many updates per second; pairing that
+      // with the pending-seek effect + Remotion Player caused maximum update depth when dragging.
       setSegmentDraft((prev) => {
         const currentSegment = prev[index];
         if (
@@ -325,7 +382,7 @@ export function VideoPreviewModal({
         );
       });
     },
-    [currentFrame, pushTimelineHistory]
+    [pushTimelineHistory]
   );
 
   const handleDurationChangeStart = React.useCallback(() => {
@@ -388,7 +445,25 @@ export function VideoPreviewModal({
     playerRef.current?.seekTo(nextFrame);
     setCurrentFrame(nextFrame);
     pendingSeekFrameRef.current = null;
-  }, [draftDurationInFrames, segmentDraft]);
+  }, [draftDurationInFrames, segmentClipIdsKey]);
+
+  /**
+   * After the composition length changes (resize), re-seek the Remotion player so it stays aligned
+   * with React state (and clamp when the playhead would exceed the new duration). Runs only when
+   * `draftDurationInFrames` changes — not on every `segmentDraft` edit — to avoid update-depth loops.
+   */
+  React.useLayoutEffect(() => {
+    const player = playerRef.current;
+    if (!player) {
+      return;
+    }
+    const f = currentFrameRef.current;
+    const clamped = Math.min(f, draftDurationInFrames);
+    player.seekTo(clamped);
+    if (clamped !== f) {
+      setCurrentFrame(clamped);
+    }
+  }, [draftDurationInFrames]);
 
   React.useEffect(() => {
     const player = playerInstance;
@@ -414,7 +489,7 @@ export function VideoPreviewModal({
       player.removeEventListener("timeupdate", syncFrame);
       player.removeEventListener("ended", handleEnded);
     };
-  }, [draftDurationInFrames, playerInstance, selectedPreview]);
+  }, [draftDurationInFrames, playerInstance, selectedPreview?.id]);
 
   React.useEffect(() => {
     const player = playerInstance;
@@ -444,7 +519,7 @@ export function VideoPreviewModal({
       cancelled = true;
       window.cancelAnimationFrame(frameId);
     };
-  }, [playerInstance, selectedPreview]);
+  }, [playerInstance, selectedPreview?.id]);
 
   return (
     <Dialog open={Boolean(selectedPreview)} onOpenChange={onOpenChange}>
@@ -495,6 +570,17 @@ export function VideoPreviewModal({
                       segments={segmentDraft}
                       deletedClipOptions={deletedClipOptions}
                       userMediaClipOptions={userMediaClipOptions}
+                      userMediaVideoCount={userMediaVideoCount}
+                      isAddClipPopoverOpen={isAddClipOpen}
+                      onAddClipPopoverOpenChange={setIsAddClipOpen}
+                      addClipActiveTab={activeAddClipTab}
+                      onAddClipActiveTabChange={setActiveAddClipTab}
+                      userMediaPickerInitialLoading={userMediaPickerInitialLoading}
+                      userMediaPickerLoadingMore={userMediaPickerLoadingMore}
+                      userMediaPickerError={userMediaPickerError}
+                      userMediaPickerOnRetry={userMediaPickerRetry}
+                      userMediaPickerLoadMoreRef={userMediaPickerLoadMoreRef}
+                      onUserMediaScrollRoot={setUserMediaScrollRoot}
                       previewFps={previewFps}
                       currentFrame={currentFrame}
                       totalFrames={draftDurationInFrames}

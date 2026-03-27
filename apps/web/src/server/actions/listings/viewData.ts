@@ -7,7 +7,7 @@ import {
   mapListingImageToDisplayItem
 } from "@web/src/server/models/listings/images";
 import type { ListingContentItem as ContentItem } from "@web/src/lib/domain/listings/content";
-import { getUserMedia } from "@web/src/server/models/user";
+import { countUserMediaVideos, getUserMedia } from "@web/src/server/models/user";
 import { mapUserMediaToVideoItem } from "./content/reels";
 import {
   LISTING_CREATE_INITIAL_PAGE_SIZE,
@@ -29,7 +29,8 @@ export async function getListingCreateViewData(
     clipVersionItems,
     listingImages,
     listingContentItemsPage,
-    userMediaRows
+    userMediaRows,
+    userMediaVideoCount
   ] = await Promise.all([
     getListingClipVersionItems(listingId),
     getListingImages(userId, listingId),
@@ -41,7 +42,8 @@ export async function getListingCreateViewData(
       limit: LISTING_CREATE_INITIAL_PAGE_SIZE,
       offset: 0
     }),
-    getUserMedia(userId)
+    getUserMedia(userId),
+    countUserMediaVideos(userId)
   ]);
 
   const listingClipItems: ContentItem[] = clipVersionItems
@@ -60,7 +62,8 @@ export async function getListingCreateViewData(
     listingClipItems: [...listingClipItems, ...userMediaClipItems],
     clipVersionItems,
     listingContentItems: listingContentItemsPage.items,
-    listingImages: listingImages.map(mapListingImageToDisplayItem)
+    listingImages: listingImages.map(mapListingImageToDisplayItem),
+    userMediaVideoCount
   };
 }
 

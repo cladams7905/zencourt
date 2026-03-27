@@ -56,6 +56,7 @@ type ListingCreateViewProps = {
   clipVersionItems: ListingClipVersionItem[];
   listingContentItems: ContentItem[];
   listingImages: ListingCreateImage[];
+  userMediaVideoCount: number;
   initialMediaTab?: ListingCreateMediaTab;
   initialSubcategory?: ListingContentSubcategory;
   /**
@@ -76,6 +77,7 @@ export function ListingCreateView({
   clipVersionItems,
   listingContentItems,
   listingImages,
+  userMediaVideoCount,
   initialMediaTab = "videos",
   initialSubcategory = LISTING_CONTENT_SUBCATEGORIES[0],
   stickyFilterExtraTopBannerPx = LISTING_CREATE_FILTER_EXTRA_TOP_BANNER_PX
@@ -308,6 +310,7 @@ export function ListingCreateView({
               listingSubcategory={activeSubcategory}
               listingAddress={listingAddress ?? null}
               openHouseContext={openHouseContext ?? null}
+              userMediaVideoCount={userMediaVideoCount}
               forceSimpleOverlayTemplate
               loadingCount={
                 loadingCount + initialPageLoadingCount + loadingMoreCount

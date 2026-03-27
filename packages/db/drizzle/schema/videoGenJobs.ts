@@ -1,11 +1,5 @@
-import { sql } from "drizzle-orm";
-import {
-  index,
-  jsonb,
-  pgTable,
-  text,
-  timestamp
-} from "drizzle-orm/pg-core";
+import { sql } from "@db/client";
+import { index, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { authenticatedRole, crudPolicy } from "drizzle-orm/neon";
 
 import type {
@@ -44,11 +38,13 @@ export const videoGenJobs = pgTable(
     metadata: jsonb("metadata").$type<VideoMetadata>(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
-    errorMessage: text("error_message"),
+    errorMessage: text("error_message")
   },
   (table) => [
     index("video_gen_jobs_video_gen_batch_id_idx").on(table.videoGenBatchId),
-    index("video_gen_jobs_video_clip_version_id_idx").on(table.videoClipVersionId),
+    index("video_gen_jobs_video_clip_version_id_idx").on(
+      table.videoClipVersionId
+    ),
     index("video_gen_jobs_status_idx").on(table.status),
     index("video_gen_jobs_video_gen_batch_status_idx").on(
       table.videoGenBatchId,

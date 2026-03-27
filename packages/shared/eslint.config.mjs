@@ -24,6 +24,11 @@ export default [
               group: ["@db/*", "../db/*", "../../db/*", "**/packages/db/**"],
               message:
                 "packages/shared must not import from packages/db. Move shared contracts/types to packages/shared or import DB-owned types at consumers."
+            },
+            {
+              group: ["drizzle-orm", "drizzle-orm/*"],
+              message:
+                "Import Drizzle helpers from @db/client at app boundaries. drizzle-orm is only allowed in packages/db/client.ts and drizzle/schema/."
             }
           ]
         }

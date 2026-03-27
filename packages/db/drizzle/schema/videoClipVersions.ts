@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm";
+import { sql } from "@db/client";
 import {
   index,
   integer,
@@ -56,7 +56,10 @@ export const videoClipVersions = pgTable(
     index("video_clip_versions_source_video_gen_job_id_idx").on(
       table.sourceVideoGenJobId
     ),
-    uniqueIndex("video_clip_versions_clip_id_id_uidx").on(table.videoClipId, table.id),
+    uniqueIndex("video_clip_versions_clip_id_id_uidx").on(
+      table.videoClipId,
+      table.id
+    ),
     uniqueIndex("video_clip_versions_clip_version_number_uidx").on(
       table.videoClipId,
       table.versionNumber

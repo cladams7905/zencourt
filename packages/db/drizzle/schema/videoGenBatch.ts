@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm";
+import { sql } from "@db/client";
 import { index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { authenticatedRole, crudPolicy } from "drizzle-orm/neon";
 

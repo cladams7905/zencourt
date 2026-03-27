@@ -1,4 +1,4 @@
-import { getTableColumns } from "drizzle-orm";
+import { getTableColumns } from "@db/client";
 import {
   content,
   listingImages,
@@ -153,7 +153,7 @@ describe("db schema column contracts", () => {
         "roomId",
         "roomName",
         "sortOrder",
-        "updatedAt",
+        "updatedAt"
       ].sort()
     );
     expect(columnKeys(videoClipVersions)).toEqual(

@@ -81,6 +81,14 @@ jest.mock("@web/src/components/ui/loading-image", () => ({
   }
 }));
 
+const mockUseUserMediaReelPickerInfinite = jest.fn();
+jest.mock(
+  "@web/src/components/listings/create/media/video/hooks/useUserMediaReelPickerInfinite",
+  () => ({
+    useUserMediaReelPickerInfinite: () => mockUseUserMediaReelPickerInfinite()
+  })
+);
+
 function createSelectedPreview(overrides?: Partial<ContentItem>): PlayablePreview {
   return {
     id: "preview-1",
@@ -146,12 +154,21 @@ describe("VideoPreviewModal", () => {
     playerListeners.clear();
     mockCurrentFrame = 0;
     mockOnSave.mockResolvedValue(undefined);
+    mockUseUserMediaReelPickerInfinite.mockReturnValue({
+      items: [],
+      errorMessage: null,
+      isInitialLoading: false,
+      isLoadingMore: false,
+      loadMoreRef: jest.fn(),
+      retry: jest.fn()
+    });
   });
 
   it("renders a player, timeline items, and editable hook/caption fields", () => {
     render(
       <VideoPreviewModal
         selectedPreview={createSelectedPreview()}
+        userMediaVideoCount={0}
         previewFps={30}
         onOpenChange={mockOnOpenChange}
         onSavePreviewText={mockOnSave}
@@ -188,6 +205,7 @@ describe("VideoPreviewModal", () => {
     render(
       <VideoPreviewModal
         selectedPreview={createSelectedPreview()}
+        userMediaVideoCount={0}
         previewFps={30}
         onOpenChange={mockOnOpenChange}
         onSavePreviewText={mockOnSave}
@@ -211,6 +229,7 @@ describe("VideoPreviewModal", () => {
     render(
       <VideoPreviewModal
         selectedPreview={createSelectedPreview()}
+        userMediaVideoCount={0}
         previewFps={30}
         onOpenChange={mockOnOpenChange}
         onSavePreviewText={mockOnSave}
@@ -247,6 +266,7 @@ describe("VideoPreviewModal", () => {
     render(
       <VideoPreviewModal
         selectedPreview={createSelectedPreview()}
+        userMediaVideoCount={0}
         previewFps={30}
         onOpenChange={mockOnOpenChange}
         onSavePreviewText={mockOnSave}
@@ -304,6 +324,7 @@ describe("VideoPreviewModal", () => {
     render(
       <VideoPreviewModal
         selectedPreview={createSelectedPreview()}
+        userMediaVideoCount={0}
         previewFps={30}
         onOpenChange={mockOnOpenChange}
         onSavePreviewText={mockOnSave}
@@ -324,6 +345,7 @@ describe("VideoPreviewModal", () => {
     render(
       <VideoPreviewModal
         selectedPreview={createSelectedPreview()}
+        userMediaVideoCount={0}
         previewFps={30}
         onOpenChange={mockOnOpenChange}
         onSavePreviewText={mockOnSave}
@@ -385,6 +407,7 @@ describe("VideoPreviewModal", () => {
     render(
       <VideoPreviewModal
         selectedPreview={createSelectedPreview()}
+        userMediaVideoCount={0}
         previewFps={30}
         onOpenChange={mockOnOpenChange}
         onSavePreviewText={mockOnSave}
@@ -400,6 +423,7 @@ describe("VideoPreviewModal", () => {
     render(
       <VideoPreviewModal
         selectedPreview={createSelectedPreview()}
+        userMediaVideoCount={0}
         previewFps={30}
         onOpenChange={mockOnOpenChange}
         onSavePreviewText={mockOnSave}
@@ -457,6 +481,7 @@ describe("VideoPreviewModal", () => {
     render(
       <VideoPreviewModal
         selectedPreview={createSelectedPreview()}
+        userMediaVideoCount={0}
         previewFps={30}
         onOpenChange={mockOnOpenChange}
         onSavePreviewText={mockOnSave}
@@ -519,6 +544,7 @@ describe("VideoPreviewModal", () => {
     render(
       <VideoPreviewModal
         selectedPreview={createSelectedPreview()}
+        userMediaVideoCount={0}
         previewFps={30}
         onOpenChange={mockOnOpenChange}
         onSavePreviewText={mockOnSave}
@@ -576,6 +602,7 @@ describe("VideoPreviewModal", () => {
     render(
       <VideoPreviewModal
         selectedPreview={createSelectedPreview()}
+        userMediaVideoCount={0}
         previewFps={30}
         onOpenChange={mockOnOpenChange}
         onSavePreviewText={mockOnSave}
@@ -623,19 +650,28 @@ describe("VideoPreviewModal", () => {
   it("shows user media in the add-clip popover and appends it to the timeline", async () => {
     const user = userEvent.setup();
 
+    mockUseUserMediaReelPickerInfinite.mockReturnValue({
+      items: [
+        {
+          id: "user-media:media-1",
+          reelClipSource: "user_media",
+          videoUrl: "https://user-media/video.mp4",
+          thumbnail: "https://user-media/thumb.jpg",
+          alt: "Uploaded walkthrough",
+          durationSeconds: 3
+        } as ContentItem
+      ],
+      errorMessage: null,
+      isInitialLoading: false,
+      isLoadingMore: false,
+      loadMoreRef: jest.fn(),
+      retry: jest.fn()
+    });
+
     render(
       <VideoPreviewModal
         selectedPreview={createSelectedPreview()}
-        userMediaItems={[
-          {
-            id: "user-media:media-1",
-            reelClipSource: "user_media",
-            videoUrl: "https://user-media/video.mp4",
-            thumbnail: "https://user-media/thumb.jpg",
-            alt: "Uploaded walkthrough",
-            durationSeconds: 3
-          } as ContentItem
-        ]}
+        userMediaVideoCount={1}
         previewFps={30}
         onOpenChange={mockOnOpenChange}
         onSavePreviewText={mockOnSave}
@@ -657,6 +693,28 @@ describe("VideoPreviewModal", () => {
         })
       )
     );
+
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("button", { name: /Add Uploaded walkthrough/i })
+      ).not.toBeInTheDocument();
+    });
+    expect(
+      screen.getByText("No user media videos available.")
+    ).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByTestId("timeline-delete-user-media:media-1-2")
+    );
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: /Add Uploaded walkthrough/i })
+      ).toBeInTheDocument();
+    });
+    expect(
+      screen.queryByText("No user media videos available.")
+    ).not.toBeInTheDocument();
   });
 
   it("resizes a clip from the right edge, updates the player input, and caps at the max duration", async () => {
@@ -665,6 +723,7 @@ describe("VideoPreviewModal", () => {
     render(
       <VideoPreviewModal
         selectedPreview={createSelectedPreview()}
+        userMediaVideoCount={0}
         previewFps={30}
         onOpenChange={mockOnOpenChange}
         onSavePreviewText={mockOnSave}
@@ -739,6 +798,7 @@ describe("VideoPreviewModal", () => {
             savedContentId: "saved-reel-1"
           }
         }}
+        userMediaVideoCount={0}
         previewFps={30}
         onOpenChange={mockOnOpenChange}
         onSavePreviewText={mockOnSave}
@@ -763,6 +823,7 @@ describe("VideoPreviewModal", () => {
     render(
       <VideoPreviewModal
         selectedPreview={createSelectedPreview()}
+        userMediaVideoCount={0}
         previewFps={30}
         onOpenChange={mockOnOpenChange}
         onSavePreviewText={mockOnSave}
@@ -795,6 +856,7 @@ describe("VideoPreviewModal", () => {
     render(
       <VideoPreviewModal
         selectedPreview={createSelectedPreview()}
+        userMediaVideoCount={0}
         previewFps={30}
         onOpenChange={mockOnOpenChange}
         onSavePreviewText={mockOnSave}
@@ -827,6 +889,7 @@ describe("VideoPreviewModal", () => {
     render(
       <VideoPreviewModal
         selectedPreview={createSelectedPreview()}
+        userMediaVideoCount={0}
         previewFps={30}
         onOpenChange={mockOnOpenChange}
         onSavePreviewText={mockOnSave}
@@ -847,6 +910,7 @@ describe("VideoPreviewModal", () => {
     render(
       <VideoPreviewModal
         selectedPreview={createSelectedPreview()}
+        userMediaVideoCount={0}
         previewFps={30}
         onOpenChange={mockOnOpenChange}
         onSavePreviewText={mockOnSave}
@@ -870,6 +934,7 @@ describe("VideoPreviewModal", () => {
     render(
       <VideoPreviewModal
         selectedPreview={createSelectedPreview()}
+        userMediaVideoCount={0}
         previewFps={30}
         onOpenChange={mockOnOpenChange}
         onSavePreviewText={mockOnSave}
@@ -903,6 +968,7 @@ describe("VideoPreviewModal", () => {
     const { rerender } = render(
       <VideoPreviewModal
         selectedPreview={preview}
+        userMediaVideoCount={0}
         previewFps={30}
         onOpenChange={mockOnOpenChange}
         onSavePreviewText={mockOnSave}
@@ -915,6 +981,7 @@ describe("VideoPreviewModal", () => {
     rerender(
       <VideoPreviewModal
         selectedPreview={null}
+        userMediaVideoCount={0}
         previewFps={30}
         onOpenChange={mockOnOpenChange}
         onSavePreviewText={mockOnSave}
@@ -928,6 +995,7 @@ describe("VideoPreviewModal", () => {
     rerender(
       <VideoPreviewModal
         selectedPreview={preview}
+        userMediaVideoCount={0}
         previewFps={30}
         onOpenChange={mockOnOpenChange}
         onSavePreviewText={mockOnSave}
@@ -968,6 +1036,7 @@ describe("VideoPreviewModal", () => {
     render(
       <VideoPreviewModal
         selectedPreview={createSelectedPreview()}
+        userMediaVideoCount={0}
         previewFps={30}
         onOpenChange={mockOnOpenChange}
         onSavePreviewText={mockOnSave}
@@ -994,6 +1063,7 @@ describe("VideoPreviewModal", () => {
     render(
       <VideoPreviewModal
         selectedPreview={createSelectedPreview()}
+        userMediaVideoCount={0}
         previewFps={30}
         onOpenChange={mockOnOpenChange}
         onSavePreviewText={mockOnSave}
@@ -1030,6 +1100,7 @@ describe("VideoPreviewModal", () => {
     const { rerender } = render(
       <VideoPreviewModal
         selectedPreview={createSelectedPreviewWithId("preview-1")}
+        userMediaVideoCount={0}
         previewFps={30}
         onOpenChange={mockOnOpenChange}
         onSavePreviewText={mockOnSave}
@@ -1039,6 +1110,7 @@ describe("VideoPreviewModal", () => {
     rerender(
       <VideoPreviewModal
         selectedPreview={null}
+        userMediaVideoCount={0}
         previewFps={30}
         onOpenChange={mockOnOpenChange}
         onSavePreviewText={mockOnSave}
@@ -1050,6 +1122,7 @@ describe("VideoPreviewModal", () => {
     rerender(
       <VideoPreviewModal
         selectedPreview={createSelectedPreviewWithId("preview-2")}
+        userMediaVideoCount={0}
         previewFps={30}
         onOpenChange={mockOnOpenChange}
         onSavePreviewText={mockOnSave}

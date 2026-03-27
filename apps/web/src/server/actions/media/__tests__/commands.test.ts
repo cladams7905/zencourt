@@ -2,6 +2,8 @@ const mockCreateUserMediaRecords = jest.fn();
 const mockDeleteUserMedia = jest.fn();
 const mockGetUserMediaById = jest.fn();
 const mockGetUserMedia = jest.fn();
+const mockGetUserMediaVideoPage = jest.fn();
+const mockCountUserMediaVideos = jest.fn();
 const mockRequireAuthenticatedUser = jest.fn();
 const mockPrepareUserMediaUploadUrls = jest.fn();
 const mockMapUserMediaRecordInputs = jest.fn((_: string, uploads: unknown[]) => uploads);
@@ -16,6 +18,10 @@ jest.mock("@web/src/server/models/user", () => ({
     (mockGetUserMediaById as (...a: unknown[]) => unknown)(...args),
   getUserMedia: (...args: unknown[]) =>
     (mockGetUserMedia as (...a: unknown[]) => unknown)(...args),
+  getUserMediaVideoPage: (...args: unknown[]) =>
+    (mockGetUserMediaVideoPage as (...a: unknown[]) => unknown)(...args),
+  countUserMediaVideos: (...args: unknown[]) =>
+    (mockCountUserMediaVideos as (...a: unknown[]) => unknown)(...args),
   deleteUserMedia: (...args: unknown[]) =>
     (mockDeleteUserMedia as (...a: unknown[]) => unknown)(...args)
 }));
@@ -47,7 +53,9 @@ import {
   getUserMediaUploadUrlsForCurrentUser,
   createUserMediaRecordsForCurrentUser,
   deleteUserMediaForCurrentUser,
-  getUserMediaForCurrentUser
+  getUserMediaForCurrentUser,
+  getUserMediaPageForReelPicker,
+  getUserMediaVideoCountForCurrentUser
 } from "@web/src/server/actions/media/commands";
 
 describe("media commands", () => {
@@ -58,6 +66,8 @@ describe("media commands", () => {
     mockDeleteUserMedia.mockReset();
     mockGetUserMediaById.mockReset();
     mockGetUserMedia.mockReset();
+    mockGetUserMediaVideoPage.mockReset();
+    mockCountUserMediaVideos.mockReset();
     mockPrepareUserMediaUploadUrls.mockReset();
     mockMapUserMediaRecordInputs.mockClear();
     mockDeleteStorageUrlsOrThrow.mockReset();
@@ -141,6 +151,60 @@ describe("media commands", () => {
         ["https://managed.com/a.jpg"],
         "Failed to delete media file"
       );
+    });
+  });
+
+  describe("getUserMediaPageForReelPicker", () => {
+    it("maps video rows to content items with pagination metadata", async () => {
+      mockGetUserMediaVideoPage.mockResolvedValueOnce({
+        items: [
+          {
+            id: "m1",
+            userId: "user-1",
+            type: "video",
+            url: "private://v",
+            thumbnailUrl: "private://t",
+            durationSeconds: 3,
+            usageCount: 0,
+            uploadedAt: new Date("2024-01-01T00:00:00.000Z")
+          }
+        ],
+        nextCursor: "cursor-1",
+        hasMore: true
+      });
+      mockGetPublicDownloadUrlSafe
+        .mockReturnValueOnce("https://public/v")
+        .mockReturnValueOnce("https://public/t");
+
+      const result = await getUserMediaPageForReelPicker({
+        limit: 6,
+        cursor: null
+      });
+
+      expect(mockGetUserMediaVideoPage).toHaveBeenCalledWith("user-1", {
+        limit: 6,
+        cursor: null
+      });
+      expect(result.items).toEqual([
+        expect.objectContaining({
+          id: "user-media:m1",
+          videoUrl: "https://public/v",
+          reelClipSource: "user_media"
+        })
+      ]);
+      expect(result.nextCursor).toBe("cursor-1");
+      expect(result.hasMore).toBe(true);
+    });
+  });
+
+  describe("getUserMediaVideoCountForCurrentUser", () => {
+    it("returns the video count for the current user", async () => {
+      mockCountUserMediaVideos.mockResolvedValueOnce(4);
+
+      const result = await getUserMediaVideoCountForCurrentUser();
+
+      expect(mockCountUserMediaVideos).toHaveBeenCalledWith("user-1");
+      expect(result).toBe(4);
     });
   });
 

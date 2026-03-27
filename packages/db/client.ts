@@ -27,10 +27,15 @@ export {
   eq,
   ne,
   or,
+  lt,
   inArray,
   exists,
   sql,
   desc,
   like,
-  asc
+  asc,
+  isNotNull,
+  lte,
+  DrizzleError,
+  getTableColumns
 } from "drizzle-orm";

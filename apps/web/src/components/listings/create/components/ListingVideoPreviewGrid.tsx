@@ -22,6 +22,7 @@ type ListingVideoPreviewGridProps = {
   listingSubcategory: ListingContentSubcategory;
   listingAddress: string | null;
   openHouseContext: ListingOpenHouseContext | null;
+  userMediaVideoCount: number;
   forceSimpleOverlayTemplate?: boolean;
   loadingCount?: number;
   onReplacePreviewItem: (params: {
@@ -38,6 +39,7 @@ export function ListingVideoPreviewGrid({
   listingSubcategory,
   listingAddress,
   openHouseContext,
+  userMediaVideoCount,
   forceSimpleOverlayTemplate = false,
   loadingCount = 0,
   onReplacePreviewItem
@@ -132,9 +134,7 @@ export function ListingVideoPreviewGrid({
 
       <VideoPreviewModal
         selectedPreview={selectedPreview}
-        userMediaItems={items.filter(
-          (item) => item.reelClipSource === "user_media"
-        )}
+        userMediaVideoCount={userMediaVideoCount}
         previewFps={PREVIEW_FPS}
         onOpenChange={(open) => {
           if (!open) {
