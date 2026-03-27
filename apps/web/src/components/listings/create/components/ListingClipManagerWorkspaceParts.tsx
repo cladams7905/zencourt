@@ -96,7 +96,7 @@ export function ListingClipManagerClipList({
   renderSelectedMobileDetail: (item: ListingClipVersionItem) => React.ReactNode;
 }) {
   return (
-    <div className="min-h-0 overflow-x-hidden rounded-xl border border-border bg-background lg:h-full lg:overflow-y-auto">
+    <div className="min-h-0 overflow-x-hidden rounded-xl border border-border bg-background lg:max-h-[calc(100vh-220px)] lg:self-start lg:overflow-y-auto">
       {clipItems.map((item) => {
         const isSelected = item.clipId === selectedClipId;
         const itemIsRegenerating = isItemRegenerating(item);
