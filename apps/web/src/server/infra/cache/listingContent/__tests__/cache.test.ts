@@ -11,8 +11,10 @@ import {
   getAllCachedListingContentForCreate,
   getCachedListingContentItem,
   getListingContentFilterPrefix,
+  getListingContentListingScanMatch,
   LISTING_CONTENT_CACHE_PREFIX,
   LISTING_CONTENT_CACHE_TTL_SECONDS,
+  parseListingContentItemKey,
   setCachedListingContentItem,
   updateCachedListingContentText,
   updateRenderedPreviewForItem
@@ -45,9 +47,16 @@ describe("listingContent cache", () => {
     expect(prefix).toBe(
       `${LISTING_CONTENT_CACHE_PREFIX}:user-1:listing-1:new_listing:video`
     );
+
+    expect(
+      getListingContentListingScanMatch({
+        userId: baseParams.userId,
+        listingId: baseParams.listingId
+      })
+    ).toBe(`${LISTING_CONTENT_CACHE_PREFIX}:user-1:listing-1:*`);
   });
 
-  it("scans per-item keys, sorts, and returns only valid items", async () => {
+  it("scans listing-wide keys, sorts, and returns only valid items", async () => {
     const prefix = getListingContentFilterPrefix(baseParams);
     const scan = jest
       .fn()
@@ -191,7 +200,9 @@ describe("listingContent cache", () => {
 
   it("returns [] when redis.get throws during scan iteration", async () => {
     const prefix = getListingContentFilterPrefix(baseParams);
-    const scan = jest.fn().mockResolvedValue([0, [`${prefix}:100:1`]]);
+    const scan = jest
+      .fn()
+      .mockResolvedValue([0, [`${prefix}:100:1`]]);
     const get = jest.fn().mockRejectedValue(new Error("get failed"));
     mockedGetSharedRedisClient.mockReturnValue({
       scan,
@@ -425,10 +436,14 @@ describe("listingContent cache", () => {
 
   it("creates cached preview fields when rendered preview exists", async () => {
     const prefixForTarget = `${LISTING_CONTENT_CACHE_PREFIX}:user-1:listing-1:new_listing:video`;
+    const listingScanMatch = getListingContentListingScanMatch({
+      userId: "user-1",
+      listingId: "listing-1"
+    });
 
     mockedGetSharedRedisClient.mockReturnValue({
       scan: jest.fn(async (_cursor: number, { match }: { match: string }) => {
-        if (!match.startsWith(prefixForTarget)) {
+        if (match !== listingScanMatch) {
           return [0, []];
         }
         return [0, [`${prefixForTarget}:123:7`]];
@@ -463,5 +478,73 @@ describe("listingContent cache", () => {
       templateId: "tpl",
       modifications: { headline: "A" }
     });
+  });
+});
+
+describe("parseListingContentItemKey", () => {
+  const base = {
+    userId: "user-1",
+    listingId: "listing-1",
+    subcategory: "new_listing" as const,
+    mediaType: "image" as const
+  };
+
+  it("round-trips with buildListingContentItemKey", () => {
+    const key = buildListingContentItemKey({
+      ...base,
+      timestamp: 99,
+      id: 42
+    });
+    expect(parseListingContentItemKey(key)).toEqual({
+      userId: "user-1",
+      listingId: "listing-1",
+      subcategory: "new_listing",
+      mediaType: "image",
+      timestamp: 99,
+      id: 42
+    });
+  });
+
+  it("returns null when segment count is not 7", () => {
+    expect(
+      parseListingContentItemKey(
+        `${LISTING_CONTENT_CACHE_PREFIX}:user-1:listing-1:new_listing:image`
+      )
+    ).toBeNull();
+    expect(
+      parseListingContentItemKey(
+        `${LISTING_CONTENT_CACHE_PREFIX}:user-1:listing-1:new_listing:image:1:2:extra`
+      )
+    ).toBeNull();
+  });
+
+  it("returns null for wrong prefix", () => {
+    expect(
+      parseListingContentItemKey(
+        `other:user-1:listing-1:new_listing:image:1:2`
+      )
+    ).toBeNull();
+  });
+
+  it("returns null for unknown subcategory", () => {
+    const key = `${LISTING_CONTENT_CACHE_PREFIX}:user-1:listing-1:unknown_sub:image:1:2`;
+    expect(parseListingContentItemKey(key)).toBeNull();
+  });
+
+  it("returns null for unknown media type", () => {
+    const key = `${LISTING_CONTENT_CACHE_PREFIX}:user-1:listing-1:new_listing:audio:1:2`;
+    expect(parseListingContentItemKey(key)).toBeNull();
+  });
+
+  it("returns null for non-numeric timestamp or id", () => {
+    const key = `${LISTING_CONTENT_CACHE_PREFIX}:user-1:listing-1:new_listing:image:xx:2`;
+    expect(parseListingContentItemKey(key)).toBeNull();
+    const key2 = `${LISTING_CONTENT_CACHE_PREFIX}:user-1:listing-1:new_listing:image:1:yy`;
+    expect(parseListingContentItemKey(key2)).toBeNull();
+  });
+
+  it("returns null when a required segment is empty", () => {
+    const key = `${LISTING_CONTENT_CACHE_PREFIX}::listing-1:new_listing:image:1:2`;
+    expect(parseListingContentItemKey(key)).toBeNull();
   });
 });

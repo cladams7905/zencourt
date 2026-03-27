@@ -29,6 +29,14 @@ export const LISTING_CONTENT_CACHE_PREFIX = "listing-content";
 export const LISTING_CONTENT_CACHE_TTL_SECONDS = 60 * 60 * 48;
 const LISTING_MEDIA_TYPES: readonly ListingMediaType[] = ["image", "video"];
 
+const LISTING_SUBCATEGORY_INDEX = new Map(
+  LISTING_CONTENT_SUBCATEGORIES.map((s, i) => [s, i] as const)
+);
+
+function mediaTypeSortIndex(mediaType: ListingMediaType): number {
+  return mediaType === "image" ? 0 : 1;
+}
+
 export type ListingCreateCachedContentItem = {
   id: string;
   aspectRatio: "square";
@@ -129,6 +137,153 @@ export function getListingContentFilterPrefix(params: {
   ].join(":");
 }
 
+const LISTING_SUBCATEGORY_SET = new Set<string>(LISTING_CONTENT_SUBCATEGORIES);
+
+/**
+ * SCAN match for all item keys under one listing: listing-content:{userId}:{listingId}:*
+ */
+export function getListingContentListingScanMatch(params: {
+  userId: string;
+  listingId: string;
+}): string {
+  return [
+    LISTING_CONTENT_CACHE_PREFIX,
+    params.userId,
+    params.listingId,
+    "*"
+  ].join(":");
+}
+
+/**
+ * Parses a cache key built by {@link buildListingContentItemKey}. Returns null if the key is malformed
+ * or uses an unknown subcategory or media type.
+ */
+export function parseListingContentItemKey(key: string): {
+  userId: string;
+  listingId: string;
+  subcategory: ListingContentSubcategory;
+  mediaType: ListingMediaType;
+  timestamp: number;
+  id: number;
+} | null {
+  const parts = key.split(":");
+  if (parts.length !== 7) return null;
+  if (parts[0] !== LISTING_CONTENT_CACHE_PREFIX) return null;
+  const [, userId, listingId, subRaw, mediaRaw, tsRaw, idRaw] = parts;
+  if (!userId || !listingId || !subRaw || !mediaRaw || !tsRaw || !idRaw) {
+    return null;
+  }
+  if (!LISTING_SUBCATEGORY_SET.has(subRaw)) return null;
+  if (!LISTING_MEDIA_TYPES.includes(mediaRaw as ListingMediaType)) return null;
+  const timestamp = parseInt(tsRaw, 10);
+  const id = parseInt(idRaw, 10);
+  if (Number.isNaN(timestamp) || Number.isNaN(id)) return null;
+  return {
+    userId,
+    listingId,
+    subcategory: subRaw as ListingContentSubcategory,
+    mediaType: mediaRaw as ListingMediaType,
+    timestamp,
+    id
+  };
+}
+
+type CachedListingContentRow = {
+  key: string;
+  subcategory: ListingContentSubcategory;
+  mediaType: ListingMediaType;
+  item: ListingContentItemWithKey;
+};
+
+/**
+ * Sort for create view: same order as iterating LISTING_CONTENT_SUBCATEGORIES × LISTING_MEDIA_TYPES,
+ * with timestamp then id within each (subcategory, mediaType) bucket — not a single global timestamp sort.
+ */
+function compareRowsForCreateSort(
+  a: CachedListingContentRow,
+  b: CachedListingContentRow
+): number {
+  const ai = LISTING_SUBCATEGORY_INDEX.get(a.subcategory) ?? 999;
+  const bi = LISTING_SUBCATEGORY_INDEX.get(b.subcategory) ?? 999;
+  if (ai !== bi) return ai - bi;
+  const am = mediaTypeSortIndex(a.mediaType);
+  const bm = mediaTypeSortIndex(b.mediaType);
+  if (am !== bm) return am - bm;
+  if (a.item.cacheKeyTimestamp !== b.item.cacheKeyTimestamp) {
+    return a.item.cacheKeyTimestamp - b.item.cacheKeyTimestamp;
+  }
+  return a.item.cacheKeyId - b.item.cacheKeyId;
+}
+
+async function scanKeysForMatch(params: {
+  redis: NonNullable<ReturnType<typeof getSharedRedisClient>>;
+  match: string;
+}): Promise<string[]> {
+  const { redis, match } = params;
+  const keys: string[] = [];
+  let cursor = 0;
+  try {
+    do {
+      const [nextCursor, batch] = await redis.scan(cursor, {
+        match,
+        count: 100
+      });
+      cursor =
+        typeof nextCursor === "string" ? parseInt(nextCursor, 10) : nextCursor;
+      keys.push(...(batch as string[]));
+    } while (cursor !== 0);
+  } catch (error) {
+    logger.warn(
+      { err: normalizeErrorForLogging(error), match },
+      "Failed scanning listing content cache keys"
+    );
+    return [];
+  }
+  return keys;
+}
+
+async function loadAllCachedListingContentRowsForListing(params: {
+  userId: string;
+  listingId: string;
+}): Promise<CachedListingContentRow[]> {
+  const redis = getSharedRedisClient();
+  if (!redis) return [];
+  const match = getListingContentListingScanMatch(params);
+  const keys = await scanKeysForMatch({ redis, match });
+  const rows: CachedListingContentRow[] = [];
+  for (const key of keys) {
+    const parsed = parseListingContentItemKey(key);
+    if (!parsed) continue;
+    if (
+      parsed.userId !== params.userId ||
+      parsed.listingId !== params.listingId
+    ) {
+      continue;
+    }
+    try {
+      const item = await redis.get<ListingContentItem>(key);
+      if (item && typeof item === "object" && typeof item.hook === "string") {
+        rows.push({
+          key,
+          subcategory: parsed.subcategory,
+          mediaType: parsed.mediaType,
+          item: {
+            ...item,
+            cacheKeyTimestamp: parsed.timestamp,
+            cacheKeyId: parsed.id
+          }
+        });
+      }
+    } catch (error) {
+      logger.warn(
+        { err: normalizeErrorForLogging(error), cacheKey: key },
+        "Failed reading listing content item"
+      );
+    }
+  }
+  return rows;
+}
+
 /**
  * Writes one listing content item to its key. One key per item (timestamp:id).
  */
@@ -164,7 +319,8 @@ export async function setCachedListingContentItem(params: {
 }
 
 /**
- * Returns all cached listing content items for a filter. SCANs keys by prefix, GETs each, sorts by timestamp then id.
+ * Returns all cached listing content items for a filter. One listing-wide SCAN, then in-memory filter;
+ * sorts by timestamp then id within that subcategory/media pair.
  */
 export async function getAllCachedListingContentForFilter(params: {
   userId: string;
@@ -172,82 +328,35 @@ export async function getAllCachedListingContentForFilter(params: {
   subcategory: ListingContentSubcategory;
   mediaType: ListingMediaType;
 }): Promise<ListingContentItemWithKey[]> {
-  const redis = getSharedRedisClient();
-  if (!redis) return [];
-  const prefix = getListingContentFilterPrefix(params);
-  const match = `${prefix}:*`;
-  const keys: string[] = [];
-  let cursor = 0;
-  try {
-    do {
-      const [nextCursor, batch] = await redis.scan(cursor, {
-        match,
-        count: 100
-      });
-      cursor =
-        typeof nextCursor === "string" ? parseInt(nextCursor, 10) : nextCursor;
-      keys.push(...(batch as string[]));
-    } while (cursor !== 0);
-  } catch (error) {
-    logger.warn(
-      { err: normalizeErrorForLogging(error), match },
-      "Failed scanning listing content cache keys"
-    );
-    return [];
-  }
-  const entries: { timestamp: number; id: number; key: string }[] = [];
-  for (const key of keys) {
-    const parts = key.split(":");
-    const timestampStr = parts[parts.length - 2];
-    const idStr = parts[parts.length - 1];
-    const timestamp = parseInt(timestampStr ?? "0", 10);
-    const id = parseInt(idStr ?? "0", 10);
-    if (Number.isNaN(timestamp) || Number.isNaN(id)) continue;
-    entries.push({ timestamp, id, key });
-  }
-  entries.sort((a, b) => a.timestamp - b.timestamp || a.id - b.id);
-  const result: ListingContentItemWithKey[] = [];
-  for (const { key, timestamp, id } of entries) {
-    try {
-      const item = await redis.get<ListingContentItem>(key);
-      if (item && typeof item === "object" && typeof item.hook === "string") {
-        result.push({
-          ...item,
-          cacheKeyTimestamp: timestamp,
-          cacheKeyId: id
-        });
-      }
-    } catch (error) {
-      logger.warn(
-        { err: normalizeErrorForLogging(error), cacheKey: key },
-        "Failed reading listing content item"
-      );
-    }
-  }
-  return result;
+  const rows = await loadAllCachedListingContentRowsForListing({
+    userId: params.userId,
+    listingId: params.listingId
+  });
+  const filtered = rows.filter(
+    (r) =>
+      r.subcategory === params.subcategory && r.mediaType === params.mediaType
+  );
+  filtered.sort(
+    (a, b) =>
+      a.item.cacheKeyTimestamp - b.item.cacheKeyTimestamp ||
+      a.item.cacheKeyId - b.item.cacheKeyId
+  );
+  return filtered.map((r) => r.item);
 }
 
 export async function getAllCachedListingContentForCreate(params: {
   userId: string;
   listingId: string;
 }): Promise<ListingCreateCachedContentItem[]> {
-  const { userId, listingId } = params;
-  const groups = await Promise.all(
-    LISTING_CONTENT_SUBCATEGORIES.flatMap((subcategory) =>
-      LISTING_MEDIA_TYPES.map(async (mediaType) => {
-        const items = await getAllCachedListingContentForFilter({
-          userId,
-          listingId,
-          subcategory,
-          mediaType
-        });
-        return items.map((item) =>
-          mapCachedListingItemToCreateContent({ item, subcategory, mediaType })
-        );
-      })
-    )
+  const rows = await loadAllCachedListingContentRowsForListing(params);
+  rows.sort(compareRowsForCreateSort);
+  return rows.map((r) =>
+    mapCachedListingItemToCreateContent({
+      item: r.item,
+      subcategory: r.subcategory,
+      mediaType: r.mediaType
+    })
   );
-  return groups.flat();
 }
 
 export async function getCachedListingContentForCreateFilter(params: {
