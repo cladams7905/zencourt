@@ -25,6 +25,7 @@ import type {
   UserMediaRecordInput,
   UserMediaUploadRequest
 } from "@web/src/server/models/user";
+import type { CursorPage } from "@web/src/lib/domain/pagination";
 
 export const getUserMediaUploadUrlsForCurrentUser = withServerActionCaller(
   "getUserMediaUploadUrlsForCurrentUser",
@@ -82,11 +83,7 @@ export const getUserMediaForCurrentUser = withServerActionCaller(
 
 const USER_MEDIA_REEL_PICKER_PAGE_SIZE = 6;
 
-export type UserMediaReelPickerPage = {
-  items: ContentItem[];
-  nextCursor: string | null;
-  hasMore: boolean;
-};
+export type UserMediaReelPickerPage = CursorPage<ContentItem>;
 
 export const getUserMediaPageForReelPicker = withServerActionCaller(
   "getUserMediaPageForReelPicker",

@@ -22,6 +22,7 @@ import {
   useListingCreateEffects,
   useListingCreateWorkflow
 } from "@web/src/components/listings/create/domain";
+import { useInfiniteIntersection } from "@web/src/components/shared/pagination";
 import {
   MEDIA_TAB_LABELS,
   SUBCATEGORY_LABELS,
@@ -83,9 +84,6 @@ export function ListingCreateView({
   stickyFilterExtraTopBannerPx = LISTING_CREATE_FILTER_EXTRA_TOP_BANNER_PX
 }: ListingCreateViewProps) {
   const pathname = usePathname();
-  const [loadMoreNode, setLoadMoreNode] = React.useState<HTMLDivElement | null>(
-    null
-  );
   const filterStickyTopOffsets = React.useMemo(
     () => getListingCreateFilterStickyTopOffsets(stickyFilterExtraTopBannerPx),
     [stickyFilterExtraTopBannerPx]
@@ -154,26 +152,11 @@ export function ListingCreateView({
     generateSubcategoryContent
   });
 
-  React.useEffect(() => {
-    const node = loadMoreNode;
-    if (!node || !hasMoreForActiveFilter) {
-      return;
-    }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            void loadMoreForActiveFilter();
-          }
-        });
-      },
-      { rootMargin: "200px" }
-    );
-
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [hasMoreForActiveFilter, loadMoreForActiveFilter, loadMoreNode]);
+  const loadMoreRef = useInfiniteIntersection({
+    hasMore: hasMoreForActiveFilter,
+    onLoadMore: loadMoreForActiveFilter,
+    rootMargin: "200px"
+  });
 
   return (
     <>
@@ -336,7 +319,7 @@ export function ListingCreateView({
           )}
           {hasMoreForActiveFilter ? (
             <div
-              ref={setLoadMoreNode}
+              ref={loadMoreRef}
               className="h-0"
               aria-hidden
               data-testid="listing-create-load-more-sentinel"

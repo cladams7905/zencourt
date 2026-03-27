@@ -6,6 +6,8 @@ interface UseMediaPaginationArgs {
   resetDeps: React.DependencyList;
 }
 
+// This hook reveals more of an already-loaded collection and intentionally
+// stays separate from the server-backed infinite pagination hooks.
 export const useMediaPagination = ({
   pageSize,
   totalCount,

@@ -59,7 +59,8 @@ export async function getListingCreateViewData(
       subcategory: options?.initialSubcategory,
       limit: LISTING_CREATE_INITIAL_PAGE_SIZE,
       offset: 0,
-      savedContentRows
+      savedContentRows,
+      allCachedListingContentForCreate: cachedAllForCreate
     }),
     getUserMediaByIds(userId, reelReferencedUserMediaIds)
   ]);

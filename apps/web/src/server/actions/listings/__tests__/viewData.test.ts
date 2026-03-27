@@ -94,6 +94,7 @@ import {
 
 describe("listings viewData", () => {
   const savedContentRowsRef: { id: string }[] = [];
+  const cachedAllForCreateRef = [{ orderedClipIds: ["user-media:media-1"] }];
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -117,9 +118,9 @@ describe("listings viewData", () => {
       nextOffset: 1
     });
     mockGetContentByListingId.mockResolvedValue(savedContentRowsRef);
-    mockGetAllCachedListingContentForCreate.mockResolvedValue([
-      { orderedClipIds: ["user-media:media-1"] }
-    ]);
+    mockGetAllCachedListingContentForCreate.mockResolvedValue(
+      cachedAllForCreateRef
+    );
     mockGetUserMediaByIds.mockResolvedValue([{ id: "media-1", type: "video" }]);
     mockCountUserMediaVideos.mockResolvedValue(2);
     mockMapUserMediaToVideoItem.mockReturnValue({
@@ -145,7 +146,8 @@ describe("listings viewData", () => {
       subcategory: undefined,
       limit: 8,
       offset: 0,
-      savedContentRows: savedContentRowsRef
+      savedContentRows: savedContentRowsRef,
+      allCachedListingContentForCreate: cachedAllForCreateRef
     });
     expect(result).toEqual({
       listingClipItems: [

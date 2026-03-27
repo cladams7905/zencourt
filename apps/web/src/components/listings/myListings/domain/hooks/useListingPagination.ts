@@ -1,15 +1,16 @@
 "use client";
 
 import * as React from "react";
-import useSWRInfinite from "swr/infinite";
 import {
   buildListingsPageUrl,
-  fetchListingsPage
+  fetchListingsPage,
+  type ListingsOffsetPage
 } from "@web/src/components/listings/myListings/domain/services";
 import {
   MY_LISTINGS_PAGE_SIZE,
   type ListingSummaryItem
 } from "@web/src/components/listings/myListings/shared";
+import { useInfiniteSwrPages } from "@web/src/components/shared/pagination";
 
 type UseListingPaginationParams = {
   initialListings: ListingSummaryItem[];
@@ -20,9 +21,8 @@ export const useListingPagination = ({
   initialListings,
   initialHasMore
 }: UseListingPaginationParams) => {
-  const loadMoreRef = React.useRef<HTMLDivElement>(null);
   const getKey = React.useCallback(
-    (pageIndex: number, previousPageData?: { hasMore: boolean }) => {
+    (pageIndex: number, previousPageData: ListingsOffsetPage | null) => {
       if (pageIndex > 0 && previousPageData && !previousPageData.hasMore) {
         return null;
       }
@@ -33,55 +33,23 @@ export const useListingPagination = ({
     [initialListings.length]
   );
   const {
-    data: pages = [],
-    error,
-    isValidating,
-    size,
-    setSize
-  } = useSWRInfinite(getKey, fetchListingsPage, {
-    revalidateFirstPage: false
+    items: listings,
+    hasMore,
+    isLoadingMore,
+    errorMessage: loadError,
+    loadMoreRef,
+    fetchMore: fetchMoreListings
+  } = useInfiniteSwrPages({
+    getKey,
+    fetcher: fetchListingsPage,
+    selectItems: (page) => page.items,
+    getHasMore: (page) => page.hasMore,
+    initialItems: initialListings,
+    initialHasMore,
+    swr: {
+      revalidateFirstPage: false
+    }
   });
-
-  const listings = React.useMemo(
-    () => [...initialListings, ...pages.flatMap((page) => page.items)],
-    [initialListings, pages]
-  );
-  const hasMore = React.useMemo(() => {
-    if (pages.length === 0) {
-      return initialHasMore;
-    }
-    return pages[pages.length - 1]?.hasMore ?? false;
-  }, [initialHasMore, pages]);
-  const isLoadingMore = isValidating;
-  const loadError = error instanceof Error ? error.message : null;
-
-  const fetchMoreListings = React.useCallback(async () => {
-    if (isLoadingMore || !hasMore) {
-      return;
-    }
-    await setSize(size + 1);
-  }, [hasMore, isLoadingMore, setSize, size]);
-
-  React.useEffect(() => {
-    const node = loadMoreRef.current;
-    if (!node || !hasMore) {
-      return;
-    }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            void fetchMoreListings();
-          }
-        });
-      },
-      { rootMargin: "200px" }
-    );
-
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [fetchMoreListings, hasMore]);
 
   return {
     listings,

@@ -3,6 +3,7 @@
 import { getContentByListingId } from "@web/src/server/models/content";
 import {
   getCachedListingContentForCreateFilter,
+  type ListingCreateCachedContentItem,
   type ListingMediaType
 } from "@web/src/server/infra/cache/listingContent/cache";
 import type { ListingContentItem as ContentItem } from "@web/src/lib/domain/listings/content";
@@ -78,18 +79,31 @@ export async function getListingContentItems(params: {
   offset?: number;
   /** When set, skips an extra getContentByListingId (e.g. listing create view already loaded rows). */
   savedContentRows?: Awaited<ReturnType<typeof getContentByListingId>>;
+  /**
+   * When set (e.g. from getAllCachedListingContentForCreate), filters in memory for the active
+   * subcategory/media tab instead of calling getCachedListingContentForCreateFilter (avoids a second Redis scan).
+   */
+  allCachedListingContentForCreate?: ListingCreateCachedContentItem[];
 }) {
   const activeMediaType: ListingMediaType =
     params.mediaTab === "images" ? "image" : "video";
   const activeSubcategory: ListingContentSubcategory =
     params.subcategory ?? "new_listing";
   const [cachedListingContentItems, savedContentRows] = await Promise.all([
-    getCachedListingContentForCreateFilter({
-      userId: params.userId,
-      listingId: params.listingId,
-      subcategory: activeSubcategory,
-      mediaType: activeMediaType
-    }),
+    params.allCachedListingContentForCreate !== undefined
+      ? Promise.resolve(
+          params.allCachedListingContentForCreate.filter(
+            (item) =>
+              item.listingSubcategory === activeSubcategory &&
+              item.mediaType === activeMediaType
+          )
+        )
+      : getCachedListingContentForCreateFilter({
+          userId: params.userId,
+          listingId: params.listingId,
+          subcategory: activeSubcategory,
+          mediaType: activeMediaType
+        }),
     params.savedContentRows !== undefined
       ? Promise.resolve(params.savedContentRows)
       : getContentByListingId(params.userId, params.listingId)

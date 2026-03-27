@@ -2,12 +2,9 @@ import { fetchApiData } from "@web/src/lib/core/http/client";
 import type { ListingCreateMediaTab } from "@web/src/components/listings/create/shared/constants";
 import type { ListingContentSubcategory } from "@shared/types/models";
 import type { ListingContentItem as ContentItem } from "@web/src/lib/domain/listings/content";
+import type { OffsetPage } from "@web/src/lib/domain/pagination";
 
-export type ListingContentItemsPage = {
-  items: ContentItem[];
-  hasMore: boolean;
-  nextOffset: number;
-};
+export type ListingContentItemsPage = OffsetPage<ContentItem>;
 
 export function buildListingContentItemsPageKey(
   listingId: string,

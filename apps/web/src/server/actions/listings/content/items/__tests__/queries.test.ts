@@ -136,7 +136,12 @@ describe("listing content item queries", () => {
 
   it("uses preloaded savedContentRows and skips getContentByListingId", async () => {
     mockGetCachedListingContentForCreateFilter.mockResolvedValue([]);
-    const preloaded = [{ id: "pre-1", contentType: "video" as const }];
+    const preloaded = [
+      {
+        id: "pre-1",
+        contentType: "video" as const
+      }
+    ] as never;
     mockIsSavedListingReelMetadata.mockReturnValue(false);
 
     await getListingContentItems({
@@ -147,5 +152,55 @@ describe("listing content item queries", () => {
     });
 
     expect(mockGetContentByListingId).not.toHaveBeenCalled();
+  });
+
+  it("uses preloaded allCachedListingContentForCreate and skips getCachedListingContentForCreateFilter", async () => {
+    mockGetContentByListingId.mockResolvedValue([]);
+    mockIsSavedListingReelMetadata.mockReturnValue(false);
+
+    const fullCached = [
+      {
+        id: "cached-vid",
+        aspectRatio: "square" as const,
+        isFavorite: false as const,
+        hook: "h",
+        caption: null,
+        body: null,
+        brollQuery: null,
+        listingSubcategory: "new_listing" as const,
+        mediaType: "video" as const,
+        cacheKeyTimestamp: 1,
+        cacheKeyId: 1
+      },
+      {
+        id: "cached-img",
+        aspectRatio: "square" as const,
+        isFavorite: false as const,
+        hook: "h2",
+        caption: null,
+        body: null,
+        brollQuery: null,
+        listingSubcategory: "new_listing" as const,
+        mediaType: "image" as const,
+        cacheKeyTimestamp: 2,
+        cacheKeyId: 2
+      }
+    ];
+
+    const result = await getListingContentItems({
+      userId: "user-1",
+      listingId: "listing-1",
+      mediaTab: "videos",
+      subcategory: "new_listing",
+      allCachedListingContentForCreate: fullCached
+    });
+
+    expect(mockGetCachedListingContentForCreateFilter).not.toHaveBeenCalled();
+    expect(result.items).toEqual([
+      expect.objectContaining({
+        id: "cached-vid",
+        contentSource: "cached_create"
+      })
+    ]);
   });
 });
