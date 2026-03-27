@@ -5,7 +5,7 @@ import type {
 import type {
   PreviewTextOverlay,
   PreviewTimelinePlan
-} from "@web/src/components/listings/create/domain/listingCreate";
+} from "@web/src/components/listings/create/domain";
 import type { ListingContentSubcategory } from "@shared/types/models";
 import type { ListingOpenHouseContext } from "@web/src/lib/domain/listings/openHouse";
 import {

@@ -29,7 +29,7 @@ jest.mock("@web/src/lib/sse/contentExtractor", () => ({
     mockExtractJsonItems(...args)
 }));
 
-jest.mock("../../items/contentItemsClient", () => ({
+jest.mock("../../items/client", () => ({
   buildListingContentItemsPageKey: (
     listingId: string,
     params: Record<string, unknown>

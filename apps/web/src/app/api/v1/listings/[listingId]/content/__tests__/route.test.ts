@@ -22,7 +22,7 @@ describe("listing create content items route", () => {
     jest.doMock("@web/src/app/api/v1/_utils", () => ({
       ApiError: TestApiError
     }));
-    jest.doMock("@web/src/server/actions/listings/create/content", () => ({
+    jest.doMock("@web/src/server/actions/listings/content/items", () => ({
       getListingContentItemsForCurrentUser: (...args: unknown[]) =>
         mockGetListingContentItemsForCurrentUser(...args)
     }));

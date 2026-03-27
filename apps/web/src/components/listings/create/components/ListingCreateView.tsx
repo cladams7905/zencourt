@@ -11,13 +11,13 @@ import {
   ListingImagePreviewGrid,
   DevSingleTemplateRender
 } from "@web/src/components/listings/create/components";
-import { type ListingCreateImage } from "@web/src/components/listings/create/domain/listingCreate";
+import { type ListingCreateImage } from "@web/src/components/listings/create/domain";
 import { useStickyHeader } from "@web/src/components/listings/create/shared/hooks/useStickyHeader";
 import { useScrollFade } from "@web/src/components/listings/create/shared/hooks/useScrollFade";
 import {
   useListingCreateEffects,
   useListingCreateWorkflow
-} from "@web/src/components/listings/create/domain/listingCreate";
+} from "@web/src/components/listings/create/domain";
 import {
   MEDIA_TAB_LABELS,
   SUBCATEGORY_LABELS,

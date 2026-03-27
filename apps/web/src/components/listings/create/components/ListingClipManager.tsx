@@ -12,7 +12,7 @@ import {
   getRegeneratingVersion,
   isClipRegenerating,
   useListingClipManagerWorkspace
-} from "@web/src/components/listings/create/domain/listingClipManager";
+} from "@web/src/components/listings/create/domain/clipManager";
 import {
   AlertDialog,
   AlertDialogAction,
