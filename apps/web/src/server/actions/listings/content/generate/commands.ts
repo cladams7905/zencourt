@@ -123,7 +123,7 @@ export const generateListingContentForCurrentUser = withServerActionCaller(
                           listingId: context.listingId,
                           subcategory: context.subcategory,
                           items: doneItems,
-                          videoItems: listingVideoItems,
+                          listingClipItems: listingVideoItems,
                           cacheKeyTimestamp: timestamp
                         })
                       : doneItems;

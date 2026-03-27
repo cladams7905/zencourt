@@ -2,7 +2,7 @@ import { act, renderHook } from "@testing-library/react";
 
 const mockDeleteCachedListingContentItem = jest.fn();
 
-jest.mock("@web/src/server/actions/listings/cache", () => ({
+jest.mock("@web/src/server/actions/listings/content/cache", () => ({
   deleteCachedListingContentItem: (...args: unknown[]) =>
     mockDeleteCachedListingContentItem(...args)
 }));
@@ -22,7 +22,7 @@ describe("useDeleteCachedPreviewItem", () => {
       useDeleteCachedPreviewItem({
         listingId: "l1",
         activeSubcategory: "new_listing",
-        activeMediaItems: [
+        activeContentItems: [
           { id: "item-1", cacheKeyTimestamp: 10, cacheKeyId: 3 }
         ] as never,
         removeContentItem

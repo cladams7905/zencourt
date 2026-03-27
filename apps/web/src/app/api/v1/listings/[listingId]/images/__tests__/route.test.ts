@@ -20,7 +20,7 @@ describe("listing images route", () => {
     jest.doMock("@web/src/app/api/v1/_utils", () => ({
       ApiError: TestApiError
     }));
-    jest.doMock("@web/src/server/actions/listings/commands", () => ({
+    jest.doMock("@web/src/server/actions/listings/image", () => ({
       getListingImagesForCurrentUser: (...args: unknown[]) =>
         mockGetListingImagesForCurrentUser(...args)
     }));

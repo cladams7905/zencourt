@@ -335,7 +335,7 @@ describe("ListingClipManager", () => {
       (result) => result.value instanceof HTMLAnchorElement
     )?.value as HTMLAnchorElement | undefined;
     expect(anchor?.href).toContain(
-      "/api/v1/listings/listing-1/clip-versions/clip-version-1/download"
+      "/api/v1/listings/listing-1/clips/clip-version-1/download"
     );
     expect(anchorClick).toHaveBeenCalled();
 

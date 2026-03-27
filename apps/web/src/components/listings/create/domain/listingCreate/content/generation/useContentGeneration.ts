@@ -34,11 +34,14 @@ import {
   getEmptyBucket,
   type FilterBucket,
   type FilterBuckets
-} from "./filterBuckets";
-import { fetchListingCreatePostItemsPageCached } from "./postItemsTransport";
+} from "../items/filterBuckets";
+import { fetchListingContentItemsPageCached } from "../items/transport";
 
 const DEFAULT_GENERATION_COUNT = GENERATED_BATCH_SIZE;
-function buildContentItemRevision(item: ContentItem): string {
+type ListingContentItem = ContentItem;
+type ListingClipItem = ContentItem;
+
+function buildContentItemRevision(item: ListingContentItem): string {
   const cacheIdentity = item as ContentItem & {
     cacheKeyTimestamp?: number;
     cacheKeyId?: number;
@@ -64,7 +67,7 @@ function buildContentItemRevision(item: ContentItem): string {
   ].join("::");
 }
 
-function buildListingPostItemsRevision(items: ContentItem[]): string {
+function buildListingContentItemsRevision(items: ListingContentItem[]): string {
   return items.map(buildContentItemRevision).join("###");
 }
 
@@ -89,14 +92,14 @@ function getOppositeMediaTab(
 
 export function useContentGeneration(params: {
   listingId: string;
-  listingPostItems: ContentItem[];
+  listingContentItems: ListingContentItem[];
   initialMediaTab: ListingCreateMediaTab;
   initialSubcategory: ListingContentSubcategory;
   activeMediaTab: ListingCreateMediaTab;
   activeSubcategory: ListingContentSubcategory;
-  videoItems: ContentItem[];
+  listingClipItems: ListingClipItem[];
 }): {
-  localPostItems: ContentItem[];
+  bucketContentItems: ListingContentItem[];
   isGenerating: boolean;
   generationError: string | null;
   loadingCount: number;
@@ -115,17 +118,17 @@ export function useContentGeneration(params: {
   loadMoreForActiveFilter: () => Promise<void>;
   replaceContentItem: (params: {
     previousContentItemId: string;
-    nextItem: ContentItem;
+    nextItem: ListingContentItem;
   }) => void;
 } {
   const {
     listingId,
-    listingPostItems,
+    listingContentItems,
     initialMediaTab,
     initialSubcategory,
     activeMediaTab,
     activeSubcategory,
-    videoItems
+    listingClipItems
   } = params;
 
   const initialServerFilterKey = React.useMemo(
@@ -138,7 +141,7 @@ export function useContentGeneration(params: {
   );
   const [filterBuckets, setFilterBuckets] = React.useState<FilterBuckets>(
     () => ({
-      [initialServerFilterKey]: buildInitialBucket(listingPostItems)
+      [initialServerFilterKey]: buildInitialBucket(listingContentItems)
     })
   );
   const [isGenerating, setIsGenerating] = React.useState(false);
@@ -164,9 +167,9 @@ export function useContentGeneration(params: {
   const inFlightWarmupsRef = React.useRef<Map<string, Promise<void>>>(
     new Map()
   );
-  const listingPostItemsSnapshot = React.useMemo(
-    () => buildListingPostItemsRevision(listingPostItems),
-    [listingPostItems]
+  const listingContentItemsSnapshot = React.useMemo(
+    () => buildListingContentItemsRevision(listingContentItems),
+    [listingContentItems]
   );
 
   React.useEffect(() => {
@@ -183,12 +186,12 @@ export function useContentGeneration(params: {
     inFlightWarmupsRef.current.clear();
     lastSyncedServerRevisionRef.current = "";
     setFilterBuckets({
-      [initialServerFilterKey]: buildInitialBucket(listingPostItems)
+      [initialServerFilterKey]: buildInitialBucket(listingContentItems)
     });
-  }, [initialServerFilterKey, listingId, listingPostItems]);
+  }, [initialServerFilterKey, listingId, listingContentItems]);
 
   React.useEffect(() => {
-    const nextRevision = `${listingId}::${initialServerFilterKey}::${listingPostItemsSnapshot}`;
+    const nextRevision = `${listingId}::${initialServerFilterKey}::${listingContentItemsSnapshot}`;
     if (nextRevision === lastSyncedServerRevisionRef.current) {
       return;
     }
@@ -196,13 +199,13 @@ export function useContentGeneration(params: {
 
     setFilterBuckets((prev) => ({
       ...prev,
-      [initialServerFilterKey]: buildInitialBucket(listingPostItems)
+      [initialServerFilterKey]: buildInitialBucket(listingContentItems)
     }));
   }, [
     initialServerFilterKey,
     listingId,
-    listingPostItems,
-    listingPostItemsSnapshot
+    listingContentItems,
+    listingContentItemsSnapshot
   ]);
 
   const updateBucket = React.useCallback(
@@ -254,7 +257,7 @@ export function useContentGeneration(params: {
         };
       });
 
-      const promise = fetchListingCreatePostItemsPageCached(listingId, {
+      const promise = fetchListingContentItemsPageCached(listingId, {
         mediaTab,
         subcategory,
         limit: LISTING_CREATE_INITIAL_PAGE_SIZE,
@@ -362,7 +365,7 @@ export function useContentGeneration(params: {
 
     try {
       const requestVersion = listingRequestVersionRef.current;
-      const page = await fetchListingCreatePostItemsPageCached(listingId, {
+      const page = await fetchListingContentItemsPageCached(listingId, {
         mediaTab: activeMediaTab,
         subcategory: activeSubcategory,
         limit: LISTING_CREATE_INITIAL_PAGE_SIZE,
@@ -554,8 +557,8 @@ export function useContentGeneration(params: {
                       listingId,
                       activeMediaTab: "videos",
                       activeSubcategory: subcategory,
-                      activeMediaItems: [item],
-                      videoItems
+                      activeContentItems: [item],
+                      listingClipItems
                     });
 
                     return plan
@@ -644,7 +647,7 @@ export function useContentGeneration(params: {
         activeGeneratingFilterKeyRef.current = null;
       }
     },
-    [activeMediaTab, listingId, updateBucket, videoItems]
+    [activeMediaTab, listingId, updateBucket, listingClipItems]
   );
 
   const removeContentItem = React.useCallback((contentItemId: string) => {
@@ -718,7 +721,7 @@ export function useContentGeneration(params: {
     : 0;
 
   return {
-    localPostItems: currentBucket.items,
+    bucketContentItems: currentBucket.items,
     isGenerating,
     generationError,
     loadingCount,

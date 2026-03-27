@@ -11,7 +11,7 @@ export function useListingCreateEffects(params: {
   activeSubcategory: ListingContentSubcategory;
   initialMediaTab: ListingCreateMediaTab;
   initialSubcategory: ListingContentSubcategory;
-  activeMediaItemsLength: number;
+  activeContentItemsLength: number;
   isGenerating: boolean;
   generationError: string | null;
   templateRenderError: string | null;
@@ -27,7 +27,7 @@ export function useListingCreateEffects(params: {
     activeSubcategory,
     initialMediaTab,
     initialSubcategory,
-    activeMediaItemsLength,
+    activeContentItemsLength,
     isGenerating,
     generationError,
     templateRenderError,
@@ -94,11 +94,11 @@ export function useListingCreateEffects(params: {
     }
 
     hasHandledInitialAutoGenerateRef.current = true;
-    if (activeMediaItemsLength === 0) {
+    if (activeContentItemsLength === 0) {
       void generateSubcategoryContent(activeSubcategory);
     }
   }, [
-    activeMediaItemsLength,
+    activeContentItemsLength,
     activeMediaTab,
     activeSubcategory,
     generateSubcategoryContent,

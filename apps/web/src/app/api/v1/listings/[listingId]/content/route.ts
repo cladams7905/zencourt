@@ -7,9 +7,9 @@ import {
 } from "@web/src/app/api/v1/_responses";
 import { parseRequiredRouteParam } from "@shared/utils/api/parsers";
 import { runWithCaller } from "@web/src/server/infra/logger/callContext";
-import { getListingCreatePostItemsForCurrentUser } from "@web/src/server/actions/listings/createPostItems";
+import { getListingContentItemsForCurrentUser } from "@web/src/server/actions/listings/content/items";
 
-const ROUTE_CALLER = "api/v1/listings/.../create-post-items";
+const ROUTE_CALLER = "api/v1/listings/.../content";
 const DEFAULT_PAGE_SIZE = 8;
 const MAX_PAGE_SIZE = 8;
 
@@ -38,12 +38,14 @@ export async function GET(
       const { searchParams } = request.nextUrl;
       const { limit, offset } = parsePaginationParams(searchParams);
 
-      const page = await getListingCreatePostItemsForCurrentUser(listingId, {
+      const page = await getListingContentItemsForCurrentUser(listingId, {
         mediaTab:
           searchParams.get("mediaTab") === "images" ? "images" : "videos",
         subcategory:
           (searchParams.get("subcategory") as
-            | Parameters<typeof getListingCreatePostItemsForCurrentUser>[1]["subcategory"]
+            | Parameters<
+                typeof getListingContentItemsForCurrentUser
+              >[1]["subcategory"]
             | null) ?? undefined,
         limit,
         offset

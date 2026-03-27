@@ -6,17 +6,17 @@ import { resolveContentMediaType } from "../shared/utils";
 export function useListingCreateActiveMediaItems(params: {
   activeMediaTab: "videos" | "images";
   activeSubcategory: ListingContentSubcategory;
-  localPostItems: ContentItem[];
+  bucketContentItems: ContentItem[];
 }) {
-  const { activeMediaTab, activeSubcategory, localPostItems } = params;
+  const { activeMediaTab, activeSubcategory, bucketContentItems } = params;
 
   return React.useMemo(
     () =>
-      localPostItems.filter(
+      bucketContentItems.filter(
         (item) =>
           item.listingSubcategory === activeSubcategory &&
           resolveContentMediaType(item) === (activeMediaTab === "videos" ? "video" : "image")
       ),
-    [activeMediaTab, activeSubcategory, localPostItems]
+    [activeMediaTab, activeSubcategory, bucketContentItems]
   );
 }

@@ -27,7 +27,7 @@ jest.mock(
   })
 );
 
-jest.mock("@web/src/server/actions/listings/queries", () => ({
+jest.mock("@web/src/server/actions/listings/clips", () => ({
   getListingClipVersionItemsForCurrentUser: (...args: unknown[]) =>
     mockGetListingClipVersionItemsForCurrentUser(...args)
 }));

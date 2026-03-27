@@ -6,7 +6,7 @@ import {
   type ListingCreateMediaTab
 } from "@web/src/components/listings/create/shared/constants";
 import type { ListingContentSubcategory } from "@shared/types/models";
-import type { ListingCreatePostItemsPage } from "./listingCreatePostItemsClient";
+import type { ListingContentItemsPage } from "./client";
 
 const EMPTY_ITEMS: ContentItem[] = [];
 
@@ -54,7 +54,7 @@ export function getEmptyBucket(): FilterBucket {
 }
 
 export function buildFetchedBucket(
-  page: ListingCreatePostItemsPage
+  page: ListingContentItemsPage
 ): FilterBucket {
   return {
     items: page.items,

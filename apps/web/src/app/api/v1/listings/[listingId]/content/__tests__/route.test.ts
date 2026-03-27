@@ -14,29 +14,29 @@ class TestApiError extends Error {
   }
 }
 
-describe("listing create post items route", () => {
+describe("listing create content items route", () => {
   async function loadRoute() {
     jest.resetModules();
 
-    const mockGetListingCreatePostItemsForCurrentUser = jest.fn();
+    const mockGetListingContentItemsForCurrentUser = jest.fn();
     jest.doMock("@web/src/app/api/v1/_utils", () => ({
       ApiError: TestApiError
     }));
-    jest.doMock("@web/src/server/actions/listings/createPostItems", () => ({
-      getListingCreatePostItemsForCurrentUser: (...args: unknown[]) =>
-        mockGetListingCreatePostItemsForCurrentUser(...args)
+    jest.doMock("@web/src/server/actions/listings/content/items", () => ({
+      getListingContentItemsForCurrentUser: (...args: unknown[]) =>
+        mockGetListingContentItemsForCurrentUser(...args)
     }));
 
     const mod = await import("../route");
     return {
       GET: mod.GET,
-      mockGetListingCreatePostItemsForCurrentUser
+      mockGetListingContentItemsForCurrentUser
     };
   }
 
-  it("returns paged create post items", async () => {
-    const { GET, mockGetListingCreatePostItemsForCurrentUser } = await loadRoute();
-    mockGetListingCreatePostItemsForCurrentUser.mockResolvedValueOnce({
+  it("returns paged create content items", async () => {
+    const { GET, mockGetListingContentItemsForCurrentUser } = await loadRoute();
+    mockGetListingContentItemsForCurrentUser.mockResolvedValueOnce({
       items: [{ id: "item-1" }],
       hasMore: true,
       nextOffset: 8
@@ -45,11 +45,11 @@ describe("listing create post items route", () => {
     const response = await GET(
       {
         nextUrl: new NodeURL(
-          "https://example.com/api/v1/listings/listing-1/create-post-items?mediaTab=videos&subcategory=new_listing&limit=8&offset=0"
+          "https://example.com/api/v1/listings/listing-1/content?mediaTab=videos&subcategory=new_listing&limit=8&offset=0"
         )
       } as never,
       {
-      params: Promise.resolve({ listingId: "listing-1" })
+        params: Promise.resolve({ listingId: "listing-1" })
       }
     );
 
@@ -62,7 +62,7 @@ describe("listing create post items route", () => {
         nextOffset: 8
       }
     });
-    expect(mockGetListingCreatePostItemsForCurrentUser).toHaveBeenCalledWith(
+    expect(mockGetListingContentItemsForCurrentUser).toHaveBeenCalledWith(
       "listing-1",
       {
         mediaTab: "videos",
@@ -74,8 +74,8 @@ describe("listing create post items route", () => {
   });
 
   it("clamps invalid pagination params at the route boundary", async () => {
-    const { GET, mockGetListingCreatePostItemsForCurrentUser } = await loadRoute();
-    mockGetListingCreatePostItemsForCurrentUser.mockResolvedValueOnce({
+    const { GET, mockGetListingContentItemsForCurrentUser } = await loadRoute();
+    mockGetListingContentItemsForCurrentUser.mockResolvedValueOnce({
       items: [],
       hasMore: false,
       nextOffset: 0
@@ -84,7 +84,7 @@ describe("listing create post items route", () => {
     await GET(
       {
         nextUrl: new NodeURL(
-          "https://example.com/api/v1/listings/listing-1/create-post-items?mediaTab=videos&subcategory=new_listing&limit=999&offset=-12"
+          "https://example.com/api/v1/listings/listing-1/content?mediaTab=videos&subcategory=new_listing&limit=999&offset=-12"
         )
       } as never,
       {
@@ -92,7 +92,7 @@ describe("listing create post items route", () => {
       }
     );
 
-    expect(mockGetListingCreatePostItemsForCurrentUser).toHaveBeenCalledWith(
+    expect(mockGetListingContentItemsForCurrentUser).toHaveBeenCalledWith(
       "listing-1",
       expect.objectContaining({
         limit: 8,

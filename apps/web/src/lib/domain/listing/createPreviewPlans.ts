@@ -60,7 +60,7 @@ export type PreviewPlanCaptionItem = {
   reelSequence?: ReelSequenceItem[] | null;
 };
 
-export type PreviewPlanVideoItem = {
+export type PreviewPlanClipItem = {
   id: string;
   reelClipSource?: "listing_clip" | "user_media";
   videoUrl?: string | null;
@@ -357,22 +357,22 @@ export function buildListingCreatePreviewPlans(params: {
   listingId: string;
   activeMediaTab: "videos" | "images";
   activeSubcategory: ListingContentSubcategory;
-  activeMediaItems: PreviewPlanCaptionItem[];
-  videoItems: PreviewPlanVideoItem[];
+  activeContentItems: PreviewPlanCaptionItem[];
+  listingClipItems: PreviewPlanClipItem[];
 }): PreviewTimelinePlan[] {
   const {
     listingId,
     activeMediaTab,
     activeSubcategory,
-    activeMediaItems,
-    videoItems
+    activeContentItems,
+    listingClipItems
   } = params;
 
   if (activeMediaTab !== "videos") {
     return [];
   }
 
-  const clipCandidates: PreviewClipCandidate[] = videoItems
+  const clipCandidates: PreviewClipCandidate[] = listingClipItems
     .filter((item) => item.reelClipSource !== "user_media")
     .filter((item) => Boolean(item.videoUrl))
     .map((item) => ({
@@ -385,16 +385,16 @@ export function buildListingCreatePreviewPlans(params: {
         .replace(/[^\w\s]/g, " ")
     }));
   const clipById = new Map(
-    videoItems
+    listingClipItems
       .filter((item) => Boolean(item.videoUrl))
       .map((item) => [item.id, item] as const)
   );
 
-  if (activeMediaItems.length === 0) {
+  if (activeContentItems.length === 0) {
     return [];
   }
 
-  return activeMediaItems.map((captionItem): PreviewTimelinePlan => {
+  return activeContentItems.map((captionItem): PreviewTimelinePlan => {
     if (captionItem.reelSequence?.length) {
       const segments = captionItem.reelSequence
         .map((sequenceItem) => {

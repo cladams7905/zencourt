@@ -3,7 +3,7 @@ import type { ListingContentSubcategory } from "@shared/types/models";
 import {
   buildListingCreatePreviewPlans,
   type PreviewPlanCaptionItem,
-  type PreviewPlanVideoItem
+  type PreviewPlanClipItem
 } from "@web/src/lib/domain/listing/createPreviewPlans";
 
 export { buildListingCreatePreviewPlans } from "@web/src/lib/domain/listing/createPreviewPlans";
@@ -12,18 +12,18 @@ export function useListingCreatePreviewPlans(params: {
   listingId: string;
   activeMediaTab: "videos" | "images";
   activeSubcategory: ListingContentSubcategory;
-  activeMediaItems: PreviewPlanCaptionItem[];
-  videoItems: PreviewPlanVideoItem[];
+  activeContentItems: PreviewPlanCaptionItem[];
+  listingClipItems: PreviewPlanClipItem[];
 }) {
-  const { listingId, activeMediaTab, activeSubcategory, activeMediaItems, videoItems } = params;
+  const { listingId, activeMediaTab, activeSubcategory, activeContentItems, listingClipItems } = params;
 
   return React.useMemo(() => {
     return buildListingCreatePreviewPlans({
       listingId,
       activeMediaTab,
       activeSubcategory,
-      activeMediaItems,
-      videoItems
+      activeContentItems,
+      listingClipItems
     });
-  }, [activeMediaItems, activeMediaTab, activeSubcategory, listingId, videoItems]);
+  }, [activeContentItems, activeMediaTab, activeSubcategory, listingId, listingClipItems]);
 }

@@ -7,8 +7,8 @@ const mockToastError = jest.fn();
 const mockRequestStream = jest.fn();
 const mockStreamEvents = jest.fn();
 const mockExtractJsonItems = jest.fn();
-const mockFetchListingCreatePostItemsPage = jest.fn();
-const EMPTY_LISTING_POST_ITEMS: never[] = [];
+const mockFetchListingContentItemsPage = jest.fn();
+const EMPTY_LISTING_CONTENT_ITEMS: never[] = [];
 const EMPTY_VIDEO_ITEMS: never[] = [];
 
 jest.mock("sonner", () => ({
@@ -17,29 +17,26 @@ jest.mock("sonner", () => ({
   }
 }));
 
-jest.mock(
-  "../stream",
-  () => ({
-    requestContentGenerationStream: (...args: unknown[]) => mockRequestStream(...args),
-    streamContentGenerationEvents: (...args: unknown[]) => mockStreamEvents(...args)
-  })
-);
-
-jest.mock("@web/src/lib/sse/contentExtractor", () => ({
-  extractJsonItemsFromStream: (...args: unknown[]) => mockExtractJsonItems(...args)
+jest.mock("../stream", () => ({
+  requestContentGenerationStream: (...args: unknown[]) =>
+    mockRequestStream(...args),
+  streamContentGenerationEvents: (...args: unknown[]) =>
+    mockStreamEvents(...args)
 }));
 
-jest.mock(
-  "../listingCreatePostItemsClient",
-  () => ({
-    buildListingCreatePostItemsPageKey: (
-      listingId: string,
-      params: Record<string, unknown>
-    ) => JSON.stringify([listingId, params]),
-    fetchListingCreatePostItemsPage: (...args: unknown[]) =>
-      mockFetchListingCreatePostItemsPage(...args)
-  })
-);
+jest.mock("@web/src/lib/sse/contentExtractor", () => ({
+  extractJsonItemsFromStream: (...args: unknown[]) =>
+    mockExtractJsonItems(...args)
+}));
+
+jest.mock("../../items/contentItemsClient", () => ({
+  buildListingContentItemsPageKey: (
+    listingId: string,
+    params: Record<string, unknown>
+  ) => JSON.stringify([listingId, params]),
+  fetchListingContentItemsPage: (...args: unknown[]) =>
+    mockFetchListingContentItemsPage(...args)
+}));
 
 function eventsGenerator(events: Array<unknown | Promise<unknown>>) {
   return (async function* () {
@@ -65,9 +62,11 @@ describe("useContentGeneration", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockRequestStream.mockResolvedValue({} as ReadableStreamDefaultReader<Uint8Array>);
+    mockRequestStream.mockResolvedValue(
+      {} as ReadableStreamDefaultReader<Uint8Array>
+    );
     mockExtractJsonItems.mockReturnValue([]);
-    mockFetchListingCreatePostItemsPage.mockResolvedValue({
+    mockFetchListingContentItemsPage.mockResolvedValue({
       items: [],
       hasMore: false,
       nextOffset: 0
@@ -109,12 +108,12 @@ describe("useContentGeneration", () => {
     const { result } = renderHook(() =>
       useContentGeneration({
         listingId: "listing-1",
-        listingPostItems: EMPTY_LISTING_POST_ITEMS,
+        listingContentItems: EMPTY_LISTING_CONTENT_ITEMS,
         initialMediaTab: "videos",
         initialSubcategory: "new_listing",
         activeMediaTab: "videos",
         activeSubcategory: "new_listing",
-        videoItems: EMPTY_VIDEO_ITEMS
+        listingClipItems: EMPTY_VIDEO_ITEMS
       })
     );
 
@@ -125,7 +124,7 @@ describe("useContentGeneration", () => {
     expect(result.current.isGenerating).toBe(false);
     expect(result.current.generationError).toBeNull();
     expect(result.current.loadingCount).toBe(0);
-    expect(result.current.localPostItems).toHaveLength(4);
+    expect(result.current.bucketContentItems).toHaveLength(4);
   });
 
   it("reports partial done payload as retryable error and keeps missing skeleton count", async () => {
@@ -141,12 +140,12 @@ describe("useContentGeneration", () => {
     const { result } = renderHook(() =>
       useContentGeneration({
         listingId: "listing-1",
-        listingPostItems: EMPTY_LISTING_POST_ITEMS,
+        listingContentItems: EMPTY_LISTING_CONTENT_ITEMS,
         initialMediaTab: "images",
         initialSubcategory: "new_listing",
         activeMediaTab: "images",
         activeSubcategory: "new_listing",
-        videoItems: EMPTY_VIDEO_ITEMS
+        listingClipItems: EMPTY_VIDEO_ITEMS
       })
     );
 
@@ -154,7 +153,7 @@ describe("useContentGeneration", () => {
       await result.current.generateSubcategoryContent("new_listing");
     });
 
-    expect(result.current.localPostItems).toHaveLength(2);
+    expect(result.current.bucketContentItems).toHaveLength(2);
     expect(result.current.loadingCount).toBe(GENERATED_BATCH_SIZE - 2);
     expect(result.current.generationError).toBe(
       "sorry, an error occurred. Please retry."
@@ -166,17 +165,17 @@ describe("useContentGeneration", () => {
 
   it("handles stream finishing without done event", async () => {
     mockStreamEvents.mockReturnValue(eventsGenerator([]));
-    const existingListingPostItems = [{ id: "existing-1" }] as never;
+    const existingListingContentItems = [{ id: "existing-1" }] as never;
 
     const { result } = renderHook(() =>
       useContentGeneration({
         listingId: "listing-1",
-        listingPostItems: existingListingPostItems,
+        listingContentItems: existingListingContentItems,
         initialMediaTab: "videos",
         initialSubcategory: "new_listing",
         activeMediaTab: "videos",
         activeSubcategory: "new_listing",
-        videoItems: EMPTY_VIDEO_ITEMS
+        listingClipItems: EMPTY_VIDEO_ITEMS
       })
     );
 
@@ -184,7 +183,7 @@ describe("useContentGeneration", () => {
       await result.current.generateSubcategoryContent("new_listing");
     });
 
-    expect(result.current.localPostItems).toEqual([{ id: "existing-1" }]);
+    expect(result.current.bucketContentItems).toEqual([{ id: "existing-1" }]);
     expect(result.current.generationError).toBe(
       "Stream ended before completing output."
     );
@@ -199,12 +198,12 @@ describe("useContentGeneration", () => {
     const { result } = renderHook(() =>
       useContentGeneration({
         listingId: "listing-1",
-        listingPostItems: EMPTY_LISTING_POST_ITEMS,
+        listingContentItems: EMPTY_LISTING_CONTENT_ITEMS,
         initialMediaTab: "videos",
         initialSubcategory: "new_listing",
         activeMediaTab: "videos",
         activeSubcategory: "new_listing",
-        videoItems: EMPTY_VIDEO_ITEMS
+        listingClipItems: EMPTY_VIDEO_ITEMS
       })
     );
 
@@ -219,18 +218,28 @@ describe("useContentGeneration", () => {
 
   it("passes generation nonce when forceNewBatch is true", async () => {
     mockStreamEvents.mockReturnValue(
-      eventsGenerator([{ type: "done", items: [{ hook: "H1" }, { hook: "H2" }, { hook: "H3" }, { hook: "H4" }] }])
+      eventsGenerator([
+        {
+          type: "done",
+          items: [
+            { hook: "H1" },
+            { hook: "H2" },
+            { hook: "H3" },
+            { hook: "H4" }
+          ]
+        }
+      ])
     );
 
     const { result } = renderHook(() =>
       useContentGeneration({
         listingId: "listing-1",
-        listingPostItems: EMPTY_LISTING_POST_ITEMS,
+        listingContentItems: EMPTY_LISTING_CONTENT_ITEMS,
         initialMediaTab: "videos",
         initialSubcategory: "new_listing",
         activeMediaTab: "videos",
         activeSubcategory: "new_listing",
-        videoItems: EMPTY_VIDEO_ITEMS
+        listingClipItems: EMPTY_VIDEO_ITEMS
       })
     );
 
@@ -252,38 +261,38 @@ describe("useContentGeneration", () => {
   it("re-syncs local post items when server props update for same listing", () => {
     const stableEmptyVideoItems = EMPTY_VIDEO_ITEMS;
     const { result, rerender } = renderHook(
-      (props: { listingPostItems: Array<{ id: string }> }) =>
+      (props: { listingContentItems: Array<{ id: string }> }) =>
         useContentGeneration({
           listingId: "listing-1",
-          listingPostItems: props.listingPostItems,
+          listingContentItems: props.listingContentItems,
           initialMediaTab: "images",
           initialSubcategory: "new_listing",
           activeMediaTab: "images",
           activeSubcategory: "new_listing",
-          videoItems: stableEmptyVideoItems
+          listingClipItems: stableEmptyVideoItems
         }),
       {
         initialProps: {
-          listingPostItems: [{ id: "cached-new-listing-1" }]
+          listingContentItems: [{ id: "cached-new-listing-1" }]
         }
       }
     );
 
-    expect(result.current.localPostItems).toEqual([
+    expect(result.current.bucketContentItems).toEqual([
       { id: "cached-new-listing-1" }
     ]);
 
     rerender({
-      listingPostItems: [{ id: "cached-open-house-1" }]
+      listingContentItems: [{ id: "cached-open-house-1" }]
     });
 
-    expect(result.current.localPostItems).toEqual([
+    expect(result.current.bucketContentItems).toEqual([
       { id: "cached-open-house-1" }
     ]);
   });
 
   it("warms current-media siblings before warming the opposite media tab", async () => {
-    const initialListingPostItems = [
+    const initialListingContentItems = [
       {
         id: "cached-new-listing-1",
         listingSubcategory: "new_listing",
@@ -296,13 +305,24 @@ describe("useContentGeneration", () => {
     const siblingDeferreds = new Map(
       siblingSubcategories.map((subcategory) => [
         subcategory,
-        createDeferred<{ items: unknown[]; hasMore: boolean; nextOffset: number }>()
+        createDeferred<{
+          items: unknown[];
+          hasMore: boolean;
+          nextOffset: number;
+        }>()
       ])
     );
 
-    mockFetchListingCreatePostItemsPage.mockImplementation(
-      async (_listingId: string, params: { mediaTab?: string; subcategory?: string }) => {
-        if (params.mediaTab === "videos" && params.subcategory && params.subcategory !== "new_listing") {
+    mockFetchListingContentItemsPage.mockImplementation(
+      async (
+        _listingId: string,
+        params: { mediaTab?: string; subcategory?: string }
+      ) => {
+        if (
+          params.mediaTab === "videos" &&
+          params.subcategory &&
+          params.subcategory !== "new_listing"
+        ) {
           return (
             siblingDeferreds.get(
               params.subcategory as (typeof siblingSubcategories)[number]
@@ -316,23 +336,23 @@ describe("useContentGeneration", () => {
     renderHook(() =>
       useContentGeneration({
         listingId: "listing-1",
-        listingPostItems: initialListingPostItems,
+        listingContentItems: initialListingContentItems,
         initialMediaTab: "videos",
         initialSubcategory: "new_listing",
         activeMediaTab: "videos",
         activeSubcategory: "new_listing",
-        videoItems: EMPTY_VIDEO_ITEMS
+        listingClipItems: EMPTY_VIDEO_ITEMS
       })
     );
 
     await waitFor(() => {
-      expect(mockFetchListingCreatePostItemsPage).toHaveBeenCalledTimes(
+      expect(mockFetchListingContentItemsPage).toHaveBeenCalledTimes(
         siblingSubcategories.length
       );
     });
 
     expect(
-      mockFetchListingCreatePostItemsPage.mock.calls.every(
+      mockFetchListingContentItemsPage.mock.calls.every(
         ([, params]) => params.mediaTab === "videos"
       )
     ).toBe(true);
@@ -347,7 +367,7 @@ describe("useContentGeneration", () => {
 
     await waitFor(() => {
       expect(
-        mockFetchListingCreatePostItemsPage.mock.calls.some(
+        mockFetchListingContentItemsPage.mock.calls.some(
           ([, params]) => params.mediaTab === "images"
         )
       ).toBe(true);
@@ -355,7 +375,7 @@ describe("useContentGeneration", () => {
   });
 
   it("shows eight skeletons when switching to a warming bucket with no items yet", async () => {
-    const initialListingPostItems = [
+    const initialListingContentItems = [
       {
         id: "cached-new-listing-1",
         listingSubcategory: "new_listing",
@@ -367,9 +387,15 @@ describe("useContentGeneration", () => {
       hasMore: boolean;
       nextOffset: number;
     }>();
-    mockFetchListingCreatePostItemsPage.mockImplementation(
-      async (_listingId: string, params: { mediaTab?: string; subcategory?: string }) => {
-        if (params.mediaTab === "videos" && params.subcategory === "open_house") {
+    mockFetchListingContentItemsPage.mockImplementation(
+      async (
+        _listingId: string,
+        params: { mediaTab?: string; subcategory?: string }
+      ) => {
+        if (
+          params.mediaTab === "videos" &&
+          params.subcategory === "open_house"
+        ) {
           return openHouseDeferred.promise;
         }
         return { items: [], hasMore: false, nextOffset: 0 };
@@ -380,12 +406,12 @@ describe("useContentGeneration", () => {
       (props: { activeSubcategory: "new_listing" | "open_house" }) =>
         useContentGeneration({
           listingId: "listing-1",
-          listingPostItems: initialListingPostItems,
+          listingContentItems: initialListingContentItems,
           initialMediaTab: "videos",
           initialSubcategory: "new_listing",
           activeMediaTab: "videos",
           activeSubcategory: props.activeSubcategory,
-          videoItems: EMPTY_VIDEO_ITEMS
+          listingClipItems: EMPTY_VIDEO_ITEMS
         }),
       {
         initialProps: {
@@ -399,7 +425,7 @@ describe("useContentGeneration", () => {
     });
 
     await waitFor(() => {
-      expect(mockFetchListingCreatePostItemsPage).toHaveBeenCalledWith(
+      expect(mockFetchListingContentItemsPage).toHaveBeenCalledWith(
         "listing-1",
         expect.objectContaining({
           mediaTab: "videos",
@@ -411,7 +437,7 @@ describe("useContentGeneration", () => {
     await waitFor(() => {
       expect(result.current.initialPageLoadingCount).toBe(8);
     });
-    expect(result.current.localPostItems).toEqual([]);
+    expect(result.current.bucketContentItems).toEqual([]);
 
     await act(async () => {
       openHouseDeferred.resolve({
@@ -424,23 +450,34 @@ describe("useContentGeneration", () => {
     await waitFor(() => {
       expect(result.current.initialPageLoadingCount).toBe(0);
     });
-    expect(result.current.localPostItems).toEqual([{ id: "cached-open-house-1" }]);
+    expect(result.current.bucketContentItems).toEqual([
+      { id: "cached-open-house-1" }
+    ]);
   });
 
   it("appends the next page for the active bucket when loading more", async () => {
-    const initialListingPostItems = [
+    const initialListingContentItems = [
       {
         id: "cached-new-listing-1",
         listingSubcategory: "new_listing",
         mediaType: "video"
       }
     ] as never;
-    mockFetchListingCreatePostItemsPage.mockImplementation(
-      async (_listingId: string, params: { mediaTab?: string; subcategory?: string; offset?: number }) => {
-        if (params.mediaTab === "videos" && params.subcategory === "open_house") {
+    mockFetchListingContentItemsPage.mockImplementation(
+      async (
+        _listingId: string,
+        params: { mediaTab?: string; subcategory?: string; offset?: number }
+      ) => {
+        if (
+          params.mediaTab === "videos" &&
+          params.subcategory === "open_house"
+        ) {
           if ((params.offset ?? 0) > 0) {
             return {
-              items: [{ id: "cached-open-house-2" }, { id: "cached-open-house-3" }],
+              items: [
+                { id: "cached-open-house-2" },
+                { id: "cached-open-house-3" }
+              ],
               hasMore: false,
               nextOffset: 3
             };
@@ -461,12 +498,12 @@ describe("useContentGeneration", () => {
       (props: { activeSubcategory: "new_listing" | "open_house" }) =>
         useContentGeneration({
           listingId: "listing-1",
-          listingPostItems: initialListingPostItems,
+          listingContentItems: initialListingContentItems,
           initialMediaTab: "videos",
           initialSubcategory: "new_listing",
           activeMediaTab: "videos",
           activeSubcategory: props.activeSubcategory,
-          videoItems: EMPTY_VIDEO_ITEMS
+          listingClipItems: EMPTY_VIDEO_ITEMS
         }),
       {
         initialProps: {
@@ -478,14 +515,16 @@ describe("useContentGeneration", () => {
     rerender({ activeSubcategory: "open_house" });
 
     await waitFor(() => {
-      expect(result.current.localPostItems).toEqual([{ id: "cached-open-house-1" }]);
+      expect(result.current.bucketContentItems).toEqual([
+        { id: "cached-open-house-1" }
+      ]);
     });
 
     await act(async () => {
       await result.current.loadMoreForActiveFilter();
     });
 
-    expect(mockFetchListingCreatePostItemsPage).toHaveBeenLastCalledWith(
+    expect(mockFetchListingContentItemsPage).toHaveBeenLastCalledWith(
       "listing-1",
       expect.objectContaining({
         mediaTab: "videos",
@@ -495,7 +534,7 @@ describe("useContentGeneration", () => {
       })
     );
     await waitFor(() => {
-      expect(result.current.localPostItems).toEqual([
+      expect(result.current.bucketContentItems).toEqual([
         { id: "cached-open-house-1" },
         { id: "cached-open-house-2" },
         { id: "cached-open-house-3" }
@@ -512,8 +551,11 @@ describe("useContentGeneration", () => {
       nextOffset: number;
     }>();
 
-    mockFetchListingCreatePostItemsPage.mockImplementation(
-      async (listingId: string, params: { mediaTab?: string; subcategory?: string }) => {
+    mockFetchListingContentItemsPage.mockImplementation(
+      async (
+        listingId: string,
+        params: { mediaTab?: string; subcategory?: string }
+      ) => {
         if (
           listingId === "listing-1" &&
           params.mediaTab === "videos" &&
@@ -529,22 +571,22 @@ describe("useContentGeneration", () => {
     const { result, rerender } = renderHook(
       (props: {
         listingId: string;
-        listingPostItems: Array<{ id: string }>;
+        listingContentItems: Array<{ id: string }>;
         activeSubcategory: "new_listing" | "open_house";
       }) =>
         useContentGeneration({
           listingId: props.listingId,
-          listingPostItems: props.listingPostItems as never,
+          listingContentItems: props.listingContentItems as never,
           initialMediaTab: "videos",
           initialSubcategory: "new_listing",
           activeMediaTab: "videos",
           activeSubcategory: props.activeSubcategory,
-          videoItems: stableEmptyVideoItems
+          listingClipItems: stableEmptyVideoItems
         }),
       {
         initialProps: {
           listingId: "listing-1",
-          listingPostItems: [{ id: "listing-1-new" }],
+          listingContentItems: [{ id: "listing-1-new" }],
           activeSubcategory: "new_listing" as "new_listing" | "open_house"
         }
       }
@@ -552,12 +594,12 @@ describe("useContentGeneration", () => {
 
     rerender({
       listingId: "listing-1",
-      listingPostItems: [{ id: "listing-1-new" }],
+      listingContentItems: [{ id: "listing-1-new" }],
       activeSubcategory: "open_house"
     });
 
     await waitFor(() => {
-      expect(mockFetchListingCreatePostItemsPage).toHaveBeenCalledWith(
+      expect(mockFetchListingContentItemsPage).toHaveBeenCalledWith(
         "listing-1",
         expect.objectContaining({
           subcategory: "open_house"
@@ -567,11 +609,13 @@ describe("useContentGeneration", () => {
 
     rerender({
       listingId: "listing-2",
-      listingPostItems: [{ id: "listing-2-new" }],
+      listingContentItems: [{ id: "listing-2-new" }],
       activeSubcategory: "new_listing"
     });
 
-    expect(result.current.localPostItems).toEqual([{ id: "listing-2-new" }]);
+    expect(result.current.bucketContentItems).toEqual([
+      { id: "listing-2-new" }
+    ]);
 
     await act(async () => {
       staleDeferred.resolve({
@@ -582,19 +626,23 @@ describe("useContentGeneration", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.localPostItems).toEqual([{ id: "listing-2-new" }]);
+      expect(result.current.bucketContentItems).toEqual([
+        { id: "listing-2-new" }
+      ]);
     });
   });
 
   it("does not load more while the active bucket is generating", async () => {
-    const initialListingPostItems = [
+    const initialListingContentItems = [
       {
         id: "cached-new-listing-1",
         listingSubcategory: "new_listing",
         mediaType: "video"
       }
     ] as never;
-    let resolveRequest!: (value: ReadableStreamDefaultReader<Uint8Array>) => void;
+    let resolveRequest!: (
+      value: ReadableStreamDefaultReader<Uint8Array>
+    ) => void;
     const requestPromise = new Promise<ReadableStreamDefaultReader<Uint8Array>>(
       (resolve) => {
         resolveRequest = resolve;
@@ -605,12 +653,12 @@ describe("useContentGeneration", () => {
     const { result } = renderHook(() =>
       useContentGeneration({
         listingId: "listing-1",
-        listingPostItems: initialListingPostItems,
+        listingContentItems: initialListingContentItems,
         initialMediaTab: "videos",
         initialSubcategory: "new_listing",
         activeMediaTab: "videos",
         activeSubcategory: "new_listing",
-        videoItems: EMPTY_VIDEO_ITEMS
+        listingClipItems: EMPTY_VIDEO_ITEMS
       })
     );
 
@@ -622,7 +670,7 @@ describe("useContentGeneration", () => {
       await result.current.loadMoreForActiveFilter();
     });
 
-    expect(mockFetchListingCreatePostItemsPage).not.toHaveBeenCalledWith(
+    expect(mockFetchListingContentItemsPage).not.toHaveBeenCalledWith(
       "listing-1",
       expect.objectContaining({
         offset: 1,
@@ -661,12 +709,12 @@ describe("useContentGeneration", () => {
     const { result } = renderHook(() =>
       useContentGeneration({
         listingId: "listing-1",
-        listingPostItems: EMPTY_LISTING_POST_ITEMS,
+        listingContentItems: EMPTY_LISTING_CONTENT_ITEMS,
         initialMediaTab: "videos",
         initialSubcategory: "new_listing",
         activeMediaTab: "videos",
         activeSubcategory: "new_listing",
-        videoItems: previewVideoItems
+        listingClipItems: previewVideoItems
       })
     );
 
@@ -674,7 +722,7 @@ describe("useContentGeneration", () => {
       await result.current.generateSubcategoryContent("new_listing");
     });
 
-    const generatedItem = result.current.localPostItems[0] as {
+    const generatedItem = result.current.bucketContentItems[0] as {
       orderedClipIds?: string[];
       clipDurationOverrides?: Record<string, number>;
     };
@@ -704,7 +752,9 @@ describe("useContentGeneration", () => {
         category: "exterior"
       }
     ] as never;
-    mockExtractJsonItems.mockReturnValueOnce([{ hook: "Hook", caption: "Caption" }]);
+    mockExtractJsonItems.mockReturnValueOnce([
+      { hook: "Hook", caption: "Caption" }
+    ]);
     mockStreamEvents.mockReturnValue(
       eventsGenerator([
         {
@@ -721,12 +771,12 @@ describe("useContentGeneration", () => {
     const { result } = renderHook(() =>
       useContentGeneration({
         listingId: "listing-1",
-        listingPostItems: EMPTY_LISTING_POST_ITEMS,
+        listingContentItems: EMPTY_LISTING_CONTENT_ITEMS,
         initialMediaTab: "videos",
         initialSubcategory: "new_listing",
         activeMediaTab: "videos",
         activeSubcategory: "new_listing",
-        videoItems: previewVideoItems
+        listingClipItems: previewVideoItems
       })
     );
 
@@ -734,7 +784,7 @@ describe("useContentGeneration", () => {
       await result.current.generateSubcategoryContent("new_listing");
     });
 
-    expect(result.current.localPostItems[0]).toEqual(
+    expect(result.current.bucketContentItems[0]).toEqual(
       expect.objectContaining({
         cacheKeyTimestamp: 123,
         cacheKeyId: 0
@@ -771,24 +821,27 @@ describe("useContentGeneration", () => {
     const { result } = renderHook(() =>
       useContentGeneration({
         listingId: "listing-1",
-        listingPostItems: EMPTY_LISTING_POST_ITEMS,
+        listingContentItems: EMPTY_LISTING_CONTENT_ITEMS,
         initialMediaTab: "videos",
         initialSubcategory: "new_listing",
         activeMediaTab: "videos",
         activeSubcategory: "new_listing",
-        videoItems: EMPTY_VIDEO_ITEMS
+        listingClipItems: EMPTY_VIDEO_ITEMS
       })
     );
 
     let generationPromise: Promise<void>;
     act(() => {
-      generationPromise = result.current.generateSubcategoryContent("new_listing", {
-        generationCount: 4
-      });
+      generationPromise = result.current.generateSubcategoryContent(
+        "new_listing",
+        {
+          generationCount: 4
+        }
+      );
     });
 
     await waitFor(() => {
-      expect(result.current.localPostItems).toHaveLength(1);
+      expect(result.current.bucketContentItems).toHaveLength(1);
     });
 
     expect(result.current.loadingCount).toBe(3);
@@ -798,5 +851,4 @@ describe("useContentGeneration", () => {
       await generationPromise;
     });
   });
-
 });

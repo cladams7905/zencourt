@@ -8,7 +8,10 @@ const mockEmitListingSidebarUpdate = jest.fn();
 const mockGetImageMetadataFromFile = jest.fn();
 
 jest.mock("@web/src/server/actions/listings/commands", () => ({
-  createListingForCurrentUser: (...args: unknown[]) => mockCreateListing(...args),
+  createListingForCurrentUser: (...args: unknown[]) => mockCreateListing(...args)
+}));
+
+jest.mock("@web/src/server/actions/listings/image", () => ({
   createListingImageRecordsForCurrentUser: (...args: unknown[]) =>
     mockCreateListingImageRecords(...args),
   getListingImageUploadUrlsForCurrentUser: (...args: unknown[]) =>

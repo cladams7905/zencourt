@@ -9,7 +9,7 @@ import {
 
 export function useListingCreateMediaItems(params: {
   activeMediaTab: "videos" | "images";
-  activeMediaItems: ContentItem[];
+  activeContentItems: ContentItem[];
   listingImages: ListingCreateImage[];
   isGenerating: boolean;
   loadingCount: number;
@@ -21,7 +21,7 @@ export function useListingCreateMediaItems(params: {
 }) {
   const {
     activeMediaTab,
-    activeMediaItems,
+    activeContentItems,
     listingImages,
     isGenerating,
     loadingCount,
@@ -33,7 +33,7 @@ export function useListingCreateMediaItems(params: {
   } = params;
 
   const fallbackImagePreviewItems = React.useMemo<ListingImagePreviewItem[]>(() => {
-    if (activeMediaTab !== "images" || activeMediaItems.length === 0) {
+    if (activeMediaTab !== "images" || activeContentItems.length === 0) {
       return [];
     }
 
@@ -48,7 +48,7 @@ export function useListingCreateMediaItems(params: {
       return b.uploadedAtMs - a.uploadedAtMs;
     });
 
-    return activeMediaItems.map((item, index) => {
+    return activeContentItems.map((item, index) => {
       const rankedForItem = rankListingImagesForItem(fallbackSortedImages, item);
       const variedForItem = buildVariedImageSequence(rankedForItem, `${item.id}:${index}`);
       const fallbackSlides = [
@@ -83,7 +83,7 @@ export function useListingCreateMediaItems(params: {
         coverImageUrl: slides[0]?.imageUrl ?? null
       };
     });
-  }, [activeMediaItems, activeMediaTab, listingImages]);
+  }, [activeContentItems, activeMediaTab, listingImages]);
 
   const activeImagePreviewItems = React.useMemo(() => {
     if (isTemplateRenderingUnavailable) {
@@ -96,7 +96,7 @@ export function useListingCreateMediaItems(params: {
     if (activeMediaTab !== "images") {
       return 0;
     }
-    if (initialPageLoadingCount > 0 && activeMediaItems.length === 0) {
+    if (initialPageLoadingCount > 0 && activeContentItems.length === 0) {
       return initialPageLoadingCount;
     }
     if (loadingMoreCount > 0) {
@@ -109,13 +109,13 @@ export function useListingCreateMediaItems(params: {
       return Math.max(0, loadingCount);
     }
     const expectingTemplateResults =
-      activeMediaItems.length > 0 && (isTemplateRendering || templatePreviewItems.length === 0);
+      activeContentItems.length > 0 && (isTemplateRendering || templatePreviewItems.length === 0);
     if (!expectingTemplateResults) {
       return 0;
     }
-    return Math.max(0, activeMediaItems.length - templatePreviewItems.length);
+    return Math.max(0, activeContentItems.length - templatePreviewItems.length);
   }, [
-    activeMediaItems.length,
+    activeContentItems.length,
     activeMediaTab,
     initialPageLoadingCount,
     loadingMoreCount,

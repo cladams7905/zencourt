@@ -5,10 +5,10 @@ import { requireAuthenticatedUser } from "@web/src/server/actions/_auth/api";
 import { requireListingAccess } from "@web/src/server/models/listings/access";
 import type { ListingCreateMediaTab } from "@web/src/components/listings/create/shared/constants";
 import type { ListingContentSubcategory } from "@shared/types/models";
-import { getListingCreatePostItems } from "./queries";
+import { getListingContentItems } from "./queries";
 
-export const getListingCreatePostItemsForCurrentUser = withServerActionCaller(
-  "getListingCreatePostItemsForCurrentUser",
+export const getListingContentItemsForCurrentUser = withServerActionCaller(
+  "getListingContentItemsForCurrentUser",
   async (
     listingId: string,
     params: {
@@ -20,7 +20,7 @@ export const getListingCreatePostItemsForCurrentUser = withServerActionCaller(
   ) => {
     const user = await requireAuthenticatedUser();
     await requireListingAccess(listingId, user.id);
-    return getListingCreatePostItems({
+    return getListingContentItems({
       userId: user.id,
       listingId,
       mediaTab: params.mediaTab,

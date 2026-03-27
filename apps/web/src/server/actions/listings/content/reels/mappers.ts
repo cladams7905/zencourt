@@ -1,12 +1,18 @@
 import type { DashboardContentItem as ContentItem } from "@web/src/components/dashboard/shared/types";
-import { buildReelSourceKey, isSavedListingReelMetadata } from "@web/src/components/listings/create/shared/reels";
+import {
+  buildReelSourceKey,
+  isSavedListingReelMetadata
+} from "@web/src/components/listings/create/shared/reels";
 import type { SavedListingReelMetadata } from "@web/src/components/listings/create/shared/reels";
 import type { DBContent, DBUserMedia } from "@db/types/models";
 
 export function mapSavedReelContentToCreateItem(
   contentRow: DBContent
 ): ContentItem | null {
-  if (contentRow.contentType !== "video" || !isSavedListingReelMetadata(contentRow.metadata)) {
+  if (
+    contentRow.contentType !== "video" ||
+    !isSavedListingReelMetadata(contentRow.metadata)
+  ) {
     return null;
   }
 
@@ -27,7 +33,9 @@ export function mapSavedReelContentToCreateItem(
   };
 }
 
-export function buildSavedReelDedupKey(metadata: SavedListingReelMetadata): string | null {
+export function buildSavedReelDedupKey(
+  metadata: SavedListingReelMetadata
+): string | null {
   if (
     typeof metadata.originCacheKeyTimestamp !== "number" ||
     typeof metadata.originCacheKeyId !== "number"

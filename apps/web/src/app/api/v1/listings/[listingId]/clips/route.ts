@@ -7,7 +7,7 @@ import {
 import { ApiError } from "@web/src/app/api/v1/_utils";
 import { runWithCaller } from "@web/src/server/infra/logger/callContext";
 import { parseRequiredRouteParam } from "@shared/utils/api/parsers";
-import { getListingClipVersionItemsForCurrentUser } from "@web/src/server/actions/listings/queries";
+import { getListingClipVersionItemsForCurrentUser } from "@web/src/server/actions/listings/clips";
 
 export const runtime = "nodejs";
 
@@ -15,7 +15,7 @@ export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ listingId: string }> }
 ) {
-  return runWithCaller("api/v1/listings/clip-versions", async () => {
+  return runWithCaller("api/v1/listings/clips", async () => {
     try {
       const listingId = parseRequiredRouteParam(
         (await params).listingId,
@@ -43,9 +43,7 @@ export async function GET(
       return apiErrorResponse(
         StatusCode.INTERNAL_SERVER_ERROR,
         "INTERNAL_ERROR",
-        error instanceof Error
-          ? error.message
-          : "Failed to load clip versions",
+        error instanceof Error ? error.message : "Failed to load clip versions",
         {
           message:
             error instanceof Error

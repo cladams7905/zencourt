@@ -93,7 +93,7 @@ export function useListingClipManagerWorkspaceSync({
   );
 
   const { data } = useSWR(
-    `/api/v1/listings/${listingId}/clip-versions`,
+    `/api/v1/listings/${listingId}/clips`,
     (url: string) =>
       fetchApiData<{ clipVersionItems: ListingClipVersionItem[] }>(
         url,

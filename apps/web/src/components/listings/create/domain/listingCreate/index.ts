@@ -1,6 +1,5 @@
 export * from "./workflow";
-export * from "./content/generation";
-export * from "./content/query";
+export * from "./content";
 export * from "./media";
 export * from "./preview";
 export * from "./templateRender";

@@ -3,13 +3,13 @@ import type { ContentItem } from "@web/src/components/dashboard/components/Conte
 import type { ListingCreateMediaTab } from "@web/src/components/listings/create/shared/constants";
 import type { ListingContentSubcategory } from "@shared/types/models";
 
-export type ListingCreatePostItemsPage = {
+export type ListingContentItemsPage = {
   items: ContentItem[];
   hasMore: boolean;
   nextOffset: number;
 };
 
-export function buildListingCreatePostItemsPageKey(
+export function buildListingContentItemsPageKey(
   listingId: string,
   params: {
     mediaTab?: ListingCreateMediaTab;
@@ -34,14 +34,13 @@ export function buildListingCreatePostItemsPageKey(
 
   const query = searchParams.toString();
   return query
-    ? `/api/v1/listings/${listingId}/create-post-items?${query}`
-    : `/api/v1/listings/${listingId}/create-post-items`;
+    ? `/api/v1/listings/${listingId}/content?${query}`
+    : `/api/v1/listings/${listingId}/content`;
 }
 
-export const buildListingCreatePostItemsPageUrl =
-  buildListingCreatePostItemsPageKey;
+export const buildListingContentItemsPageUrl = buildListingContentItemsPageKey;
 
-export async function fetchListingCreatePostItemsPage(
+export async function fetchListingContentItemsPage(
   listingId: string,
   params: {
     mediaTab?: ListingCreateMediaTab;
@@ -49,9 +48,9 @@ export async function fetchListingCreatePostItemsPage(
     limit?: number;
     offset?: number;
   }
-): Promise<ListingCreatePostItemsPage> {
-  return fetchApiData<ListingCreatePostItemsPage>(
-    buildListingCreatePostItemsPageKey(listingId, params),
+): Promise<ListingContentItemsPage> {
+  return fetchApiData<ListingContentItemsPage>(
+    buildListingContentItemsPageKey(listingId, params),
     undefined,
     "Failed to load listing create content."
   );

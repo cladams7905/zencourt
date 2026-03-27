@@ -8,8 +8,8 @@ describe("useListingCreatePreviewPlans", () => {
         listingId: "l1",
         activeMediaTab: "videos",
         activeSubcategory: "new_listing",
-        activeMediaItems: [{ id: "caption-1", hook: "Hook" }] as never,
-        videoItems: [{ id: "clip-1", videoUrl: "https://example.com/v.mp4", durationSeconds: 3 }] as never
+        activeContentItems: [{ id: "caption-1", hook: "Hook" }] as never,
+        listingClipItems: [{ id: "clip-1", videoUrl: "https://example.com/v.mp4", durationSeconds: 3 }] as never
       })
     );
 
@@ -22,14 +22,14 @@ describe("useListingCreatePreviewPlans", () => {
         listingId: "l1",
         activeMediaTab: "videos",
         activeSubcategory: "new_listing",
-        activeMediaItems: [
+        activeContentItems: [
           {
             id: "caption-1",
             hook: "Hook",
             orderedClipIds: ["clip-2", "clip-1"]
           }
         ] as never,
-        videoItems: [
+        listingClipItems: [
           {
             id: "clip-1",
             videoUrl: "https://example.com/1.mp4",
@@ -58,14 +58,14 @@ describe("useListingCreatePreviewPlans", () => {
         listingId: "l1",
         activeMediaTab: "videos",
         activeSubcategory: "new_listing",
-        activeMediaItems: [
+        activeContentItems: [
           {
             id: "caption-1",
             hook: "Hook",
             clipDurationOverrides: { "clip-2": 4, "clip-1": 2.75 }
           }
         ] as never,
-        videoItems: [
+        listingClipItems: [
           {
             id: "clip-1",
             videoUrl: "https://example.com/1.mp4",
@@ -99,7 +99,7 @@ describe("useListingCreatePreviewPlans", () => {
         listingId: "l1",
         activeMediaTab: "videos",
         activeSubcategory: "new_listing",
-        activeMediaItems: [
+        activeContentItems: [
           {
             id: "saved-reel-1",
             hook: "Saved hook",
@@ -117,7 +117,7 @@ describe("useListingCreatePreviewPlans", () => {
             ]
           }
         ] as never,
-        videoItems: [
+        listingClipItems: [
           {
             id: "clip-1",
             reelClipSource: "listing_clip",
@@ -160,7 +160,7 @@ describe("useListingCreatePreviewPlans", () => {
   });
 
   it("uses cache identity as the stable seed for untouched cached auto-generated reels", () => {
-    const videoItems = [
+    const listingClipItems = [
       {
         id: "clip-1",
         videoUrl: "https://example.com/1.mp4",
@@ -186,7 +186,7 @@ describe("useListingCreatePreviewPlans", () => {
         listingId: "l1",
         activeMediaTab: "videos",
         activeSubcategory: "new_listing",
-        activeMediaItems: [
+        activeContentItems: [
           {
             id: "generated-batch-a-0",
             hook: "Hook",
@@ -194,7 +194,7 @@ describe("useListingCreatePreviewPlans", () => {
             cacheKeyId: 0
           }
         ] as never,
-        videoItems
+        listingClipItems
       })
     );
 
@@ -203,7 +203,7 @@ describe("useListingCreatePreviewPlans", () => {
         listingId: "l1",
         activeMediaTab: "videos",
         activeSubcategory: "new_listing",
-        activeMediaItems: [
+        activeContentItems: [
           {
             id: "cached-new_listing-video-123-0",
             hook: "Hook",
@@ -211,7 +211,7 @@ describe("useListingCreatePreviewPlans", () => {
             cacheKeyId: 0
           }
         ] as never,
-        videoItems
+        listingClipItems
       })
     );
 

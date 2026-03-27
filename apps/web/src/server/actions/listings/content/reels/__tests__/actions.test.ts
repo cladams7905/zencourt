@@ -36,7 +36,7 @@ jest.mock("@web/src/server/models/content", () => ({
     (mockUpdateContent as (...a: unknown[]) => unknown)(...args)
 }));
 
-import { saveListingVideoReel } from "@web/src/server/actions/listings/reels";
+import { saveListingVideoReel } from "@web/src/server/actions/listings/content/reels";
 
 describe("saveListingVideoReel", () => {
   beforeEach(() => {

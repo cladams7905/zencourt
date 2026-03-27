@@ -12,19 +12,22 @@ import { useListingCreateMediaItems } from "../media/mediaItems";
 import { useListingCreatePreviewPlans } from "../preview/previewPlans";
 import { useDeleteCachedPreviewItem } from "../media/deleteCachedPreviewItem";
 
+type ListingContentItem = ContentItem;
+type ListingClipItem = ContentItem;
+
 export function useListingCreateWorkflow(params: {
   listingId: string;
-  listingPostItems: ContentItem[];
+  listingContentItems: ListingContentItem[];
   listingImages: ListingCreateImage[];
-  videoItems: ContentItem[];
+  listingClipItems: ListingClipItem[];
   initialMediaTab: ListingCreateMediaTab;
   initialSubcategory: ListingContentSubcategory;
 }) {
   const {
     listingId,
-    listingPostItems,
+    listingContentItems,
     listingImages,
-    videoItems,
+    listingClipItems,
     initialMediaTab,
     initialSubcategory
   } = params;
@@ -38,7 +41,7 @@ export function useListingCreateWorkflow(params: {
     React.useState<string | null>(null);
 
   const {
-    localPostItems,
+    bucketContentItems,
     isGenerating,
     generationError,
     loadingCount,
@@ -51,12 +54,12 @@ export function useListingCreateWorkflow(params: {
     replaceContentItem
   } = useContentGeneration({
     listingId,
-    listingPostItems,
+    listingContentItems,
     initialMediaTab,
     initialSubcategory,
     activeMediaTab,
     activeSubcategory,
-    videoItems
+    listingClipItems
   });
 
   const generateSubcategoryContent = React.useCallback(
@@ -76,10 +79,10 @@ export function useListingCreateWorkflow(params: {
     [generateSubcategoryContentRaw]
   );
 
-  const activeMediaItems = useListingCreateActiveMediaItems({
+  const activeContentItems = useListingCreateActiveMediaItems({
     activeMediaTab,
     activeSubcategory,
-    localPostItems
+    bucketContentItems
   });
 
   const clearTemplateIdForRender = React.useCallback(() => {
@@ -95,7 +98,7 @@ export function useListingCreateWorkflow(params: {
     listingId,
     activeSubcategory,
     activeMediaTab,
-    captionItems: activeMediaItems,
+    captionItems: activeContentItems,
     isGenerating,
     templateIdForRender: templateIdForRender ?? undefined,
     clearTemplateIdForRender
@@ -103,7 +106,7 @@ export function useListingCreateWorkflow(params: {
 
   const { activeImagePreviewItems, imageLoadingCount } = useListingCreateMediaItems({
     activeMediaTab,
-    activeMediaItems,
+    activeContentItems,
     listingImages,
     isGenerating,
     loadingCount,
@@ -118,14 +121,14 @@ export function useListingCreateWorkflow(params: {
     listingId,
     activeMediaTab,
     activeSubcategory,
-    activeMediaItems,
-    videoItems
+    activeContentItems,
+    listingClipItems
   });
 
   const handleDeleteImagePreviewItem = useDeleteCachedPreviewItem({
     listingId,
     activeSubcategory,
-    activeMediaItems,
+    activeContentItems,
     removeContentItem
   });
 
@@ -141,7 +144,7 @@ export function useListingCreateWorkflow(params: {
     loadingMoreCount,
     hasMoreForActiveFilter,
     generateSubcategoryContent,
-    activeMediaItems,
+    activeContentItems,
     templateRenderError,
     isTemplateRendering,
     activeImagePreviewItems,

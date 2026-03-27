@@ -16,7 +16,7 @@ import { DomainValidationError } from "@web/src/server/errors/domain";
 import type { PlayablePreviewTextUpdate } from "@web/src/components/listings/create/shared/types";
 import type { SavedListingReelMetadata } from "@web/src/components/listings/create/shared/reels";
 import { isSavedListingReelMetadata } from "@web/src/components/listings/create/shared/reels";
-import { mapSavedReelContentToCreateItem } from "./reelContent";
+import { mapSavedReelContentToCreateItem } from "./mappers";
 
 function normalizeSequence(
   sequence: PlayablePreviewTextUpdate["sequence"]

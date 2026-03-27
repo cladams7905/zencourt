@@ -6,7 +6,7 @@ describe("useListingCreateMediaItems", () => {
     const { result } = renderHook(() =>
       useListingCreateMediaItems({
         activeMediaTab: "images",
-        activeMediaItems: [
+        activeContentItems: [
           {
             id: "item-1",
             hook: "Hook",

@@ -23,7 +23,7 @@ export function buildClipDownloadHref(
   listingId: string,
   clipVersionId: string
 ) {
-  return `/api/v1/listings/${listingId}/clip-versions/${clipVersionId}/download`;
+  return `/api/v1/listings/${listingId}/clips/${clipVersionId}/download`;
 }
 
 export function serializeClipItems(itemsToSerialize: ListingClipVersionItem[]) {

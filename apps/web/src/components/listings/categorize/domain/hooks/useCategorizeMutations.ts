@@ -4,7 +4,7 @@ import type { ListingImageItem } from "@web/src/components/listings/categorize/s
 import {
   assignPrimaryListingImageForCategoryForCurrentUser,
   updateListingImageAssignmentsForCurrentUser
-} from "@web/src/server/actions/listings/commands";
+} from "@web/src/server/actions/listings/image";
 
 type UseCategorizeMutationsParams = {
   listingId: string;

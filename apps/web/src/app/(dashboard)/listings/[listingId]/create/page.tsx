@@ -9,7 +9,7 @@ import {
   parseInitialSubcategory
 } from "@web/src/components/listings/create/domain/listingCreate";
 import { redirectToListingStage } from "../_utils/redirectToListingStage";
-import { getListingCreateViewData } from "@web/src/server/actions/listings/queries";
+import { getListingCreateViewData } from "@web/src/server/actions/listings/viewData";
 import type { ListingPropertyDetails } from "@shared/types/models";
 
 interface ListingCreatePageProps {
@@ -43,7 +43,7 @@ export default async function ListingCreatePage({
 
     redirectToListingStage(listingId, listing.listingStage, "create");
 
-    const { videoItems, clipVersionItems, listingPostItems, listingImages } =
+    const { listingClipItems, clipVersionItems, listingContentItems, listingImages } =
       await getListingCreateViewData(user.id, listingId, {
         initialMediaTab,
         initialSubcategory
@@ -60,9 +60,9 @@ export default async function ListingCreatePage({
         title={listing.title?.trim() || "Listing"}
         listingAddress={listing.address ?? null}
         openHouseContext={openHouseContext}
-        videoItems={videoItems}
+        listingClipItems={listingClipItems}
         clipVersionItems={clipVersionItems}
-        listingPostItems={listingPostItems}
+        listingContentItems={listingContentItems}
         initialMediaTab={initialMediaTab}
         initialSubcategory={initialSubcategory}
         listingImages={listingImages}

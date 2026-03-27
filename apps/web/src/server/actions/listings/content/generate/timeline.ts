@@ -3,6 +3,9 @@ import { buildListingCreatePreviewPlans } from "@web/src/lib/domain/listing/crea
 import type { ListingContentSubcategory } from "@shared/types/models";
 import type { ListingGeneratedItem } from "@web/src/server/infra/cache/listingContent/cache";
 
+type ListingContentItem = ContentItem;
+type ListingClipItem = ContentItem;
+
 type GeneratedPreviewContentItem = ContentItem & {
   cacheKeyTimestamp: number;
   cacheKeyId: number;
@@ -13,7 +16,7 @@ function buildGeneratedContentItem(params: {
   subcategory: ListingContentSubcategory;
   cacheKeyTimestamp: number;
   cacheKeyId: number;
-}): ContentItem {
+}): ListingContentItem {
   return {
     id: `generated-${params.cacheKeyTimestamp}-${params.cacheKeyId}`,
     aspectRatio: "square",
@@ -33,10 +36,10 @@ export function addGeneratedVideoTimelines(params: {
   listingId: string;
   subcategory: ListingContentSubcategory;
   items: ListingGeneratedItem[];
-  videoItems: ContentItem[];
+  listingClipItems: ListingClipItem[];
   cacheKeyTimestamp: number;
 }): ListingGeneratedItem[] {
-  const { listingId, subcategory, items, videoItems, cacheKeyTimestamp } = params;
+  const { listingId, subcategory, items, listingClipItems, cacheKeyTimestamp } = params;
 
   return items.map((item, index) => {
     if (item.orderedClipIds?.length) {
@@ -47,7 +50,7 @@ export function addGeneratedVideoTimelines(params: {
       listingId,
       activeMediaTab: "videos",
       activeSubcategory: subcategory,
-      activeMediaItems: [
+      activeContentItems: [
         buildGeneratedContentItem({
           item,
           subcategory,
@@ -55,7 +58,7 @@ export function addGeneratedVideoTimelines(params: {
           cacheKeyId: index
         })
       ],
-      videoItems
+      listingClipItems
     });
 
     if (!plan) {

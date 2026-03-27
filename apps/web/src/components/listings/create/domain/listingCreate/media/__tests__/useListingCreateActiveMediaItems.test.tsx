@@ -3,7 +3,7 @@ import { useListingCreateActiveMediaItems } from "../activeMediaItems";
 
 describe("useListingCreateActiveMediaItems", () => {
   it("filters by subcategory and media type", () => {
-    const localPostItems = [
+    const bucketContentItems = [
       { id: "1", listingSubcategory: "new_listing", mediaType: "image" },
       { id: "2", listingSubcategory: "new_listing", mediaType: "video" },
       { id: "3", listingSubcategory: "price_drop", mediaType: "image" }
@@ -13,7 +13,7 @@ describe("useListingCreateActiveMediaItems", () => {
       useListingCreateActiveMediaItems({
         activeMediaTab: "images",
         activeSubcategory: "new_listing",
-        localPostItems
+        bucketContentItems
       })
     );
 

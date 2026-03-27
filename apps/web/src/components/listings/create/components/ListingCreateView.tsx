@@ -48,9 +48,9 @@ type ListingCreateViewProps = {
   title: string;
   listingAddress?: string | null;
   openHouseContext?: ListingOpenHouseContext | null;
-  videoItems: ContentItem[];
+  listingClipItems: ContentItem[];
   clipVersionItems: ListingClipVersionItem[];
-  listingPostItems: ContentItem[];
+  listingContentItems: ContentItem[];
   listingImages: ListingCreateImage[];
   initialMediaTab?: ListingCreateMediaTab;
   initialSubcategory?: ListingContentSubcategory;
@@ -63,9 +63,9 @@ export function ListingCreateView({
   title,
   listingAddress,
   openHouseContext,
-  videoItems,
+  listingClipItems,
   clipVersionItems,
-  listingPostItems,
+  listingContentItems,
   listingImages,
   initialMediaTab = "videos",
   initialSubcategory = LISTING_CONTENT_SUBCATEGORIES[0]
@@ -90,7 +90,7 @@ export function ListingCreateView({
     loadingMoreCount,
     hasMoreForActiveFilter,
     generateSubcategoryContent,
-    activeMediaItems,
+    activeContentItems,
     templateRenderError,
     isTemplateRendering,
     activeImagePreviewItems,
@@ -101,9 +101,9 @@ export function ListingCreateView({
     replaceContentItem
   } = useListingCreateWorkflow({
     listingId,
-    listingPostItems,
+    listingContentItems,
     listingImages,
-    videoItems,
+    listingClipItems,
     initialMediaTab,
     initialSubcategory
   });
@@ -111,7 +111,7 @@ export function ListingCreateView({
   useListingCreateEffects({
     listingId,
     pathname,
-    activeMediaItemsLength: activeMediaItems.length,
+    activeContentItemsLength: activeContentItems.length,
     activeMediaTab,
     activeSubcategory,
     initialMediaTab,
@@ -272,8 +272,8 @@ export function ListingCreateView({
             <ListingVideoPreviewGrid
               listingId={listingId}
               plans={activePreviewPlans}
-              items={videoItems}
-              captionItems={activeMediaItems}
+              items={listingClipItems}
+              captionItems={activeContentItems}
               listingSubcategory={activeSubcategory}
               listingAddress={listingAddress ?? null}
               openHouseContext={openHouseContext ?? null}

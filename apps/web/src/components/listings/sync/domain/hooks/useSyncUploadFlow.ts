@@ -5,7 +5,7 @@ import { createListingForCurrentUser } from "@web/src/server/actions/listings/co
 import {
   createListingImageRecordsForCurrentUser,
   getListingImageUploadUrlsForCurrentUser
-} from "@web/src/server/actions/listings/commands";
+} from "@web/src/server/actions/listings/image";
 import {
   buildListingUploadRecordInput,
   buildProcessingRoute,

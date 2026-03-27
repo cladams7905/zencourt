@@ -7,17 +7,16 @@ import {
 } from "@web/src/app/api/v1/_responses";
 import { parseRequiredRouteParam } from "@shared/utils/api/parsers";
 import { runWithCaller } from "@web/src/server/infra/logger/callContext";
-import { getListingClipDownloadForCurrentUser } from "@web/src/server/actions/listings/queries";
+import { getListingClipDownloadForCurrentUser } from "@web/src/server/actions/listings/clips";
 
-const ROUTE_CALLER = "api/v1/listings/.../clip-versions/.../download";
+const ROUTE_CALLER =
+  "api/v1/listings/[listingId]/clips/[clipVersionId]/download";
 
 export const runtime = "nodejs";
 
 export async function GET(
   _request: Request,
-  {
-    params
-  }: { params: Promise<{ listingId: string; clipVersionId: string }> }
+  { params }: { params: Promise<{ listingId: string; clipVersionId: string }> }
 ) {
   return runWithCaller(ROUTE_CALLER, async () => {
     try {

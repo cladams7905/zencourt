@@ -7,7 +7,7 @@ import {
 } from "@web/src/app/api/v1/_responses";
 import { parseRequiredRouteParam } from "@shared/utils/api/parsers";
 import { runWithCaller } from "@web/src/server/infra/logger/callContext";
-import { getListingImagesForCurrentUser } from "@web/src/server/actions/listings/commands";
+import { getListingImagesForCurrentUser } from "@web/src/server/actions/listings/image";
 
 const ROUTE_CALLER = "api/v1/listings/.../images";
 
