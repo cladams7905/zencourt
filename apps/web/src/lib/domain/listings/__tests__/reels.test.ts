@@ -1,7 +1,7 @@
 import {
   buildReelSourceKey,
   isSavedListingReelMetadata
-} from "@web/src/lib/domain/listings/reels";
+} from "@web/src/lib/domain/listings/content/reels";
 
 describe("listing reel helpers", () => {
   it("accepts persisted listing reel metadata", () => {

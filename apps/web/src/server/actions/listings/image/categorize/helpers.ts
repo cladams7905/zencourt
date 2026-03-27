@@ -3,7 +3,7 @@ import type {
   CategorizationPhase,
   CategorizationProgress,
   SerializableImageData
-} from "@web/src/lib/domain/listings/images";
+} from "@web/src/lib/domain/listings/media/images";
 import {
   createChildLogger,
   logger as baseLogger

@@ -4,7 +4,7 @@ import * as React from "react";
 import { ListingViewHeader } from "@web/src/components/listings/shared";
 import { usePathname } from "next/navigation";
 import type { ListingContentItem as ContentItem } from "@web/src/lib/domain/listings/content";
-import type { ListingOpenHouseContext } from "@web/src/lib/domain/listings/openHouse";
+import type { ListingOpenHouseContext } from "@web/src/lib/domain/listings/content/openHouse";
 import {
   ListingClipManager,
   ListingVideoPreviewGrid,

@@ -1,5 +1,5 @@
 import type { ListingContentSubcategory } from "@shared/types/models";
-import type { CarouselSlide, ReelSequenceItem } from "./content";
+import type { CarouselSlide, ReelSequenceItem } from "./index";
 
 export type SavedListingReelMetadata = {
   source: "listing_reel";

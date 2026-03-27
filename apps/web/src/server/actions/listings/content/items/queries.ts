@@ -9,8 +9,8 @@ import type { ListingContentItem as ContentItem } from "@web/src/lib/domain/list
 import {
   LISTING_CREATE_INITIAL_PAGE_SIZE,
   type ListingCreateMediaTab
-} from "@web/src/lib/domain/listings/create";
-import { isSavedListingReelMetadata } from "@web/src/lib/domain/listings/reels";
+} from "@web/src/lib/domain/listings/content/create";
+import { isSavedListingReelMetadata } from "@web/src/lib/domain/listings/content/reels";
 import type { ListingContentSubcategory } from "@shared/types/models";
 import {
   buildSavedReelDedupKey,

@@ -3,7 +3,7 @@ import {
   buildReelSourceKey,
   isSavedListingReelMetadata,
   type SavedListingReelMetadata
-} from "@web/src/lib/domain/listings/reels";
+} from "@web/src/lib/domain/listings/content/reels";
 import type { DBContent, DBUserMedia } from "@db/types/models";
 
 export function mapSavedReelContentToCreateItem(

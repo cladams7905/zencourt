@@ -12,7 +12,7 @@ import {
   buildStoragePublicUrl
 } from "@shared/utils";
 import { isPriorityCategory } from "@shared/utils";
-import { resolveListingOpenHouseContext } from "@web/src/lib/domain/listings/openHouse";
+import { resolveListingOpenHouseContext } from "@web/src/lib/domain/listings/content/openHouse";
 import {
   createChildLogger,
   logger as baseLogger

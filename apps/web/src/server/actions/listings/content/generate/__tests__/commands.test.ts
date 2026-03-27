@@ -41,7 +41,7 @@ jest.mock("@web/src/server/actions/listings/content/generate/helpers", () => ({
     (mockBuildUpstreamRequestBody as (...a: unknown[]) => unknown)(...args)
 }));
 
-jest.mock("@web/src/lib/domain/listings/createPreviewPlans", () => ({
+jest.mock("@web/src/lib/domain/listings/content/createPreviewPlans", () => ({
   buildListingCreatePreviewPlans: (...args: unknown[]) =>
     (mockBuildListingCreatePreviewPlans as (...a: unknown[]) => unknown)(
       ...args

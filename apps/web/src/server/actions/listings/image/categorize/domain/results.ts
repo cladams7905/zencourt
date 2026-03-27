@@ -1,4 +1,4 @@
-import type { SerializableImageData } from "@web/src/lib/domain/listings/images";
+import type { SerializableImageData } from "@web/src/lib/domain/listings/media/images";
 import type { CategorizedImages, CategorizationResult } from "./types";
 
 export function cloneSerializableImages(

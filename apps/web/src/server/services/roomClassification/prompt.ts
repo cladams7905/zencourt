@@ -1,4 +1,4 @@
-import { ROOM_CATEGORIES } from "@web/src/lib/domain/listings/roomCategories";
+import { ROOM_CATEGORIES } from "@web/src/lib/domain/listings/media/roomCategories";
 
 const CATEGORY_PROMPT_LINES = Object.values(ROOM_CATEGORIES)
   .sort((a, b) => a.order - b.order)

@@ -9,13 +9,13 @@ import type {
   InitialVideoStatusPayload,
   VideoGenerationBatchStatusPayload,
   VideoJobUpdateEvent
-} from "@web/src/lib/domain/listings/videoStatus";
+} from "@web/src/lib/domain/listings/video/videoStatus";
 import { isPriorityCategory } from "@shared/utils";
 import {
   getBatchGenerationHardTimeoutMs,
   isPastTimeout,
   VIDEO_GENERATION_TIMEOUT_MESSAGE
-} from "@web/src/lib/domain/listings/videoGenerationTimeouts";
+} from "@web/src/lib/domain/listings/video/videoGenerationTimeouts";
 
 function countJobsByStatus(jobs: Array<{ status: string }>) {
   const completedJobs = jobs.filter((job) => job.status === "completed").length;

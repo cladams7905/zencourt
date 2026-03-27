@@ -9,7 +9,7 @@ import {
   getClipRegenerationSoftTimeoutMs,
   isPastTimeout,
   VIDEO_GENERATION_TIMEOUT_MESSAGE
-} from "@web/src/lib/domain/listings/videoGenerationTimeouts";
+} from "@web/src/lib/domain/listings/video/videoGenerationTimeouts";
 import {
   applyOptimisticClipRegenerations,
   getLatestAttemptVersion,

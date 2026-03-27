@@ -2,12 +2,12 @@ import * as React from "react";
 import useSWR from "swr";
 import { toast } from "sonner";
 import { emitListingSidebarUpdate } from "@web/src/lib/domain/listings/sidebarEvents";
-import type { VideoGenerationBatchStatusPayload } from "@web/src/lib/domain/listings/videoStatus";
+import type { VideoGenerationBatchStatusPayload } from "@web/src/lib/domain/listings/video/videoStatus";
 import {
   getBatchGenerationSoftTimeoutMs,
   isPastTimeout,
   VIDEO_GENERATION_TIMEOUT_MESSAGE
-} from "@web/src/lib/domain/listings/videoGenerationTimeouts";
+} from "@web/src/lib/domain/listings/video/videoGenerationTimeouts";
 import {
   cancelVideoGeneration,
   fetchVideoStatus,

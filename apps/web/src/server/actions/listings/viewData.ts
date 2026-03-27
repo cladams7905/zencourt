@@ -13,7 +13,7 @@ import { mapUserMediaToVideoItem } from "./content/reels";
 import {
   LISTING_CREATE_INITIAL_PAGE_SIZE,
   type ListingCreateMediaTab
-} from "@web/src/lib/domain/listings/create";
+} from "@web/src/lib/domain/listings/content/create";
 import type { ListingContentSubcategory } from "@shared/types/models";
 import { getListingContentItems } from "./content/items";
 import { getListingClipVersionItems } from "./clips";

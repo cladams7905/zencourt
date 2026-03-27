@@ -1,4 +1,4 @@
-import type { PreviewTimelineClip } from "../preview/previewTimeline";
+import type { PreviewTimelineClip } from "@web/src/lib/domain/listings/content/createPreviewPlans";
 import type { ListingImagePreviewItem } from "@web/src/components/listings/create/shared/types";
 import type { ListingContentItem as ContentItem } from "@web/src/lib/domain/listings/content";
 import type {

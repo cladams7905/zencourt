@@ -14,7 +14,7 @@ import type {
   ListingContentSubcategory,
   ListingPropertyDetails
 } from "@shared/types/models";
-import { resolveListingOpenHouseContext } from "@web/src/lib/domain/listings/openHouse";
+import { resolveListingOpenHouseContext } from "@web/src/lib/domain/listings/content/openHouse";
 import {
   createChildLogger,
   logger as baseLogger

@@ -3,14 +3,14 @@
 import * as React from "react";
 import type { ListingContentSubcategory } from "@shared/types/models";
 import type { ListingContentItem as ContentItem } from "@web/src/lib/domain/listings/content";
-import type { ListingCreateImage } from "../shared/utils";
+import type { ListingCreateImage } from "./shared/utils";
 import type { ListingCreateMediaTab } from "@web/src/components/listings/create/shared/constants";
-import { useContentGeneration } from "../content/generation";
-import { useListingCreateActiveMediaItems } from "../media/activeMediaItems";
-import { useTemplateRender } from "../templateRender";
-import { useListingCreateMediaItems } from "../media/mediaItems";
-import { useListingCreatePreviewPlans } from "../preview/previewPlans";
-import { useDeleteCachedPreviewItem } from "../media/deleteCachedPreviewItem";
+import { useContentGeneration } from "./content/generation";
+import { useListingCreateActiveMediaItems } from "./media/activeMediaItems";
+import { useTemplateRender } from "./templateRender";
+import { useListingCreateMediaItems } from "./media/mediaItems";
+import { useListingCreatePreviewPlans } from "./usePreviewPlans";
+import { useDeleteCachedPreviewItem } from "./media/deleteCachedPreviewItem";
 
 type ListingContentItem = ContentItem;
 type ListingClipItem = ContentItem;
@@ -37,8 +37,9 @@ export function useListingCreateWorkflow(params: {
   const [activeSubcategory, setActiveSubcategory] =
     React.useState<ListingContentSubcategory>(initialSubcategory);
   /** When set (e.g. by Dev single-template generate), next template render uses this id. Cleared after use. */
-  const [templateIdForRender, setTemplateIdForRender] =
-    React.useState<string | null>(null);
+  const [templateIdForRender, setTemplateIdForRender] = React.useState<
+    string | null
+  >(null);
 
   const {
     bucketContentItems,
@@ -104,18 +105,19 @@ export function useListingCreateWorkflow(params: {
     clearTemplateIdForRender
   });
 
-  const { activeImagePreviewItems, imageLoadingCount } = useListingCreateMediaItems({
-    activeMediaTab,
-    activeContentItems,
-    listingImages,
-    isGenerating,
-    loadingCount,
-    initialPageLoadingCount,
-    loadingMoreCount,
-    isTemplateRendering,
-    isTemplateRenderingUnavailable,
-    templatePreviewItems
-  });
+  const { activeImagePreviewItems, imageLoadingCount } =
+    useListingCreateMediaItems({
+      activeMediaTab,
+      activeContentItems,
+      listingImages,
+      isGenerating,
+      loadingCount,
+      initialPageLoadingCount,
+      loadingMoreCount,
+      isTemplateRendering,
+      isTemplateRenderingUnavailable,
+      templatePreviewItems
+    });
 
   const activePreviewPlans = useListingCreatePreviewPlans({
     listingId,

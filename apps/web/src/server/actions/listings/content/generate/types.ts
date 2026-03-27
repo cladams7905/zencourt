@@ -2,7 +2,7 @@ import type {
   ListingContentSubcategory,
   ListingPropertyDetails
 } from "@shared/types/models";
-import type { ListingOpenHouseContext } from "@web/src/lib/domain/listings/openHouse";
+import type { ListingOpenHouseContext } from "@web/src/lib/domain/listings/content/openHouse";
 import type {
   ListingGeneratedItem,
   ListingMediaType

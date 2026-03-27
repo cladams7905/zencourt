@@ -1,7 +1,7 @@
 import {
   ROOM_CATEGORIES,
   RoomCategory
-} from "@web/src/lib/domain/listings/roomCategories";
+} from "@web/src/lib/domain/listings/media/roomCategories";
 
 const PROMPT_CONSTRAINTS =
   "No people. No added objects. Keep architecture and materials unchanged. Single continuous camera movement only. Full-bleed, edge-to-edge composition from the first frame, filling the entire video frame at all times. Start already full-screen. No framed or inset opening, no letterboxing or pillarboxing, and no fades, transitions, cuts, or scene changes.";

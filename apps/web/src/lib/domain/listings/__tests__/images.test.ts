@@ -3,7 +3,7 @@ import {
   toInsertDBImage,
   toSerializable,
   type ProcessedImage
-} from "@web/src/lib/domain/listings/images";
+} from "@web/src/lib/domain/listings/media/images";
 
 describe("listing images adapters", () => {
   it("maps processed image to serializable payload", () => {

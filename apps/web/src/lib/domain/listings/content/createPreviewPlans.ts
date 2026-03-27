@@ -9,7 +9,7 @@ import type {
 import type {
   CarouselSlide,
   ReelSequenceItem
-} from "./content";
+} from "./index";
 import { buildReelSourceKey } from "./reels";
 
 export type {

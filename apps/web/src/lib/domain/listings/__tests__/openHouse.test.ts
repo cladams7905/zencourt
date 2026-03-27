@@ -1,4 +1,4 @@
-import { resolveListingOpenHouseContext } from "../openHouse";
+import { resolveListingOpenHouseContext } from "../content/openHouse";
 
 describe("resolveListingOpenHouseContext", () => {
   it("selects the next upcoming event by date/time", () => {

@@ -2,7 +2,7 @@ import { ApiError } from "@web/src/server/errors/api";
 import {
   ROOM_CATEGORIES,
   RoomCategory
-} from "@web/src/lib/domain/listings/roomCategories";
+} from "@web/src/lib/domain/listings/media/roomCategories";
 import type { DBListingImage } from "@db/types/models";
 
 export type DerivedRoom = {

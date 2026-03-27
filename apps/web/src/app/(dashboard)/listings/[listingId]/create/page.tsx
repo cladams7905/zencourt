@@ -3,7 +3,7 @@ import { runWithCaller } from "@web/src/server/infra/logger/callContext";
 import { getListingById } from "@web/src/server/models/listings";
 import { requireUserOrRedirect } from "@web/src/app/(dashboard)/_utils/requireUserOrRedirect";
 import { ListingCreateView } from "@web/src/components/listings/create/components";
-import { resolveListingOpenHouseContext } from "@web/src/lib/domain/listings/openHouse";
+import { resolveListingOpenHouseContext } from "@web/src/lib/domain/listings/content/openHouse";
 import {
   parseInitialMediaTab,
   parseInitialSubcategory

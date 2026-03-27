@@ -26,7 +26,7 @@ import {
   streamContentGenerationEvents
 } from "./stream";
 import type { StreamedContentItem } from "./types";
-import { buildListingCreatePreviewPlans } from "../../preview/previewPlans";
+import { buildListingCreatePreviewPlans } from "../../usePreviewPlans";
 import {
   buildFetchedBucket,
   buildFilterKey,

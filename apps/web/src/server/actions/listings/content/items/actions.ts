@@ -3,7 +3,7 @@
 import { withServerActionCaller } from "@web/src/server/infra/logger/callContext";
 import { requireAuthenticatedUser } from "@web/src/server/actions/_auth/api";
 import { requireListingAccess } from "@web/src/server/models/listings/access";
-import type { ListingCreateMediaTab } from "@web/src/lib/domain/listings/create";
+import type { ListingCreateMediaTab } from "@web/src/lib/domain/listings/content/create";
 import type { ListingContentSubcategory } from "@shared/types/models";
 import { getListingContentItems } from "./queries";
 

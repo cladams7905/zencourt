@@ -1,5 +1,5 @@
 import { renderHook } from "@testing-library/react";
-import { useListingCreatePreviewPlans } from "../previewPlans";
+import { useListingCreatePreviewPlans } from "../usePreviewPlans";
 
 describe("useListingCreatePreviewPlans", () => {
   it("builds plans for video tab with clips and captions", () => {
@@ -9,7 +9,13 @@ describe("useListingCreatePreviewPlans", () => {
         activeMediaTab: "videos",
         activeSubcategory: "new_listing",
         activeContentItems: [{ id: "caption-1", hook: "Hook" }] as never,
-        listingClipItems: [{ id: "clip-1", videoUrl: "https://example.com/v.mp4", durationSeconds: 3 }] as never
+        listingClipItems: [
+          {
+            id: "clip-1",
+            videoUrl: "https://example.com/v.mp4",
+            durationSeconds: 3
+          }
+        ] as never
       })
     );
 
@@ -46,10 +52,9 @@ describe("useListingCreatePreviewPlans", () => {
       })
     );
 
-    expect(result.current[0]?.segments.map((segment) => segment.clipId)).toEqual([
-      "clip-2",
-      "clip-1"
-    ]);
+    expect(
+      result.current[0]?.segments.map((segment) => segment.clipId)
+    ).toEqual(["clip-2", "clip-1"]);
   });
 
   it("applies saved clip duration overrides from the caption item", () => {

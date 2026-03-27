@@ -1,5 +1,5 @@
 import type { ListingContentSubcategory } from "@shared/types/models";
-import type { ReelSequenceItem } from "./content";
+import type { ReelSequenceItem } from "./index";
 
 export type ListingCreateMediaTab = "videos" | "images";
 

@@ -3,7 +3,7 @@ import {
   buildPreviewTimelinePlans,
   buildPreviewTimelineVariants,
   type PreviewTimelineClip
-} from "../previewTimeline";
+} from "@web/src/lib/domain/listings/content/createPreviewPlans";
 
 const clips: PreviewTimelineClip[] = [
   { id: "a", category: "kitchen", durationSeconds: 4, isPriorityCategory: true, sortOrder: 1 },

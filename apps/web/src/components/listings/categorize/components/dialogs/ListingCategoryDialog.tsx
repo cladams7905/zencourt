@@ -21,7 +21,7 @@ import { Button } from "@web/src/components/ui/button";
 import {
   ROOM_CATEGORIES,
   type RoomCategory
-} from "@web/src/lib/domain/listings/roomCategories";
+} from "@web/src/lib/domain/listings/media/roomCategories";
 
 const MAX_CUSTOM_CATEGORY_LENGTH = 20;
 const CATEGORY_OPTIONS = Object.values(ROOM_CATEGORIES)

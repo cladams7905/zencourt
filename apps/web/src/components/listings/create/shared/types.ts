@@ -4,12 +4,12 @@ import type {
 } from "@web/src/lib/domain/listings/content";
 import type { PreviewTextOverlay } from "@shared/types/video";
 import type { TimelinePreviewResolvedSegment } from "@web/src/components/listings/create/media/video/components/ListingTimelinePreviewComposition";
-import type { PlayablePreviewSaveTarget } from "@web/src/lib/domain/listings/create";
+import type { PlayablePreviewSaveTarget } from "@web/src/lib/domain/listings/content/create";
 
 export type {
   PlayablePreviewSaveTarget,
   PlayablePreviewTextUpdate
-} from "@web/src/lib/domain/listings/create";
+} from "@web/src/lib/domain/listings/content/create";
 
 export type ListingImagePreviewSlide = {
   id: string;

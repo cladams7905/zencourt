@@ -7,7 +7,7 @@ import type {
   PreviewTimelinePlan
 } from "@web/src/components/listings/create/domain";
 import type { ListingContentSubcategory } from "@shared/types/models";
-import type { ListingOpenHouseContext } from "@web/src/lib/domain/listings/openHouse";
+import type { ListingOpenHouseContext } from "@web/src/lib/domain/listings/content/openHouse";
 import {
   hashTextOverlaySeed,
   pickPreviewTextOverlayVariant,
