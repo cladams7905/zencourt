@@ -15,7 +15,7 @@ import {
   type ListingMediaType
 } from "@web/src/server/infra/cache/listingContent/cache";
 import { getContentByListingId } from "@web/src/server/models/content";
-import type { ContentItem } from "@web/src/components/dashboard/components/ContentGrid";
+import type { DashboardContentItem as ContentItem } from "@web/src/components/dashboard/shared/types";
 import { getUserMedia } from "@web/src/server/models/userMedia/queries";
 import {
   createVideoClip,

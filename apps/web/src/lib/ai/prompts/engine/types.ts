@@ -1,9 +1,12 @@
-import type { CommunityData, MarketData } from "@web/src/lib/domain/market/types";
+import type {
+  CommunityData,
+  MarketData
+} from "@web/src/lib/domain/market/types";
 import type {
   ListingContentSubcategory,
   ListingPropertyDetails
 } from "@shared/types/models";
-import type { ListingOpenHouseContext } from "@web/src/lib/domain/listings/openHouse";
+import type { ListingOpenHouseContext } from "@web/src/lib/domain/listing/openHouse";
 
 export type PromptValues = Record<string, string | number | null | undefined>;
 

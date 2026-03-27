@@ -1,5 +1,5 @@
 import type { ContentItem } from "@web/src/components/dashboard/components/ContentGrid";
-import type { PreviewTimelinePlan } from "@web/src/components/listings/create/domain/previewTimeline";
+import type { PreviewTimelinePlan } from "@web/src/components/listings/create/domain/listingCreate";
 import { appendRandomHeaderSuffix } from "@shared/utils";
 import { buildPlayablePreviews } from "@web/src/components/listings/create/media/video/videoPreviewViewModel";
 

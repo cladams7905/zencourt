@@ -14,7 +14,7 @@ import type {
   ListingContentSubcategory,
   ListingPropertyDetails
 } from "@shared/types/models";
-import { resolveListingOpenHouseContext } from "@web/src/lib/domain/listings/openHouse";
+import { resolveListingOpenHouseContext } from "@web/src/lib/domain/listing/openHouse";
 import {
   createChildLogger,
   logger as baseLogger
@@ -82,7 +82,8 @@ function filterTemplatesForRender(params: {
   const afterOpenHouseFilter =
     params.subcategory === "open_house" && !params.hasOpenHouseSchedule
       ? params.templates.filter(
-          (template) => !template.requiredParams.includes(OPEN_HOUSE_SCHEDULE_PARAM)
+          (template) =>
+            !template.requiredParams.includes(OPEN_HOUSE_SCHEDULE_PARAM)
         )
       : params.templates;
 
@@ -90,7 +91,8 @@ function filterTemplatesForRender(params: {
     logger.info(
       {
         listingId: params.listingId,
-        droppedTemplateCount: params.templates.length - afterOpenHouseFilter.length
+        droppedTemplateCount:
+          params.templates.length - afterOpenHouseFilter.length
       },
       "Filtered open house templates requiring schedule parameter"
     );
@@ -100,7 +102,8 @@ function filterTemplatesForRender(params: {
     params.listingImages
   );
   const afterImageFilter = afterOpenHouseFilter.filter((template) => {
-    const requiredBackgroundImageCount = countRequiredBackgroundImages(template);
+    const requiredBackgroundImageCount =
+      countRequiredBackgroundImages(template);
     return requiredBackgroundImageCount <= availableListingImageCount;
   });
 

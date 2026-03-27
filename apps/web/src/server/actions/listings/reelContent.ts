@@ -1,4 +1,4 @@
-import type { ContentItem } from "@web/src/components/dashboard/components/ContentGrid";
+import type { DashboardContentItem as ContentItem } from "@web/src/components/dashboard/shared/types";
 import { buildReelSourceKey, isSavedListingReelMetadata } from "@web/src/components/listings/create/shared/reels";
 import type { SavedListingReelMetadata } from "@web/src/components/listings/create/shared/reels";
 import type { DBContent, DBUserMedia } from "@db/types/models";

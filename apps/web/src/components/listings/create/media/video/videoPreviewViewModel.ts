@@ -5,9 +5,9 @@ import type {
 import type {
   PreviewTextOverlay,
   PreviewTimelinePlan
-} from "@web/src/components/listings/create/domain/previewTimeline";
+} from "@web/src/components/listings/create/domain/listingCreate";
 import type { ListingContentSubcategory } from "@shared/types/models";
-import type { ListingOpenHouseContext } from "@web/src/lib/domain/listings/openHouse";
+import type { ListingOpenHouseContext } from "@web/src/lib/domain/listing/openHouse";
 import {
   hashTextOverlaySeed,
   pickPreviewTextOverlayVariant,
@@ -133,7 +133,8 @@ function buildAddressSupplementalOverlay(
   listingAddress: string,
   labelText?: string
 ): TimelinePreviewResolvedSegment["supplementalAddressOverlay"] {
-  const addressText = labelText?.trim() || `${LOCATION_EMOJI} ${listingAddress.trim()}`;
+  const addressText =
+    labelText?.trim() || `${LOCATION_EMOJI} ${listingAddress.trim()}`;
   const shouldPushLower =
     primaryOverlay.templatePattern !== "simple" ||
     primaryOverlay.position === "top-third";
@@ -250,13 +251,13 @@ function buildRichOverlay(
     templatePattern === "simple"
       ? lines.map((line, index) =>
           index === 0
-              ? {
-                  ...line,
-                  text: appendRandomHeaderSuffix(line.text, {
-                    emojis: [],
-                    random: makeSimpleSuffixRandom()
-                  })
-                }
+            ? {
+                ...line,
+                text: appendRandomHeaderSuffix(line.text, {
+                  emojis: [],
+                  random: makeSimpleSuffixRandom()
+                })
+              }
             : line
         )
       : lines;
@@ -315,7 +316,8 @@ export function buildPlayablePreviews(params: {
         })
       : "";
   const openHouseNeedsSupplement =
-    params.listingSubcategory === "open_house" && openHouseOverlayText.length > 0;
+    params.listingSubcategory === "open_house" &&
+    openHouseOverlayText.length > 0;
   const normalizedOpenHouseTerms = openHouseNeedsSupplement
     ? [openHouseOverlayText, listingStreetAddress]
         .map((value) => normalizeForAddressMatch(value))
@@ -336,9 +338,7 @@ export function buildPlayablePreviews(params: {
         };
       })
       .filter(
-        (
-          segment
-        ): segment is NonNullable<typeof segment> => segment !== null
+        (segment): segment is NonNullable<typeof segment> => segment !== null
       );
 
     const captionItem = params.captionItems.at(index) ?? null;
@@ -350,19 +350,21 @@ export function buildPlayablePreviews(params: {
             savedContentId: captionItem.savedContentId
           }
         : captionItem &&
-            typeof (captionItem as ContentItem & { cacheKeyTimestamp?: number }).cacheKeyTimestamp ===
-              "number" &&
-            typeof (captionItem as ContentItem & { cacheKeyId?: number }).cacheKeyId ===
-              "number"
+            typeof (captionItem as ContentItem & { cacheKeyTimestamp?: number })
+              .cacheKeyTimestamp === "number" &&
+            typeof (captionItem as ContentItem & { cacheKeyId?: number })
+              .cacheKeyId === "number"
           ? {
-            contentSource: "cached_create" as const,
-            cacheKeyTimestamp: (
-              captionItem as ContentItem & { cacheKeyTimestamp: number }
-            ).cacheKeyTimestamp,
-            cacheKeyId: (captionItem as ContentItem & { cacheKeyId: number }).cacheKeyId,
-            subcategory: captionItem.listingSubcategory ?? params.listingSubcategory,
-            mediaType: "video" as const
-          }
+              contentSource: "cached_create" as const,
+              cacheKeyTimestamp: (
+                captionItem as ContentItem & { cacheKeyTimestamp: number }
+              ).cacheKeyTimestamp,
+              cacheKeyId: (captionItem as ContentItem & { cacheKeyId: number })
+                .cacheKeyId,
+              subcategory:
+                captionItem.listingSubcategory ?? params.listingSubcategory,
+              mediaType: "video" as const
+            }
           : undefined;
     if (resolvedSegments.length < 1) {
       return null;
@@ -393,7 +395,10 @@ export function buildPlayablePreviews(params: {
           openHouseNeedsSupplement &&
           !slideContainsAnyTerm(data, normalizedOpenHouseTerms);
         const supplementalAddressOverlay = needsAddressSupplement
-          ? buildAddressSupplementalOverlay(primaryOverlay, listingStreetAddress)
+          ? buildAddressSupplementalOverlay(
+              primaryOverlay,
+              listingStreetAddress
+            )
           : needsOpenHouseSupplement
             ? buildAddressSupplementalOverlay(
                 primaryOverlay,

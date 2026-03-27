@@ -1,5 +1,5 @@
-import type { ContentItem } from "@web/src/components/dashboard/components/ContentGrid";
-import { buildListingCreatePreviewPlans } from "@web/src/components/listings/create/domain/useListingCreatePreviewPlans";
+import type { DashboardContentItem as ContentItem } from "@web/src/components/dashboard/shared/types";
+import { buildListingCreatePreviewPlans } from "@web/src/lib/domain/listing/createPreviewPlans";
 import type { ListingContentSubcategory } from "@shared/types/models";
 import type { ListingGeneratedItem } from "@web/src/server/infra/cache/listingContent/cache";
 

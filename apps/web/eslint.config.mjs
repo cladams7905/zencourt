@@ -131,6 +131,14 @@ const eslintConfig = [
               message:
                 "Server actions must remain HTTP-agnostic and must not import API route modules.",
             },
+            {
+              group: [
+                "@web/src/components/**/domain/**",
+                "@web/src/components/**/components/**",
+              ],
+              message:
+                "Server actions must not import component-layer domain/components modules. Move shared logic or types into lib/domain, @shared, or another server-safe module.",
+            },
           ],
           paths: [
             {

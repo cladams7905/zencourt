@@ -41,13 +41,10 @@ jest.mock("@web/src/server/actions/listings/content/generate/helpers", () => ({
     (mockBuildUpstreamRequestBody as (...a: unknown[]) => unknown)(...args)
 }));
 
-jest.mock(
-  "@web/src/components/listings/create/domain/useListingCreatePreviewPlans",
-  () => ({
-    buildListingCreatePreviewPlans: (...args: unknown[]) =>
-      (mockBuildListingCreatePreviewPlans as (...a: unknown[]) => unknown)(...args)
-  })
-);
+jest.mock("@web/src/lib/domain/listing/createPreviewPlans", () => ({
+  buildListingCreatePreviewPlans: (...args: unknown[]) =>
+    (mockBuildListingCreatePreviewPlans as (...a: unknown[]) => unknown)(...args)
+}));
 
 jest.mock("@web/src/lib/sse/sseEncoder", () => ({
   encodeSseEvent: (...args: unknown[]) =>

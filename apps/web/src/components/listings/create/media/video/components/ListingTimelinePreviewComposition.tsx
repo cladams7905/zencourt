@@ -5,7 +5,7 @@ import { AbsoluteFill, Sequence, Video, useVideoConfig } from "remotion";
 import type {
   PreviewTextOverlay,
   PreviewTimelineSegment
-} from "@web/src/components/listings/create/domain/previewTimeline";
+} from "@web/src/components/listings/create/domain/listingCreate";
 import {
   PreviewTextOverlayRenderer,
   PREVIEW_TEXT_OVERLAY_POSITION_TOP,

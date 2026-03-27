@@ -4,20 +4,20 @@ import * as React from "react";
 import { ListingViewHeader } from "@web/src/components/listings/shared";
 import { type ContentItem } from "@web/src/components/dashboard/components/ContentGrid";
 import { usePathname } from "next/navigation";
-import type { ListingOpenHouseContext } from "@web/src/lib/domain/listings/openHouse";
+import type { ListingOpenHouseContext } from "@web/src/lib/domain/listing/openHouse";
 import {
   ListingClipManager,
   ListingVideoPreviewGrid,
   ListingImagePreviewGrid,
   DevSingleTemplateRender
 } from "@web/src/components/listings/create/components";
-import { type ListingCreateImage } from "@web/src/components/listings/create/domain/listingCreateUtils";
+import { type ListingCreateImage } from "@web/src/components/listings/create/domain/listingCreate";
 import { useStickyHeader } from "@web/src/components/listings/create/shared/hooks/useStickyHeader";
 import { useScrollFade } from "@web/src/components/listings/create/shared/hooks/useScrollFade";
 import {
   useListingCreateEffects,
   useListingCreateWorkflow
-} from "@web/src/components/listings/create/domain";
+} from "@web/src/components/listings/create/domain/listingCreate";
 import {
   MEDIA_TAB_LABELS,
   SUBCATEGORY_LABELS,
@@ -32,12 +32,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from "@web/src/components/ui/dropdown-menu";
-import {
-  Camera,
-  ChevronDown,
-  Clapperboard,
-  RefreshCw
-} from "lucide-react";
+import { Camera, ChevronDown, Clapperboard, RefreshCw } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,

@@ -2,9 +2,9 @@
 
 import * as React from "react";
 import type { ContentItem } from "@web/src/components/dashboard/components/ContentGrid";
-import type { PreviewTimelinePlan } from "@web/src/components/listings/create/domain/previewTimeline";
+import type { PreviewTimelinePlan } from "@web/src/components/listings/create/domain/listingCreate";
 import type { ListingContentSubcategory } from "@shared/types/models";
-import type { ListingOpenHouseContext } from "@web/src/lib/domain/listings/openHouse";
+import type { ListingOpenHouseContext } from "@web/src/lib/domain/listing/openHouse";
 import { saveListingVideoReel } from "@web/src/server/actions/listings/reels";
 import { buildPlayablePreviews } from "@web/src/components/listings/create/media/video/videoPreviewViewModel";
 import { PREVIEW_FPS } from "@web/src/components/listings/create/media/video/previewConstants";
@@ -132,7 +132,9 @@ export function ListingVideoPreviewGrid({
 
       <VideoPreviewModal
         selectedPreview={selectedPreview}
-        userMediaItems={items.filter((item) => item.reelClipSource === "user_media")}
+        userMediaItems={items.filter(
+          (item) => item.reelClipSource === "user_media"
+        )}
         previewFps={PREVIEW_FPS}
         onOpenChange={(open) => {
           if (!open) {

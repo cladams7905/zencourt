@@ -10,7 +10,7 @@ import {
 import { ListingViewHeader } from "@web/src/components/listings/shared";
 import { redirectToListingStage } from "../../_utils/redirectToListingStage";
 import { getListingClipVersionItemsForCurrentUser } from "@web/src/server/actions/listings/queries";
-import { stringifyListingCreateSearchParams } from "@web/src/components/listings/create/domain/listingCreateQueryParams";
+import { stringifyListingCreateSearchParams } from "@web/src/components/listings/create/domain/listingCreate";
 
 interface ListingCreateClipsPageProps {
   params: Promise<{ listingId: string }>;

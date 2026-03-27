@@ -1,8 +1,18 @@
-import type { DBListing, DBListingImage, DBUserAdditional } from "@db/types/models";
-import type { ListingContentSubcategory, ListingPropertyDetails } from "@shared/types/models";
-import { PREVIEW_TEXT_OVERLAY_ARROW_PATHS, buildStoragePublicUrl } from "@shared/utils";
+import type {
+  DBListing,
+  DBListingImage,
+  DBUserAdditional
+} from "@db/types/models";
+import type {
+  ListingContentSubcategory,
+  ListingPropertyDetails
+} from "@shared/types/models";
+import {
+  PREVIEW_TEXT_OVERLAY_ARROW_PATHS,
+  buildStoragePublicUrl
+} from "@shared/utils";
 import { isPriorityCategory } from "@shared/utils";
-import { resolveListingOpenHouseContext } from "@web/src/lib/domain/listings/openHouse";
+import { resolveListingOpenHouseContext } from "@web/src/lib/domain/listing/openHouse";
 import {
   createChildLogger,
   logger as baseLogger
@@ -42,7 +52,9 @@ function splitHeaderText(headerText: string): {
 
 function pickRandomArrowPath(random: () => number = Math.random): string {
   const index = Math.floor(random() * PREVIEW_TEXT_OVERLAY_ARROW_PATHS.length);
-  const arrowPath = PREVIEW_TEXT_OVERLAY_ARROW_PATHS[index] ?? PREVIEW_TEXT_OVERLAY_ARROW_PATHS[0];
+  const arrowPath =
+    PREVIEW_TEXT_OVERLAY_ARROW_PATHS[index] ??
+    PREVIEW_TEXT_OVERLAY_ARROW_PATHS[0];
   if (!arrowPath) {
     return "";
   }
@@ -74,11 +86,12 @@ function rankListingImagesForTemplate(
   images: DBListingImage[],
   captionItem: TemplateRenderCaptionItemInput
 ): string[] {
-  const needle = `${captionItem.hook ?? ""} ${captionItem.caption ?? ""} ${captionItem.body
-    .map((slide) => `${slide.header} ${slide.content}`)
-    .join(" ")}`
-    .toLowerCase()
-    .replace(/[^\w\s]/g, " ");
+  const needle =
+    `${captionItem.hook ?? ""} ${captionItem.caption ?? ""} ${captionItem.body
+      .map((slide) => `${slide.header} ${slide.content}`)
+      .join(" ")}`
+      .toLowerCase()
+      .replace(/[^\w\s]/g, " ");
 
   const sortByRelevance = (items: DBListingImage[]): DBListingImage[] =>
     [...items].sort((a, b) => {
@@ -102,8 +115,10 @@ function rankListingImagesForTemplate(
         return bCategoryMatch - aCategoryMatch;
       }
 
-      const aScore = typeof a.primaryScore === "number" ? a.primaryScore : -Infinity;
-      const bScore = typeof b.primaryScore === "number" ? b.primaryScore : -Infinity;
+      const aScore =
+        typeof a.primaryScore === "number" ? a.primaryScore : -Infinity;
+      const bScore =
+        typeof b.primaryScore === "number" ? b.primaryScore : -Infinity;
       if (aScore !== bScore) {
         return bScore - aScore;
       }
@@ -111,7 +126,9 @@ function rankListingImagesForTemplate(
       return b.uploadedAt.getTime() - a.uploadedAt.getTime();
     });
 
-  const primaryImages = sortByRelevance(images.filter((image) => image.isPrimary));
+  const primaryImages = sortByRelevance(
+    images.filter((image) => image.isPrimary)
+  );
   const secondaryImages = sortByRelevance(
     images.filter((image) => !image.isPrimary)
   );
@@ -134,7 +151,8 @@ function rotateImages(images: string[], startIndex: number): string[] {
   if (images.length === 0) {
     return images;
   }
-  const normalized = ((startIndex % images.length) + images.length) % images.length;
+  const normalized =
+    ((startIndex % images.length) + images.length) % images.length;
   return [...images.slice(normalized), ...images.slice(0, normalized)];
 }
 
@@ -149,10 +167,14 @@ function resolveHeaderTag(subcategory: ListingContentSubcategory): string {
 }
 
 function compactList(values: Array<string | null | undefined>): string[] {
-  return values.map((value) => value?.trim() ?? "").filter((value) => value.length > 0);
+  return values
+    .map((value) => value?.trim() ?? "")
+    .filter((value) => value.length > 0);
 }
 
-export function pickPropertyDetails(listing: DBListing): ListingPropertyDetails | null {
+export function pickPropertyDetails(
+  listing: DBListing
+): ListingPropertyDetails | null {
   const details = listing.propertyDetails as ListingPropertyDetails | null;
   return details ?? null;
 }
@@ -176,7 +198,10 @@ export function resolveTemplateParameters(params: {
   );
   const random = params.random ?? Math.random;
   const resolvedRotationIndex = (() => {
-    if (typeof params.rotationKey === "string" && params.rotationKey.length > 0) {
+    if (
+      typeof params.rotationKey === "string" &&
+      params.rotationKey.length > 0
+    ) {
       if (rankedImages.length === 0) {
         return 0;
       }
@@ -232,7 +257,8 @@ export function resolveTemplateParameters(params: {
       : "";
 
   const listingPrice = formatCurrencyUsd(details?.listing_price ?? null, "$0");
-  const priceLabel = params.subcategory === "status_update" ? "sold for" : "starting from";
+  const priceLabel =
+    params.subcategory === "status_update" ? "sold for" : "starting from";
   const featureItems = compactList([
     beds,
     baths,
@@ -246,7 +272,10 @@ export function resolveTemplateParameters(params: {
   const agentTitle = params.userAdditional.agentTitle?.trim() || "";
   const brokerageName = params.userAdditional.brokerageName?.trim() || "";
   const listingAddress =
-    details?.address?.trim() || params.listing.address?.trim() || params.listing.title?.trim() || "";
+    details?.address?.trim() ||
+    params.listing.address?.trim() ||
+    params.listing.title?.trim() ||
+    "";
   const agentContact1 = "";
   const agentContact2 = "";
   const agentContact3 = "";

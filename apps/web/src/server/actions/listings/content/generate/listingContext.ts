@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import type { ListingPropertyDetails } from "@shared/types/models";
-import { resolveListingOpenHouseContext } from "@web/src/lib/domain/listings/openHouse";
+import { resolveListingOpenHouseContext } from "@web/src/lib/domain/listing/openHouse";
 import type {
   ListingGenerationContext,
   ValidatedGenerateParams

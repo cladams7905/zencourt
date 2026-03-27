@@ -1,11 +1,14 @@
 import type { ListingPropertyDetails } from "@shared/types/models";
 import type { MarketDataInput } from "./types";
-import type { ListingOpenHouseContext } from "@web/src/lib/domain/listings/openHouse";
+import type { ListingOpenHouseContext } from "@web/src/lib/domain/listing/openHouse";
 import {
   readPromptFile,
   LISTING_SUBCATEGORY_DIRECTIVE_FILES
 } from "./promptFileCache";
-import { hasMeaningfulValue, normalizeListingSubcategory } from "./promptHelpers";
+import {
+  hasMeaningfulValue,
+  normalizeListingSubcategory
+} from "./promptHelpers";
 
 const LISTING_PROMPT_DROPPED_KEYS = new Set([
   "sources",
