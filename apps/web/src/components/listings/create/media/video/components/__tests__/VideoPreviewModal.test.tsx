@@ -192,12 +192,14 @@ describe("VideoPreviewModal", () => {
       />
     );
 
+    const stage = screen.getByTestId("video-preview-stage").className;
+    expect(stage).toContain("max-[1049px]:min-h-[min(46dvh,22rem)]");
     const shell = screen.getByTestId("video-player-shell").className;
     expect(shell).toContain("rounded-xl");
-    expect(shell).toContain("border-border");
+    expect(shell).toContain("bg-card");
+    expect(shell).toContain("shadow-sm");
     expect(shell).toContain("min-w-[168px]");
     expect(shell).toContain("max-w-[min(260px");
-    expect(shell).toContain("max-[1049px]:min-h-[min(46dvh,22rem)]");
     expect(shell).toContain("min-[1050px]:h-[86%]");
   });
 

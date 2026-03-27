@@ -287,7 +287,10 @@ export function VideoPreviewModal({
       pendingSeekFrameRef.current = currentFrame;
       setSegmentDraft((prev) => {
         const currentSegment = prev[index];
-        if (!currentSegment || currentSegment.durationSeconds === durationSeconds) {
+        if (
+          !currentSegment ||
+          currentSegment.durationSeconds === durationSeconds
+        ) {
           return prev;
         }
 
@@ -320,7 +323,10 @@ export function VideoPreviewModal({
       }
 
       pendingSeekFrameRef.current = currentFrame;
-      setRedoStack((prevRedoStack) => [...prevRedoStack, cloneSegments(segmentDraft)]);
+      setRedoStack((prevRedoStack) => [
+        ...prevRedoStack,
+        cloneSegments(segmentDraft)
+      ]);
       setSegmentDraft(cloneSegments(previousSegments));
       resizeHistoryCapturedRef.current = false;
       return prevUndoStack.slice(0, -1);
@@ -335,7 +341,10 @@ export function VideoPreviewModal({
       }
 
       pendingSeekFrameRef.current = currentFrame;
-      setUndoStack((prevUndoStack) => [...prevUndoStack, cloneSegments(segmentDraft)]);
+      setUndoStack((prevUndoStack) => [
+        ...prevUndoStack,
+        cloneSegments(segmentDraft)
+      ]);
       setSegmentDraft(cloneSegments(nextSegments));
       resizeHistoryCapturedRef.current = false;
       return prevRedoStack.slice(0, -1);
@@ -441,10 +450,13 @@ export function VideoPreviewModal({
             <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden max-[1049px]:pb-19 min-[1050px]:flex min-[1050px]:min-h-0 min-[1050px]:flex-col min-[1050px]:overflow-hidden min-[1050px]:pb-0">
               <div className="grid min-w-0 max-w-full items-start min-[1050px]:h-full min-[1050px]:min-h-0 min-[1050px]:grid-cols-[minmax(0,1fr)_1px_minmax(0,520px)] min-[1050px]:items-stretch min-[1050px]:overflow-hidden">
                 <div className="grid min-w-0 max-w-full content-start min-[1050px]:h-full min-[1050px]:min-h-0 min-[1050px]:grid-rows-[minmax(0,1fr)_1px_248px] min-[1050px]:overflow-hidden">
-                  <div className="flex min-h-0 min-w-0 items-center justify-center overflow-hidden bg-secondary px-3 py-4 min-[1050px]:h-full min-[1050px]:px-0 min-[1050px]:py-0">
+                  <div
+                    data-testid="video-preview-stage"
+                    className="flex min-h-0 min-w-0 items-center justify-center overflow-hidden bg-secondary px-3 py-4 max-[1049px]:min-h-[min(46dvh,22rem)] min-[1050px]:h-full min-[1050px]:px-0 min-[1050px]:py-0"
+                  >
                     <div
                       data-testid="video-player-shell"
-                      className="relative isolate mx-auto aspect-9/16 w-full min-w-[168px] max-w-[min(260px,calc(100vw-3rem))] overflow-hidden rounded-xl border border-border bg-black max-[1049px]:min-h-[min(46dvh,22rem)] min-[1050px]:h-[86%] min-[1050px]:max-h-full min-[1050px]:w-auto min-[1050px]:max-w-full"
+                      className="relative mx-auto aspect-9/16 w-full min-w-[168px] max-w-[min(260px,calc(100vw-3rem))] overflow-hidden rounded-xl bg-card shadow-sm min-[1050px]:h-[86%] min-[1050px]:max-h-full min-[1050px]:w-auto min-[1050px]:max-w-full"
                     >
                       <VideoPreviewPlayer
                         key={selectedPreview.id}
