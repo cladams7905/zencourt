@@ -59,17 +59,11 @@ export function serializeClipItems(itemsToSerialize: ListingClipVersionItem[]) {
 }
 
 export function useIsDesktopLayout() {
-  const [isDesktop, setIsDesktop] = React.useState(() => {
-    if (
-      typeof window === "undefined" ||
-      typeof window.matchMedia !== "function"
-    ) {
-      return true;
-    }
-    return window.matchMedia("(min-width: 1024px)").matches;
-  });
+  // Server and the first client render must agree (no `window` on the server).
+  // Reading `matchMedia` in the initializer only on the client causes hydration mismatches.
+  const [isDesktop, setIsDesktop] = React.useState(true);
 
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
     if (
       typeof window === "undefined" ||
       typeof window.matchMedia !== "function"
