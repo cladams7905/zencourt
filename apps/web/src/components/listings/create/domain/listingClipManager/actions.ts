@@ -20,7 +20,6 @@ import { buildClipDownloadHref } from "./helpers";
 
 type UseListingClipManagerWorkspaceActionsParams = {
   listingId: string;
-  clipItems: ListingClipVersionItem[];
   selectedItem?: ListingClipVersionItem;
   selectedVersion?: ListingClipVersionItem["currentVersion"];
   selectedClipBatchId?: string;
@@ -47,7 +46,6 @@ type UseListingClipManagerWorkspaceActionsParams = {
 
 export function useListingClipManagerWorkspaceActions({
   listingId,
-  clipItems,
   selectedItem,
   selectedVersion,
   selectedClipBatchId,

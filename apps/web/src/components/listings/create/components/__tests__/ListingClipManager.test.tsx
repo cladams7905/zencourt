@@ -402,8 +402,10 @@ describe("ListingClipManager", () => {
 
   it("keeps the clip in regenerating state when stale polling still returns the previous completed version", async () => {
     const user = userEvent.setup();
-    let swrData: { clipVersionItems: ListingClipVersionItem[] } | undefined;
-    mockUseSWR.mockImplementation(() => ({ data: swrData }));
+    const swrDataRef: {
+      current: { clipVersionItems: ListingClipVersionItem[] } | undefined;
+    } = { current: undefined };
+    mockUseSWR.mockImplementation(() => ({ data: swrDataRef.current }));
     jest.mocked(regenerateListingClipVersion).mockResolvedValue({
       listingId: "listing-1",
       clipId: "clip-1",
@@ -422,7 +424,7 @@ describe("ListingClipManager", () => {
     await user.click(screen.getByRole("button", { name: /^regenerate$/i }));
     await user.click(screen.getByRole("button", { name: /quick regenerate/i }));
 
-    swrData = { clipVersionItems: items };
+    swrDataRef.current = { clipVersionItems: items };
     view.rerender(
       <ListingClipManager
         listingId="listing-1"
@@ -439,8 +441,10 @@ describe("ListingClipManager", () => {
 
   it("keeps the clip in regenerating state after remount while polling is still stale", async () => {
     const user = userEvent.setup();
-    let swrData: { clipVersionItems: ListingClipVersionItem[] } | undefined;
-    mockUseSWR.mockImplementation(() => ({ data: swrData }));
+    const swrDataRef: {
+      current: { clipVersionItems: ListingClipVersionItem[] } | undefined;
+    } = { current: undefined };
+    mockUseSWR.mockImplementation(() => ({ data: swrDataRef.current }));
     jest.mocked(regenerateListingClipVersion).mockResolvedValue({
       listingId: "listing-1",
       clipId: "clip-1",
@@ -461,7 +465,7 @@ describe("ListingClipManager", () => {
 
     firstView.unmount();
 
-    swrData = { clipVersionItems: items };
+    swrDataRef.current = { clipVersionItems: items };
     render(
       <ListingClipManager
         listingId="listing-1"
@@ -620,8 +624,10 @@ describe("ListingClipManager", () => {
       canceledJobs: 1
     });
 
-    let swrData: { clipVersionItems: ListingClipVersionItem[] } | undefined;
-    mockUseSWR.mockImplementation(() => ({ data: swrData }));
+    const swrDataRef: {
+      current: { clipVersionItems: ListingClipVersionItem[] } | undefined;
+    } = { current: undefined };
+    mockUseSWR.mockImplementation(() => ({ data: swrDataRef.current }));
 
     const view = render(
       <ListingClipManager
@@ -638,7 +644,7 @@ describe("ListingClipManager", () => {
     );
     await user.click(screen.getByRole("button", { name: /^cancel generation$/i }));
 
-    swrData = { clipVersionItems: stalePollingItems };
+    swrDataRef.current = { clipVersionItems: stalePollingItems };
     view.rerender(
       <ListingClipManager
         listingId="listing-1"
@@ -680,8 +686,10 @@ describe("ListingClipManager", () => {
       canceledJobs: 1
     });
 
-    let swrData: { clipVersionItems: ListingClipVersionItem[] } | undefined;
-    mockUseSWR.mockImplementation(() => ({ data: swrData }));
+    const swrDataRef: {
+      current: { clipVersionItems: ListingClipVersionItem[] } | undefined;
+    } = { current: undefined };
+    mockUseSWR.mockImplementation(() => ({ data: swrDataRef.current }));
 
     const view = render(
       <ListingClipManager
@@ -694,7 +702,7 @@ describe("ListingClipManager", () => {
     await user.click(screen.getByRole("button", { name: /^regenerate$/i }));
     await user.click(screen.getByRole("button", { name: /quick regenerate/i }));
 
-    swrData = { clipVersionItems: processingItems };
+    swrDataRef.current = { clipVersionItems: processingItems };
     view.rerender(
       <ListingClipManager
         listingId="listing-1"
@@ -744,8 +752,10 @@ describe("ListingClipManager", () => {
       canceledJobs: 1
     });
 
-    let swrData: { clipVersionItems: ListingClipVersionItem[] } | undefined;
-    mockUseSWR.mockImplementation(() => ({ data: swrData }));
+    const swrDataRef: {
+      current: { clipVersionItems: ListingClipVersionItem[] } | undefined;
+    } = { current: undefined };
+    mockUseSWR.mockImplementation(() => ({ data: swrDataRef.current }));
 
     const view = render(
       <ListingClipManager
@@ -758,7 +768,7 @@ describe("ListingClipManager", () => {
     await user.click(screen.getByRole("button", { name: /^regenerate$/i }));
     await user.click(screen.getByRole("button", { name: /quick regenerate/i }));
 
-    swrData = { clipVersionItems: processingItems };
+    swrDataRef.current = { clipVersionItems: processingItems };
     view.rerender(
       <ListingClipManager
         listingId="listing-1"
@@ -772,7 +782,7 @@ describe("ListingClipManager", () => {
     );
     await user.click(screen.getByRole("button", { name: /^cancel generation$/i }));
 
-    swrData = { clipVersionItems: processingItems };
+    swrDataRef.current = { clipVersionItems: processingItems };
     view.rerender(
       <ListingClipManager
         listingId="listing-1"
@@ -815,8 +825,10 @@ describe("ListingClipManager", () => {
       canceledJobs: 1
     });
 
-    let swrData: { clipVersionItems: ListingClipVersionItem[] } | undefined;
-    mockUseSWR.mockImplementation(() => ({ data: swrData }));
+    const swrDataRef: {
+      current: { clipVersionItems: ListingClipVersionItem[] } | undefined;
+    } = { current: undefined };
+    mockUseSWR.mockImplementation(() => ({ data: swrDataRef.current }));
 
     const view = render(
       <ListingClipManager
@@ -829,7 +841,7 @@ describe("ListingClipManager", () => {
     await user.click(screen.getByRole("button", { name: /^regenerate$/i }));
     await user.click(screen.getByRole("button", { name: /quick regenerate/i }));
 
-    swrData = { clipVersionItems: processingItemsWithoutHistory };
+    swrDataRef.current = { clipVersionItems: processingItemsWithoutHistory };
     view.rerender(
       <ListingClipManager
         listingId="listing-1"

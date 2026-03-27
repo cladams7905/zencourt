@@ -1,10 +1,12 @@
 import type {
-  ContentItem,
+  DashboardContentItem,
   TextOverlayInput
-} from "@web/src/components/dashboard/components/ContentGrid";
-import type { ReelSequenceItem } from "@web/src/components/dashboard/shared/types";
+} from "@web/src/lib/domain/listing/contentTypes";
 import type { PreviewTextOverlay } from "@shared/types/video";
 import type { TimelinePreviewResolvedSegment } from "@web/src/components/listings/create/media/video/components/ListingTimelinePreviewComposition";
+import type { PlayablePreviewSaveTarget } from "@web/src/lib/domain/listing/create";
+
+export type { PlayablePreviewSaveTarget, PlayablePreviewTextUpdate } from "@web/src/lib/domain/listing/create";
 
 export type ListingImagePreviewSlide = {
   id: string;
@@ -25,32 +27,6 @@ export type ListingImagePreviewItem = {
   captionItemId?: string;
 };
 
-export type PlayablePreviewCaptionItemKey = {
-  contentSource: "cached_create";
-  cacheKeyTimestamp: number;
-  cacheKeyId: number;
-  subcategory: string;
-  mediaType: "video";
-};
-
-export type PlayablePreviewSavedContentKey = {
-  contentSource: "saved_content";
-  savedContentId: string;
-};
-
-export type PlayablePreviewSaveTarget =
-  | PlayablePreviewCaptionItemKey
-  | PlayablePreviewSavedContentKey;
-
-export type PlayablePreviewTextUpdate = {
-  hook: string;
-  caption: string;
-  orderedClipIds: string[];
-  clipDurationOverrides: Record<string, number>;
-  sequence: ReelSequenceItem[];
-  saveTarget: PlayablePreviewSaveTarget;
-};
-
 export type PlayablePreview = {
   id: string;
   resolvedSegments: TimelinePreviewResolvedSegment[];
@@ -60,7 +36,7 @@ export type PlayablePreview = {
     | null;
   firstThumb: string | null;
   durationInFrames: number;
-  captionItem: ContentItem | null;
+  captionItem: DashboardContentItem | null;
   captionItemKey?: PlayablePreviewSaveTarget;
   variationNumber: number;
 };
@@ -71,7 +47,7 @@ export type ListingClipVersionItem = {
   roomId?: string | null;
   clipIndex: number;
   sortOrder: number;
-  currentVersion: ContentItem;
-  inFlightVersion?: ContentItem | null;
-  versions: ContentItem[];
+  currentVersion: DashboardContentItem;
+  inFlightVersion?: DashboardContentItem | null;
+  versions: DashboardContentItem[];
 };

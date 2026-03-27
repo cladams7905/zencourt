@@ -9,8 +9,8 @@ import type {
 import type {
   CarouselSlide,
   ReelSequenceItem
-} from "@web/src/components/dashboard/shared/types";
-import { buildReelSourceKey } from "@web/src/components/listings/create/shared/reels";
+} from "./contentTypes";
+import { buildReelSourceKey } from "./reels";
 
 export type {
   PreviewTextOverlay,

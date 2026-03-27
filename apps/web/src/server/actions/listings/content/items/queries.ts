@@ -5,12 +5,12 @@ import {
   getCachedListingContentForCreateFilter,
   type ListingMediaType
 } from "@web/src/server/infra/cache/listingContent/cache";
-import type { DashboardContentItem as ContentItem } from "@web/src/components/dashboard/shared/types";
+import type { DashboardContentItem as ContentItem } from "@web/src/lib/domain/listing/contentTypes";
 import {
   LISTING_CREATE_INITIAL_PAGE_SIZE,
   type ListingCreateMediaTab
-} from "@web/src/components/listings/create/shared/constants";
-import { isSavedListingReelMetadata } from "@web/src/components/listings/create/shared/reels";
+} from "@web/src/lib/domain/listing/create";
+import { isSavedListingReelMetadata } from "@web/src/lib/domain/listing/reels";
 import type { ListingContentSubcategory } from "@shared/types/models";
 import {
   buildSavedReelDedupKey,

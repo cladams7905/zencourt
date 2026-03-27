@@ -1,42 +1,5 @@
-import type {
-  CarouselSlide,
-  ReelSequenceItem
-} from "@web/src/components/dashboard/shared/types";
-import type { ListingContentSubcategory } from "@shared/types/models";
-
-export type SavedListingReelMetadata = {
-  source: "listing_reel";
-  version: 1;
-  listingSubcategory: ListingContentSubcategory;
-  hook: string;
-  caption: string | null;
-  body: CarouselSlide[] | null;
-  brollQuery: string | null;
-  sequence: ReelSequenceItem[];
-  originCacheKeyTimestamp?: number;
-  originCacheKeyId?: number;
-};
-
-export function isSavedListingReelMetadata(
-  value: unknown
-): value is SavedListingReelMetadata {
-  if (!value || typeof value !== "object") {
-    return false;
-  }
-
-  const metadata = value as Partial<SavedListingReelMetadata>;
-  return (
-    metadata.source === "listing_reel" &&
-    metadata.version === 1 &&
-    typeof metadata.listingSubcategory === "string" &&
-    typeof metadata.hook === "string" &&
-    Array.isArray(metadata.sequence)
-  );
-}
-
-export function buildReelSourceKey(
-  sourceType: ReelSequenceItem["sourceType"],
-  sourceId: string
-): string {
-  return sourceType === "user_media" ? `user-media:${sourceId}` : sourceId;
-}
+export {
+  buildReelSourceKey,
+  isSavedListingReelMetadata
+} from "@web/src/lib/domain/listing/reels";
+export type { SavedListingReelMetadata } from "@web/src/lib/domain/listing/reels";

@@ -133,6 +133,7 @@ const eslintConfig = [
             },
             {
               group: [
+                "@web/src/components/**",
                 "@web/src/components/**/domain/**",
                 "@web/src/components/**/components/**",
               ],
@@ -159,9 +160,9 @@ const eslintConfig = [
         {
           patterns: [
             {
-              group: ["@web/src/server/actions/**"],
+              group: ["@web/src/server/actions/**", "@web/src/components/**"],
               message:
-                "Services must not import server/actions. Keep dependency direction action -> service.",
+                "Services must not import server/actions or component-layer modules. Keep dependency direction action -> service, and move shared contracts into @web/src/lib/domain/**.",
             },
           ],
         },
@@ -177,9 +178,53 @@ const eslintConfig = [
         {
           patterns: [
             {
-              group: ["@web/src/server/actions/**", "@web/src/server/services/**", "@web/src/app/api/**"],
+              group: [
+                "@web/src/server/actions/**",
+                "@web/src/server/services/**",
+                "@web/src/app/api/**",
+                "@web/src/components/**",
+              ],
               message:
-                "Models are the DB layer and must not depend on actions, services, or routes.",
+                "Models are the DB layer and must not depend on actions, services, routes, or component-layer modules.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["src/server/**/*.{ts,tsx}"],
+    ignores: [
+      "src/server/actions/**/*.ts",
+      "src/server/services/**/*.ts",
+      "src/server/models/**/*.ts",
+    ],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@web/src/components/**"],
+              message:
+                "Server modules must not import component-layer modules. Move shared contracts and pure helpers into @web/src/lib/domain/** or another server-safe module.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["src/lib/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@web/src/components/**"],
+              message:
+                "Lib modules must not import component-layer modules. Move shared contracts and pure helpers into @web/src/lib/domain/** or another server-safe module.",
             },
           ],
         },

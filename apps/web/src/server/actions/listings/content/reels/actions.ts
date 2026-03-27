@@ -13,9 +13,9 @@ import {
   getCachedListingContentItem
 } from "@web/src/server/infra/cache/listingContent/cache";
 import { DomainValidationError } from "@web/src/server/errors/domain";
-import type { PlayablePreviewTextUpdate } from "@web/src/components/listings/create/shared/types";
-import type { SavedListingReelMetadata } from "@web/src/components/listings/create/shared/reels";
-import { isSavedListingReelMetadata } from "@web/src/components/listings/create/shared/reels";
+import type { PlayablePreviewTextUpdate } from "@web/src/lib/domain/listing/create";
+import type { SavedListingReelMetadata } from "@web/src/lib/domain/listing/reels";
+import { isSavedListingReelMetadata } from "@web/src/lib/domain/listing/reels";
 import { mapSavedReelContentToCreateItem } from "./mappers";
 
 function normalizeSequence(

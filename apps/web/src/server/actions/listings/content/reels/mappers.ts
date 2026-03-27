@@ -1,9 +1,9 @@
-import type { DashboardContentItem as ContentItem } from "@web/src/components/dashboard/shared/types";
+import type { DashboardContentItem as ContentItem } from "@web/src/lib/domain/listing/contentTypes";
 import {
   buildReelSourceKey,
-  isSavedListingReelMetadata
-} from "@web/src/components/listings/create/shared/reels";
-import type { SavedListingReelMetadata } from "@web/src/components/listings/create/shared/reels";
+  isSavedListingReelMetadata,
+  type SavedListingReelMetadata
+} from "@web/src/lib/domain/listing/reels";
 import type { DBContent, DBUserMedia } from "@db/types/models";
 
 export function mapSavedReelContentToCreateItem(

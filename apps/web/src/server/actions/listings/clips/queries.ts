@@ -13,7 +13,7 @@ import {
   getVideoClipVersionBySourceVideoGenJobId,
   updateVideoClip
 } from "@web/src/server/models/videoGen";
-import type { DashboardContentItem as ContentItem } from "@web/src/components/dashboard/shared/types";
+import type { DashboardContentItem as ContentItem } from "@web/src/lib/domain/listing/contentTypes";
 import type { DBVideoClip, DBVideoClipVersion } from "@db/types/models";
 import { ApiError } from "@web/src/server/errors/api";
 import { StatusCode } from "@shared/types/api";

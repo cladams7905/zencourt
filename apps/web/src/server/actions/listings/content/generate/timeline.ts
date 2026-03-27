@@ -1,4 +1,4 @@
-import type { DashboardContentItem as ContentItem } from "@web/src/components/dashboard/shared/types";
+import type { DashboardContentItem as ContentItem } from "@web/src/lib/domain/listing/contentTypes";
 import { buildListingCreatePreviewPlans } from "@web/src/lib/domain/listing/createPreviewPlans";
 import type { ListingContentSubcategory } from "@shared/types/models";
 import type { ListingGeneratedItem } from "@web/src/server/infra/cache/listingContent/cache";
