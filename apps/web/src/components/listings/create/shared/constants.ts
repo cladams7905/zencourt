@@ -1,7 +1,7 @@
 import type { ListingContentSubcategory } from "@shared/types/models";
-import type { ListingCreateMediaTab } from "@web/src/lib/domain/listing/create";
+import type { ListingCreateMediaTab } from "@web/src/lib/domain/listings/create";
 
-export type { ListingCreateMediaTab } from "@web/src/lib/domain/listing/create";
+export type { ListingCreateMediaTab } from "@web/src/lib/domain/listings/create";
 
 export const MEDIA_TAB_LABELS: Record<ListingCreateMediaTab, string> = {
   videos: "Videos",

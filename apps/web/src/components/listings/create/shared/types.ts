@@ -1,12 +1,15 @@
 import type {
-  DashboardContentItem,
+  ListingContentItem,
   TextOverlayInput
-} from "@web/src/lib/domain/listing/contentTypes";
+} from "@web/src/lib/domain/listings/content";
 import type { PreviewTextOverlay } from "@shared/types/video";
 import type { TimelinePreviewResolvedSegment } from "@web/src/components/listings/create/media/video/components/ListingTimelinePreviewComposition";
-import type { PlayablePreviewSaveTarget } from "@web/src/lib/domain/listing/create";
+import type { PlayablePreviewSaveTarget } from "@web/src/lib/domain/listings/create";
 
-export type { PlayablePreviewSaveTarget, PlayablePreviewTextUpdate } from "@web/src/lib/domain/listing/create";
+export type {
+  PlayablePreviewSaveTarget,
+  PlayablePreviewTextUpdate
+} from "@web/src/lib/domain/listings/create";
 
 export type ListingImagePreviewSlide = {
   id: string;
@@ -36,7 +39,7 @@ export type PlayablePreview = {
     | null;
   firstThumb: string | null;
   durationInFrames: number;
-  captionItem: DashboardContentItem | null;
+  captionItem: ListingContentItem | null;
   captionItemKey?: PlayablePreviewSaveTarget;
   variationNumber: number;
 };
@@ -47,7 +50,7 @@ export type ListingClipVersionItem = {
   roomId?: string | null;
   clipIndex: number;
   sortOrder: number;
-  currentVersion: DashboardContentItem;
-  inFlightVersion?: DashboardContentItem | null;
-  versions: DashboardContentItem[];
+  currentVersion: ListingContentItem;
+  inFlightVersion?: ListingContentItem | null;
+  versions: ListingContentItem[];
 };

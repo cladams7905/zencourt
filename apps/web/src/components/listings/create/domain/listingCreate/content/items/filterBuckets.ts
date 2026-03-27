@@ -1,11 +1,11 @@
 "use client";
 
-import type { ContentItem } from "@web/src/components/dashboard/components/ContentGrid";
 import {
   LISTING_CREATE_INITIAL_PAGE_SIZE,
   type ListingCreateMediaTab
 } from "@web/src/components/listings/create/shared/constants";
 import type { ListingContentSubcategory } from "@shared/types/models";
+import type { ListingContentItem as ContentItem } from "@web/src/lib/domain/listings/content";
 import type { ListingContentItemsPage } from "./client";
 
 const EMPTY_ITEMS: ContentItem[] = [];

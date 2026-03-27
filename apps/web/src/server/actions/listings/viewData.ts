@@ -6,14 +6,14 @@ import { requireListingAccess } from "@web/src/server/models/listings/access";
 import {
   getListingImages,
   mapListingImageToDisplayItem
-} from "@web/src/server/models/listingImages";
-import type { DashboardContentItem as ContentItem } from "@web/src/lib/domain/listing/contentTypes";
-import { getUserMedia } from "@web/src/server/models/userMedia/queries";
+} from "@web/src/server/models/listings/images";
+import type { ListingContentItem as ContentItem } from "@web/src/lib/domain/listings/content";
+import { getUserMedia } from "@web/src/server/models/user";
 import { mapUserMediaToVideoItem } from "./content/reels";
 import {
   LISTING_CREATE_INITIAL_PAGE_SIZE,
   type ListingCreateMediaTab
-} from "@web/src/lib/domain/listing/create";
+} from "@web/src/lib/domain/listings/create";
 import type { ListingContentSubcategory } from "@shared/types/models";
 import { getListingContentItems } from "./content/items";
 import { getListingClipVersionItems } from "./clips";

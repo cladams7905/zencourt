@@ -20,7 +20,7 @@ jest.mock("@db/client", () => ({
   userAdditional: { userId: "userId", headshotUrl: "headshotUrl" }
 }));
 
-jest.mock("@web/src/server/models/userAdditional", () => ({
+jest.mock("@web/src/server/models/user", () => ({
   updateUserProfile: (...args: unknown[]) =>
     (mockUpdateUserProfile as (...a: unknown[]) => unknown)(...args),
   ensureGoogleHeadshot: (...args: unknown[]) =>
@@ -51,7 +51,7 @@ jest.mock("@web/src/server/services/storage", () => ({
 }));
 
 const mockUpsertUserAdditional = jest.fn();
-jest.mock("@web/src/server/models/userAdditional/helpers", () => ({
+jest.mock("@web/src/server/models/user/additional/helpers", () => ({
   upsertUserAdditional: (...args: unknown[]) =>
     (mockUpsertUserAdditional as (...a: unknown[]) => unknown)(...args)
 }));

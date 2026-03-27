@@ -9,7 +9,7 @@ import {
   getClipRegenerationSoftTimeoutMs,
   isPastTimeout,
   VIDEO_GENERATION_TIMEOUT_MESSAGE
-} from "@web/src/lib/domain/listing/videoGenerationTimeouts";
+} from "@web/src/lib/domain/listings/videoGenerationTimeouts";
 import {
   applyOptimisticClipRegenerations,
   getLatestAttemptVersion,
@@ -124,11 +124,15 @@ export function useListingClipManagerWorkspaceSync({
         ] as const;
       })
     );
-    const rawNormalized = applyOptimisticClipRegenerations(listingId, nextItems);
+    const rawNormalized = applyOptimisticClipRegenerations(
+      listingId,
+      nextItems
+    );
     const localItemsByClipId = new Map(
       clipItems.map((item) => [item.clipId, item] as const)
     );
-    const optimisticClipRegenerations = getOptimisticClipRegenerations(listingId);
+    const optimisticClipRegenerations =
+      getOptimisticClipRegenerations(listingId);
     const nextStatuses = new Map<string, string>();
     const nextCanceledClipIds = new Set(canceledClipIds);
     let didCanceledClipIdsChange = false;

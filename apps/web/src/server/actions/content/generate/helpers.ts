@@ -13,7 +13,7 @@ import {
   getRecentHooksKey,
   selectRotatedAudienceSegment
 } from "@web/src/server/services/contentRotation";
-import { getUserAdditionalSnapshot } from "@web/src/server/models/userAdditional";
+import { getUserAdditionalSnapshot } from "@web/src/server/models/user";
 import {
   buildPromptInput,
   parsePrimaryAudienceSegments,

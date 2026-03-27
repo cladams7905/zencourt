@@ -20,7 +20,7 @@ describe("clip version download route", () => {
     jest.doMock("@web/src/app/api/v1/_utils", () => ({
       ApiError: TestApiError
     }));
-    jest.doMock("@web/src/server/actions/listings/clips", () => ({
+    jest.doMock("@web/src/server/actions/listings/create/clips", () => ({
       getListingClipDownloadForCurrentUser: (...args: unknown[]) =>
         mockGetListingClipDownloadForCurrentUser(...args)
     }));

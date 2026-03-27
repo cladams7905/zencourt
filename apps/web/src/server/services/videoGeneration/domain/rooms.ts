@@ -2,7 +2,7 @@ import { ApiError } from "@web/src/server/errors/api";
 import {
   ROOM_CATEGORIES,
   RoomCategory
-} from "@web/src/lib/domain/listing/roomCategories";
+} from "@web/src/lib/domain/listings/roomCategories";
 import type { DBListingImage } from "@db/types/models";
 
 export type DerivedRoom = {
@@ -69,7 +69,9 @@ export function groupImagesByCategory(
 export function selectListingPrimaryImage(
   listingImages: DBListingImage[]
 ): DBListingImage {
-  const primaryImage = listingImages.find((image) => image.isPrimary && image.url);
+  const primaryImage = listingImages.find(
+    (image) => image.isPrimary && image.url
+  );
 
   if (!primaryImage?.url) {
     throw new ApiError(400, {

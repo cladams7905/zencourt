@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { toast } from "sonner";
-import type { ContentItem } from "@web/src/components/dashboard/components/ContentGrid";
+import type { ListingContentItem as ContentItem } from "@web/src/lib/domain/listings/content";
 import {
   LISTING_CONTENT_SUBCATEGORIES,
   type ListingContentSubcategory

@@ -45,12 +45,12 @@ jest.mock("@web/src/lib/sse/sseEncoder", () => ({
   encodeSseEvent: (payload: unknown) => mockEncodeSseEvent(payload)
 }));
 
-jest.mock("@web/src/server/models/listingImages", () => ({
+jest.mock("@web/src/server/models/listings/images", () => ({
   getListingImages: (...args: unknown[]) =>
     (mockGetListingImages as (...a: unknown[]) => unknown)(...args)
 }));
 
-jest.mock("@web/src/server/models/userAdditional", () => ({
+jest.mock("@web/src/server/models/user", () => ({
   getOrCreateUserAdditional: (...args: unknown[]) =>
     (mockGetOrCreateUserAdditional as (...a: unknown[]) => unknown)(...args)
 }));

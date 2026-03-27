@@ -1,8 +1,8 @@
 "use server";
 
 import { withServerActionCaller } from "@web/src/server/infra/logger/callContext";
-import { getUser } from "@web/src/server/models/users";
-import { getOrCreateUserAdditional } from "@web/src/server/models/userAdditional";
+import { getUser } from "@web/src/server/models/user/users";
+import { getOrCreateUserAdditional } from "@web/src/server/models/user";
 import { getUserSidebarListings } from "@web/src/server/models/listings";
 
 export const getCurrentUserSidebarData = withServerActionCaller(

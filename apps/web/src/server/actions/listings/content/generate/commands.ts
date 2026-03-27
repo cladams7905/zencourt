@@ -10,7 +10,7 @@ import {
 import { requireListingAccess } from "@web/src/server/models/listings/access";
 import { setCachedListingContentItem } from "@web/src/server/infra/cache/listingContent/cache";
 import { runContentGenerationForUser } from "@web/src/server/actions/content/generate/helpers";
-import { getCurrentVideoClipsWithCurrentVersionsByListingId } from "@web/src/server/models/videoGen";
+import { getCurrentVideoClipsWithCurrentVersionsByListingId } from "@web/src/server/models/video";
 import {
   buildUpstreamRequestBody,
   parseAndValidateParams,

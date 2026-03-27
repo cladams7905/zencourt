@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import {
   emitListingSidebarHeartbeat,
   emitListingSidebarUpdate
-} from "@web/src/lib/domain/listing/sidebarEvents";
+} from "@web/src/lib/domain/listings/sidebarEvents";
 import { fetchApiData } from "@web/src/lib/core/http/client";
 
 type UseReviewStageActionsParams = {

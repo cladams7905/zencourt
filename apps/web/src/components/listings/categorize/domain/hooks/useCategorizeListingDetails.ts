@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { emitListingSidebarUpdate } from "@web/src/lib/domain/listing/sidebarEvents";
+import { emitListingSidebarUpdate } from "@web/src/lib/domain/listings/sidebarEvents";
 import {
   touchListingActivityForCurrentUser,
   updateListingForCurrentUser
@@ -118,7 +118,9 @@ export function useCategorizeListingDetails({
       );
 
       try {
-        await runDraftSave(() => updateListingForCurrentUser(listingId, payload));
+        await runDraftSave(() =>
+          updateListingForCurrentUser(listingId, payload)
+        );
         lastSavedAddressRef.current = nextAddress;
         if (shouldClearDetails) {
           setHasPropertyDetailsState(false);
@@ -206,9 +208,7 @@ export function useCategorizeListingDetails({
       await touchListingActivity();
     } catch (error) {
       toast.error(
-        error instanceof Error
-          ? error.message
-          : "Failed to continue to review."
+        error instanceof Error ? error.message : "Failed to continue to review."
       );
       return;
     }

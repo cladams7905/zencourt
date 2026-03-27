@@ -16,14 +16,14 @@ import {
   updateUserProfile,
   updateWritingStyle,
   completeWelcomeSurvey
-} from "@web/src/server/models/userAdditional";
+} from "@web/src/server/models/user";
 import type {
   UserProfileUpdates,
   WelcomeSurveyUpdates,
   WritingStyleUpdates
-} from "@web/src/server/models/userAdditional/types";
+} from "@web/src/server/models/user";
 import storageService from "@web/src/server/services/storage";
-import { upsertUserAdditional } from "@web/src/server/models/userAdditional/helpers";
+import { upsertUserAdditional } from "@web/src/server/models/user/additional/helpers";
 
 const logger = createChildLogger(baseLogger, { module: "user-actions" });
 

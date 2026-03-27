@@ -1,6 +1,6 @@
 import type { PromptAssemblyInput } from "@web/src/lib/ai/prompts/engine/assemble";
 import type { CommunityCategoryKey } from "@web/src/server/services/contentRotation";
-import type { UserAdditionalSnapshot } from "@web/src/server/models/userAdditional";
+import type { UserAdditionalSnapshot } from "@web/src/server/models/user";
 import {
   buildWritingStyleDescription,
   getWritingToneLabel,
@@ -47,7 +47,10 @@ export function buildPromptInput(args: {
     service_areas: snapshot.serviceAreas?.join(", ") ?? "",
     writing_tone_level: writingToneLevel,
     writing_tone_label: getWritingToneLabel(writingToneLevel),
-    writing_style_description: buildWritingStyleDescription(writingToneLevel, null),
+    writing_style_description: buildWritingStyleDescription(
+      writingToneLevel,
+      null
+    ),
     writing_style_notes: snapshot.writingStyleCustom ?? null
   };
 

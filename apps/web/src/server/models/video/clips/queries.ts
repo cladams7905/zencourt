@@ -1,0 +1,241 @@
+"use server";
+
+import {
+  and,
+  asc,
+  db,
+  desc,
+  eq,
+  inArray,
+  videoClipVersions,
+  videoClips
+} from "@db/client";
+import type { DBVideoClip, DBVideoClipVersion } from "@db/types/models";
+import { requireNonEmptyString } from "../../shared/validation";
+import { withDbErrorHandling } from "../../shared/dbErrorHandling";
+
+export async function getVideoClipById(videoClipId: string): Promise<DBVideoClip | null> {
+  requireNonEmptyString(videoClipId, "videoClipId is required");
+
+  return withDbErrorHandling(
+    async () => {
+      const [videoClip] = await db.select().from(videoClips).where(eq(videoClips.id, videoClipId)).limit(1);
+      return videoClip ?? null;
+    },
+    {
+      actionName: "getVideoClipById",
+      context: { videoClipId },
+      errorMessage: "Failed to load video clip. Please try again."
+    }
+  );
+}
+
+export async function getVideoClipVersionById(
+  clipVersionId: string
+): Promise<DBVideoClipVersion | null> {
+  requireNonEmptyString(clipVersionId, "clipVersionId is required");
+
+  return withDbErrorHandling(
+    async () => {
+      const [clipVersion] = await db
+        .select()
+        .from(videoClipVersions)
+        .where(eq(videoClipVersions.id, clipVersionId))
+        .limit(1);
+
+      return clipVersion ?? null;
+    },
+    {
+      actionName: "getVideoClipVersionById",
+      context: { clipVersionId },
+      errorMessage: "Failed to load video clip version. Please try again."
+    }
+  );
+}
+
+export async function getCurrentVideoClipVersionsByListingId(
+  listingId: string
+): Promise<DBVideoClipVersion[]> {
+  requireNonEmptyString(listingId, "listingId is required");
+
+  return withDbErrorHandling(
+    async () => {
+      const rows = await db
+        .select({
+          clipVersion: videoClipVersions
+        })
+        .from(videoClips)
+        .innerJoin(videoClipVersions, eq(videoClipVersions.id, videoClips.currentVideoClipVersionId))
+        .where(eq(videoClips.listingId, listingId))
+        .orderBy(asc(videoClips.sortOrder), asc(videoClips.createdAt));
+
+      return rows
+        .map(({ clipVersion }) => clipVersion)
+        .filter(
+          (
+            clipVersion
+          ): clipVersion is NonNullable<typeof clipVersion> => Boolean(clipVersion)
+        );
+    },
+    {
+      actionName: "getCurrentVideoClipVersionsByListingId",
+      context: { listingId },
+      errorMessage: "Failed to load current video clip versions. Please try again."
+    }
+  );
+}
+
+export async function getCurrentVideoClipsWithCurrentVersionsByListingId(
+  listingId: string
+): Promise<Array<{ clip: DBVideoClip; clipVersion: DBVideoClipVersion }>> {
+  requireNonEmptyString(listingId, "listingId is required");
+
+  return withDbErrorHandling(
+    async () => {
+      const rows = await db
+        .select({
+          clip: videoClips,
+          clipVersion: videoClipVersions
+        })
+        .from(videoClips)
+        .innerJoin(videoClipVersions, eq(videoClipVersions.id, videoClips.currentVideoClipVersionId))
+        .where(eq(videoClips.listingId, listingId))
+        .orderBy(asc(videoClips.sortOrder), asc(videoClips.createdAt));
+
+      return rows.filter(
+        (
+          row
+        ): row is {
+          clip: DBVideoClip;
+          clipVersion: DBVideoClipVersion;
+        } => Boolean(row?.clip && row?.clipVersion)
+      );
+    },
+    {
+      actionName: "getCurrentVideoClipsWithCurrentVersionsByListingId",
+      context: { listingId },
+      errorMessage: "Failed to load current video clips with versions. Please try again."
+    }
+  );
+}
+
+export async function getVideoClipVersionBySourceVideoGenJobId(
+  sourceVideoGenJobId: string
+): Promise<DBVideoClipVersion | null> {
+  requireNonEmptyString(sourceVideoGenJobId, "sourceVideoGenJobId is required");
+
+  return withDbErrorHandling(
+    async () => {
+      const [clipVersion] = await db
+        .select()
+        .from(videoClipVersions)
+        .where(eq(videoClipVersions.sourceVideoGenJobId, sourceVideoGenJobId))
+        .limit(1);
+
+      return clipVersion ?? null;
+    },
+    {
+      actionName: "getVideoClipVersionBySourceVideoGenJobId",
+      context: { sourceVideoGenJobId },
+      errorMessage: "Failed to load video clip version. Please try again."
+    }
+  );
+}
+
+export async function getSuccessfulVideoClipVersionsByClipId(
+  clipId: string
+): Promise<DBVideoClipVersion[]> {
+  requireNonEmptyString(clipId, "clipId is required");
+
+  return withDbErrorHandling(
+    async () => {
+      return await db
+        .select()
+        .from(videoClipVersions)
+        .where(
+          and(
+            eq(videoClipVersions.videoClipId, clipId),
+            eq(videoClipVersions.status, "completed")
+          )
+        )
+        .orderBy(desc(videoClipVersions.versionNumber), desc(videoClipVersions.createdAt));
+    },
+    {
+      actionName: "getSuccessfulVideoClipVersionsByClipId",
+      context: { clipId },
+      errorMessage: "Failed to load video clip version history. Please try again."
+    }
+  );
+}
+
+export async function getSuccessfulVideoClipVersionsByClipIds(
+  clipIds: string[]
+): Promise<Map<string, DBVideoClipVersion[]>> {
+  const normalizedClipIds = clipIds.map((clipId) => clipId.trim()).filter(Boolean);
+
+  if (normalizedClipIds.length === 0) {
+    return new Map();
+  }
+
+  return withDbErrorHandling(
+    async () => {
+      const rows = await db
+        .select()
+        .from(videoClipVersions)
+        .where(
+          and(
+            inArray(videoClipVersions.videoClipId, normalizedClipIds),
+            eq(videoClipVersions.status, "completed")
+          )
+        )
+        .orderBy(
+          asc(videoClipVersions.videoClipId),
+          desc(videoClipVersions.versionNumber),
+          desc(videoClipVersions.createdAt)
+        );
+
+      const versionsByClipId = new Map<string, DBVideoClipVersion[]>();
+      for (const row of rows.filter(
+        (row): row is NonNullable<(typeof rows)[number]> => Boolean(row)
+      )) {
+        const existing = versionsByClipId.get(row.videoClipId);
+        if (existing) {
+          existing.push(row);
+          continue;
+        }
+        versionsByClipId.set(row.videoClipId, [row]);
+      }
+
+      return versionsByClipId;
+    },
+    {
+      actionName: "getSuccessfulVideoClipVersionsByClipIds",
+      context: { clipIds: normalizedClipIds },
+      errorMessage: "Failed to load video clip version history. Please try again."
+    }
+  );
+}
+
+export async function getLatestVideoClipVersionByClipId(
+  clipId: string
+): Promise<DBVideoClipVersion | null> {
+  requireNonEmptyString(clipId, "clipId is required");
+
+  return withDbErrorHandling(
+    async () => {
+      const [clipVersion] = await db
+        .select()
+        .from(videoClipVersions)
+        .where(eq(videoClipVersions.videoClipId, clipId))
+        .orderBy(desc(videoClipVersions.versionNumber), desc(videoClipVersions.createdAt))
+        .limit(1);
+
+      return clipVersion ?? null;
+    },
+    {
+      actionName: "getLatestVideoClipVersionByClipId",
+      context: { clipId },
+      errorMessage: "Failed to load latest video clip version. Please try again."
+    }
+  );
+}

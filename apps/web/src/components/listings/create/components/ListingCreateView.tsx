@@ -2,9 +2,9 @@
 
 import * as React from "react";
 import { ListingViewHeader } from "@web/src/components/listings/shared";
-import { type ContentItem } from "@web/src/components/dashboard/components/ContentGrid";
 import { usePathname } from "next/navigation";
-import type { ListingOpenHouseContext } from "@web/src/lib/domain/listing/openHouse";
+import type { ListingContentItem as ContentItem } from "@web/src/lib/domain/listings/content";
+import type { ListingOpenHouseContext } from "@web/src/lib/domain/listings/openHouse";
 import {
   ListingClipManager,
   ListingVideoPreviewGrid,

@@ -1,4 +1,4 @@
-import type { SerializableImageData } from "@web/src/lib/domain/listing/images";
+import type { SerializableImageData } from "@web/src/lib/domain/listings/images";
 
 export interface CategorizedImages {
   [category: string]: SerializableImageData[];
@@ -17,4 +17,3 @@ export interface CategorizationResult {
   };
   categorized: CategorizedImages;
 }
-

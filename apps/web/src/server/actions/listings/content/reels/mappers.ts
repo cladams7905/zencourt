@@ -1,9 +1,9 @@
-import type { DashboardContentItem as ContentItem } from "@web/src/lib/domain/listing/contentTypes";
+import type { ListingContentItem as ContentItem } from "@web/src/lib/domain/listings/content";
 import {
   buildReelSourceKey,
   isSavedListingReelMetadata,
   type SavedListingReelMetadata
-} from "@web/src/lib/domain/listing/reels";
+} from "@web/src/lib/domain/listings/reels";
 import type { DBContent, DBUserMedia } from "@db/types/models";
 
 export function mapSavedReelContentToCreateItem(
@@ -46,7 +46,9 @@ export function buildSavedReelDedupKey(
   return `${metadata.originCacheKeyTimestamp}:${metadata.originCacheKeyId}`;
 }
 
-export function mapUserMediaToVideoItem(media: DBUserMedia): ContentItem | null {
+export function mapUserMediaToVideoItem(
+  media: DBUserMedia
+): ContentItem | null {
   if (media.type !== "video") {
     return null;
   }

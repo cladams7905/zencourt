@@ -9,14 +9,14 @@ import {
   getListingImages,
   updateListingImageAssignments,
   getListingImageUrlsByIds
-} from "@web/src/server/models/listingImages";
+} from "@web/src/server/models/listings/images";
 import { deleteStorageUrlsOrThrow } from "@web/src/server/actions/shared/storageCleanup";
 import { isManagedStorageUrl } from "@web/src/server/services/storage/urlResolution";
 import type {
   ListingImageRecordInput,
   ListingImageUpdate,
   ListingImageUploadRequest
-} from "@web/src/server/models/listingImages/types";
+} from "@web/src/server/models/listings/images/types";
 import { prepareListingImageUploadUrls } from "@web/src/server/services/storage/uploadPreparation";
 
 export const getListingImageUploadUrlsForCurrentUser = withServerActionCaller(

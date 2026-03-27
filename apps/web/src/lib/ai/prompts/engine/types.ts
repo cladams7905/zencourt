@@ -6,7 +6,7 @@ import type {
   ListingContentSubcategory,
   ListingPropertyDetails
 } from "@shared/types/models";
-import type { ListingOpenHouseContext } from "@web/src/lib/domain/listing/openHouse";
+import type { ListingOpenHouseContext } from "@web/src/lib/domain/listings/openHouse";
 
 export type PromptValues = Record<string, string | number | null | undefined>;
 

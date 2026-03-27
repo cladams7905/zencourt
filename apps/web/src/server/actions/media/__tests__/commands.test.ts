@@ -9,7 +9,7 @@ const mockDeleteStorageUrlsOrThrow = jest.fn();
 const mockIsManagedStorageUrl = jest.fn(() => true);
 const mockGetPublicDownloadUrlSafe = jest.fn((url: string | null | undefined) => url);
 
-jest.mock("@web/src/server/models/userMedia", () => ({
+jest.mock("@web/src/server/models/user", () => ({
   createUserMediaRecords: (...args: unknown[]) =>
     (mockCreateUserMediaRecords as (...a: unknown[]) => unknown)(...args),
   getUserMediaById: (...args: unknown[]) =>

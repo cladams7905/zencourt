@@ -7,7 +7,7 @@ import {
 } from "@web/src/app/api/v1/_responses";
 import { parseRequiredRouteParam } from "@shared/utils/api/parsers";
 import { runWithCaller } from "@web/src/server/infra/logger/callContext";
-import { getListingClipDownloadForCurrentUser } from "@web/src/server/actions/listings/clips";
+import { getListingClipDownloadForCurrentUser } from "@web/src/server/actions/listings/create/clips";
 
 const ROUTE_CALLER =
   "api/v1/listings/[listingId]/clips/[clipVersionId]/download";

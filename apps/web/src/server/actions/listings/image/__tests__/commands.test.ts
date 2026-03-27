@@ -10,7 +10,7 @@ const mockRequireListingAccess = jest.fn();
 const mockDeleteStorageUrlsOrThrow = jest.fn();
 const mockIsManagedStorageUrl = jest.fn(() => true);
 
-jest.mock("@web/src/server/models/listingImages", () => ({
+jest.mock("@web/src/server/models/listings/images", () => ({
   createListingImageRecords: (...args: unknown[]) =>
     (mockCreateListingImageRecords as (...a: unknown[]) => unknown)(...args),
   updateListingImageAssignments: (...args: unknown[]) =>

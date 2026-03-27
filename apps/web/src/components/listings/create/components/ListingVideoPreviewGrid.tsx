@@ -1,11 +1,11 @@
 "use client";
 
 import * as React from "react";
-import type { ContentItem } from "@web/src/components/dashboard/components/ContentGrid";
 import type { PreviewTimelinePlan } from "@web/src/components/listings/create/domain/listingCreate";
 import type { ListingContentSubcategory } from "@shared/types/models";
-import type { ListingOpenHouseContext } from "@web/src/lib/domain/listing/openHouse";
-import { saveListingVideoReel } from "@web/src/server/actions/listings/content/reels";
+import type { ListingContentItem as ContentItem } from "@web/src/lib/domain/listings/content";
+import type { ListingOpenHouseContext } from "@web/src/lib/domain/listings/openHouse";
+import { saveListingVideoReel } from "@web/src/server/actions/listings/create/reels";
 import { buildPlayablePreviews } from "@web/src/components/listings/create/media/video/videoPreviewViewModel";
 import { PREVIEW_FPS } from "@web/src/components/listings/create/media/video/previewConstants";
 import { useHoverReveal } from "@web/src/components/listings/create/media/video/useHoverReveal";

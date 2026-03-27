@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import type { ListingContentSubcategory } from "@shared/types/models";
-import type { ContentItem } from "@web/src/components/dashboard/components/ContentGrid";
+import type { ListingContentItem as ContentItem } from "@web/src/lib/domain/listings/content";
 import type { ListingCreateImage } from "../shared/utils";
 import type { ListingCreateMediaTab } from "@web/src/components/listings/create/shared/constants";
 import { useContentGeneration } from "../content/generation";

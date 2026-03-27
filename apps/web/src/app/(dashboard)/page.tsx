@@ -1,9 +1,9 @@
 import { DashboardView } from "@web/src/components/dashboard/DashboardView";
-import { getUser } from "@web/src/server/models/users";
+import { getUser } from "@web/src/server/models/user/users";
 import {
   getOrCreateUserAdditional,
   getUserProfileCompletion
-} from "@web/src/server/models/userAdditional";
+} from "@web/src/server/models/user";
 import { LandingPage } from "@web/src/components/landing/LandingPage";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";

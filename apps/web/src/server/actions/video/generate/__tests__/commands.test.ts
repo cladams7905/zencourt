@@ -34,7 +34,7 @@ jest.mock("@web/src/server/models/listings/access", () => ({
     (mockRequireListingAccess as (...a: unknown[]) => unknown)(...args)
 }));
 
-jest.mock("@web/src/server/models/videoGen", () => ({
+jest.mock("@web/src/server/models/video", () => ({
   getVideoGenBatchById: (...args: unknown[]) =>
     (mockGetVideoGenBatchById as (...a: unknown[]) => unknown)(...args),
   getVideoClipById: (...args: unknown[]) =>

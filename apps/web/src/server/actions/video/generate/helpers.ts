@@ -14,7 +14,7 @@ import {
   getVideoClipVersionById,
   updateVideoClip,
   updateVideoGenJob
-} from "@web/src/server/models/videoGen";
+} from "@web/src/server/models/video";
 import { getVideoGenerationConfig } from "@web/src/server/services/videoGeneration/config";
 import {
   groupImagesByCategory,

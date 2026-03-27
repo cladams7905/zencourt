@@ -1,6 +1,6 @@
 import type { PreviewTimelineClip } from "../preview/previewTimeline";
-import type { ContentItem } from "@web/src/components/dashboard/components/ContentGrid";
 import type { ListingImagePreviewItem } from "@web/src/components/listings/create/shared/types";
+import type { ListingContentItem as ContentItem } from "@web/src/lib/domain/listings/content";
 import type {
   ListingTemplateRenderedItem,
   TemplateRenderCaptionItemInput

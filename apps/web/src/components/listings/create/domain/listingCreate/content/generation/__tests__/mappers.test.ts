@@ -1,4 +1,4 @@
-import type { ContentItem } from "@web/src/components/dashboard/components/ContentGrid";
+import type { ListingContentItem as ContentItem } from "@web/src/lib/domain/listings/content";
 import {
   ensureBatchItemIds,
   mapFinalItemsToContentItems,

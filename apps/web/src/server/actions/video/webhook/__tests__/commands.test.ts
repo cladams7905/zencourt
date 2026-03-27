@@ -7,7 +7,7 @@ const mockGetVideoClipVersionBySourceVideoGenJobId = jest.fn();
 const mockUpdateVideoClipVersion = jest.fn();
 const mockUpdateVideoClip = jest.fn();
 
-jest.mock("@web/src/server/models/videoGen", () => ({
+jest.mock("@web/src/server/models/video", () => ({
   getVideoGenJobById: (...args: unknown[]) =>
     (mockGetVideoGenJobById as (...a: unknown[]) => unknown)(...args),
   updateVideoGenJob: (...args: unknown[]) =>

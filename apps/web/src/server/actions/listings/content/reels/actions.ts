@@ -13,9 +13,9 @@ import {
   getCachedListingContentItem
 } from "@web/src/server/infra/cache/listingContent/cache";
 import { DomainValidationError } from "@web/src/server/errors/domain";
-import type { PlayablePreviewTextUpdate } from "@web/src/lib/domain/listing/create";
-import type { SavedListingReelMetadata } from "@web/src/lib/domain/listing/reels";
-import { isSavedListingReelMetadata } from "@web/src/lib/domain/listing/reels";
+import type { PlayablePreviewTextUpdate } from "@web/src/lib/domain/listings/create";
+import type { SavedListingReelMetadata } from "@web/src/lib/domain/listings/reels";
+import { isSavedListingReelMetadata } from "@web/src/lib/domain/listings/reels";
 import { mapSavedReelContentToCreateItem } from "./mappers";
 
 function normalizeSequence(
@@ -120,7 +120,10 @@ export const saveListingVideoReel = withServerActionCaller(
       return mapped;
     }
 
-    const existing = await getContentById(user.id, params.saveTarget.savedContentId);
+    const existing = await getContentById(
+      user.id,
+      params.saveTarget.savedContentId
+    );
     if (!existing || existing.listingId !== listingId) {
       throw new DomainValidationError("Saved reel not found.");
     }

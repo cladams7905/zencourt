@@ -2,7 +2,7 @@ import * as React from "react";
 import {
   addListingSidebarListener,
   type ListingSidebarUpdate
-} from "@web/src/lib/domain/listing/sidebarEvents";
+} from "@web/src/lib/domain/listings/sidebarEvents";
 import type { ListingSidebarItem } from "@web/src/components/view/sidebar/shared";
 import { buildSidebarListingsViewModel } from "@web/src/components/view/sidebar/domain/viewModel";
 

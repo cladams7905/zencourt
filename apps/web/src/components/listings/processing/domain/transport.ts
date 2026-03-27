@@ -5,7 +5,7 @@ import {
   cancelVideoGenerationBatch,
   startListingVideoGeneration
 } from "@web/src/server/actions/video/generate";
-import type { VideoGenerationBatchStatusPayload } from "@web/src/lib/domain/listing/videoStatus";
+import type { VideoGenerationBatchStatusPayload } from "@web/src/lib/domain/listings/videoStatus";
 import {
   fetchApiData,
   fetchStreamResponse

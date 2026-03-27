@@ -12,8 +12,8 @@ import {
   getVideoClipVersionById,
   getVideoClipVersionBySourceVideoGenJobId,
   updateVideoClip
-} from "@web/src/server/models/videoGen";
-import type { DashboardContentItem as ContentItem } from "@web/src/lib/domain/listing/contentTypes";
+} from "@web/src/server/models/video";
+import type { ListingContentItem as ContentItem } from "@web/src/lib/domain/listings/content";
 import type { DBVideoClip, DBVideoClipVersion } from "@db/types/models";
 import { ApiError } from "@web/src/server/errors/api";
 import { StatusCode } from "@shared/types/api";
@@ -245,6 +245,9 @@ export async function getListingClipDownload(
 
   return {
     videoUrl: clipVersion.videoUrl,
-    filename: buildClipDownloadFilename(clip.roomName, clipVersion.versionNumber)
+    filename: buildClipDownloadFilename(
+      clip.roomName,
+      clipVersion.versionNumber
+    )
   };
 }

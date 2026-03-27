@@ -3,13 +3,13 @@ import type {
   CategorizationPhase,
   CategorizationProgress,
   SerializableImageData
-} from "@web/src/lib/domain/listing/images";
+} from "@web/src/lib/domain/listings/images";
 import {
   createChildLogger,
   logger as baseLogger
 } from "@web/src/lib/core/logging/logger";
 import { getListingById } from "@web/src/server/models/listings";
-import { assignPrimaryListingImageForCategoryTrusted } from "@web/src/server/models/listingImages";
+import { assignPrimaryListingImageForCategoryTrusted } from "@web/src/server/models/listings/images";
 import roomClassificationService from "@web/src/server/services/roomClassification";
 import type { CategorizationResult } from "./domain/types";
 import type { ImageCategorizationStats } from "./types";
@@ -93,7 +93,10 @@ function getUploadedImagesForAnalysis(
 
 function getPublicImageUrl(image: SerializableImageData): string | null {
   if (!image.url) {
-    logger.error({ imageId: image.id }, "Missing image URL for room classification");
+    logger.error(
+      { imageId: image.id },
+      "Missing image URL for room classification"
+    );
     return null;
   }
   const publicUrl = storageService.getPublicUrlForStorageUrl(image.url);
@@ -126,7 +129,9 @@ function mapBatchResultToImage(
     ...image,
     category: isOther ? null : batchResult.classification.category,
     confidence: batchResult.classification.confidence,
-    primaryScore: isOther ? null : (batchResult.classification.primaryScore ?? null),
+    primaryScore: isOther
+      ? null
+      : (batchResult.classification.primaryScore ?? null),
     status: "analyzed"
   };
 
@@ -166,7 +171,9 @@ function buildAnalyzableTargets(
     return { imageId: image.id, signedUrl: imageUrl };
   });
 
-  return targets.filter((target): target is AnalyzableTarget => Boolean(target));
+  return targets.filter((target): target is AnalyzableTarget =>
+    Boolean(target)
+  );
 }
 
 async function analyzeImages(
@@ -233,7 +240,10 @@ export async function runAnalyzeImagesWorkflow(
 
   const normalizedImages = cloneSerializableImages(analyzedImages);
   const categorized = categorizeAnalyzedImages(normalizedImages);
-  const stats = calculateProcessingStats(normalizedImages, Date.now() - startTime);
+  const stats = calculateProcessingStats(
+    normalizedImages,
+    Date.now() - startTime
+  );
 
   emitProgress(
     onProgress,
@@ -303,7 +313,10 @@ export async function persistListingImageAnalysis(
       metadata: image.metadata ?? undefined
     })
     .where(
-      and(eq(listingImages.id, image.id), eq(listingImages.listingId, listingId))
+      and(
+        eq(listingImages.id, image.id),
+        eq(listingImages.listingId, listingId)
+      )
     );
 }
 
@@ -322,7 +335,10 @@ async function assignPrimaryImagesByCategory(
   );
 }
 
-function buildNoopStats(uploaded: number, analyzed: number): ImageCategorizationStats {
+function buildNoopStats(
+  uploaded: number,
+  analyzed: number
+): ImageCategorizationStats {
   return {
     total: 0,
     uploaded,
@@ -362,7 +378,9 @@ export async function runListingImagesCategorizationWorkflow(
     }
   });
 
-  await Promise.all(result.images.map((image) => persistListingImageAnalysis(listingId, image)));
+  await Promise.all(
+    result.images.map((image) => persistListingImageAnalysis(listingId, image))
+  );
 
   await assignPrimaryImagesByCategory(
     listingId,

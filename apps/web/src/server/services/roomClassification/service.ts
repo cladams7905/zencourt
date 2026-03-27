@@ -3,7 +3,7 @@ import {
   type BatchClassificationResult,
   type BatchProgressCallback,
   type RoomClassification as RoomClassificationResult
-} from "@web/src/lib/domain/listing/roomCategories";
+} from "@web/src/lib/domain/listings/roomCategories";
 import {
   createChildLogger,
   logger as baseLogger

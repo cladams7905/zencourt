@@ -1,13 +1,13 @@
 import type {
-  ContentItem,
+  ListingContentItem as ContentItem,
   TextOverlayInput
-} from "@web/src/components/dashboard/components/ContentGrid";
+} from "@web/src/lib/domain/listings/content";
 import type {
   PreviewTextOverlay,
   PreviewTimelinePlan
 } from "@web/src/components/listings/create/domain/listingCreate";
 import type { ListingContentSubcategory } from "@shared/types/models";
-import type { ListingOpenHouseContext } from "@web/src/lib/domain/listing/openHouse";
+import type { ListingOpenHouseContext } from "@web/src/lib/domain/listings/openHouse";
 import {
   hashTextOverlaySeed,
   pickPreviewTextOverlayVariant,

@@ -18,7 +18,7 @@ import type {
   PlayablePreviewTextUpdate
 } from "@web/src/components/listings/create/shared/types";
 import type { TimelinePreviewResolvedSegment } from "@web/src/components/listings/create/media/video/components/ListingTimelinePreviewComposition";
-import type { ContentItem } from "@web/src/components/dashboard/components/ContentGrid";
+import type { ListingContentItem as ContentItem } from "@web/src/lib/domain/listings/content";
 
 type VideoPreviewModalProps = {
   selectedPreview: PlayablePreview | null;

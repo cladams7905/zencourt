@@ -13,7 +13,7 @@ import {
   getVideoClipVersionById,
   getVideoGenBatchById,
   updateVideoClip
-} from "@web/src/server/models/videoGen";
+} from "@web/src/server/models/video";
 import {
   cancelVideoGenerationBatch as cancelVideoGenerationBatchHelper,
   regenerateListingClipVersion as regenerateListingClipVersionHelper,

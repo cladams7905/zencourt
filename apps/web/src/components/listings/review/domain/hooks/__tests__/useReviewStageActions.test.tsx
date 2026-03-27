@@ -14,7 +14,7 @@ jest.mock("@web/src/lib/core/http/client", () => ({
   fetchApiData: (...args: unknown[]) => mockFetchApiData(...args)
 }));
 
-jest.mock("@web/src/lib/domain/listing/sidebarEvents", () => ({
+jest.mock("@web/src/lib/domain/listings/sidebarEvents", () => ({
   emitListingSidebarUpdate: (...args: unknown[]) =>
     mockEmitListingSidebarUpdate(...args),
   emitListingSidebarHeartbeat: (...args: unknown[]) =>

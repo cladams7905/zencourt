@@ -6,7 +6,7 @@ import {
   updateVideoClipVersion,
   updateVideoGenJob,
   getVideoGenJobById
-} from "@web/src/server/models/videoGen";
+} from "@web/src/server/models/video";
 import {
   createChildLogger,
   logger as baseLogger

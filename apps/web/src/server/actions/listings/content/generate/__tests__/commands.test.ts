@@ -41,9 +41,11 @@ jest.mock("@web/src/server/actions/listings/content/generate/helpers", () => ({
     (mockBuildUpstreamRequestBody as (...a: unknown[]) => unknown)(...args)
 }));
 
-jest.mock("@web/src/lib/domain/listing/createPreviewPlans", () => ({
+jest.mock("@web/src/lib/domain/listings/createPreviewPlans", () => ({
   buildListingCreatePreviewPlans: (...args: unknown[]) =>
-    (mockBuildListingCreatePreviewPlans as (...a: unknown[]) => unknown)(...args)
+    (mockBuildListingCreatePreviewPlans as (...a: unknown[]) => unknown)(
+      ...args
+    )
 }));
 
 jest.mock("@web/src/lib/sse/sseEncoder", () => ({
@@ -56,11 +58,13 @@ jest.mock("@web/src/lib/sse/sseEventStream", () => ({
     (mockConsumeSseStream as (...a: unknown[]) => unknown)(...args)
 }));
 
-jest.mock("@web/src/server/models/videoGen", () => ({
+jest.mock("@web/src/server/models/video", () => ({
   getCurrentVideoClipsWithCurrentVersionsByListingId: (...args: unknown[]) =>
-    (mockGetCurrentVideoClipsWithCurrentVersionsByListingId as (
-      ...a: unknown[]
-    ) => unknown)(...args)
+    (
+      mockGetCurrentVideoClipsWithCurrentVersionsByListingId as (
+        ...a: unknown[]
+      ) => unknown
+    )(...args)
 }));
 
 jest.mock("@web/src/lib/core/logging/logger", () => ({
@@ -100,7 +104,9 @@ describe("contentGeneration/commands", () => {
     });
     mockBuildUpstreamRequestBody.mockReturnValue({ category: "listing" });
     mockBuildListingCreatePreviewPlans.mockReturnValue([]);
-    mockGetCurrentVideoClipsWithCurrentVersionsByListingId.mockResolvedValue([]);
+    mockGetCurrentVideoClipsWithCurrentVersionsByListingId.mockResolvedValue(
+      []
+    );
     mockEncodeSseEvent.mockImplementation((payload: unknown) =>
       new TextEncoder().encode(`data: ${JSON.stringify(payload)}\n\n`)
     );
@@ -241,7 +247,7 @@ describe("contentGeneration/commands", () => {
       userId: "user-1",
       listingId: "listing-1",
       subcategory: "new_listing",
-      mediaType: "video",
+      mediaType: "video"
     });
     mockGetCurrentVideoClipsWithCurrentVersionsByListingId.mockResolvedValue([
       {

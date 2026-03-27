@@ -1,5 +1,5 @@
-import type { DashboardContentItem as ContentItem } from "@web/src/lib/domain/listing/contentTypes";
-import { buildListingCreatePreviewPlans } from "@web/src/lib/domain/listing/createPreviewPlans";
+import type { ListingContentItem as ContentItem } from "@web/src/lib/domain/listings/content";
+import { buildListingCreatePreviewPlans } from "@web/src/lib/domain/listings/createPreviewPlans";
 import type { ListingContentSubcategory } from "@shared/types/models";
 import type { ListingGeneratedItem } from "@web/src/server/infra/cache/listingContent/cache";
 
@@ -39,7 +39,8 @@ export function addGeneratedVideoTimelines(params: {
   listingClipItems: ListingClipItem[];
   cacheKeyTimestamp: number;
 }): ListingGeneratedItem[] {
-  const { listingId, subcategory, items, listingClipItems, cacheKeyTimestamp } = params;
+  const { listingId, subcategory, items, listingClipItems, cacheKeyTimestamp } =
+    params;
 
   return items.map((item, index) => {
     if (item.orderedClipIds?.length) {
@@ -69,7 +70,10 @@ export function addGeneratedVideoTimelines(params: {
       ...item,
       orderedClipIds: plan.segments.map((segment) => segment.clipId),
       clipDurationOverrides: Object.fromEntries(
-        plan.segments.map((segment) => [segment.clipId, segment.durationSeconds])
+        plan.segments.map((segment) => [
+          segment.clipId,
+          segment.durationSeconds
+        ])
       )
     };
   });

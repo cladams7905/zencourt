@@ -2,8 +2,8 @@ import { redirect } from "next/navigation";
 import { runWithCaller } from "@web/src/server/infra/logger/callContext";
 import { cookies } from "next/headers";
 import { SurveyClient } from "@web/src/components/welcome";
-import { getUser } from "@web/src/server/models/users";
-import { getOrCreateUserAdditional } from "@web/src/server/models/userAdditional";
+import { getUser } from "@web/src/server/models/user/users";
+import { getOrCreateUserAdditional } from "@web/src/server/models/user";
 
 export const dynamic = "force-dynamic";
 

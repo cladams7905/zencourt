@@ -1,6 +1,6 @@
 import * as React from "react";
 import useSWR from "swr";
-import { emitListingSidebarUpdate } from "@web/src/lib/domain/listing/sidebarEvents";
+import { emitListingSidebarUpdate } from "@web/src/lib/domain/listings/sidebarEvents";
 import { fetchListingImages, triggerCategorization } from "./transport";
 
 export function useCategorizeProcessingFlow(params: {
@@ -13,7 +13,9 @@ export function useCategorizeProcessingFlow(params: {
   const [isProcessing, setIsProcessing] = React.useState(true);
   const hasTriggeredCategorizeRef = React.useRef(false);
   const { data: images = [] } = useSWR(
-    mode === "categorize" && isProcessing ? `/api/v1/listings/${listingId}/images` : null,
+    mode === "categorize" && isProcessing
+      ? `/api/v1/listings/${listingId}/images`
+      : null,
     () => fetchListingImages(listingId),
     {
       refreshInterval: 1000,
@@ -36,10 +38,10 @@ export function useCategorizeProcessingFlow(params: {
     }) =>
       Boolean(
         image.category &&
-          image.confidence !== null &&
-          image.confidence !== undefined &&
-          image.primaryScore !== null &&
-          image.primaryScore !== undefined
+        image.confidence !== null &&
+        image.confidence !== undefined &&
+        image.primaryScore !== null &&
+        image.primaryScore !== undefined
       );
 
     const batchFiltered = batchStartedAt
@@ -47,17 +49,22 @@ export function useCategorizeProcessingFlow(params: {
           const uploadedAt =
             typeof image.uploadedAt === "string"
               ? new Date(image.uploadedAt).getTime()
-              : image.uploadedAt?.getTime?.() ?? 0;
+              : (image.uploadedAt?.getTime?.() ?? 0);
           return uploadedAt >= batchStartedAt;
         })
       : images;
 
     if (batchFiltered.length === 0) return;
 
-    const needsCategorization = batchFiltered.some((image) => !isProcessed(image));
+    const needsCategorization = batchFiltered.some(
+      (image) => !isProcessed(image)
+    );
     if (!needsCategorization) {
       setIsProcessing(false);
-      emitListingSidebarUpdate({ id: listingId, lastOpenedAt: new Date().toISOString() });
+      emitListingSidebarUpdate({
+        id: listingId,
+        lastOpenedAt: new Date().toISOString()
+      });
       navigate(`/listings/${listingId}/categorize`);
     }
   }, [batchStartedAt, images, isProcessing, listingId, mode, navigate]);

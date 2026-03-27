@@ -11,7 +11,7 @@ jest.mock("@web/src/server/infra/cache/redis", () => ({
   getSharedRedisClient: () => mockGetSharedRedisClient()
 }));
 
-jest.mock("@web/src/server/models/userAdditional", () => ({
+jest.mock("@web/src/server/models/user", () => ({
   getUserAdditionalSnapshot: (...args: unknown[]) =>
     (mockGetUserAdditionalSnapshot as (...a: unknown[]) => unknown)(...args)
 }));

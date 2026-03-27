@@ -3,17 +3,17 @@ export type {
   PreviewTextOverlayBackground,
   PreviewTextOverlayFont,
   PreviewTextOverlayPosition
-} from "@web/src/lib/domain/listing/createPreviewPlans";
+} from "@web/src/lib/domain/listings/createPreviewPlans";
 
 export {
   buildPreviewTimelinePlan,
   buildPreviewTimelinePlans,
   buildPreviewTimelineVariants
-} from "@web/src/lib/domain/listing/createPreviewPlans";
+} from "@web/src/lib/domain/listings/createPreviewPlans";
 
 export type {
   BuildPreviewTimelineOptions,
   PreviewTimelineClip,
   PreviewTimelinePlan,
   PreviewTimelineSegment
-} from "@web/src/lib/domain/listing/createPreviewPlans";
+} from "@web/src/lib/domain/listings/createPreviewPlans";

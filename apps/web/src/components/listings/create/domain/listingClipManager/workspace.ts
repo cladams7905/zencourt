@@ -117,7 +117,6 @@ export function useListingClipManagerWorkspace({
     isItemRegenerating
   } = useListingClipManagerWorkspaceActions({
     listingId,
-    clipItems,
     selectedItem,
     selectedVersion,
     selectedClipBatchId,

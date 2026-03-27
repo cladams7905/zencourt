@@ -1,5 +1,5 @@
 import { act, renderHook } from "@testing-library/react";
-import { emitListingSidebarUpdate } from "@web/src/lib/domain/listing/sidebarEvents";
+import { emitListingSidebarUpdate } from "@web/src/lib/domain/listings/sidebarEvents";
 import { useSidebarListings } from "@web/src/components/view/sidebar/domain/hooks/useSidebarListings";
 import type { ListingSidebarItem } from "@web/src/components/view/sidebar/shared";
 
@@ -50,8 +50,9 @@ describe("useSidebarListings", () => {
 
     expect(result.current.pendingListingIds.has("listing-1")).toBe(true);
     expect(
-      result.current.displayedListingItems.find((item) => item.id === "listing-1")
-        ?.title
+      result.current.displayedListingItems.find(
+        (item) => item.id === "listing-1"
+      )?.title
     ).toBe("Updated Title");
 
     act(() => {
@@ -73,8 +74,9 @@ describe("useSidebarListings", () => {
     expect(clearTimeoutSpy).toHaveBeenCalled();
     expect(result.current.pendingListingIds.has("listing-1")).toBe(true);
     expect(
-      result.current.displayedListingItems.find((item) => item.id === "listing-1")
-        ?.title
+      result.current.displayedListingItems.find(
+        (item) => item.id === "listing-1"
+      )?.title
     ).toBe("Second update");
 
     act(() => {

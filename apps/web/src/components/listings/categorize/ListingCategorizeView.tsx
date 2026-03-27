@@ -18,7 +18,7 @@ import {
   ListingImageMoveDialog
 } from "@web/src/components/listings/categorize/components";
 import { getImageMetadataFromFile } from "@web/src/lib/domain/media/imageMetadata";
-import { emitListingSidebarHeartbeat } from "@web/src/lib/domain/listing/sidebarEvents";
+import { emitListingSidebarHeartbeat } from "@web/src/lib/domain/listings/sidebarEvents";
 import {
   UNCATEGORIZED_CATEGORY_ID,
   useDragAutoScroll,
@@ -113,12 +113,11 @@ export function ListingCategorizeView({
     listingId,
     runDraftSave
   });
-  const { getUploadUrls, onCreateRecords } =
-    useCategorizeUploads({
-      listingId,
-      runDraftSave,
-      setImages
-    });
+  const { getUploadUrls, onCreateRecords } = useCategorizeUploads({
+    listingId,
+    runDraftSave,
+    setImages
+  });
   const [openCategories, setOpenCategories] = React.useState<string[]>(
     () => categoryOrder
   );

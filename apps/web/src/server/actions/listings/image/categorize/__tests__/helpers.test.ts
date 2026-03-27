@@ -32,7 +32,7 @@ jest.mock("@web/src/server/models/listings", () => ({
   getListingById: (...args: unknown[]) => mockGetListingById(...args)
 }));
 
-jest.mock("@web/src/server/models/listingImages", () => ({
+jest.mock("@web/src/server/models/listings/images", () => ({
   assignPrimaryListingImageForCategoryTrusted: (...args: unknown[]) =>
     mockAssignPrimary(...args)
 }));

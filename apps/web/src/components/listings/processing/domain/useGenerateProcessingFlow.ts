@@ -1,13 +1,13 @@
 import * as React from "react";
 import useSWR from "swr";
 import { toast } from "sonner";
-import { emitListingSidebarUpdate } from "@web/src/lib/domain/listing/sidebarEvents";
-import type { VideoGenerationBatchStatusPayload } from "@web/src/lib/domain/listing/videoStatus";
+import { emitListingSidebarUpdate } from "@web/src/lib/domain/listings/sidebarEvents";
+import type { VideoGenerationBatchStatusPayload } from "@web/src/lib/domain/listings/videoStatus";
 import {
   getBatchGenerationSoftTimeoutMs,
   isPastTimeout,
   VIDEO_GENERATION_TIMEOUT_MESSAGE
-} from "@web/src/lib/domain/listing/videoGenerationTimeouts";
+} from "@web/src/lib/domain/listings/videoGenerationTimeouts";
 import {
   cancelVideoGeneration,
   fetchVideoStatus,
@@ -30,11 +30,14 @@ export function useGenerateProcessingFlow(params: {
   );
   const [generationStatus, setGenerationStatus] =
     React.useState<VideoGenerationBatchStatusPayload | null>(null);
-  const [canPollGeneration, setCanPollGeneration] = React.useState(mode !== "generate");
+  const [canPollGeneration, setCanPollGeneration] = React.useState(
+    mode !== "generate"
+  );
   const [listingContentStatus, setListingContentStatus] = React.useState<
     "idle" | "running" | "succeeded" | "failed"
   >("idle");
-  const [remainingEstimateSeconds, setRemainingEstimateSeconds] = React.useState(0);
+  const [remainingEstimateSeconds, setRemainingEstimateSeconds] =
+    React.useState(0);
   const [isCancelOpen, setIsCancelOpen] = React.useState(false);
   const [isCanceling, setIsCanceling] = React.useState(false);
 
@@ -58,10 +61,7 @@ export function useGenerateProcessingFlow(params: {
     const canceled = generationStatus?.canceledJobs ?? 0;
     return {
       total,
-      terminal:
-        (generationStatus?.completedJobs ?? 0) +
-        failed +
-        canceled,
+      terminal: (generationStatus?.completedJobs ?? 0) + failed + canceled,
       failed,
       canceled,
       isTerminal: generationStatus?.isTerminal ?? false,
@@ -184,13 +184,19 @@ export function useGenerateProcessingFlow(params: {
       });
       void contentPromise;
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to start generation.");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to start generation."
+      );
       await goToStage("review", `/listings/${listingId}/review`);
     }
   }, [activeBatchId, goToStage, listingId, mode]);
 
   React.useEffect(() => {
-    if (mode !== "generate" || !generationStatus || generationStatus.isTerminal) {
+    if (
+      mode !== "generate" ||
+      !generationStatus ||
+      generationStatus.isTerminal
+    ) {
       return;
     }
 
@@ -226,7 +232,11 @@ export function useGenerateProcessingFlow(params: {
   }, [estimatedTotalSeconds, mode]);
 
   React.useEffect(() => {
-    if (mode !== "generate" || generationSummary.isTerminal || remainingEstimateSeconds <= 0) {
+    if (
+      mode !== "generate" ||
+      generationSummary.isTerminal ||
+      remainingEstimateSeconds <= 0
+    ) {
       if (generationSummary.isTerminal) {
         setRemainingEstimateSeconds(0);
       }
@@ -240,7 +250,12 @@ export function useGenerateProcessingFlow(params: {
 
   React.useEffect(() => {
     if (mode !== "generate") return;
-    if (!generationSummary.total || !generationSummary.isTerminal || hasNavigatedRef.current) return;
+    if (
+      !generationSummary.total ||
+      !generationSummary.isTerminal ||
+      hasNavigatedRef.current
+    )
+      return;
 
     if (generationSummary.failed > 0 || generationSummary.canceled > 0) {
       hasNavigatedRef.current = true;
@@ -248,7 +263,10 @@ export function useGenerateProcessingFlow(params: {
       return;
     }
 
-    if (!generationSummary.allSucceeded || listingContentStatus !== "succeeded") {
+    if (
+      !generationSummary.allSucceeded ||
+      listingContentStatus !== "succeeded"
+    ) {
       if (listingContentStatus === "failed") {
         hasNavigatedRef.current = true;
         void goToStage("review", `/listings/${listingId}/review`);
@@ -257,7 +275,10 @@ export function useGenerateProcessingFlow(params: {
     }
 
     hasNavigatedRef.current = true;
-    void goToStage("create", `/listings/${listingId}/create?mediaType=videos&filter=new_listing`);
+    void goToStage(
+      "create",
+      `/listings/${listingId}/create?mediaType=videos&filter=new_listing`
+    );
   }, [generationSummary, goToStage, listingContentStatus, listingId, mode]);
 
   React.useEffect(() => {
@@ -283,7 +304,9 @@ export function useGenerateProcessingFlow(params: {
       toast.success("Video generation canceled.");
       navigate(`/listings/${listingId}/review`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to cancel generation.");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to cancel generation."
+      );
     } finally {
       setIsCanceling(false);
       setIsCancelOpen(false);

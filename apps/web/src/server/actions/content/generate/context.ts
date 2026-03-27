@@ -18,7 +18,7 @@ import {
   selectCommunityCategories,
   type CommunityCategoryKey
 } from "@web/src/server/services/contentRotation";
-import type { UserAdditionalSnapshot } from "@web/src/server/models/userAdditional";
+import type { UserAdditionalSnapshot } from "@web/src/server/models/user";
 import type { Redis } from "@web/src/server/infra/cache/redis";
 
 export type ResolvedContentContext = {

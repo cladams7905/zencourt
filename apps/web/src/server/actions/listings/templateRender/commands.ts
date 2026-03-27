@@ -5,8 +5,8 @@ import {
   createChildLogger,
   logger as baseLogger
 } from "@web/src/lib/core/logging/logger";
-import { getOrCreateUserAdditional } from "@web/src/server/models/userAdditional";
-import { getListingImages } from "@web/src/server/models/listingImages";
+import { getOrCreateUserAdditional } from "@web/src/server/models/user";
+import { getListingImages } from "@web/src/server/models/listings/images";
 import { setCachedListingContentItem } from "@web/src/server/infra/cache/listingContent/cache";
 import { getSharedRedisClient } from "@web/src/server/infra/cache/redis";
 import {

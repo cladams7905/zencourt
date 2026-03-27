@@ -9,7 +9,7 @@ jest.mock("sonner", () => ({
   }
 }));
 
-jest.mock("@web/src/lib/domain/listing/sidebarEvents", () => ({
+jest.mock("@web/src/lib/domain/listings/sidebarEvents", () => ({
   emitListingSidebarUpdate: (...args: unknown[]) =>
     mockEmitListingSidebarUpdate(...args)
 }));
@@ -19,7 +19,11 @@ import { useListingCreateEffects } from "../effects";
 describe("useListingCreateEffects", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    window.history.replaceState({}, "", "/listings/l1/create?mediaType=videos&filter=new_listing");
+    window.history.replaceState(
+      {},
+      "",
+      "/listings/l1/create?mediaType=videos&filter=new_listing"
+    );
   });
 
   function renderEffects(overrides?: Record<string, unknown>) {
@@ -106,21 +110,20 @@ describe("useListingCreateEffects", () => {
 
   it("avoids duplicate replaceState calls for the same URL across rerenders", () => {
     const replaceSpy = jest.spyOn(window.history, "replaceState");
-    const { rerender } = renderHook(
-      () =>
-        useListingCreateEffects({
-          listingId: "l1",
-          pathname: "/listings/l1/create",
-          activeMediaTab: "images",
-          activeSubcategory: "status_update",
-          initialMediaTab: "images",
-          initialSubcategory: "new_listing",
-          activeContentItemsLength: 1,
-          isGenerating: false,
-          generationError: null,
-          templateRenderError: null,
-          generateSubcategoryContent: jest.fn().mockResolvedValue(undefined)
-        }),
+    const { rerender } = renderHook(() =>
+      useListingCreateEffects({
+        listingId: "l1",
+        pathname: "/listings/l1/create",
+        activeMediaTab: "images",
+        activeSubcategory: "status_update",
+        initialMediaTab: "images",
+        initialSubcategory: "new_listing",
+        activeContentItemsLength: 1,
+        isGenerating: false,
+        generationError: null,
+        templateRenderError: null,
+        generateSubcategoryContent: jest.fn().mockResolvedValue(undefined)
+      })
     );
 
     rerender();

@@ -7,7 +7,7 @@ import {
 import { ApiError } from "@web/src/app/api/v1/_utils";
 import { runWithCaller } from "@web/src/server/infra/logger/callContext";
 import { parseRequiredRouteParam } from "@shared/utils/api/parsers";
-import { getListingClipVersionItemsForCurrentUser } from "@web/src/server/actions/listings/clips";
+import { getListingClipVersionItemsForCurrentUser } from "@web/src/server/actions/listings/create/clips";
 
 export const runtime = "nodejs";
 

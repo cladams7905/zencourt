@@ -19,13 +19,14 @@ jest.mock("sonner", () => ({
   }
 }));
 
-jest.mock("@web/src/lib/domain/listing/sidebarEvents", () => ({
+jest.mock("@web/src/lib/domain/listings/sidebarEvents", () => ({
   emitListingSidebarUpdate: (...args: unknown[]) =>
     mockEmitListingSidebarUpdate(...args)
 }));
 
 jest.mock("@web/src/server/actions/listings/commands", () => ({
-  updateListingForCurrentUser: (...args: unknown[]) => mockUpdateListing(...args),
+  updateListingForCurrentUser: (...args: unknown[]) =>
+    mockUpdateListing(...args),
   touchListingActivityForCurrentUser: (...args: unknown[]) =>
     mockTouchListingActivity(...args)
 }));

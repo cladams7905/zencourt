@@ -1,6 +1,6 @@
 import type { ListingPropertyDetails } from "@shared/types/models";
 import type { MarketDataInput } from "./types";
-import type { ListingOpenHouseContext } from "@web/src/lib/domain/listing/openHouse";
+import type { ListingOpenHouseContext } from "@web/src/lib/domain/listings/openHouse";
 import {
   readPromptFile,
   LISTING_SUBCATEGORY_DIRECTIVE_FILES

@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { runWithCaller } from "@web/src/server/infra/logger/callContext";
 import { getListingById } from "@web/src/server/models/listings";
 import { requireUserOrRedirect } from "@web/src/app/(dashboard)/_utils/requireUserOrRedirect";
-import { getOrCreateUserAdditional } from "@web/src/server/models/userAdditional";
+import { getOrCreateUserAdditional } from "@web/src/server/models/user";
 import { ListingReviewView } from "@web/src/components/listings/review";
 import { redirectToListingStage } from "../_utils/redirectToListingStage";
 

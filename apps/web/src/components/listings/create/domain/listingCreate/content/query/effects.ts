@@ -1,6 +1,6 @@
 import * as React from "react";
 import { toast } from "sonner";
-import { emitListingSidebarUpdate } from "@web/src/lib/domain/listing/sidebarEvents";
+import { emitListingSidebarUpdate } from "@web/src/lib/domain/listings/sidebarEvents";
 import type { ListingContentSubcategory } from "@shared/types/models";
 import type { ListingCreateMediaTab } from "@web/src/components/listings/create/shared/constants";
 
@@ -17,7 +17,11 @@ export function useListingCreateEffects(params: {
   templateRenderError: string | null;
   generateSubcategoryContent: (
     subcategory: ListingContentSubcategory,
-    options?: { forceNewBatch?: boolean; generationCount?: number; templateId?: string }
+    options?: {
+      forceNewBatch?: boolean;
+      generationCount?: number;
+      templateId?: string;
+    }
   ) => Promise<void>;
 }) {
   const {

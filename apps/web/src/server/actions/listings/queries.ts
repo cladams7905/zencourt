@@ -3,10 +3,6 @@
 import { withServerActionCaller } from "@web/src/server/infra/logger/callContext";
 import { requireAuthenticatedUser } from "@web/src/server/actions/_auth/api";
 import { getUserListingSummariesPage } from "@web/src/server/models/listings";
-import { getListingContentItems } from "./content/items";
-export { getListingCreateViewDataForCurrentUser } from "./viewData";
-
-export { getListingContentItems };
 
 export const getCurrentUserListingSummariesPage = withServerActionCaller(
   "getCurrentUserListingSummariesPage",

@@ -13,7 +13,7 @@ import { redirect } from "next/navigation";
 jest.mock("@web/src/server/models/users", () => ({
   getUser: jest.fn()
 }));
-import { getUser } from "@web/src/server/models/users";
+import { getUser } from "@web/src/server/models/user/users";
 
 import { requireUserOrRedirect } from "../requireUserOrRedirect";
 
@@ -27,7 +27,10 @@ describe("requireUserOrRedirect", () => {
   });
 
   it("returns the user when getUser resolves to a user object", async () => {
-    const fakeUser = { id: "user-123", primaryEmail: "test@example.com" } as never;
+    const fakeUser = {
+      id: "user-123",
+      primaryEmail: "test@example.com"
+    } as never;
     mockGetUser.mockResolvedValue(fakeUser);
     const user = await requireUserOrRedirect();
     expect(user).toBe(fakeUser);

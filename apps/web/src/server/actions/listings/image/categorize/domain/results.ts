@@ -1,4 +1,4 @@
-import type { SerializableImageData } from "@web/src/lib/domain/listing/images";
+import type { SerializableImageData } from "@web/src/lib/domain/listings/images";
 import type { CategorizedImages, CategorizationResult } from "./types";
 
 export function cloneSerializableImages(
@@ -77,4 +77,3 @@ export function calculateProcessingStats(
     totalDuration: duration
   };
 }
-

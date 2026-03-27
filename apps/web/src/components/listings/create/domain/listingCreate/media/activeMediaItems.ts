@@ -1,6 +1,6 @@
 import * as React from "react";
-import type { ContentItem } from "@web/src/components/dashboard/components/ContentGrid";
 import type { ListingContentSubcategory } from "@shared/types/models";
+import type { ListingContentItem as ContentItem } from "@web/src/lib/domain/listings/content";
 import { resolveContentMediaType } from "../shared/utils";
 
 export function useListingCreateActiveMediaItems(params: {

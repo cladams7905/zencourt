@@ -1,7 +1,7 @@
 import { fetchApiData } from "@web/src/lib/core/http/client";
-import type { ContentItem } from "@web/src/components/dashboard/components/ContentGrid";
 import type { ListingCreateMediaTab } from "@web/src/components/listings/create/shared/constants";
 import type { ListingContentSubcategory } from "@shared/types/models";
+import type { ListingContentItem as ContentItem } from "@web/src/lib/domain/listings/content";
 
 export type ListingContentItemsPage = {
   items: ContentItem[];

@@ -7,7 +7,7 @@ import {
 } from "@web/src/app/api/v1/_responses";
 import { parseRequiredRouteParam } from "@shared/utils/api/parsers";
 import { runWithCaller } from "@web/src/server/infra/logger/callContext";
-import { getListingContentItemsForCurrentUser } from "@web/src/server/actions/listings/content/items";
+import { getListingContentItemsForCurrentUser } from "@web/src/server/actions/listings/create/content";
 
 const ROUTE_CALLER = "api/v1/listings/.../content";
 const DEFAULT_PAGE_SIZE = 8;

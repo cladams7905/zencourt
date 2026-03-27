@@ -4,13 +4,15 @@ const mockEmitListingSidebarUpdate = jest.fn();
 const mockFetchListingImages = jest.fn();
 const mockTriggerCategorization = jest.fn();
 
-jest.mock("@web/src/lib/domain/listing/sidebarEvents", () => ({
-  emitListingSidebarUpdate: (...args: unknown[]) => mockEmitListingSidebarUpdate(...args)
+jest.mock("@web/src/lib/domain/listings/sidebarEvents", () => ({
+  emitListingSidebarUpdate: (...args: unknown[]) =>
+    mockEmitListingSidebarUpdate(...args)
 }));
 
 jest.mock("@web/src/components/listings/processing/domain/transport", () => ({
   fetchListingImages: (...args: unknown[]) => mockFetchListingImages(...args),
-  triggerCategorization: (...args: unknown[]) => mockTriggerCategorization(...args)
+  triggerCategorization: (...args: unknown[]) =>
+    mockTriggerCategorization(...args)
 }));
 
 import { useCategorizeProcessingFlow } from "@web/src/components/listings/processing/domain/useCategorizeProcessingFlow";

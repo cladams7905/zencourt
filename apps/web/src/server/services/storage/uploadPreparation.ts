@@ -9,12 +9,12 @@ import {
 import type {
   ListingImageUploadRequest,
   ListingImageUploadUrlResult
-} from "@web/src/server/models/listingImages/types";
+} from "@web/src/server/models/listings/images/types";
 import type {
   UserMediaRecordInput,
   UserMediaUploadRequest,
   UserMediaUploadUrlResult
-} from "@web/src/server/models/userMedia/types";
+} from "@web/src/server/models/user";
 import {
   buildUploadFailure,
   isImageMimeType,
@@ -46,7 +46,11 @@ export async function prepareListingImageUploadUrls(
   for (const file of files) {
     if (!isImageMimeType(file.fileType)) {
       failed.push(
-        buildUploadFailure(file.id, file.fileName, "Only image files are supported.")
+        buildUploadFailure(
+          file.id,
+          file.fileName,
+          "Only image files are supported."
+        )
       );
       continue;
     }
@@ -91,7 +95,9 @@ function buildUploadContext(userId: string) {
   };
 }
 
-function unsupportedFileTypeFailure(file: UserMediaUploadRequest): UploadFailure {
+function unsupportedFileTypeFailure(
+  file: UserMediaUploadRequest
+): UploadFailure {
   return buildUploadFailure(
     file.id,
     file.fileName,
@@ -125,7 +131,10 @@ export async function prepareUserMediaUploadUrls(
       }
 
       const key = getUserMediaPath(ctx.userId, "image", file.fileName);
-      const signed = await storageService.getSignedUploadUrl(key, file.fileType);
+      const signed = await storageService.getSignedUploadUrl(
+        key,
+        file.fileType
+      );
       if (!signed.success) {
         failed.push(buildUploadFailure(file.id, file.fileName, signed.error));
         continue;
@@ -155,7 +164,10 @@ export async function prepareUserMediaUploadUrls(
       }
 
       const key = getUserMediaPath(ctx.userId, "video", file.fileName);
-      const signed = await storageService.getSignedUploadUrl(key, file.fileType);
+      const signed = await storageService.getSignedUploadUrl(
+        key,
+        file.fileType
+      );
       if (!signed.success) {
         failed.push(buildUploadFailure(file.id, file.fileName, signed.error));
         continue;
@@ -167,7 +179,9 @@ export async function prepareUserMediaUploadUrls(
         "image/jpeg"
       );
       if (!thumbnailSigned.success) {
-        failed.push(buildUploadFailure(file.id, file.fileName, thumbnailSigned.error));
+        failed.push(
+          buildUploadFailure(file.id, file.fileName, thumbnailSigned.error)
+        );
         continue;
       }
 
@@ -210,7 +224,10 @@ export function mapUserMediaRecordInputs(
       throw new Error("Invalid media upload key");
     }
 
-    if (upload.thumbnailKey && !upload.thumbnailKey.startsWith(thumbnailPrefix)) {
+    if (
+      upload.thumbnailKey &&
+      !upload.thumbnailKey.startsWith(thumbnailPrefix)
+    ) {
       throw new Error("Invalid media thumbnail upload key");
     }
 

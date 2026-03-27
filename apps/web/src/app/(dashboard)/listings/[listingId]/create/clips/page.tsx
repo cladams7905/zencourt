@@ -9,8 +9,8 @@ import {
 } from "@web/src/components/listings/create/components/ListingClipManager";
 import { ListingViewHeader } from "@web/src/components/listings/shared";
 import { redirectToListingStage } from "../../_utils/redirectToListingStage";
-import { getListingClipVersionItemsForCurrentUser } from "@web/src/server/actions/listings/clips";
-import { stringifyListingCreateSearchParams } from "@web/src/components/listings/create/domain/listingCreate";
+import { getListingClipVersionItemsForCurrentUser } from "@web/src/server/actions/listings/create/clips";
+import { stringifyListingCreateSearchParams } from "@web/src/components/listings/create/domain/listingCreate/content/query";
 
 interface ListingCreateClipsPageProps {
   params: Promise<{ listingId: string }>;

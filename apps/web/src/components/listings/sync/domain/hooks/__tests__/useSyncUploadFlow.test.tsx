@@ -8,7 +8,8 @@ const mockEmitListingSidebarUpdate = jest.fn();
 const mockGetImageMetadataFromFile = jest.fn();
 
 jest.mock("@web/src/server/actions/listings/commands", () => ({
-  createListingForCurrentUser: (...args: unknown[]) => mockCreateListing(...args)
+  createListingForCurrentUser: (...args: unknown[]) =>
+    mockCreateListing(...args)
 }));
 
 jest.mock("@web/src/server/actions/listings/image", () => ({
@@ -18,7 +19,7 @@ jest.mock("@web/src/server/actions/listings/image", () => ({
     mockGetListingImageUploadUrls(...args)
 }));
 
-jest.mock("@web/src/lib/domain/listing/sidebarEvents", () => ({
+jest.mock("@web/src/lib/domain/listings/sidebarEvents", () => ({
   emitListingSidebarUpdate: (...args: unknown[]) =>
     mockEmitListingSidebarUpdate(...args)
 }));
@@ -60,7 +61,11 @@ describe("useSyncUploadFlow", () => {
 
       expect(mockCreateListing).toHaveBeenCalledTimes(1);
 
-      resolveDraft?.({ id: "listing-1", title: null, listingStage: "categorize" });
+      resolveDraft?.({
+        id: "listing-1",
+        title: null,
+        listingStage: "categorize"
+      });
       await Promise.all([p1, p2]);
     });
 
@@ -96,9 +101,7 @@ describe("useSyncUploadFlow", () => {
     });
     mockCreateListingImageRecords.mockResolvedValue(undefined);
 
-    const { result } = renderHook(() =>
-      useSyncUploadFlow({ navigate })
-    );
+    const { result } = renderHook(() => useSyncUploadFlow({ navigate }));
 
     await act(async () => {
       await result.current.ensureListingId();

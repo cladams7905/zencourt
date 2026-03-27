@@ -1,7 +1,7 @@
 import * as React from "react";
 import { deleteCachedListingContentItem } from "@web/src/server/actions/listings/content/cache";
-import type { ContentItem } from "@web/src/components/dashboard/components/ContentGrid";
 import type { ListingContentSubcategory } from "@shared/types/models";
+import type { ListingContentItem as ContentItem } from "@web/src/lib/domain/listings/content";
 
 type CachedContentItem = ContentItem & {
   cacheKeyTimestamp?: number;

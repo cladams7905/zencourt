@@ -3,25 +3,27 @@ import { asc, desc, eq } from "@db/client";
 import {
   updateVideoGenBatch,
   updateVideoGenJob
-} from "@web/src/server/models/videoGen";
+} from "@web/src/server/models/video";
 import type { VideoStatus } from "@db/types/models";
 import type {
   InitialVideoStatusPayload,
   VideoGenerationBatchStatusPayload,
   VideoJobUpdateEvent
-} from "@web/src/lib/domain/listing/videoStatus";
+} from "@web/src/lib/domain/listings/videoStatus";
 import { isPriorityCategory } from "@shared/utils";
 import {
   getBatchGenerationHardTimeoutMs,
   isPastTimeout,
   VIDEO_GENERATION_TIMEOUT_MESSAGE
-} from "@web/src/lib/domain/listing/videoGenerationTimeouts";
+} from "@web/src/lib/domain/listings/videoGenerationTimeouts";
 
 function countJobsByStatus(jobs: Array<{ status: string }>) {
   const completedJobs = jobs.filter((job) => job.status === "completed").length;
   const failedJobs = jobs.filter((job) => job.status === "failed").length;
   const canceledJobs = jobs.filter((job) => job.status === "canceled").length;
-  const processingJobs = jobs.filter((job) => job.status === "processing").length;
+  const processingJobs = jobs.filter(
+    (job) => job.status === "processing"
+  ).length;
   const pendingJobs = jobs.filter((job) => job.status === "pending").length;
   return {
     totalJobs: jobs.length,
@@ -91,10 +93,10 @@ async function failTimedOutBatch<
     jobs: jobs.map((job) =>
       isNonTerminalStatus(job.status)
         ? {
-          ...job,
-          status: "failed",
-          errorMessage: VIDEO_GENERATION_TIMEOUT_MESSAGE
-        }
+            ...job,
+            status: "failed",
+            errorMessage: VIDEO_GENERATION_TIMEOUT_MESSAGE
+          }
         : job
     )
   };

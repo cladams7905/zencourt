@@ -1,5 +1,5 @@
 import * as React from "react";
-import { emitListingSidebarUpdate } from "@web/src/lib/domain/listing/sidebarEvents";
+import { emitListingSidebarUpdate } from "@web/src/lib/domain/listings/sidebarEvents";
 import { updateListingStage } from "./transport";
 import { useCategorizeProcessingFlow } from "./useCategorizeProcessingFlow";
 import { useGenerateProcessingFlow } from "./useGenerateProcessingFlow";
@@ -49,13 +49,14 @@ export function useListingProcessingWorkflow(params: {
     navigate
   });
 
-  const { status, errorMessage, fetchDetails, handleSkip } = useReviewProcessingFlow({
-    mode,
-    listingId,
-    address,
-    navigate,
-    updateStage
-  });
+  const { status, errorMessage, fetchDetails, handleSkip } =
+    useReviewProcessingFlow({
+      mode,
+      listingId,
+      address,
+      navigate,
+      updateStage
+    });
 
   const {
     isCancelOpen,
@@ -76,26 +77,33 @@ export function useListingProcessingWorkflow(params: {
   const copy = React.useMemo(() => {
     if (mode === "review") {
       return {
-        title: status === "error" ? "Property lookup failed" : "Fetching property details",
+        title:
+          status === "error"
+            ? "Property lookup failed"
+            : "Fetching property details",
         subtitle:
           status === "error"
             ? "We could not fetch IDX details. You can retry or fill in details manually."
             : "We’re pulling public IDX records for review.",
         addressLine: address || "Address on file",
-        helperText: "This usually takes a few moments. Please keep this tab open."
+        helperText:
+          "This usually takes a few moments. Please keep this tab open."
       };
     }
     if (mode === "generate") {
       return {
         title: "Generating clips",
-        subtitle: "We’re turning your listing photos into short b-roll clips for your reels.",
+        subtitle:
+          "We’re turning your listing photos into short b-roll clips for your reels.",
         addressLine: null,
-        helperText: "Keep this tab open. We’ll automatically take you to your clip board when ready."
+        helperText:
+          "Keep this tab open. We’ll automatically take you to your clip board when ready."
       };
     }
     return {
       title: "Processing listing photos",
-      subtitle: "We’re categorizing your photos so you can review each room quickly.",
+      subtitle:
+        "We’re categorizing your photos so you can review each room quickly.",
       addressLine: null,
       helperText: "This usually takes a few moments. Please keep this tab open."
     };

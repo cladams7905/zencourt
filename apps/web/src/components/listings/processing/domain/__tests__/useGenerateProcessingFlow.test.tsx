@@ -15,16 +15,19 @@ jest.mock("sonner", () => ({
   }
 }));
 
-jest.mock("@web/src/lib/domain/listing/sidebarEvents", () => ({
-  emitListingSidebarUpdate: (...args: unknown[]) => mockEmitListingSidebarUpdate(...args)
+jest.mock("@web/src/lib/domain/listings/sidebarEvents", () => ({
+  emitListingSidebarUpdate: (...args: unknown[]) =>
+    mockEmitListingSidebarUpdate(...args)
 }));
 
 jest.mock("@web/src/components/listings/processing/domain/transport", () => ({
   fetchVideoStatus: (...args: unknown[]) => mockFetchVideoStatus(...args),
-  cancelVideoGeneration: (...args: unknown[]) => mockCancelVideoGeneration(...args),
+  cancelVideoGeneration: (...args: unknown[]) =>
+    mockCancelVideoGeneration(...args),
   startListingContentGeneration: (...args: unknown[]) =>
     mockStartListingContentGeneration(...args),
-  startVideoGeneration: (...args: unknown[]) => mockStartVideoGeneration(...args)
+  startVideoGeneration: (...args: unknown[]) =>
+    mockStartVideoGeneration(...args)
 }));
 
 import { useGenerateProcessingFlow } from "@web/src/components/listings/processing/domain/useGenerateProcessingFlow";

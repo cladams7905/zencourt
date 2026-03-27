@@ -2,12 +2,12 @@ const mockGetUser = jest.fn();
 const mockGetOrCreateUserAdditional = jest.fn();
 const mockGetUserSidebarListings = jest.fn();
 
-jest.mock("@web/src/server/models/users", () => ({
+jest.mock("@web/src/server/models/user/users", () => ({
   getUser: (...args: unknown[]) =>
     (mockGetUser as (...a: unknown[]) => unknown)(...args)
 }));
 
-jest.mock("@web/src/server/models/userAdditional", () => ({
+jest.mock("@web/src/server/models/user", () => ({
   getOrCreateUserAdditional: (...args: unknown[]) =>
     (mockGetOrCreateUserAdditional as (...a: unknown[]) => unknown)(...args)
 }));

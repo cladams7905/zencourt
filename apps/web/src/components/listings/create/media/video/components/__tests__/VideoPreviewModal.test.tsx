@@ -1,7 +1,7 @@
 import * as React from "react";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ContentItem } from "@web/src/components/dashboard/components/ContentGrid";
+import type { ListingContentItem as ContentItem } from "@web/src/lib/domain/listings/content";
 import type { PlayablePreview } from "@web/src/components/listings/create/shared/types";
 import { VideoPreviewModal } from "@web/src/components/listings/create/media/video/components/VideoPreviewModal";
 

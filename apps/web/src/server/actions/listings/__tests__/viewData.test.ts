@@ -23,7 +23,7 @@ jest.mock("@web/src/server/actions/listings/clips", () => ({
     (mockGetListingClipVersionItems as (...a: unknown[]) => unknown)(...args)
 }));
 
-jest.mock("@web/src/server/models/listingImages", () => ({
+jest.mock("@web/src/server/models/listings/images", () => ({
   getListingImages: (...args: unknown[]) =>
     (mockGetListingImages as (...a: unknown[]) => unknown)(...args),
   mapListingImageToDisplayItem: (...args: unknown[]) =>
@@ -35,7 +35,7 @@ jest.mock("@web/src/server/actions/listings/content/items", () => ({
     (mockGetListingContentItems as (...a: unknown[]) => unknown)(...args)
 }));
 
-jest.mock("@web/src/server/models/userMedia/queries", () => ({
+jest.mock("@web/src/server/models/user", () => ({
   getUserMedia: (...args: unknown[]) =>
     (mockGetUserMedia as (...a: unknown[]) => unknown)(...args)
 }));

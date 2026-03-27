@@ -7,7 +7,7 @@ import {
   deleteUserMedia,
   getUserMediaById,
   getUserMedia
-} from "@web/src/server/models/userMedia";
+} from "@web/src/server/models/user";
 import { deleteStorageUrlsOrThrow } from "@web/src/server/actions/shared/storageCleanup";
 import {
   getPublicDownloadUrlSafe,
@@ -20,7 +20,7 @@ import {
 import type {
   UserMediaRecordInput,
   UserMediaUploadRequest
-} from "@web/src/server/models/userMedia/types";
+} from "@web/src/server/models/user";
 
 export const getUserMediaUploadUrlsForCurrentUser = withServerActionCaller(
   "getUserMediaUploadUrlsForCurrentUser",

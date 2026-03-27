@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { runWithCaller } from "@web/src/server/infra/logger/callContext";
 import { getListingById } from "@web/src/server/models/listings";
-import { getLatestVideoGenBatchByListingId } from "@web/src/server/models/videoGen";
+import { getLatestVideoGenBatchByListingId } from "@web/src/server/models/video";
 import { requireUserOrRedirect } from "@web/src/app/(dashboard)/_utils/requireUserOrRedirect";
 import { ListingProcessingView } from "@web/src/components/listings/processing";
 import { redirectToListingStage } from "../_utils/redirectToListingStage";

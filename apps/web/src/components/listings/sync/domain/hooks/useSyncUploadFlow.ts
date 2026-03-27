@@ -1,5 +1,5 @@
 import * as React from "react";
-import { emitListingSidebarUpdate } from "@web/src/lib/domain/listing/sidebarEvents";
+import { emitListingSidebarUpdate } from "@web/src/lib/domain/listings/sidebarEvents";
 import { getImageMetadataFromFile } from "@web/src/lib/domain/media/imageMetadata";
 import { createListingForCurrentUser } from "@web/src/server/actions/listings/commands";
 import {
@@ -23,9 +23,7 @@ type UseSyncUploadFlowParams = {
   navigate: (path: string) => void;
 };
 
-export const useSyncUploadFlow = ({
-  navigate
-}: UseSyncUploadFlowParams) => {
+export const useSyncUploadFlow = ({ navigate }: UseSyncUploadFlowParams) => {
   const listingIdRef = React.useRef<string | null>(null);
   const inFlightListingPromiseRef = React.useRef<Promise<string> | null>(null);
 

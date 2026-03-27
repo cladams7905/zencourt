@@ -4,9 +4,9 @@ import {
   buildListingCreatePreviewPlans,
   type PreviewPlanCaptionItem,
   type PreviewPlanClipItem
-} from "@web/src/lib/domain/listing/createPreviewPlans";
+} from "@web/src/lib/domain/listings/createPreviewPlans";
 
-export { buildListingCreatePreviewPlans } from "@web/src/lib/domain/listing/createPreviewPlans";
+export { buildListingCreatePreviewPlans } from "@web/src/lib/domain/listings/createPreviewPlans";
 
 export function useListingCreatePreviewPlans(params: {
   listingId: string;
@@ -15,7 +15,13 @@ export function useListingCreatePreviewPlans(params: {
   activeContentItems: PreviewPlanCaptionItem[];
   listingClipItems: PreviewPlanClipItem[];
 }) {
-  const { listingId, activeMediaTab, activeSubcategory, activeContentItems, listingClipItems } = params;
+  const {
+    listingId,
+    activeMediaTab,
+    activeSubcategory,
+    activeContentItems,
+    listingClipItems
+  } = params;
 
   return React.useMemo(() => {
     return buildListingCreatePreviewPlans({
@@ -25,5 +31,11 @@ export function useListingCreatePreviewPlans(params: {
       activeContentItems,
       listingClipItems
     });
-  }, [activeContentItems, activeMediaTab, activeSubcategory, listingId, listingClipItems]);
+  }, [
+    activeContentItems,
+    activeMediaTab,
+    activeSubcategory,
+    listingId,
+    listingClipItems
+  ]);
 }

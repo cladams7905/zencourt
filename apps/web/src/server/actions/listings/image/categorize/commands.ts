@@ -2,7 +2,7 @@
 
 import { withServerActionCaller } from "@web/src/server/infra/logger/callContext";
 import { type CategorizationResult } from "./domain/types";
-import type { SerializableImageData } from "@web/src/lib/domain/listing/images";
+import type { SerializableImageData } from "@web/src/lib/domain/listings/images";
 import {
   createChildLogger,
   logger as baseLogger

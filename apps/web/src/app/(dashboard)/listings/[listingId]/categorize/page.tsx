@@ -4,7 +4,7 @@ import { getListingById } from "@web/src/server/models/listings";
 import {
   getListingImages,
   mapListingImageToDisplayItem
-} from "@web/src/server/models/listingImages";
+} from "@web/src/server/models/listings/images";
 import { ListingCategorizeView } from "@web/src/components/listings/categorize";
 import { redirectToListingStage } from "../_utils/redirectToListingStage";
 import { requireUserOrRedirect } from "@web/src/app/(dashboard)/_utils/requireUserOrRedirect";

@@ -19,21 +19,25 @@ jest.mock("sonner", () => ({
   }
 }));
 
-jest.mock("@web/src/lib/domain/listing/sidebarEvents", () => ({
+jest.mock("@web/src/lib/domain/listings/sidebarEvents", () => ({
   emitListingSidebarUpdate: (...args: unknown[]) =>
     mockEmitListingSidebarUpdate(...args)
 }));
 
 jest.mock("@web/src/components/listings/processing/domain/transport", () => ({
-  fetchPropertyDetails: (...args: unknown[]) => mockFetchPropertyDetails(...args),
+  fetchPropertyDetails: (...args: unknown[]) =>
+    mockFetchPropertyDetails(...args),
   updateListingStage: (...args: unknown[]) => mockUpdateListingStage(...args),
   fetchVideoStatus: (...args: unknown[]) => mockFetchVideoStatus(...args),
   fetchListingImages: (...args: unknown[]) => mockFetchListingImages(...args),
-  triggerCategorization: (...args: unknown[]) => mockTriggerCategorization(...args),
+  triggerCategorization: (...args: unknown[]) =>
+    mockTriggerCategorization(...args),
   startListingContentGeneration: (...args: unknown[]) =>
     mockStartListingContentGeneration(...args),
-  startVideoGeneration: (...args: unknown[]) => mockStartVideoGeneration(...args),
-  cancelVideoGeneration: (...args: unknown[]) => mockCancelVideoGeneration(...args)
+  startVideoGeneration: (...args: unknown[]) =>
+    mockStartVideoGeneration(...args),
+  cancelVideoGeneration: (...args: unknown[]) =>
+    mockCancelVideoGeneration(...args)
 }));
 
 import { useListingProcessingWorkflow } from "@web/src/components/listings/processing/domain/useListingProcessingWorkflow";
