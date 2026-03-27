@@ -133,4 +133,19 @@ describe("listing content item queries", () => {
       nextOffset: 2
     });
   });
+
+  it("uses preloaded savedContentRows and skips getContentByListingId", async () => {
+    mockGetCachedListingContentForCreateFilter.mockResolvedValue([]);
+    const preloaded = [{ id: "pre-1", contentType: "video" as const }];
+    mockIsSavedListingReelMetadata.mockReturnValue(false);
+
+    await getListingContentItems({
+      userId: "user-1",
+      listingId: "listing-1",
+      mediaTab: "videos",
+      savedContentRows: preloaded
+    });
+
+    expect(mockGetContentByListingId).not.toHaveBeenCalled();
+  });
 });

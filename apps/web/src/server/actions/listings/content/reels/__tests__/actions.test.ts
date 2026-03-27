@@ -4,15 +4,19 @@ const mockRequireAuthenticatedUser = jest.fn();
 const mockRequireListingAccess = jest.fn();
 const mockGetCachedListingContentItem = jest.fn();
 const mockDeleteCachedListingContentItem = jest.fn();
+const mockGetAllCachedListingContentForCreate = jest.fn();
 const mockCreateContent = jest.fn();
 const mockGetContentById = jest.fn();
+const mockGetContentByListingId = jest.fn();
 const mockUpdateContent = jest.fn();
 
 jest.mock("@web/src/server/actions/shared/auth", () => ({
   requireAuthenticatedUser: (...args: unknown[]) =>
     (mockRequireAuthenticatedUser as (...a: unknown[]) => unknown)(...args),
   withCurrentUserListingAccess: async (
-    listingIdOrResolver: string | ((context: { user: { id: string } }) => string | Promise<string>),
+    listingIdOrResolver:
+      | string
+      | ((context: { user: { id: string } }) => string | Promise<string>),
     run: (context: { user: { id: string }; listing: unknown }) => unknown
   ) => {
     const user = await mockRequireAuthenticatedUser();
@@ -36,6 +40,10 @@ jest.mock("@web/src/server/infra/cache/listingContent/cache", () => ({
   deleteCachedListingContentItem: (...args: unknown[]) =>
     (mockDeleteCachedListingContentItem as (...a: unknown[]) => unknown)(
       ...args
+    ),
+  getAllCachedListingContentForCreate: (...args: unknown[]) =>
+    (mockGetAllCachedListingContentForCreate as (...a: unknown[]) => unknown)(
+      ...args
     )
 }));
 
@@ -44,11 +52,17 @@ jest.mock("@web/src/server/models/content", () => ({
     (mockCreateContent as (...a: unknown[]) => unknown)(...args),
   getContentById: (...args: unknown[]) =>
     (mockGetContentById as (...a: unknown[]) => unknown)(...args),
+  getContentByListingId: (...args: unknown[]) =>
+    (mockGetContentByListingId as (...a: unknown[]) => unknown)(...args),
   updateContent: (...args: unknown[]) =>
     (mockUpdateContent as (...a: unknown[]) => unknown)(...args)
 }));
 
 import { saveListingVideoReel } from "@web/src/server/actions/listings/content/reels";
+import {
+  collectReelReferencedUserMediaIds,
+  collectReelReferencedUserMediaIdsFromSnapshot
+} from "@web/src/server/actions/listings/content/reels/userMedia";
 
 describe("saveListingVideoReel", () => {
   beforeEach(() => {
@@ -224,5 +238,126 @@ describe("saveListingVideoReel", () => {
       })
     );
     expect(mockDeleteCachedListingContentItem).not.toHaveBeenCalled();
+  });
+});
+
+describe("collectReelReferencedUserMediaIdsFromSnapshot", () => {
+  it("matches async behavior for saved + cache inputs", () => {
+    const saved = [
+      {
+        metadata: {
+          source: "listing_reel" as const,
+          version: 1 as const,
+          listingSubcategory: "new_listing" as const,
+          hook: "h",
+          caption: null,
+          body: null,
+          brollQuery: null,
+          sequence: [
+            {
+              sourceType: "user_media" as const,
+              sourceId: "um-1",
+              durationSeconds: 1
+            }
+          ]
+        }
+      }
+    ];
+    const cached = [{ orderedClipIds: ["user-media:um-2"] as string[] }];
+    const ids = collectReelReferencedUserMediaIdsFromSnapshot(
+      saved as never,
+      cached as never
+    );
+    expect(ids.sort()).toEqual(["um-1", "um-2"]);
+  });
+});
+
+describe("collectReelReferencedUserMediaIds", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockGetContentByListingId.mockResolvedValue([]);
+    mockGetAllCachedListingContentForCreate.mockResolvedValue([]);
+  });
+
+  it("collects user_media sourceIds from saved reel metadata", async () => {
+    mockGetContentByListingId.mockResolvedValue([
+      {
+        metadata: {
+          source: "listing_reel",
+          version: 1,
+          listingSubcategory: "new_listing",
+          hook: "h",
+          caption: null,
+          body: null,
+          brollQuery: null,
+          sequence: [
+            {
+              sourceType: "listing_clip",
+              sourceId: "clip-1",
+              durationSeconds: 1
+            },
+            {
+              sourceType: "user_media",
+              sourceId: "um-1",
+              durationSeconds: 2
+            }
+          ]
+        }
+      }
+    ]);
+
+    const ids = await collectReelReferencedUserMediaIds("user-1", "listing-1");
+
+    expect(ids).toEqual(["um-1"]);
+    expect(mockGetContentByListingId).toHaveBeenCalledWith(
+      "user-1",
+      "listing-1"
+    );
+    expect(mockGetAllCachedListingContentForCreate).toHaveBeenCalledWith({
+      userId: "user-1",
+      listingId: "listing-1"
+    });
+  });
+
+  it("parses user-media: ids from cached orderedClipIds", async () => {
+    mockGetAllCachedListingContentForCreate.mockResolvedValue([
+      {
+        orderedClipIds: ["clip-a", "user-media:um-x", "user-media:um-y"]
+      }
+    ]);
+
+    const ids = await collectReelReferencedUserMediaIds("user-1", "listing-1");
+
+    expect(ids.sort()).toEqual(["um-x", "um-y"]);
+  });
+
+  it("dedupes ids across DB and cache", async () => {
+    mockGetContentByListingId.mockResolvedValue([
+      {
+        metadata: {
+          source: "listing_reel",
+          version: 1,
+          listingSubcategory: "new_listing",
+          hook: "h",
+          caption: null,
+          body: null,
+          brollQuery: null,
+          sequence: [
+            {
+              sourceType: "user_media",
+              sourceId: "dup",
+              durationSeconds: 1
+            }
+          ]
+        }
+      }
+    ]);
+    mockGetAllCachedListingContentForCreate.mockResolvedValue([
+      { orderedClipIds: ["user-media:dup"] }
+    ]);
+
+    const ids = await collectReelReferencedUserMediaIds("user-1", "listing-1");
+
+    expect(ids).toEqual(["dup"]);
   });
 });

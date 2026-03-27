@@ -76,6 +76,8 @@ export async function getListingContentItems(params: {
   subcategory?: ListingContentSubcategory;
   limit?: number;
   offset?: number;
+  /** When set, skips an extra getContentByListingId (e.g. listing create view already loaded rows). */
+  savedContentRows?: Awaited<ReturnType<typeof getContentByListingId>>;
 }) {
   const activeMediaType: ListingMediaType =
     params.mediaTab === "images" ? "image" : "video";
@@ -88,7 +90,9 @@ export async function getListingContentItems(params: {
       subcategory: activeSubcategory,
       mediaType: activeMediaType
     }),
-    getContentByListingId(params.userId, params.listingId)
+    params.savedContentRows !== undefined
+      ? Promise.resolve(params.savedContentRows)
+      : getContentByListingId(params.userId, params.listingId)
   ]);
   const { savedItems, staleCacheKeys } = buildSavedCreatePageData({
     savedContentRows,

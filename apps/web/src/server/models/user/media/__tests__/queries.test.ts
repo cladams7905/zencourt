@@ -14,6 +14,8 @@ jest.mock("@db/client", () => ({
   },
   userMedia: { id: "id", userId: "userId", uploadedAt: "uploadedAt" },
   eq: (...args: unknown[]) => args,
+  and: (...args: unknown[]) => args,
+  inArray: (...args: unknown[]) => args,
   desc: (...args: unknown[]) => args
 }));
 
@@ -24,7 +26,8 @@ jest.mock("@web/src/server/models/shared/dbErrorHandling", () => ({
 
 import {
   getUserMedia,
-  getUserMediaById
+  getUserMediaById,
+  getUserMediaByIds
 } from "@web/src/server/models/user/media/queries";
 
 describe("userMedia queries", () => {
@@ -63,5 +66,18 @@ describe("userMedia queries", () => {
     const row = { id: "m1", userId: "u1" };
     mockLimit.mockResolvedValueOnce([row]);
     await expect(getUserMediaById("u1", "m1")).resolves.toEqual(row);
+  });
+
+  it("getUserMediaByIds returns empty array when no ids", async () => {
+    await expect(getUserMediaByIds("u1", [])).resolves.toEqual([]);
+    await expect(getUserMediaByIds("u1", ["", "  "])).resolves.toEqual([]);
+    expect(mockSelect).not.toHaveBeenCalled();
+  });
+
+  it("getUserMediaByIds dedupes and orders by query", async () => {
+    mockOrderBy.mockResolvedValueOnce([{ id: "m2" }, { id: "m1" }]);
+    await expect(
+      getUserMediaByIds("u1", ["m1", "m1", "m2"])
+    ).resolves.toEqual([{ id: "m2" }, { id: "m1" }]);
   });
 });

@@ -7,8 +7,14 @@ import {
   mapListingImageToDisplayItem
 } from "@web/src/server/models/listings/images";
 import type { ListingContentItem as ContentItem } from "@web/src/lib/domain/listings/content";
-import { countUserMediaVideos, getUserMedia } from "@web/src/server/models/user";
+import {
+  countUserMediaVideos,
+  getUserMediaByIds
+} from "@web/src/server/models/user";
+import { getContentByListingId } from "@web/src/server/models/content";
+import { getAllCachedListingContentForCreate } from "@web/src/server/infra/cache/listingContent/cache";
 import { mapUserMediaToVideoItem } from "./content/reels";
+import { collectReelReferencedUserMediaIdsFromSnapshot } from "./content/reels/userMedia";
 import {
   LISTING_CREATE_INITIAL_PAGE_SIZE,
   type ListingCreateMediaTab
@@ -28,22 +34,34 @@ export async function getListingCreateViewData(
   const [
     clipVersionItems,
     listingImages,
-    listingContentItemsPage,
-    userMediaRows,
+    savedContentRows,
+    cachedAllForCreate,
     userMediaVideoCount
   ] = await Promise.all([
     getListingClipVersionItems(listingId),
     getListingImages(userId, listingId),
+    getContentByListingId(userId, listingId),
+    getAllCachedListingContentForCreate({ userId, listingId }),
+    countUserMediaVideos(userId)
+  ]);
+
+  const reelReferencedUserMediaIds =
+    collectReelReferencedUserMediaIdsFromSnapshot(
+      savedContentRows,
+      cachedAllForCreate
+    );
+
+  const [listingContentItemsPage, userMediaRows] = await Promise.all([
     getListingContentItems({
       userId,
       listingId,
       mediaTab: options?.initialMediaTab,
       subcategory: options?.initialSubcategory,
       limit: LISTING_CREATE_INITIAL_PAGE_SIZE,
-      offset: 0
+      offset: 0,
+      savedContentRows
     }),
-    getUserMedia(userId),
-    countUserMediaVideos(userId)
+    getUserMediaByIds(userId, reelReferencedUserMediaIds)
   ]);
 
   const listingClipItems: ContentItem[] = clipVersionItems

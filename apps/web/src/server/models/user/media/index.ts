@@ -1,6 +1,7 @@
 export {
   getUserMedia,
   getUserMediaById,
+  getUserMediaByIds,
   getUserMediaVideoPage,
   countUserMediaVideos
 } from "./queries";

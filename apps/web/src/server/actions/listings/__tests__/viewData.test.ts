@@ -5,7 +5,9 @@ const mockGetListingClipVersionItems = jest.fn();
 const mockGetListingImages = jest.fn();
 const mockMapListingImageToDisplayItem = jest.fn((item) => item);
 const mockGetListingContentItems = jest.fn();
-const mockGetUserMedia = jest.fn();
+const mockGetContentByListingId = jest.fn();
+const mockGetAllCachedListingContentForCreate = jest.fn();
+const mockGetUserMediaByIds = jest.fn();
 const mockCountUserMediaVideos = jest.fn();
 const mockMapUserMediaToVideoItem = jest.fn();
 
@@ -48,17 +50,35 @@ jest.mock("@web/src/server/actions/listings/content/items", () => ({
     (mockGetListingContentItems as (...a: unknown[]) => unknown)(...args)
 }));
 
+jest.mock("@web/src/server/models/content", () => ({
+  getContentByListingId: (...args: unknown[]) =>
+    (mockGetContentByListingId as (...a: unknown[]) => unknown)(...args)
+}));
+
+jest.mock("@web/src/server/infra/cache/listingContent/cache", () => ({
+  getAllCachedListingContentForCreate: (...args: unknown[]) =>
+    (mockGetAllCachedListingContentForCreate as (...a: unknown[]) => unknown)(
+      ...args
+    )
+}));
+
 jest.mock("@web/src/server/models/user", () => ({
-  getUserMedia: (...args: unknown[]) =>
-    (mockGetUserMedia as (...a: unknown[]) => unknown)(...args),
+  getUserMediaByIds: (...args: unknown[]) =>
+    (mockGetUserMediaByIds as (...a: unknown[]) => unknown)(...args),
   countUserMediaVideos: (...args: unknown[]) =>
     (mockCountUserMediaVideos as (...a: unknown[]) => unknown)(...args)
 }));
 
-jest.mock("@web/src/server/actions/listings/content/reels", () => ({
-  mapUserMediaToVideoItem: (...args: unknown[]) =>
-    (mockMapUserMediaToVideoItem as (...a: unknown[]) => unknown)(...args)
-}));
+jest.mock("@web/src/server/actions/listings/content/reels", () => {
+  const actual = jest.requireActual(
+    "@web/src/server/actions/listings/content/reels"
+  ) as typeof import("@web/src/server/actions/listings/content/reels");
+  return {
+    ...actual,
+    mapUserMediaToVideoItem: (...args: unknown[]) =>
+      (mockMapUserMediaToVideoItem as (...a: unknown[]) => unknown)(...args)
+  };
+});
 
 jest.mock("@web/src/lib/core/logging/logger", () => ({
   logger: {},
@@ -73,8 +93,11 @@ import {
 } from "@web/src/server/actions/listings/viewData";
 
 describe("listings viewData", () => {
+  const savedContentRowsRef: { id: string }[] = [];
+
   beforeEach(() => {
     jest.clearAllMocks();
+    savedContentRowsRef.length = 0;
     mockRequireAuthenticatedUser.mockResolvedValue({ id: "user-1" });
     mockRequireListingAccess.mockResolvedValue({ id: "listing-1" });
     mockGetListingClipVersionItems.mockResolvedValue([
@@ -93,7 +116,11 @@ describe("listings viewData", () => {
       hasMore: false,
       nextOffset: 1
     });
-    mockGetUserMedia.mockResolvedValue([{ id: "media-1", type: "video" }]);
+    mockGetContentByListingId.mockResolvedValue(savedContentRowsRef);
+    mockGetAllCachedListingContentForCreate.mockResolvedValue([
+      { orderedClipIds: ["user-media:media-1"] }
+    ]);
+    mockGetUserMediaByIds.mockResolvedValue([{ id: "media-1", type: "video" }]);
     mockCountUserMediaVideos.mockResolvedValue(2);
     mockMapUserMediaToVideoItem.mockReturnValue({
       id: "user-media:media-1",
@@ -105,13 +132,20 @@ describe("listings viewData", () => {
     const result = await getListingCreateViewData("user-1", "listing-1");
 
     expect(mockGetListingClipVersionItems).toHaveBeenCalledWith("listing-1");
+    expect(mockGetContentByListingId).toHaveBeenCalledWith("user-1", "listing-1");
+    expect(mockGetAllCachedListingContentForCreate).toHaveBeenCalledWith({
+      userId: "user-1",
+      listingId: "listing-1"
+    });
+    expect(mockGetUserMediaByIds).toHaveBeenCalledWith("user-1", ["media-1"]);
     expect(mockGetListingContentItems).toHaveBeenCalledWith({
       userId: "user-1",
       listingId: "listing-1",
       mediaTab: undefined,
       subcategory: undefined,
       limit: 8,
-      offset: 0
+      offset: 0,
+      savedContentRows: savedContentRowsRef
     });
     expect(result).toEqual({
       listingClipItems: [

@@ -1,4 +1,14 @@
-import { db, userMedia, and, desc, eq, lt, or, sql } from "@db/client";
+import {
+  db,
+  userMedia,
+  and,
+  desc,
+  eq,
+  inArray,
+  lt,
+  or,
+  sql
+} from "@db/client";
 import type { DBUserMedia } from "@db/types/models";
 import { withDbErrorHandling } from "@web/src/server/models/shared/dbErrorHandling";
 import { requireUserId } from "@web/src/server/models/shared/validation";
@@ -143,6 +153,39 @@ export async function getUserMediaVideoPage(
     {
       actionName: "getUserMediaVideoPage",
       context: { userId, limit, hasCursor: Boolean(options.cursor) },
+      errorMessage: "Failed to fetch media. Please try again."
+    }
+  );
+}
+
+export async function getUserMediaByIds(
+  userId: string,
+  mediaIds: string[]
+): Promise<DBUserMedia[]> {
+  requireUserId(userId, "User ID is required to fetch media");
+
+  const uniqueIds = Array.from(
+    new Set(
+      mediaIds.filter((id) => typeof id === "string" && id.trim().length > 0)
+    )
+  );
+  if (uniqueIds.length === 0) {
+    return [];
+  }
+
+  return withDbErrorHandling(
+    async () => {
+      return db
+        .select()
+        .from(userMedia)
+        .where(
+          and(eq(userMedia.userId, userId), inArray(userMedia.id, uniqueIds))
+        )
+        .orderBy(desc(userMedia.uploadedAt), desc(userMedia.id));
+    },
+    {
+      actionName: "getUserMediaByIds",
+      context: { userId, idCount: uniqueIds.length },
       errorMessage: "Failed to fetch media. Please try again."
     }
   );
