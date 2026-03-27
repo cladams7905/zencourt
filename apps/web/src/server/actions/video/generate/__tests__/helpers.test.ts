@@ -14,6 +14,7 @@ const mockGetCategoryForRoom = jest.fn();
 const mockSelectPrimaryImageForRoom = jest.fn();
 const mockSelectSecondaryImageForRoom = jest.fn();
 const mockBuildPrompt = jest.fn();
+const mockAssembleProviderPrompt = jest.fn();
 const mockGetVideoGenerationConfig = jest.fn();
 const mockIsPriorityCategory = jest.fn();
 const mockFetch = jest.fn();
@@ -68,7 +69,9 @@ jest.mock("@web/src/server/services/videoGeneration/domain/rooms", () => ({
 }));
 
 jest.mock("@web/src/server/services/videoGeneration/domain/prompt", () => ({
-  buildPrompt: (...args: unknown[]) => mockBuildPrompt(...args)
+  buildPrompt: (...args: unknown[]) => mockBuildPrompt(...args),
+  assembleProviderPrompt: (...args: unknown[]) =>
+    mockAssembleProviderPrompt(...args)
 }));
 
 jest.mock("@web/src/server/services/videoGeneration/config", () => ({
@@ -142,6 +145,9 @@ describe("video actions/helpers", () => {
     mockUpdateVideoClip.mockResolvedValue(undefined);
     mockUpdateVideoGenJob.mockResolvedValue(undefined);
     mockGetLatestVideoClipVersionByClipId.mockResolvedValue(null);
+    mockAssembleProviderPrompt.mockImplementation(
+      (motionPrompt: string) => `${motionPrompt} [constraints]`
+    );
   });
 
   it("creates jobs in batch and enqueues video server request", async () => {
@@ -194,7 +200,8 @@ describe("video actions/helpers", () => {
           model: "veo3.1_fast",
           orientation: "vertical",
           category: "kitchen",
-          clipIndex: 0
+          clipIndex: 0,
+          prompt: "Forward pan through the Kitchen. [constraints]"
         })
       })
     ]);
@@ -408,7 +415,6 @@ describe("video actions/helpers", () => {
       generationModel: "veo3.1_fast",
       imageUrls: ["https://signed/kitchen.jpg"],
       prompt: "Forward pan through the Kitchen.",
-      aiDirections: "Old directions",
       sourceVideoGenJobId: "job-1"
     });
     mockCreateVideoGenBatch.mockResolvedValue(undefined);
@@ -419,7 +425,7 @@ describe("video actions/helpers", () => {
       listingId: "listing-1",
       userId: "user-1",
       clipId: "clip-1",
-      aiDirections: "Use warmer late afternoon light",
+      prompt: "Use warmer late afternoon light",
       resolvePublicDownloadUrls
     });
 
@@ -429,7 +435,7 @@ describe("video actions/helpers", () => {
         videoClipId: "clip-1",
         versionNumber: 2,
         status: "pending",
-        aiDirections: "Use warmer late afternoon light"
+        prompt: "Use warmer late afternoon light"
       })
     );
     expect(mockCreateVideoGenJobsBatch).toHaveBeenCalledWith([
@@ -439,7 +445,7 @@ describe("video actions/helpers", () => {
         generationSettings: expect.objectContaining({
           roomName: "Kitchen",
           clipIndex: 0,
-          aiDirections: "Use warmer late afternoon light"
+          prompt: "Use warmer late afternoon light [constraints]"
         })
       })
     ]);
@@ -487,7 +493,6 @@ describe("video actions/helpers", () => {
       generationModel: "veo3.1_fast",
       imageUrls: ["https://signed/kitchen.jpg"],
       prompt: "Forward pan through the Kitchen.",
-      aiDirections: "Old directions",
       sourceVideoGenJobId: "job-1"
     });
     mockCreateVideoGenBatch.mockResolvedValue(undefined);
@@ -499,7 +504,7 @@ describe("video actions/helpers", () => {
         listingId: "listing-1",
         userId: "user-1",
         clipId: "clip-1",
-        aiDirections: "Use warmer late afternoon light",
+        prompt: "Use warmer late afternoon light",
         resolvePublicDownloadUrls
       })
     ).rejects.toThrow("video server down");
@@ -542,7 +547,6 @@ describe("video actions/helpers", () => {
       generationModel: "veo3.1_fast",
       imageUrls: [],
       prompt: "",
-      aiDirections: "Old directions",
       sourceVideoGenJobId: "job-1"
     });
 
@@ -599,7 +603,6 @@ describe("video actions/helpers", () => {
       generationModel: "veo3.1_fast",
       imageUrls: ["https://signed/kitchen.jpg"],
       prompt: "Forward pan through the Kitchen.",
-      aiDirections: "Old directions",
       sourceVideoGenJobId: "job-1"
     });
     mockGetLatestVideoClipVersionByClipId.mockResolvedValueOnce({
@@ -616,7 +619,6 @@ describe("video actions/helpers", () => {
       generationModel: "veo3.1_fast",
       imageUrls: ["https://signed/kitchen.jpg"],
       prompt: "Forward pan through the Kitchen.",
-      aiDirections: "Old directions",
       sourceVideoGenJobId: "job-older"
     });
     mockCreateVideoGenBatch.mockResolvedValue(undefined);
@@ -627,7 +629,7 @@ describe("video actions/helpers", () => {
       listingId: "listing-1",
       userId: "user-1",
       clipId: "clip-1",
-      aiDirections: "Use warmer late afternoon light",
+      prompt: "Use warmer late afternoon light",
       resolvePublicDownloadUrls
     });
 

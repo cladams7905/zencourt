@@ -158,7 +158,6 @@ describe("db schema column contracts", () => {
     );
     expect(columnKeys(videoClipVersions)).toEqual(
       [
-        "aiDirections",
         "createdAt",
         "durationSeconds",
         "errorMessage",

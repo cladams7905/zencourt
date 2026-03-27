@@ -13,11 +13,6 @@ type PromptTemplate = {
 
 type PromptTemplatePicker = (templates: PromptTemplate[]) => PromptTemplate;
 
-function normalizeAiDirections(aiDirections?: string): string | null {
-  const normalized = aiDirections?.trim();
-  return normalized ? normalized : null;
-}
-
 const INTERIOR_TEMPLATES: PromptTemplate[] = [
   {
     key: "interior-forward-pan",
@@ -118,7 +113,6 @@ function pickPromptTemplate(args: {
 export function buildPrompt(args: {
   roomName: string;
   category: string;
-  aiDirections?: string;
   perspective?: "aerial" | "ground";
   previousTemplateKey?: string | null;
   picker?: PromptTemplatePicker;
@@ -126,7 +120,6 @@ export function buildPrompt(args: {
   const {
     roomName,
     category,
-    aiDirections,
     perspective,
     previousTemplateKey,
     picker
@@ -154,12 +147,29 @@ export function buildPrompt(args: {
   const motionPrompt = promptInfo.template
     .replace(/\{roomName\}/g, displayRoomName)
     .trim();
-  const directionPrompt = normalizeAiDirections(aiDirections);
 
   return {
-    prompt: [motionPrompt, directionPrompt, PROMPT_CONSTRAINTS]
-      .filter(Boolean)
-      .join(" "),
+    prompt: motionPrompt,
     templateKey: promptInfo.key
   };
+}
+
+export function assembleProviderPrompt(motionPrompt: string): string {
+  const normalizedMotionPrompt = motionPrompt.trim();
+  return [normalizedMotionPrompt, PROMPT_CONSTRAINTS].filter(Boolean).join(" ");
+}
+
+export function stripProviderPromptConstraints(prompt: string): string {
+  const normalizedPrompt = prompt.trim();
+  const suffix = ` ${PROMPT_CONSTRAINTS}`;
+
+  if (normalizedPrompt.endsWith(suffix)) {
+    return normalizedPrompt.slice(0, -suffix.length).trim();
+  }
+
+  if (normalizedPrompt === PROMPT_CONSTRAINTS) {
+    return "";
+  }
+
+  return normalizedPrompt;
 }

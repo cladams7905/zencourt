@@ -325,7 +325,7 @@ export function useListingClipManagerWorkspaceSync({
       previousDraftSelection?.versionId !== nextSelectedVersionId;
 
     if (didSelectionChange) {
-      setDraftAiDirections(nextSelectedItem.currentVersion.aiDirections ?? "");
+      setDraftAiDirections(nextSelectedItem.currentVersion.prompt ?? "");
     }
 
     previousDraftSelectionRef.current = {

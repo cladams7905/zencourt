@@ -70,7 +70,7 @@ export type ListingContentItem = {
   roomName?: string | null;
   clipIndex?: number | null;
   sortOrder?: number | null;
-  aiDirections?: string | null;
+  prompt?: string | null;
   versionNumber?: number | null;
   isCurrentVersion?: boolean;
   versionStatus?: "pending" | "processing" | "completed" | "failed" | "canceled";

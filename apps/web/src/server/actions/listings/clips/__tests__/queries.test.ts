@@ -114,7 +114,7 @@ describe("listing clips queries", () => {
           durationSeconds: 4,
           generationModel: "veo3.1_fast",
           orientation: "vertical",
-          aiDirections: "retry",
+          prompt: "show kitchen",
           versionNumber: 3,
           status: "failed",
           createdAt: "2026-01-01T00:00:00.000Z"
@@ -133,7 +133,7 @@ describe("listing clips queries", () => {
               durationSeconds: 3,
               generationModel: "veo3.1_fast",
               orientation: "vertical",
-              aiDirections: "",
+              prompt: "show kitchen",
               versionNumber: 2,
               status: "completed",
               createdAt: "2025-12-31T00:00:00.000Z"

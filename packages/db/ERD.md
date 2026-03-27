@@ -85,7 +85,6 @@ erDiagram
     text generation_model
     jsonb image_urls
     text prompt
-    text ai_directions
     text source_video_gen_job_id FK
     timestamp created_at
     timestamp updated_at

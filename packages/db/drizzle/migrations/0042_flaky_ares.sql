@@ -1,0 +1,1 @@
+ALTER TABLE "video_clip_versions" DROP COLUMN "ai_directions";

@@ -34,7 +34,7 @@ export function serializeClipItems(itemsToSerialize: ListingClipVersionItem[]) {
       currentVersion: {
         clipVersionId: item.currentVersion.clipVersionId ?? null,
         versionStatus: item.currentVersion.versionStatus ?? null,
-        aiDirections: item.currentVersion.aiDirections ?? null,
+        prompt: item.currentVersion.prompt ?? null,
         videoUrl: item.currentVersion.videoUrl ?? null,
         thumbnail: item.currentVersion.thumbnail ?? null,
         generatedAt: item.currentVersion.generatedAt ?? null
@@ -42,7 +42,7 @@ export function serializeClipItems(itemsToSerialize: ListingClipVersionItem[]) {
       inFlightVersion: {
         clipVersionId: item.inFlightVersion?.clipVersionId ?? null,
         versionStatus: item.inFlightVersion?.versionStatus ?? null,
-        aiDirections: item.inFlightVersion?.aiDirections ?? null,
+        prompt: item.inFlightVersion?.prompt ?? null,
         videoUrl: item.inFlightVersion?.videoUrl ?? null,
         thumbnail: item.inFlightVersion?.thumbnail ?? null,
         generatedAt: item.inFlightVersion?.generatedAt ?? null

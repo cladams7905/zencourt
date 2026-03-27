@@ -1,7 +1,7 @@
-import { buildPrompt } from "../prompt";
+import { assembleProviderPrompt, buildPrompt } from "../prompt";
 
 describe("videoGeneration/domain/prompt", () => {
-  it("uses injected picker and appends constraints", () => {
+  it("uses injected picker and returns the motion prompt only", () => {
     const result = buildPrompt({
       roomName: "Kitchen",
       category: "kitchen",
@@ -9,46 +9,13 @@ describe("videoGeneration/domain/prompt", () => {
     });
 
     expect(result.templateKey).toBe("interior-forward-pan");
-    expect(result.prompt).toContain("Forward pan through the Kitchen.");
-    expect(result.prompt).toContain(
-      "No people. No added objects. Keep architecture and materials unchanged."
-    );
-    expect(result.prompt).toContain(
-      "Single continuous camera movement only."
-    );
-    expect(result.prompt).toContain(
-      "Full-bleed, edge-to-edge composition from the first frame, filling the entire video frame at all times."
-    );
-    expect(result.prompt).toContain(
-      "Start already full-screen. No framed or inset opening, no letterboxing or pillarboxing, and no fades, transitions, cuts, or scene changes."
-    );
+    expect(result.prompt).toBe("Forward pan through the Kitchen.");
   });
 
-  it("includes ai directions before hard constraints", () => {
-    const result = buildPrompt({
-      roomName: "Kitchen",
-      category: "kitchen",
-      aiDirections: "Warm morning light. Preserve natural staging.",
-      picker: (templates) => templates[0]
-    });
-
-    expect(result.prompt).toContain(
-      "Forward pan through the Kitchen. Warm morning light. Preserve natural staging."
-    );
-    expect(result.prompt).toContain(
-      "No people. No added objects. Keep architecture and materials unchanged."
-    );
-  });
-
-  it("ignores blank ai directions", () => {
-    const result = buildPrompt({
-      roomName: "Kitchen",
-      category: "kitchen",
-      aiDirections: "   ",
-      picker: (templates) => templates[0]
-    });
-
-    expect(result.prompt).toBe(
+  it("assembles provider prompts by appending hard constraints", () => {
+    expect(
+      assembleProviderPrompt("Forward pan through the Kitchen.")
+    ).toBe(
       "Forward pan through the Kitchen. No people. No added objects. Keep architecture and materials unchanged. Single continuous camera movement only. Full-bleed, edge-to-edge composition from the first frame, filling the entire video frame at all times. Start already full-screen. No framed or inset opening, no letterboxing or pillarboxing, and no fades, transitions, cuts, or scene changes."
     );
   });

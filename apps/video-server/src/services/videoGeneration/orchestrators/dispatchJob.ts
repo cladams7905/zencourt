@@ -118,7 +118,6 @@ export async function dispatchJobOrchestrator(
     prompt: input.prompt,
     imageUrls: input.imageUrls,
     orientation: input.orientation,
-    aiDirections: job.generationSettings?.aiDirections ?? "",
     category: job.generationSettings?.category ?? "general",
     sortOrder: job.generationSettings?.sortOrder ?? 0,
     model: result.model
