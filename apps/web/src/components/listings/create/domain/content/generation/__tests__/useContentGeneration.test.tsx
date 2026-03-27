@@ -90,6 +90,34 @@ describe("useContentGeneration", () => {
     consoleErrorSpy.mockRestore();
   });
 
+  it("preserves the public return contract", () => {
+    const { result } = renderHook(() =>
+      useContentGeneration({
+        listingId: "listing-1",
+        listingContentItems: EMPTY_LISTING_CONTENT_ITEMS,
+        initialMediaTab: "videos",
+        initialSubcategory: "new_listing",
+        activeMediaTab: "videos",
+        activeSubcategory: "new_listing",
+        listingClipItems: EMPTY_VIDEO_ITEMS
+      })
+    );
+
+    expect(Object.keys(result.current).sort()).toEqual([
+      "bucketContentItems",
+      "generateSubcategoryContent",
+      "generationError",
+      "hasMoreForActiveFilter",
+      "initialPageLoadingCount",
+      "isGenerating",
+      "loadMoreForActiveFilter",
+      "loadingCount",
+      "loadingMoreCount",
+      "removeContentItem",
+      "replaceContentItem"
+    ]);
+  });
+
   it("handles successful generation flow", async () => {
     mockStreamEvents.mockReturnValue(
       eventsGenerator([
