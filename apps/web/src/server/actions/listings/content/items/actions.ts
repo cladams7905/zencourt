@@ -1,8 +1,7 @@
 "use server";
 
 import { withServerActionCaller } from "@web/src/server/infra/logger/callContext";
-import { requireAuthenticatedUser } from "@web/src/server/actions/_auth/api";
-import { requireListingAccess } from "@web/src/server/models/listings/access";
+import { withCurrentUserListingAccess } from "@web/src/server/actions/shared/auth";
 import type { ListingCreateMediaTab } from "@web/src/lib/domain/listings/content/create";
 import type { ListingContentSubcategory } from "@shared/types/models";
 import { getListingContentItems } from "./queries";
@@ -17,16 +16,15 @@ export const getListingContentItemsForCurrentUser = withServerActionCaller(
       limit?: number;
       offset?: number;
     }
-  ) => {
-    const user = await requireAuthenticatedUser();
-    await requireListingAccess(listingId, user.id);
-    return getListingContentItems({
-      userId: user.id,
-      listingId,
-      mediaTab: params.mediaTab,
-      subcategory: params.subcategory,
-      limit: params.limit,
-      offset: params.offset
-    });
-  }
+  ) =>
+    withCurrentUserListingAccess(listingId, async ({ user }) =>
+      getListingContentItems({
+        userId: user.id,
+        listingId,
+        mediaTab: params.mediaTab,
+        subcategory: params.subcategory,
+        limit: params.limit,
+        offset: params.offset
+      })
+    )
 );

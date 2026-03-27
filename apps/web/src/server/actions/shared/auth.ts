@@ -13,7 +13,7 @@ const logger = createChildLogger(baseLogger, { module: "auth" });
 
 export { ApiError };
 
-export async function requireListingAccess(
+async function requireListingAccess(
   listingId: string | null | undefined,
   userId: string
 ) {
@@ -23,7 +23,7 @@ export async function requireListingAccess(
   return requireListingAccessImpl(listingId, userId);
 }
 
-export async function requireAuthenticatedUser(): Promise<CurrentServerUser> {
+async function requireAuthenticatedUser(): Promise<CurrentServerUser> {
   if (getCallContext()?.caller) {
     logger.debug("Auth check: requireAuthenticatedUser");
   }
@@ -37,4 +37,29 @@ export async function requireAuthenticatedUser(): Promise<CurrentServerUser> {
   }
 
   return user;
+}
+
+export async function withCurrentUser<T>(
+  run: (context: { user: CurrentServerUser }) => Promise<T>
+): Promise<T> {
+  const user = await requireAuthenticatedUser();
+  return run({ user });
+}
+
+export async function withCurrentUserListingAccess<T>(
+  listingIdOrResolver:
+    | string
+    | ((context: { user: CurrentServerUser }) => string | Promise<string>),
+  run: (context: {
+    user: CurrentServerUser;
+    listing: Awaited<ReturnType<typeof requireListingAccessImpl>>;
+  }) => Promise<T>
+): Promise<T> {
+  const user = await requireAuthenticatedUser();
+  const listingId =
+    typeof listingIdOrResolver === "function"
+      ? await listingIdOrResolver({ user })
+      : listingIdOrResolver;
+  const listing = await requireListingAccess(listingId, user.id);
+  return run({ user, listing });
 }

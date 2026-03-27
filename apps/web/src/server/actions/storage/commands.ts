@@ -8,7 +8,7 @@ import {
   createChildLogger,
   logger as baseLogger
 } from "@web/src/lib/core/logging/logger";
-import { requireAuthenticatedUser } from "@web/src/server/actions/_auth/api";
+import { withCurrentUser } from "@web/src/server/actions/shared/auth";
 import { normalizeErrorForLogging } from "@shared/utils/errors";
 
 const logger = createChildLogger(baseLogger, { module: "storage-actions" });
@@ -21,7 +21,7 @@ function formatError(error: unknown, fallback: string): Error {
 }
 
 async function requireStorageActor() {
-  await requireAuthenticatedUser();
+  await withCurrentUser(async () => undefined);
 }
 
 export const uploadFile = withServerActionCaller(
@@ -96,13 +96,13 @@ export const uploadCurrentUserBrandingAssetFromBuffer = withServerActionCaller(
     fileBuffer: ArrayBuffer;
     fileName: string;
     contentType: string;
-  }) => {
-    const user = await requireAuthenticatedUser();
-    return uploadFileFromBufferTrusted({
-      ...args,
-      folder: `user_${user.id}/branding`
-    });
-  }
+  }) =>
+    withCurrentUser(async ({ user }) =>
+      uploadFileFromBufferTrusted({
+        ...args,
+        folder: `user_${user.id}/branding`
+      })
+    )
 );
 
 export const uploadFilesBatch = withServerActionCaller(

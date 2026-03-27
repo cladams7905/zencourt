@@ -1,7 +1,7 @@
 "use server";
 
 import { withServerActionCaller } from "@web/src/server/infra/logger/callContext";
-import { requireAuthenticatedUser } from "@web/src/server/actions/_auth/api";
+import { withCurrentUser } from "@web/src/server/actions/shared/auth";
 import {
   createUserMediaRecords,
   deleteUserMedia,
@@ -24,54 +24,54 @@ import type {
 
 export const getUserMediaUploadUrlsForCurrentUser = withServerActionCaller(
   "getUserMediaUploadUrlsForCurrentUser",
-  async (files: UserMediaUploadRequest[]) => {
-    const user = await requireAuthenticatedUser();
-    return prepareUserMediaUploadUrls(user.id, files);
-  }
+  async (files: UserMediaUploadRequest[]) =>
+    withCurrentUser(async ({ user }) =>
+      prepareUserMediaUploadUrls(user.id, files)
+    )
 );
 
 export const createUserMediaRecordsForCurrentUser = withServerActionCaller(
   "createUserMediaRecordsForCurrentUser",
-  async (uploads: UserMediaRecordInput[]) => {
-    const user = await requireAuthenticatedUser();
-    return createUserMediaRecords(
-      user.id,
-      mapUserMediaRecordInputs(user.id, uploads)
-    );
-  }
+  async (uploads: UserMediaRecordInput[]) =>
+    withCurrentUser(async ({ user }) =>
+      createUserMediaRecords(
+        user.id,
+        mapUserMediaRecordInputs(user.id, uploads)
+      )
+    )
 );
 
 export const deleteUserMediaForCurrentUser = withServerActionCaller(
   "deleteUserMediaForCurrentUser",
-  async (mediaId: string) => {
-    const user = await requireAuthenticatedUser();
-    const media = await getUserMediaById(user.id, mediaId);
-    await deleteUserMedia(user.id, mediaId);
+  async (mediaId: string) =>
+    withCurrentUser(async ({ user }) => {
+      const media = await getUserMediaById(user.id, mediaId);
+      await deleteUserMedia(user.id, mediaId);
 
-    if (!media) {
-      return;
-    }
+      if (!media) {
+        return;
+      }
 
-    await deleteStorageUrlsOrThrow(
-      [media.url, media.thumbnailUrl].filter(
-        (url): url is string =>
-          typeof url === "string" && isManagedStorageUrl(url)
-      ),
-      "Failed to delete media file"
-    );
-  }
+      await deleteStorageUrlsOrThrow(
+        [media.url, media.thumbnailUrl].filter(
+          (url): url is string =>
+            typeof url === "string" && isManagedStorageUrl(url)
+        ),
+        "Failed to delete media file"
+      );
+    })
 );
 
 export const getUserMediaForCurrentUser = withServerActionCaller(
   "getUserMediaForCurrentUser",
-  async () => {
-    const user = await requireAuthenticatedUser();
-    const userMedia = await getUserMedia(user.id);
-    return userMedia.map((media) => ({
-      ...media,
-      url: getPublicDownloadUrlSafe(media.url) ?? media.url,
-      thumbnailUrl:
-        getPublicDownloadUrlSafe(media.thumbnailUrl) ?? media.thumbnailUrl
-    }));
-  }
+  async () =>
+    withCurrentUser(async ({ user }) => {
+      const userMedia = await getUserMedia(user.id);
+      return userMedia.map((media) => ({
+        ...media,
+        url: getPublicDownloadUrlSafe(media.url) ?? media.url,
+        thumbnailUrl:
+          getPublicDownloadUrlSafe(media.thumbnailUrl) ?? media.thumbnailUrl
+      }));
+    })
 );

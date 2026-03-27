@@ -28,8 +28,7 @@ import type {
 } from "./helpers";
 import { resolveListingImagesToPublicUrls } from "./helpers";
 import { DomainValidationError } from "@web/src/server/errors/domain";
-import { requireAuthenticatedUser } from "@web/src/server/actions/_auth/api";
-import { requireListingAccess } from "@web/src/server/models/listings/access";
+import { withCurrentUserListingAccess } from "@web/src/server/actions/shared/auth";
 import { encodeSseEvent } from "@web/src/lib/sse/sseEncoder";
 import { normalizeErrorForLogging } from "@shared/utils/errors";
 
@@ -44,50 +43,49 @@ export const renderListingTemplateBatch = withServerActionCaller(
     listingId: string,
     body: RenderListingTemplateBatchBody | null,
     _siteOrigin: string
-  ): Promise<ListingTemplateRenderResult> => {
-    void _siteOrigin; // site origin is currently unused but part of the action signature
-    const user = await requireAuthenticatedUser();
-    const listing = await requireListingAccess(listingId, user.id);
+  ): Promise<ListingTemplateRenderResult> =>
+    withCurrentUserListingAccess(listingId, async ({ user, listing }) => {
+      void _siteOrigin; // site origin is currently unused but part of the action signature
 
-    let subcategory: ReturnType<typeof parseListingSubcategory>;
-    try {
-      subcategory = parseListingSubcategory(body?.subcategory);
-    } catch {
-      throw new DomainValidationError(
-        "A valid listing subcategory is required"
-      );
-    }
+      let subcategory: ReturnType<typeof parseListingSubcategory>;
+      try {
+        subcategory = parseListingSubcategory(body?.subcategory);
+      } catch {
+        throw new DomainValidationError(
+          "A valid listing subcategory is required"
+        );
+      }
 
-    const captionItems = sanitizeCaptionItems(body?.captionItems);
-    if (captionItems.length === 0) {
-      return { items: [], failedTemplateIds: [] };
-    }
+      const captionItems = sanitizeCaptionItems(body?.captionItems);
+      if (captionItems.length === 0) {
+        return { items: [], failedTemplateIds: [] };
+      }
 
-    const [listingImages, userAdditional] = await Promise.all([
-      getListingImages(user.id, listing.id),
-      getOrCreateUserAdditional(user.id)
-    ]);
-    const redis = getSharedRedisClient();
-    const headerRotationStore = redis
-      ? createRedisTemplateHeaderRotationStore(redis)
-      : undefined;
-    const listingImagesWithPublicUrls =
-      resolveListingImagesToPublicUrls(listingImages);
+      const [listingImages, userAdditional] = await Promise.all([
+        getListingImages(user.id, listing.id),
+        getOrCreateUserAdditional(user.id)
+      ]);
+      const redis = getSharedRedisClient();
+      const headerRotationStore = redis
+        ? createRedisTemplateHeaderRotationStore(redis)
+        : undefined;
+      const listingImagesWithPublicUrls =
+        resolveListingImagesToPublicUrls(listingImages);
 
-    return renderListingTemplateBatchService({
-      subcategory,
-      listing,
-      listingImages: listingImagesWithPublicUrls,
-      userAdditional,
-      captionItems,
-      templateCount:
-        typeof body?.templateCount === "number" && body.templateCount > 0
-          ? body.templateCount
-          : undefined,
-      headerRotationStore,
-      imageRotationStore
-    });
-  }
+      return renderListingTemplateBatchService({
+        subcategory,
+        listing,
+        listingImages: listingImagesWithPublicUrls,
+        userAdditional,
+        captionItems,
+        templateCount:
+          typeof body?.templateCount === "number" && body.templateCount > 0
+            ? body.templateCount
+            : undefined,
+        headerRotationStore,
+        imageRotationStore
+      });
+    })
 );
 
 export const renderListingTemplateBatchStream = withServerActionCaller(
@@ -96,142 +94,142 @@ export const renderListingTemplateBatchStream = withServerActionCaller(
     listingId: string,
     body: RenderListingTemplateBatchStreamBody | null,
     _siteOrigin: string
-  ): Promise<{ stream: ReadableStream }> => {
-    void _siteOrigin; // site origin is currently unused but part of the action signature
-    const user = await requireAuthenticatedUser();
-    const listing = await requireListingAccess(listingId, user.id);
+  ): Promise<{ stream: ReadableStream }> =>
+    withCurrentUserListingAccess(listingId, async ({ user, listing }) => {
+      void _siteOrigin; // site origin is currently unused but part of the action signature
 
-    let subcategory: ReturnType<typeof parseListingSubcategory>;
-    try {
-      subcategory = parseListingSubcategory(body?.subcategory);
-    } catch {
-      throw new DomainValidationError(
-        "A valid listing subcategory is required"
-      );
-    }
+      let subcategory: ReturnType<typeof parseListingSubcategory>;
+      try {
+        subcategory = parseListingSubcategory(body?.subcategory);
+      } catch {
+        throw new DomainValidationError(
+          "A valid listing subcategory is required"
+        );
+      }
 
-    const captionItems = sanitizeCaptionItems(body?.captionItems);
-    const templateCount =
-      typeof body?.templateCount === "number" && body.templateCount > 0
-        ? body.templateCount
+      const captionItems = sanitizeCaptionItems(body?.captionItems);
+      const templateCount =
+        typeof body?.templateCount === "number" && body.templateCount > 0
+          ? body.templateCount
+          : undefined;
+      const templateId =
+        typeof body?.templateId === "string" &&
+        body.templateId.trim().length > 0
+          ? body.templateId.trim()
+          : undefined;
+
+      if (captionItems.length === 0) {
+        const stream = new ReadableStream({
+          start(controller) {
+            controller.enqueue(
+              encodeSseEvent({ type: "done", items: [], failedTemplateIds: [] })
+            );
+            controller.close();
+          }
+        });
+        return { stream };
+      }
+
+      const [listingImages, userAdditional] = await Promise.all([
+        getListingImages(user.id, listing.id),
+        getOrCreateUserAdditional(user.id)
+      ]);
+      const redis = getSharedRedisClient();
+      const headerRotationStore = redis
+        ? createRedisTemplateHeaderRotationStore(redis)
         : undefined;
-    const templateId =
-      typeof body?.templateId === "string" && body.templateId.trim().length > 0
-        ? body.templateId.trim()
-        : undefined;
+      const listingImagesWithPublicUrls =
+        resolveListingImagesToPublicUrls(listingImages);
 
-    if (captionItems.length === 0) {
       const stream = new ReadableStream({
-        start(controller) {
-          controller.enqueue(
-            encodeSseEvent({ type: "done", items: [], failedTemplateIds: [] })
-          );
-          controller.close();
-        }
-      });
-      return { stream };
-    }
-
-    const [listingImages, userAdditional] = await Promise.all([
-      getListingImages(user.id, listing.id),
-      getOrCreateUserAdditional(user.id)
-    ]);
-    const redis = getSharedRedisClient();
-    const headerRotationStore = redis
-      ? createRedisTemplateHeaderRotationStore(redis)
-      : undefined;
-    const listingImagesWithPublicUrls =
-      resolveListingImagesToPublicUrls(listingImages);
-
-    const stream = new ReadableStream({
-      async start(controller) {
-        try {
-          const { failedTemplateIds } =
-            await renderListingTemplateBatchStreamService(
-              {
-                userId: user.id,
-                listingId,
-                subcategory,
-                mediaType: "image",
-                listing,
-                listingImages: listingImagesWithPublicUrls,
-                userAdditional,
-                captionItems,
-                templateCount,
-                templateId,
-                headerRotationStore,
-                imageRotationStore
-              },
-              {
-                onItem: async (item) => {
-                  controller.enqueue(encodeSseEvent({ type: "item", item }));
+        async start(controller) {
+          try {
+            const { failedTemplateIds } =
+              await renderListingTemplateBatchStreamService(
+                {
+                  userId: user.id,
+                  listingId,
+                  subcategory,
+                  mediaType: "image",
+                  listing,
+                  listingImages: listingImagesWithPublicUrls,
+                  userAdditional,
+                  captionItems,
+                  templateCount,
+                  templateId,
+                  headerRotationStore,
+                  imageRotationStore
                 },
-                onResult: async (result) => {
-                  const { cacheKeyTimestamp, cacheKeyId, content, rendered } =
-                    result;
-                  if (
-                    typeof cacheKeyTimestamp !== "number" ||
-                    typeof cacheKeyId !== "number"
-                  ) {
-                    return;
-                  }
+                {
+                  onItem: async (item) => {
+                    controller.enqueue(encodeSseEvent({ type: "item", item }));
+                  },
+                  onResult: async (result) => {
+                    const { cacheKeyTimestamp, cacheKeyId, content, rendered } =
+                      result;
+                    if (
+                      typeof cacheKeyTimestamp !== "number" ||
+                      typeof cacheKeyId !== "number"
+                    ) {
+                      return;
+                    }
 
-                  try {
-                    await setCachedListingContentItem({
-                      userId: user.id,
-                      listingId,
-                      subcategory,
-                      mediaType: "image",
-                      timestamp: cacheKeyTimestamp,
-                      id: cacheKeyId,
-                      item: {
-                        ...content,
-                        renderedImageUrl: rendered?.imageUrl ?? null,
-                        renderedTemplateId: rendered?.templateId,
-                        renderedModifications: rendered?.modifications
-                      }
-                    });
-                  } catch (error) {
-                    logger.warn(
-                      {
-                        err: normalizeErrorForLogging(error),
+                    try {
+                      await setCachedListingContentItem({
+                        userId: user.id,
                         listingId,
-                        cacheKeyTimestamp,
-                        cacheKeyId
-                      },
-                      "Failed to persist template render cache item"
-                    );
+                        subcategory,
+                        mediaType: "image",
+                        timestamp: cacheKeyTimestamp,
+                        id: cacheKeyId,
+                        item: {
+                          ...content,
+                          renderedImageUrl: rendered?.imageUrl ?? null,
+                          renderedTemplateId: rendered?.templateId,
+                          renderedModifications: rendered?.modifications
+                        }
+                      });
+                    } catch (error) {
+                      logger.warn(
+                        {
+                          err: normalizeErrorForLogging(error),
+                          listingId,
+                          cacheKeyTimestamp,
+                          cacheKeyId
+                        },
+                        "Failed to persist template render cache item"
+                      );
+                    }
                   }
                 }
-              }
+              );
+
+            controller.enqueue(
+              encodeSseEvent({
+                type: "done",
+                failedTemplateIds
+              })
             );
-
-          controller.enqueue(
-            encodeSseEvent({
-              type: "done",
-              failedTemplateIds
-            })
-          );
-        } catch (error) {
-          logger.error(
-            { err: normalizeErrorForLogging(error) },
-            "Template render stream error"
-          );
-          controller.enqueue(
-            encodeSseEvent({
-              type: "error",
-              message:
-                error instanceof Error
-                  ? error.message
-                  : "Failed to render templates"
-            })
-          );
-        } finally {
-          controller.close();
+          } catch (error) {
+            logger.error(
+              { err: normalizeErrorForLogging(error) },
+              "Template render stream error"
+            );
+            controller.enqueue(
+              encodeSseEvent({
+                type: "error",
+                message:
+                  error instanceof Error
+                    ? error.message
+                    : "Failed to render templates"
+              })
+            );
+          } finally {
+            controller.close();
+          }
         }
-      }
-    });
+      });
 
-    return { stream };
-  }
+      return { stream };
+    })
 );

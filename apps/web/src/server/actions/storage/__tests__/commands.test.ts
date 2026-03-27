@@ -24,7 +24,9 @@ jest.mock("@web/src/lib/core/logging/logger", () => ({
 
 jest.mock("@web/src/server/actions/_auth/api", () => ({
   requireAuthenticatedUser: (...args: unknown[]) =>
-    (mockRequireAuthenticatedUser as (...a: unknown[]) => unknown)(...args)
+    (mockRequireAuthenticatedUser as (...a: unknown[]) => unknown)(...args),
+  withCurrentUser: async (run: (context: { user: { id: string } }) => unknown) =>
+    run({ user: await mockRequireAuthenticatedUser() })
 }));
 
 import {

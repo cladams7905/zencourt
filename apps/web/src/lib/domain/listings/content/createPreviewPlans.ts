@@ -278,12 +278,10 @@ function applyClipDurationOverrides(
 
     return {
       ...segment,
-      durationSeconds: Number(
-        Math.min(
-          segment.maxDurationSeconds,
-          Math.max(MIN_OVERRIDE_CLIP_DURATION_SECONDS, override)
-        ).toFixed(2)
-      )
+      durationSeconds: normalizeDurationSeconds({
+        durationSeconds: override,
+        maxDurationSeconds: segment.maxDurationSeconds
+      })
     };
   });
 
@@ -296,6 +294,23 @@ function applyClipDurationOverrides(
         .toFixed(2)
     )
   };
+}
+
+function normalizeDurationSeconds(params: {
+  durationSeconds: number;
+  maxDurationSeconds: number;
+  minDurationSeconds?: number;
+}) {
+  const {
+    durationSeconds,
+    maxDurationSeconds,
+    minDurationSeconds = MIN_OVERRIDE_CLIP_DURATION_SECONDS
+  } = params;
+  return Number(
+    Math.min(maxDurationSeconds, Math.max(minDurationSeconds, durationSeconds)).toFixed(
+      2
+    )
+  );
 }
 
 export function buildPreviewTimelinePlan(
@@ -415,15 +430,10 @@ export function buildListingCreatePreviewPlans(params: {
           return {
             clipId,
             category: sourceItem.category ?? sourceItem.roomName ?? null,
-            durationSeconds: Number(
-              Math.min(
-                maxDurationSeconds,
-                Math.max(
-                  MIN_OVERRIDE_CLIP_DURATION_SECONDS,
-                  sequenceItem.durationSeconds
-                )
-              ).toFixed(2)
-            ),
+            durationSeconds: normalizeDurationSeconds({
+              durationSeconds: sequenceItem.durationSeconds,
+              maxDurationSeconds
+            }),
             maxDurationSeconds,
             sourceType: sequenceItem.sourceType,
             sourceId: sequenceItem.sourceId

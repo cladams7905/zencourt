@@ -7,7 +7,7 @@ import {
   createChildLogger,
   logger as baseLogger
 } from "@web/src/lib/core/logging/logger";
-import { requireListingAccess } from "@web/src/server/models/listings/access";
+import { withCurrentUserListingAccess } from "@web/src/server/actions/shared/auth";
 import { setCachedListingContentItem } from "@web/src/server/infra/cache/listingContent/cache";
 import { runContentGenerationForUser } from "@web/src/server/actions/content/generate/helpers";
 import { getCurrentVideoClipsWithCurrentVersionsByListingId } from "@web/src/server/models/video";
@@ -18,7 +18,6 @@ import {
 } from "./helpers";
 import type { GenerateListingContentBody } from "./types";
 import type { ListingGeneratedItem } from "@web/src/server/infra/cache/listingContent/cache";
-import { requireAuthenticatedUser } from "@web/src/server/actions/_auth/api";
 import { normalizeErrorForLogging } from "@shared/utils/errors";
 import { addGeneratedVideoTimelines } from "./timeline";
 
@@ -41,169 +40,171 @@ type ContentStreamEvent =
 
 export const generateListingContentForCurrentUser = withServerActionCaller(
   "generateListingContentForCurrentUser",
-  async (listingId: string, body: GenerateListingContentBody | null) => {
-    const user = await requireAuthenticatedUser();
-    const listing = await requireListingAccess(listingId, user.id);
-    const validated = parseAndValidateParams(body, listingId);
-    const context = resolveListingContext(listing, validated);
-    if (context.subcategory === "open_house") {
-      logger.info(
-        {
-          listingId,
-          hasAnyEvent: context.openHouseContext?.hasAnyEvent ?? false,
-          hasSchedule: context.openHouseContext?.hasSchedule ?? false,
-          selectedEventDate: context.openHouseContext?.selectedEvent?.date ?? null
-        },
-        "Resolved open house generation context"
-      );
-      if (!context.openHouseContext?.hasSchedule) {
+  async (listingId: string, body: GenerateListingContentBody | null) =>
+    withCurrentUserListingAccess(listingId, async ({ user, listing }) => {
+      const validated = parseAndValidateParams(body, listingId);
+      const context = resolveListingContext(listing, validated);
+      if (context.subcategory === "open_house") {
         logger.info(
-          { listingId },
-          "Open house generation running without schedule details"
+          {
+            listingId,
+            hasAnyEvent: context.openHouseContext?.hasAnyEvent ?? false,
+            hasSchedule: context.openHouseContext?.hasSchedule ?? false,
+            selectedEventDate:
+              context.openHouseContext?.selectedEvent?.date ?? null
+          },
+          "Resolved open house generation context"
         );
-      }
-    }
-
-    const upstreamBody = buildUpstreamRequestBody(context);
-    const listingVideoItems =
-      context.mediaType === "video"
-        ? (
-            await getCurrentVideoClipsWithCurrentVersionsByListingId(listingId)
-          )
-            .map(({ clip, clipVersion }) => ({
-              id: clip.id,
-              videoUrl: clipVersion.videoUrl ?? undefined,
-              thumbnail: clipVersion.thumbnailUrl ?? undefined,
-              category: clip.category ?? undefined,
-              durationSeconds: clipVersion.durationSeconds ?? undefined,
-              roomName: clip.roomName,
-              reelClipSource: "listing_clip" as const
-            }))
-            .filter((item) => Boolean(item.videoUrl))
-        : [];
-    const upstreamResponse = await runContentGenerationForUser(
-      user.id,
-      upstreamBody
-    );
-
-    const stream = new ReadableStream({
-      async start(controller) {
-        try {
-          let doneItems: ListingGeneratedItem[] | null = null;
-          let errored = false;
-          const cacheKeyTimestamp =
-            context.mediaType === "video" ? Date.now() : undefined;
-
-          if (typeof cacheKeyTimestamp === "number") {
-            controller.enqueue(
-              encodeSseEvent({
-                type: "meta",
-                meta: { cache_key_timestamp: cacheKeyTimestamp }
-              })
-            );
-          }
-
-          await consumeSseStream<ContentStreamEvent>(
-            upstreamResponse.stream,
-            async (event) => {
-              if (event.type === "meta") {
-                return;
-              }
-
-              if (event.type === "delta" || event.type === "error") {
-                controller.enqueue(encodeSseEvent(event));
-                if (event.type === "error") errored = true;
-              } else if (event.type === "done") {
-                doneItems = event.items;
-                if (!errored && doneItems && doneItems.length > 0) {
-                  const timestamp = cacheKeyTimestamp ?? Date.now();
-                  const resolvedDoneItems =
-                    context.mediaType === "video"
-                      ? addGeneratedVideoTimelines({
-                          listingId: context.listingId,
-                          subcategory: context.subcategory,
-                          items: doneItems,
-                          listingClipItems: listingVideoItems,
-                          cacheKeyTimestamp: timestamp
-                        })
-                      : doneItems;
-                  doneItems = resolvedDoneItems;
-
-                  if (context.mediaType === "video") {
-                    for (let id = 0; id < resolvedDoneItems.length; id += 1) {
-                      const item = resolvedDoneItems[id];
-                      if (!item) continue;
-                      await setCachedListingContentItem({
-                        userId: context.userId,
-                        listingId: context.listingId,
-                        subcategory: context.subcategory,
-                        mediaType: context.mediaType,
-                        timestamp,
-                        id,
-                        item: {
-                          ...item,
-                          renderedImageUrl: null,
-                          renderedTemplateId: undefined,
-                          renderedModifications: undefined
-                        }
-                      });
-                    }
-                  }
-
-                  controller.enqueue(
-                    encodeSseEvent({
-                      type: "done",
-                      items: resolvedDoneItems,
-                      meta: {
-                        model: "generated",
-                        batch_size: resolvedDoneItems.length,
-                        cache_key_timestamp: timestamp
-                      }
-                    })
-                  );
-                } else {
-                  controller.enqueue(encodeSseEvent(event));
-                }
-              }
-            }
+        if (!context.openHouseContext?.hasSchedule) {
+          logger.info(
+            { listingId },
+            "Open house generation running without schedule details"
           );
-
-          const hasNoItems =
-            doneItems === null ||
-            !Array.isArray(doneItems) ||
-            (doneItems as ListingGeneratedItem[]).length === 0;
-          if (hasNoItems) {
-            controller.enqueue(
-              encodeSseEvent({
-                type: "error",
-                message:
-                  "Listing content generation did not return completed items"
-              })
-            );
-          }
-        } catch (error) {
-          const message =
-            error instanceof Error
-              ? error.message
-              : "Failed to generate listing content";
-          logger.error(
-            { err: normalizeErrorForLogging(error) },
-            "Listing content stream error"
-          );
-          try {
-            controller.enqueue(encodeSseEvent({ type: "error", message }));
-          } catch {
-            // Controller may already be closed.
-          }
-        } finally {
-          controller.close();
         }
       }
-    });
 
-    return {
-      stream,
-      status: 200
-    };
-  }
+      const upstreamBody = buildUpstreamRequestBody(context);
+      const listingVideoItems =
+        context.mediaType === "video"
+          ? (
+              await getCurrentVideoClipsWithCurrentVersionsByListingId(
+                listingId
+              )
+            )
+              .map(({ clip, clipVersion }) => ({
+                id: clip.id,
+                videoUrl: clipVersion.videoUrl ?? undefined,
+                thumbnail: clipVersion.thumbnailUrl ?? undefined,
+                category: clip.category ?? undefined,
+                durationSeconds: clipVersion.durationSeconds ?? undefined,
+                roomName: clip.roomName,
+                reelClipSource: "listing_clip" as const
+              }))
+              .filter((item) => Boolean(item.videoUrl))
+          : [];
+      const upstreamResponse = await runContentGenerationForUser(
+        user.id,
+        upstreamBody
+      );
+
+      const stream = new ReadableStream({
+        async start(controller) {
+          try {
+            let doneItems: ListingGeneratedItem[] | null = null;
+            let errored = false;
+            const cacheKeyTimestamp =
+              context.mediaType === "video" ? Date.now() : undefined;
+
+            if (typeof cacheKeyTimestamp === "number") {
+              controller.enqueue(
+                encodeSseEvent({
+                  type: "meta",
+                  meta: { cache_key_timestamp: cacheKeyTimestamp }
+                })
+              );
+            }
+
+            await consumeSseStream<ContentStreamEvent>(
+              upstreamResponse.stream,
+              async (event) => {
+                if (event.type === "meta") {
+                  return;
+                }
+
+                if (event.type === "delta" || event.type === "error") {
+                  controller.enqueue(encodeSseEvent(event));
+                  if (event.type === "error") errored = true;
+                } else if (event.type === "done") {
+                  doneItems = event.items;
+                  if (!errored && doneItems && doneItems.length > 0) {
+                    const timestamp = cacheKeyTimestamp ?? Date.now();
+                    const resolvedDoneItems =
+                      context.mediaType === "video"
+                        ? addGeneratedVideoTimelines({
+                            listingId: context.listingId,
+                            subcategory: context.subcategory,
+                            items: doneItems,
+                            listingClipItems: listingVideoItems,
+                            cacheKeyTimestamp: timestamp
+                          })
+                        : doneItems;
+                    doneItems = resolvedDoneItems;
+
+                    if (context.mediaType === "video") {
+                      for (let id = 0; id < resolvedDoneItems.length; id += 1) {
+                        const item = resolvedDoneItems[id];
+                        if (!item) continue;
+                        await setCachedListingContentItem({
+                          userId: context.userId,
+                          listingId: context.listingId,
+                          subcategory: context.subcategory,
+                          mediaType: context.mediaType,
+                          timestamp,
+                          id,
+                          item: {
+                            ...item,
+                            renderedImageUrl: null,
+                            renderedTemplateId: undefined,
+                            renderedModifications: undefined
+                          }
+                        });
+                      }
+                    }
+
+                    controller.enqueue(
+                      encodeSseEvent({
+                        type: "done",
+                        items: resolvedDoneItems,
+                        meta: {
+                          model: "generated",
+                          batch_size: resolvedDoneItems.length,
+                          cache_key_timestamp: timestamp
+                        }
+                      })
+                    );
+                  } else {
+                    controller.enqueue(encodeSseEvent(event));
+                  }
+                }
+              }
+            );
+
+            const hasNoItems =
+              doneItems === null ||
+              !Array.isArray(doneItems) ||
+              (doneItems as ListingGeneratedItem[]).length === 0;
+            if (hasNoItems) {
+              controller.enqueue(
+                encodeSseEvent({
+                  type: "error",
+                  message:
+                    "Listing content generation did not return completed items"
+                })
+              );
+            }
+          } catch (error) {
+            const message =
+              error instanceof Error
+                ? error.message
+                : "Failed to generate listing content";
+            logger.error(
+              { err: normalizeErrorForLogging(error) },
+              "Listing content stream error"
+            );
+            try {
+              controller.enqueue(encodeSseEvent({ type: "error", message }));
+            } catch {
+              // Controller may already be closed.
+            }
+          } finally {
+            controller.close();
+          }
+        }
+      });
+
+      return {
+        stream,
+        status: 200
+      };
+    })
 );

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import {
   requireAuthenticatedUser,
   requireListingAccess
-} from "@web/src/server/actions/_auth/api";
+} from "@web/src/server/actions/shared/auth";
 import { ApiError } from "@web/src/server/errors/api";
 import { StatusCode } from "@shared/types/api";
 import { DomainError, isDomainError } from "@web/src/server/errors/domain";

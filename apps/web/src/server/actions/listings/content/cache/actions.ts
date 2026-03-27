@@ -8,11 +8,11 @@ import {
   updateCachedListingContentTimeline as updateCachedListingContentTimelineService
 } from "@web/src/server/infra/cache/listingContent/cache";
 import { DomainValidationError } from "@web/src/server/errors/domain";
-import { requireAuthenticatedUser } from "@web/src/server/actions/_auth/api";
-import { requireListingAccess } from "@web/src/server/models/listings/access";
+import { withCurrentUserListingAccess } from "@web/src/server/actions/shared/auth";
 
 const MEDIA_TYPE_IMAGE = "image" as const;
 const MEDIA_TYPE_VIDEO = "video" as const;
+type ListingSubcategory = (typeof LISTING_CONTENT_SUBCATEGORIES)[number];
 
 export type DeleteCachedListingContentItemParams = {
   cacheKeyTimestamp: number;
@@ -38,207 +38,181 @@ export type UpdateCachedListingVideoTimelineParams = {
   clipDurationOverrides?: Record<string, number>;
 };
 
+function isValidListingSubcategory(value: string): value is ListingSubcategory {
+  return (LISTING_CONTENT_SUBCATEGORIES as readonly string[]).includes(value);
+}
+
+function normalizeCacheTarget(params: {
+  cacheKeyTimestamp: number;
+  cacheKeyId: number;
+  subcategory: string;
+}) {
+  const subcategory = params.subcategory?.trim();
+  const hasValidTarget =
+    typeof params.cacheKeyTimestamp === "number" &&
+    Number.isFinite(params.cacheKeyTimestamp) &&
+    params.cacheKeyTimestamp > 0 &&
+    typeof params.cacheKeyId === "number" &&
+    Number.isFinite(params.cacheKeyId) &&
+    params.cacheKeyId >= 0 &&
+    Boolean(subcategory) &&
+    Boolean(subcategory && isValidListingSubcategory(subcategory));
+
+  if (
+    !hasValidTarget ||
+    !subcategory ||
+    !isValidListingSubcategory(subcategory)
+  ) {
+    throw new DomainValidationError(
+      "cacheKeyTimestamp, cacheKeyId, and valid subcategory are required"
+    );
+  }
+
+  return {
+    cacheKeyTimestamp: params.cacheKeyTimestamp,
+    cacheKeyId: params.cacheKeyId,
+    subcategory
+  };
+}
+
+function normalizeOrderedClipIds(orderedClipIdsRaw: unknown): string[] {
+  if (!Array.isArray(orderedClipIdsRaw)) {
+    return [];
+  }
+
+  return orderedClipIdsRaw
+    .map((clipId) => (typeof clipId === "string" ? clipId.trim() : ""))
+    .filter(Boolean);
+}
+
+function normalizeClipDurationOverrides(
+  clipDurationOverridesRaw: unknown
+): Record<string, number> {
+  if (
+    !clipDurationOverridesRaw ||
+    typeof clipDurationOverridesRaw !== "object" ||
+    Array.isArray(clipDurationOverridesRaw)
+  ) {
+    return {};
+  }
+
+  return Object.fromEntries(
+    Object.entries(clipDurationOverridesRaw)
+      .map(([clipId, duration]): [string, number | null] => [
+        clipId.trim(),
+        typeof duration === "number" ? Number(duration.toFixed(2)) : null
+      ])
+      .filter(
+        (entry): entry is [string, number] =>
+          Boolean(entry[0]) && entry[1] !== null && entry[1] > 0
+      )
+  );
+}
+
 export const deleteCachedListingContentItem = withServerActionCaller(
   "deleteCachedListingContentItem",
-  async (listingId: string, params: DeleteCachedListingContentItemParams) => {
-    const user = await requireAuthenticatedUser();
-    await requireListingAccess(listingId, user.id);
+  async (listingId: string, params: DeleteCachedListingContentItemParams) =>
+    withCurrentUserListingAccess(listingId, async ({ user }) => {
+      const { cacheKeyTimestamp, cacheKeyId, subcategory } =
+        normalizeCacheTarget({
+          cacheKeyTimestamp: params.cacheKeyTimestamp,
+          cacheKeyId: params.cacheKeyId,
+          subcategory: params.subcategory
+        });
 
-    const {
-      cacheKeyTimestamp,
-      cacheKeyId,
-      subcategory: subcategoryRaw
-    } = params;
-    const subcategory = subcategoryRaw?.trim();
-    if (
-      typeof cacheKeyTimestamp !== "number" ||
-      !Number.isFinite(cacheKeyTimestamp) ||
-      cacheKeyTimestamp <= 0 ||
-      typeof cacheKeyId !== "number" ||
-      !Number.isFinite(cacheKeyId) ||
-      cacheKeyId < 0 ||
-      !subcategory ||
-      !(LISTING_CONTENT_SUBCATEGORIES as readonly string[]).includes(
-        subcategory
-      )
-    ) {
-      throw new DomainValidationError(
-        "cacheKeyTimestamp, cacheKeyId, and valid subcategory are required"
-      );
-    }
-
-    await deleteCachedListingContentItemService({
-      userId: user.id,
-      listingId,
-      subcategory:
-        subcategory as (typeof LISTING_CONTENT_SUBCATEGORIES)[number],
-      mediaType: MEDIA_TYPE_IMAGE,
-      timestamp: cacheKeyTimestamp,
-      id: cacheKeyId
-    });
-  }
+      await deleteCachedListingContentItemService({
+        userId: user.id,
+        listingId,
+        subcategory,
+        mediaType: MEDIA_TYPE_IMAGE,
+        timestamp: cacheKeyTimestamp,
+        id: cacheKeyId
+      });
+    })
 );
 
 export const updateCachedListingVideoText = withServerActionCaller(
   "updateCachedListingVideoText",
-  async (listingId: string, params: UpdateCachedListingVideoTextParams) => {
-    const user = await requireAuthenticatedUser();
-    await requireListingAccess(listingId, user.id);
-
-    const {
-      cacheKeyTimestamp,
-      cacheKeyId,
-      subcategory: subcategoryRaw,
-      hook: hookRaw,
-      caption: captionRaw,
-      orderedClipIds: orderedClipIdsRaw,
-      clipDurationOverrides: clipDurationOverridesRaw
-    } = params;
-    const subcategory = subcategoryRaw?.trim();
-    const hook = hookRaw?.trim();
-    const caption = captionRaw?.trim();
-    const orderedClipIds = Array.isArray(orderedClipIdsRaw)
-      ? orderedClipIdsRaw
-          .map((clipId) => (typeof clipId === "string" ? clipId.trim() : ""))
-          .filter(Boolean)
-      : [];
-    const clipDurationOverrides =
-      clipDurationOverridesRaw &&
-      typeof clipDurationOverridesRaw === "object" &&
-      !Array.isArray(clipDurationOverridesRaw)
-        ? Object.fromEntries(
-            Object.entries(clipDurationOverridesRaw)
-              .map(
-                ([clipId, duration]): [string, number | null] => [
-                  clipId.trim(),
-                  typeof duration === "number"
-                    ? Number(duration.toFixed(2))
-                    : null
-                ]
-              )
-              .filter(
-                (entry): entry is [string, number] =>
-                  Boolean(entry[0]) && entry[1] !== null && entry[1] > 0
-              )
-          )
-        : {};
-
-    if (
-      typeof cacheKeyTimestamp !== "number" ||
-      !Number.isFinite(cacheKeyTimestamp) ||
-      cacheKeyTimestamp <= 0 ||
-      typeof cacheKeyId !== "number" ||
-      !Number.isFinite(cacheKeyId) ||
-      cacheKeyId < 0 ||
-      !subcategory ||
-      !(LISTING_CONTENT_SUBCATEGORIES as readonly string[]).includes(
-        subcategory
-      ) ||
-      !hook ||
-      !caption ||
-      orderedClipIds.length === 0
-    ) {
-      throw new DomainValidationError(
-        "cacheKeyTimestamp, cacheKeyId, valid subcategory, hook, caption, and orderedClipIds are required"
+  async (listingId: string, params: UpdateCachedListingVideoTextParams) =>
+    withCurrentUserListingAccess(listingId, async ({ user }) => {
+      const { cacheKeyTimestamp, cacheKeyId, subcategory } =
+        normalizeCacheTarget({
+          cacheKeyTimestamp: params.cacheKeyTimestamp,
+          cacheKeyId: params.cacheKeyId,
+          subcategory: params.subcategory
+        });
+      const hook = params.hook?.trim();
+      const caption = params.caption?.trim();
+      const orderedClipIds = normalizeOrderedClipIds(params.orderedClipIds);
+      const clipDurationOverrides = normalizeClipDurationOverrides(
+        params.clipDurationOverrides
       );
-    }
 
-    const updated = await updateCachedListingContentTextService({
-      userId: user.id,
-      listingId,
-      subcategory:
-        subcategory as (typeof LISTING_CONTENT_SUBCATEGORIES)[number],
-      mediaType: MEDIA_TYPE_VIDEO,
-      timestamp: cacheKeyTimestamp,
-      id: cacheKeyId,
-      hook,
-      caption,
-      orderedClipIds,
-      clipDurationOverrides
-    });
+      if (!hook || !caption || orderedClipIds.length === 0) {
+        throw new DomainValidationError(
+          "hook, caption, and orderedClipIds are required"
+        );
+      }
 
-    if (!updated) {
-      throw new DomainValidationError("Cached listing content item not found");
-    }
+      const updated = await updateCachedListingContentTextService({
+        userId: user.id,
+        listingId,
+        subcategory,
+        mediaType: MEDIA_TYPE_VIDEO,
+        timestamp: cacheKeyTimestamp,
+        id: cacheKeyId,
+        hook,
+        caption,
+        orderedClipIds,
+        clipDurationOverrides
+      });
 
-    return updated;
-  }
+      if (!updated) {
+        throw new DomainValidationError(
+          "Cached listing content item not found"
+        );
+      }
+
+      return updated;
+    })
 );
 
 export const updateCachedListingVideoTimeline = withServerActionCaller(
   "updateCachedListingVideoTimeline",
-  async (listingId: string, params: UpdateCachedListingVideoTimelineParams) => {
-    const user = await requireAuthenticatedUser();
-    await requireListingAccess(listingId, user.id);
-
-    const {
-      cacheKeyTimestamp,
-      cacheKeyId,
-      subcategory: subcategoryRaw,
-      orderedClipIds: orderedClipIdsRaw,
-      clipDurationOverrides: clipDurationOverridesRaw
-    } = params;
-    const subcategory = subcategoryRaw?.trim();
-    const orderedClipIds = Array.isArray(orderedClipIdsRaw)
-      ? orderedClipIdsRaw
-          .map((clipId) => (typeof clipId === "string" ? clipId.trim() : ""))
-          .filter(Boolean)
-      : [];
-    const clipDurationOverrides =
-      clipDurationOverridesRaw &&
-      typeof clipDurationOverridesRaw === "object" &&
-      !Array.isArray(clipDurationOverridesRaw)
-        ? Object.fromEntries(
-            Object.entries(clipDurationOverridesRaw)
-              .map(
-                ([clipId, duration]): [string, number | null] => [
-                  clipId.trim(),
-                  typeof duration === "number"
-                    ? Number(duration.toFixed(2))
-                    : null
-                ]
-              )
-              .filter(
-                (entry): entry is [string, number] =>
-                  Boolean(entry[0]) && entry[1] !== null && entry[1] > 0
-              )
-          )
-        : {};
-
-    if (
-      typeof cacheKeyTimestamp !== "number" ||
-      !Number.isFinite(cacheKeyTimestamp) ||
-      cacheKeyTimestamp <= 0 ||
-      typeof cacheKeyId !== "number" ||
-      !Number.isFinite(cacheKeyId) ||
-      cacheKeyId < 0 ||
-      !subcategory ||
-      !(LISTING_CONTENT_SUBCATEGORIES as readonly string[]).includes(
-        subcategory
-      ) ||
-      orderedClipIds.length === 0
-    ) {
-      throw new DomainValidationError(
-        "cacheKeyTimestamp, cacheKeyId, valid subcategory, and orderedClipIds are required"
+  async (listingId: string, params: UpdateCachedListingVideoTimelineParams) =>
+    withCurrentUserListingAccess(listingId, async ({ user }) => {
+      const { cacheKeyTimestamp, cacheKeyId, subcategory } =
+        normalizeCacheTarget({
+          cacheKeyTimestamp: params.cacheKeyTimestamp,
+          cacheKeyId: params.cacheKeyId,
+          subcategory: params.subcategory
+        });
+      const orderedClipIds = normalizeOrderedClipIds(params.orderedClipIds);
+      const clipDurationOverrides = normalizeClipDurationOverrides(
+        params.clipDurationOverrides
       );
-    }
 
-    const updated = await updateCachedListingContentTimelineService({
-      userId: user.id,
-      listingId,
-      subcategory:
-        subcategory as (typeof LISTING_CONTENT_SUBCATEGORIES)[number],
-      mediaType: MEDIA_TYPE_VIDEO,
-      timestamp: cacheKeyTimestamp,
-      id: cacheKeyId,
-      orderedClipIds,
-      clipDurationOverrides
-    });
+      if (orderedClipIds.length === 0) {
+        throw new DomainValidationError("orderedClipIds are required");
+      }
 
-    if (!updated) {
-      throw new DomainValidationError("Cached listing content item not found");
-    }
+      const updated = await updateCachedListingContentTimelineService({
+        userId: user.id,
+        listingId,
+        subcategory,
+        mediaType: MEDIA_TYPE_VIDEO,
+        timestamp: cacheKeyTimestamp,
+        id: cacheKeyId,
+        orderedClipIds,
+        clipDurationOverrides
+      });
 
-    return updated;
-  }
+      if (!updated) {
+        throw new DomainValidationError(
+          "Cached listing content item not found"
+        );
+      }
+
+      return updated;
+    })
 );

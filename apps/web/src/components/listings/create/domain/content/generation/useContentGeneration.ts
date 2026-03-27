@@ -41,6 +41,56 @@ const DEFAULT_GENERATION_COUNT = GENERATED_BATCH_SIZE;
 type ListingContentItem = ContentItem;
 type ListingClipItem = ContentItem;
 
+function withSettledBucket(
+  bucket: FilterBucket,
+  items: ListingContentItem[]
+): FilterBucket {
+  return {
+    ...bucket,
+    items,
+    isLoadingInitialPage: false,
+    isLoadingMore: false,
+    hasFetchedInitialPage: true,
+    offset: items.length,
+    loadedCount: items.length
+  };
+}
+
+function withRemovedBatchItems(
+  bucket: FilterBucket,
+  batchItemIds: string[]
+): FilterBucket {
+  const nextItems = removeCurrentBatchItems(bucket.items, batchItemIds);
+  return {
+    ...bucket,
+    items: nextItems,
+    loadedCount: nextItems.length
+  };
+}
+
+function withAppendedPageItems(
+  bucket: FilterBucket,
+  page: {
+    items: ListingContentItem[];
+    hasMore: boolean;
+    nextOffset: number;
+  }
+): FilterBucket {
+  const existingIds = new Set(bucket.items.map((item) => item.id));
+  const appendedItems = page.items.filter((item) => !existingIds.has(item.id));
+  const nextItems =
+    appendedItems.length > 0 ? [...bucket.items, ...appendedItems] : bucket.items;
+
+  return {
+    ...bucket,
+    items: nextItems,
+    isLoadingMore: false,
+    hasMore: page.hasMore,
+    offset: page.nextOffset,
+    loadedCount: nextItems.length
+  };
+}
+
 function buildContentItemRevision(item: ListingContentItem): string {
   const cacheIdentity = item as ContentItem & {
     cacheKeyTimestamp?: number;
@@ -376,23 +426,7 @@ export function useContentGeneration(params: {
       }
 
       updateBucket(currentFilterKey, (bucket) => {
-        const existingIds = new Set(bucket.items.map((item) => item.id));
-        const appendedItems = page.items.filter(
-          (item) => !existingIds.has(item.id)
-        );
-        const nextItems =
-          appendedItems.length > 0
-            ? [...bucket.items, ...appendedItems]
-            : bucket.items;
-
-        return {
-          ...bucket,
-          items: nextItems,
-          isLoadingMore: false,
-          hasMore: page.hasMore,
-          offset: page.nextOffset,
-          loadedCount: nextItems.length
-        };
+        return withAppendedPageItems(bucket, page);
       });
     } catch {
       if (!isCurrentListingRequestVersion(listingRequestVersionRef.current)) {
@@ -496,22 +530,13 @@ export function useContentGeneration(params: {
               });
 
               updateBucket(targetFilterKey, (bucket) => {
-                const nextItems = [
+                return withSettledBucket(bucket, [
                   ...removeCurrentBatchItems(
                     bucket.items,
                     activeBatchItemIdsRef.current
                   ),
                   ...streamedContentItems
-                ];
-                return {
-                  items: nextItems,
-                  isLoadingInitialPage: false,
-                  isLoadingMore: false,
-                  hasFetchedInitialPage: true,
-                  hasMore: bucket.hasMore,
-                  offset: nextItems.length,
-                  loadedCount: nextItems.length
-                };
+                ]);
               });
             }
           }
@@ -585,16 +610,7 @@ export function useContentGeneration(params: {
                 batchItemIds: activeBatchItemIdsRef.current,
                 forceNewBatch: options?.forceNewBatch
               });
-
-              return {
-                items: nextItems,
-                isLoadingInitialPage: false,
-                isLoadingMore: false,
-                hasFetchedInitialPage: true,
-                hasMore: bucket.hasMore,
-                offset: nextItems.length,
-                loadedCount: nextItems.length
-              };
+              return withSettledBucket(bucket, nextItems);
             });
           }
         }
@@ -604,17 +620,9 @@ export function useContentGeneration(params: {
         }
       } catch (error) {
         if ((error as Error).name === "AbortError") {
-          updateBucket(targetFilterKey, (bucket) => {
-            const nextItems = removeCurrentBatchItems(
-              bucket.items,
-              activeBatchItemIdsRef.current
-            );
-            return {
-              ...bucket,
-              items: nextItems,
-              loadedCount: nextItems.length
-            };
-          });
+          updateBucket(targetFilterKey, (bucket) =>
+            withRemovedBatchItems(bucket, activeBatchItemIdsRef.current)
+          );
           return;
         }
         const message =
@@ -624,17 +632,9 @@ export function useContentGeneration(params: {
         setGenerationError(message);
         toast.error(message);
         setIncompleteBatchSkeletonCount(activeGenerationCountRef.current);
-        updateBucket(targetFilterKey, (bucket) => {
-          const nextItems = removeCurrentBatchItems(
-            bucket.items,
-            activeBatchItemIdsRef.current
-          );
-          return {
-            ...bucket,
-            items: nextItems,
-            loadedCount: nextItems.length
-          };
-        });
+        updateBucket(targetFilterKey, (bucket) =>
+          withRemovedBatchItems(bucket, activeBatchItemIdsRef.current)
+        );
       } finally {
         if (activeControllerRef.current === controller) {
           activeControllerRef.current = null;

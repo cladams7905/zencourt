@@ -7,7 +7,7 @@ import {
   createChildLogger,
   logger as baseLogger
 } from "@web/src/lib/core/logging/logger";
-import { requireAuthenticatedUser } from "@web/src/server/actions/_auth/api";
+import { withCurrentUser } from "@web/src/server/actions/shared/auth";
 import type {
   ImageCategorizationActionOptions,
   ImageCategorizationStats
@@ -93,8 +93,8 @@ export const categorizeListingImagesForCurrentUser = withServerActionCaller(
   async (
     listingId: string,
     options: ImageCategorizationActionOptions = {}
-  ): Promise<ImageCategorizationStats> => {
-    const user = await requireAuthenticatedUser();
-    return categorizeListingImages(user.id, listingId, options);
-  }
+  ): Promise<ImageCategorizationStats> =>
+    withCurrentUser(async ({ user }) =>
+      categorizeListingImages(user.id, listingId, options)
+    )
 );

@@ -14,7 +14,7 @@ import {
   requireListingId,
   requireUserId
 } from "@web/src/server/actions/shared/validation";
-import { requireAuthenticatedUser } from "@web/src/server/actions/_auth/api";
+import { withCurrentUser } from "@web/src/server/actions/shared/auth";
 
 export async function fetchPropertyDetails(
   userId: string,
@@ -94,16 +94,16 @@ export async function saveListingPropertyDetails(
 
 export const fetchPropertyDetailsForCurrentUser = withServerActionCaller(
   "fetchPropertyDetailsForCurrentUser",
-  async (listingId: string, addressOverride?: string | null) => {
-    const user = await requireAuthenticatedUser();
-    return fetchPropertyDetails(user.id, listingId, addressOverride);
-  }
+  async (listingId: string, addressOverride?: string | null) =>
+    withCurrentUser(async ({ user }) =>
+      fetchPropertyDetails(user.id, listingId, addressOverride)
+    )
 );
 
 export const saveListingPropertyDetailsForCurrentUser = withServerActionCaller(
   "saveListingPropertyDetailsForCurrentUser",
-  async (listingId: string, propertyDetails: ListingPropertyDetails) => {
-    const user = await requireAuthenticatedUser();
-    return saveListingPropertyDetails(user.id, listingId, propertyDetails);
-  }
+  async (listingId: string, propertyDetails: ListingPropertyDetails) =>
+    withCurrentUser(async ({ user }) =>
+      saveListingPropertyDetails(user.id, listingId, propertyDetails)
+    )
 );

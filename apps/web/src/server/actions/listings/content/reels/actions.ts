@@ -1,8 +1,7 @@
 "use server";
 
 import { withServerActionCaller } from "@web/src/server/infra/logger/callContext";
-import { requireAuthenticatedUser } from "@web/src/server/actions/_auth/api";
-import { requireListingAccess } from "@web/src/server/models/listings/access";
+import { withCurrentUserListingAccess } from "@web/src/server/actions/shared/auth";
 import {
   createContent,
   getContentById,
@@ -17,6 +16,12 @@ import type { PlayablePreviewTextUpdate } from "@web/src/lib/domain/listings/con
 import type { SavedListingReelMetadata } from "@web/src/lib/domain/listings/content/reels";
 import { isSavedListingReelMetadata } from "@web/src/lib/domain/listings/content/reels";
 import { mapSavedReelContentToCreateItem } from "./mappers";
+
+type NormalizedReelInput = {
+  hook: string;
+  caption: string;
+  sequence: PlayablePreviewTextUpdate["sequence"];
+};
 
 function normalizeSequence(
   sequence: PlayablePreviewTextUpdate["sequence"]
@@ -52,101 +57,142 @@ function ensureValidSequence(
   }
 }
 
+function normalizeReelInput(
+  params: PlayablePreviewTextUpdate
+): NormalizedReelInput {
+  const hook = params.hook.trim();
+  const caption = params.caption.trim();
+  const sequence = normalizeSequence(params.sequence);
+
+  if (!hook || !caption) {
+    throw new DomainValidationError("Hook and caption are required.");
+  }
+
+  ensureValidSequence(sequence);
+
+  return {
+    hook,
+    caption,
+    sequence
+  };
+}
+
+function mapOrThrowSavedReel(row: Awaited<ReturnType<typeof createContent>>) {
+  const mapped = mapSavedReelContentToCreateItem(row);
+  if (!mapped) {
+    throw new DomainValidationError("Saved reel could not be mapped.");
+  }
+  return mapped;
+}
+
+async function saveCachedReelAsContent(params: {
+  userId: string;
+  listingId: string;
+  saveTarget: Extract<
+    PlayablePreviewTextUpdate["saveTarget"],
+    { contentSource: "cached_create" }
+  >;
+  normalizedInput: NormalizedReelInput;
+}) {
+  const { userId, listingId, saveTarget, normalizedInput } = params;
+  const cachedItem = await getCachedListingContentItem({
+    userId,
+    listingId,
+    subcategory: saveTarget.subcategory as never,
+    mediaType: "video",
+    timestamp: saveTarget.cacheKeyTimestamp,
+    id: saveTarget.cacheKeyId
+  });
+
+  if (!cachedItem) {
+    throw new DomainValidationError("Cached reel not found.");
+  }
+
+  const metadata: SavedListingReelMetadata = {
+    source: "listing_reel",
+    version: 1,
+    listingSubcategory: saveTarget.subcategory as never,
+    hook: normalizedInput.hook,
+    caption: normalizedInput.caption,
+    body: cachedItem.body ?? null,
+    brollQuery: cachedItem.broll_query ?? null,
+    sequence: normalizedInput.sequence,
+    originCacheKeyTimestamp: saveTarget.cacheKeyTimestamp,
+    originCacheKeyId: saveTarget.cacheKeyId
+  };
+
+  const created = await createContent(userId, {
+    listingId,
+    contentType: "video",
+    contentUrl: null,
+    thumbnailUrl: null,
+    metadata
+  });
+
+  await deleteCachedListingContentItem({
+    userId,
+    listingId,
+    subcategory: saveTarget.subcategory as never,
+    mediaType: "video",
+    timestamp: saveTarget.cacheKeyTimestamp,
+    id: saveTarget.cacheKeyId
+  });
+
+  return mapOrThrowSavedReel(created);
+}
+
+async function updateSavedReelContent(params: {
+  userId: string;
+  listingId: string;
+  saveTarget: Extract<
+    PlayablePreviewTextUpdate["saveTarget"],
+    { contentSource: "saved_content" }
+  >;
+  normalizedInput: NormalizedReelInput;
+}) {
+  const { userId, listingId, saveTarget, normalizedInput } = params;
+  const existing = await getContentById(userId, saveTarget.savedContentId);
+  if (!existing || existing.listingId !== listingId) {
+    throw new DomainValidationError("Saved reel not found.");
+  }
+  if (!isSavedListingReelMetadata(existing.metadata)) {
+    throw new DomainValidationError("Saved reel metadata is invalid.");
+  }
+
+  const metadata: SavedListingReelMetadata = {
+    ...existing.metadata,
+    hook: normalizedInput.hook,
+    caption: normalizedInput.caption,
+    sequence: normalizedInput.sequence
+  };
+
+  const updated = await updateContent(userId, existing.id, {
+    metadata
+  });
+
+  return mapOrThrowSavedReel(updated);
+}
+
 export const saveListingVideoReel = withServerActionCaller(
   "saveListingVideoReel",
-  async (listingId: string, params: PlayablePreviewTextUpdate) => {
-    const user = await requireAuthenticatedUser();
-    await requireListingAccess(listingId, user.id);
+  async (listingId: string, params: PlayablePreviewTextUpdate) =>
+    withCurrentUserListingAccess(listingId, async ({ user }) => {
+      const normalizedInput = normalizeReelInput(params);
 
-    const hook = params.hook.trim();
-    const caption = params.caption.trim();
-    const sequence = normalizeSequence(params.sequence);
-
-    if (!hook || !caption) {
-      throw new DomainValidationError("Hook and caption are required.");
-    }
-
-    ensureValidSequence(sequence);
-
-    if (params.saveTarget.contentSource === "cached_create") {
-      const cachedItem = await getCachedListingContentItem({
-        userId: user.id,
-        listingId,
-        subcategory: params.saveTarget.subcategory as never,
-        mediaType: "video",
-        timestamp: params.saveTarget.cacheKeyTimestamp,
-        id: params.saveTarget.cacheKeyId
-      });
-
-      if (!cachedItem) {
-        throw new DomainValidationError("Cached reel not found.");
+      if (params.saveTarget.contentSource === "cached_create") {
+        return saveCachedReelAsContent({
+          userId: user.id,
+          listingId,
+          saveTarget: params.saveTarget,
+          normalizedInput
+        });
       }
 
-      const metadata: SavedListingReelMetadata = {
-        source: "listing_reel",
-        version: 1,
-        listingSubcategory: params.saveTarget.subcategory as never,
-        hook,
-        caption,
-        body: cachedItem.body ?? null,
-        brollQuery: cachedItem.broll_query ?? null,
-        sequence,
-        originCacheKeyTimestamp: params.saveTarget.cacheKeyTimestamp,
-        originCacheKeyId: params.saveTarget.cacheKeyId
-      };
-
-      const created = await createContent(user.id, {
-        listingId,
-        contentType: "video",
-        contentUrl: null,
-        thumbnailUrl: null,
-        metadata
-      });
-
-      await deleteCachedListingContentItem({
+      return updateSavedReelContent({
         userId: user.id,
         listingId,
-        subcategory: params.saveTarget.subcategory as never,
-        mediaType: "video",
-        timestamp: params.saveTarget.cacheKeyTimestamp,
-        id: params.saveTarget.cacheKeyId
+        saveTarget: params.saveTarget,
+        normalizedInput
       });
-
-      const mapped = mapSavedReelContentToCreateItem(created);
-      if (!mapped) {
-        throw new DomainValidationError("Saved reel could not be mapped.");
-      }
-
-      return mapped;
-    }
-
-    const existing = await getContentById(
-      user.id,
-      params.saveTarget.savedContentId
-    );
-    if (!existing || existing.listingId !== listingId) {
-      throw new DomainValidationError("Saved reel not found.");
-    }
-    if (!isSavedListingReelMetadata(existing.metadata)) {
-      throw new DomainValidationError("Saved reel metadata is invalid.");
-    }
-
-    const metadata: SavedListingReelMetadata = {
-      ...existing.metadata,
-      hook,
-      caption,
-      sequence
-    };
-
-    const updated = await updateContent(user.id, existing.id, {
-      metadata
-    });
-
-    const mapped = mapSavedReelContentToCreateItem(updated);
-    if (!mapped) {
-      throw new DomainValidationError("Saved reel could not be mapped.");
-    }
-
-    return mapped;
-  }
+    })
 );

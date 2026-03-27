@@ -6,8 +6,7 @@ import type {
   VideoGenerateRequest
 } from "@shared/types/api";
 import { DomainValidationError } from "@web/src/server/errors/domain";
-import { requireAuthenticatedUser } from "@web/src/server/actions/_auth/api";
-import { requireListingAccess } from "@web/src/server/models/listings/access";
+import { withCurrentUserListingAccess } from "@web/src/server/actions/shared/auth";
 import {
   getVideoClipById,
   getVideoClipVersionById,
@@ -84,79 +83,91 @@ function parseSelectCurrentClipVersionRequest(body: unknown): {
 export const startListingVideoGeneration = withServerActionCaller(
   "startListingVideoGeneration",
   async (body: unknown) => {
-    const user = await requireAuthenticatedUser();
     const parsed = parseVideoGenerateRequest(body);
-    const listing = await requireListingAccess(parsed.listingId, user.id);
-    const result = await startListingVideoGenerationHelper({
-      listingId: listing.id,
-      userId: user.id,
-      orientation: parsed.orientation,
-      aiDirections: parsed.aiDirections,
-      resolvePublicDownloadUrls: getPublicDownloadUrls
-    });
-    return { ...result, listingId: listing.id };
+    return withCurrentUserListingAccess(
+      parsed.listingId,
+      async ({ user, listing }) => {
+        const result = await startListingVideoGenerationHelper({
+          listingId: listing.id,
+          userId: user.id,
+          orientation: parsed.orientation,
+          aiDirections: parsed.aiDirections,
+          resolvePublicDownloadUrls: getPublicDownloadUrls
+        });
+        return { ...result, listingId: listing.id };
+      }
+    );
   }
 );
 
 export const cancelVideoGenerationBatch = withServerActionCaller(
   "cancelVideoGenerationBatch",
-  async (batchId: string, reason?: string) => {
-    const user = await requireAuthenticatedUser();
-    const batch = await getVideoGenBatchById(batchId);
-    if (!batch) {
-      throw new DomainValidationError("batchId is invalid");
-    }
-    await requireListingAccess(batch.listingId, user.id);
-    return cancelVideoGenerationBatchHelper({
-      batchId,
-      reason
-    });
-  }
+  async (batchId: string, reason?: string) =>
+    withCurrentUserListingAccess(
+      async () => {
+        const batch = await getVideoGenBatchById(batchId);
+        if (!batch) {
+          throw new DomainValidationError("batchId is invalid");
+        }
+        return batch.listingId;
+      },
+      async () =>
+        cancelVideoGenerationBatchHelper({
+          batchId,
+          reason
+        })
+    )
 );
 
 export const regenerateListingClipVersion = withServerActionCaller(
   "regenerateListingClipVersion",
   async (body: unknown) => {
-    const user = await requireAuthenticatedUser();
     const parsed = parseClipVersionRegenerateRequest(body);
-    const listing = await requireListingAccess(parsed.listingId, user.id);
-    const result = await regenerateListingClipVersionHelper({
-      listingId: listing.id,
-      userId: user.id,
-      clipId: parsed.clipId,
-      aiDirections: parsed.aiDirections,
-      resolvePublicDownloadUrls: getPublicDownloadUrls
-    });
+    return withCurrentUserListingAccess(
+      parsed.listingId,
+      async ({ user, listing }) => {
+        const result = await regenerateListingClipVersionHelper({
+          listingId: listing.id,
+          userId: user.id,
+          clipId: parsed.clipId,
+          aiDirections: parsed.aiDirections,
+          resolvePublicDownloadUrls: getPublicDownloadUrls
+        });
 
-    return { ...result, listingId: listing.id };
+        return { ...result, listingId: listing.id };
+      }
+    );
   }
 );
 
 export const selectListingClipVersion = withServerActionCaller(
   "selectListingClipVersion",
   async (body: unknown) => {
-    const user = await requireAuthenticatedUser();
     const parsed = parseSelectCurrentClipVersionRequest(body);
-    const listing = await requireListingAccess(parsed.listingId, user.id);
-    const clip = await getVideoClipById(parsed.clipId);
+    return withCurrentUserListingAccess(
+      parsed.listingId,
+      async ({ listing }) => {
+        const clip = await getVideoClipById(parsed.clipId);
 
-    if (!clip || clip.listingId !== listing.id) {
-      throw new DomainValidationError("clipId is invalid");
-    }
+        if (!clip || clip.listingId !== listing.id) {
+          throw new DomainValidationError("clipId is invalid");
+        }
 
-    const clipVersion = await getVideoClipVersionById(parsed.clipVersionId);
-    if (!clipVersion || clipVersion.videoClipId !== clip.id) {
-      throw new DomainValidationError("clipVersionId is invalid");
-    }
+        const clipVersion = await getVideoClipVersionById(parsed.clipVersionId);
+        if (!clipVersion || clipVersion.videoClipId !== clip.id) {
+          throw new DomainValidationError("clipVersionId is invalid");
+        }
 
-    await updateVideoClip(clip.id, {
-      currentVideoClipVersionId: clipVersion.id
-    });
+        await updateVideoClip(clip.id, {
+          currentVideoClipVersionId: clipVersion.id
+        });
 
-    return {
-      listingId: listing.id,
-      clipId: clip.id,
-      clipVersionId: clipVersion.id
-    };
+        return {
+          listingId: listing.id,
+          clipId: clip.id,
+          clipVersionId: clipVersion.id
+        };
+      }
+    );
   }
 );

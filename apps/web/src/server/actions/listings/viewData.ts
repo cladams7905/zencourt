@@ -1,8 +1,7 @@
 "use server";
 
 import { withServerActionCaller } from "@web/src/server/infra/logger/callContext";
-import { requireAuthenticatedUser } from "@web/src/server/actions/_auth/api";
-import { requireListingAccess } from "@web/src/server/models/listings/access";
+import { withCurrentUserListingAccess } from "@web/src/server/actions/shared/auth";
 import {
   getListingImages,
   mapListingImageToDisplayItem
@@ -67,9 +66,8 @@ export async function getListingCreateViewData(
 
 export const getListingCreateViewDataForCurrentUser = withServerActionCaller(
   "getListingCreateViewDataForCurrentUser",
-  async (listingId: string) => {
-    const user = await requireAuthenticatedUser();
-    await requireListingAccess(listingId, user.id);
-    return getListingCreateViewData(user.id, listingId);
-  }
+  async (listingId: string) =>
+    withCurrentUserListingAccess(listingId, async ({ user }) =>
+      getListingCreateViewData(user.id, listingId)
+    )
 );

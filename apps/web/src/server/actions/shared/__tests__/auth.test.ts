@@ -15,10 +15,10 @@ import { runWithCaller } from "@web/src/server/infra/logger/callContext";
 import { requireListingAccess as requireListingAccessImpl } from "@web/src/server/models/listings/access";
 
 import {
-  requireAuthenticatedUser,
   ApiError,
-  requireListingAccess
-} from "@web/src/server/actions/_auth/api";
+  withCurrentUser,
+  withCurrentUserListingAccess
+} from "@web/src/server/actions/shared/auth";
 import { StatusCode } from "@web/src/server/errors/api";
 
 describe("_auth api", () => {
@@ -27,11 +27,13 @@ describe("_auth api", () => {
     (requireListingAccessImpl as unknown as jest.Mock).mockReset();
   });
 
-  describe("requireAuthenticatedUser", () => {
+  describe("withCurrentUser", () => {
     it("returns user when stack returns user", async () => {
       const user = { id: "user-1" } as never;
       mockGetUser.mockResolvedValueOnce(user);
-      await expect(requireAuthenticatedUser()).resolves.toEqual(user);
+      await expect(
+        withCurrentUser(async ({ user: currentUser }) => currentUser)
+      ).resolves.toEqual(user);
     });
 
     it("logs debug when call context exists", async () => {
@@ -39,14 +41,16 @@ describe("_auth api", () => {
       mockGetUser.mockResolvedValueOnce(user);
 
       await runWithCaller("caller", async () => {
-        await expect(requireAuthenticatedUser()).resolves.toEqual(user);
+        await expect(
+          withCurrentUser(async ({ user: currentUser }) => currentUser)
+        ).resolves.toEqual(user);
       });
     });
 
     it("throws ApiError with 401 when user is not authenticated", async () => {
       mockGetUser.mockResolvedValueOnce(null);
       try {
-        await requireAuthenticatedUser();
+        await withCurrentUser(async () => null);
       } catch (e) {
         expect(e).toBeInstanceOf(ApiError);
         expect((e as ApiError).status).toBe(StatusCode.UNAUTHORIZED);
@@ -56,26 +60,37 @@ describe("_auth api", () => {
     });
   });
 
-  describe("requireListingAccess", () => {
+  describe("withCurrentUserListingAccess", () => {
     it("delegates to requireListingAccessImpl", async () => {
+      mockGetUser.mockResolvedValueOnce({ id: "user-1" } as never);
       (requireListingAccessImpl as unknown as jest.Mock).mockResolvedValueOnce(
         "ok"
       );
 
       await expect(
-        requireListingAccess("listing-1", "user-1")
+        withCurrentUserListingAccess(
+          "listing-1",
+          async ({ listing }) => listing
+        )
       ).resolves.toBe("ok");
-      expect(requireListingAccessImpl).toHaveBeenCalledWith("listing-1", "user-1");
+      expect(requireListingAccessImpl).toHaveBeenCalledWith(
+        "listing-1",
+        "user-1"
+      );
     });
 
     it("logs debug when call context exists", async () => {
+      mockGetUser.mockResolvedValueOnce({ id: "user-2" } as never);
       (requireListingAccessImpl as unknown as jest.Mock).mockResolvedValueOnce(
         "ok"
       );
 
       await runWithCaller("auth:requireListingAccess", async () => {
         await expect(
-          requireListingAccess("listing-2", "user-2")
+          withCurrentUserListingAccess(
+            "listing-2",
+            async ({ listing }) => listing
+          )
         ).resolves.toBe("ok");
       });
     });
@@ -87,8 +102,9 @@ describe("_auth api", () => {
       expect(new ApiError(401, { error: "x", message: "y" }).status).toBe(401);
     });
 
-    it("exports requireListingAccess as function", () => {
-      expect(typeof requireListingAccess).toBe("function");
+    it("exports access wrappers as functions", () => {
+      expect(typeof withCurrentUser).toBe("function");
+      expect(typeof withCurrentUserListingAccess).toBe("function");
     });
   });
 });

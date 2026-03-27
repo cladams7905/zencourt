@@ -44,7 +44,21 @@ jest.mock("@web/src/server/services/storage/urlResolution", () => ({
 
 jest.mock("@web/src/server/actions/_auth/api", () => ({
   requireAuthenticatedUser: (...args: unknown[]) =>
-    (mockRequireAuthenticatedUser as (...a: unknown[]) => unknown)(...args)
+    (mockRequireAuthenticatedUser as (...a: unknown[]) => unknown)(...args),
+  withCurrentUser: async (run: (context: { user: { id: string } }) => unknown) =>
+    run({ user: await mockRequireAuthenticatedUser() }),
+  withCurrentUserListingAccess: async (
+    listingIdOrResolver: string | ((context: { user: { id: string } }) => string | Promise<string>),
+    run: (context: { user: { id: string }; listing: unknown }) => unknown
+  ) => {
+    const user = await mockRequireAuthenticatedUser();
+    const listingId =
+      typeof listingIdOrResolver === "function"
+        ? await listingIdOrResolver({ user })
+        : listingIdOrResolver;
+    const listing = await mockRequireListingAccess(listingId, user.id);
+    return run({ user, listing });
+  }
 }));
 
 jest.mock("@web/src/server/models/listings/access", () => ({

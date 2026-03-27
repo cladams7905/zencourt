@@ -44,6 +44,44 @@ type UseListingClipManagerWorkspaceActionsParams = {
   >;
 };
 
+function withUpdatedClipItem(
+  items: ListingClipVersionItem[],
+  clipId: string,
+  updater: (item: ListingClipVersionItem) => ListingClipVersionItem
+) {
+  return items.map((item) => (item.clipId === clipId ? updater(item) : item));
+}
+
+function withSetMembership(
+  currentSet: Set<string>,
+  clipId: string,
+  shouldInclude: boolean
+) {
+  const nextSet = new Set(currentSet);
+  if (shouldInclude) {
+    nextSet.add(clipId);
+  } else {
+    nextSet.delete(clipId);
+  }
+  return nextSet;
+}
+
+function withPendingBatch(
+  currentPendingBatchIdByClipId: Record<string, string>,
+  clipId: string,
+  batchId?: string
+) {
+  if (!batchId) {
+    const nextPendingBatchIdByClipId = { ...currentPendingBatchIdByClipId };
+    delete nextPendingBatchIdByClipId[clipId];
+    return nextPendingBatchIdByClipId;
+  }
+  return {
+    ...currentPendingBatchIdByClipId,
+    [clipId]: batchId
+  };
+}
+
 export function useListingClipManagerWorkspaceActions({
   listingId,
   selectedItem,
@@ -96,29 +134,28 @@ export function useListingClipManagerWorkspaceActions({
               batchId: result.batchId
             });
             setClipItems((currentItems) =>
-              currentItems.map((item) =>
-                item.clipId === selectedItem.clipId
-                  ? {
-                      ...item,
-                      inFlightVersion: optimisticInFlightVersion
-                    }
-                  : item
+              withUpdatedClipItem(currentItems, selectedItem.clipId, (item) => ({
+                ...item,
+                inFlightVersion: optimisticInFlightVersion
+              }))
+            );
+            setCanceledClipIds((currentCanceledClipIds) =>
+              withSetMembership(
+                currentCanceledClipIds,
+                selectedItem.clipId,
+                false
               )
             );
-            setCanceledClipIds((currentCanceledClipIds) => {
-              const nextCanceledClipIds = new Set(currentCanceledClipIds);
-              nextCanceledClipIds.delete(selectedItem.clipId);
-              return nextCanceledClipIds;
-            });
-            setPendingBatchIdByClipId((currentPendingBatchIdByClipId) => ({
-              ...currentPendingBatchIdByClipId,
-              [selectedItem.clipId]: result.batchId
-            }));
-            setTimedOutClipIds((currentTimedOutClipIds) => {
-              const nextTimedOutClipIds = new Set(currentTimedOutClipIds);
-              nextTimedOutClipIds.delete(selectedItem.clipId);
-              return nextTimedOutClipIds;
-            });
+            setPendingBatchIdByClipId((currentPendingBatchIdByClipId) =>
+              withPendingBatch(
+                currentPendingBatchIdByClipId,
+                selectedItem.clipId,
+                result.batchId
+              )
+            );
+            setTimedOutClipIds((currentTimedOutClipIds) =>
+              withSetMembership(currentTimedOutClipIds, selectedItem.clipId, false)
+            );
             setIsRegenerateMenuOpen(false);
             setIsCustomizeExpanded(false);
             toast.success(`Started regenerating ${selectedItem.roomName} clip.`);
@@ -212,23 +249,17 @@ export function useListingClipManagerWorkspaceActions({
             inFlightVersion: null,
             canceled: true
           });
-          setPendingBatchIdByClipId((currentPendingBatchIdByClipId) => {
-            const nextPendingBatchIdByClipId = {
-              ...currentPendingBatchIdByClipId
-            };
-            delete nextPendingBatchIdByClipId[selectedItem.clipId];
-            return nextPendingBatchIdByClipId;
-          });
-          setClipItems((currentItems) =>
-            currentItems.map((item) =>
-              item.clipId === selectedItem.clipId ? { ...fallbackItem } : item
-            )
+          setPendingBatchIdByClipId((currentPendingBatchIdByClipId) =>
+            withPendingBatch(currentPendingBatchIdByClipId, selectedItem.clipId)
           );
-          setCanceledClipIds((currentCanceledClipIds) => {
-            const nextCanceledClipIds = new Set(currentCanceledClipIds);
-            nextCanceledClipIds.add(selectedItem.clipId);
-            return nextCanceledClipIds;
-          });
+          setClipItems((currentItems) =>
+            withUpdatedClipItem(currentItems, selectedItem.clipId, () => ({
+              ...fallbackItem
+            }))
+          );
+          setCanceledClipIds((currentCanceledClipIds) =>
+            withSetMembership(currentCanceledClipIds, selectedItem.clipId, true)
+          );
           setIsCancelDialogOpen(false);
           toast.success(`Canceled ${selectedItem.roomName} clip generation.`);
         })
@@ -254,11 +285,7 @@ export function useListingClipManagerWorkspaceActions({
   const applySelectedVersionLocally = React.useCallback(
     (clipId: string, clipVersionId: string) => {
       setClipItems((currentItems) =>
-        currentItems.map((item) => {
-          if (item.clipId !== clipId) {
-            return item;
-          }
-
+        withUpdatedClipItem(currentItems, clipId, (item) => {
           const nextCurrentVersion =
             item.versions.find(
               (version) => version.clipVersionId === clipVersionId

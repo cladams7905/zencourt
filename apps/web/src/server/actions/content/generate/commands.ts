@@ -1,7 +1,7 @@
 "use server";
 
 import { withServerActionCaller } from "@web/src/server/infra/logger/callContext";
-import { requireAuthenticatedUser } from "@web/src/server/actions/_auth/api";
+import { withCurrentUser } from "@web/src/server/actions/shared/auth";
 import { runContentGenerationForUser } from "@web/src/server/actions/content/generate/helpers";
 import type { PromptAssemblyInput } from "@web/src/lib/ai/prompts/engine/assemble";
 import { DomainValidationError } from "@web/src/server/errors/domain";
@@ -16,7 +16,8 @@ export const generateContentForCurrentUser = withServerActionCaller(
       throw new DomainValidationError("agent_profile is required");
     }
 
-    const user = await requireAuthenticatedUser();
-    return runContentGenerationForUser(user.id, body);
+    return withCurrentUser(async ({ user }) =>
+      runContentGenerationForUser(user.id, body)
+    );
   }
 );
