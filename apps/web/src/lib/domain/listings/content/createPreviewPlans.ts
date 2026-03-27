@@ -22,6 +22,7 @@ export type {
 export interface PreviewTimelineClip {
   id: string;
   category?: string | null;
+  roomName?: string | null;
   durationSeconds?: number | null;
   isPriorityCategory?: boolean;
   sortOrder?: number | null;
@@ -30,6 +31,7 @@ export interface PreviewTimelineClip {
 export interface PreviewTimelineSegment {
   clipId: string;
   category: string | null;
+  roomName?: string | null;
   durationSeconds: number;
   maxDurationSeconds: number;
   sourceType?: "listing_clip" | "user_media";
@@ -324,6 +326,7 @@ export function buildPreviewTimelinePlan(
   const segments: PreviewTimelineSegment[] = ordered.map((clip) => ({
     clipId: clip.id,
     category: clip.category ?? null,
+    roomName: clip.roomName ?? null,
     durationSeconds: getEffectiveDurationSeconds(clip, rng),
     maxDurationSeconds: Math.max(
       MIN_TIMELINE_CLIP_DURATION_SECONDS,
@@ -393,6 +396,7 @@ export function buildListingCreatePreviewPlans(params: {
     .map((item) => ({
       id: item.id,
       category: item.category ?? null,
+      roomName: item.roomName ?? null,
       durationSeconds: item.durationSeconds ?? null,
       isPriorityCategory: item.isPriorityCategory ?? false,
       searchableText: `${item.category ?? ""} ${item.alt ?? ""}`
@@ -430,6 +434,7 @@ export function buildListingCreatePreviewPlans(params: {
           return {
             clipId,
             category: sourceItem.category ?? sourceItem.roomName ?? null,
+            roomName: sourceItem.roomName ?? null,
             durationSeconds: normalizeDurationSeconds({
               durationSeconds: sequenceItem.durationSeconds,
               maxDurationSeconds

@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Clapperboard, Plus, Redo2, Trash2, Undo2 } from "lucide-react";
+import { Clock, Plus, Redo2, Trash2, Undo2 } from "lucide-react";
 import { LoadingImage } from "@web/src/components/ui/loading-image";
 import {
   Tooltip,
@@ -21,19 +21,35 @@ import {
   TIMELINE_PIXELS_PER_SECOND,
   buildVideoPreviewTimelineItems,
   buildVideoPreviewTimelineLayout,
+  formatDurationLabel,
   getFrameFromTimelineOffset,
   getPlayheadOffsetPx
 } from "@web/src/components/listings/create/media/video/components/videoPreviewTimelineViewModel";
 import { cn } from "@web/src/components/ui/utils";
 
+function ClipThumbnailBadge({ text }: { text: string | null | undefined }) {
+  const trimmed = text?.trim();
+  if (!trimmed) {
+    return null;
+  }
+  return (
+    <span
+      className="pointer-events-none absolute right-1 top-1 z-10 max-w-[min(7rem,calc(100%-0.5rem))] truncate rounded bg-background/90 px-1 py-0.5 text-[10px] font-medium leading-tight text-foreground shadow-sm ring-1 ring-border/60"
+      title={trimmed}
+    >
+      {trimmed}
+    </span>
+  );
+}
+
 type VideoPreviewTimelineProps = {
   segments: TimelinePreviewResolvedSegment[];
-  totalClipCount: number;
   deletedClipOptions: TimelinePreviewResolvedSegment[];
   userMediaClipOptions: Array<{
     clipId: string;
     thumbnailSrc?: string | null;
     label: string;
+    fileName?: string | null;
   }>;
   previewFps: number;
   currentFrame: number;
@@ -62,9 +78,11 @@ type ResizeState = {
   maxDurationSeconds: number;
 };
 
+const ADD_CLIP_TILE_CLASS =
+  "group mb-1.5 w-full max-w-[7.25rem] mx-auto break-inside-avoid overflow-hidden rounded-md bg-muted";
+
 export function VideoPreviewTimeline({
   segments,
-  totalClipCount,
   deletedClipOptions,
   userMediaClipOptions,
   previewFps,
@@ -108,8 +126,8 @@ export function VideoPreviewTimeline({
   const [isScrubbing, setIsScrubbing] = React.useState(false);
   const [isAddClipOpen, setIsAddClipOpen] = React.useState(false);
   const [activeAddClipTab, setActiveAddClipTab] = React.useState<
-    "listing_clips" | "user_media"
-  >("listing_clips");
+    "room_clips" | "user_media"
+  >("room_clips");
   const startResize = React.useCallback(
     (
       event: React.MouseEvent<HTMLElement>,
@@ -290,86 +308,177 @@ export function VideoPreviewTimeline({
               </TooltipTrigger>
               <TooltipContent side="top">Add clip</TooltipContent>
             </Tooltip>
-            <PopoverContent align="end" className="w-[320px] p-0">
-              <div className="flex border-b border-border">
-                <button
-                  type="button"
-                  className={cn(
-                    "flex-1 px-3 py-2 text-sm font-medium",
-                    activeAddClipTab === "listing_clips"
-                      ? "bg-muted text-foreground"
-                      : "text-muted-foreground"
-                  )}
-                  onClick={() => setActiveAddClipTab("listing_clips")}
+            <PopoverContent
+              align="end"
+              side="top"
+              sideOffset={8}
+              className="z-100 w-[min(25rem,calc(100vw-2rem))] border-0 bg-transparent p-0 shadow-none overflow-visible"
+            >
+              <div className="relative w-full">
+                <div
+                  className="absolute bottom-full left-0 z-20 flex items-end"
+                  role="group"
+                  aria-label="Clip source"
                 >
-                  Listing Clips
-                </button>
-                <button
-                  type="button"
-                  className={cn(
-                    "flex-1 border-l border-border px-3 py-2 text-sm font-medium",
-                    activeAddClipTab === "user_media"
-                      ? "bg-muted text-foreground"
-                      : "text-muted-foreground"
-                  )}
-                  onClick={() => setActiveAddClipTab("user_media")}
-                >
-                  User Media
-                </button>
-              </div>
-              <div className="grid max-h-72 grid-cols-2 gap-px overflow-y-auto bg-border">
-                {(activeAddClipTab === "listing_clips"
-                  ? deletedClipOptions.map((clipOption) => ({
-                      clipId: clipOption.clipId,
-                      thumbnailSrc: clipOption.thumbnailSrc,
-                      label: formatClipLabel(
-                        clipOption.category ?? clipOption.clipId
-                      )
-                    }))
-                  : userMediaClipOptions
-                ).map((clipOption) => (
                   <button
-                    key={clipOption.clipId}
                     type="button"
-                    className="bg-background p-2 text-left transition-colors hover:bg-muted"
-                    onClick={() => {
-                      onAddClip?.(clipOption.clipId);
-                      setIsAddClipOpen(false);
-                    }}
+                    aria-pressed={activeAddClipTab === "room_clips"}
+                    className={cn(
+                      "rounded-t-lg px-3 py-1.5 text-xs font-semibold tracking-wide transition-colors",
+                      activeAddClipTab === "room_clips"
+                        ? "relative z-30 -mb-px border-x border-t border-border border-b-0 bg-card pb-2 text-card-foreground"
+                        : "z-10 border-x border-t border-border border-b-0 bg-muted text-muted-foreground hover:bg-secondary hover:text-card-foreground"
+                    )}
+                    onClick={() => setActiveAddClipTab("room_clips")}
                   >
-                    <div className="relative aspect-video overflow-hidden rounded-md bg-muted">
-                      {clipOption.thumbnailSrc ? (
-                        <LoadingImage
-                          src={clipOption.thumbnailSrc}
-                          alt={`${clipOption.label} clip thumbnail`}
-                          fill
-                          className="object-cover"
-                        />
-                      ) : null}
-                    </div>
-                    <span className="mt-2 block truncate text-sm font-medium text-foreground">
-                      {clipOption.label}
-                    </span>
+                    Room Clips
                   </button>
-                ))}
-                {activeAddClipTab === "listing_clips" &&
-                deletedClipOptions.length === 0 ? (
-                  <div className="col-span-2 bg-background px-3 py-4 text-sm text-muted-foreground">
-                    No deleted listing clips available.
-                  </div>
-                ) : null}
-                {activeAddClipTab === "user_media" &&
-                userMediaClipOptions.length === 0 ? (
-                  <div className="col-span-2 bg-background px-3 py-4 text-sm text-muted-foreground">
-                    No user media videos available.
-                  </div>
-                ) : null}
+                  <button
+                    type="button"
+                    aria-pressed={activeAddClipTab === "user_media"}
+                    className={cn(
+                      "rounded-t-lg px-3 py-1.5 text-xs font-semibold tracking-wide transition-colors",
+                      activeAddClipTab === "user_media"
+                        ? "relative z-30 -mb-px border-x border-t border-border border-b-0 bg-card pb-2 text-card-foreground"
+                        : "z-10 border-x border-t border-border border-b-0 bg-muted text-muted-foreground hover:bg-secondary hover:text-card-foreground"
+                    )}
+                    onClick={() => setActiveAddClipTab("user_media")}
+                  >
+                    User Media
+                  </button>
+                </div>
+                <div className="overflow-hidden rounded-b-xl rounded-tr-xl rounded-tl-none border border-border/80 bg-popover text-popover-foreground shadow-lg">
+                  {activeAddClipTab === "room_clips" ? (
+                    deletedClipOptions.length === 0 ? (
+                      <div className="px-3 py-4 text-sm text-muted-foreground">
+                        No deleted room clips available.
+                      </div>
+                    ) : (
+                      <div className="flex max-h-72 min-h-0 flex-col">
+                        <div className="shrink-0 h-4" aria-hidden />
+                        <div
+                          className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 touch-pan-y [scrollbar-gutter:stable]"
+                          onWheel={(event) => event.stopPropagation()}
+                        >
+                          <div className="grid grid-cols-3 justify-items-center gap-1.5">
+                            {deletedClipOptions.map((clipOption) => {
+                              const label = formatClipLabel(
+                                clipOption.category ?? clipOption.clipId
+                              );
+                              const roomBadgeText = (() => {
+                                const raw =
+                                  clipOption.roomName?.trim() ||
+                                  clipOption.category?.trim();
+                                return raw ? formatClipLabel(raw) : null;
+                              })();
+                              return (
+                                <button
+                                  key={clipOption.clipId}
+                                  type="button"
+                                  aria-label={`Add ${label}`}
+                                  className={ADD_CLIP_TILE_CLASS}
+                                  onClick={() => {
+                                    onAddClip?.(clipOption.clipId);
+                                    setIsAddClipOpen(false);
+                                  }}
+                                >
+                                  <div className="relative aspect-9/16 w-full">
+                                    <ClipThumbnailBadge text={roomBadgeText} />
+                                    {clipOption.thumbnailSrc ? (
+                                      <LoadingImage
+                                        src={clipOption.thumbnailSrc}
+                                        alt=""
+                                        fill
+                                        className="object-cover"
+                                      />
+                                    ) : null}
+                                    <div
+                                      className="pointer-events-none absolute inset-0 z-1 flex items-center justify-center rounded-md bg-black/0 transition-colors group-hover:bg-black/55"
+                                      aria-hidden
+                                    >
+                                      <Plus
+                                        className="h-7 w-7 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                                        strokeWidth={2}
+                                        aria-hidden
+                                      />
+                                    </div>
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                        <div className="shrink-0 h-2" aria-hidden />
+                      </div>
+                    )
+                  ) : userMediaClipOptions.length === 0 ? (
+                    <div className="px-3 py-4 text-sm text-muted-foreground">
+                      No user media videos available.
+                    </div>
+                  ) : (
+                    <div className="flex max-h-72 min-h-0 flex-col">
+                      <div className="shrink-0 h-4" aria-hidden />
+                      <div
+                        className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 touch-pan-y [scrollbar-gutter:stable]"
+                        onWheel={(event) => event.stopPropagation()}
+                      >
+                        <div className="grid grid-cols-3 justify-items-center gap-1.5">
+                          {userMediaClipOptions.map((clipOption) => (
+                            <button
+                              key={clipOption.clipId}
+                              type="button"
+                              aria-label={`Add ${clipOption.label}`}
+                              className={ADD_CLIP_TILE_CLASS}
+                              onClick={() => {
+                                onAddClip?.(clipOption.clipId);
+                                setIsAddClipOpen(false);
+                              }}
+                            >
+                              <div className="relative aspect-9/16 w-full">
+                                <ClipThumbnailBadge
+                                  text={clipOption.fileName}
+                                />
+                                {clipOption.thumbnailSrc ? (
+                                  <LoadingImage
+                                    src={clipOption.thumbnailSrc}
+                                    alt=""
+                                    fill
+                                    className="object-cover"
+                                  />
+                                ) : null}
+                                <div
+                                  className="pointer-events-none absolute inset-0 z-1 flex items-center justify-center rounded-md bg-black/0 transition-colors group-hover:bg-black/55"
+                                  aria-hidden
+                                >
+                                  <Plus
+                                    className="h-7 w-7 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                                    strokeWidth={2}
+                                    aria-hidden
+                                  />
+                                </div>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="shrink-0 h-2" aria-hidden />
+                    </div>
+                  )}
+                </div>
               </div>
             </PopoverContent>
           </Popover>
-          <div className="inline-flex h-7 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-border px-3 py-1 text-xs text-muted-foreground">
-            <Clapperboard className="h-3.5 w-3.5 shrink-0" aria-hidden />
-            {items.length}/{totalClipCount}
+          <div
+            className="inline-flex h-7 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-border px-3 py-1 text-xs text-muted-foreground"
+            title="Total reel duration"
+          >
+            <Clock className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            <span
+              className="tabular-nums"
+              data-testid="timeline-total-duration"
+            >
+              {formatDurationLabel(totalDurationSeconds)}
+            </span>
           </div>
         </div>
       </div>

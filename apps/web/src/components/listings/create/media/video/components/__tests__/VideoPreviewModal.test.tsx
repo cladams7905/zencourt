@@ -179,7 +179,9 @@ describe("VideoPreviewModal", () => {
     expect(
       screen.getByRole("button", { name: "Add clip to timeline" })
     ).toBeDisabled();
-    expect(screen.getByText("2/2")).toBeInTheDocument();
+    expect(screen.getByTestId("timeline-total-duration")).toHaveTextContent(
+      "7.5s"
+    );
   });
 
   it("keeps the player shell sized for mobile and 1050px+ desktop layout", () => {
@@ -539,7 +541,9 @@ describe("VideoPreviewModal", () => {
       )
     );
 
-    expect(screen.getByText("1/2")).toBeInTheDocument();
+    expect(screen.getByTestId("timeline-total-duration")).toHaveTextContent(
+      "5s"
+    );
     expect(
       screen.getByRole("button", { name: "Add clip to timeline" })
     ).toBeEnabled();
@@ -561,7 +565,9 @@ describe("VideoPreviewModal", () => {
       )
     );
 
-    expect(screen.getByText("2/2")).toBeInTheDocument();
+    expect(screen.getByTestId("timeline-total-duration")).toHaveTextContent(
+      "7.5s"
+    );
   });
 
   it("adds a deleted clip back to the end of the timeline and supports undo", async () => {
@@ -577,7 +583,11 @@ describe("VideoPreviewModal", () => {
     );
 
     fireEvent.click(screen.getByTestId("timeline-delete-clip-1-0"));
-    await waitFor(() => expect(screen.getByText("1/2")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByTestId("timeline-total-duration")).toHaveTextContent(
+        "5s"
+      )
+    );
 
     await user.click(screen.getByRole("button", { name: "Add clip to timeline" }));
     await user.click(screen.getByRole("button", { name: /kitchen/i }));
@@ -595,13 +605,19 @@ describe("VideoPreviewModal", () => {
       )
     );
 
-    expect(screen.getByText("2/2")).toBeInTheDocument();
+    expect(screen.getByTestId("timeline-total-duration")).toHaveTextContent(
+      "7.5s"
+    );
 
     fireEvent.click(
       screen.getByRole("button", { name: "Undo timeline change" })
     );
 
-    await waitFor(() => expect(screen.getByText("1/2")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByTestId("timeline-total-duration")).toHaveTextContent(
+        "5s"
+      )
+    );
   });
 
   it("shows user media in the add-clip popover and appends it to the timeline", async () => {

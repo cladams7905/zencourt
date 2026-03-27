@@ -32,7 +32,7 @@ function toTitleCase(value: string): string {
     .join(" ");
 }
 
-function formatDurationLabel(durationSeconds: number): string {
+export function formatDurationLabel(durationSeconds: number): string {
   const rounded = Number(durationSeconds.toFixed(1));
   return `${rounded % 1 === 0 ? rounded.toFixed(0) : rounded.toFixed(1)}s`;
 }

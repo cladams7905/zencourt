@@ -39,6 +39,26 @@ function getSegmentSourceKey(segment: TimelinePreviewResolvedSegment): string {
   return `${segment.sourceType ?? "listing_clip"}:${segment.sourceId ?? segment.clipId}`;
 }
 
+function extractFileNameFromVideoUrl(
+  url: string | null | undefined
+): string | null {
+  if (!url?.trim()) {
+    return null;
+  }
+  try {
+    const { pathname } = new URL(url);
+    const segment = pathname.split("/").filter(Boolean).pop();
+    if (!segment) {
+      return null;
+    }
+    const decoded = decodeURIComponent(segment);
+    const base = decoded.split("?")[0]?.trim();
+    return base && base.length > 0 ? base : null;
+  } catch {
+    return null;
+  }
+}
+
 export function VideoPreviewModal({
   selectedPreview,
   userMediaItems = [],
@@ -202,7 +222,8 @@ export function VideoPreviewModal({
         category: item.category ?? null,
         durationSeconds: Math.min(item.durationSeconds ?? 3, 3),
         maxDurationSeconds: Math.max(0.5, item.durationSeconds ?? 3),
-        label: item.alt?.trim() || `User Media ${index + 1}`
+        label: item.alt?.trim() || `User Media ${index + 1}`,
+        fileName: extractFileNameFromVideoUrl(item.videoUrl)
       }));
   }, [segmentDraft, userMediaItems]);
 
@@ -472,7 +493,6 @@ export function VideoPreviewModal({
                   <div className="min-w-0 max-w-full px-3 py-3 min-[1050px]:flex min-[1050px]:h-[248px] min-[1050px]:min-h-[248px] min-[1050px]:flex-col min-[1050px]:overflow-hidden min-[1050px]:px-4">
                     <VideoPreviewTimeline
                       segments={segmentDraft}
-                      totalClipCount={selectedPreview.resolvedSegments.length}
                       deletedClipOptions={deletedClipOptions}
                       userMediaClipOptions={userMediaClipOptions}
                       previewFps={previewFps}
