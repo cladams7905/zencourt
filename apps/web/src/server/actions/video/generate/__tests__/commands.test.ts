@@ -131,7 +131,6 @@ describe("video commands", () => {
         listingId: "listing-1",
         userId: "user-1",
         orientation: undefined,
-        aiDirections: undefined,
         resolvePublicDownloadUrls: expect.any(Function)
       });
       expect(result).toEqual({
@@ -141,7 +140,7 @@ describe("video commands", () => {
       });
     });
 
-    it("passes orientation and aiDirections when provided", async () => {
+    it("passes orientation without custom prompt input", async () => {
       mockStartListingVideoGenerationHelper.mockResolvedValueOnce({
         batchId: "b1",
         jobCount: 0
@@ -149,15 +148,13 @@ describe("video commands", () => {
 
       await startListingVideoGeneration({
         listingId: "l1",
-        orientation: "portrait",
-        aiDirections: "sunny day"
+        orientation: "portrait"
       });
 
       expect(mockStartListingVideoGenerationHelper).toHaveBeenCalledWith({
         listingId: "listing-1",
         userId: "user-1",
         orientation: "portrait",
-        aiDirections: "sunny day",
         resolvePublicDownloadUrls: expect.any(Function)
       });
     });
@@ -213,7 +210,7 @@ describe("video commands", () => {
       const result = await regenerateListingClipVersion({
         listingId: " listing-1 ",
         clipId: " clip-1 ",
-        aiDirections: " Preserve window light "
+        prompt: " Preserve window light "
       });
 
       expect(mockRequireListingAccess).toHaveBeenCalledWith(
@@ -224,7 +221,7 @@ describe("video commands", () => {
         listingId: "listing-1",
         userId: "user-1",
         clipId: "clip-1",
-        aiDirections: " Preserve window light ",
+        prompt: " Preserve window light ",
         resolvePublicDownloadUrls: expect.any(Function)
       });
       expect(result).toEqual({

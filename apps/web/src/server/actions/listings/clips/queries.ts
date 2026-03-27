@@ -17,6 +17,7 @@ import type { ListingContentItem as ContentItem } from "@web/src/lib/domain/list
 import type { DBVideoClip, DBVideoClipVersion } from "@db/types/models";
 import { ApiError } from "@web/src/server/errors/api";
 import { StatusCode } from "@shared/types/api";
+import { stripProviderPromptConstraints } from "@web/src/server/services/videoGeneration/domain/prompt";
 
 function buildStableClipId(args: {
   listingId: string;
@@ -68,7 +69,7 @@ function mapClipVersionToVideoItem(
     roomName: clip.roomName,
     clipIndex: clip.clipIndex,
     sortOrder: clip.sortOrder,
-    aiDirections: clipVersion.aiDirections,
+    prompt: clipVersion.prompt,
     versionNumber: clipVersion.versionNumber,
     versionStatus: clipVersion.status,
     generatedAt: clipVersion.createdAt
@@ -161,8 +162,7 @@ async function seedMissingVideoClips(listingId: string) {
       orientation: job.orientation ?? "vertical",
       generationModel: job.generationModel ?? "veo3.1_fast",
       imageUrls: job.imageUrls ?? [],
-      prompt: job.prompt ?? "",
-      aiDirections: "",
+      prompt: stripProviderPromptConstraints(job.prompt ?? ""),
       sourceVideoGenJobId: job.jobId
     });
 

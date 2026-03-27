@@ -46,7 +46,6 @@ export const videoClipVersions = pgTable(
       .notNull(),
     imageUrls: jsonb("image_urls").$type<string[]>().notNull(),
     prompt: text("prompt").notNull(),
-    aiDirections: text("ai_directions").notNull().default(""),
     sourceVideoGenJobId: text("source_video_gen_job_id"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull()

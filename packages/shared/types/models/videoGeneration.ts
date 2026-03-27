@@ -26,7 +26,6 @@ export type GENERATION_MODELS =
 export type JobGenerationSettings = {
   model: GENERATION_MODELS;
   orientation: VideoOrientation;
-  aiDirections: string;
   imageUrls: string[];
   prompt: string;
   category: string;
@@ -58,7 +57,6 @@ export type ClipVersionRecord = {
   generationModel: GENERATION_MODELS;
   imageUrls: string[];
   prompt: string;
-  aiDirections: string;
   sourceVideoGenJobId?: string | null;
   createdAt: string | Date;
   updatedAt: string | Date;

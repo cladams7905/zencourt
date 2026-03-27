@@ -20,6 +20,7 @@ import {
   groupImagesByCategory,
   selectListingPrimaryImage
 } from "@web/src/server/services/videoGeneration/domain/rooms";
+import { assembleProviderPrompt } from "@web/src/server/services/videoGeneration/domain/prompt";
 import {
   buildJobRecords,
   createParentVideoBatchRecord,
@@ -64,7 +65,7 @@ function validateImagesExist(listingImageRows: DBListingImage[]): void {
 export async function startListingVideoGeneration(
   args: StartListingVideoGenerationArgs
 ): Promise<{ batchId: string; jobCount: number }> {
-  const { listingId, userId, aiDirections, resolvePublicDownloadUrls } = args;
+  const { listingId, userId, resolvePublicDownloadUrls } = args;
   const config = getVideoGenerationConfig();
   const orientation = args.orientation ?? config.defaultOrientation;
 
@@ -83,7 +84,6 @@ export async function startListingVideoGeneration(
     groupedImages,
     listingPrimaryImageUrl: listingPrimaryImage.url,
     orientation,
-    aiDirections,
     resolvePublicDownloadUrls
   });
 
@@ -135,7 +135,7 @@ export async function cancelVideoGenerationBatch(
 export async function regenerateListingClipVersion(
   args: RegenerateListingClipVersionArgs
 ): Promise<RegenerateListingClipVersionResult> {
-  const { listingId, userId, clipId, aiDirections } = args;
+  const { listingId, userId, clipId, prompt } = args;
 
   try {
     const currentClip = await getVideoClipById(clipId);
@@ -173,12 +173,11 @@ export async function regenerateListingClipVersion(
     const parentVideoId = nanoid();
     const jobId = nanoid();
     const nextClipVersionId = nanoid();
-    const resolvedAiDirections =
-      typeof aiDirections === "string"
-        ? aiDirections
-        : currentClipVersion.aiDirections;
     const resolvedImageUrls = currentClipVersion.imageUrls ?? [];
-    const resolvedPrompt = currentClipVersion.prompt?.trim() ?? "";
+    const resolvedPrompt =
+      typeof prompt === "string"
+        ? prompt.trim()
+        : currentClipVersion.prompt?.trim() ?? "";
 
     if (!resolvedImageUrls.length || !resolvedPrompt) {
       throw new ApiError(400, {
@@ -207,9 +206,8 @@ export async function regenerateListingClipVersion(
         generationSettings: {
           model: currentClipVersion.generationModel,
           orientation: currentClipVersion.orientation,
-          aiDirections: resolvedAiDirections ?? "",
           imageUrls: args.resolvePublicDownloadUrls(resolvedImageUrls),
-          prompt: resolvedPrompt,
+          prompt: assembleProviderPrompt(resolvedPrompt),
           category: currentClip.category,
           sortOrder: currentClip.sortOrder,
           roomId: currentClip.roomId ?? undefined,
@@ -237,7 +235,6 @@ export async function regenerateListingClipVersion(
       generationModel: currentClipVersion.generationModel,
       imageUrls: resolvedImageUrls,
       prompt: resolvedPrompt,
-      aiDirections: resolvedAiDirections ?? "",
       sourceVideoGenJobId: jobId
     });
 

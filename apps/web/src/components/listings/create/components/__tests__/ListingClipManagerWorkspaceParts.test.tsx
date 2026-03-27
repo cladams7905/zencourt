@@ -37,7 +37,7 @@ describe("ListingClipManagerWorkspaceParts", () => {
         roomName: "Kitchen",
         thumbnail: "https://thumb",
         videoUrl: "https://video",
-        aiDirections: "Warm light",
+        prompt: "Forward pan through the Kitchen.",
         durationSeconds: 4,
         versionNumber: 1,
         versionStatus: "completed",
@@ -135,7 +135,7 @@ describe("ListingClipManagerWorkspaceParts", () => {
         hasSelectedItem
         isRegenerateMenuOpen={true}
         isCustomizeExpanded={false}
-        draftAiDirections="Warm light"
+        draftAiDirections="Forward pan through the Kitchen."
         onVersionChange={jest.fn()}
         onDownload={jest.fn()}
         onCancel={jest.fn()}

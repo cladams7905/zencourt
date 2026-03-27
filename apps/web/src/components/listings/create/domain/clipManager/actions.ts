@@ -106,7 +106,7 @@ export function useListingClipManagerWorkspaceActions({
   setPendingBatchIdByClipId
 }: UseListingClipManagerWorkspaceActionsParams) {
   const submitRegeneration = React.useCallback(
-    (aiDirections: string) => {
+    (prompt: string) => {
       if (!selectedItem) {
         return;
       }
@@ -115,13 +115,13 @@ export function useListingClipManagerWorkspaceActions({
         void regenerateListingClipVersion({
           listingId,
           clipId: selectedItem.clipId,
-          aiDirections
+          prompt
         })
           .then((result) => {
             const optimisticInFlightVersion = {
               ...selectedItem.currentVersion,
               clipVersionId: result.clipVersionId,
-              aiDirections,
+              prompt,
               generatedAt: new Date().toISOString(),
               versionStatus: "processing" as const
             };
@@ -183,13 +183,13 @@ export function useListingClipManagerWorkspaceActions({
   );
 
   const handleQuickRegenerate = React.useCallback(() => {
-    const savedAiDirections = selectedItem?.currentVersion.aiDirections ?? "";
-    setDraftAiDirections(savedAiDirections);
-    submitRegeneration(savedAiDirections);
+    const savedPrompt = selectedItem?.currentVersion.prompt ?? "";
+    setDraftAiDirections(savedPrompt);
+    submitRegeneration(savedPrompt);
   }, [selectedItem, setDraftAiDirections, submitRegeneration]);
 
   const handleOpenCustomize = React.useCallback(() => {
-    setDraftAiDirections(selectedItem?.currentVersion.aiDirections ?? "");
+    setDraftAiDirections(selectedItem?.currentVersion.prompt ?? "");
     setIsCustomizeExpanded(true);
   }, [selectedItem, setDraftAiDirections, setIsCustomizeExpanded]);
 

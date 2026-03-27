@@ -15,7 +15,6 @@ describe("handleProviderSuccessOrchestrator", () => {
     generationSettings: {
       model: "veo3.1_fast",
       orientation: "vertical",
-      aiDirections: "",
       imageUrls: ["https://listing-image.jpg"],
       prompt: "prompt",
       category: "general",

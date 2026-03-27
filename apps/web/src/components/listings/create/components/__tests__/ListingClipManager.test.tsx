@@ -69,7 +69,7 @@ describe("ListingClipManager", () => {
         roomName: "Kitchen",
         thumbnail: "https://thumb",
         videoUrl: "https://video",
-        aiDirections: "Warm light",
+        prompt: "Forward pan through the Kitchen.",
         durationSeconds: 4,
         versionNumber: 1,
         versionStatus: "completed",
@@ -82,7 +82,7 @@ describe("ListingClipManager", () => {
           roomName: "Kitchen",
           thumbnail: "https://thumb",
           videoUrl: "https://video",
-          aiDirections: "Warm light",
+          prompt: "Forward pan through the Kitchen.",
           durationSeconds: 4,
           versionNumber: 1,
           versionStatus: "completed",
@@ -244,7 +244,7 @@ describe("ListingClipManager", () => {
             roomName: "Kitchen",
             thumbnail: "https://thumb-2",
             videoUrl: "https://video-2",
-            aiDirections: "Cooler tone",
+            prompt: "Cooler tone",
             durationSeconds: 5,
             versionNumber: 2,
             versionStatus: "completed",
@@ -273,7 +273,7 @@ describe("ListingClipManager", () => {
     });
   });
 
-  it("lets the user type custom ai directions for a clip regeneration", async () => {
+  it("prefills the textarea from the stored motion prompt for a clip regeneration", async () => {
     const user = userEvent.setup();
 
     render(
@@ -288,10 +288,7 @@ describe("ListingClipManager", () => {
     await user.click(screen.getByRole("button", { name: /customize prompt/i }));
 
     const textarea = await screen.findByLabelText("AI Directions");
-    await user.clear(textarea);
-    await user.type(textarea, "Brighter kitchen, cleaner counters");
-
-    expect(textarea).toHaveValue("Brighter kitchen, cleaner counters");
+    expect(textarea).toHaveValue("Forward pan through the Kitchen.");
   });
 
   it("shows an always-visible download control for the selected clip and downloads its video file", async () => {
@@ -368,7 +365,7 @@ describe("ListingClipManager", () => {
     expect(mockRegenerateListingClipVersion).toHaveBeenCalledWith({
       listingId: "listing-1",
       clipId: "clip-1",
-      aiDirections: "Warm light"
+      prompt: "Forward pan through the Kitchen."
     });
   });
 
@@ -489,7 +486,7 @@ describe("ListingClipManager", () => {
           clipVersionId: "clip-version-2",
           thumbnail: undefined,
           videoUrl: undefined,
-          aiDirections: "new directions",
+          prompt: "new directions",
           versionNumber: 2,
           versionStatus: "failed",
           generatedAt: "2026-03-20T10:00:00.000Z",

@@ -7,7 +7,6 @@ export type StartListingVideoGenerationArgs = {
   listingId: string;
   userId: string;
   orientation?: VideoOrientation;
-  aiDirections?: string;
   resolvePublicDownloadUrls: ResolvePublicDownloadUrls;
 };
 
@@ -27,7 +26,7 @@ export type RegenerateListingClipVersionArgs = {
   listingId: string;
   userId: string;
   clipId: string;
-  aiDirections?: string;
+  prompt?: string;
   resolvePublicDownloadUrls: ResolvePublicDownloadUrls;
 };
 

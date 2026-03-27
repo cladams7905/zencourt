@@ -1,7 +1,10 @@
 import { nanoid } from "nanoid";
 import { ApiError } from "@web/src/server/errors/api";
 import { isPriorityCategory } from "@shared/utils";
-import { buildPrompt } from "@web/src/server/services/videoGeneration/domain/prompt";
+import {
+  assembleProviderPrompt,
+  buildPrompt
+} from "@web/src/server/services/videoGeneration/domain/prompt";
 import {
   buildRoomsFromImages,
   getCategoryForRoom,
@@ -41,7 +44,6 @@ async function buildPrimaryJobRecord(args: {
   groupedImages: GroupedListingImages;
   listingPrimaryImageUrl: string;
   orientation: VideoOrientation;
-  aiDirections?: string;
   sortOrder: number;
   previousTemplateKey: string | null;
   resolvePublicDownloadUrls: ResolvePublicDownloadUrls;
@@ -58,7 +60,6 @@ async function buildPrimaryJobRecord(args: {
     groupedImages,
     listingPrimaryImageUrl,
     orientation,
-    aiDirections,
     sortOrder,
     previousTemplateKey,
     resolvePublicDownloadUrls
@@ -75,7 +76,6 @@ async function buildPrimaryJobRecord(args: {
   const primaryPrompt = buildPrompt({
     roomName: room.name,
     category,
-    aiDirections,
     perspective: primaryImage?.metadata?.perspective,
     previousTemplateKey
   });
@@ -91,9 +91,8 @@ async function buildPrimaryJobRecord(args: {
       generationSettings: {
         model: config.model as JobGenerationSettings["model"],
         orientation,
-        aiDirections: aiDirections || "",
         imageUrls: publicPrimaryUrls,
-        prompt: primaryPrompt.prompt,
+        prompt: assembleProviderPrompt(primaryPrompt.prompt),
         category,
         sortOrder,
         roomId: room.id,
@@ -116,7 +115,6 @@ async function buildSecondaryJobRecord(args: {
   groupedImages: GroupedListingImages;
   primaryImageUrl: string;
   orientation: VideoOrientation;
-  aiDirections?: string;
   sortOrder: number;
   previousTemplateKey: string | null;
   resolvePublicDownloadUrls: ResolvePublicDownloadUrls;
@@ -129,7 +127,6 @@ async function buildSecondaryJobRecord(args: {
     groupedImages,
     primaryImageUrl,
     orientation,
-    aiDirections,
     sortOrder,
     previousTemplateKey,
     resolvePublicDownloadUrls
@@ -150,7 +147,6 @@ async function buildSecondaryJobRecord(args: {
   const secondaryPrompt = buildPrompt({
     roomName: room.name,
     category,
-    aiDirections,
     perspective: secondaryImage?.metadata?.perspective,
     previousTemplateKey
   });
@@ -166,9 +162,8 @@ async function buildSecondaryJobRecord(args: {
       generationSettings: {
         model: config.model as JobGenerationSettings["model"],
         orientation,
-        aiDirections: aiDirections || "",
         imageUrls: publicSecondaryUrls,
-        prompt: secondaryPrompt.prompt,
+        prompt: assembleProviderPrompt(secondaryPrompt.prompt),
         category,
         sortOrder,
         roomId: room.id,
@@ -189,7 +184,6 @@ async function processRoomForJobRecords(args: {
   groupedImages: GroupedListingImages;
   listingPrimaryImageUrl: string;
   orientation: VideoOrientation;
-  aiDirections?: string;
   sortOrder: number;
   previousTemplateKey: string | null;
   resolvePublicDownloadUrls: ResolvePublicDownloadUrls;
@@ -205,7 +199,6 @@ async function processRoomForJobRecords(args: {
     groupedImages,
     listingPrimaryImageUrl,
     orientation,
-    aiDirections,
     sortOrder,
     previousTemplateKey,
     resolvePublicDownloadUrls
@@ -221,7 +214,6 @@ async function processRoomForJobRecords(args: {
     groupedImages,
     listingPrimaryImageUrl,
     orientation,
-    aiDirections,
     sortOrder,
     previousTemplateKey,
     resolvePublicDownloadUrls
@@ -241,7 +233,6 @@ async function processRoomForJobRecords(args: {
       groupedImages,
       primaryImageUrl: primaryResult.primaryImageUrl,
       orientation,
-      aiDirections,
       sortOrder: currentSortOrder,
       previousTemplateKey: currentTemplateKey,
       resolvePublicDownloadUrls
@@ -265,7 +256,6 @@ export async function buildJobRecords(args: {
   groupedImages: GroupedListingImages;
   listingPrimaryImageUrl: string;
   orientation: VideoOrientation;
-  aiDirections?: string;
   resolvePublicDownloadUrls: ResolvePublicDownloadUrls;
 }): Promise<InsertDBVideoGenJob[]> {
   const {
@@ -273,7 +263,6 @@ export async function buildJobRecords(args: {
     groupedImages,
     listingPrimaryImageUrl,
     orientation,
-    aiDirections,
     resolvePublicDownloadUrls
   } = args;
 
@@ -291,7 +280,6 @@ export async function buildJobRecords(args: {
       groupedImages,
       listingPrimaryImageUrl,
       orientation,
-      aiDirections,
       sortOrder,
       previousTemplateKey,
       resolvePublicDownloadUrls

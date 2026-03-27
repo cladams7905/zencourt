@@ -23,11 +23,10 @@ export interface StorageUploadRequest {
 export interface VideoGenerateRequest {
   listingId: string;
   orientation?: VideoOrientation;
-  aiDirections?: string;
 }
 
 export interface ClipVersionRegenerateRequest {
   listingId: string;
   clipId: string;
-  aiDirections?: string;
+  prompt?: string;
 }

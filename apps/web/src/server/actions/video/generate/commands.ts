@@ -27,9 +27,7 @@ function parseVideoGenerateRequest(body: unknown): VideoGenerateRequest {
   }
   return {
     listingId: input.listingId.trim(),
-    orientation: input.orientation,
-    aiDirections:
-      typeof input.aiDirections === "string" ? input.aiDirections : undefined
+    orientation: input.orientation
   };
 }
 
@@ -47,8 +45,7 @@ function parseClipVersionRegenerateRequest(
   return {
     listingId: input.listingId.trim(),
     clipId: input.clipId.trim(),
-    aiDirections:
-      typeof input.aiDirections === "string" ? input.aiDirections : undefined
+    prompt: typeof input.prompt === "string" ? input.prompt : undefined
   };
 }
 
@@ -91,7 +88,6 @@ export const startListingVideoGeneration = withServerActionCaller(
           listingId: listing.id,
           userId: user.id,
           orientation: parsed.orientation,
-          aiDirections: parsed.aiDirections,
           resolvePublicDownloadUrls: getPublicDownloadUrls
         });
         return { ...result, listingId: listing.id };
@@ -130,7 +126,7 @@ export const regenerateListingClipVersion = withServerActionCaller(
           listingId: listing.id,
           userId: user.id,
           clipId: parsed.clipId,
-          aiDirections: parsed.aiDirections,
+          prompt: parsed.prompt,
           resolvePublicDownloadUrls: getPublicDownloadUrls
         });
 
