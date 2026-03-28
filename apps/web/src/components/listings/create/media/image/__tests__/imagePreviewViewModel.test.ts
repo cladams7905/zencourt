@@ -99,7 +99,7 @@ describe("imagePreviewViewModel", () => {
     expect(overlay).toMatchObject({
       templatePattern: "sandwich",
       position: "top-third",
-      background: "none",
+      background: "transparent",
       fontPairing: "contemporary-script"
     });
   });

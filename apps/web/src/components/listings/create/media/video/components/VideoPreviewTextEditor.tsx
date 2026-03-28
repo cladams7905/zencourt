@@ -156,7 +156,7 @@ export function VideoPreviewTextEditor({
               />
             </div>
 
-            <section className="space-y-4 rounded-xl border border-border/70 bg-muted/20 p-4">
+            <section className="space-y-4 rounded-xl border border-border/70 p-4">
               <div className="space-y-1">
                 <p className="text-sm font-semibold text-foreground">
                   Overlay Style

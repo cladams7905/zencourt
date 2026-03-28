@@ -23,7 +23,7 @@
   --border: #e4e4de;
   --input: #e4e4de;
   --input-background: #fdfcf9;
-  --switch-background: #fdfcf9;
+  --switch-background: var(--muted);
   --font-weight-medium: 500;
   --font-weight-normal: 400;
   --ring: #666666;

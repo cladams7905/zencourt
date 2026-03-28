@@ -5,7 +5,7 @@ describe("computeOverlayLineStyles", () => {
     const styles = computeOverlayLineStyles(
       {
         text: "HELLO WORLD",
-        background: "none",
+        background: "transparent",
         font: "serif-classic",
         position: "center",
         templatePattern: "simple"
