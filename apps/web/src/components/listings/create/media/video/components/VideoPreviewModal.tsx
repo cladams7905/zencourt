@@ -3,11 +3,20 @@ import type { PlayerRef } from "@remotion/player";
 import { X } from "lucide-react";
 import {
   Dialog,
-  DialogClose,
   DialogContent,
   DialogHeader,
   DialogTitle
 } from "@web/src/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from "@web/src/components/ui/alert-dialog";
 import { Button } from "@web/src/components/ui/button";
 import { getTimelineDurationInFrames } from "@web/src/components/listings/create/media/video/components/ListingTimelinePreviewComposition";
 import { VideoPreviewPlayer } from "@web/src/components/listings/create/media/video/components/VideoPreviewPlayer";
@@ -101,6 +110,7 @@ export function VideoPreviewModal({
   const resizeHistoryCapturedRef = React.useRef(false);
   const [isSaving, setIsSaving] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+  const [isExitConfirmOpen, setIsExitConfirmOpen] = React.useState(false);
   const [isAddClipOpen, setIsAddClipOpen] = React.useState(false);
   const [activeAddClipTab, setActiveAddClipTab] = React.useState<
     "room_clips" | "user_media"
@@ -131,6 +141,7 @@ export function VideoPreviewModal({
     setIsAddClipOpen(false);
     setActiveAddClipTab("room_clips");
     setUserMediaScrollRoot(null);
+    setIsExitConfirmOpen(false);
   }, [selectedPreview?.id]);
 
   // Reset drafts only when the user opens a different preview. `selectedPreview` is a new object
@@ -155,9 +166,13 @@ export function VideoPreviewModal({
 
   const handlePlayerRef = React.useCallback((player: PlayerRef | null) => {
     playerRef.current = player;
-    setPlayerInstance((currentPlayer) =>
-      currentPlayer === player ? currentPlayer : player
-    );
+    setPlayerInstance((currentPlayer) => {
+      if (player === null) {
+        return currentPlayer;
+      }
+
+      return currentPlayer ?? player;
+    });
   }, []);
 
   const normalizedHook = hookDraft.trim();
@@ -192,6 +207,33 @@ export function VideoPreviewModal({
     setErrorMessage(null);
     resizeHistoryCapturedRef.current = false;
   }, []);
+
+  const requestClose = React.useCallback(() => {
+    if (isDirty) {
+      setIsExitConfirmOpen(true);
+      return;
+    }
+
+    onOpenChange(false);
+  }, [isDirty, onOpenChange]);
+
+  const handleDialogOpenChange = React.useCallback(
+    (open: boolean) => {
+      if (open) {
+        onOpenChange(true);
+        return;
+      }
+
+      requestClose();
+    },
+    [onOpenChange, requestClose]
+  );
+
+  const handleDiscardAndClose = React.useCallback(() => {
+    handleCancel();
+    setIsExitConfirmOpen(false);
+    onOpenChange(false);
+  }, [handleCancel, onOpenChange]);
 
   const pushTimelineHistory = React.useCallback(
     (currentSegments: TimelinePreviewResolvedSegment[]) => {
@@ -253,7 +295,12 @@ export function VideoPreviewModal({
   const userMediaPickerRows = React.useMemo(() => {
     return userMediaPickerItems
       .filter((item) => Boolean(item.videoUrl))
-      .map<TimelinePreviewResolvedSegment & { label: string; fileName: string | null }>((item, index) => ({
+      .map<
+        TimelinePreviewResolvedSegment & {
+          label: string;
+          fileName: string | null;
+        }
+      >((item, index) => ({
         clipId: item.id,
         sourceType: "user_media" as const,
         sourceId: item.id.replace(/^user-media:/, ""),
@@ -536,24 +583,26 @@ export function VideoPreviewModal({
   }, [playerInstance, selectedPreview]);
 
   return (
-    <Dialog open={Boolean(selectedPreview)} onOpenChange={onOpenChange}>
+    <Dialog
+      open={Boolean(selectedPreview)}
+      onOpenChange={handleDialogOpenChange}
+    >
       <DialogContent
         hideCloseButton
         className="grid max-h-[88vh] w-[96vw] max-w-[calc(100vw-1rem)] grid-rows-[auto_minmax(0,1fr)] gap-0 overflow-hidden border-0 p-0 sm:max-w-[calc(100vw-2rem)] min-[1050px]:h-[88vh] min-[1050px]:w-[82vw] min-[1050px]:max-w-[min(1400px,calc(100vw-2rem))]"
       >
         <DialogHeader className="sticky top-0 z-20 flex-row items-center justify-between border-b border-border bg-background/95 px-6 py-4 backdrop-blur supports-backdrop-filter:bg-background/90">
           <DialogTitle>Reel Preview</DialogTitle>
-          <DialogClose asChild>
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              className="h-9 w-9 shrink-0 rounded-full"
-              aria-label="Close"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </DialogClose>
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            className="h-9 w-9 shrink-0 rounded-full"
+            aria-label="Close"
+            onClick={requestClose}
+          >
+            <X className="h-4 w-4" />
+          </Button>
         </DialogHeader>
         {selectedPreview ? (
           <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden max-[1049px]:overflow-x-hidden">
@@ -562,11 +611,11 @@ export function VideoPreviewModal({
                 <div className="grid min-w-0 max-w-full content-start min-[1050px]:h-full min-[1050px]:min-h-0 min-[1050px]:grid-rows-[minmax(0,1fr)_1px_248px] min-[1050px]:overflow-hidden">
                   <div
                     data-testid="video-preview-stage"
-                    className="flex min-h-0 min-w-0 items-center justify-center overflow-hidden bg-secondary px-3 py-4 max-[1049px]:min-h-[min(46dvh,22rem)] min-[1050px]:h-full min-[1050px]:px-0 min-[1050px]:py-0"
+                    className="flex min-h-0 min-w-0 items-center justify-center overflow-hidden bg-secondary px-3 py-4 max-[1049px]:min-h-[min(38dvh,18rem)] min-[1050px]:h-full min-[1050px]:px-0 min-[1050px]:py-0"
                   >
                     <div
                       data-testid="video-player-shell"
-                      className="relative mx-auto aspect-9/16 w-full min-w-[168px] max-w-[min(260px,calc(100vw-3rem))] overflow-hidden rounded-xl bg-card shadow-sm min-[1050px]:h-[86%] min-[1050px]:max-h-full min-[1050px]:w-auto min-[1050px]:max-w-full"
+                      className="relative mx-auto aspect-9/16 w-full min-w-[148px] max-w-[min(160px,calc(100vw-5rem))] overflow-hidden rounded-xl bg-card shadow-sm min-[1050px]:h-[86%] min-[1050px]:max-h-full min-[1050px]:w-auto min-[1050px]:max-w-full"
                     >
                       <VideoPreviewPlayer
                         key={selectedPreview.id}
@@ -648,6 +697,24 @@ export function VideoPreviewModal({
           </div>
         ) : null}
       </DialogContent>
+      <AlertDialog open={isExitConfirmOpen} onOpenChange={setIsExitConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Leave reel preview without saving?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Your unsaved reel changes will be lost.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep Editing</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDiscardAndClose}>
+              Continue Without Saving
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }

@@ -56,15 +56,60 @@ jest.mock("@remotion/player", () => {
 jest.mock("@web/src/components/ui/dialog", () => ({
   Dialog: ({
     open,
+    onOpenChange,
     children
   }: {
     open: boolean;
+    onOpenChange?: (open: boolean) => void;
     children: React.ReactNode;
-  }) => (open ? <div data-testid="dialog-root">{children}</div> : null),
+  }) =>
+    open ? (
+      <div data-testid="dialog-root">
+        <button type="button" onClick={() => onOpenChange?.(false)}>
+          Mock dialog dismiss
+        </button>
+        {children}
+      </div>
+    ) : null,
   DialogClose: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   DialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DialogHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DialogTitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>
+}));
+
+jest.mock("@web/src/components/ui/alert-dialog", () => ({
+  AlertDialog: ({
+    open,
+    children
+  }: {
+    open: boolean;
+    children: React.ReactNode;
+  }) => (open ? <div data-testid="alert-dialog-root">{children}</div> : null),
+  AlertDialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  AlertDialogDescription: ({ children }: { children: React.ReactNode }) => (
+    <p>{children}</p>
+  ),
+  AlertDialogFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  AlertDialogHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  AlertDialogTitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
+  AlertDialogAction: ({
+    children,
+    onClick,
+    ...props
+  }: React.ComponentProps<"button">) => (
+    <button type="button" onClick={onClick} {...props}>
+      {children}
+    </button>
+  ),
+  AlertDialogCancel: ({
+    children,
+    onClick,
+    ...props
+  }: React.ComponentProps<"button">) => (
+    <button type="button" onClick={onClick} {...props}>
+      {children}
+    </button>
+  )
 }));
 
 jest.mock("@web/src/components/ui/loading-image", () => ({
@@ -165,6 +210,32 @@ function createSelectedPreviewWithId(
   };
 }
 
+function StatefulVideoPreviewModal({
+  onOpenChange = mockOnOpenChange,
+  preview = createSelectedPreview()
+}: {
+  onOpenChange?: (open: boolean) => void;
+  preview?: PlayablePreview;
+}) {
+  const [selectedPreview, setSelectedPreview] =
+    React.useState<PlayablePreview | null>(preview);
+
+  return (
+    <VideoPreviewModal
+      selectedPreview={selectedPreview}
+      userMediaVideoCount={0}
+      previewFps={30}
+      onOpenChange={(open) => {
+        onOpenChange(open);
+        if (!open) {
+          setSelectedPreview(null);
+        }
+      }}
+      onSavePreviewText={mockOnSave}
+    />
+  );
+}
+
 describe("VideoPreviewModal", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -194,6 +265,11 @@ describe("VideoPreviewModal", () => {
 
     expect(screen.getByText("Reel Preview")).toBeInTheDocument();
     expect(screen.getByTestId("video-player")).toBeInTheDocument();
+    expect(mockPlayer).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        controls: true
+      })
+    );
     expect(screen.getByLabelText("Header")).toHaveValue("Original hook");
     expect(screen.getByLabelText("Caption")).toHaveValue("Original caption");
     expect(screen.getByText("Kitchen")).toBeInTheDocument();
@@ -231,14 +307,15 @@ describe("VideoPreviewModal", () => {
     );
 
     const stage = screen.getByTestId("video-preview-stage").className;
-    expect(stage).toContain("max-[1049px]:min-h-[min(46dvh,22rem)]");
+    expect(stage).toContain("max-[1049px]:min-h-[min(38dvh,18rem)]");
     const shell = screen.getByTestId("video-player-shell").className;
     expect(shell).toContain("rounded-xl");
     expect(shell).toContain("bg-card");
     expect(shell).toContain("shadow-sm");
-    expect(shell).toContain("min-w-[168px]");
-    expect(shell).toContain("max-w-[min(260px");
+    expect(shell).toContain("min-w-[148px]");
+    expect(shell).toContain("max-w-[min(190px");
     expect(shell).toContain("min-[1050px]:h-[86%]");
+    expect(shell).toContain("min-[1050px]:w-auto");
   });
 
   it("enables save when fields change and resets draft values on cancel", async () => {
@@ -355,6 +432,64 @@ describe("VideoPreviewModal", () => {
 
     expect(await screen.findByText("save failed")).toBeInTheDocument();
     expect(screen.getByLabelText("Header")).toHaveValue("Updated hook");
+  });
+
+  it("opens a discard confirmation instead of closing from the header button when dirty", async () => {
+    const user = userEvent.setup();
+
+    render(<StatefulVideoPreviewModal />);
+
+    await user.clear(screen.getByLabelText("Header"));
+    await user.type(screen.getByLabelText("Header"), "Updated hook");
+    await user.click(screen.getByRole("button", { name: "Close" }));
+
+    expect(
+      screen.getByText("Leave reel preview without saving?")
+    ).toBeInTheDocument();
+    expect(mockOnOpenChange).not.toHaveBeenCalledWith(false);
+    expect(screen.getByTestId("dialog-root")).toBeInTheDocument();
+  });
+
+  it("discards dirty changes and closes after confirming", async () => {
+    const user = userEvent.setup();
+
+    render(<StatefulVideoPreviewModal />);
+
+    await user.clear(screen.getByLabelText("Header"));
+    await user.type(screen.getByLabelText("Header"), "Updated hook");
+    await user.click(screen.getByRole("button", { name: "Close" }));
+    await user.click(
+      screen.getByRole("button", { name: "Continue Without Saving" })
+    );
+
+    expect(mockOnOpenChange).toHaveBeenCalledWith(false);
+    expect(screen.queryByTestId("dialog-root")).not.toBeInTheDocument();
+  });
+
+  it("opens the discard confirmation for dialog dismiss requests when dirty", async () => {
+    const user = userEvent.setup();
+
+    render(<StatefulVideoPreviewModal />);
+
+    await user.clear(screen.getByLabelText("Header"));
+    await user.type(screen.getByLabelText("Header"), "Updated hook");
+    await user.click(screen.getByRole("button", { name: "Mock dialog dismiss" }));
+
+    expect(
+      screen.getByText("Leave reel preview without saving?")
+    ).toBeInTheDocument();
+    expect(mockOnOpenChange).not.toHaveBeenCalledWith(false);
+  });
+
+  it("closes immediately for dialog dismiss requests when clean", async () => {
+    const user = userEvent.setup();
+
+    render(<StatefulVideoPreviewModal />);
+
+    await user.click(screen.getByRole("button", { name: "Mock dialog dismiss" }));
+
+    expect(mockOnOpenChange).toHaveBeenCalledWith(false);
+    expect(screen.queryByTestId("dialog-root")).not.toBeInTheDocument();
   });
 
   it("reorders timeline clips, updates the player input, and saves the new clip order", async () => {
