@@ -1,4 +1,4 @@
-import { DrizzleError } from "@db/client";
+import { DrizzleError } from "drizzle-orm";
 
 const mockDebug = jest.fn();
 const mockInfo = jest.fn();

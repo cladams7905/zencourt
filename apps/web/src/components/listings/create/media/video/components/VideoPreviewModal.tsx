@@ -265,9 +265,7 @@ export function VideoPreviewModal({
   const userMediaClipOptions = React.useMemo(() => {
     const currentClipIds = new Set(segmentDraft.map(getSegmentSourceKey));
     return userMediaPickerRows
-      .filter(
-        (row) => !currentClipIds.has(`user_media:${row.sourceId}`)
-      )
+      .filter((row) => !currentClipIds.has(`user_media:${row.sourceId}`))
       .map((row) => ({
         clipId: row.clipId,
         thumbnailSrc: row.thumbnailSrc,
@@ -284,8 +282,7 @@ export function VideoPreviewModal({
         const nextSegment =
           (preview?.resolvedSegments ?? []).find(
             (segment) => segment.clipId === clipId
-          ) ??
-          userMediaPickerRows.find((segment) => segment.clipId === clipId);
+          ) ?? userMediaPickerRows.find((segment) => segment.clipId === clipId);
         if (!nextSegment || prev.some((segment) => segment.clipId === clipId)) {
           return prev;
         }
@@ -519,7 +516,7 @@ export function VideoPreviewModal({
       cancelled = true;
       window.cancelAnimationFrame(frameId);
     };
-  }, [playerInstance, selectedPreview?.id]);
+  }, [playerInstance, selectedPreview]);
 
   return (
     <Dialog open={Boolean(selectedPreview)} onOpenChange={onOpenChange}>
@@ -575,7 +572,9 @@ export function VideoPreviewModal({
                       onAddClipPopoverOpenChange={setIsAddClipOpen}
                       addClipActiveTab={activeAddClipTab}
                       onAddClipActiveTabChange={setActiveAddClipTab}
-                      userMediaPickerInitialLoading={userMediaPickerInitialLoading}
+                      userMediaPickerInitialLoading={
+                        userMediaPickerInitialLoading
+                      }
                       userMediaPickerLoadingMore={userMediaPickerLoadingMore}
                       userMediaPickerError={userMediaPickerError}
                       userMediaPickerOnRetry={userMediaPickerRetry}

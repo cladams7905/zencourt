@@ -1,4 +1,4 @@
-import { DrizzleError } from "@db/client";
+import { DrizzleError } from "drizzle-orm";
 import {
   createChildLogger,
   logger as baseLogger

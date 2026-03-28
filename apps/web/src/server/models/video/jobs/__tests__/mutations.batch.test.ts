@@ -5,14 +5,22 @@ const mockWhere = jest.fn(() => ({ returning: mockReturning }));
 const mockSet = jest.fn(() => ({ where: mockWhere }));
 const mockUpdate = jest.fn(() => ({ set: mockSet }));
 
-jest.mock("@db/client", () => ({
-  db: {
-    insert: (...args: unknown[]) => ((mockInsert as (...a: unknown[]) => unknown)(...args)),
-    update: (...args: unknown[]) => ((mockUpdate as (...a: unknown[]) => unknown)(...args))
-  },
-  videoGenBatch: { id: "id" },
-  eq: (...args: unknown[]) => args
-}));
+jest.mock("@db/client", () => {
+  const { DrizzleError } = jest.requireActual<typeof import("drizzle-orm")>(
+    "drizzle-orm"
+  );
+  return {
+    DrizzleError,
+    db: {
+      insert: (...args: unknown[]) =>
+        (mockInsert as (...a: unknown[]) => unknown)(...args),
+      update: (...args: unknown[]) =>
+        (mockUpdate as (...a: unknown[]) => unknown)(...args)
+    },
+    videoGenBatch: { id: "id" },
+    eq: (...args: unknown[]) => args
+  };
+});
 
 import {
   createVideoGenBatch,

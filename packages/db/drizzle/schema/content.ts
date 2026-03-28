@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { authenticatedRole, crudPolicy } from "drizzle-orm/neon";
 import {
   boolean,
@@ -7,7 +8,6 @@ import {
   text,
   timestamp
 } from "drizzle-orm/pg-core";
-import { sql } from "@db/client";
 
 import { contentStatusEnum, contentTypeEnum } from "./enums";
 import { listings } from "./listings";

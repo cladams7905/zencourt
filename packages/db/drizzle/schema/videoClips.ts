@@ -1,4 +1,4 @@
-import { sql } from "@db/client";
+import { sql } from "drizzle-orm";
 import {
   type PgTableExtraConfigValue,
   foreignKey,

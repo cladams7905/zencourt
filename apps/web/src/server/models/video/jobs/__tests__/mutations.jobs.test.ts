@@ -9,15 +9,24 @@ const mockSelectWhere = jest.fn(() => ({ limit: mockLimit }));
 const mockSelectFrom = jest.fn(() => ({ where: mockSelectWhere }));
 const mockSelect = jest.fn(() => ({ from: mockSelectFrom }));
 
-jest.mock("@db/client", () => ({
-  db: {
-    insert: (...args: unknown[]) => ((mockInsert as (...a: unknown[]) => unknown)(...args)),
-    update: (...args: unknown[]) => ((mockUpdate as (...a: unknown[]) => unknown)(...args)),
-    select: (...args: unknown[]) => ((mockSelect as (...a: unknown[]) => unknown)(...args))
-  },
-  videoGenJobs: { id: "id" },
-  eq: (...args: unknown[]) => args
-}));
+jest.mock("@db/client", () => {
+  const { DrizzleError } = jest.requireActual<typeof import("drizzle-orm")>(
+    "drizzle-orm"
+  );
+  return {
+    DrizzleError,
+    db: {
+      insert: (...args: unknown[]) =>
+        (mockInsert as (...a: unknown[]) => unknown)(...args),
+      update: (...args: unknown[]) =>
+        (mockUpdate as (...a: unknown[]) => unknown)(...args),
+      select: (...args: unknown[]) =>
+        (mockSelect as (...a: unknown[]) => unknown)(...args)
+    },
+    videoGenJobs: { id: "id" },
+    eq: (...args: unknown[]) => args
+  };
+});
 
 import {
   createVideoGenJob,
