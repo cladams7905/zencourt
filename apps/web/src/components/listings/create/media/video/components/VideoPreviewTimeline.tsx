@@ -21,7 +21,9 @@ import {
   TIMELINE_PIXELS_PER_SECOND,
   buildVideoPreviewTimelineItems,
   buildVideoPreviewTimelineLayout,
+  formatVideoPreviewClipLabel,
   formatDurationLabel,
+  getVideoPreviewSegmentDisplayLabels,
   getFrameFromTimelineOffset,
   getPlayheadOffsetPx
 } from "@web/src/components/listings/create/media/video/videoPreviewTimelineViewModel";
@@ -46,6 +48,7 @@ function ClipThumbnailBadge({ text }: { text: string | null | undefined }) {
 
 type VideoPreviewTimelineProps = {
   segments: TimelinePreviewResolvedSegment[];
+  stableRoomLabelSegments?: TimelinePreviewResolvedSegment[];
   /** Bumps when the parent wants the horizontal strip scrolled to the far right (e.g. after appending a clip). */
   scrollToEndNonce?: number;
   deletedClipOptions: TimelinePreviewResolvedSegment[];
@@ -98,6 +101,7 @@ const ADD_CLIP_TILE_CLASS =
 
 export function VideoPreviewTimeline({
   segments,
+  stableRoomLabelSegments,
   scrollToEndNonce = 0,
   deletedClipOptions,
   userMediaClipOptions,
@@ -127,16 +131,17 @@ export function VideoPreviewTimeline({
   onUndo,
   onRedo
 }: VideoPreviewTimelineProps) {
-  const formatClipLabel = React.useCallback((value: string) => {
-    return value
-      .split(/[\s_-]+/)
-      .filter(Boolean)
-      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-      .join(" ");
-  }, []);
   const items = React.useMemo(
-    () => buildVideoPreviewTimelineItems(segments),
-    [segments]
+    () => buildVideoPreviewTimelineItems(segments, stableRoomLabelSegments),
+    [segments, stableRoomLabelSegments]
+  );
+  const deletedClipDisplayLabels = React.useMemo(
+    () =>
+      getVideoPreviewSegmentDisplayLabels({
+        segments: deletedClipOptions,
+        stableSegments: stableRoomLabelSegments
+      }),
+    [deletedClipOptions, stableRoomLabelSegments]
   );
   const { items: layoutItems, contentWidthPx } = React.useMemo(
     () => buildVideoPreviewTimelineLayout({ items, fps: previewFps }),
@@ -400,14 +405,15 @@ export function VideoPreviewTimeline({
                         >
                           <div className="grid grid-cols-3 items-start justify-items-center gap-1.5">
                             {deletedClipOptions.map((clipOption) => {
-                              const label = formatClipLabel(
-                                clipOption.category ?? clipOption.clipId
-                              );
+                              const label =
+                                deletedClipDisplayLabels.get(
+                                  `${clipOption.sourceType ?? "listing_clip"}:${clipOption.sourceId ?? clipOption.clipId}`
+                                ) ??
+                                formatVideoPreviewClipLabel(
+                                  clipOption.category ?? clipOption.clipId
+                                );
                               const roomBadgeText = (() => {
-                                const raw =
-                                  clipOption.roomName?.trim() ||
-                                  clipOption.category?.trim();
-                                return raw ? formatClipLabel(raw) : null;
+                                return clipOption.roomName?.trim() ? label : null;
                               })();
                               return (
                                 <button

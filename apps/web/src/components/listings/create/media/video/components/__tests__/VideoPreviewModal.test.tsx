@@ -145,6 +145,7 @@ function createSelectedPreview(overrides?: Partial<ContentItem>): PlayablePrevie
         src: "https://video/1.mp4",
         thumbnailSrc: "https://img/1.jpg",
         category: "kitchen",
+        roomName: "Kitchen",
         durationSeconds: 2.5,
         maxDurationSeconds: 4,
         textOverlay: {
@@ -162,6 +163,7 @@ function createSelectedPreview(overrides?: Partial<ContentItem>): PlayablePrevie
         src: "https://video/2.mp4",
         thumbnailSrc: "https://img/2.jpg",
         category: "exterior",
+        roomName: "Exterior",
         durationSeconds: 5,
         maxDurationSeconds: 6,
         textOverlay: {
@@ -337,6 +339,44 @@ describe("VideoPreviewModal", () => {
     expect(screen.getByTestId("timeline-total-duration")).toHaveTextContent(
       "7.5s"
     );
+  });
+
+  it("numbers duplicate room names in the timeline and room clips picker", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <VideoPreviewModal
+        selectedPreview={{
+          ...createSelectedPreview(),
+          resolvedSegments: [
+            {
+              ...createSelectedPreview().resolvedSegments[0],
+              clipId: "clip-1",
+              category: "kitchen",
+              roomName: "Kitchen"
+            },
+            {
+              ...createSelectedPreview().resolvedSegments[1],
+              clipId: "clip-2",
+              category: "kitchen",
+              roomName: "Kitchen"
+            }
+          ]
+        }}
+        userMediaVideoCount={0}
+        previewFps={30}
+        onOpenChange={mockOnOpenChange}
+        onSavePreviewText={mockOnSave}
+      />
+    );
+
+    expect(screen.getByText("Kitchen 1")).toBeInTheDocument();
+    expect(screen.getByText("Kitchen 2")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("timeline-delete-clip-1-0"));
+    await user.click(screen.getByRole("button", { name: "Add clip to timeline" }));
+
+    expect(screen.getByTitle("Kitchen 1")).toBeInTheDocument();
   });
 
   it("renders overlay controls in the right column editor", () => {

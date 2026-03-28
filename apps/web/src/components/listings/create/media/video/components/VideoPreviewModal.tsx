@@ -1036,6 +1036,9 @@ export function VideoPreviewModal({
                   <div className="min-w-0 max-w-full px-3 py-3 min-[1050px]:flex min-[1050px]:h-[248px] min-[1050px]:min-h-[248px] min-[1050px]:flex-col min-[1050px]:overflow-hidden min-[1050px]:px-4">
                     <VideoPreviewTimeline
                       segments={segmentDraft}
+                      stableRoomLabelSegments={
+                        selectedPreview?.resolvedSegments ?? undefined
+                      }
                       scrollToEndNonce={timelineScrollToEndNonce}
                       deletedClipOptions={deletedClipOptions}
                       userMediaClipOptions={userMediaClipOptions}

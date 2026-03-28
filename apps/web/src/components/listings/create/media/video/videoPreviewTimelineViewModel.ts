@@ -24,12 +24,83 @@ export type VideoPreviewTimelineLayoutItem = VideoPreviewTimelineItem & {
 export const TIMELINE_CARD_GAP_PX = 0;
 export const TIMELINE_PIXELS_PER_SECOND = 64;
 
-function toTitleCase(value: string): string {
+export function formatVideoPreviewClipLabel(value: string): string {
   return value
     .split(/[\s_-]+/)
     .filter(Boolean)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
+}
+
+function getVideoPreviewSegmentKey(segment: TimelinePreviewResolvedSegment): string {
+  return `${segment.sourceType ?? "listing_clip"}:${segment.sourceId ?? segment.clipId}`;
+}
+
+export function getVideoPreviewSegmentDisplayLabels(params: {
+  segments: TimelinePreviewResolvedSegment[];
+  stableSegments?: TimelinePreviewResolvedSegment[];
+}): Map<string, string> {
+  const orderedSegments = [
+    ...(params.stableSegments ?? []),
+    ...params.segments
+  ].filter(
+    (segment, index, collection) =>
+      index ===
+      collection.findIndex(
+        (candidate) =>
+          getVideoPreviewSegmentKey(candidate) ===
+          getVideoPreviewSegmentKey(segment)
+      )
+  );
+
+  const roomNameCounts = new Map<string, number>();
+  for (const segment of orderedSegments) {
+    const roomName = segment.roomName?.trim();
+    if (!roomName) {
+      continue;
+    }
+    const formattedRoomName = formatVideoPreviewClipLabel(roomName);
+    roomNameCounts.set(
+      formattedRoomName,
+      (roomNameCounts.get(formattedRoomName) ?? 0) + 1
+    );
+  }
+
+  const roomNameOrdinals = new Map<string, number>();
+  const labels = new Map<string, string>();
+  for (const segment of orderedSegments) {
+    const key = getVideoPreviewSegmentKey(segment);
+    const roomName = segment.roomName?.trim();
+    if (roomName) {
+      const formattedRoomName = formatVideoPreviewClipLabel(roomName);
+      const duplicateCount = roomNameCounts.get(formattedRoomName) ?? 0;
+      if (duplicateCount > 1) {
+        const nextOrdinal = (roomNameOrdinals.get(formattedRoomName) ?? 0) + 1;
+        roomNameOrdinals.set(formattedRoomName, nextOrdinal);
+        labels.set(key, `${formattedRoomName} ${nextOrdinal}`);
+        continue;
+      }
+
+      labels.set(key, formattedRoomName);
+      continue;
+    }
+
+    labels.set(
+      key,
+      formatVideoPreviewClipLabel(segment.category?.trim() || segment.clipId)
+    );
+  }
+
+  return new Map(
+    params.segments.map((segment) => {
+      const key = getVideoPreviewSegmentKey(segment);
+      return [
+        key,
+        labels.get(key) ??
+          formatVideoPreviewClipLabel(segment.category?.trim() || segment.clipId)
+      ];
+    })
+  );
 }
 
 export function formatDurationLabel(durationSeconds: number): string {
@@ -38,19 +109,26 @@ export function formatDurationLabel(durationSeconds: number): string {
 }
 
 export function buildVideoPreviewTimelineItems(
-  segments: TimelinePreviewResolvedSegment[]
+  segments: TimelinePreviewResolvedSegment[],
+  stableSegments?: TimelinePreviewResolvedSegment[]
 ): VideoPreviewTimelineItem[] {
   const totalDuration = segments.reduce(
     (sum, segment) => sum + segment.durationSeconds,
     0
   );
   const safeTotalDuration = totalDuration > 0 ? totalDuration : segments.length;
+  const labels = getVideoPreviewSegmentDisplayLabels({
+    segments,
+    stableSegments
+  });
 
   return segments.map((segment, index) => {
     const widthPercent = (segment.durationSeconds / safeTotalDuration) * 100;
     return {
       id: `${segment.clipId}-${index}`,
-      label: toTitleCase(segment.category?.trim() || segment.clipId),
+      label:
+        labels.get(getVideoPreviewSegmentKey(segment)) ??
+        formatVideoPreviewClipLabel(segment.category?.trim() || segment.clipId),
       durationSeconds: segment.durationSeconds,
       durationLabel: formatDurationLabel(segment.durationSeconds),
       widthPercent,
