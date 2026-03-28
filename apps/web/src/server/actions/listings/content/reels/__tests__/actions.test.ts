@@ -76,7 +76,7 @@ describe("saveListingVideoReel", () => {
       hook: "Cached hook",
       caption: "Cached caption",
       broll_query: "kitchen",
-      body: [{ header: "Slide", content: "Body", broll_query: "kitchen" }],
+      body: null,
       cta: null
     });
     mockCreateContent.mockResolvedValue({
@@ -93,7 +93,6 @@ describe("saveListingVideoReel", () => {
         listingSubcategory: "new_listing",
         hook: "Updated hook",
         caption: "Updated caption",
-        body: [{ header: "Slide", content: "Body", broll_query: "kitchen" }],
         brollQuery: "kitchen",
         sequence: [
           {
@@ -172,7 +171,6 @@ describe("saveListingVideoReel", () => {
         listingSubcategory: "new_listing",
         hook: "Original hook",
         caption: "Original caption",
-        body: [{ header: "Slide", content: "Body", broll_query: "kitchen" }],
         brollQuery: "kitchen",
         sequence: [
           {
@@ -197,7 +195,6 @@ describe("saveListingVideoReel", () => {
         listingSubcategory: "new_listing",
         hook: "Updated hook",
         caption: "Updated caption",
-        body: [{ header: "Slide", content: "Body", broll_query: "kitchen" }],
         brollQuery: "kitchen",
         sequence: [
           {

@@ -48,7 +48,6 @@ export function VideoPreviewEditorActions({
 type VideoPreviewTextEditorProps = {
   hookValue: string;
   captionValue: string;
-  slideNotes: Array<{ key: string; header: string; content: string }>;
   isDirty: boolean;
   isSaving: boolean;
   errorMessage: string | null;
@@ -61,7 +60,6 @@ type VideoPreviewTextEditorProps = {
 export function VideoPreviewTextEditor({
   hookValue,
   captionValue,
-  slideNotes,
   isDirty,
   isSaving,
   errorMessage,
@@ -98,21 +96,6 @@ export function VideoPreviewTextEditor({
 
             {errorMessage ? (
               <p className="text-sm text-destructive">{errorMessage}</p>
-            ) : null}
-
-            {slideNotes.length > 0 ? (
-              <div>
-                <p className="text-xs font-semibold text-muted-foreground">
-                  Slide Notes
-                </p>
-                <div className="mt-2 space-y-2">
-                  {slideNotes.map((slide, index) => (
-                    <p key={slide.key} className="text-xs text-muted-foreground">
-                      {index + 1}. {slide.header}: {slide.content}
-                    </p>
-                  ))}
-                </div>
-              </div>
             ) : null}
           </div>
         </div>

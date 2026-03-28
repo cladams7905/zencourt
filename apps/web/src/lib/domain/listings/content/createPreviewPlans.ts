@@ -6,10 +6,7 @@ import type {
   PreviewTextOverlayFont,
   PreviewTextOverlayPosition
 } from "@shared/types/video";
-import type {
-  CarouselSlide,
-  ReelSequenceItem
-} from "./index";
+import type { ReelSequenceItem } from "./index";
 import { buildReelSourceKey } from "./reels";
 
 export type {
@@ -55,7 +52,6 @@ export type PreviewPlanCaptionItem = {
   id: string;
   hook?: string;
   caption?: string | null;
-  body?: CarouselSlide[] | null;
   brollQuery?: string | null;
   orderedClipIds?: string[] | null;
   clipDurationOverrides?: Record<string, number> | null;
@@ -174,13 +170,7 @@ function orderClips(
 }
 
 function buildFeatureNeedle(item: PreviewPlanCaptionItem): string {
-  const bodyText = (item.body ?? [])
-    .map(
-      (slide) =>
-        `${slide.header ?? ""} ${slide.content ?? ""} ${slide.broll_query ?? ""}`
-    )
-    .join(" ");
-  return `${item.hook ?? ""} ${item.caption ?? ""} ${item.brollQuery ?? ""} ${bodyText}`
+  return `${item.hook ?? ""} ${item.caption ?? ""} ${item.brollQuery ?? ""}`
     .toLowerCase()
     .replace(/[^\w\s]/g, " ");
 }

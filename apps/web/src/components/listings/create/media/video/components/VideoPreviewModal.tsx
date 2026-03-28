@@ -35,6 +35,19 @@ function cloneSegments(segments: TimelinePreviewResolvedSegment[]) {
   return segments.map((segment) => ({ ...segment }));
 }
 
+function getSharedTextOverlay(
+  segments: TimelinePreviewResolvedSegment[]
+): TimelinePreviewResolvedSegment["textOverlay"] {
+  return segments.find((segment) => segment.textOverlay)?.textOverlay;
+}
+
+function getSharedSupplementalAddressOverlay(
+  segments: TimelinePreviewResolvedSegment[]
+): TimelinePreviewResolvedSegment["supplementalAddressOverlay"] {
+  return segments.find((segment) => segment.supplementalAddressOverlay)
+    ?.supplementalAddressOverlay;
+}
+
 function getSegmentSourceKey(segment: TimelinePreviewResolvedSegment): string {
   return `${segment.sourceType ?? "listing_clip"}:${segment.sourceId ?? segment.clipId}`;
 }
@@ -169,14 +182,6 @@ export function VideoPreviewModal({
     draftClipOrderSignature !== savedClipOrderSignature ||
     draftDurationSignature !== savedDurationSignature;
 
-  const slideNotes = (selectedPreview?.captionItem?.body ?? []).map(
-    (slide, index) => ({
-      key: `${selectedPreview?.captionItem?.id ?? "preview"}-${index}`,
-      header: slide.header,
-      content: slide.content
-    })
-  );
-
   const handleCancel = React.useCallback(() => {
     const preview = selectedPreviewRef.current;
     setHookDraft(preview?.captionItem?.hook ?? "");
@@ -248,7 +253,7 @@ export function VideoPreviewModal({
   const userMediaPickerRows = React.useMemo(() => {
     return userMediaPickerItems
       .filter((item) => Boolean(item.videoUrl))
-      .map((item, index) => ({
+      .map<TimelinePreviewResolvedSegment & { label: string; fileName: string | null }>((item, index) => ({
         clipId: item.id,
         sourceType: "user_media" as const,
         sourceId: item.id.replace(/^user-media:/, ""),
@@ -287,11 +292,23 @@ export function VideoPreviewModal({
           return prev;
         }
 
+        const sharedTextOverlay =
+          getSharedTextOverlay(prev) ??
+          getSharedTextOverlay(preview?.resolvedSegments ?? []);
+        const sharedSupplementalAddressOverlay =
+          getSharedSupplementalAddressOverlay(prev) ??
+          getSharedSupplementalAddressOverlay(preview?.resolvedSegments ?? []);
+
         pushTimelineHistory(prev);
         return [
           ...prev,
           {
             ...nextSegment,
+            textOverlay:
+              nextSegment.textOverlay ?? sharedTextOverlay ?? undefined,
+            supplementalAddressOverlay:
+              nextSegment.supplementalAddressOverlay ??
+              sharedSupplementalAddressOverlay,
             sourceType: nextSegment.sourceType ?? "listing_clip",
             sourceId: nextSegment.sourceId ?? nextSegment.clipId
           }
@@ -606,7 +623,6 @@ export function VideoPreviewModal({
                     <VideoPreviewTextEditor
                       hookValue={hookDraft}
                       captionValue={captionDraft}
-                      slideNotes={slideNotes}
                       isDirty={isDirty}
                       isSaving={isSaving}
                       errorMessage={errorMessage}

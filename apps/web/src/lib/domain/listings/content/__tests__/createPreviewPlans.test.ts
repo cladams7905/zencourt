@@ -233,4 +233,44 @@ describe("createPreviewPlans", () => {
       })
     ]);
   });
+
+  it("ignores slide body text when selecting video feature clips", () => {
+    const [plan] = buildListingCreatePreviewPlans({
+      listingId: "listing-1",
+      activeMediaTab: "videos",
+      activeSubcategory: "property_features",
+      activeContentItems: [
+        {
+          id: "caption-1",
+          hook: "Exterior entertaining",
+          body: [{ header: "Kitchen island", content: "Quartz counters" }]
+        }
+      ],
+      listingClipItems: [
+        {
+          id: "clip-exterior",
+          reelClipSource: "listing_clip",
+          videoUrl: "https://example.com/exterior.mp4",
+          durationSeconds: 4,
+          category: "exterior",
+          alt: "Back patio"
+        },
+        {
+          id: "clip-kitchen",
+          reelClipSource: "listing_clip",
+          videoUrl: "https://example.com/kitchen.mp4",
+          durationSeconds: 4,
+          category: "kitchen",
+          alt: "Kitchen island"
+        }
+      ]
+    } as never);
+
+    expect(plan.segments).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ clipId: "clip-exterior" }),
+        expect.objectContaining({ clipId: "clip-kitchen" })
+      ])
+    );
+  });
 });

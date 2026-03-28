@@ -12,7 +12,6 @@ describe("listing reel helpers", () => {
         listingSubcategory: "new_listing",
         hook: "Fresh to market",
         caption: "Open concept with natural light",
-        body: [{ header: "Kitchen", content: "Quartz counters" }],
         brollQuery: "kitchen",
         sequence: [
           {

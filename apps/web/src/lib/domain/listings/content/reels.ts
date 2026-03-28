@@ -1,5 +1,5 @@
 import type { ListingContentSubcategory } from "@shared/types/models";
-import type { CarouselSlide, ReelSequenceItem } from "./index";
+import type { ReelSequenceItem } from "./index";
 
 export type SavedListingReelMetadata = {
   source: "listing_reel";
@@ -7,7 +7,6 @@ export type SavedListingReelMetadata = {
   listingSubcategory: ListingContentSubcategory;
   hook: string;
   caption: string | null;
-  body: CarouselSlide[] | null;
   brollQuery: string | null;
   sequence: ReelSequenceItem[];
   originCacheKeyTimestamp?: number;

@@ -62,6 +62,9 @@ describe("contentGeneration helpers", () => {
       writing_tone_level: 3,
       writing_tone_label: "Conversational",
       writing_style_description: "Clear"
+    },
+    content_request: {
+      media_type: "video" as const
     }
   };
 
@@ -133,6 +136,7 @@ describe("contentGeneration helpers", () => {
       expect.objectContaining({
         systemPrompt: "system prompt",
         userPrompt: "user prompt",
+        mediaType: "video",
         redis: mockRedis,
         logger: expect.anything()
       })
@@ -161,6 +165,7 @@ describe("contentGeneration helpers", () => {
     expect(mockRedis.lrange).not.toHaveBeenCalled();
     expect(mockCreateSseResponse).toHaveBeenCalledWith(
       expect.objectContaining({
+        mediaType: "video",
         redis: null
       })
     );

@@ -46,6 +46,7 @@ describe("listing reel mappers", () => {
     ).toEqual(
       expect.objectContaining({
         id: "saved-content-1",
+        body: null,
         contentSource: "saved_content",
         savedContentId: "content-1"
       })

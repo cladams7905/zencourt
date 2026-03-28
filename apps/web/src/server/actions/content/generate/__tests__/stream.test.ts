@@ -91,6 +91,7 @@ describe("contentGeneration stream", () => {
       const result = await createSseResponse({
         systemPrompt: "system",
         userPrompt: "user",
+        mediaType: "video",
         redis: null,
         recentHooksKey: "key",
         logger
@@ -122,6 +123,7 @@ describe("contentGeneration stream", () => {
         createSseResponse({
           systemPrompt: "s",
           userPrompt: "u",
+          mediaType: "video",
           redis: null,
           recentHooksKey: "k",
           logger
@@ -131,6 +133,7 @@ describe("contentGeneration stream", () => {
         createSseResponse({
           systemPrompt: "s",
           userPrompt: "u",
+          mediaType: "video",
           redis: null,
           recentHooksKey: "k",
           logger
@@ -149,6 +152,7 @@ describe("contentGeneration stream", () => {
         createSseResponse({
           systemPrompt: "s",
           userPrompt: "u",
+          mediaType: "video",
           redis: null,
           recentHooksKey: "k",
           logger
@@ -158,6 +162,7 @@ describe("contentGeneration stream", () => {
         createSseResponse({
           systemPrompt: "s",
           userPrompt: "u",
+          mediaType: "video",
           redis: null,
           recentHooksKey: "k",
           logger
@@ -175,6 +180,7 @@ describe("contentGeneration stream", () => {
         createSseResponse({
           systemPrompt: "s",
           userPrompt: "u",
+          mediaType: "video",
           redis: null,
           recentHooksKey: "k",
           logger
@@ -184,6 +190,7 @@ describe("contentGeneration stream", () => {
         createSseResponse({
           systemPrompt: "s",
           userPrompt: "u",
+          mediaType: "video",
           redis: null,
           recentHooksKey: "k",
           logger
@@ -204,6 +211,7 @@ describe("contentGeneration stream", () => {
       const result = await createSseResponse({
         systemPrompt: "s",
         userPrompt: "u",
+        mediaType: "video",
         redis: null,
         recentHooksKey: "k",
         logger
@@ -222,6 +230,47 @@ describe("contentGeneration stream", () => {
       const errorEvent = parsed.find((p) => p && p.type === "error");
       expect(errorEvent).toBeDefined();
       expect(errorEvent.message).toContain("could not be parsed");
+    });
+
+    it("uses the video-specific output schema when mediaType is video", async () => {
+      const upstream = makeUpstreamStream([
+        'data: {"type":"message_stop"}\n\n'
+      ]);
+      mockGenerateStructuredStreamForUseCase.mockResolvedValue({
+        ok: true,
+        body: upstream
+      });
+
+      await createSseResponse({
+        systemPrompt: "system",
+        userPrompt: "user",
+        mediaType: "video",
+        redis: null,
+        recentHooksKey: "key",
+        logger
+      });
+
+      expect(mockGenerateStructuredStreamForUseCase).toHaveBeenCalledWith(
+        expect.objectContaining({
+          outputFormat: expect.objectContaining({
+            schema: expect.objectContaining({
+              items: expect.objectContaining({
+                properties: expect.objectContaining({
+                  body: expect.objectContaining({
+                    anyOf: expect.arrayContaining([{ type: "null" }])
+                  })
+                })
+              })
+            })
+          })
+        })
+      );
+
+      const outputFormat =
+        mockGenerateStructuredStreamForUseCase.mock.calls[0]?.[0]?.outputFormat;
+      const bodyAnyOf =
+        outputFormat?.schema?.items?.properties?.body?.anyOf ?? [];
+      expect(bodyAnyOf).toEqual([{ type: "null" }]);
     });
   });
 });

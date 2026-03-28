@@ -8,7 +8,7 @@ import {
   RECENT_HOOKS_MAX,
   RECENT_HOOKS_TTL_SECONDS
 } from "@web/src/server/services/contentRotation";
-import { OUTPUT_FORMAT } from "./domain/outputFormat";
+import { buildOutputFormat } from "./domain/outputFormat";
 import {
   extractTextDelta,
   parseJsonArray,
@@ -26,6 +26,7 @@ type Logger = {
 async function initializeAiStream(
   systemPrompt: string,
   userPrompt: string,
+  mediaType: "image" | "video",
   logger: Logger
 ): Promise<ReadableStream<Uint8Array>> {
   let response: Response;
@@ -34,7 +35,7 @@ async function initializeAiStream(
       useCase: "content_generation_stream",
       system: systemPrompt,
       messages: [{ role: "user", content: userPrompt }],
-      outputFormat: OUTPUT_FORMAT
+      outputFormat: buildOutputFormat(mediaType)
     });
   } catch (error) {
     throw new DomainDependencyError(
@@ -205,6 +206,7 @@ function sendDoneEvent(
 export async function createSseResponse(args: {
   systemPrompt: string;
   userPrompt: string;
+  mediaType: "image" | "video";
   redis: Redis | null;
   recentHooksKey: string;
   logger: Logger;
@@ -212,10 +214,15 @@ export async function createSseResponse(args: {
   stream: ReadableStream;
   status: number;
 }> {
-  const { systemPrompt, userPrompt, redis, recentHooksKey, logger } = args;
+  const { systemPrompt, userPrompt, mediaType, redis, recentHooksKey, logger } = args;
   const streamConfig = getAiUseCaseConfig("content_generation_stream");
 
-  const upstream = await initializeAiStream(systemPrompt, userPrompt, logger);
+  const upstream = await initializeAiStream(
+    systemPrompt,
+    userPrompt,
+    mediaType,
+    logger
+  );
 
   const stream = new ReadableStream({
     async start(controller) {

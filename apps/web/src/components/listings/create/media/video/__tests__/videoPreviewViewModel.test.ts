@@ -176,6 +176,12 @@ describe("videoPreviewViewModel", () => {
     expect(result[0]?.resolvedSegments).toHaveLength(2);
     expect(result[0]?.resolvedSegments[0]?.maxDurationSeconds).toBe(3);
     expect(result[0]?.thumbnailOverlay).not.toBeNull();
+    expect(result[0]?.resolvedSegments[0]?.textOverlay?.text).toBe(
+      "Luxury home"
+    );
+    expect(result[0]?.resolvedSegments[1]?.textOverlay).toEqual(
+      result[0]?.resolvedSegments[0]?.textOverlay
+    );
     expect(result[0]?.firstThumb).toBe("https://img/1.jpg");
     expect(result[0]?.captionItemKey).toEqual({
       cacheKeyTimestamp: 123,
@@ -299,14 +305,14 @@ describe("videoPreviewViewModel", () => {
     ).toContain("123 Main St");
   });
 
-  it("does not add supplemental address overlay when header already includes address", () => {
+  it("does not add supplemental address overlay when hook already includes address", () => {
     const result = buildPlayablePreviews({
       plans: basePlans,
       items: baseItems,
       captionItems: [
         {
           id: "cap-1",
-          body: [{ header: "Tour 123 Main St today", content: "Open layout" }]
+          hook: "Tour 123 Main St today"
         } as ContentItem
       ],
       listingSubcategory: "new_listing",
@@ -329,6 +335,7 @@ describe("videoPreviewViewModel", () => {
       captionItems: [
         {
           id: "cap-1",
+          hook: "Headline",
           body: [
             {
               header: "Headline",
@@ -361,7 +368,7 @@ describe("videoPreviewViewModel", () => {
       captionItems: [
         {
           id: "cap-1",
-          body: [{ header: "B", content: "Body" }]
+          hook: "B"
         } as ContentItem
       ],
       listingSubcategory: "status_update",
@@ -385,7 +392,7 @@ describe("videoPreviewViewModel", () => {
       captionItems: [
         {
           id: "cap-1",
-          body: [{ header: "Headline", content: "Body" }]
+          hook: "Headline"
         } as ContentItem
       ],
       listingSubcategory: "status_update",
@@ -449,12 +456,7 @@ describe("videoPreviewViewModel", () => {
       captionItems: [
         {
           id: "cap-1",
-          body: [
-            {
-              header: "Join us Mar 1st, 1-3PM at 123 Main St",
-              content: "See you there"
-            }
-          ]
+          hook: "Join us Mar 1st, 1-3PM at 123 Main St"
         } as ContentItem
       ],
       listingSubcategory: "open_house",
@@ -491,6 +493,7 @@ describe("videoPreviewViewModel", () => {
       captionItems: [
         {
           id: "cap-1",
+          hook: "Tour this home",
           body: [{ header: "Tour this home", content: "Open concept" }]
         } as ContentItem
       ],
@@ -510,5 +513,32 @@ describe("videoPreviewViewModel", () => {
     expect(
       result[0]?.resolvedSegments[0]?.supplementalAddressOverlay?.overlay.text
     ).toBe("📍 123 Main St");
+  });
+
+  it("ignores slide headers for video overlays and uses the hook only", () => {
+    const result = buildPlayablePreviews({
+      plans: basePlans,
+      items: baseItems,
+      captionItems: [
+        {
+          id: "cap-1",
+          hook: "Hook wins",
+          body: [{ header: "Slide header", content: "Slide body" }]
+        } as ContentItem
+      ],
+      listingSubcategory: "status_update",
+      listingAddress: null,
+      openHouseContext: null,
+      previewFps: 30
+    });
+
+    expect(result[0]?.resolvedSegments[0]?.textOverlay?.text).toBe("Hook wins");
+    expect(result[0]?.resolvedSegments[0]?.textOverlay?.lines).toEqual([
+      { text: "Hook wins", fontRole: "body" }
+    ]);
+    expect(mockAppendRandomHeaderSuffix).toHaveBeenCalledWith(
+      "Hook wins",
+      expect.objectContaining({ emojis: [] })
+    );
   });
 });

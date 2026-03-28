@@ -3,6 +3,7 @@ import {
   buildSystemPrompt,
   buildUserPrompt
 } from "@web/src/lib/ai/prompts/engine/assemble";
+import { resolveContentMediaType } from "@web/src/lib/ai/prompts/engine/promptHelpers";
 import {
   createChildLogger,
   logger as baseLogger
@@ -80,6 +81,7 @@ export async function runContentGenerationForUser(
   return createSseResponse({
     systemPrompt,
     userPrompt,
+    mediaType: resolveContentMediaType(body.content_request),
     redis,
     recentHooksKey,
     logger

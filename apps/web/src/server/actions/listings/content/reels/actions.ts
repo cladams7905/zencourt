@@ -114,7 +114,6 @@ async function saveCachedReelAsContent(params: {
     listingSubcategory: saveTarget.subcategory as never,
     hook: normalizedInput.hook,
     caption: normalizedInput.caption,
-    body: cachedItem.body ?? null,
     brollQuery: cachedItem.broll_query ?? null,
     sequence: normalizedInput.sequence,
     originCacheKeyTimestamp: saveTarget.cacheKeyTimestamp,

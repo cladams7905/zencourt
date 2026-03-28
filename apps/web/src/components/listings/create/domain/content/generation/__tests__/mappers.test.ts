@@ -20,7 +20,14 @@ describe("contentGeneration/mappers", () => {
 
   it("maps streamed and final items to content items with defaults", () => {
     const streamed = mapStreamedItemsToContentItems({
-      items: [{ hook: "Hook 1", caption: "Caption 1", broll_query: "query-1" }],
+      items: [
+        {
+          hook: "Hook 1",
+          caption: "Caption 1",
+          broll_query: "query-1",
+          body: [{ header: "Slide", content: "Body", broll_query: "query-1" }]
+        }
+      ],
       batchItemIds: ["id-1"],
       subcategory: "new_listing",
       mediaType: "video"
@@ -38,6 +45,7 @@ describe("contentGeneration/mappers", () => {
       isFavorite: false,
       hook: "Hook 1",
       caption: "Caption 1",
+      body: null,
       brollQuery: "query-1",
       listingSubcategory: "new_listing",
       mediaType: "video"

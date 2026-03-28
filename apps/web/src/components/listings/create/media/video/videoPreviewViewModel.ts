@@ -1,6 +1,5 @@
 import type {
-  ListingContentItem as ContentItem,
-  TextOverlayInput
+  ListingContentItem as ContentItem
 } from "@web/src/lib/domain/listings/content";
 import type {
   PreviewTextOverlay,
@@ -27,7 +26,6 @@ const LOCATION_EMOJI = "📍";
 
 interface SlideOverlayData {
   plainText: string;
-  textOverlay?: TextOverlayInput | null;
 }
 
 function buildPreviewStyleSeed(
@@ -62,20 +60,8 @@ function buildPreviewStyleSeed(
 function getSlideOverlayData(
   captionItem: ContentItem | null
 ): SlideOverlayData[] {
-  const slides = captionItem?.body ?? [];
-  const data: SlideOverlayData[] = slides
-    .filter((slide) => slide.header?.trim())
-    .map((slide) => ({
-      plainText: slide.header.trim(),
-      textOverlay: slide.text_overlay ?? null
-    }));
-
-  if (data.length > 0) {
-    return data;
-  }
-
-  const fallback = captionItem?.hook?.trim();
-  return fallback ? [{ plainText: fallback }] : [];
+  const hook = captionItem?.hook?.trim();
+  return hook ? [{ plainText: hook }] : [];
 }
 
 function normalizeForAddressMatch(value: string): string {
@@ -96,9 +82,6 @@ function slideContainsAddress(
 ): boolean {
   const parts = [
     slideData.plainText,
-    slideData.textOverlay?.headline ?? "",
-    slideData.textOverlay?.accent_top ?? "",
-    slideData.textOverlay?.accent_bottom ?? ""
   ];
 
   return parts.some((value) =>
@@ -115,10 +98,7 @@ function slideContainsAnyTerm(
   }
 
   const parts = [
-    slideData.plainText,
-    slideData.textOverlay?.headline ?? "",
-    slideData.textOverlay?.accent_top ?? "",
-    slideData.textOverlay?.accent_bottom ?? ""
+    slideData.plainText
   ]
     .map(normalizeForAddressMatch)
     .filter(Boolean);
@@ -186,24 +166,21 @@ function buildRichOverlay(
   variant: OverlayVariant,
   options?: { forceSimpleTemplate?: boolean }
 ): PreviewTextOverlay {
-  const textOverlay = slideData.textOverlay;
-  const normalizedOverlay = options?.forceSimpleTemplate
-    ? {
-        headline: textOverlay?.headline ?? slideData.plainText,
-        accent_top: null,
-        accent_bottom: null
-      }
-    : textOverlay;
-
   const { pattern: templatePattern, lines } = buildOverlayTemplateLines(
-    normalizedOverlay,
+    options?.forceSimpleTemplate
+      ? {
+          headline: slideData.plainText,
+          accent_top: null,
+          accent_bottom: null
+        }
+      : undefined,
     slideData.plainText,
     options?.forceSimpleTemplate ? "simple" : undefined
   );
 
   const isRichTemplate = templatePattern !== "simple";
-  const simpleSeedBase = `${slideData.plainText}:${normalizedOverlay?.headline ?? "simple"}:${variant.position}:${variant.fontPairing}`;
-  const richSeedBase = `${slideData.plainText}:${normalizedOverlay?.headline ?? "rich"}:${variant.position}`;
+  const simpleSeedBase = `${slideData.plainText}:simple:${variant.position}:${variant.fontPairing}`;
+  const richSeedBase = `${slideData.plainText}:rich:${variant.position}`;
   const brownBackgroundOptions: PreviewTextOverlay["background"][] = [
     "brown",
     "brown-700",

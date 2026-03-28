@@ -23,7 +23,7 @@ export function mapSavedReelContentToCreateItem(
     isFavorite: contentRow.isFavorite,
     hook: metadata.hook,
     caption: metadata.caption ?? null,
-    body: metadata.body ?? null,
+    body: null,
     brollQuery: metadata.brollQuery ?? null,
     listingSubcategory: metadata.listingSubcategory,
     mediaType: "video",

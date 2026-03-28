@@ -23,7 +23,7 @@ function buildGeneratedContentItem(params: {
     isFavorite: false,
     hook: params.item.hook,
     caption: params.item.caption ?? null,
-    body: params.item.body ?? null,
+    body: null,
     brollQuery: params.item.broll_query ?? null,
     listingSubcategory: params.subcategory,
     mediaType: "video",

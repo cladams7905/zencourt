@@ -99,7 +99,16 @@ function createSelectedPreview(overrides?: Partial<ContentItem>): PlayablePrevie
         thumbnailSrc: "https://img/1.jpg",
         category: "kitchen",
         durationSeconds: 2.5,
-        maxDurationSeconds: 4
+        maxDurationSeconds: 4,
+        textOverlay: {
+          text: "Original hook",
+          position: "center",
+          background: "black",
+          font: "sans-modern",
+          templatePattern: "simple",
+          lines: [{ text: "Original hook", fontRole: "body" }],
+          fontPairing: "contemporary-script"
+        }
       },
       {
         clipId: "clip-2",
@@ -107,7 +116,16 @@ function createSelectedPreview(overrides?: Partial<ContentItem>): PlayablePrevie
         thumbnailSrc: "https://img/2.jpg",
         category: "exterior",
         durationSeconds: 5,
-        maxDurationSeconds: 6
+        maxDurationSeconds: 6,
+        textOverlay: {
+          text: "Original hook",
+          position: "center",
+          background: "black",
+          font: "sans-modern",
+          templatePattern: "simple",
+          lines: [{ text: "Original hook", fontRole: "body" }],
+          fontPairing: "contemporary-script"
+        }
       }
     ],
     thumbnailOverlay: null,
@@ -119,7 +137,6 @@ function createSelectedPreview(overrides?: Partial<ContentItem>): PlayablePrevie
       id: "caption-1",
       hook: "Original hook",
       caption: "Original caption",
-      body: [{ header: "Slide one", content: "Slide body" }],
       cacheKeyTimestamp: 123,
       cacheKeyId: 4,
       ...overrides
@@ -187,6 +204,7 @@ describe("VideoPreviewModal", () => {
       screen.getAllByAltText("Kitchen clip thumbnail").length
     );
     expect(screen.getByText("Timeline")).toBeInTheDocument();
+    expect(screen.queryByText("Slide Notes")).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Undo timeline change" })
     ).toBeDisabled();
@@ -687,7 +705,12 @@ describe("VideoPreviewModal", () => {
         expect.objectContaining({
           inputProps: expect.objectContaining({
             segments: expect.arrayContaining([
-              expect.objectContaining({ clipId: "user-media:media-1" })
+              expect.objectContaining({
+                clipId: "user-media:media-1",
+                textOverlay: expect.objectContaining({
+                  text: "Original hook"
+                })
+              })
             ])
           })
         })
