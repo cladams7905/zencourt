@@ -28,7 +28,8 @@ describe("render queue", () => {
     const queue = createRenderQueue(provider);
     const onComplete = jest.fn().mockResolvedValue({
       videoUrl: "https://cdn/video.mp4",
-      thumbnailUrl: "https://cdn/thumb.jpg"
+      thumbnailUrl: "https://cdn/thumb.jpg",
+      artifactPath: "/tmp/export-job-1.mp4"
     });
 
     const jobId = queue.createJob(
@@ -48,7 +49,9 @@ describe("render queue", () => {
     expect(queue.getJob("job-1")).toMatchObject({
       status: "completed",
       videoUrl: "https://cdn/video.mp4",
-      thumbnailUrl: "https://cdn/thumb.jpg"
+      thumbnailUrl: "https://cdn/thumb.jpg",
+      artifactReady: true,
+      artifactPath: "/tmp/export-job-1.mp4"
     });
   });
 

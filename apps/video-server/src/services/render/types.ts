@@ -25,6 +25,8 @@ export type RenderJobState =
       data: RenderJobData;
       videoUrl?: string;
       thumbnailUrl?: string;
+      artifactReady?: boolean;
+      artifactPath?: string;
     }
   | {
       status: "failed";

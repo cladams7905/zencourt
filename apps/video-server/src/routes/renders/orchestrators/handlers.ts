@@ -13,6 +13,9 @@ type RenderContext = {
 
 type RenderQueueJob = {
   status: "queued" | "in-progress" | "completed" | "failed" | "canceled";
+  progress?: number;
+  error?: string;
+  artifactReady?: boolean;
 };
 
 type RenderQueuePort = {
@@ -115,7 +118,49 @@ export function handleGetRenderJob(
   if (!job) {
     return { status: 404, body: { success: false, error: "Job not found" } };
   }
-  return { status: 200, body: { success: true, job } };
+
+  switch (job.status) {
+    case "queued":
+      return {
+        status: 200,
+        body: { success: true, job: { status: "queued", progress: 0 } }
+      };
+    case "in-progress":
+      return {
+        status: 200,
+        body: {
+          success: true,
+          job: { status: "in-progress", progress: job.progress ?? 0 }
+        }
+      };
+    case "completed":
+      return {
+        status: 200,
+        body: {
+          success: true,
+          job: {
+            status: "completed",
+            progress: 1,
+            artifactReady: Boolean(job.artifactReady)
+          }
+        }
+      };
+    case "failed":
+      return {
+        status: 200,
+        body: {
+          success: true,
+          job: { status: "failed", error: job.error }
+        }
+      };
+    case "canceled":
+      return {
+        status: 200,
+        body: { success: true, job: { status: "canceled" } }
+      };
+    default:
+      return { status: 404, body: { success: false, error: "Job not found" } };
+  }
 }
 
 export function handleCancelRenderJob(

@@ -1,8 +1,14 @@
 import { and, db, eq, listings } from "@db/client";
 import { StatusCode } from "@shared/types/api";
+import {
+  createChildLogger,
+  logger as baseLogger
+} from "@web/src/lib/core/logging";
 import { ApiError } from "@web/src/server/errors/api";
 
 type Listing = typeof listings.$inferSelect;
+
+const logger = createChildLogger(baseLogger, { module: "listings-access" });
 
 /**
  * Ensures the user has access to the listing (listing exists and belongs to user).
@@ -14,6 +20,7 @@ export async function requireListingAccess(
   userId: string
 ): Promise<Listing> {
   if (!listingId) {
+    logger.warn("requireListingAccess: no listing ID provided");
     throw new ApiError(StatusCode.BAD_REQUEST, {
       error: "Invalid request",
       message: "Listing ID is required"
@@ -40,12 +47,14 @@ export async function requireListingAccess(
     .limit(1);
 
   if (existsResult.length === 0) {
+    logger.warn("Listing not found");
     throw new ApiError(StatusCode.NOT_FOUND, {
       error: "Not found",
       message: "Listing not found"
     });
   }
 
+  logger.warn("User does not have access to listing");
   throw new ApiError(StatusCode.FORBIDDEN, {
     error: "Forbidden",
     message: "You don't have access to this listing"

@@ -58,7 +58,10 @@ jest.mock("@web/src/server/models/content", () => ({
     (mockUpdateContent as (...a: unknown[]) => unknown)(...args)
 }));
 
-import { saveListingVideoReel } from "@web/src/server/actions/listings/content/reels";
+import {
+  saveAndFavoriteListingVideoReel,
+  saveListingVideoReel
+} from "@web/src/server/actions/listings/content/reels";
 import {
   collectReelReferencedUserMediaIds,
   collectReelReferencedUserMediaIdsFromSnapshot
@@ -263,6 +266,252 @@ describe("saveListingVideoReel", () => {
       })
     );
     expect(mockDeleteCachedListingContentItem).not.toHaveBeenCalled();
+  });
+});
+
+describe("saveAndFavoriteListingVideoReel", () => {
+  beforeEach(() => {
+    jest.resetAllMocks();
+    mockRequireAuthenticatedUser.mockResolvedValue({ id: "user-1" });
+    mockRequireListingAccess.mockResolvedValue({ id: "listing-1" });
+  });
+
+  it("promotes a cached reel and then marks the saved content favorite", async () => {
+    mockGetCachedListingContentItem.mockResolvedValue({
+      hook: "Cached hook",
+      caption: "Cached caption",
+      broll_query: "kitchen",
+      body: null,
+      cta: null
+    });
+    mockCreateContent.mockResolvedValue({
+      id: "saved-reel-1",
+      listingId: "listing-1",
+      userId: "user-1",
+      contentType: "video",
+      status: "draft",
+      contentUrl: null,
+      thumbnailUrl: null,
+      isFavorite: false,
+      metadata: {
+        source: "listing_reel",
+        version: 1,
+        listingSubcategory: "new_listing",
+        hook: "Updated hook",
+        caption: "Updated caption",
+        brollQuery: "kitchen",
+        overlayBackground: "black",
+        overlayPosition: "center",
+        overlayFontPairing: "contemporary-script",
+        showAddress: false,
+        sequence: [
+          {
+            sourceType: "listing_clip",
+            sourceId: "clip-1",
+            durationSeconds: 2.5
+          }
+        ],
+        originCacheKeyTimestamp: 123,
+        originCacheKeyId: 4
+      }
+    });
+    mockUpdateContent.mockResolvedValue({
+      id: "saved-reel-1",
+      listingId: "listing-1",
+      userId: "user-1",
+      contentType: "video",
+      status: "draft",
+      contentUrl: null,
+      thumbnailUrl: null,
+      isFavorite: true,
+      metadata: {
+        source: "listing_reel",
+        version: 1,
+        listingSubcategory: "new_listing",
+        hook: "Updated hook",
+        caption: "Updated caption",
+        brollQuery: "kitchen",
+        overlayBackground: "black",
+        overlayPosition: "center",
+        overlayFontPairing: "contemporary-script",
+        showAddress: false,
+        sequence: [
+          {
+            sourceType: "listing_clip",
+            sourceId: "clip-1",
+            durationSeconds: 2.5
+          }
+        ],
+        originCacheKeyTimestamp: 123,
+        originCacheKeyId: 4
+      }
+    });
+
+    const result = await saveAndFavoriteListingVideoReel("listing-1", {
+      hook: "Updated hook",
+      caption: "Updated caption",
+      overlayBackground: "black",
+      overlayPosition: "center",
+      overlayFontPairing: "contemporary-script",
+      showAddress: false,
+      orderedClipIds: ["clip-1"],
+      clipDurationOverrides: { "clip-1": 2.5 },
+      sequence: [
+        {
+          sourceType: "listing_clip" as const,
+          sourceId: "clip-1",
+          durationSeconds: 2.5
+        }
+      ],
+      saveTarget: {
+        contentSource: "cached_create",
+        cacheKeyTimestamp: 123,
+        cacheKeyId: 4,
+        subcategory: "new_listing",
+        mediaType: "video"
+      }
+    });
+
+    expect(mockCreateContent).toHaveBeenCalled();
+    expect(mockUpdateContent).toHaveBeenCalledWith("user-1", "saved-reel-1", {
+      isFavorite: true
+    });
+    expect(result).toEqual(
+      expect.objectContaining({
+        savedContentId: "saved-reel-1",
+        contentSource: "saved_content",
+        isFavorite: true
+      })
+    );
+  });
+
+  it("updates an existing saved reel and then marks it favorite", async () => {
+    mockGetContentById.mockResolvedValue({
+      id: "saved-reel-1",
+      listingId: "listing-1",
+      userId: "user-1",
+      contentType: "video",
+      status: "draft",
+      contentUrl: null,
+      thumbnailUrl: null,
+      isFavorite: false,
+      metadata: {
+        source: "listing_reel",
+        version: 1,
+        listingSubcategory: "new_listing",
+        hook: "Original hook",
+        caption: "Original caption",
+        brollQuery: "kitchen",
+        overlayBackground: "black",
+        overlayPosition: "center",
+        overlayFontPairing: "contemporary-script",
+        showAddress: false,
+        sequence: [
+          {
+            sourceType: "listing_clip",
+            sourceId: "clip-1",
+            durationSeconds: 2.5
+          }
+        ]
+      }
+    });
+    mockUpdateContent
+      .mockResolvedValueOnce({
+        id: "saved-reel-1",
+        listingId: "listing-1",
+        userId: "user-1",
+        contentType: "video",
+        status: "draft",
+        contentUrl: null,
+        thumbnailUrl: null,
+        isFavorite: false,
+        metadata: {
+          source: "listing_reel",
+          version: 1,
+          listingSubcategory: "new_listing",
+          hook: "Updated hook",
+          caption: "Updated caption",
+          brollQuery: "kitchen",
+          overlayBackground: "white",
+          overlayPosition: "top-third",
+          overlayFontPairing: "editorial-clean",
+          showAddress: true,
+          sequence: [
+            {
+              sourceType: "listing_clip",
+              sourceId: "clip-1",
+              durationSeconds: 3
+            }
+          ]
+        }
+      })
+      .mockResolvedValueOnce({
+        id: "saved-reel-1",
+        listingId: "listing-1",
+        userId: "user-1",
+        contentType: "video",
+        status: "draft",
+        contentUrl: null,
+        thumbnailUrl: null,
+        isFavorite: true,
+        metadata: {
+          source: "listing_reel",
+          version: 1,
+          listingSubcategory: "new_listing",
+          hook: "Updated hook",
+          caption: "Updated caption",
+          brollQuery: "kitchen",
+          overlayBackground: "white",
+          overlayPosition: "top-third",
+          overlayFontPairing: "editorial-clean",
+          showAddress: true,
+          sequence: [
+            {
+              sourceType: "listing_clip",
+              sourceId: "clip-1",
+              durationSeconds: 3
+            }
+          ]
+        }
+      });
+
+    const result = await saveAndFavoriteListingVideoReel("listing-1", {
+      hook: "Updated hook",
+      caption: "Updated caption",
+      overlayBackground: "white",
+      overlayPosition: "top-third",
+      overlayFontPairing: "editorial-clean",
+      showAddress: true,
+      orderedClipIds: ["clip-1"],
+      clipDurationOverrides: { "clip-1": 3 },
+      sequence: [
+        {
+          sourceType: "listing_clip" as const,
+          sourceId: "clip-1",
+          durationSeconds: 3
+        }
+      ],
+      saveTarget: {
+        contentSource: "saved_content",
+        savedContentId: "saved-reel-1"
+      }
+    });
+
+    expect(mockUpdateContent).toHaveBeenNthCalledWith(
+      1,
+      "user-1",
+      "saved-reel-1",
+      expect.objectContaining({
+        metadata: expect.objectContaining({
+          hook: "Updated hook",
+          caption: "Updated caption"
+        })
+      })
+    );
+    expect(mockUpdateContent).toHaveBeenNthCalledWith(2, "user-1", "saved-reel-1", {
+      isFavorite: true
+    });
+    expect(result).toEqual(expect.objectContaining({ isFavorite: true }));
   });
 });
 

@@ -7,6 +7,7 @@ import type { CancelSignal } from "@remotion/renderer";
 export type RenderQueueFacade = {
   getJob: (jobId: string) => RenderJobState | undefined;
   cancelJob: (jobId: string) => boolean;
+  clearArtifact: (jobId: string) => Promise<boolean>;
   createJob: (
     data: RenderJobData,
     handlers?: {
@@ -15,7 +16,11 @@ export type RenderQueueFacade = {
       onComplete?: (
         result: RenderOutput,
         data: RenderJobData
-      ) => Promise<{ videoUrl?: string; thumbnailUrl?: string }>;
+      ) => Promise<{
+        videoUrl?: string;
+        thumbnailUrl?: string;
+        artifactPath?: string;
+      }>;
       onError?: (error: Error, data: RenderJobData) => Promise<void>;
     },
     jobIdOverride?: string

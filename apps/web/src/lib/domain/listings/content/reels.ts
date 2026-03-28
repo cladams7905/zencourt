@@ -1,6 +1,7 @@
 import type { ListingContentSubcategory } from "@shared/types/models";
 import type {
   OverlayFontPairing,
+  PreviewTextOverlay,
   PreviewTextOverlayBackground,
   PreviewTextOverlayPosition
 } from "@shared/types/video";
@@ -20,6 +21,37 @@ export type SavedListingReelMetadata = {
   sequence: ReelSequenceItem[];
   originCacheKeyTimestamp?: number;
   originCacheKeyId?: number;
+};
+
+export type ListingReelExportStatus =
+  | "queued"
+  | "in-progress"
+  | "completed"
+  | "failed"
+  | "canceled";
+
+export type ListingReelExportJob = {
+  exportId: string;
+  status: ListingReelExportStatus;
+  progress: number;
+  errorMessage?: string;
+  downloadReady: boolean;
+};
+
+export type ListingReelExportSegment = {
+  sourceType: "listing_clip" | "user_media";
+  sourceId: string;
+  durationSeconds: number;
+  textOverlay?: PreviewTextOverlay | null;
+  supplementalAddressOverlay?: {
+    overlay: PreviewTextOverlay;
+    placement: "bottom-third" | "below-primary" | "low-bottom";
+  } | null;
+};
+
+export type ListingReelExportRequest = {
+  filenameBase?: string;
+  segments: ListingReelExportSegment[];
 };
 
 export function isSavedListingReelMetadata(

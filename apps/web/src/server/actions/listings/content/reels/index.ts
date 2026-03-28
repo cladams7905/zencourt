@@ -1,4 +1,7 @@
-export { saveListingVideoReel } from "./actions";
+export {
+  saveAndFavoriteListingVideoReel,
+  saveListingVideoReel
+} from "./actions";
 export {
   mapSavedReelContentToCreateItem,
   buildSavedReelDedupKey,

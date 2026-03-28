@@ -11,11 +11,27 @@ import {
 } from "../assets/layout";
 import { computeOverlayLineStyles } from "../renderer";
 import { pickSandwichOverlayArrowPath } from "../assets/arrows";
+import { splitTextWithEmojiUrls } from "../renderer/emojis";
 
 export interface PreviewTextOverlayRendererProps {
   overlay: PreviewTextOverlay;
   topOverride?: string;
   baseFontSizePxOverride?: number;
+}
+
+function normalizeTextSegment(
+  value: string,
+  previousEmoji: string | null
+): string {
+  if (previousEmoji === "📍" && value.startsWith("  ")) {
+    return `\u00A0\u00A0${value.slice(2)}`;
+  }
+
+  if (previousEmoji === "📍" && value.startsWith(" ")) {
+    return `\u00A0${value.slice(1)}`;
+  }
+
+  return value;
 }
 
 /**
@@ -86,9 +102,35 @@ export function PreviewTextOverlayRenderer({
               marginBottom: line.marginBottom
             }}
           >
-            {line.text.startsWith("📍 ")
-              ? line.text.replace(/^📍\s+/, "📍\u00A0\u00A0")
-              : line.text}
+            {splitTextWithEmojiUrls(line.text).map((segment, index, segments) => {
+              if (segment.type === "text") {
+                const previousSegment = segments[index - 1];
+                return (
+                  <span key={`${line.text}-text-${index}`}>
+                    {normalizeTextSegment(
+                      segment.value,
+                      previousSegment?.type === "emoji"
+                        ? previousSegment.value
+                        : null
+                    )}
+                  </span>
+                );
+              }
+
+              return (
+                <img
+                  key={`${line.text}-emoji-${index}`}
+                  src={segment.url}
+                  alt={segment.value}
+                  style={{
+                    display: "inline-block",
+                    width: "1em",
+                    height: "1em",
+                    verticalAlign: "-0.12em"
+                  }}
+                />
+              );
+            })}
           </div>
         ))}
         {arrowPath ? (

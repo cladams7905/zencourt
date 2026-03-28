@@ -2,7 +2,7 @@ import { existsSync } from "fs";
 import { mkdir, readFile, rm } from "fs/promises";
 import path from "path";
 import { tmpdir } from "os";
-import { bundle } from "@remotion/bundler";
+import { bundle, type BundleOptions, type WebpackOverrideFn } from "@remotion/bundler";
 import {
   ensureBrowser,
   renderMedia,
@@ -17,20 +17,27 @@ import type { RenderProvider } from "@/services/render/ports";
 
 const COMPOSITION_ID = "ListingVideo";
 
-function resolveEntryPoint(): string {
+export function resolveEntryPoint(
+  cwd = process.cwd(),
+  pathExists: (candidate: string) => boolean = existsSync
+): string {
   const candidates = [
     path.join(
-      process.cwd(),
-      "apps/video-server/src/services/render/providers/remotion/composition/Root.tsx"
+      cwd,
+      "apps/video-server/dist/apps/video-server/src/services/render/providers/remotion/composition/Root.js"
     ),
     path.join(
-      process.cwd(),
+      cwd,
       "dist/apps/video-server/src/services/render/providers/remotion/composition/Root.js"
+    ),
+    path.join(
+      cwd,
+      "apps/video-server/src/services/render/providers/remotion/composition/Root.tsx"
     )
   ];
 
   for (const candidate of candidates) {
-    if (existsSync(candidate)) {
+    if (pathExists(candidate)) {
       return candidate;
     }
   }
@@ -56,6 +63,22 @@ class RemotionProvider implements RenderProvider {
     this.cacheReady = true;
   }
 
+  private getWebpackOverride(): WebpackOverrideFn {
+    const cacheDirectory =
+      process.env.REMOTION_CACHE_DIR ||
+      process.env.TEMP_DIR ||
+      path.join(process.cwd(), "tmp/video-processing");
+
+    return (config) => ({
+      ...config,
+      cache: {
+        ...(typeof config.cache === "object" && config.cache ? config.cache : {}),
+        type: "filesystem",
+        cacheDirectory
+      }
+    });
+  }
+
   private async getBundleLocation(): Promise<string> {
     if (this.bundleLocation) {
       return this.bundleLocation;
@@ -68,8 +91,15 @@ class RemotionProvider implements RenderProvider {
     }
 
     const entryPoint = resolveEntryPoint();
+    const remotionRoot = path.join(process.cwd(), "apps/video-server");
     logger.info({ entryPoint }, "[RenderProvider] Bundling Remotion project");
-    this.bundleLocation = await bundle({ entryPoint, enableCaching: true });
+    const bundleOptions: BundleOptions = {
+      entryPoint,
+      enableCaching: true,
+      webpackOverride: this.getWebpackOverride(),
+      rootDir: remotionRoot
+    };
+    this.bundleLocation = await bundle(bundleOptions);
     return this.bundleLocation;
   }
 

@@ -1,6 +1,15 @@
+import { createReadStream } from "fs";
+import { mkdir, writeFile } from "fs/promises";
+import { tmpdir } from "os";
+import path from "path";
 import { Router, Request, Response } from "express";
+import logger from "@/config/logger";
 import { validateApiKey } from "@/middleware/auth";
-import { asyncHandler } from "@/middleware/errorHandler";
+import {
+  asyncHandler,
+  VideoProcessingError,
+  VideoProcessingErrorType
+} from "@/middleware/errorHandler";
 import { renderQueue } from "@/services/render";
 import {
   db,
@@ -23,10 +32,68 @@ import {
   parseCreateRenderRequest,
   parseRenderJobIdParam
 } from "@/routes/renders/domain/requests";
+import { parseCreateReelExportRequest } from "@/routes/renders/domain/reelExportRequests";
 
 const router = Router();
+const REEL_EXPORT_ARTIFACT_DIR = path.join(tmpdir(), "zencourt-reel-exports");
 
 router.use(validateApiKey);
+
+async function persistReelExportArtifact(
+  exportId: string,
+  videoBuffer: Buffer
+): Promise<string> {
+  await mkdir(REEL_EXPORT_ARTIFACT_DIR, { recursive: true });
+  const artifactPath = path.join(
+    REEL_EXPORT_ARTIFACT_DIR,
+    `${exportId}-${Date.now()}.mp4`
+  );
+  await writeFile(artifactPath, videoBuffer);
+  return artifactPath;
+}
+
+router.post(
+  "/reel-export",
+  asyncHandler(async (req: Request, res: Response) => {
+    const input = parseCreateReelExportRequest(req.body);
+    let lastLoggedBucket = -1;
+    const jobId = renderQueue.createJob(
+      {
+        videoId: input.exportId,
+        listingId: "reel-export",
+        userId: "reel-export",
+        clips: input.clips,
+        orientation: input.orientation
+      },
+      {
+        onProgress: async (progress) => {
+          const bucket = Math.floor(progress * 10);
+          if (bucket <= lastLoggedBucket) {
+            return;
+          }
+
+          lastLoggedBucket = bucket;
+          logger.info(
+            {
+              exportId: input.exportId,
+              progress: Number((progress * 100).toFixed(1))
+            },
+            "[RenderProvider] Reel export progress"
+          );
+        },
+        onComplete: async (result) => ({
+          artifactPath: await persistReelExportArtifact(
+            input.exportId,
+            result.videoBuffer
+          )
+        })
+      },
+      input.exportId
+    );
+
+    res.status(200).json({ success: true, jobId });
+  })
+);
 
 router.post(
   "/",
@@ -79,6 +146,46 @@ router.get(
     const jobId = parseRenderJobIdParam(req);
     const result = handleGetRenderJob(jobId, renderQueue);
     res.status(result.status).json(result.body);
+  })
+);
+
+router.get(
+  "/:jobId/artifact",
+  asyncHandler(async (req: Request, res: Response) => {
+    const jobId = parseRenderJobIdParam(req);
+    const job = renderQueue.getJob(jobId);
+
+    if (!job) {
+      throw new VideoProcessingError(
+        "Render job not found",
+        VideoProcessingErrorType.JOB_NOT_FOUND,
+        { statusCode: 404 }
+      );
+    }
+
+    if (
+      job.status !== "completed" ||
+      !job.artifactReady ||
+      !job.artifactPath
+    ) {
+      throw new VideoProcessingError(
+        "Render artifact not ready",
+        VideoProcessingErrorType.INVALID_INPUT,
+        { statusCode: 409 }
+      );
+    }
+
+    res.setHeader("Content-Type", "video/mp4");
+    res.setHeader("Cache-Control", "no-store");
+    const artifactPath = job.artifactPath;
+    const stream = createReadStream(artifactPath);
+    const cleanup = () => {
+      void renderQueue.clearArtifact(jobId);
+    };
+
+    res.once("finish", cleanup);
+    res.once("close", cleanup);
+    stream.pipe(res);
   })
 );
 

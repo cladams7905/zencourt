@@ -188,26 +188,60 @@ async function updateSavedReelContent(params: {
   return mapOrThrowSavedReel(updated);
 }
 
+async function saveListingVideoReelForUser(params: {
+  userId: string;
+  listingId: string;
+  input: PlayablePreviewTextUpdate;
+}) {
+  const normalizedInput = normalizeReelInput(params.input);
+
+  if (params.input.saveTarget.contentSource === "cached_create") {
+    return saveCachedReelAsContent({
+      userId: params.userId,
+      listingId: params.listingId,
+      saveTarget: params.input.saveTarget,
+      normalizedInput
+    });
+  }
+
+  return updateSavedReelContent({
+    userId: params.userId,
+    listingId: params.listingId,
+    saveTarget: params.input.saveTarget,
+    normalizedInput
+  });
+}
+
 export const saveListingVideoReel = withServerActionCaller(
   "saveListingVideoReel",
   async (listingId: string, params: PlayablePreviewTextUpdate) =>
     withCurrentUserListingAccess(listingId, async ({ user }) => {
-      const normalizedInput = normalizeReelInput(params);
-
-      if (params.saveTarget.contentSource === "cached_create") {
-        return saveCachedReelAsContent({
-          userId: user.id,
-          listingId,
-          saveTarget: params.saveTarget,
-          normalizedInput
-        });
-      }
-
-      return updateSavedReelContent({
+      return saveListingVideoReelForUser({
         userId: user.id,
         listingId,
-        saveTarget: params.saveTarget,
-        normalizedInput
+        input: params
       });
+    })
+);
+
+export const saveAndFavoriteListingVideoReel = withServerActionCaller(
+  "saveAndFavoriteListingVideoReel",
+  async (listingId: string, params: PlayablePreviewTextUpdate) =>
+    withCurrentUserListingAccess(listingId, async ({ user }) => {
+      const saved = await saveListingVideoReelForUser({
+        userId: user.id,
+        listingId,
+        input: params
+      });
+
+      if (!saved.savedContentId) {
+        throw new DomainValidationError("Saved reel content id is required.");
+      }
+
+      const favorited = await updateContent(user.id, saved.savedContentId, {
+        isFavorite: true
+      });
+
+      return mapOrThrowSavedReel(favorited);
     })
 );

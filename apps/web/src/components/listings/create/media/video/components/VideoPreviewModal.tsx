@@ -1,6 +1,8 @@
 import * as React from "react";
 import type { PlayerRef } from "@remotion/player";
-import { X } from "lucide-react";
+import useSWR from "swr";
+import { Download, Heart, Hourglass, X } from "lucide-react";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -18,6 +20,11 @@ import {
   AlertDialogTitle
 } from "@web/src/components/ui/alert-dialog";
 import { Button } from "@web/src/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger
+} from "@web/src/components/ui/tooltip";
 import { getTimelineDurationInFrames } from "@web/src/components/listings/create/media/video/components/ListingTimelinePreviewComposition";
 import { VideoPreviewPlayer } from "@web/src/components/listings/create/media/video/components/VideoPreviewPlayer";
 import {
@@ -34,6 +41,19 @@ import {
   type ReelOverlayDraft
 } from "@web/src/components/listings/create/media/video/videoPreviewOverlayControls";
 import { useUserMediaReelPickerInfinite } from "@web/src/components/listings/create/media/video/hooks";
+import {
+  clampReelDownloadProgress,
+  readReelDownloadBlob
+} from "@web/src/components/listings/create/media/video/reelExportClient";
+import type {
+  ListingReelExportJob,
+  ListingReelExportRequest,
+  ListingReelExportStatus
+} from "@web/src/lib/domain/listings/content/reels";
+import {
+  fetchApiData,
+  fetchStreamResponse
+} from "@web/src/lib/core/http/client";
 import type {
   PlayablePreview,
   PlayablePreviewTextUpdate
@@ -41,11 +61,21 @@ import type {
 import type { TimelinePreviewResolvedSegment } from "@web/src/components/listings/create/media/video/components/ListingTimelinePreviewComposition";
 type VideoPreviewModalProps = {
   selectedPreview: PlayablePreview | null;
+  listingId?: string;
   /** Count of user-owned video media (for enabling Add clip before picker fetch completes). */
   userMediaVideoCount: number;
   previewFps: number;
   onOpenChange: (open: boolean) => void;
   onSavePreviewText: (params: PlayablePreviewTextUpdate) => Promise<void>;
+  onSaveAndFavoritePreview?: (
+    params: PlayablePreviewTextUpdate
+  ) => Promise<void>;
+  downloadState?: {
+    isDownloading: boolean;
+    progress: number;
+    status?: ListingReelExportStatus | "starting";
+  } | null;
+  onDownloadPreview?: (params: ListingReelExportRequest) => Promise<void>;
 };
 
 function cloneSegments(segments: TimelinePreviewResolvedSegment[]) {
@@ -89,12 +119,18 @@ function extractFileNameFromVideoUrl(
   }
 }
 
+const REEL_EXPORT_POLL_INTERVAL_MS = 1000;
+
 export function VideoPreviewModal({
   selectedPreview,
+  listingId,
   userMediaVideoCount,
   previewFps,
   onOpenChange,
-  onSavePreviewText
+  onSavePreviewText,
+  onSaveAndFavoritePreview,
+  downloadState,
+  onDownloadPreview
 }: VideoPreviewModalProps) {
   const playerRef = React.useRef<PlayerRef | null>(null);
   const [playerInstance, setPlayerInstance] = React.useState<PlayerRef | null>(
@@ -120,6 +156,9 @@ export function VideoPreviewModal({
   currentFrameRef.current = currentFrame;
   const resizeHistoryCapturedRef = React.useRef(false);
   const [isSaving, setIsSaving] = React.useState(false);
+  const [isFavoriting, setIsFavoriting] = React.useState(false);
+  const [isDownloadStarting, setIsDownloadStarting] = React.useState(false);
+  const [downloadProgress, setDownloadProgress] = React.useState(0);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [isExitConfirmOpen, setIsExitConfirmOpen] = React.useState(false);
   const [isAddClipOpen, setIsAddClipOpen] = React.useState(false);
@@ -130,8 +169,13 @@ export function VideoPreviewModal({
     React.useState(0);
   const [userMediaScrollRoot, setUserMediaScrollRoot] =
     React.useState<HTMLDivElement | null>(null);
+  const [activeExport, setActiveExport] = React.useState<{
+    exportId: string;
+    filenameBase: string;
+  } | null>(null);
   const selectedPreviewRef = React.useRef(selectedPreview);
   selectedPreviewRef.current = selectedPreview;
+  const startedArtifactDownloadRef = React.useRef<string | null>(null);
 
   const pickerEnabled =
     Boolean(selectedPreview) &&
@@ -175,7 +219,11 @@ export function VideoPreviewModal({
     setCurrentFrame(0);
     setPlayerInstance(null);
     setIsSaving(false);
+    setIsDownloadStarting(false);
+    setActiveExport(null);
+    setDownloadProgress(0);
     setErrorMessage(null);
+    startedArtifactDownloadRef.current = null;
     resizeHistoryCapturedRef.current = false;
   }, [selectedPreview?.id]);
 
@@ -409,18 +457,14 @@ export function VideoPreviewModal({
     [pushTimelineHistory, userMediaPickerRows]
   );
 
-  const handleSave = React.useCallback(async () => {
-    const preview = selectedPreviewRef.current;
-    if (!preview?.captionItemKey) {
-      setErrorMessage("This preview cannot be edited yet.");
-      return;
-    }
+  const buildDraftPayload =
+    React.useCallback((): PlayablePreviewTextUpdate | null => {
+      const preview = selectedPreviewRef.current;
+      if (!preview?.captionItemKey) {
+        return null;
+      }
 
-    setIsSaving(true);
-    setErrorMessage(null);
-
-    try {
-      await onSavePreviewText({
+      return {
         hook: normalizedHook,
         caption: normalizedCaption,
         overlayBackground: overlayDraft.background,
@@ -440,7 +484,43 @@ export function VideoPreviewModal({
           durationSeconds: segment.durationSeconds
         })),
         saveTarget: preview.captionItemKey
-      });
+      };
+    }, [
+      normalizedCaption,
+      normalizedHook,
+      overlayDraft.background,
+      overlayDraft.fontPairing,
+      overlayDraft.position,
+      overlayDraft.showAddress,
+      segmentDraft
+    ]);
+
+  const buildExportPayload = React.useCallback(
+    (): ListingReelExportRequest => ({
+      filenameBase: `reel-preview-${selectedPreviewRef.current?.variationNumber ?? 1}`,
+      segments: segmentDraft.map((segment) => ({
+        sourceType: segment.sourceType ?? "listing_clip",
+        sourceId: segment.sourceId ?? segment.clipId,
+        durationSeconds: segment.durationSeconds,
+        textOverlay: segment.textOverlay ?? null,
+        supplementalAddressOverlay: segment.supplementalAddressOverlay ?? null
+      }))
+    }),
+    [segmentDraft]
+  );
+
+  const handleSave = React.useCallback(async () => {
+    const payload = buildDraftPayload();
+    if (!payload) {
+      setErrorMessage("This preview cannot be edited yet.");
+      return;
+    }
+
+    setIsSaving(true);
+    setErrorMessage(null);
+
+    try {
+      await onSavePreviewText(payload);
       handleCancel();
     } catch (error) {
       setErrorMessage(
@@ -449,17 +529,232 @@ export function VideoPreviewModal({
     } finally {
       setIsSaving(false);
     }
+  }, [buildDraftPayload, handleCancel, onSavePreviewText]);
+
+  const handleSaveAndFavorite = React.useCallback(async () => {
+    const payload = buildDraftPayload();
+    if (!payload || !onSaveAndFavoritePreview) {
+      setErrorMessage("This preview cannot be edited yet.");
+      return;
+    }
+
+    setIsFavoriting(true);
+    setErrorMessage(null);
+
+    try {
+      await onSaveAndFavoritePreview(payload);
+      handleCancel();
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Failed to favorite preview."
+      );
+    } finally {
+      setIsFavoriting(false);
+    }
+  }, [buildDraftPayload, handleCancel, onSaveAndFavoritePreview]);
+
+  const usesExternalDownloadState = typeof onDownloadPreview === "function";
+  const isDownloading =
+    downloadState?.isDownloading ?? (isDownloadStarting || activeExport !== null);
+
+  const exportStatusPath =
+    !usesExternalDownloadState && listingId && activeExport
+      ? `/api/v1/listings/${listingId}/reels/exports/${activeExport.exportId}`
+      : null;
+
+  const { data: exportStatus } = useSWR(
+    exportStatusPath,
+    (url: string) =>
+      fetchApiData<ListingReelExportJob>(
+        url,
+        { cache: "no-store" },
+        "Failed to load reel export status."
+      ),
+    {
+      refreshInterval: (latestData) => {
+        if (!activeExport) {
+          return 0;
+        }
+
+        const status = (latestData as ListingReelExportJob | undefined)?.status;
+        return status === "completed" ||
+          status === "failed" ||
+          status === "canceled"
+          ? 0
+          : REEL_EXPORT_POLL_INTERVAL_MS;
+      },
+      revalidateOnFocus: false,
+      refreshWhenHidden: true,
+      shouldRetryOnError: false,
+      dedupingInterval: 0
+    }
+  );
+
+  const localDownloadStatus: ListingReelExportStatus | "starting" | null =
+    activeExport
+      ? exportStatus?.status ?? (isDownloadStarting ? "starting" : "queued")
+      : isDownloadStarting
+        ? "starting"
+        : null;
+  const downloadStatus = downloadState?.status ?? localDownloadStatus;
+  const isQueuedDownload = downloadStatus === "queued";
+
+  const downloadArtifact = React.useCallback(
+    async (exportJob: { exportId: string; filenameBase: string }) => {
+      if (!listingId) {
+        throw new Error("This preview cannot be downloaded yet.");
+      }
+
+      const response = await fetchStreamResponse(
+        `/api/v1/listings/${listingId}/reels/exports/${exportJob.exportId}/download?filenameBase=${encodeURIComponent(exportJob.filenameBase)}`,
+        undefined,
+        "Failed to download reel preview."
+      );
+
+      const blob = await readReelDownloadBlob(response, (progress) => {
+        setDownloadProgress((current) =>
+          Math.max(current, clampReelDownloadProgress(progress))
+        );
+      });
+      setDownloadProgress(1);
+      const objectUrl = URL.createObjectURL(blob);
+      const downloadLink = document.createElement("a");
+      const fileName =
+        response.headers
+          .get("Content-Disposition")
+          ?.match(/filename=\"?([^"]+)\"?/)?.[1] ??
+        `${exportJob.filenameBase}.mp4`;
+      downloadLink.href = objectUrl;
+      downloadLink.download = fileName;
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      downloadLink.remove();
+      URL.revokeObjectURL(objectUrl);
+      toast.success("Reel download complete.");
+      setActiveExport(null);
+      setIsDownloadStarting(false);
+    },
+    [listingId]
+  );
+
+  React.useEffect(() => {
+    if (!activeExport || !exportStatus) {
+      return;
+    }
+
+    if (
+      exportStatus.status === "queued" ||
+      exportStatus.status === "in-progress"
+    ) {
+      setDownloadProgress((current) =>
+        Math.max(current, clampReelDownloadProgress(exportStatus.progress))
+      );
+      return;
+    }
+
+    if (exportStatus.status === "completed" && exportStatus.downloadReady) {
+      setDownloadProgress(1);
+      if (startedArtifactDownloadRef.current === activeExport.exportId) {
+        return;
+      }
+
+      startedArtifactDownloadRef.current = activeExport.exportId;
+      void downloadArtifact(activeExport).catch((error) => {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Failed to download reel preview.";
+        setErrorMessage(message);
+        toast.error(message);
+        setActiveExport(null);
+        setIsDownloadStarting(false);
+      });
+      return;
+    }
+
+    if (
+      exportStatus.status === "failed" ||
+      exportStatus.status === "canceled"
+    ) {
+      const message =
+        exportStatus.errorMessage ??
+        (exportStatus.status === "canceled"
+          ? "Reel export was canceled."
+          : "Failed to download reel preview.");
+      setErrorMessage(message);
+      toast.error(message);
+      setActiveExport(null);
+      setIsDownloadStarting(false);
+      setDownloadProgress(0);
+      startedArtifactDownloadRef.current = null;
+    }
+  }, [activeExport, downloadArtifact, exportStatus]);
+
+  const handleDownload = React.useCallback(async () => {
+    if (usesExternalDownloadState) {
+      const exportPayload = buildExportPayload();
+      setErrorMessage(null);
+      await onDownloadPreview?.(exportPayload);
+      return;
+    }
+
+    if (!listingId) {
+      setErrorMessage("This preview cannot be downloaded yet.");
+      return;
+    }
+
+    if (isDownloading) {
+      return;
+    }
+
+    setIsDownloadStarting(true);
+    setDownloadProgress(0);
+    setErrorMessage(null);
+    toast("Started downloading reel preview.");
+
+    try {
+      const exportPayload = buildExportPayload();
+      const response = await fetchApiData<ListingReelExportJob>(
+        `/api/v1/listings/${listingId}/reels/exports`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(exportPayload)
+        },
+        "Failed to start reel export."
+      );
+      startedArtifactDownloadRef.current = null;
+      setActiveExport({
+        exportId: response.exportId,
+        filenameBase: exportPayload.filenameBase ?? "reel-preview"
+      });
+      setDownloadProgress(clampReelDownloadProgress(response.progress));
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to download reel preview.";
+      setErrorMessage(message);
+      toast.error(message);
+    } finally {
+      setIsDownloadStarting(false);
+    }
   }, [
-    handleCancel,
-    normalizedCaption,
-    normalizedHook,
-    onSavePreviewText,
-    overlayDraft.background,
-    overlayDraft.fontPairing,
-    overlayDraft.position,
-    overlayDraft.showAddress,
-    segmentDraft
+    buildExportPayload,
+    isDownloading,
+    listingId,
+    onDownloadPreview,
+    usesExternalDownloadState
   ]);
+
+  const downloadProgressPercent = React.useMemo(
+    () =>
+      Math.round(
+        clampReelDownloadProgress(downloadState?.progress ?? downloadProgress) *
+          100
+      ),
+    [downloadProgress, downloadState?.progress]
+  );
 
   const draftDurationInFrames = React.useMemo(
     () => getTimelineDurationInFrames(segmentDraft, previewFps),
@@ -666,8 +961,63 @@ export function VideoPreviewModal({
                 <div className="grid min-w-0 max-w-full content-start min-[1050px]:h-full min-[1050px]:min-h-0 min-[1050px]:grid-rows-[minmax(0,1fr)_1px_248px] min-[1050px]:overflow-hidden">
                   <div
                     data-testid="video-preview-stage"
-                    className="flex min-h-0 min-w-0 items-center justify-center overflow-hidden bg-secondary px-3 py-4 max-[1049px]:min-h-[min(38dvh,18rem)] min-[1050px]:h-full min-[1050px]:px-0 min-[1050px]:py-0"
+                    className="relative flex min-h-0 min-w-0 items-center justify-center overflow-hidden bg-secondary px-3 py-4 max-[1049px]:min-h-[min(38dvh,18rem)] min-[1050px]:h-full min-[1050px]:px-0 min-[1050px]:py-0"
                   >
+                    <div className="absolute right-3 top-3 z-10 flex gap-2 min-[1050px]:right-4 min-[1050px]:top-4">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="outline"
+                            className="relative h-8 w-8 rounded-full bg-background text-foreground hover:bg-secondary hover:text-secondary-foreground disabled:opacity-100 dark:bg-input/30 dark:border-input dark:hover:bg-input/50"
+                            aria-label="Download reel preview"
+                            disabled={isSaving || isFavoriting || isDownloading}
+                            onClick={() => void handleDownload()}
+                          >
+                            {isDownloading && !isQueuedDownload ? (
+                              <span
+                                data-testid="reel-download-spinner"
+                                aria-hidden
+                                className="pointer-events-none absolute inset-0 rounded-full border border-primary/20 border-t-primary animate-spin"
+                              />
+                            ) : null}
+                            {isQueuedDownload ? (
+                              <Hourglass
+                                data-testid="reel-download-queued-icon"
+                                className="relative z-10 h-4 w-4 text-primary"
+                              />
+                            ) : isDownloading ? (
+                              <span
+                                data-testid="reel-download-progress-label"
+                                className="relative z-10 text-[9px] font-semibold leading-none text-primary"
+                              >
+                                {downloadProgressPercent}%
+                              </span>
+                            ) : (
+                              <Download className="relative z-10 h-4 w-4" />
+                            )}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">Download</TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="outline"
+                            className="h-8 w-8 rounded-full bg-background text-foreground hover:bg-secondary hover:text-secondary-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50"
+                            aria-label="Favorite reel preview"
+                            disabled={isSaving || isFavoriting}
+                            onClick={() => void handleSaveAndFavorite()}
+                          >
+                            <Heart className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">Favorite</TooltipContent>
+                      </Tooltip>
+                    </div>
                     <div
                       data-testid="video-player-shell"
                       className="relative mx-auto aspect-9/16 w-full min-w-[148px] max-w-[min(160px,calc(100vw-5rem))] overflow-hidden rounded-xl bg-card shadow-sm min-[1050px]:h-[86%] min-[1050px]:max-h-full min-[1050px]:w-auto min-[1050px]:max-w-full"

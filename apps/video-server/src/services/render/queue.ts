@@ -1,3 +1,4 @@
+import { rm } from "fs/promises";
 import { makeCancelSignal } from "@remotion/renderer";
 import { nanoid } from "nanoid";
 import logger from "@/config/logger";
@@ -7,6 +8,7 @@ import type { RenderProvider } from "./ports";
 type RenderCompletion = {
   videoUrl?: string;
   thumbnailUrl?: string;
+  artifactPath?: string;
 };
 
 type RenderHandlers = {
@@ -29,6 +31,7 @@ class RenderQueue {
   private pending: Array<{ jobId: string; handlers?: RenderHandlers }> = [];
   private activeCount = 0;
   private maxConcurrent = Number(process.env.RENDER_CONCURRENCY) || 3;
+  private artifactCleanupTimers = new Map<string, NodeJS.Timeout>();
 
   constructor(private provider: RenderProvider) {}
 
@@ -51,6 +54,27 @@ class RenderQueue {
         reason: "User requested cancel"
       });
     }
+    return true;
+  }
+
+  async clearArtifact(jobId: string): Promise<boolean> {
+    const job = this.jobs.get(jobId);
+    if (!job || job.status !== "completed" || !job.artifactPath) {
+      return false;
+    }
+
+    const cleanupTimer = this.artifactCleanupTimers.get(jobId);
+    if (cleanupTimer) {
+      clearTimeout(cleanupTimer);
+      this.artifactCleanupTimers.delete(jobId);
+    }
+
+    await rm(job.artifactPath, { force: true }).catch(() => undefined);
+    this.jobs.set(jobId, {
+      ...job,
+      artifactPath: undefined,
+      artifactReady: false
+    });
     return true;
   }
 
@@ -135,8 +159,11 @@ class RenderQueue {
         status: "completed",
         data: job.data,
         videoUrl: completion?.videoUrl,
-        thumbnailUrl: completion?.thumbnailUrl
+        thumbnailUrl: completion?.thumbnailUrl,
+        artifactReady: Boolean(completion?.artifactPath),
+        artifactPath: completion?.artifactPath
       });
+      this.scheduleArtifactCleanup(jobId, completion?.artifactPath);
     } catch (error) {
       logger.error(
         { jobId, error: error instanceof Error ? error.message : String(error) },
@@ -156,6 +183,27 @@ class RenderQueue {
         error: error instanceof Error ? error.message : String(error)
       });
     }
+  }
+
+  private scheduleArtifactCleanup(
+    jobId: string,
+    artifactPath: string | undefined
+  ): void {
+    if (!artifactPath) {
+      return;
+    }
+
+    const existingTimer = this.artifactCleanupTimers.get(jobId);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+    }
+
+    const ttlMs = Number(process.env.REEL_EXPORT_ARTIFACT_TTL_MS) || 15 * 60 * 1000;
+    const timer = setTimeout(() => {
+      void this.clearArtifact(jobId);
+    }, ttlMs);
+    timer.unref?.();
+    this.artifactCleanupTimers.set(jobId, timer);
   }
 }
 

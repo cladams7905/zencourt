@@ -38,6 +38,7 @@ describe("remotion provider", () => {
   beforeEach(() => {
     jest.resetModules();
     jest.clearAllMocks();
+    process.env.REMOTION_CACHE_DIR = "/tmp/remotion";
 
     mockExistsSync.mockReturnValue(true);
     mockMkdir.mockResolvedValue(undefined);
@@ -69,6 +70,27 @@ describe("remotion provider", () => {
 
     expect(mockEnsureBrowser).toHaveBeenCalledTimes(1);
     expect(mockBundle).toHaveBeenCalledTimes(1);
+    const bundleOptions = mockBundle.mock.calls[0]?.[0];
+    expect(bundleOptions).toEqual(
+      expect.objectContaining({
+        entryPoint: expect.stringContaining(
+          "dist/apps/video-server/src/services/render/providers/remotion/composition/Root.js"
+        ),
+        enableCaching: true,
+        webpackOverride: expect.any(Function),
+        rootDir: expect.stringContaining("/apps/video-server")
+      })
+    );
+    expect(
+      bundleOptions.webpackOverride({
+        cache: { type: "filesystem" }
+      }).cache
+    ).toEqual(
+      expect.objectContaining({
+        type: "filesystem",
+        cacheDirectory: "/tmp/remotion"
+      })
+    );
     expect(mockSelectComposition).toHaveBeenCalledTimes(1);
     expect(mockRenderMedia).toHaveBeenCalledTimes(1);
     expect(mockRenderStill).toHaveBeenCalledTimes(1);

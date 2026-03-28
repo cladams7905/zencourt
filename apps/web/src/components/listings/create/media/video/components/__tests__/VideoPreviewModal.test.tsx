@@ -10,10 +10,15 @@ const mockPlayer = jest.fn<React.ReactNode, [unknown]>(
 );
 const mockOnOpenChange = jest.fn();
 const mockOnSave = jest.fn();
+const mockOnSaveAndFavorite = jest.fn();
 const mockSeekTo = jest.fn();
 const mockPause = jest.fn();
 const mockAddEventListener = jest.fn();
 const mockRemoveEventListener = jest.fn();
+const mockFetch = jest.fn();
+const mockCreateObjectURL = jest.fn();
+const mockRevokeObjectURL = jest.fn();
+const mockAnchorClick = jest.fn();
 let mockCurrentFrame = 0;
 const playerListeners = new Map<string, Set<(event: { detail: unknown }) => void>>();
 
@@ -246,6 +251,7 @@ function StatefulVideoPreviewModal({
   return (
     <VideoPreviewModal
       selectedPreview={selectedPreview}
+      listingId="listing-1"
       userMediaVideoCount={0}
       previewFps={30}
       onOpenChange={(open) => {
@@ -255,6 +261,7 @@ function StatefulVideoPreviewModal({
         }
       }}
       onSavePreviewText={mockOnSave}
+      onSaveAndFavoritePreview={mockOnSaveAndFavorite}
     />
   );
 }
@@ -265,6 +272,20 @@ describe("VideoPreviewModal", () => {
     playerListeners.clear();
     mockCurrentFrame = 0;
     mockOnSave.mockResolvedValue(undefined);
+    mockOnSaveAndFavorite.mockResolvedValue(undefined);
+    mockFetch.mockResolvedValue({
+      ok: true,
+      blob: async () => new Blob(["video"], { type: "video/mp4" }),
+      headers: new Headers({
+        "Content-Disposition": 'attachment; filename="reel-preview-1.mp4"'
+      })
+    });
+    global.fetch = mockFetch as typeof fetch;
+    URL.createObjectURL = mockCreateObjectURL.mockReturnValue(
+      "blob:reel-preview"
+    );
+    URL.revokeObjectURL = mockRevokeObjectURL;
+    HTMLAnchorElement.prototype.click = mockAnchorClick;
     mockUseUserMediaReelPickerInfinite.mockReturnValue({
       items: [],
       errorMessage: null,
@@ -342,6 +363,43 @@ describe("VideoPreviewModal", () => {
     expect(
       screen.getByRole("switch", { name: "Show address" })
     ).toBeInTheDocument();
+  });
+
+  it("renders download and favorite buttons in the stage container outside the player shell", () => {
+    render(
+      <VideoPreviewModal
+        selectedPreview={createSelectedPreview()}
+        listingId="listing-1"
+        userMediaVideoCount={0}
+        previewFps={30}
+        onOpenChange={mockOnOpenChange}
+        onSavePreviewText={mockOnSave}
+        onSaveAndFavoritePreview={mockOnSaveAndFavorite}
+      />
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Download reel preview" })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Favorite reel preview" })
+    ).toBeInTheDocument();
+
+    const stage = screen.getByTestId("video-preview-stage");
+    const playerShell = screen.getByTestId("video-player-shell");
+
+    expect(stage).toContainElement(
+      screen.getByRole("button", { name: "Download reel preview" })
+    );
+    expect(stage).toContainElement(
+      screen.getByRole("button", { name: "Favorite reel preview" })
+    );
+    expect(playerShell).not.toContainElement(
+      screen.getByRole("button", { name: "Download reel preview" })
+    );
+    expect(playerShell).not.toContainElement(
+      screen.getByRole("button", { name: "Favorite reel preview" })
+    );
   });
 
   it("keeps the player shell sized for mobile and 1050px+ desktop layout", () => {
@@ -551,6 +609,154 @@ describe("VideoPreviewModal", () => {
     await waitFor(() =>
       expect(screen.getByTestId("reel-preview-save")).toBeDisabled()
     );
+  });
+
+  it("saves and favorites the current dirty draft", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <VideoPreviewModal
+        selectedPreview={createSelectedPreview()}
+        listingId="listing-1"
+        userMediaVideoCount={0}
+        previewFps={30}
+        onOpenChange={mockOnOpenChange}
+        onSavePreviewText={mockOnSave}
+        onSaveAndFavoritePreview={mockOnSaveAndFavorite}
+      />
+    );
+
+    await user.clear(screen.getByLabelText("Header"));
+    await user.type(screen.getByLabelText("Header"), "Favorited hook");
+    fireEvent.dragStart(screen.getByTestId("timeline-clip-clip-2-1"));
+    fireEvent.dragOver(screen.getByTestId("timeline-clip-clip-1-0"));
+    fireEvent.drop(screen.getByTestId("timeline-clip-clip-1-0"));
+
+    await user.click(screen.getByRole("button", { name: "Favorite reel preview" }));
+
+    expect(mockOnSaveAndFavorite).toHaveBeenCalledWith({
+      hook: "Favorited hook",
+      caption: "Original caption",
+      overlayBackground: "black",
+      overlayPosition: "center",
+      overlayFontPairing: "contemporary-script",
+      showAddress: false,
+      orderedClipIds: ["clip-2", "clip-1"],
+      clipDurationOverrides: { "clip-2": 5, "clip-1": 2.5 },
+      sequence: [
+        {
+          sourceType: "listing_clip",
+          sourceId: "clip-2",
+          durationSeconds: 5
+        },
+        {
+          sourceType: "listing_clip",
+          sourceId: "clip-1",
+          durationSeconds: 2.5
+        }
+      ],
+      saveTarget: {
+        contentSource: "cached_create",
+        cacheKeyTimestamp: 123,
+        cacheKeyId: 4,
+        subcategory: "new_listing",
+        mediaType: "video"
+      }
+    });
+  });
+
+  it("posts a reduced export payload when downloading the dirty draft", async () => {
+    const user = userEvent.setup();
+
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          data: {
+            exportId: "export-job-1",
+            status: "queued",
+            progress: 0
+          }
+        })
+      })
+      .mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          success: true,
+          data: {
+            exportId: "export-job-1",
+            status: "in-progress",
+            progress: 0.25,
+            downloadReady: false
+          }
+        })
+      });
+
+    render(
+      <VideoPreviewModal
+        selectedPreview={createSelectedPreviewWithAddressOverlay()}
+        listingId="listing-1"
+        userMediaVideoCount={0}
+        previewFps={30}
+        onOpenChange={mockOnOpenChange}
+        onSavePreviewText={mockOnSave}
+        onSaveAndFavoritePreview={mockOnSaveAndFavorite}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: "Brown 700" }));
+    await user.click(screen.getByRole("button", { name: "Download reel preview" }));
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      "/api/v1/listings/listing-1/reels/exports",
+      expect.objectContaining({
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+      })
+    );
+
+    const [, requestInit] = mockFetch.mock.calls[0] as [
+      string,
+      RequestInit & { body: string }
+    ];
+    expect(JSON.parse(requestInit.body)).toEqual({
+      filenameBase: "reel-preview-1",
+      segments: [
+        {
+          sourceType: "listing_clip",
+          sourceId: "clip-1",
+          durationSeconds: 2.5,
+          textOverlay: expect.objectContaining({
+            background: "brown-700",
+            text: "Original hook"
+          }),
+          supplementalAddressOverlay: expect.objectContaining({
+            placement: "below-primary",
+            overlay: expect.objectContaining({
+              background: "brown-700",
+              text: "123 Main St"
+            })
+          })
+        },
+        {
+          sourceType: "listing_clip",
+          sourceId: "clip-2",
+          durationSeconds: 5,
+          textOverlay: expect.objectContaining({
+            background: "brown-700",
+            text: "Original hook"
+          }),
+          supplementalAddressOverlay: expect.objectContaining({
+            placement: "below-primary",
+            overlay: expect.objectContaining({
+              background: "brown-700",
+              text: "123 Main St"
+            })
+          })
+        }
+      ]
+    });
   });
 
   it("shows an inline error when save fails", async () => {
