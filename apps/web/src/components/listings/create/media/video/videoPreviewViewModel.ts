@@ -1,6 +1,4 @@
-import type {
-  ListingContentItem as ContentItem
-} from "@web/src/lib/domain/listings/content";
+import type { ListingContentItem as ContentItem } from "@web/src/lib/domain/listings/content";
 import type {
   PreviewTextOverlay,
   PreviewTimelinePlan
@@ -16,6 +14,11 @@ import {
   appendRandomHeaderSuffix,
   type OverlayVariant
 } from "@shared/utils";
+import type {
+  OverlayFontPairing,
+  PreviewTextOverlayBackground,
+  PreviewTextOverlayPosition
+} from "@shared/types/video";
 import {
   getTimelineDurationInFrames,
   type TimelinePreviewResolvedSegment
@@ -27,6 +30,13 @@ const LOCATION_EMOJI = "📍";
 interface SlideOverlayData {
   plainText: string;
 }
+
+type SavedOverlaySettings = {
+  overlayBackground: PreviewTextOverlayBackground;
+  overlayPosition: PreviewTextOverlayPosition;
+  overlayFontPairing: OverlayFontPairing;
+  showAddress: boolean;
+};
 
 function buildPreviewStyleSeed(
   planId: string,
@@ -57,6 +67,26 @@ function buildPreviewStyleSeed(
   return `${planId}:${captionItem.id}`;
 }
 
+function getSavedOverlaySettings(
+  captionItem: ContentItem | null
+): SavedOverlaySettings | null {
+  if (
+    !captionItem?.overlayBackground ||
+    !captionItem.overlayPosition ||
+    !captionItem.overlayFontPairing ||
+    typeof captionItem.showAddress !== "boolean"
+  ) {
+    return null;
+  }
+
+  return {
+    overlayBackground: captionItem.overlayBackground,
+    overlayPosition: captionItem.overlayPosition,
+    overlayFontPairing: captionItem.overlayFontPairing,
+    showAddress: captionItem.showAddress
+  };
+}
+
 function getSlideOverlayData(
   captionItem: ContentItem | null
 ): SlideOverlayData[] {
@@ -80,9 +110,7 @@ function slideContainsAddress(
   slideData: SlideOverlayData,
   normalizedAddress: string
 ): boolean {
-  const parts = [
-    slideData.plainText,
-  ];
+  const parts = [slideData.plainText];
 
   return parts.some((value) =>
     normalizeForAddressMatch(value).includes(normalizedAddress)
@@ -97,9 +125,7 @@ function slideContainsAnyTerm(
     return false;
   }
 
-  const parts = [
-    slideData.plainText
-  ]
+  const parts = [slideData.plainText]
     .map(normalizeForAddressMatch)
     .filter(Boolean);
 
@@ -130,9 +156,9 @@ function buildAddressSupplementalOverlay(
       position: "bottom-third",
       background:
         primaryOverlay.templatePattern === "simple" &&
-        primaryOverlay.background === "none"
-          ? "none"
-          : primaryOverlay.background === "none"
+        primaryOverlay.background === "transparent"
+          ? "transparent"
+          : primaryOverlay.background === "transparent"
             ? "black"
             : primaryOverlay.background,
       font: primaryOverlay.font,
@@ -245,7 +271,7 @@ function buildRichOverlay(
       templatePattern === "simple"
         ? simplePosition
         : pickRichOverlayPosition(richSeedBase),
-    background: isRichTemplate ? "none" : simpleBackground,
+    background: isRichTemplate ? "transparent" : simpleBackground,
     font: variant.font,
     templatePattern,
     lines: resolvedLines,
@@ -349,6 +375,7 @@ export function buildPlayablePreviews(params: {
     const slideOverlayData = getSlideOverlayData(captionItem);
     const seed = buildPreviewStyleSeed(plan.id, captionItem);
     const overlayVariant = pickPreviewTextOverlayVariant(seed);
+    const savedOverlaySettings = getSavedOverlaySettings(captionItem);
 
     const segmentsWithOverlays = resolvedSegments.map(
       (segment, segmentIndex) => {
@@ -363,22 +390,30 @@ export function buildPlayablePreviews(params: {
         const primaryOverlay = buildRichOverlay(data, overlayVariant, {
           forceSimpleTemplate: params.forceSimpleOverlayTemplate
         });
+        const resolvedPrimaryOverlay = savedOverlaySettings
+          ? {
+              ...primaryOverlay,
+              background: savedOverlaySettings.overlayBackground,
+              position: savedOverlaySettings.overlayPosition,
+              fontPairing: savedOverlaySettings.overlayFontPairing
+            }
+          : primaryOverlay;
 
         const needsAddressSupplement =
-          shouldEnforceAddressOverlay &&
+          (savedOverlaySettings?.showAddress ?? shouldEnforceAddressOverlay) &&
           !slideContainsAddress(data, normalizedListingAddress) &&
           Boolean(params.listingAddress?.trim());
         const needsOpenHouseSupplement =
-          openHouseNeedsSupplement &&
+          (savedOverlaySettings?.showAddress ?? openHouseNeedsSupplement) &&
           !slideContainsAnyTerm(data, normalizedOpenHouseTerms);
         const supplementalAddressOverlay = needsAddressSupplement
           ? buildAddressSupplementalOverlay(
-              primaryOverlay,
+              resolvedPrimaryOverlay,
               listingStreetAddress
             )
           : needsOpenHouseSupplement
             ? buildAddressSupplementalOverlay(
-                primaryOverlay,
+                resolvedPrimaryOverlay,
                 listingStreetAddress,
                 openHouseOverlayText
               )
@@ -386,7 +421,7 @@ export function buildPlayablePreviews(params: {
 
         return {
           ...segment,
-          textOverlay: primaryOverlay,
+          textOverlay: resolvedPrimaryOverlay,
           supplementalAddressOverlay
         };
       }

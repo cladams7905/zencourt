@@ -1,5 +1,5 @@
 import * as React from "react";
-import type { VideoPreviewTimelineLayoutItem } from "@web/src/components/listings/create/media/video/components/videoPreviewTimelineViewModel";
+import type { VideoPreviewTimelineLayoutItem } from "@web/src/components/listings/create/media/video/videoPreviewTimelineViewModel";
 
 type VideoPreviewTimelineRulerProps = {
   totalDurationSeconds: number;

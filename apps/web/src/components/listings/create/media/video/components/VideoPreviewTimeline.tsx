@@ -24,10 +24,10 @@ import {
   formatDurationLabel,
   getFrameFromTimelineOffset,
   getPlayheadOffsetPx
-} from "@web/src/components/listings/create/media/video/components/videoPreviewTimelineViewModel";
+} from "@web/src/components/listings/create/media/video/videoPreviewTimelineViewModel";
 import { cn } from "@web/src/components/ui/utils";
 import { VideoPreviewAddClipTileSkeleton } from "@web/src/components/listings/create/media/video/components/VideoPreviewAddClipTileSkeleton";
-import { USER_MEDIA_REEL_PICKER_PAGE_SIZE } from "@web/src/components/listings/create/media/video/userMediaReelPickerConstants";
+import { USER_MEDIA_REEL_PICKER_PAGE_SIZE } from "@web/src/components/listings/create/media/video/constants";
 
 function ClipThumbnailBadge({ text }: { text: string | null | undefined }) {
   const trimmed = text?.trim();
@@ -46,6 +46,8 @@ function ClipThumbnailBadge({ text }: { text: string | null | undefined }) {
 
 type VideoPreviewTimelineProps = {
   segments: TimelinePreviewResolvedSegment[];
+  /** Bumps when the parent wants the horizontal strip scrolled to the far right (e.g. after appending a clip). */
+  scrollToEndNonce?: number;
   deletedClipOptions: TimelinePreviewResolvedSegment[];
   userMediaClipOptions: Array<{
     clipId: string;
@@ -96,6 +98,7 @@ const ADD_CLIP_TILE_CLASS =
 
 export function VideoPreviewTimeline({
   segments,
+  scrollToEndNonce = 0,
   deletedClipOptions,
   userMediaClipOptions,
   userMediaVideoCount,
@@ -140,6 +143,16 @@ export function VideoPreviewTimeline({
     [items, previewFps]
   );
   const { containerRef, maskImage } = useScrollFade();
+  React.useLayoutEffect(() => {
+    if (scrollToEndNonce === 0) {
+      return;
+    }
+    const el = containerRef.current;
+    if (!el) {
+      return;
+    }
+    el.scrollLeft = Math.max(0, el.scrollWidth - el.clientWidth);
+  }, [contentWidthPx, scrollToEndNonce, containerRef]);
   const [draggedItemId, setDraggedItemId] = React.useState<string | null>(null);
   const [dragTargetItemId, setDragTargetItemId] = React.useState<string | null>(
     null

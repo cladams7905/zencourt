@@ -1,4 +1,9 @@
 import type { ListingContentSubcategory } from "@shared/types/models";
+import type {
+  OverlayFontPairing,
+  PreviewTextOverlayBackground,
+  PreviewTextOverlayPosition
+} from "@shared/types/video";
 
 export type ListingContentType = "videos" | "posts" | "stories";
 
@@ -34,6 +39,13 @@ export type ReelSequenceItem = {
   durationSeconds: number;
 };
 
+export type ReelOverlaySettings = {
+  overlayBackground?: PreviewTextOverlayBackground | null;
+  overlayPosition?: PreviewTextOverlayPosition | null;
+  overlayFontPairing?: OverlayFontPairing | null;
+  showAddress?: boolean | null;
+};
+
 export type TextOverlayInput = {
   accent_top?: string | null;
   headline: string;
@@ -47,7 +59,7 @@ export type CarouselSlide = {
   text_overlay?: TextOverlayInput | null;
 };
 
-export type ListingContentItem = {
+export type ListingContentItem = ReelOverlaySettings & {
   id: string;
   clipVersionId?: string;
   thumbnail?: string;

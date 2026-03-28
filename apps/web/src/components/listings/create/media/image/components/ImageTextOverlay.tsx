@@ -21,7 +21,7 @@ import {
 } from "@web/src/components/listings/create/media/image/imagePreviewConstants";
 
 export function ImageTextOverlay({ overlay }: { overlay: PreviewTextOverlay }) {
-  const hasBackground = overlay.background !== "none";
+  const hasBackground = overlay.background !== "transparent";
   const backgroundColor =
     overlay.templatePattern === "simple"
       ? PREVIEW_TEXT_OVERLAY_BACKGROUND_COLOR_OPAQUE[overlay.background]
@@ -84,14 +84,16 @@ export function ImageTextOverlay({ overlay }: { overlay: PreviewTextOverlay }) {
                     : line.marginBottom
               }}
             >
-              {parseInlineItalicSegments(line.text).map((segment, segmentIndex) => (
-                <span
-                  key={segmentIndex}
-                  style={segment.italic ? { fontStyle: "italic" } : undefined}
-                >
-                  {segment.text}
-                </span>
-              ))}
+              {parseInlineItalicSegments(line.text).map(
+                (segment, segmentIndex) => (
+                  <span
+                    key={segmentIndex}
+                    style={segment.italic ? { fontStyle: "italic" } : undefined}
+                  >
+                    {segment.text}
+                  </span>
+                )
+              )}
             </div>
           ))}
           {arrowPath ? (

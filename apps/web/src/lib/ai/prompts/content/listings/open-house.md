@@ -15,15 +15,14 @@ Use `<open_house_context>` as the primary source for event logistics.
 
 Use this structure for open house posts:
 
-1. Hook line that creates excitement about seeing the home in person.
-2. One line highlighting what makes this property worth visiting.
-3. Event logistics block:
+1. One line highlighting what makes this property worth visiting.
+2. Event logistics block:
    - Day and time from `<open_house_context>` when available
    - Address with `📍` prefix when available
    - Any special details (refreshments, private tours available) only if provided
-4. A short checklist of 2-4 key property highlights that motivate in-person visits.
-5. Price line as a standalone emphasis line when available.
-6. Single CTA: attend, RSVP, or request a private showing.
+3. A short checklist of 2-4 key property highlights that motivate in-person visits.
+4. Price line as a standalone emphasis line when available.
+5. Single CTA: attend, RSVP, or request a private showing.
 
 ### Style Guidance
 

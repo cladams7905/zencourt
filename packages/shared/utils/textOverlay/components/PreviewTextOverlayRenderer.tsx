@@ -28,7 +28,7 @@ export function PreviewTextOverlayRenderer({
   topOverride,
   baseFontSizePxOverride
 }: PreviewTextOverlayRendererProps): React.ReactElement {
-  const hasBackground = overlay.background !== "none";
+  const hasBackground = overlay.background !== "transparent";
   const backgroundColor =
     overlay.templatePattern === "simple"
       ? PREVIEW_TEXT_OVERLAY_BACKGROUND_COLOR_OPAQUE[overlay.background]
@@ -102,8 +102,7 @@ export function PreviewTextOverlayRenderer({
               width: 220,
               maxWidth: "100%",
               opacity: 0.95,
-              filter:
-                "invert(1) drop-shadow(0 2px 6px rgba(0, 0, 0, 0.45))"
+              filter: "invert(1) drop-shadow(0 2px 6px rgba(0, 0, 0, 0.45))"
             }}
           />
         ) : null}

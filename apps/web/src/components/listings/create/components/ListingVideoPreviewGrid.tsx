@@ -7,8 +7,8 @@ import type { ListingContentItem as ContentItem } from "@web/src/lib/domain/list
 import type { ListingOpenHouseContext } from "@web/src/lib/domain/listings/content/openHouse";
 import { saveListingVideoReel } from "@web/src/server/actions/listings/content/reels";
 import { buildPlayablePreviews } from "@web/src/components/listings/create/media/video/videoPreviewViewModel";
-import { PREVIEW_FPS } from "@web/src/components/listings/create/media/video/previewConstants";
-import { useHoverReveal } from "@web/src/components/listings/create/media/video/useHoverReveal";
+import { PREVIEW_FPS } from "@web/src/components/listings/create/media/video/constants";
+import { useHoverReveal } from "@web/src/components/listings/create/media/video/hooks";
 import { VideoPreviewCard } from "@web/src/components/listings/create/media/video/components/VideoPreviewCard";
 import { VideoPreviewModal } from "@web/src/components/listings/create/media/video/components/VideoPreviewModal";
 import { VideoPreviewSkeletonCard } from "@web/src/components/listings/create/media/video/components/VideoPreviewSkeletonCard";

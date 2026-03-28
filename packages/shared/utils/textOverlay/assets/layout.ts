@@ -21,7 +21,7 @@ export const PREVIEW_TEXT_OVERLAY_BACKGROUND_COLOR: Record<
   "brown-200": "rgba(201, 184, 170, 0.9)",
   "brown-100": "rgba(229, 220, 211, 0.9)",
   white: "rgba(245, 241, 236, 0.9)",
-  none: "transparent"
+  transparent: "transparent"
 };
 
 export const PREVIEW_TEXT_OVERLAY_BACKGROUND_COLOR_OPAQUE: Record<
@@ -36,7 +36,7 @@ export const PREVIEW_TEXT_OVERLAY_BACKGROUND_COLOR_OPAQUE: Record<
   "brown-200": "rgba(201, 184, 170, 0.95)",
   "brown-100": "rgba(229, 220, 211, 0.95)",
   white: "rgba(245, 241, 236, 0.95)",
-  none: "transparent"
+  transparent: "transparent"
 };
 
 export const PREVIEW_TEXT_OVERLAY_TEXT_COLOR: Record<
@@ -51,7 +51,7 @@ export const PREVIEW_TEXT_OVERLAY_TEXT_COLOR: Record<
   "brown-200": "#16120e",
   "brown-100": "#16120e",
   white: "#16120e",
-  none: "#f5f3ef"
+  transparent: "#f5f3ef"
 };
 
 export const PREVIEW_TEXT_OVERLAY_NO_BACKGROUND_TEXT_SHADOW =

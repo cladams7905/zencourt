@@ -94,6 +94,10 @@ describe("saveListingVideoReel", () => {
         hook: "Updated hook",
         caption: "Updated caption",
         brollQuery: "kitchen",
+        overlayBackground: "brown-700",
+        overlayPosition: "bottom-third",
+        overlayFontPairing: "stacked-modern",
+        showAddress: true,
         sequence: [
           {
             sourceType: "listing_clip",
@@ -109,6 +113,10 @@ describe("saveListingVideoReel", () => {
     const result = await saveListingVideoReel("listing-1", {
       hook: "Updated hook",
       caption: "Updated caption",
+      overlayBackground: "brown-700",
+      overlayPosition: "bottom-third",
+      overlayFontPairing: "stacked-modern",
+      showAddress: true,
       orderedClipIds: ["clip-1"],
       clipDurationOverrides: { "clip-1": 2.5 },
       sequence: [
@@ -135,7 +143,11 @@ describe("saveListingVideoReel", () => {
         metadata: expect.objectContaining({
           source: "listing_reel",
           originCacheKeyTimestamp: 123,
-          originCacheKeyId: 4
+          originCacheKeyId: 4,
+          overlayBackground: "brown-700",
+          overlayPosition: "bottom-third",
+          overlayFontPairing: "stacked-modern",
+          showAddress: true
         })
       })
     );
@@ -172,6 +184,10 @@ describe("saveListingVideoReel", () => {
         hook: "Original hook",
         caption: "Original caption",
         brollQuery: "kitchen",
+        overlayBackground: "black",
+        overlayPosition: "center",
+        overlayFontPairing: "contemporary-script",
+        showAddress: false,
         sequence: [
           {
             sourceType: "listing_clip",
@@ -196,6 +212,10 @@ describe("saveListingVideoReel", () => {
         hook: "Updated hook",
         caption: "Updated caption",
         brollQuery: "kitchen",
+        overlayBackground: "white",
+        overlayPosition: "top-third",
+        overlayFontPairing: "editorial-clean",
+        showAddress: true,
         sequence: [
           {
             sourceType: "listing_clip",
@@ -209,6 +229,10 @@ describe("saveListingVideoReel", () => {
     await saveListingVideoReel("listing-1", {
       hook: "Updated hook",
       caption: "Updated caption",
+      overlayBackground: "white",
+      overlayPosition: "top-third",
+      overlayFontPairing: "editorial-clean",
+      showAddress: true,
       orderedClipIds: ["clip-1"],
       clipDurationOverrides: { "clip-1": 3 },
       sequence: [
@@ -230,7 +254,11 @@ describe("saveListingVideoReel", () => {
       expect.objectContaining({
         metadata: expect.objectContaining({
           hook: "Updated hook",
-          caption: "Updated caption"
+          caption: "Updated caption",
+          overlayBackground: "white",
+          overlayPosition: "top-third",
+          overlayFontPairing: "editorial-clean",
+          showAddress: true
         })
       })
     );

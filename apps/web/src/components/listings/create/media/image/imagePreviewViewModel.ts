@@ -52,7 +52,7 @@ export function buildImagePreviewOverlay(
   );
   const hasSubheaders = Boolean(
     slide.textOverlay?.accent_top?.trim() ||
-      slide.textOverlay?.accent_bottom?.trim()
+    slide.textOverlay?.accent_bottom?.trim()
   );
 
   return {
@@ -61,7 +61,7 @@ export function buildImagePreviewOverlay(
       pattern === "simple"
         ? variant.position
         : pickRichOverlayPosition(variationSeed),
-    background: pattern === "simple" ? variant.background : "none",
+    background: pattern === "simple" ? variant.background : "transparent",
     font: variant.font,
     templatePattern: pattern,
     lines,

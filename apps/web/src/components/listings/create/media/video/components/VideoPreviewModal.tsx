@@ -25,7 +25,15 @@ import {
   VideoPreviewTextEditor
 } from "@web/src/components/listings/create/media/video/components/VideoPreviewTextEditor";
 import { VideoPreviewTimeline } from "@web/src/components/listings/create/media/video/components/VideoPreviewTimeline";
-import { useUserMediaReelPickerInfinite } from "@web/src/components/listings/create/media/video/hooks/useUserMediaReelPickerInfinite";
+import {
+  applyOverlayDraftToSegments,
+  seedOverlayDraftFromPreview,
+  VIDEO_PREVIEW_OVERLAY_BACKGROUND_OPTIONS,
+  VIDEO_PREVIEW_OVERLAY_FONT_OPTIONS,
+  VIDEO_PREVIEW_OVERLAY_POSITION_OPTIONS,
+  type ReelOverlayDraft
+} from "@web/src/components/listings/create/media/video/videoPreviewOverlayControls";
+import { useUserMediaReelPickerInfinite } from "@web/src/components/listings/create/media/video/hooks";
 import type {
   PlayablePreview,
   PlayablePreviewTextUpdate
@@ -94,6 +102,9 @@ export function VideoPreviewModal({
   );
   const [hookDraft, setHookDraft] = React.useState("");
   const [captionDraft, setCaptionDraft] = React.useState("");
+  const [overlayDraft, setOverlayDraft] = React.useState<ReelOverlayDraft>(
+    seedOverlayDraftFromPreview(selectedPreview)
+  );
   const [segmentDraft, setSegmentDraft] = React.useState<
     TimelinePreviewResolvedSegment[]
   >([]);
@@ -115,6 +126,8 @@ export function VideoPreviewModal({
   const [activeAddClipTab, setActiveAddClipTab] = React.useState<
     "room_clips" | "user_media"
   >("room_clips");
+  const [timelineScrollToEndNonce, setTimelineScrollToEndNonce] =
+    React.useState(0);
   const [userMediaScrollRoot, setUserMediaScrollRoot] =
     React.useState<HTMLDivElement | null>(null);
   const selectedPreviewRef = React.useRef(selectedPreview);
@@ -142,6 +155,7 @@ export function VideoPreviewModal({
     setActiveAddClipTab("room_clips");
     setUserMediaScrollRoot(null);
     setIsExitConfirmOpen(false);
+    setTimelineScrollToEndNonce(0);
   }, [selectedPreview?.id]);
 
   // Reset drafts only when the user opens a different preview. `selectedPreview` is a new object
@@ -154,6 +168,7 @@ export function VideoPreviewModal({
     }
     setHookDraft(preview.captionItem?.hook ?? "");
     setCaptionDraft(preview.captionItem?.caption ?? "");
+    setOverlayDraft(seedOverlayDraftFromPreview(preview));
     setSegmentDraft(cloneSegments(preview.resolvedSegments ?? []));
     setUndoStack([]);
     setRedoStack([]);
@@ -179,6 +194,10 @@ export function VideoPreviewModal({
   const normalizedCaption = captionDraft.trim();
   const savedHook = selectedPreview?.captionItem?.hook ?? "";
   const savedCaption = selectedPreview?.captionItem?.caption ?? "";
+  const savedOverlayDraft = React.useMemo(
+    () => seedOverlayDraftFromPreview(selectedPreview),
+    [selectedPreview]
+  );
   const savedClipOrderSignature = (selectedPreview?.resolvedSegments ?? [])
     .map((segment) => segment.clipId)
     .join("::");
@@ -194,6 +213,10 @@ export function VideoPreviewModal({
   const isDirty =
     normalizedHook !== savedHook.trim() ||
     normalizedCaption !== savedCaption.trim() ||
+    overlayDraft.background !== savedOverlayDraft.background ||
+    overlayDraft.position !== savedOverlayDraft.position ||
+    overlayDraft.fontPairing !== savedOverlayDraft.fontPairing ||
+    overlayDraft.showAddress !== savedOverlayDraft.showAddress ||
     draftClipOrderSignature !== savedClipOrderSignature ||
     draftDurationSignature !== savedDurationSignature;
 
@@ -201,6 +224,7 @@ export function VideoPreviewModal({
     const preview = selectedPreviewRef.current;
     setHookDraft(preview?.captionItem?.hook ?? "");
     setCaptionDraft(preview?.captionItem?.caption ?? "");
+    setOverlayDraft(seedOverlayDraftFromPreview(preview));
     setSegmentDraft(cloneSegments(preview?.resolvedSegments ?? []));
     setUndoStack([]);
     setRedoStack([]);
@@ -234,6 +258,21 @@ export function VideoPreviewModal({
     setIsExitConfirmOpen(false);
     onOpenChange(false);
   }, [handleCancel, onOpenChange]);
+
+  React.useEffect(() => {
+    if (!selectedPreviewRef.current) {
+      return;
+    }
+
+    setSegmentDraft((currentSegments) =>
+      applyOverlayDraftToSegments({
+        segments: currentSegments,
+        hookText: hookDraft,
+        overlayDraft,
+        previewContext: selectedPreviewRef.current
+      })
+    );
+  }, [hookDraft, overlayDraft, selectedPreview?.id]);
 
   const pushTimelineHistory = React.useCallback(
     (currentSegments: TimelinePreviewResolvedSegment[]) => {
@@ -328,7 +367,7 @@ export function VideoPreviewModal({
 
   const handleAddSegment = React.useCallback(
     (clipId: string) => {
-      pendingSeekFrameRef.current = currentFrame;
+      let didAppend = false;
       setSegmentDraft((prev) => {
         const preview = selectedPreviewRef.current;
         const nextSegment =
@@ -346,6 +385,7 @@ export function VideoPreviewModal({
           getSharedSupplementalAddressOverlay(prev) ??
           getSharedSupplementalAddressOverlay(preview?.resolvedSegments ?? []);
 
+        didAppend = true;
         pushTimelineHistory(prev);
         return [
           ...prev,
@@ -361,8 +401,12 @@ export function VideoPreviewModal({
           }
         ];
       });
+      if (didAppend) {
+        pendingSeekFrameRef.current = Number.POSITIVE_INFINITY;
+        setTimelineScrollToEndNonce((n) => n + 1);
+      }
     },
-    [currentFrame, pushTimelineHistory, userMediaPickerRows]
+    [pushTimelineHistory, userMediaPickerRows]
   );
 
   const handleSave = React.useCallback(async () => {
@@ -379,6 +423,10 @@ export function VideoPreviewModal({
       await onSavePreviewText({
         hook: normalizedHook,
         caption: normalizedCaption,
+        overlayBackground: overlayDraft.background,
+        overlayPosition: overlayDraft.position,
+        overlayFontPairing: overlayDraft.fontPairing,
+        showAddress: overlayDraft.showAddress,
         orderedClipIds: segmentDraft.map((segment) => segment.clipId),
         clipDurationOverrides: Object.fromEntries(
           segmentDraft.map((segment) => [
@@ -406,6 +454,10 @@ export function VideoPreviewModal({
     normalizedCaption,
     normalizedHook,
     onSavePreviewText,
+    overlayDraft.background,
+    overlayDraft.fontPairing,
+    overlayDraft.position,
+    overlayDraft.showAddress,
     segmentDraft
   ]);
 
@@ -502,10 +554,13 @@ export function VideoPreviewModal({
       return;
     }
 
-    const nextFrame = Math.min(pendingFrame, draftDurationInFrames);
+    pendingSeekFrameRef.current = null;
+    const nextFrame =
+      pendingFrame === Number.POSITIVE_INFINITY
+        ? draftDurationInFrames
+        : Math.min(pendingFrame, draftDurationInFrames);
     playerRef.current?.seekTo(nextFrame);
     setCurrentFrame(nextFrame);
-    pendingSeekFrameRef.current = null;
   }, [draftDurationInFrames, segmentClipIdsKey]);
 
   /**
@@ -631,6 +686,7 @@ export function VideoPreviewModal({
                   <div className="min-w-0 max-w-full px-3 py-3 min-[1050px]:flex min-[1050px]:h-[248px] min-[1050px]:min-h-[248px] min-[1050px]:flex-col min-[1050px]:overflow-hidden min-[1050px]:px-4">
                     <VideoPreviewTimeline
                       segments={segmentDraft}
+                      scrollToEndNonce={timelineScrollToEndNonce}
                       deletedClipOptions={deletedClipOptions}
                       userMediaClipOptions={userMediaClipOptions}
                       userMediaVideoCount={userMediaVideoCount}
@@ -679,6 +735,36 @@ export function VideoPreviewModal({
                       onCaptionChange={setCaptionDraft}
                       onCancel={handleCancel}
                       onSave={() => void handleSave()}
+                      overlayDraft={overlayDraft}
+                      backgroundOptions={
+                        VIDEO_PREVIEW_OVERLAY_BACKGROUND_OPTIONS
+                      }
+                      fontOptions={VIDEO_PREVIEW_OVERLAY_FONT_OPTIONS}
+                      positionOptions={VIDEO_PREVIEW_OVERLAY_POSITION_OPTIONS}
+                      onOverlayBackgroundChange={(background) =>
+                        setOverlayDraft((current) => ({
+                          ...current,
+                          background
+                        }))
+                      }
+                      onOverlayFontChange={(fontPairing) =>
+                        setOverlayDraft((current) => ({
+                          ...current,
+                          fontPairing
+                        }))
+                      }
+                      onOverlayPositionChange={(position) =>
+                        setOverlayDraft((current) => ({
+                          ...current,
+                          position
+                        }))
+                      }
+                      onOverlayAddressToggle={(showAddress) =>
+                        setOverlayDraft((current) => ({
+                          ...current,
+                          showAddress
+                        }))
+                      }
                     />
                   </div>
                 </div>

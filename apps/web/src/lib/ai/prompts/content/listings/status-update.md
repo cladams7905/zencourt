@@ -8,13 +8,12 @@ Share listing lifecycle updates with clear context and professional positioning.
 
 Use this structure for status update posts:
 
-1. Hook line that announces the status moment (pending, sold, or back on market).
-2. One line providing context: timeline, terms context, or outcome.
-3. For sold/pending: 2-3 lines sharing a useful insight or lesson, not only celebration.
-4. For back-on-market: 2-3 lines reframing the opportunity for new buyers.
-5. Address block with `📍` prefix when relevant.
-6. Price or sale context as a standalone line when available.
-7. Single CTA relevant to buyers or sellers considering similar moves.
+1. One line providing context: timeline, terms context, or outcome.
+2. For sold/pending: 2-3 lines sharing a useful insight or lesson, not only celebration.
+3. For back-on-market: 2-3 lines reframing the opportunity for new buyers.
+4. Address block with `📍` prefix when relevant.
+5. Price or sale context as a standalone line when available.
+6. Single CTA relevant to buyers or sellers considering similar moves.
 
 ### Style Guidance
 

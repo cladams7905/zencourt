@@ -276,6 +276,10 @@ describe("listingContent cache", () => {
       body: [{ header: "Slide 1", content: "Body", broll_query: "b" }],
       cta: null,
       caption: "Original caption",
+      overlayBackground: "black",
+      overlayPosition: "center",
+      overlayFontPairing: "contemporary-script",
+      showAddress: false,
       orderedClipIds: ["clip-1", "clip-2"],
       clipDurationOverrides: { "clip-1": 2.5, "clip-2": 5 },
       renderedImageUrl: "https://rendered/image.png",
@@ -294,6 +298,10 @@ describe("listingContent cache", () => {
       id: 9,
       hook: "Updated hook",
       caption: "Updated caption",
+      overlayBackground: "brown-700",
+      overlayPosition: "bottom-third",
+      overlayFontPairing: "stacked-modern",
+      showAddress: true,
       orderedClipIds: ["clip-2", "clip-1"],
       clipDurationOverrides: { "clip-2": 4.25, "clip-1": 3.75 }
     });
@@ -302,6 +310,10 @@ describe("listingContent cache", () => {
       expect.objectContaining({
         hook: "Updated hook",
         caption: "Updated caption",
+        overlayBackground: "brown-700",
+        overlayPosition: "bottom-third",
+        overlayFontPairing: "stacked-modern",
+        showAddress: true,
         orderedClipIds: ["clip-2", "clip-1"],
         clipDurationOverrides: { "clip-2": 4.25, "clip-1": 3.75 },
         body: [{ header: "Slide 1", content: "Body", broll_query: "b" }],
@@ -315,6 +327,10 @@ describe("listingContent cache", () => {
       expect.objectContaining({
         hook: "Updated hook",
         caption: "Updated caption",
+        overlayBackground: "brown-700",
+        overlayPosition: "bottom-third",
+        overlayFontPairing: "stacked-modern",
+        showAddress: true,
         orderedClipIds: ["clip-2", "clip-1"],
         clipDurationOverrides: { "clip-2": 4.25, "clip-1": 3.75 },
         body: [{ header: "Slide 1", content: "Body", broll_query: "b" }],

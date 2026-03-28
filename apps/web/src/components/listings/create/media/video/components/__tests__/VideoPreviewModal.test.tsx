@@ -127,12 +127,9 @@ jest.mock("@web/src/components/ui/loading-image", () => ({
 }));
 
 const mockUseUserMediaReelPickerInfinite = jest.fn();
-jest.mock(
-  "@web/src/components/listings/create/media/video/hooks/useUserMediaReelPickerInfinite",
-  () => ({
-    useUserMediaReelPickerInfinite: () => mockUseUserMediaReelPickerInfinite()
-  })
-);
+jest.mock("@web/src/components/listings/create/media/video/hooks", () => ({
+  useUserMediaReelPickerInfinite: () => mockUseUserMediaReelPickerInfinite()
+}));
 
 function createSelectedPreview(overrides?: Partial<ContentItem>): PlayablePreview {
   return {
@@ -193,6 +190,32 @@ function createSelectedPreview(overrides?: Partial<ContentItem>): PlayablePrevie
       subcategory: "new_listing",
       mediaType: "video"
     }
+  };
+}
+
+function createSelectedPreviewWithAddressOverlay(): PlayablePreview {
+  const preview = createSelectedPreview();
+
+  return {
+    ...preview,
+    resolvedSegments: preview.resolvedSegments.map((segment, index) => ({
+      ...segment,
+      supplementalAddressOverlay:
+        index === 0
+          ? {
+              placement: "below-primary",
+              overlay: {
+                text: "123 Main St",
+                position: "bottom-third",
+                background: "black",
+                font: "sans-modern",
+                templatePattern: "simple",
+                lines: [{ text: "123 Main St", fontRole: "body" }],
+                fontPairing: "contemporary-script"
+              }
+            }
+          : undefined
+    }))
   };
 }
 
@@ -295,6 +318,32 @@ describe("VideoPreviewModal", () => {
     );
   });
 
+  it("renders overlay controls in the right column editor", () => {
+    render(
+      <VideoPreviewModal
+        selectedPreview={createSelectedPreview()}
+        userMediaVideoCount={0}
+        previewFps={30}
+        onOpenChange={mockOnOpenChange}
+        onSavePreviewText={mockOnSave}
+      />
+    );
+
+    expect(screen.getByText("Overlay Style")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Black" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Brown" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "White" })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Font" })).toHaveTextContent(
+      "Modern Script"
+    );
+    expect(screen.getByRole("combobox", { name: "Position" })).toHaveTextContent(
+      "Center"
+    );
+    expect(
+      screen.getByRole("switch", { name: "Show address" })
+    ).toBeInTheDocument();
+  });
+
   it("keeps the player shell sized for mobile and 1050px+ desktop layout", () => {
     render(
       <VideoPreviewModal
@@ -313,7 +362,7 @@ describe("VideoPreviewModal", () => {
     expect(shell).toContain("bg-card");
     expect(shell).toContain("shadow-sm");
     expect(shell).toContain("min-w-[148px]");
-    expect(shell).toContain("max-w-[min(190px");
+    expect(shell).toContain("max-w-[min(160px");
     expect(shell).toContain("min-[1050px]:h-[86%]");
     expect(shell).toContain("min-[1050px]:w-auto");
   });
@@ -348,6 +397,94 @@ describe("VideoPreviewModal", () => {
     expect(saveButton).toBeDisabled();
   });
 
+  it("marks overlay edits dirty and updates player input with the new overlay values", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <VideoPreviewModal
+        selectedPreview={createSelectedPreviewWithAddressOverlay()}
+        userMediaVideoCount={0}
+        previewFps={30}
+        onOpenChange={mockOnOpenChange}
+        onSavePreviewText={mockOnSave}
+      />
+    );
+
+    const saveButton = screen.getByTestId("reel-preview-save");
+
+    expect(saveButton).toBeDisabled();
+
+    await user.click(screen.getByRole("button", { name: "Brown 700" }));
+
+    expect(saveButton).toBeEnabled();
+
+    await waitFor(() =>
+      expect(mockPlayer).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          inputProps: expect.objectContaining({
+            segments: expect.arrayContaining([
+              expect.objectContaining({
+                textOverlay: expect.objectContaining({
+                  background: "brown-700",
+                  position: "center",
+                  fontPairing: "contemporary-script"
+                }),
+                supplementalAddressOverlay: expect.objectContaining({
+                  overlay: expect.objectContaining({
+                    background: "brown-700",
+                    position: "center",
+                    fontPairing: "contemporary-script"
+                  })
+                })
+              })
+            ])
+          })
+        })
+      )
+    );
+  });
+
+  it("resets overlay control values on cancel", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <VideoPreviewModal
+        selectedPreview={createSelectedPreviewWithAddressOverlay()}
+        userMediaVideoCount={0}
+        previewFps={30}
+        onOpenChange={mockOnOpenChange}
+        onSavePreviewText={mockOnSave}
+      />
+    );
+
+    expect(screen.getByRole("button", { name: "Black" })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+    expect(screen.getByRole("switch", { name: "Show address" })).toHaveAttribute(
+      "aria-checked",
+      "true"
+    );
+
+    await user.click(screen.getByRole("button", { name: "White" }));
+    await user.click(screen.getByRole("switch", { name: "Show address" }));
+    await user.click(screen.getByTestId("reel-preview-cancel"));
+
+    expect(screen.getByRole("button", { name: "Black" })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+    expect(screen.getByRole("button", { name: "White" })).toHaveAttribute(
+      "aria-pressed",
+      "false"
+    );
+    expect(screen.getByRole("switch", { name: "Show address" })).toHaveAttribute(
+      "aria-checked",
+      "true"
+    );
+    expect(screen.getByTestId("reel-preview-save")).toBeDisabled();
+  });
+
   it("saves trimmed hook and caption values and disables actions while saving", async () => {
     const user = userEvent.setup();
     let resolveSave: (() => void) | undefined;
@@ -378,6 +515,10 @@ describe("VideoPreviewModal", () => {
     expect(mockOnSave).toHaveBeenCalledWith({
       hook: "Updated hook",
       caption: "Updated caption",
+      overlayBackground: "black",
+      overlayPosition: "center",
+      overlayFontPairing: "contemporary-script",
+      showAddress: false,
       orderedClipIds: ["clip-1", "clip-2"],
       clipDurationOverrides: { "clip-1": 2.5, "clip-2": 5 },
       sequence: [
@@ -466,6 +607,40 @@ describe("VideoPreviewModal", () => {
     expect(screen.queryByTestId("dialog-root")).not.toBeInTheDocument();
   });
 
+  it("resets overlay control values before closing on discard confirm", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <StatefulVideoPreviewModal preview={createSelectedPreviewWithAddressOverlay()} />
+    );
+
+    await user.click(screen.getByRole("button", { name: "White" }));
+    await user.click(screen.getByRole("switch", { name: "Show address" }));
+    await user.click(screen.getByRole("button", { name: "Close" }));
+    await user.click(
+      screen.getByRole("button", { name: "Continue Without Saving" })
+    );
+
+    render(
+      <VideoPreviewModal
+        selectedPreview={createSelectedPreviewWithAddressOverlay()}
+        userMediaVideoCount={0}
+        previewFps={30}
+        onOpenChange={mockOnOpenChange}
+        onSavePreviewText={mockOnSave}
+      />
+    );
+
+    expect(screen.getByRole("button", { name: "Black" })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+    expect(screen.getByRole("switch", { name: "Show address" })).toHaveAttribute(
+      "aria-checked",
+      "true"
+    );
+  });
+
   it("opens the discard confirmation for dialog dismiss requests when dirty", async () => {
     const user = userEvent.setup();
 
@@ -532,6 +707,10 @@ describe("VideoPreviewModal", () => {
     expect(mockOnSave).toHaveBeenCalledWith({
       hook: "Original hook",
       caption: "Original caption",
+      overlayBackground: "black",
+      overlayPosition: "center",
+      overlayFontPairing: "contemporary-script",
+      showAddress: false,
       orderedClipIds: ["clip-2", "clip-1"],
       clipDurationOverrides: { "clip-2": 5, "clip-1": 2.5 },
       sequence: [
@@ -770,7 +949,10 @@ describe("VideoPreviewModal", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "Add clip to timeline" }));
+    mockSeekTo.mockClear();
     await user.click(screen.getByRole("button", { name: /kitchen/i }));
+
+    await waitFor(() => expect(mockSeekTo).toHaveBeenCalledWith(225));
 
     await waitFor(() =>
       expect(mockPlayer).toHaveBeenLastCalledWith(
@@ -833,7 +1015,10 @@ describe("VideoPreviewModal", () => {
 
     await user.click(screen.getByRole("button", { name: "Add clip to timeline" }));
     await user.click(screen.getByRole("button", { name: "User Media" }));
+    mockSeekTo.mockClear();
     await user.click(screen.getByRole("button", { name: /Uploaded walkthrough/i }));
+
+    await waitFor(() => expect(mockSeekTo).toHaveBeenCalledWith(315));
 
     await waitFor(() =>
       expect(mockPlayer).toHaveBeenLastCalledWith(
@@ -914,6 +1099,10 @@ describe("VideoPreviewModal", () => {
     expect(mockOnSave).toHaveBeenCalledWith({
       hook: "Original hook",
       caption: "Original caption",
+      overlayBackground: "black",
+      overlayPosition: "center",
+      overlayFontPairing: "contemporary-script",
+      showAddress: false,
       orderedClipIds: ["clip-1", "clip-2"],
       clipDurationOverrides: { "clip-1": 4, "clip-2": 5 },
       sequence: [
@@ -969,6 +1158,10 @@ describe("VideoPreviewModal", () => {
 
     expect(mockOnSave).toHaveBeenCalledWith(
       expect.objectContaining({
+        overlayBackground: "black",
+        overlayPosition: "center",
+        overlayFontPairing: "contemporary-script",
+        showAddress: false,
         saveTarget: {
           contentSource: "saved_content",
           savedContentId: "saved-reel-1"

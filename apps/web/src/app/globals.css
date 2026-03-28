@@ -394,7 +394,7 @@ html {
         var(--tw-enter-scale, 1),
         var(--tw-enter-scale, 1)
       )
-      rotate(var(--tw-enter-rotate, 0));
+      rotate(var(--tw-enter-rotate, 0deg));
   }
 }
 
@@ -411,88 +411,163 @@ html {
         var(--tw-exit-scale, 1),
         var(--tw-exit-scale, 1)
       )
-      rotate(var(--tw-exit-rotate, 0));
+      rotate(var(--tw-exit-rotate, 0deg));
   }
 }
 
-@layer utilities {
-  .animate-in {
-    animation-name: enter;
-    animation-duration: 150ms;
-    animation-fill-mode: both;
-    --tw-enter-opacity: initial;
-    --tw-enter-scale: initial;
-    --tw-enter-rotate: initial;
-    --tw-enter-translate-x: initial;
-    --tw-enter-translate-y: initial;
-  }
+/*
+ * Radix / shadcn-style enter/exit animations.
+ * Tailwind v4: use @utility (not raw @layer utilities classes) so variants like
+ * data-[state=open]:animate-in actually emit CSS. Plain .animate-in in @layer
+ * utilities is invisible to the variant compiler.
+ */
+@utility animate-in {
+  animation-name: enter;
+  animation-duration: 150ms;
+  animation-fill-mode: both;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  --tw-enter-opacity: 1;
+  --tw-enter-scale: 1;
+  --tw-enter-rotate: 0deg;
+  --tw-enter-translate-x: 0;
+  --tw-enter-translate-y: 0;
+}
 
-  .animate-out {
-    animation-name: exit;
-    animation-duration: 150ms;
-    animation-fill-mode: both;
-    --tw-exit-opacity: initial;
-    --tw-exit-scale: initial;
-    --tw-exit-rotate: initial;
-    --tw-exit-translate-x: initial;
-    --tw-exit-translate-y: initial;
-  }
+@utility animate-out {
+  animation-name: exit;
+  animation-duration: 150ms;
+  animation-fill-mode: both;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  --tw-exit-opacity: 1;
+  --tw-exit-scale: 1;
+  --tw-exit-rotate: 0deg;
+  --tw-exit-translate-x: 0;
+  --tw-exit-translate-y: 0;
+}
 
-  .fade-in-0 {
-    --tw-enter-opacity: 0;
-  }
+@utility fade-in {
+  --tw-enter-opacity: 0;
+}
 
-  .fade-out-0 {
-    --tw-exit-opacity: 0;
-  }
+@utility fade-out {
+  --tw-exit-opacity: 0;
+}
 
-  .zoom-in-95 {
-    --tw-enter-scale: 0.95;
-  }
+@utility fade-in-0 {
+  --tw-enter-opacity: 0;
+}
 
-  .zoom-out-95 {
-    --tw-exit-scale: 0.95;
-  }
+@utility fade-out-0 {
+  --tw-exit-opacity: 0;
+}
 
-  .slide-in-from-top-2 {
-    --tw-enter-translate-y: -0.5rem;
-  }
+@utility zoom-in-90 {
+  --tw-enter-scale: 0.9;
+}
 
-  .slide-in-from-bottom-2 {
-    --tw-enter-translate-y: 0.5rem;
-  }
+@utility zoom-in-95 {
+  --tw-enter-scale: 0.95;
+}
 
-  .slide-in-from-left-2 {
-    --tw-enter-translate-x: -0.5rem;
-  }
+@utility zoom-out-95 {
+  --tw-exit-scale: 0.95;
+}
 
-  .slide-in-from-right-2 {
-    --tw-enter-translate-x: 0.5rem;
-  }
+@utility slide-in-from-top {
+  --tw-enter-translate-y: -100%;
+}
 
-  .slide-out-to-top-2 {
-    --tw-exit-translate-y: -0.5rem;
-  }
+@utility slide-in-from-bottom {
+  --tw-enter-translate-y: 100%;
+}
 
-  .slide-out-to-bottom-2 {
-    --tw-exit-translate-y: 0.5rem;
-  }
+@utility slide-in-from-left {
+  --tw-enter-translate-x: -100%;
+}
 
-  .slide-out-to-left-2 {
-    --tw-exit-translate-x: -0.5rem;
-  }
+@utility slide-in-from-right {
+  --tw-enter-translate-x: 100%;
+}
 
-  .slide-out-to-right-2 {
-    --tw-exit-translate-x: 0.5rem;
-  }
+@utility slide-out-to-top {
+  --tw-exit-translate-y: -100%;
+}
 
-  .animate-duration-150 {
-    animation-duration: 150ms;
-  }
+@utility slide-out-to-bottom {
+  --tw-exit-translate-y: 100%;
+}
 
-  .animate-duration-200 {
-    animation-duration: 200ms;
-  }
+@utility slide-out-to-left {
+  --tw-exit-translate-x: -100%;
+}
+
+@utility slide-out-to-right {
+  --tw-exit-translate-x: 100%;
+}
+
+@utility slide-in-from-top-2 {
+  --tw-enter-translate-y: -0.5rem;
+}
+
+@utility slide-in-from-bottom-2 {
+  --tw-enter-translate-y: 0.5rem;
+}
+
+@utility slide-in-from-left-2 {
+  --tw-enter-translate-x: -0.5rem;
+}
+
+@utility slide-in-from-right-2 {
+  --tw-enter-translate-x: 0.5rem;
+}
+
+@utility slide-out-to-top-2 {
+  --tw-exit-translate-y: -0.5rem;
+}
+
+@utility slide-out-to-bottom-2 {
+  --tw-exit-translate-y: 0.5rem;
+}
+
+@utility slide-out-to-left-2 {
+  --tw-exit-translate-x: -0.5rem;
+}
+
+@utility slide-out-to-right-2 {
+  --tw-exit-translate-x: 0.5rem;
+}
+
+/* navigation-menu.tsx motion (Tailwind spacing 52 = 13rem) */
+@utility slide-in-from-left-52 {
+  --tw-enter-translate-x: -13rem;
+}
+
+@utility slide-in-from-right-52 {
+  --tw-enter-translate-x: 13rem;
+}
+
+@utility slide-out-to-left-52 {
+  --tw-exit-translate-x: -13rem;
+}
+
+@utility slide-out-to-right-52 {
+  --tw-exit-translate-x: 13rem;
+}
+
+@utility animate-duration-150 {
+  animation-duration: 150ms;
+}
+
+@utility animate-duration-200 {
+  animation-duration: 200ms;
+}
+
+@utility animate-duration-300 {
+  animation-duration: 300ms;
+}
+
+@utility animate-duration-500 {
+  animation-duration: 500ms;
 }
 
 /**

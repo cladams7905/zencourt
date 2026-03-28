@@ -55,6 +55,10 @@ export type ListingCreateCachedContentItem = {
   cacheKeyId: number;
   orderedClipIds?: string[] | null;
   clipDurationOverrides?: Record<string, number> | null;
+  overlayBackground?: ListingContentItem["overlayBackground"] | null;
+  overlayPosition?: ListingContentItem["overlayPosition"] | null;
+  overlayFontPairing?: ListingContentItem["overlayFontPairing"] | null;
+  showAddress?: boolean | null;
   cachedRenderedPreview?: {
     imageUrl: string;
     templateId: string;
@@ -80,6 +84,10 @@ function mapCachedListingItemToCreateContent(params: {
     mediaType,
     cacheKeyTimestamp: item.cacheKeyTimestamp,
     cacheKeyId: item.cacheKeyId,
+    overlayBackground: item.overlayBackground ?? null,
+    overlayPosition: item.overlayPosition ?? null,
+    overlayFontPairing: item.overlayFontPairing ?? null,
+    showAddress: item.showAddress ?? null,
     orderedClipIds: item.orderedClipIds ?? null,
     clipDurationOverrides: item.clipDurationOverrides ?? null
   };
@@ -463,6 +471,10 @@ export async function updateCachedListingContentText(params: {
   id: number;
   hook: string;
   caption: string;
+  overlayBackground?: ListingContentItem["overlayBackground"] | null;
+  overlayPosition?: ListingContentItem["overlayPosition"] | null;
+  overlayFontPairing?: ListingContentItem["overlayFontPairing"] | null;
+  showAddress?: boolean | null;
   orderedClipIds?: string[] | null;
   clipDurationOverrides?: Record<string, number> | null;
 }): Promise<ListingContentItem | null> {
@@ -486,6 +498,10 @@ export async function updateCachedListingContentText(params: {
       ...existing,
       hook: params.hook,
       caption: params.caption,
+      overlayBackground: params.overlayBackground ?? null,
+      overlayPosition: params.overlayPosition ?? null,
+      overlayFontPairing: params.overlayFontPairing ?? null,
+      showAddress: params.showAddress ?? null,
       orderedClipIds: params.orderedClipIds ?? null,
       clipDurationOverrides: params.clipDurationOverrides ?? null
     };

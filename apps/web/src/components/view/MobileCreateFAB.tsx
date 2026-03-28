@@ -37,13 +37,8 @@ export function MobileCreateFAB() {
           <Plus className="h-6 w-6" />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent
-        align="end"
-        side="top"
-        sideOffset={8}
-        className="w-72 p-2"
-      >
-        <DropdownMenuItem className="flex flex-col items-start gap-1 py-2">
+      <DropdownMenuContent align="end" side="top" sideOffset={8} className="w-72">
+        <DropdownMenuItem className="flex flex-col items-start gap-1 py-2.5">
           <span className="text-sm font-medium text-foreground">
             New Content
           </span>
@@ -51,9 +46,9 @@ export function MobileCreateFAB() {
             Build your own social media post.
           </span>
         </DropdownMenuItem>
-        <DropdownMenuSeparator className="my-1.5 bg-border/50" />
+        <DropdownMenuSeparator className="bg-border/50" />
         <DropdownMenuItem
-          className="flex flex-col items-start gap-1 py-2"
+          className="flex flex-col items-start gap-1 py-2.5"
           onSelect={() => router.push("/listings/sync")}
         >
           <span className="text-sm font-medium text-foreground">

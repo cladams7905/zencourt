@@ -1,3 +1,9 @@
+import type {
+  OverlayFontPairing,
+  PreviewTextOverlayBackground,
+  PreviewTextOverlayPosition
+} from "@shared/types/video";
+
 export type ListingMediaType = "video" | "image";
 
 export type ListingGeneratedItem = {
@@ -10,6 +16,10 @@ export type ListingGeneratedItem = {
   }>;
   cta: string | null;
   caption: string;
+  overlayBackground?: PreviewTextOverlayBackground | null;
+  overlayPosition?: PreviewTextOverlayPosition | null;
+  overlayFontPairing?: OverlayFontPairing | null;
+  showAddress?: boolean | null;
   orderedClipIds?: string[] | null;
   clipDurationOverrides?: Record<string, number> | null;
 };

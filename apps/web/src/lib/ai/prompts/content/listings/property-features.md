@@ -8,13 +8,12 @@ Showcase standout property features that motivate showings.
 
 Use this structure for property feature posts:
 
-1. Hook line spotlighting the hero feature with emotional pull.
-2. One line translating the feature into buyer value (what it means for their life, not just specs).
-3. A detailed description block: 2-4 lines painting the experience of the feature using specific facts from listing data.
-4. Optional compact checklist of 2-3 supporting features that complement the hero feature.
-5. Address block with `📍` prefix.
-6. Price line as a standalone emphasis line when available.
-7. Single CTA to see the home in person.
+1. One line translating the feature into buyer value (what it means for their life, not just specs).
+2. A detailed description block: 2-4 lines painting the experience of the feature using specific facts from listing data.
+3. Optional compact checklist of 2-3 supporting features that complement the hero feature.
+4. Address block with `📍` prefix.
+5. Price line as a standalone emphasis line when available.
+6. Single CTA to see the home in person.
 
 ### Style Guidance
 

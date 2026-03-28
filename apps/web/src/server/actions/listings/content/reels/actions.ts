@@ -20,6 +20,10 @@ import { mapSavedReelContentToCreateItem } from "./mappers";
 type NormalizedReelInput = {
   hook: string;
   caption: string;
+  overlayBackground: PlayablePreviewTextUpdate["overlayBackground"];
+  overlayPosition: PlayablePreviewTextUpdate["overlayPosition"];
+  overlayFontPairing: PlayablePreviewTextUpdate["overlayFontPairing"];
+  showAddress: boolean;
   sequence: PlayablePreviewTextUpdate["sequence"];
 };
 
@@ -73,6 +77,10 @@ function normalizeReelInput(
   return {
     hook,
     caption,
+    overlayBackground: params.overlayBackground,
+    overlayPosition: params.overlayPosition,
+    overlayFontPairing: params.overlayFontPairing,
+    showAddress: params.showAddress,
     sequence
   };
 }
@@ -115,6 +123,10 @@ async function saveCachedReelAsContent(params: {
     hook: normalizedInput.hook,
     caption: normalizedInput.caption,
     brollQuery: cachedItem.broll_query ?? null,
+    overlayBackground: normalizedInput.overlayBackground,
+    overlayPosition: normalizedInput.overlayPosition,
+    overlayFontPairing: normalizedInput.overlayFontPairing,
+    showAddress: normalizedInput.showAddress,
     sequence: normalizedInput.sequence,
     originCacheKeyTimestamp: saveTarget.cacheKeyTimestamp,
     originCacheKeyId: saveTarget.cacheKeyId
@@ -162,6 +174,10 @@ async function updateSavedReelContent(params: {
     ...existing.metadata,
     hook: normalizedInput.hook,
     caption: normalizedInput.caption,
+    overlayBackground: normalizedInput.overlayBackground,
+    overlayPosition: normalizedInput.overlayPosition,
+    overlayFontPairing: normalizedInput.overlayFontPairing,
+    showAddress: normalizedInput.showAddress,
     sequence: normalizedInput.sequence
   };
 

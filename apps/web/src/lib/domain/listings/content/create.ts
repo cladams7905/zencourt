@@ -1,4 +1,9 @@
 import type { ListingContentSubcategory } from "@shared/types/models";
+import type {
+  OverlayFontPairing,
+  PreviewTextOverlayBackground,
+  PreviewTextOverlayPosition
+} from "@shared/types/video";
 import type { ReelSequenceItem } from "./index";
 
 export type ListingCreateMediaTab = "videos" | "images";
@@ -23,6 +28,10 @@ export type PlayablePreviewSaveTarget =
 export type PlayablePreviewTextUpdate = {
   hook: string;
   caption: string;
+  overlayBackground: PreviewTextOverlayBackground;
+  overlayPosition: PreviewTextOverlayPosition;
+  overlayFontPairing: OverlayFontPairing;
+  showAddress: boolean;
   orderedClipIds: string[];
   clipDurationOverrides: Record<string, number>;
   sequence: ReelSequenceItem[];

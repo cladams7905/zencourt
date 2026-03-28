@@ -1,7 +1,7 @@
 import {
   buildVideoPreviewTimelineItems,
   buildVideoPreviewTimelineLayout
-} from "@web/src/components/listings/create/media/video/components/videoPreviewTimelineViewModel";
+} from "@web/src/components/listings/create/media/video/videoPreviewTimelineViewModel";
 
 describe("videoPreviewTimelineViewModel", () => {
   it("uses a fixed time scale so card widths are derived directly from clip duration", () => {

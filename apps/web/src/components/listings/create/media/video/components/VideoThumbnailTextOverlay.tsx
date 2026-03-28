@@ -23,7 +23,7 @@ export function VideoThumbnailTextOverlay({
   topOverride?: string;
   baseFontSizePxOverride?: number;
 }) {
-  const hasBackground = overlay.background !== "none";
+  const hasBackground = overlay.background !== "transparent";
   const backgroundColor =
     overlay.templatePattern === "simple"
       ? PREVIEW_TEXT_OVERLAY_BACKGROUND_COLOR_OPAQUE[overlay.background]

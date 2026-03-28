@@ -8,13 +8,12 @@ Frame a pricing update as a value opportunity without hype or pressure.
 
 Use this structure for price change posts:
 
-1. Hook line that signals the price update and creates interest.
-2. One line with the new price and brief framing of the update.
-3. One line explaining why the home is compelling at the current value.
-4. A short checklist of 3-5 key features that reinforce value at this price point.
-5. Address block with `📍` prefix.
-6. New price as a standalone emphasis line.
-7. Single CTA focused on tour requests or details.
+1. One line with the new price and brief framing of the update.
+2. One line explaining why the home is compelling at the current value.
+3. A short checklist of 3-5 key features that reinforce value at this price point.
+4. Address block with `📍` prefix.
+5. New price as a standalone emphasis line.
+6. Single CTA focused on tour requests or details.
 
 ### Style Guidance
 

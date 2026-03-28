@@ -280,6 +280,47 @@ describe("videoPreviewViewModel", () => {
     expect(streamed[0]?.thumbnailOverlay).toEqual(cached[0]?.thumbnailOverlay);
   });
 
+  it("prefers saved overlay settings over seeded overlay randomness", () => {
+    const result = buildPlayablePreviews({
+      plans: basePlans,
+      items: baseItems,
+      captionItems: [
+        {
+          id: "saved-saved-reel-1",
+          hook: "Saved hook",
+          savedContentId: "saved-reel-1",
+          contentSource: "saved_content",
+          listingSubcategory: "new_listing",
+          overlayBackground: "white",
+          overlayPosition: "top-third",
+          overlayFontPairing: "stacked-modern",
+          showAddress: true
+        } as ContentItem
+      ],
+      listingSubcategory: "new_listing",
+      listingAddress: "123 Main St, Austin, TX 78701",
+      openHouseContext: null,
+      previewFps: 30
+    });
+
+    expect(result[0]?.resolvedSegments[0]?.textOverlay).toEqual(
+      expect.objectContaining({
+        background: "white",
+        position: "top-third",
+        fontPairing: "stacked-modern"
+      })
+    );
+    expect(result[0]?.resolvedSegments[0]?.supplementalAddressOverlay).toEqual(
+      expect.objectContaining({
+        overlay: expect.objectContaining({
+          background: "white",
+          position: "bottom-third",
+          fontPairing: "stacked-modern"
+        })
+      })
+    );
+  });
+
   it("adds supplemental address overlay for new listings when slide lacks address", () => {
     const result = buildPlayablePreviews({
       plans: basePlans,

@@ -53,6 +53,10 @@ export type PreviewPlanCaptionItem = {
   hook?: string;
   caption?: string | null;
   brollQuery?: string | null;
+  overlayBackground?: PreviewTextOverlayBackground | null;
+  overlayPosition?: PreviewTextOverlayPosition | null;
+  overlayFontPairing?: NonNullable<PreviewTextOverlay["fontPairing"]> | null;
+  showAddress?: boolean | null;
   orderedClipIds?: string[] | null;
   clipDurationOverrides?: Record<string, number> | null;
   reelSequence?: ReelSequenceItem[] | null;

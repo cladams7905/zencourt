@@ -5,11 +5,14 @@ import {
   getUserMediaPageForReelPicker,
   type UserMediaReelPickerPage
 } from "@web/src/server/actions/media/commands";
-import { USER_MEDIA_REEL_PICKER_PAGE_SIZE } from "@web/src/components/listings/create/media/video/userMediaReelPickerConstants";
+import { USER_MEDIA_REEL_PICKER_PAGE_SIZE } from "@web/src/components/listings/create/media/video/constants";
 import { useInfiniteSwrPages } from "@web/src/components/shared/pagination";
 
 /** Stable key segment so SWR reuses the same cache across popover opens (cursor is null for page 0). */
-type UserMediaReelPickerKey = readonly ["user-media-reel-picker", string | null];
+type UserMediaReelPickerKey = readonly [
+  "user-media-reel-picker",
+  string | null
+];
 
 export function useUserMediaReelPickerInfinite(options: {
   enabled: boolean;

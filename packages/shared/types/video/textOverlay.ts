@@ -11,7 +11,7 @@ export type PreviewTextOverlayBackground =
   | "brown-200"
   | "brown-100"
   | "white"
-  | "none";
+  | "transparent";
 export type PreviewTextOverlayFont =
   | "serif-elegant"
   | "serif-classic"
@@ -19,10 +19,7 @@ export type PreviewTextOverlayFont =
 
 export type OverlayFontRole = "headline" | "accent" | "body";
 
-export type OverlayTemplatePattern =
-  | "simple"
-  | "sandwich"
-  | "accent-headline";
+export type OverlayTemplatePattern = "simple" | "sandwich" | "accent-headline";
 
 export type OverlayFontPairing =
   | "editorial-script"
