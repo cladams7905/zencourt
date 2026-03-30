@@ -16,6 +16,7 @@ export type RenderJobState =
     }
   | {
       status: "in-progress";
+      phase?: "upscaling" | "rendering";
       progress: number;
       data: RenderJobData;
       cancel: () => void;

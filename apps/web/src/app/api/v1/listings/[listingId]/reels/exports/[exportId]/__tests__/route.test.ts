@@ -49,7 +49,7 @@ describe("reel export status route", () => {
       json: async () => ({
         success: true,
         job: {
-          status: "in-progress",
+          status: "upscaling",
           progress: 0.42
         }
       })
@@ -78,7 +78,7 @@ describe("reel export status route", () => {
       success: true,
       data: {
         exportId: "export-job-1",
-        status: "in-progress",
+        status: "upscaling",
         progress: 0.42,
         downloadReady: false
       }

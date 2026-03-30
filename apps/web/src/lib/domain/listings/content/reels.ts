@@ -25,10 +25,13 @@ export type SavedListingReelMetadata = {
 
 export type ListingReelExportStatus =
   | "queued"
-  | "in-progress"
+  | "upscaling"
+  | "rendering"
   | "completed"
   | "failed"
   | "canceled";
+
+export type ListingReelExportQuality = "standard" | "premium";
 
 export type ListingReelExportJob = {
   exportId: string;
@@ -51,6 +54,7 @@ export type ListingReelExportSegment = {
 
 export type ListingReelExportRequest = {
   filenameBase?: string;
+  quality?: ListingReelExportQuality;
   segments: ListingReelExportSegment[];
 };
 

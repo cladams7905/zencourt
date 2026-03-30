@@ -16,6 +16,11 @@ function makeJobData(): RenderJobData {
 }
 
 describe("render queue", () => {
+  afterEach(() => {
+    delete process.env.REEL_EXPORT_TIMEOUT_MS;
+    jest.useRealTimers();
+  });
+
   it("completes a job and stores completion payload", async () => {
     const provider = {
       renderListingVideo: jest.fn().mockResolvedValue({
@@ -77,6 +82,33 @@ describe("render queue", () => {
     expect(queue.getJob("job-2")).toMatchObject({
       status: "failed",
       error: "render failed"
+    });
+  });
+
+  it("marks job as failed when onStart throws", async () => {
+    const provider = {
+      renderListingVideo: jest.fn()
+    };
+    const queue = createRenderQueue(provider);
+    const onError = jest.fn().mockResolvedValue(undefined);
+
+    queue.createJob(
+      makeJobData(),
+      {
+        onStart: jest.fn().mockRejectedValue(new Error("upscale failed")),
+        onError
+      },
+      "job-on-start-failure"
+    );
+
+    await tick();
+    await tick();
+
+    expect(provider.renderListingVideo).not.toHaveBeenCalled();
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(queue.getJob("job-on-start-failure")).toMatchObject({
+      status: "failed",
+      error: "upscale failed"
     });
   });
 
@@ -169,6 +201,41 @@ describe("render queue", () => {
     expect(onProgress).toHaveBeenCalledWith(0.5, makeJobData());
   });
 
+  it("applies a custom progress mapping before storing in-progress state", async () => {
+    let releaseRender: () => void = () => {};
+    const provider = {
+      renderListingVideo: jest.fn().mockImplementation(async (options) => {
+        options.onProgress?.(0.5);
+        await new Promise<void>((resolve) => {
+          releaseRender = resolve;
+        });
+        return {
+          videoBuffer: Buffer.from("v"),
+          thumbnailBuffer: Buffer.from("t"),
+          durationSeconds: 1,
+          fileSize: 1
+        };
+      })
+    };
+
+    const queue = createRenderQueue(provider);
+    queue.createJob(
+      makeJobData(),
+      {
+        mapProgress: (progress) => progress * 0.25
+      },
+      "job-mapped-progress"
+    );
+
+    await tick();
+    expect(queue.getJob("job-mapped-progress")).toMatchObject({
+      status: "in-progress",
+      progress: 0.125
+    });
+    releaseRender();
+    await tick();
+  });
+
   it("cancels a queued job before processing starts", async () => {
     const provider = {
       renderListingVideo: jest.fn().mockImplementation(
@@ -221,5 +288,33 @@ describe("render queue", () => {
 
     expect(maxSeen).toBeLessThanOrEqual(2);
     delete process.env.RENDER_CONCURRENCY;
+  });
+
+  it("marks an in-progress job as failed when it exceeds a per-job timeout", async () => {
+    jest.useFakeTimers();
+    const provider = {
+      renderListingVideo: jest.fn().mockImplementation(
+        () => new Promise(() => {})
+      )
+    };
+    const queue = createRenderQueue(provider);
+    const onError = jest.fn().mockResolvedValue(undefined);
+
+    queue.createJob(
+      makeJobData(),
+      {
+        onError,
+        timeoutMs: 1000
+      },
+      "job-timeout"
+    );
+
+    await jest.advanceTimersByTimeAsync(1000);
+
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(queue.getJob("job-timeout")).toMatchObject({
+      status: "failed",
+      error: "Render timed out after 1 seconds"
+    });
   });
 });

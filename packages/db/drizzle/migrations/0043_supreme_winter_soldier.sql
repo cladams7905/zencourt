@@ -1,0 +1,1 @@
+ALTER TABLE "video_clip_versions" ADD COLUMN "upscale_url" text;

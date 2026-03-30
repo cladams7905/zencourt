@@ -40,6 +40,7 @@ jest.mock("@db/client", () => ({
     videoClipId: "videoClipId",
     versionNumber: "versionNumber",
     status: "status",
+    upscaleUrl: "upscaleUrl",
     createdAt: "createdAt",
     sourceVideoGenJobId: "sourceVideoGenJobId"
   },
@@ -188,5 +189,25 @@ describe("video clip models", () => {
         currentVideoClipVersionId: "clip-v2"
       })
     ).resolves.toEqual([{ id: "clip-1", currentVideoClipVersionId: "clip-v2" }]);
+  });
+
+  it("updates a clip version upscale url", async () => {
+    mockUpdate.mockReturnValue({ set: mockSet });
+    mockSet.mockReturnValue({ where: mockUpdateWhere });
+    mockUpdateWhere.mockReturnValueOnce({ returning: mockReturning });
+    mockReturning.mockResolvedValueOnce([
+      { id: "clip-v2", upscaleUrl: "https://cdn.example.com/clip-v2-4k.mp4" }
+    ]);
+
+    const { updateVideoClipVersion } = await import("@web/src/server/models/video");
+
+    await expect(
+      updateVideoClipVersion("clip-v2", {
+        upscaleUrl: "https://cdn.example.com/clip-v2-4k.mp4"
+      })
+    ).resolves.toEqual({
+      id: "clip-v2",
+      upscaleUrl: "https://cdn.example.com/clip-v2-4k.mp4"
+    });
   });
 });

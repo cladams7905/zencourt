@@ -14,6 +14,7 @@ type RenderCompletion = {
 type RenderHandlers = {
   onStart?: (data: RenderJobData) => Promise<void>;
   onProgress?: (progress: number, data: RenderJobData) => Promise<void>;
+  mapProgress?: (progress: number) => number;
   onComplete?: (
     result: {
       videoBuffer: Buffer;
@@ -24,19 +25,40 @@ type RenderHandlers = {
     data: RenderJobData
   ) => Promise<RenderCompletion>;
   onError?: (error: Error, data: RenderJobData) => Promise<void>;
+  timeoutMs?: number;
 };
 
 class RenderQueue {
   private jobs = new Map<string, RenderJobState>();
   private pending: Array<{ jobId: string; handlers?: RenderHandlers }> = [];
+  private handlersByJobId = new Map<string, RenderHandlers | undefined>();
   private activeCount = 0;
   private maxConcurrent = Number(process.env.RENDER_CONCURRENCY) || 3;
   private artifactCleanupTimers = new Map<string, NodeJS.Timeout>();
+  private jobTimeoutTimers = new Map<string, NodeJS.Timeout>();
+  private jobTimeoutMs = Number(process.env.REEL_EXPORT_TIMEOUT_MS) || 5 * 60 * 1000;
 
   constructor(private provider: RenderProvider) {}
 
   getJob(jobId: string): RenderJobState | undefined {
     return this.jobs.get(jobId);
+  }
+
+  updateJobPhase(
+    jobId: string,
+    phase: "upscaling" | "rendering",
+    progress?: number
+  ): void {
+    const job = this.jobs.get(jobId);
+    if (!job || job.status !== "in-progress") {
+      return;
+    }
+
+    this.jobs.set(jobId, {
+      ...job,
+      phase,
+      ...(typeof progress === "number" ? { progress } : {})
+    });
   }
 
   cancelJob(jobId: string): boolean {
@@ -54,6 +76,8 @@ class RenderQueue {
         reason: "User requested cancel"
       });
     }
+    this.clearJobTimeout(jobId);
+    this.handlersByJobId.delete(jobId);
     return true;
   }
 
@@ -93,6 +117,8 @@ class RenderQueue {
       }
     });
 
+    this.handlersByJobId.set(jobId, handlers);
+    this.scheduleJobTimeout(jobId, handlers?.timeoutMs);
     this.pending.push({ jobId, handlers });
     this.processNext();
     return jobId;
@@ -118,30 +144,54 @@ class RenderQueue {
     const { cancel, cancelSignal } = makeCancelSignal();
     this.jobs.set(jobId, {
       status: "in-progress",
+      phase: "rendering",
       progress: 0,
       data: job.data,
       cancel
     });
 
-    if (handlers?.onStart) {
-      await handlers.onStart(job.data);
-    }
-
     try {
+      if (handlers?.onStart) {
+        await handlers.onStart(job.data);
+      }
+
+      const jobAfterStart = this.jobs.get(jobId);
+      if (!jobAfterStart || jobAfterStart.status !== "in-progress") {
+        return;
+      }
+
+      this.jobs.set(jobId, {
+        status: "in-progress",
+        phase: "rendering",
+        progress: 0,
+        data: job.data,
+        cancel
+      });
+
       const result = await this.provider.renderListingVideo({
         clips: job.data.clips,
         orientation: job.data.orientation,
         videoId: job.data.videoId,
         cancelSignal,
         onProgress: (progress) => {
+          const currentJob = this.jobs.get(jobId);
+          if (!currentJob || currentJob.status !== "in-progress") {
+            return;
+          }
+
+          const resolvedProgress = handlers?.mapProgress
+            ? handlers.mapProgress(progress)
+            : progress;
+
           this.jobs.set(jobId, {
             status: "in-progress",
-            progress,
+            phase: "rendering",
+            progress: resolvedProgress,
             data: job.data,
             cancel
           });
           if (handlers?.onProgress) {
-            handlers.onProgress(progress, job.data).catch((error) => {
+            handlers.onProgress(resolvedProgress, job.data).catch((error) => {
               logger.warn(
                 { jobId, error: error instanceof Error ? error.message : String(error) },
                 "[RenderQueue] Failed to update progress handler"
@@ -155,6 +205,11 @@ class RenderQueue {
         ? await handlers.onComplete(result, job.data)
         : undefined;
 
+      const currentJob = this.jobs.get(jobId);
+      if (!currentJob || currentJob.status !== "in-progress") {
+        return;
+      }
+
       this.jobs.set(jobId, {
         status: "completed",
         data: job.data,
@@ -163,8 +218,17 @@ class RenderQueue {
         artifactReady: Boolean(completion?.artifactPath),
         artifactPath: completion?.artifactPath
       });
+      this.clearJobTimeout(jobId);
+      this.handlersByJobId.delete(jobId);
       this.scheduleArtifactCleanup(jobId, completion?.artifactPath);
     } catch (error) {
+      const currentJob = this.jobs.get(jobId);
+      if (currentJob?.status === "failed") {
+        this.clearJobTimeout(jobId);
+        this.handlersByJobId.delete(jobId);
+        return;
+      }
+
       logger.error(
         { jobId, error: error instanceof Error ? error.message : String(error) },
         "[RenderQueue] Render failed"
@@ -182,7 +246,66 @@ class RenderQueue {
         data: job.data,
         error: error instanceof Error ? error.message : String(error)
       });
+      this.clearJobTimeout(jobId);
+      this.handlersByJobId.delete(jobId);
     }
+  }
+
+  private scheduleJobTimeout(jobId: string, timeoutOverrideMs?: number): void {
+    const existingTimer = this.jobTimeoutTimers.get(jobId);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+    }
+
+    const timeoutMs = timeoutOverrideMs ?? this.jobTimeoutMs;
+    const timer = setTimeout(() => {
+      void this.failTimedOutJob(jobId, timeoutMs);
+    }, timeoutMs);
+    timer.unref?.();
+    this.jobTimeoutTimers.set(jobId, timer);
+  }
+
+  private clearJobTimeout(jobId: string): void {
+    const timer = this.jobTimeoutTimers.get(jobId);
+    if (timer) {
+      clearTimeout(timer);
+      this.jobTimeoutTimers.delete(jobId);
+    }
+  }
+
+  private async failTimedOutJob(jobId: string, timeoutMs: number): Promise<void> {
+    const job = this.jobs.get(jobId);
+    if (!job || (job.status !== "queued" && job.status !== "in-progress")) {
+      this.clearJobTimeout(jobId);
+      this.handlersByJobId.delete(jobId);
+      return;
+    }
+
+    if (job.status === "in-progress") {
+      job.cancel();
+    }
+
+    const error = new Error(
+      `Render timed out after ${Math.round(timeoutMs / 1000)} seconds`
+    );
+
+    logger.error(
+      { jobId, timeoutMs, status: job.status },
+      "[RenderQueue] Render timed out"
+    );
+
+    this.jobs.set(jobId, {
+      status: "failed",
+      data: job.data,
+      error: error.message
+    });
+    this.clearJobTimeout(jobId);
+
+    const handlers = this.handlersByJobId.get(jobId);
+    if (handlers?.onError) {
+      await handlers.onError(error, job.data);
+    }
+    this.handlersByJobId.delete(jobId);
   }
 
   private scheduleArtifactCleanup(

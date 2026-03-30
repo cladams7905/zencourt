@@ -11,13 +11,20 @@ describe("env config", () => {
     DATABASE_URL: "postgres://db",
     FAL_KEY: "fal-key",
     RUNWAY_API_KEY: "runway-key",
-    VIDEO_SERVER_API_KEY: "server-key"
+    VIDEO_SERVER_API_KEY: "server-key",
+    WAVESPEED_API_KEY: "wavespeed-key"
   };
 
   it("throws when VIDEO_SERVER_API_KEY is missing", () => {
     const env = { ...BASE_ENV };
     delete env.VIDEO_SERVER_API_KEY;
     expect(() => parseEnv(env)).toThrow("VIDEO_SERVER_API_KEY");
+  });
+
+  it("throws when WAVESPEED_API_KEY is missing", () => {
+    const env = { ...BASE_ENV };
+    delete env.WAVESPEED_API_KEY;
+    expect(() => parseEnv(env)).toThrow("WAVESPEED_API_KEY");
   });
 
   it("normalizes urls and derives webhook url", () => {

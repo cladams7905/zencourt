@@ -48,7 +48,8 @@
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
     "remotion": "^4.0.0",
-    "tsconfig-paths": "^4.2.0"
+    "tsconfig-paths": "^4.2.0",
+    "wavespeed": "^0.2.3"
   },
   "devDependencies": {
     "@types/express": "^5.0.0",

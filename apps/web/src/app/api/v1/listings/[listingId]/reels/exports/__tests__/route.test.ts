@@ -56,9 +56,13 @@ describe("reel export create route", () => {
       request: {
         exportId: "export-job-1",
         orientation: "vertical",
+        quality: "premium",
         clips: [
           {
-            src: "https://cdn.example.com/video.mp4",
+            sourceType: "listing_clip",
+            clipVersionId: "clip-version-1",
+            originalVideoUrl: "https://cdn.example.com/video.mp4",
+            upscaleUrl: null,
             durationSeconds: 2.5,
             textOverlay: null,
             supplementalAddressOverlay: null
@@ -72,6 +76,7 @@ describe("reel export create route", () => {
         method: "POST",
         body: JSON.stringify({
           filenameBase: "reel-preview-1",
+          quality: "premium",
           segments: [
             {
               sourceType: "listing_clip",
@@ -100,6 +105,28 @@ describe("reel export create route", () => {
         downloadReady: false
       }
     });
+    expect(global.fetch).toHaveBeenCalledWith(
+      "https://video.example.com/renders/reel-export",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          exportId: "export-job-1",
+          orientation: "vertical",
+          quality: "premium",
+          clips: [
+            {
+              sourceType: "listing_clip",
+              clipVersionId: "clip-version-1",
+              originalVideoUrl: "https://cdn.example.com/video.mp4",
+              upscaleUrl: null,
+              durationSeconds: 2.5,
+              textOverlay: null,
+              supplementalAddressOverlay: null
+            }
+          ]
+        })
+      })
+    );
 
     global.fetch = originalFetch;
   });

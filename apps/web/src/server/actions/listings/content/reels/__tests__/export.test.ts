@@ -54,7 +54,11 @@ describe("buildListingReelExportRequestForCurrentUser", () => {
     mockGetCurrentVideoClipsWithCurrentVersionsByListingId.mockResolvedValue([
       {
         clip: { id: "clip-1", listingId: "listing-1" },
-        clipVersion: { id: "clip-version-1", videoUrl: "https://cdn.example.com/clip-1.mp4" }
+        clipVersion: {
+          id: "clip-version-1",
+          videoUrl: "https://cdn.example.com/clip-1.mp4",
+          upscaleUrl: "https://cdn.example.com/clip-1-4k.mp4"
+        }
       }
     ]);
     mockGetUserMediaByIds.mockResolvedValue([
@@ -67,6 +71,7 @@ describe("buildListingReelExportRequestForCurrentUser", () => {
 
     const result = await buildListingReelExportRequestForCurrentUser("listing-1", {
       filenameBase: "reel-preview-1",
+      quality: "premium",
       segments: [
         {
           sourceType: "listing_clip",
@@ -94,13 +99,17 @@ describe("buildListingReelExportRequestForCurrentUser", () => {
       request: {
         exportId: expect.any(String),
         orientation: "vertical",
+        quality: "premium",
         clips: [
           expect.objectContaining({
-            src: "https://cdn.example.com/clip-1.mp4",
+            clipVersionId: "clip-version-1",
+            originalVideoUrl: "https://cdn.example.com/clip-1.mp4",
+            upscaleUrl: "https://cdn.example.com/clip-1-4k.mp4",
             durationSeconds: 2.5
           }),
           expect.objectContaining({
-            src: "https://cdn.example.com/media-1.mp4",
+            sourceType: "user_media",
+            originalVideoUrl: "https://cdn.example.com/media-1.mp4",
             durationSeconds: 3
           })
         ]
@@ -115,6 +124,7 @@ describe("buildListingReelExportRequestForCurrentUser", () => {
     await expect(
       buildListingReelExportRequestForCurrentUser("listing-1", {
         filenameBase: "reel-preview-1",
+        quality: "premium",
         segments: [
           {
             sourceType: "listing_clip",
@@ -126,5 +136,34 @@ describe("buildListingReelExportRequestForCurrentUser", () => {
         ]
       })
     ).rejects.toThrow("Reel draft source not found");
+  });
+
+  it("defaults quality to standard when omitted", async () => {
+    mockGetCurrentVideoClipsWithCurrentVersionsByListingId.mockResolvedValue([
+      {
+        clip: { id: "clip-1", listingId: "listing-1" },
+        clipVersion: {
+          id: "clip-version-1",
+          videoUrl: "https://cdn.example.com/clip-1.mp4",
+          upscaleUrl: null
+        }
+      }
+    ]);
+    mockGetUserMediaByIds.mockResolvedValue([]);
+
+    const result = await buildListingReelExportRequestForCurrentUser("listing-1", {
+      filenameBase: "reel-preview-1",
+      segments: [
+        {
+          sourceType: "listing_clip",
+          sourceId: "clip-1",
+          durationSeconds: 2.5,
+          textOverlay: null,
+          supplementalAddressOverlay: null
+        }
+      ]
+    });
+
+    expect(result.request.quality).toBe("standard");
   });
 });

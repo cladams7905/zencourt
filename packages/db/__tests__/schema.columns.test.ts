@@ -170,6 +170,7 @@ describe("db schema column contracts", () => {
         "sourceVideoGenJobId",
         "status",
         "thumbnailUrl",
+        "upscaleUrl",
         "updatedAt",
         "versionNumber",
         "videoClipId",

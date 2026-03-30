@@ -43,6 +43,29 @@ describe("renders orchestrators", () => {
     expect(result.status).toBe(200);
   });
 
+  it("maps in-progress queue phases to reel export status values", () => {
+    const result = handleGetRenderJob("job-1", {
+      createJob: jest.fn(),
+      getJob: jest.fn().mockReturnValue({
+        status: "in-progress",
+        phase: "upscaling",
+        progress: 0.3
+      }),
+      cancelJob: jest.fn()
+    });
+
+    expect(result).toEqual({
+      status: 200,
+      body: {
+        success: true,
+        job: {
+          status: "upscaling",
+          progress: 0.3
+        }
+      }
+    });
+  });
+
   it("cancels render job", () => {
     const result = handleCancelRenderJob("job-1", {
       createJob: jest.fn(),

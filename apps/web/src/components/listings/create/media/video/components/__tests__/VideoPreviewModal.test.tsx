@@ -705,7 +705,7 @@ describe("VideoPreviewModal", () => {
     });
   });
 
-  it("posts a reduced export payload when downloading the dirty draft", async () => {
+  it("opens a download menu and posts a premium export payload from the dirty draft", async () => {
     const user = userEvent.setup();
 
     mockFetch
@@ -726,7 +726,7 @@ describe("VideoPreviewModal", () => {
           success: true,
           data: {
             exportId: "export-job-1",
-            status: "in-progress",
+            status: "rendering",
             progress: 0.25,
             downloadReady: false
           }
@@ -747,6 +747,14 @@ describe("VideoPreviewModal", () => {
 
     await user.click(screen.getByRole("button", { name: "Brown 700" }));
     await user.click(screen.getByRole("button", { name: "Download reel preview" }));
+    expect(
+      await screen.findByRole("menuitem", { name: "Standard download" })
+    ).toBeInTheDocument();
+    expect(screen.getByRole("separator")).toBeInTheDocument();
+    expect(
+      screen.getByRole("menuitem", { name: "Premium 4K download" })
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole("menuitem", { name: "Premium 4K download" }));
 
     expect(mockFetch).toHaveBeenCalledWith(
       "/api/v1/listings/listing-1/reels/exports",
@@ -762,6 +770,7 @@ describe("VideoPreviewModal", () => {
     ];
     expect(JSON.parse(requestInit.body)).toEqual({
       filenameBase: "reel-preview-1",
+      quality: "premium",
       segments: [
         {
           sourceType: "listing_clip",
@@ -1291,6 +1300,9 @@ describe("VideoPreviewModal", () => {
     expect(
       screen.getByText("No user media videos available.")
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Upload videos here" })
+    ).toHaveAttribute("href", "/media");
 
     fireEvent.click(
       screen.getByTestId("timeline-delete-user-media:media-1-2")
@@ -1303,6 +1315,9 @@ describe("VideoPreviewModal", () => {
     });
     expect(
       screen.queryByText("No user media videos available.")
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "Upload videos here" })
     ).not.toBeInTheDocument();
   });
 

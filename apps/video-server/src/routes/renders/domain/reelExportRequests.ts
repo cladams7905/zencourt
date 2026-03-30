@@ -4,18 +4,35 @@ import {
 } from "@/middleware/errorHandler";
 import type { PreviewTextOverlay } from "@shared/types/video";
 
+export type VideoServerReelExportClip =
+  | {
+      sourceType: "listing_clip";
+      clipVersionId: string;
+      originalVideoUrl: string;
+      upscaleUrl?: string | null;
+      durationSeconds: number;
+      textOverlay?: PreviewTextOverlay | null;
+      supplementalAddressOverlay?: {
+        overlay: PreviewTextOverlay;
+        placement: "bottom-third" | "below-primary" | "low-bottom";
+      } | null;
+    }
+  | {
+      sourceType: "user_media";
+      originalVideoUrl: string;
+      durationSeconds: number;
+      textOverlay?: PreviewTextOverlay | null;
+      supplementalAddressOverlay?: {
+        overlay: PreviewTextOverlay;
+        placement: "bottom-third" | "below-primary" | "low-bottom";
+      } | null;
+    };
+
 export type VideoServerReelExportRequest = {
   exportId: string;
   orientation: "vertical" | "landscape";
-  clips: Array<{
-    src: string;
-    durationSeconds: number;
-    textOverlay?: PreviewTextOverlay;
-    supplementalAddressOverlay?: {
-      overlay: PreviewTextOverlay;
-      placement: "bottom-third" | "below-primary" | "low-bottom";
-    } | null;
-  }>;
+  quality: "standard" | "premium";
+  clips: VideoServerReelExportClip[];
 };
 
 export function parseCreateReelExportRequest(
@@ -44,11 +61,30 @@ export function parseCreateReelExportRequest(
   return {
     exportId: input.exportId.trim(),
     orientation: input.orientation,
-    clips: input.clips.map((clip) => ({
-      src: String(clip.src),
-      durationSeconds: Number(clip.durationSeconds),
-      supplementalAddressOverlay: clip.supplementalAddressOverlay ?? null,
-      ...(clip.textOverlay != null ? { textOverlay: clip.textOverlay } : {})
-    }))
+    quality: input.quality === "premium" ? "premium" : "standard",
+    clips: input.clips.map((clip) => {
+      const baseClip = {
+        durationSeconds: Number(clip.durationSeconds),
+        supplementalAddressOverlay: clip.supplementalAddressOverlay ?? null,
+        ...(clip.textOverlay != null ? { textOverlay: clip.textOverlay } : {})
+      };
+
+      if (clip.sourceType === "user_media") {
+        return {
+          sourceType: "user_media" as const,
+          originalVideoUrl: String(clip.originalVideoUrl),
+          ...baseClip
+        };
+      }
+
+      return {
+        sourceType: "listing_clip" as const,
+        clipVersionId: String(clip.clipVersionId),
+        originalVideoUrl: String(clip.originalVideoUrl),
+        upscaleUrl:
+          clip.upscaleUrl == null ? null : String(clip.upscaleUrl),
+        ...baseClip
+      };
+    })
   };
 }

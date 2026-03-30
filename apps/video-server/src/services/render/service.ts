@@ -8,11 +8,17 @@ export type RenderQueueFacade = {
   getJob: (jobId: string) => RenderJobState | undefined;
   cancelJob: (jobId: string) => boolean;
   clearArtifact: (jobId: string) => Promise<boolean>;
+  updateJobPhase: (
+    jobId: string,
+    phase: "upscaling" | "rendering",
+    progress?: number
+  ) => void;
   createJob: (
     data: RenderJobData,
     handlers?: {
       onStart?: (data: RenderJobData) => Promise<void>;
       onProgress?: (progress: number, data: RenderJobData) => Promise<void>;
+      mapProgress?: (progress: number) => number;
       onComplete?: (
         result: RenderOutput,
         data: RenderJobData
@@ -22,6 +28,7 @@ export type RenderQueueFacade = {
         artifactPath?: string;
       }>;
       onError?: (error: Error, data: RenderJobData) => Promise<void>;
+      timeoutMs?: number;
     },
     jobIdOverride?: string
   ) => string;

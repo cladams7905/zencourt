@@ -11,8 +11,17 @@ type RenderContext = {
   userId: string;
 };
 
+type RenderJobResponseStatus =
+  | "queued"
+  | "upscaling"
+  | "rendering"
+  | "completed"
+  | "failed"
+  | "canceled";
+
 type RenderQueueJob = {
   status: "queued" | "in-progress" | "completed" | "failed" | "canceled";
+  phase?: "upscaling" | "rendering";
   progress?: number;
   error?: string;
   artifactReady?: boolean;
@@ -24,6 +33,7 @@ type RenderQueuePort = {
     callbacks?: {
       onStart: (data: RenderJobData) => Promise<void>;
       onProgress: (progress: number, data: RenderJobData) => Promise<void>;
+      mapProgress?: (progress: number) => number;
       onComplete: (
         result: {
           videoBuffer: Buffer;
@@ -34,6 +44,7 @@ type RenderQueuePort = {
         data: RenderJobData
       ) => Promise<Record<string, never>>;
       onError: (error: Error, data: RenderJobData) => Promise<void>;
+      timeoutMs?: number;
     },
     jobIdOverride?: string
   ) => string;
@@ -113,7 +124,19 @@ export async function handleCreateRender(
 export function handleGetRenderJob(
   jobId: string,
   queue: RenderQueuePort
-): { status: 200 | 404; body: { success: boolean; error?: string; job?: RenderQueueJob } } {
+): {
+  status: 200 | 404;
+  body: {
+    success: boolean;
+    error?: string;
+    job?: {
+      status: RenderJobResponseStatus;
+      progress?: number;
+      error?: string;
+      artifactReady?: boolean;
+    };
+  };
+} {
   const job = queue.getJob(jobId);
   if (!job) {
     return { status: 404, body: { success: false, error: "Job not found" } };
@@ -130,7 +153,10 @@ export function handleGetRenderJob(
         status: 200,
         body: {
           success: true,
-          job: { status: "in-progress", progress: job.progress ?? 0 }
+          job: {
+            status: job.phase === "upscaling" ? "upscaling" : "rendering",
+            progress: job.progress ?? 0
+          }
         }
       };
     case "completed":

@@ -1,5 +1,6 @@
 import * as React from "react";
 import { Clock, Plus, Redo2, Trash2, Undo2 } from "lucide-react";
+import Link from "next/link";
 import { LoadingImage } from "@web/src/components/ui/loading-image";
 import {
   Tooltip,
@@ -488,7 +489,13 @@ export function VideoPreviewTimeline({
                     </div>
                   ) : userMediaClipOptions.length === 0 ? (
                     <div className="px-3 py-4 text-sm text-muted-foreground">
-                      No user media videos available.
+                      No user media videos available.{" "}
+                      <Link
+                        href="/media"
+                        className="font-medium text-foreground underline underline-offset-2 hover:text-primary"
+                      >
+                        Upload videos here
+                      </Link>
                     </div>
                   ) : (
                     <div className="flex max-h-72 min-h-0 flex-col">

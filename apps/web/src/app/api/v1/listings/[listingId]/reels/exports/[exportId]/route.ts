@@ -24,7 +24,8 @@ function isListingReelExportStatus(
 ): value is ListingReelExportJob["status"] {
   return (
     value === "queued" ||
-    value === "in-progress" ||
+    value === "upscaling" ||
+    value === "rendering" ||
     value === "completed" ||
     value === "failed" ||
     value === "canceled"

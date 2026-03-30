@@ -49,6 +49,7 @@ export type ClipVersionRecord = {
   status: "pending" | "processing" | "completed" | "failed" | "canceled";
   isCurrent: boolean;
   videoUrl?: string | null;
+  upscaleUrl?: string | null;
   thumbnailUrl?: string | null;
   durationSeconds?: number | null;
   metadata?: ClipVersionMetadata | null;

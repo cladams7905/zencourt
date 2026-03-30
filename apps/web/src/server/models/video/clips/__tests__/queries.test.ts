@@ -24,6 +24,7 @@ jest.mock("@db/client", () => ({
     id: "id",
     videoClipId: "videoClipId",
     status: "status",
+    upscaleUrl: "upscaleUrl",
     versionNumber: "versionNumber",
     createdAt: "createdAt",
     sourceVideoGenJobId: "sourceVideoGenJobId"
@@ -76,7 +77,12 @@ describe("video clip query models", () => {
     mockWhere.mockReturnValue({ orderBy: mockOrderBy });
     mockOrderBy
       .mockResolvedValueOnce([
-        { id: "cv-2", videoClipId: "clip-1", versionNumber: 2 },
+        {
+          id: "cv-2",
+          videoClipId: "clip-1",
+          versionNumber: 2,
+          upscaleUrl: "https://cdn.example.com/cv-2-4k.mp4"
+        },
         { id: "cv-1", videoClipId: "clip-1", versionNumber: 1 }
       ])
       .mockResolvedValueOnce([
@@ -88,7 +94,12 @@ describe("video clip query models", () => {
     await expect(
       getSuccessfulVideoClipVersionsByClipId("clip-1")
     ).resolves.toEqual([
-      { id: "cv-2", videoClipId: "clip-1", versionNumber: 2 },
+      {
+        id: "cv-2",
+        videoClipId: "clip-1",
+        versionNumber: 2,
+        upscaleUrl: "https://cdn.example.com/cv-2-4k.mp4"
+      },
       { id: "cv-1", videoClipId: "clip-1", versionNumber: 1 }
     ]);
 

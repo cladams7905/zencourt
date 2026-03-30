@@ -36,6 +36,7 @@ export const videoClipVersions = pgTable(
       .$type<VideoStatus>()
       .default("pending"),
     videoUrl: text("video_url"),
+    upscaleUrl: text("upscale_url"),
     thumbnailUrl: text("thumbnail_url"),
     durationSeconds: integer("duration_seconds"),
     metadata: jsonb("metadata").$type<ClipVersionMetadata>(),

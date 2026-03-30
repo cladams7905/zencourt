@@ -21,6 +21,13 @@ import {
 } from "@web/src/components/ui/alert-dialog";
 import { Button } from "@web/src/components/ui/button";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
+} from "@web/src/components/ui/dropdown-menu";
+import {
   Tooltip,
   TooltipContent,
   TooltipTrigger
@@ -47,6 +54,7 @@ import {
 } from "@web/src/components/listings/create/media/video/reelExportClient";
 import type {
   ListingReelExportJob,
+  ListingReelExportQuality,
   ListingReelExportRequest,
   ListingReelExportStatus
 } from "@web/src/lib/domain/listings/content/reels";
@@ -74,6 +82,7 @@ type VideoPreviewModalProps = {
     isDownloading: boolean;
     progress: number;
     status?: ListingReelExportStatus | "starting";
+    quality?: ListingReelExportQuality;
   } | null;
   onDownloadPreview?: (params: ListingReelExportRequest) => Promise<void>;
 };
@@ -121,6 +130,26 @@ function extractFileNameFromVideoUrl(
 
 const REEL_EXPORT_POLL_INTERVAL_MS = 1000;
 
+function getDownloadStatusLabel(
+  status: ListingReelExportStatus | "starting" | null | undefined,
+  quality?: ListingReelExportQuality
+) {
+  switch (status) {
+    case "starting":
+      return "Starting download...";
+    case "queued":
+      return "Queued for export...";
+    case "upscaling":
+      return "Upscaling room clips...";
+    case "rendering":
+      return quality === "premium"
+        ? "Rendering premium reel..."
+        : "Rendering reel...";
+    default:
+      return null;
+  }
+}
+
 export function VideoPreviewModal({
   selectedPreview,
   listingId,
@@ -160,6 +189,7 @@ export function VideoPreviewModal({
   const [isDownloadStarting, setIsDownloadStarting] = React.useState(false);
   const [downloadProgress, setDownloadProgress] = React.useState(0);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+  const [isDownloadMenuOpen, setIsDownloadMenuOpen] = React.useState(false);
   const [isExitConfirmOpen, setIsExitConfirmOpen] = React.useState(false);
   const [isAddClipOpen, setIsAddClipOpen] = React.useState(false);
   const [activeAddClipTab, setActiveAddClipTab] = React.useState<
@@ -172,6 +202,7 @@ export function VideoPreviewModal({
   const [activeExport, setActiveExport] = React.useState<{
     exportId: string;
     filenameBase: string;
+    quality: ListingReelExportQuality;
   } | null>(null);
   const selectedPreviewRef = React.useRef(selectedPreview);
   selectedPreviewRef.current = selectedPreview;
@@ -496,8 +527,9 @@ export function VideoPreviewModal({
     ]);
 
   const buildExportPayload = React.useCallback(
-    (): ListingReelExportRequest => ({
+    (quality: ListingReelExportQuality): ListingReelExportRequest => ({
       filenameBase: `reel-preview-${selectedPreviewRef.current?.variationNumber ?? 1}`,
+      quality,
       segments: segmentDraft.map((segment) => ({
         sourceType: segment.sourceType ?? "listing_clip",
         sourceId: segment.sourceId ?? segment.clipId,
@@ -598,6 +630,11 @@ export function VideoPreviewModal({
         : null;
   const downloadStatus = downloadState?.status ?? localDownloadStatus;
   const isQueuedDownload = downloadStatus === "queued";
+  const downloadQuality = downloadState?.quality ?? activeExport?.quality;
+  const downloadStatusLabel = getDownloadStatusLabel(
+    downloadStatus,
+    downloadQuality
+  );
 
   const downloadArtifact = React.useCallback(
     async (exportJob: { exportId: string; filenameBase: string }) => {
@@ -644,7 +681,8 @@ export function VideoPreviewModal({
 
     if (
       exportStatus.status === "queued" ||
-      exportStatus.status === "in-progress"
+      exportStatus.status === "upscaling" ||
+      exportStatus.status === "rendering"
     ) {
       setDownloadProgress((current) =>
         Math.max(current, clampReelDownloadProgress(exportStatus.progress))
@@ -690,9 +728,9 @@ export function VideoPreviewModal({
     }
   }, [activeExport, downloadArtifact, exportStatus]);
 
-  const handleDownload = React.useCallback(async () => {
+  const handleDownload = React.useCallback(async (quality: ListingReelExportQuality) => {
     if (usesExternalDownloadState) {
-      const exportPayload = buildExportPayload();
+      const exportPayload = buildExportPayload(quality);
       setErrorMessage(null);
       await onDownloadPreview?.(exportPayload);
       return;
@@ -707,13 +745,14 @@ export function VideoPreviewModal({
       return;
     }
 
+    setIsDownloadMenuOpen(false);
     setIsDownloadStarting(true);
     setDownloadProgress(0);
     setErrorMessage(null);
     toast("Started downloading reel preview.");
 
     try {
-      const exportPayload = buildExportPayload();
+      const exportPayload = buildExportPayload(quality);
       const response = await fetchApiData<ListingReelExportJob>(
         `/api/v1/listings/${listingId}/reels/exports`,
         {
@@ -726,7 +765,8 @@ export function VideoPreviewModal({
       startedArtifactDownloadRef.current = null;
       setActiveExport({
         exportId: response.exportId,
-        filenameBase: exportPayload.filenameBase ?? "reel-preview"
+        filenameBase: exportPayload.filenameBase ?? "reel-preview",
+        quality
       });
       setDownloadProgress(clampReelDownloadProgress(response.progress));
     } catch (error) {
@@ -964,43 +1004,70 @@ export function VideoPreviewModal({
                     className="relative flex min-h-0 min-w-0 items-center justify-center overflow-hidden bg-secondary px-3 py-4 max-[1049px]:min-h-[min(38dvh,18rem)] min-[1050px]:h-full min-[1050px]:px-0 min-[1050px]:py-0"
                   >
                     <div className="absolute right-3 top-3 z-10 flex gap-2 min-[1050px]:right-4 min-[1050px]:top-4">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="outline"
-                            className="relative h-8 w-8 rounded-full bg-background text-foreground hover:bg-secondary hover:text-secondary-foreground disabled:opacity-100 dark:bg-input/30 dark:border-input dark:hover:bg-input/50"
-                            aria-label="Download reel preview"
-                            disabled={isSaving || isFavoriting || isDownloading}
-                            onClick={() => void handleDownload()}
-                          >
-                            {isDownloading && !isQueuedDownload ? (
-                              <span
-                                data-testid="reel-download-spinner"
-                                aria-hidden
-                                className="pointer-events-none absolute inset-0 rounded-full border border-primary/20 border-t-primary animate-spin"
-                              />
-                            ) : null}
-                            {isQueuedDownload ? (
-                              <Hourglass
-                                data-testid="reel-download-queued-icon"
-                                className="relative z-10 h-4 w-4 text-primary"
-                              />
-                            ) : isDownloading ? (
-                              <span
-                                data-testid="reel-download-progress-label"
-                                className="relative z-10 text-[9px] font-semibold leading-none text-primary"
+                      <DropdownMenu
+                        open={isDownloadMenuOpen}
+                        onOpenChange={setIsDownloadMenuOpen}
+                      >
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="outline"
+                                className="relative h-8 w-8 rounded-full bg-background text-foreground hover:bg-secondary hover:text-secondary-foreground disabled:opacity-100 dark:bg-input/30 dark:border-input dark:hover:bg-input/50"
+                                aria-label="Download reel preview"
+                                disabled={isSaving || isFavoriting || isDownloading}
                               >
-                                {downloadProgressPercent}%
-                              </span>
-                            ) : (
-                              <Download className="relative z-10 h-4 w-4" />
-                            )}
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent side="top">Download</TooltipContent>
-                      </Tooltip>
+                                {isDownloading && !isQueuedDownload ? (
+                                  <span
+                                    data-testid="reel-download-spinner"
+                                    aria-hidden
+                                    className="pointer-events-none absolute inset-0 rounded-full border border-primary/20 border-t-primary animate-spin"
+                                  />
+                                ) : null}
+                                {isQueuedDownload ? (
+                                  <Hourglass
+                                    data-testid="reel-download-queued-icon"
+                                    className="relative z-10 h-4 w-4 text-primary"
+                                  />
+                                ) : isDownloading ? (
+                                  <span
+                                    data-testid="reel-download-progress-label"
+                                    className="relative z-10 text-[9px] font-semibold leading-none text-primary"
+                                  >
+                                    {downloadProgressPercent}%
+                                  </span>
+                                ) : (
+                                  <Download className="relative z-10 h-4 w-4" />
+                                )}
+                              </Button>
+                            </DropdownMenuTrigger>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">Download</TooltipContent>
+                        </Tooltip>
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuItem
+                            onClick={() => void handleDownload("standard")}
+                            className="flex flex-col items-start gap-0.5"
+                          >
+                            <span>Standard download</span>
+                            <span className="text-xs text-muted-foreground">
+                              Estimated time: 1-2 minutes
+                            </span>
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => void handleDownload("premium")}
+                            className="flex flex-col items-start gap-0.5"
+                          >
+                            <span>Premium 4K download</span>
+                            <span className="text-xs text-muted-foreground">
+                              Estimated time: 3-4 minutes
+                            </span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button
@@ -1018,6 +1085,11 @@ export function VideoPreviewModal({
                         <TooltipContent side="top">Favorite</TooltipContent>
                       </Tooltip>
                     </div>
+                    {isDownloading && downloadStatusLabel ? (
+                      <div className="absolute left-3 top-3 z-10 rounded-full bg-background/95 px-3 py-1 text-[11px] font-medium text-foreground shadow-sm min-[1050px]:left-4 min-[1050px]:top-4">
+                        {downloadStatusLabel}
+                      </div>
+                    ) : null}
                     <div
                       data-testid="video-player-shell"
                       className="relative mx-auto aspect-9/16 w-full min-w-[148px] max-w-[min(160px,calc(100vw-5rem))] overflow-hidden rounded-xl bg-card shadow-sm min-[1050px]:h-[86%] min-[1050px]:max-h-full min-[1050px]:w-auto min-[1050px]:max-w-full"

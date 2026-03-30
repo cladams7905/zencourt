@@ -156,6 +156,9 @@ describe("VideoPreviewModal download errors", () => {
     await user.click(
       screen.getByRole("button", { name: "Download reel preview" })
     );
+    await user.click(
+      await screen.findByRole("menuitem", { name: /Standard download/i })
+    );
 
     await waitFor(() =>
       expect(toast.error).toHaveBeenCalledWith(
@@ -186,6 +189,68 @@ describe("VideoPreviewModal download errors", () => {
     expect(
       screen.queryByTestId("reel-download-progress-label")
     ).not.toBeInTheDocument();
+  });
+
+  it("shows premium phase copy for upscaling downloads", () => {
+    render(
+      <VideoPreviewModal
+        selectedPreview={createSelectedPreview()}
+        listingId="listing-1"
+        userMediaVideoCount={0}
+        previewFps={30}
+        onOpenChange={jest.fn()}
+        onSavePreviewText={jest.fn()}
+        downloadState={{
+          isDownloading: true,
+          progress: 0.3,
+          status: "upscaling"
+        }}
+      />
+    );
+
+    expect(screen.getByText("Upscaling room clips...")).toBeInTheDocument();
+  });
+
+  it("shows standard rendering copy for standard downloads", () => {
+    render(
+      <VideoPreviewModal
+        selectedPreview={createSelectedPreview()}
+        listingId="listing-1"
+        userMediaVideoCount={0}
+        previewFps={30}
+        onOpenChange={jest.fn()}
+        onSavePreviewText={jest.fn()}
+        downloadState={{
+          isDownloading: true,
+          progress: 0.3,
+          status: "rendering",
+          quality: "standard"
+        }}
+      />
+    );
+
+    expect(screen.getByText("Rendering reel...")).toBeInTheDocument();
+  });
+
+  it("shows premium rendering copy for premium downloads", () => {
+    render(
+      <VideoPreviewModal
+        selectedPreview={createSelectedPreview()}
+        listingId="listing-1"
+        userMediaVideoCount={0}
+        previewFps={30}
+        onOpenChange={jest.fn()}
+        onSavePreviewText={jest.fn()}
+        downloadState={{
+          isDownloading: true,
+          progress: 0.3,
+          status: "rendering",
+          quality: "premium"
+        }}
+      />
+    );
+
+    expect(screen.getByText("Rendering premium reel...")).toBeInTheDocument();
   });
 
   it("shows start and completion toasts and renders a percentage tracker during download", async () => {
@@ -250,6 +315,9 @@ describe("VideoPreviewModal download errors", () => {
     await user.click(
       screen.getByRole("button", { name: "Download reel preview" })
     );
+    await user.click(
+      await screen.findByRole("menuitem", { name: /Standard download/i })
+    );
 
     expect(toast).toHaveBeenCalledWith("Started downloading reel preview.");
     await waitFor(() =>
@@ -302,7 +370,7 @@ describe("VideoPreviewModal download errors", () => {
           success: true,
           data: {
             exportId: "export-job-2",
-            status: "in-progress",
+            status: "rendering",
             progress: 0.2,
             downloadReady: false
           }
@@ -314,7 +382,7 @@ describe("VideoPreviewModal download errors", () => {
           success: true,
           data: {
             exportId: "export-job-2",
-            status: "in-progress",
+            status: "rendering",
             progress: 0.42,
             downloadReady: false
           }
@@ -334,6 +402,9 @@ describe("VideoPreviewModal download errors", () => {
 
     await user.click(
       screen.getByRole("button", { name: "Download reel preview" })
+    );
+    await user.click(
+      await screen.findByRole("menuitem", { name: /Standard download/i })
     );
 
     await waitFor(() =>
@@ -385,7 +456,7 @@ describe("VideoPreviewModal download errors", () => {
           success: true,
           data: {
             exportId: "export-job-3",
-            status: "in-progress",
+            status: "rendering",
             progress: 0.35,
             downloadReady: false
           }
@@ -406,6 +477,9 @@ describe("VideoPreviewModal download errors", () => {
 
     await user.click(
       screen.getByRole("button", { name: "Download reel preview" })
+    );
+    await user.click(
+      await screen.findByRole("menuitem", { name: /Standard download/i })
     );
 
     await waitFor(() =>

@@ -13,6 +13,7 @@ import {
 import { renderQueue } from "@/services/render";
 import {
   db,
+  videoClipVersions,
   videoGenJobs as videoJobs,
   videoGenBatch as videos,
   listings,
@@ -33,9 +34,14 @@ import {
   parseRenderJobIdParam
 } from "@/routes/renders/domain/requests";
 import { parseCreateReelExportRequest } from "@/routes/renders/domain/reelExportRequests";
+import { prepareReelExportClips } from "@/services/render/domain/premiumReelExport";
+import { upscaleVideoTo4k } from "@/services/render/providers/wavespeed/upscaler";
 
 const router = Router();
 const REEL_EXPORT_ARTIFACT_DIR = path.join(tmpdir(), "zencourt-reel-exports");
+const STANDARD_REEL_EXPORT_TIMEOUT_MS = 5 * 60 * 1000;
+const PREMIUM_REEL_EXPORT_TIMEOUT_MS = 10 * 60 * 1000;
+const PREMIUM_UPSCALING_PROGRESS_SHARE = 0.5;
 
 router.use(validateApiKey);
 
@@ -56,16 +62,95 @@ router.post(
   "/reel-export",
   asyncHandler(async (req: Request, res: Response) => {
     const input = parseCreateReelExportRequest(req.body);
+    const exportJobId = input.exportId;
+    const isPremiumExport = input.quality === "premium";
+    const premiumListingClipCount = input.clips.filter(
+      (clip) => clip.sourceType === "listing_clip"
+    ).length;
     let lastLoggedBucket = -1;
+    logger.info(
+      {
+        exportId: input.exportId,
+        quality: input.quality,
+        clipCount: input.clips.length,
+        listingClipCount: input.clips.filter((clip) => clip.sourceType === "listing_clip").length,
+        userMediaClipCount: input.clips.filter((clip) => clip.sourceType === "user_media").length
+      },
+      "[RenderProvider] Reel export accepted"
+    );
     const jobId = renderQueue.createJob(
       {
         videoId: input.exportId,
         listingId: "reel-export",
         userId: "reel-export",
-        clips: input.clips,
+        clips: input.clips.map((clip) => ({
+          src: clip.originalVideoUrl,
+          durationSeconds: clip.durationSeconds,
+          ...(clip.textOverlay ? { textOverlay: clip.textOverlay } : {}),
+          supplementalAddressOverlay: clip.supplementalAddressOverlay ?? null
+        })),
         orientation: input.orientation
       },
       {
+        onStart: async (data) => {
+          if (!isPremiumExport) {
+            return;
+          }
+
+          renderQueue.updateJobPhase(exportJobId, "upscaling", 0);
+          logger.info(
+            {
+              exportId: input.exportId,
+              jobId: exportJobId
+            },
+            "[RenderProvider] Premium reel export entering upscaling phase"
+          );
+          const preparedClips = await prepareReelExportClips(input, {
+            upscaleListingClip: async ({ sourceUrl }) =>
+              upscaleVideoTo4k({ sourceUrl }),
+            persistUpscaleUrl: async (clipVersionId, upscaleUrl) => {
+              await db
+                .update(videoClipVersions)
+                .set({
+                  upscaleUrl,
+                  updatedAt: new Date()
+                })
+                .where(eq(videoClipVersions.id, clipVersionId));
+              logger.info(
+                {
+                  exportId: input.exportId,
+                  clipVersionId
+                },
+                "[RenderProvider] Persisted premium upscale url"
+              );
+            },
+            onListingClipPrepared:
+              premiumListingClipCount > 0
+                ? ({ completedCount, totalCount }) => {
+                    renderQueue.updateJobPhase(
+                      exportJobId,
+                      "upscaling",
+                      (completedCount / totalCount) *
+                        PREMIUM_UPSCALING_PROGRESS_SHARE
+                    );
+                  }
+                : undefined
+          });
+          data.clips.splice(0, data.clips.length, ...preparedClips);
+          renderQueue.updateJobPhase(
+            exportJobId,
+            "rendering",
+            isPremiumExport ? PREMIUM_UPSCALING_PROGRESS_SHARE : 0
+          );
+          logger.info(
+            {
+              exportId: input.exportId,
+              jobId: exportJobId,
+              preparedClipCount: preparedClips.length
+            },
+            "[RenderProvider] Premium reel export entering rendering phase"
+          );
+        },
         onProgress: async (progress) => {
           const bucket = Math.floor(progress * 10);
           if (bucket <= lastLoggedBucket) {
@@ -81,14 +166,32 @@ router.post(
             "[RenderProvider] Reel export progress"
           );
         },
+        mapProgress: isPremiumExport
+          ? (progress) =>
+              PREMIUM_UPSCALING_PROGRESS_SHARE +
+              progress * (1 - PREMIUM_UPSCALING_PROGRESS_SHARE)
+          : undefined,
         onComplete: async (result) => ({
           artifactPath: await persistReelExportArtifact(
             input.exportId,
             result.videoBuffer
           )
-        })
+        }),
+        onError: async (error) => {
+          logger.error(
+            {
+              exportId: input.exportId,
+              jobId: exportJobId,
+              error: error.message
+            },
+            "[RenderProvider] Reel export failed"
+          );
+        },
+        timeoutMs: isPremiumExport
+          ? PREMIUM_REEL_EXPORT_TIMEOUT_MS
+          : STANDARD_REEL_EXPORT_TIMEOUT_MS
       },
-      input.exportId
+      exportJobId
     );
 
     res.status(200).json({ success: true, jobId });

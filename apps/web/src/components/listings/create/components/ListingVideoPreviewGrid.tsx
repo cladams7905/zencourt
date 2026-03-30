@@ -23,6 +23,7 @@ import { VideoPreviewSkeletonCard } from "@web/src/components/listings/create/me
 import type { PlayablePreviewTextUpdate } from "@web/src/components/listings/create/shared/types";
 import type {
   ListingReelExportJob,
+  ListingReelExportQuality,
   ListingReelExportRequest,
   ListingReelExportStatus
 } from "@web/src/lib/domain/listings/content/reels";
@@ -35,6 +36,7 @@ type ReelPreviewDownloadState = {
   exportId: string | null;
   filenameBase: string;
   status: ListingReelExportStatus | "starting";
+  quality: ListingReelExportQuality;
   progress: number;
   downloadReady: boolean;
   errorMessage?: string;
@@ -213,6 +215,7 @@ export function ListingVideoPreviewGrid({
           exportId: null,
           filenameBase: params.exportRequest.filenameBase ?? "reel-preview",
           status: "starting",
+          quality: params.exportRequest.quality ?? "standard",
           progress: 0,
           downloadReady: false,
           artifactDownloadStarted: false,
@@ -239,6 +242,7 @@ export function ListingVideoPreviewGrid({
             filenameBase:
               params.exportRequest.filenameBase ?? "reel-preview",
             status: response.status,
+            quality: params.exportRequest.quality ?? "standard",
             progress: clampReelDownloadProgress(response.progress),
             downloadReady: response.downloadReady,
             errorMessage: response.errorMessage,
@@ -267,7 +271,8 @@ export function ListingVideoPreviewGrid({
       ([, state]) =>
         Boolean(state.exportId) &&
         (state.status === "queued" ||
-          state.status === "in-progress" ||
+          state.status === "upscaling" ||
+          state.status === "rendering" ||
           state.status === "starting")
     );
 
@@ -445,7 +450,9 @@ export function ListingVideoPreviewGrid({
                   progress:
                     downloadStatesByPreviewId[selectedPreview.id]?.progress ?? 0,
                   status:
-                    downloadStatesByPreviewId[selectedPreview.id]?.status
+                    downloadStatesByPreviewId[selectedPreview.id]?.status,
+                  quality:
+                    downloadStatesByPreviewId[selectedPreview.id]?.quality
                 }
               : null
             : null

@@ -30,6 +30,7 @@ declare global {
       TEMP_DIR?: string;
       STORAGE_HEALTH_CACHE_MS?: string;
       RENDER_CONCURRENCY?: string;
+      REEL_EXPORT_TIMEOUT_MS?: string;
       GENERATION_CONCURRENCY?: string;
       REMOTION_CACHE_DIR?: string;
 
@@ -44,6 +45,9 @@ declare global {
       RUNWAY_API_KEY?: string;
       RUNWAY_API_URL?: string;
       RUNWAY_API_VERSION?: string;
+
+      // WaveSpeed
+      WAVESPEED_API_KEY?: string;
     }
   }
 }
@@ -66,7 +70,8 @@ const REQUIRED_ENV_VARS = [
   "DATABASE_URL",
   "FAL_KEY",
   "RUNWAY_API_KEY",
-  "VIDEO_SERVER_API_KEY"
+  "VIDEO_SERVER_API_KEY",
+  "WAVESPEED_API_KEY"
 ] as const;
 
 function trimTrailingSlashes(value: string): string {

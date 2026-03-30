@@ -4,7 +4,10 @@ import { StatusCode } from "@shared/types/api";
 import { withCurrentUserListingAccess } from "@web/src/server/actions/shared/auth";
 import { getCurrentVideoClipsWithCurrentVersionsByListingId } from "@web/src/server/models/video";
 import { getUserMediaByIds } from "@web/src/server/models/user/media";
-import type { ListingReelExportRequest } from "@web/src/lib/domain/listings/content/reels";
+import type {
+  ListingReelExportQuality,
+  ListingReelExportRequest
+} from "@web/src/lib/domain/listings/content/reels";
 
 export type { ListingReelExportRequest as PlayablePreviewExportRequest };
 
@@ -33,13 +36,14 @@ export async function buildListingReelExportRequestForCurrentUser(
   }
 
   return withCurrentUserListingAccess(listingId, async ({ user }) => {
+    const quality: ListingReelExportQuality = input.quality ?? "standard";
     const clipRows = await getCurrentVideoClipsWithCurrentVersionsByListingId(
       listingId
     );
-    const clipUrlById = new Map(
+    const clipVersionByClipId = new Map(
       clipRows
         .filter((row) => Boolean(row.clipVersion.videoUrl))
-        .map((row) => [row.clip.id, row.clipVersion.videoUrl as string])
+        .map((row) => [row.clip.id, row.clipVersion] as const)
     );
     const userMediaIds = input.segments
       .filter((segment) => segment.sourceType === "user_media")
@@ -52,12 +56,27 @@ export async function buildListingReelExportRequestForCurrentUser(
     );
 
     const clips = input.segments.map((segment) => {
-      const src =
-        segment.sourceType === "user_media"
-          ? userMediaUrlById.get(segment.sourceId)
-          : clipUrlById.get(segment.sourceId);
+      if (segment.sourceType === "user_media") {
+        const originalVideoUrl = userMediaUrlById.get(segment.sourceId);
 
-      if (!src) {
+        if (!originalVideoUrl) {
+          throw new ApiError(StatusCode.NOT_FOUND, {
+            error: "Not found",
+            message: "Reel draft source not found"
+          });
+        }
+
+        return {
+          sourceType: "user_media" as const,
+          originalVideoUrl,
+          durationSeconds: segment.durationSeconds,
+          textOverlay: segment.textOverlay ?? null,
+          supplementalAddressOverlay: segment.supplementalAddressOverlay ?? null
+        };
+      }
+
+      const clipVersion = clipVersionByClipId.get(segment.sourceId);
+      if (!clipVersion?.videoUrl) {
         throw new ApiError(StatusCode.NOT_FOUND, {
           error: "Not found",
           message: "Reel draft source not found"
@@ -65,7 +84,10 @@ export async function buildListingReelExportRequestForCurrentUser(
       }
 
       return {
-        src,
+        sourceType: "listing_clip" as const,
+        clipVersionId: clipVersion.id,
+        originalVideoUrl: clipVersion.videoUrl,
+        upscaleUrl: clipVersion.upscaleUrl ?? null,
         durationSeconds: segment.durationSeconds,
         textOverlay: segment.textOverlay ?? null,
         supplementalAddressOverlay: segment.supplementalAddressOverlay ?? null
@@ -77,6 +99,7 @@ export async function buildListingReelExportRequestForCurrentUser(
       request: {
         exportId: nanoid(),
         orientation: "vertical" as const,
+        quality,
         clips
       }
     };
