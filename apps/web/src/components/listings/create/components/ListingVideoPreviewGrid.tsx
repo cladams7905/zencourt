@@ -7,6 +7,7 @@ import type { ListingContentSubcategory } from "@shared/types/models";
 import type { ListingContentItem as ContentItem } from "@web/src/lib/domain/listings/content";
 import type { ListingOpenHouseContext } from "@web/src/lib/domain/listings/content/openHouse";
 import {
+  regenerateListingVideoReelText,
   saveAndFavoriteListingVideoReel,
   saveListingVideoReel
 } from "@web/src/server/actions/listings/content/reels";
@@ -24,7 +25,8 @@ import type { PlayablePreviewTextUpdate } from "@web/src/components/listings/cre
 import type {
   ListingReelExportJob,
   ListingReelExportRequest,
-  ListingReelExportStatus
+  ListingReelExportStatus,
+  RegenerateListingVideoReelTextParams
 } from "@web/src/lib/domain/listings/content/reels";
 import {
   fetchApiData,
@@ -139,6 +141,17 @@ export function ListingVideoPreviewGrid({
       });
     },
     [listingId, onReplacePreviewItem, selectedPreview]
+  );
+
+  const handleRegeneratePreviewText = React.useCallback(
+    async (params: RegenerateListingVideoReelTextParams) => {
+      if (!selectedPreview?.captionItem || !selectedPreview.captionItemKey) {
+        throw new Error("This preview cannot be edited yet.");
+      }
+
+      return regenerateListingVideoReelText(listingId, params);
+    },
+    [listingId, selectedPreview]
   );
 
   const downloadArtifact = React.useCallback(
@@ -437,6 +450,7 @@ export function ListingVideoPreviewGrid({
         }}
         onSavePreviewText={handleSavePreviewText}
         onSaveAndFavoritePreview={handleSaveAndFavoritePreview}
+        onRegeneratePreviewText={handleRegeneratePreviewText}
         downloadState={
           selectedPreview
             ? downloadStatesByPreviewId[selectedPreview.id]

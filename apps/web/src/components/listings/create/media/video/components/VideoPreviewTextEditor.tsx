@@ -16,6 +16,8 @@ import {
 import { Switch } from "@web/src/components/ui/switch";
 import { Textarea } from "@web/src/components/ui/textarea";
 import { cn } from "@web/src/components/ui/utils";
+import type { ReelTextRegenerationField } from "@web/src/lib/domain/listings/content/reels";
+import { ReelTextRegenerateControl } from "./ReelTextRegenerateControl";
 import {
   type OverlayOption,
   type ReelOverlayDraft,
@@ -82,6 +84,18 @@ type VideoPreviewTextEditorProps = {
   onOverlayFontChange: (value: ReelOverlayDraft["fontPairing"]) => void;
   onOverlayPositionChange: (value: ReelOverlayDraft["position"]) => void;
   onOverlayAddressToggle: (value: boolean) => void;
+  hookInputDisabled?: boolean;
+  captionInputDisabled?: boolean;
+  hookRegenerateState?: {
+    isSubmitting: boolean;
+    onRandomRegenerate: () => void;
+    onCustomRegenerate: (directions: string) => void;
+  };
+  captionRegenerateState?: {
+    isSubmitting: boolean;
+    onRandomRegenerate: () => void;
+    onCustomRegenerate: (directions: string) => void;
+  };
 };
 
 export function VideoPreviewTextEditor({
@@ -101,7 +115,11 @@ export function VideoPreviewTextEditor({
   onOverlayBackgroundChange,
   onOverlayFontChange,
   onOverlayPositionChange,
-  onOverlayAddressToggle
+  onOverlayAddressToggle,
+  hookInputDisabled = false,
+  captionInputDisabled = false,
+  hookRegenerateState,
+  captionRegenerateState
 }: VideoPreviewTextEditorProps) {
   function handleBackgroundChange(value: ReelOverlayDraft["background"]) {
     onOverlayBackgroundChange(value);
@@ -119,6 +137,24 @@ export function VideoPreviewTextEditor({
     onOverlayAddressToggle(value);
   }
 
+  function renderRegenerateControl(
+    field: ReelTextRegenerationField,
+    state?: VideoPreviewTextEditorProps["hookRegenerateState"]
+  ) {
+    if (!state) {
+      return null;
+    }
+
+    return (
+      <ReelTextRegenerateControl
+        field={field}
+        isSubmitting={state.isSubmitting}
+        onRandomRegenerate={state.onRandomRegenerate}
+        onCustomRegenerate={state.onCustomRegenerate}
+      />
+    );
+  }
+
   const selectedFontOption =
     fontOptions.find((option) => option.value === overlayDraft.fontPairing) ??
     fontOptions[0];
@@ -132,25 +168,31 @@ export function VideoPreviewTextEditor({
         <div className="p-4">
           <div className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="video-preview-header" className="font-semibold">
-                Header
-              </Label>
+              <div className="flex items-center justify-between gap-2">
+                <Label htmlFor="video-preview-header" className="font-semibold">
+                  Header
+                </Label>
+                {renderRegenerateControl("hook", hookRegenerateState)}
+              </div>
               <Input
                 id="video-preview-header"
                 value={hookValue}
-                disabled={isSaving}
+                disabled={isSaving || hookInputDisabled}
                 onChange={(event) => onHookChange(event.target.value)}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="video-preview-caption" className="font-semibold">
-                Caption
-              </Label>
+              <div className="flex items-center justify-between gap-2">
+                <Label htmlFor="video-preview-caption" className="font-semibold">
+                  Caption
+                </Label>
+                {renderRegenerateControl("caption", captionRegenerateState)}
+              </div>
               <Textarea
                 id="video-preview-caption"
                 value={captionValue}
-                disabled={isSaving}
+                disabled={isSaving || captionInputDisabled}
                 rows={8}
                 onChange={(event) => onCaptionChange(event.target.value)}
               />

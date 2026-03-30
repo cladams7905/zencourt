@@ -11,6 +11,7 @@ const mockPlayer = jest.fn<React.ReactNode, [unknown]>(
 const mockOnOpenChange = jest.fn();
 const mockOnSave = jest.fn();
 const mockOnSaveAndFavorite = jest.fn();
+const mockOnRegeneratePreviewText = jest.fn();
 const mockSeekTo = jest.fn();
 const mockPause = jest.fn();
 const mockAddEventListener = jest.fn();
@@ -264,6 +265,7 @@ function StatefulVideoPreviewModal({
       }}
       onSavePreviewText={mockOnSave}
       onSaveAndFavoritePreview={mockOnSaveAndFavorite}
+      onRegeneratePreviewText={mockOnRegeneratePreviewText}
     />
   );
 }
@@ -275,6 +277,10 @@ describe("VideoPreviewModal", () => {
     mockCurrentFrame = 0;
     mockOnSave.mockResolvedValue(undefined);
     mockOnSaveAndFavorite.mockResolvedValue(undefined);
+    mockOnRegeneratePreviewText.mockResolvedValue({
+      targetField: "hook",
+      value: "Regenerated hook"
+    });
     mockFetch.mockResolvedValue({
       ok: true,
       blob: async () => new Blob(["video"], { type: "video/mp4" }),
@@ -339,6 +345,148 @@ describe("VideoPreviewModal", () => {
     expect(screen.getByTestId("timeline-total-duration")).toHaveTextContent(
       "7.5s"
     );
+  });
+
+  it("renders header and caption regenerate controls with tooltips", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <VideoPreviewModal
+        selectedPreview={createSelectedPreview()}
+        userMediaVideoCount={0}
+        previewFps={30}
+        onOpenChange={mockOnOpenChange}
+        onSavePreviewText={mockOnSave}
+        onRegeneratePreviewText={mockOnRegeneratePreviewText}
+      />
+    );
+
+    const headerButton = screen.getByRole("button", {
+      name: "Regenerate header"
+    });
+    const captionButton = screen.getByRole("button", {
+      name: "Regenerate caption"
+    });
+
+    await user.hover(headerButton);
+    expect(
+      (await screen.findAllByText("Regenerate header")).length
+    ).toBeGreaterThan(0);
+
+    await user.unhover(headerButton);
+    await user.hover(captionButton);
+    expect(
+      (await screen.findAllByText("Regenerate caption")).length
+    ).toBeGreaterThan(0);
+  });
+
+  it("updates only the targeted draft field during regeneration", async () => {
+    const user = userEvent.setup();
+    mockOnRegeneratePreviewText.mockImplementation(async (params) => ({
+      targetField: params.targetField,
+      value:
+        params.targetField === "hook"
+          ? "Fresh header"
+          : params.customDirections?.trim()
+            ? "Custom caption"
+            : "Fallback caption"
+    }));
+
+    render(
+      <VideoPreviewModal
+        selectedPreview={createSelectedPreview()}
+        userMediaVideoCount={0}
+        previewFps={30}
+        onOpenChange={mockOnOpenChange}
+        onSavePreviewText={mockOnSave}
+        onRegeneratePreviewText={mockOnRegeneratePreviewText}
+      />
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Regenerate header" })
+    );
+    await user.click(
+      screen.getByRole("button", { name: /Random regenerate/i })
+    );
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Header")).toHaveValue("Fresh header");
+    });
+    expect(screen.getByLabelText("Caption")).toHaveValue("Original caption");
+
+    await user.click(
+      screen.getByRole("button", { name: "Regenerate caption" })
+    );
+    await user.click(screen.getByRole("button", { name: /Custom prompt/i }));
+    await user.type(
+      screen.getByLabelText("Directions"),
+      "Make it punchier and shorter."
+    );
+    await user.click(screen.getByRole("button", { name: /^regenerate$/i }));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Caption")).toHaveValue("Custom caption");
+    });
+    expect(screen.getByLabelText("Header")).toHaveValue("Fresh header");
+
+    expect(mockOnRegeneratePreviewText).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        targetField: "hook",
+        mode: "random"
+      })
+    );
+    expect(mockOnRegeneratePreviewText).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        targetField: "caption",
+        mode: "custom",
+        customDirections: "Make it punchier and shorter."
+      })
+    );
+  });
+
+  it("disables only the targeted field during regeneration and preserves draft on failure", async () => {
+    const user = userEvent.setup();
+    let rejectRegeneration: ((error: Error) => void) | undefined;
+    mockOnRegeneratePreviewText.mockImplementation(
+      () =>
+        new Promise<never>((_, reject) => {
+          rejectRegeneration = reject;
+        })
+    );
+
+    render(
+      <VideoPreviewModal
+        selectedPreview={createSelectedPreview()}
+        userMediaVideoCount={0}
+        previewFps={30}
+        onOpenChange={mockOnOpenChange}
+        onSavePreviewText={mockOnSave}
+        onRegeneratePreviewText={mockOnRegeneratePreviewText}
+      />
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Regenerate header" })
+    );
+    await user.click(
+      screen.getByRole("button", { name: /Random regenerate/i })
+    );
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Header")).toBeDisabled();
+    });
+    expect(screen.getByLabelText("Caption")).toBeEnabled();
+
+    rejectRegeneration?.(new Error("Regeneration failed."));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Header")).toBeEnabled();
+    });
+    expect(screen.getByLabelText("Header")).toHaveValue("Original hook");
+    expect(screen.getByLabelText("Caption")).toHaveValue("Original caption");
   });
 
   it("numbers duplicate room names in the timeline and room clips picker", async () => {
