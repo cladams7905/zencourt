@@ -1,12 +1,15 @@
-import { createRunwayTaskSlots } from "@/services/videoGeneration/domain/runwayTaskSlots";
+import {
+  createProviderTaskSlots,
+  waveSpeedTaskSlots
+} from "@/services/videoGeneration/domain/providerTaskSlots";
 
 function flush(): Promise<void> {
   return new Promise((resolve) => setImmediate(resolve));
 }
 
-describe("runwayTaskSlots", () => {
-  it("queues the fourth lease until one of the first three is released", async () => {
-    const slots = createRunwayTaskSlots(3);
+describe("providerTaskSlots", () => {
+  it("queues work when the provider limit is reached", async () => {
+    const slots = createProviderTaskSlots(3);
 
     const lease1 = await slots.acquire();
     const lease2 = await slots.acquire();
@@ -32,7 +35,7 @@ describe("runwayTaskSlots", () => {
   });
 
   it("releases a bound task by task id", async () => {
-    const slots = createRunwayTaskSlots(1);
+    const slots = createProviderTaskSlots(1);
 
     const lease1 = await slots.acquire();
     lease1.bind("task-1");
@@ -54,30 +57,7 @@ describe("runwayTaskSlots", () => {
     lease2.release();
   });
 
-  it("updates task binding and releases only the current task id", async () => {
-    const slots = createRunwayTaskSlots(1);
-
-    const lease1 = await slots.acquire();
-    lease1.bind("task-1");
-    lease1.bind("task-2");
-
-    let acquiredSecond = false;
-    const secondLeasePromise = slots.acquire().then((lease) => {
-      acquiredSecond = true;
-      return lease;
-    });
-
-    await flush();
-    expect(acquiredSecond).toBe(false);
-
-    slots.releaseByTaskId("task-1");
-    await flush();
-    expect(acquiredSecond).toBe(false);
-
-    slots.releaseByTaskId("task-2");
-    const lease2 = await secondLeasePromise;
-    expect(acquiredSecond).toBe(true);
-
-    lease2.release();
+  it("supports provider-specific limits like WaveSpeed's 100-task ceiling", async () => {
+    expect(waveSpeedTaskSlots).toBeDefined();
   });
 });

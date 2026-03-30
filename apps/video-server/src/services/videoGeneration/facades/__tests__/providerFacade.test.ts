@@ -1,10 +1,13 @@
 import { ProviderDispatchFacade } from "@/services/videoGeneration/facades/providerFacade";
 
+export {};
+
 describe("ProviderDispatchFacade", () => {
   const input = {
     jobId: "job-1",
     videoId: "video-1",
     prompt: "prompt",
+    negativePrompt: "negative prompt",
     imageUrls: ["https://image.jpg"],
     orientation: "vertical" as const,
     durationSeconds: 4,

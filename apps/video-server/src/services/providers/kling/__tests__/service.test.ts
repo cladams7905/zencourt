@@ -1,6 +1,8 @@
 const submitMock = jest.fn();
 const configMock = jest.fn();
 
+export {};
+
 jest.mock("@fal-ai/client", () => ({
   fal: {
     config: (...args: unknown[]) => configMock(...args),

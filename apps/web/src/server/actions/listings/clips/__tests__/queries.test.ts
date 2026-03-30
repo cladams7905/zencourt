@@ -66,7 +66,8 @@ describe("listing clips queries", () => {
           orientation: "vertical",
           generationModel: "veo3.1_fast",
           imageUrls: ["https://example.com/still.jpg"],
-          prompt: "show kitchen"
+          prompt: "show kitchen",
+          negativePrompt: "no people"
         },
         {
           jobId: "job-2",
@@ -161,6 +162,7 @@ describe("listing clips queries", () => {
         videoClipId: "listing-1:room-1:1",
         versionNumber: 1,
         durationSeconds: 4,
+        prompt: "show kitchen",
         sourceVideoGenJobId: "job-1"
       })
     );

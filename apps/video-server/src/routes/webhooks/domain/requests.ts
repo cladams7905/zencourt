@@ -30,8 +30,30 @@ export interface FalWebhookRequestContext {
   payload: FalWebhookPayload;
 }
 
+export interface WaveSpeedWebhookPayload {
+  id: string;
+  status: "pending" | "completed" | "failed";
+  outputs?: string[];
+  error?: string;
+}
+
+export interface WaveSpeedWebhookHeaders {
+  webhookId: string | undefined;
+  timestamp: string | undefined;
+  signature: string | undefined;
+}
+
+export interface WaveSpeedWebhookRequestContext {
+  jobId?: string;
+  rawBody?: Buffer;
+  headers: WaveSpeedWebhookHeaders;
+  payload: WaveSpeedWebhookPayload;
+}
+
 export function extractWebhookJobId(req: Request): string | undefined {
-  const rawRequestId = (req.query?.requestId ?? req.query?.request_id) as
+  const rawRequestId = (req.query?.jobId ??
+    req.query?.requestId ??
+    req.query?.request_id) as
     | string
     | string[]
     | undefined;
@@ -50,5 +72,22 @@ export function parseFalWebhookRequest(req: Request): FalWebhookRequestContext {
       signature: req.header("x-fal-webhook-signature")
     },
     payload: req.body as FalWebhookPayload
+  };
+}
+
+export function parseWaveSpeedWebhookRequest(
+  req: Request
+): WaveSpeedWebhookRequestContext {
+  const rawBody = (req as Request & { rawBody?: Buffer }).rawBody;
+
+  return {
+    jobId: extractWebhookJobId(req),
+    rawBody,
+    headers: {
+      webhookId: req.header("webhook-id"),
+      timestamp: req.header("webhook-timestamp"),
+      signature: req.header("webhook-signature")
+    },
+    payload: req.body as WaveSpeedWebhookPayload
   };
 }

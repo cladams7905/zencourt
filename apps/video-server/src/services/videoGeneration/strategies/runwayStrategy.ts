@@ -11,6 +11,13 @@ import {
   VideoGenerationServiceError
 } from "@/services/videoGeneration/errors";
 
+function combineRunwayPrompt(
+  prompt: string,
+  negativePrompt: string
+): string {
+  return [prompt.trim(), negativePrompt.trim()].filter(Boolean).join(" ");
+}
+
 function normalizeRunwayDuration(_durationSeconds: number): 4 | 6 | 8 {
   return 4;
 }
@@ -55,7 +62,7 @@ export const runwayStrategy: VideoGenerationStrategy<
       const task = await runwayService.submitImageToVideo({
         model: runwayModel,
         promptImage: input.imageUrls[0],
-        promptText: input.prompt,
+        promptText: combineRunwayPrompt(input.prompt, input.negativePrompt),
         ratio: runwayRatio,
         duration: runwayDurationSeconds
       });

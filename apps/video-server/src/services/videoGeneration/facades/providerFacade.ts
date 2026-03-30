@@ -17,6 +17,7 @@ export type ProviderDispatchInput = {
   jobId: string;
   videoId: string;
   prompt: string;
+  negativePrompt: string;
   imageUrls: string[];
   orientation: "vertical" | "landscape";
   durationSeconds: number;

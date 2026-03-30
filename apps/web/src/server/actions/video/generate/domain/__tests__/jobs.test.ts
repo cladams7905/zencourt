@@ -4,7 +4,7 @@ const mockGetCategoryForRoom = jest.fn();
 const mockSelectPrimaryImageForRoom = jest.fn();
 const mockSelectSecondaryImageForRoom = jest.fn();
 const mockBuildPrompt = jest.fn();
-const mockAssembleProviderPrompt = jest.fn();
+const mockBuildNegativePrompt = jest.fn();
 const mockGetVideoGenerationConfig = jest.fn();
 const mockIsPriorityCategory = jest.fn();
 
@@ -23,8 +23,7 @@ jest.mock("@web/src/server/services/videoGeneration/domain/rooms", () => ({
 
 jest.mock("@web/src/server/services/videoGeneration/domain/prompt", () => ({
   buildPrompt: (...args: unknown[]) => mockBuildPrompt(...args),
-  assembleProviderPrompt: (...args: unknown[]) =>
-    mockAssembleProviderPrompt(...args)
+  buildNegativePrompt: (...args: unknown[]) => mockBuildNegativePrompt(...args)
 }));
 
 jest.mock("@web/src/server/services/videoGeneration/config", () => ({
@@ -45,13 +44,12 @@ import {
 describe("video jobs domain", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockNanoid.mockReset();
     mockGetVideoGenerationConfig.mockReturnValue({
       model: "veo3.1_fast",
       enablePrioritySecondary: true
     });
-    mockAssembleProviderPrompt.mockImplementation(
-      (motionPrompt: string) => `${motionPrompt} [constraints]`
-    );
+    mockBuildNegativePrompt.mockReturnValue("[constraints]");
   });
 
   it("throws when no rooms are available", async () => {
@@ -105,7 +103,8 @@ describe("video jobs domain", () => {
         generationSettings: expect.objectContaining({
           clipIndex: 0,
           sortOrder: 0,
-          prompt: "Primary prompt [constraints]",
+          prompt: "Primary prompt",
+          negativePrompt: "[constraints]",
           imageUrls: ["signed:https://img/primary.jpg"]
         })
       })
@@ -148,14 +147,16 @@ describe("video jobs domain", () => {
       expect.objectContaining({
         clipIndex: 0,
         sortOrder: 0,
-        prompt: "Primary prompt [constraints]"
+        prompt: "Primary prompt",
+        negativePrompt: "[constraints]"
       })
     );
     expect(records[1].generationSettings).toEqual(
       expect.objectContaining({
         clipIndex: 1,
         sortOrder: 1,
-        prompt: "Secondary prompt [constraints]"
+        prompt: "Secondary prompt",
+        negativePrompt: "[constraints]"
       })
     );
     expect(mockBuildPrompt).toHaveBeenNthCalledWith(

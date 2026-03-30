@@ -1,4 +1,8 @@
-import { assembleProviderPrompt, buildPrompt } from "../prompt";
+import {
+  buildNegativePrompt,
+  buildPrompt,
+  combinePromptPartsForProvider
+} from "../prompt";
 
 describe("videoGeneration/domain/prompt", () => {
   it("uses injected picker and returns the motion prompt only", () => {
@@ -12,9 +16,18 @@ describe("videoGeneration/domain/prompt", () => {
     expect(result.prompt).toBe("Forward pan through the Kitchen.");
   });
 
-  it("assembles provider prompts by appending hard constraints", () => {
+  it("builds the negative prompt as compliance constraints only", () => {
+    expect(buildNegativePrompt()).toBe(
+      "No people. No added objects. Keep architecture and materials unchanged. Single continuous camera movement only. Full-bleed, edge-to-edge composition from the first frame, filling the entire video frame at all times. Start already full-screen. No framed or inset opening, no letterboxing or pillarboxing, and no fades, transitions, cuts, or scene changes."
+    );
+  });
+
+  it("combines prompt parts only when a provider needs a single prompt string", () => {
     expect(
-      assembleProviderPrompt("Forward pan through the Kitchen.")
+      combinePromptPartsForProvider({
+        prompt: "Forward pan through the Kitchen.",
+        negativePrompt: buildNegativePrompt()
+      })
     ).toBe(
       "Forward pan through the Kitchen. No people. No added objects. Keep architecture and materials unchanged. Single continuous camera movement only. Full-bleed, edge-to-edge composition from the first frame, filling the entire video frame at all times. Start already full-screen. No framed or inset opening, no letterboxing or pillarboxing, and no fades, transitions, cuts, or scene changes."
     );

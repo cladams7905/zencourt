@@ -1,7 +1,12 @@
 import { klingStrategy } from "./klingStrategy";
 import { runwayStrategy } from "./runwayStrategy";
+import { wavespeedStrategy } from "./wavespeedStrategy";
 
-export { klingStrategy, runwayStrategy };
+export { klingStrategy, runwayStrategy, wavespeedStrategy };
 
-export const primaryProviderStrategies = [runwayStrategy, klingStrategy];
-export const fallbackProviderStrategies = [klingStrategy];
+export const primaryProviderStrategies = [
+  wavespeedStrategy,
+  runwayStrategy,
+  klingStrategy
+];
+export const fallbackProviderStrategies = [runwayStrategy, klingStrategy];

@@ -11,6 +11,7 @@ describe("dispatchJobOrchestrator", () => {
     metadata: { duration: 4 },
     generationSettings: {
       prompt: "prompt",
+      negativePrompt: "negative prompt",
       imageUrls: ["https://image.jpg"],
       orientation: "vertical"
     }
@@ -41,10 +42,20 @@ describe("dispatchJobOrchestrator", () => {
 
     expect(primaryProviderFacade.dispatch).toHaveBeenCalledTimes(1);
     expect(fallbackProviderFacade.dispatch).toHaveBeenCalledTimes(1);
+    expect(primaryProviderFacade.dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        prompt: "prompt",
+        negativePrompt: "negative prompt"
+      })
+    );
     expect(markJobProcessing).toHaveBeenCalledWith(
       "job-1",
       "req-1",
-      expect.objectContaining({ model: expect.any(String) })
+      expect.objectContaining({
+        model: expect.any(String),
+        prompt: "prompt",
+        negativePrompt: "negative prompt"
+      })
     );
   });
 
@@ -281,7 +292,53 @@ describe("dispatchJobOrchestrator", () => {
     expect(markJobProcessing).toHaveBeenCalledWith(
       "job-1",
       "req-1",
-      expect.objectContaining({ model: "veo3.1_fast" })
+      expect.objectContaining({
+        model: "veo3.1_fast",
+        negativePrompt: "negative prompt"
+      })
+    );
+  });
+
+  it("falls back safely when an older job row has no negative prompt", async () => {
+    const primaryProviderFacade: any = {
+      dispatch: jest.fn().mockResolvedValue({
+        provider: "primary",
+        model: "veo3.1_fast",
+        requestId: "req-legacy"
+      })
+    };
+    const markJobProcessing = jest.fn().mockResolvedValue(undefined);
+    const legacyJob = {
+      ...baseJob,
+      generationSettings: {
+        ...baseJob.generationSettings,
+        negativePrompt: undefined
+      }
+    } as any;
+
+    await dispatchJobOrchestrator(legacyJob, {
+      primaryProviderFacade,
+      fallbackProviderFacade: { dispatch: jest.fn() } as any,
+      markJobProcessing,
+      onProviderOutputReady: jest.fn(),
+      onProviderOutputFailure: jest.fn(),
+      buildWebhookUrl: () => "https://webhook",
+      getJobDurationSeconds: () => 4
+    });
+
+    expect(primaryProviderFacade.dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        prompt: "prompt",
+        negativePrompt: ""
+      })
+    );
+    expect(markJobProcessing).toHaveBeenCalledWith(
+      "job-1",
+      "req-legacy",
+      expect.objectContaining({
+        prompt: "prompt",
+        negativePrompt: ""
+      })
     );
   });
 

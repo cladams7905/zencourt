@@ -154,9 +154,18 @@ export function buildPrompt(args: {
   };
 }
 
-export function assembleProviderPrompt(motionPrompt: string): string {
-  const normalizedMotionPrompt = motionPrompt.trim();
-  return [normalizedMotionPrompt, PROMPT_CONSTRAINTS].filter(Boolean).join(" ");
+export function buildNegativePrompt(): string {
+  return PROMPT_CONSTRAINTS;
+}
+
+export function combinePromptPartsForProvider(args: {
+  prompt: string;
+  negativePrompt?: string | null;
+}): string {
+  const normalizedPrompt = args.prompt.trim();
+  const normalizedNegativePrompt = args.negativePrompt?.trim() ?? "";
+
+  return [normalizedPrompt, normalizedNegativePrompt].filter(Boolean).join(" ");
 }
 
 export function stripProviderPromptConstraints(prompt: string): string {

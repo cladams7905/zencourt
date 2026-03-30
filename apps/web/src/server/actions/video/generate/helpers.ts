@@ -20,7 +20,7 @@ import {
   groupImagesByCategory,
   selectListingPrimaryImage
 } from "@web/src/server/services/videoGeneration/domain/rooms";
-import { assembleProviderPrompt } from "@web/src/server/services/videoGeneration/domain/prompt";
+import { buildNegativePrompt } from "@web/src/server/services/videoGeneration/domain/prompt";
 import {
   buildJobRecords,
   createParentVideoBatchRecord,
@@ -207,7 +207,8 @@ export async function regenerateListingClipVersion(
           model: currentClipVersion.generationModel,
           orientation: currentClipVersion.orientation,
           imageUrls: args.resolvePublicDownloadUrls(resolvedImageUrls),
-          prompt: assembleProviderPrompt(resolvedPrompt),
+          prompt: resolvedPrompt,
+          negativePrompt: buildNegativePrompt(),
           category: currentClip.category,
           sortOrder: currentClip.sortOrder,
           roomId: currentClip.roomId ?? undefined,

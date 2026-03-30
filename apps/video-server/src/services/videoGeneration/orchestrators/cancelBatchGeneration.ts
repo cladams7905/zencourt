@@ -1,15 +1,28 @@
 import type { DBVideoGenJob } from "@db/types/models";
 import { isRunwayGenerationModel } from "@/services/videoGeneration/domain/runwayModels";
+import type { VideoGenerationProvider } from "@shared/types/models";
 
 type CancelBatchGenerationDeps = {
   findCancelableJobsByBatchId: (batchId: string) => Promise<DBVideoGenJob[]>;
   cancelProviderTask: (taskId: string) => Promise<void>;
-  releaseRunwayTask: (taskId: string) => void;
+  releaseProviderTask: (
+    provider: VideoGenerationProvider,
+    taskId: string
+  ) => void;
   markBatchCanceled: (batchId: string, reason?: string) => Promise<number>;
 };
 
-function isRunwayJob(job: DBVideoGenJob): boolean {
-  return isRunwayGenerationModel(job.generationSettings?.model);
+function getJobProvider(job: DBVideoGenJob): VideoGenerationProvider | null {
+  const provider = job.generationSettings?.provider;
+  if (provider) {
+    return provider;
+  }
+
+  if (isRunwayGenerationModel(job.generationSettings?.model)) {
+    return "runway";
+  }
+
+  return null;
 }
 
 export async function cancelBatchGenerationOrchestrator(
@@ -20,12 +33,16 @@ export async function cancelBatchGenerationOrchestrator(
   const jobs = await deps.findCancelableJobsByBatchId(batchId);
 
   for (const job of jobs) {
-    if (!job.requestId || !isRunwayJob(job)) {
+    const provider = getJobProvider(job);
+    if (!job.requestId || !provider) {
       continue;
     }
 
-    await deps.cancelProviderTask(job.requestId);
-    deps.releaseRunwayTask(job.requestId);
+    if (provider === "runway") {
+      await deps.cancelProviderTask(job.requestId);
+    }
+
+    deps.releaseProviderTask(provider, job.requestId);
   }
 
   const canceledBatches = await deps.markBatchCanceled(batchId, reason);

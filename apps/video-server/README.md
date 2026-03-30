@@ -4,13 +4,13 @@ Express server for AI-powered video generation and composition, designed to run 
 
 ## Overview
 
-This server handles video generation and composition for the Zencourt platform. It receives video processing requests from the Vercel Next.js frontend, generates videos using AI services (Runway ML, Kling/fal.ai), composes them with Remotion, stores results in Backblaze B2 object storage, and sends webhook notifications when complete.
+This server handles video generation and composition for the Zencourt platform. It receives video processing requests from the Vercel Next.js frontend, generates videos using AI services (WaveSpeed Google Veo, Runway ML, Kling/fal.ai), composes them with Remotion, stores results in Backblaze B2 object storage, and sends webhook notifications when complete.
 
 ## Architecture
 
 - **Runtime**: Node.js 20+
 - **Framework**: Express 4.x with TypeScript
-- **AI Video Generation**: Provider-agnostic orchestration with Runway/Kling providers
+- **AI Video Generation**: Provider-agnostic orchestration with WaveSpeed, Runway, and Kling providers
 - **Video Composition**: Render service with Remotion provider
 - **Storage**: Backblaze B2 via AWS SDK v3
 - **Logging**: Pino (structured JSON logs)
@@ -129,6 +129,7 @@ Orchestrates the full generation lifecycle:
 
 Provider-specific integrations are isolated here:
 
+- `wavespeed/` - WaveSpeed SDK integration for Google Veo image-to-video
 - `runway/` - Runway ML SDK integration
 - `kling/` - Kling/fal.ai integration
 
@@ -171,6 +172,8 @@ See `.env.example` for all required and optional environment variables.
 - `VIDEO_SERVER_API_KEY` - API key for web <-> video-server auth
 - `FAL_KEY` - fal.ai API key
 - `RUNWAY_API_KEY` - Runway ML API key
+- `WAVESPEED_API_KEY` - WaveSpeed API key
+- `WAVESPEED_WEBHOOK_SECRET` - WaveSpeed webhook signing secret
 
 ### Optional Variables
 
@@ -181,6 +184,14 @@ See `.env.example` for all required and optional environment variables.
 - `FAL_WEBHOOK_URL` - Override fal.ai webhook target
 - `RUNWAY_API_URL` - Override Runway API base URL
 - `RUNWAY_API_VERSION` - Override Runway API version
+- `RUNWAY_MAX_ACTIVE_TASKS` - Runway provider active task limit
+- `RUNWAY_RECOVERY_INTERVAL_MS` - Runway stale-job poll interval
+- `RUNWAY_RECOVERY_AGE_MS` - Runway stale-job age threshold
+- `RUNWAY_RECOVERY_BATCH_SIZE` - Runway stale-job batch size
+- `WAVESPEED_MAX_ACTIVE_TASKS` - WaveSpeed provider active task limit (default: `100`)
+- `WAVESPEED_RECOVERY_INTERVAL_MS` - WaveSpeed stale-job poll interval
+- `WAVESPEED_RECOVERY_AGE_MS` - WaveSpeed stale-job age threshold
+- `WAVESPEED_RECOVERY_BATCH_SIZE` - WaveSpeed stale-job batch size
 - `STORAGE_HEALTH_CACHE_MS` - Storage health cache duration (ms)
 
 ### fal.ai webhook routing
@@ -188,6 +199,12 @@ See `.env.example` for all required and optional environment variables.
 - **Production**: Point `FAL_WEBHOOK_URL` to the public hostname fronting this service (`.../webhooks/fal`).
 - **Local development**: Keep `VIDEO_SERVER_URL=http://localhost:3001`, set `FAL_WEBHOOK_URL` to a public tunnel.
 - **Docker Compose**: Export `FAL_WEBHOOK_URL` before running compose to override defaults.
+
+### WaveSpeed webhook routing
+
+- Configure WaveSpeed to call `POST /webhooks/wavespeed` over HTTPS.
+- The route verifies `webhook-id`, `webhook-timestamp`, and `webhook-signature` using `WAVESPEED_WEBHOOK_SECRET`.
+- Video-server acknowledges webhook deliveries immediately, then finalizes jobs asynchronously and falls back to stale-job polling if callbacks are missed.
 
 ## Development
 

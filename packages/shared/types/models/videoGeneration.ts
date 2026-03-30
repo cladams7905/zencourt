@@ -23,11 +23,18 @@ export type GENERATION_MODELS =
   | "runway-gen4-turbo"
   | "kling1.6";
 
+export type VideoGenerationProvider =
+  | "wavespeed"
+  | "runway"
+  | "kling";
+
 export type JobGenerationSettings = {
   model: GENERATION_MODELS;
+  provider?: VideoGenerationProvider;
   orientation: VideoOrientation;
   imageUrls: string[];
   prompt: string;
+  negativePrompt?: string;
   category: string;
   sortOrder: number;
   roomId?: string;

@@ -41,6 +41,7 @@ function parseJobInput(job: DBVideoGenJob): ProviderDispatchInput {
     jobId: job.id,
     videoId: job.videoGenBatchId,
     prompt,
+    negativePrompt: settings.negativePrompt?.trim() ?? "",
     imageUrls,
     orientation: settings.orientation ?? "vertical",
     durationSeconds: job.metadata?.duration ?? 4,
@@ -116,10 +117,14 @@ export async function dispatchJobOrchestrator(
   await deps.markJobProcessing(job.id, result.requestId, {
     ...job.generationSettings,
     prompt: input.prompt,
+    negativePrompt: input.negativePrompt,
     imageUrls: input.imageUrls,
     orientation: input.orientation,
     category: job.generationSettings?.category ?? "general",
     sortOrder: job.generationSettings?.sortOrder ?? 0,
+    provider: result.provider as NonNullable<
+      DBVideoGenJob["generationSettings"]
+    >["provider"],
     model: result.model
   });
 

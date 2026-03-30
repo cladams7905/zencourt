@@ -17,7 +17,6 @@ import type { ListingContentItem as ContentItem } from "@web/src/lib/domain/list
 import type { DBVideoClip, DBVideoClipVersion } from "@db/types/models";
 import { ApiError } from "@web/src/server/errors/api";
 import { StatusCode } from "@shared/types/api";
-import { stripProviderPromptConstraints } from "@web/src/server/services/videoGeneration/domain/prompt";
 
 function buildStableClipId(args: {
   listingId: string;
@@ -162,7 +161,7 @@ async function seedMissingVideoClips(listingId: string) {
       orientation: job.orientation ?? "vertical",
       generationModel: job.generationModel ?? "veo3.1_fast",
       imageUrls: job.imageUrls ?? [],
-      prompt: stripProviderPromptConstraints(job.prompt ?? ""),
+      prompt: job.prompt ?? "",
       sourceVideoGenJobId: job.jobId
     });
 

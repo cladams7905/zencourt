@@ -33,6 +33,14 @@ declare global {
       REEL_EXPORT_TIMEOUT_MS?: string;
       GENERATION_CONCURRENCY?: string;
       REMOTION_CACHE_DIR?: string;
+      RUNWAY_MAX_ACTIVE_TASKS?: string;
+      RUNWAY_RECOVERY_INTERVAL_MS?: string;
+      RUNWAY_RECOVERY_AGE_MS?: string;
+      RUNWAY_RECOVERY_BATCH_SIZE?: string;
+      WAVESPEED_MAX_ACTIVE_TASKS?: string;
+      WAVESPEED_RECOVERY_INTERVAL_MS?: string;
+      WAVESPEED_RECOVERY_AGE_MS?: string;
+      WAVESPEED_RECOVERY_BATCH_SIZE?: string;
 
       // API Authentication
       VIDEO_SERVER_API_KEY?: string;
@@ -48,6 +56,7 @@ declare global {
 
       // WaveSpeed
       WAVESPEED_API_KEY?: string;
+      WAVESPEED_WEBHOOK_SECRET?: string;
     }
   }
 }
@@ -71,7 +80,8 @@ const REQUIRED_ENV_VARS = [
   "FAL_KEY",
   "RUNWAY_API_KEY",
   "VIDEO_SERVER_API_KEY",
-  "WAVESPEED_API_KEY"
+  "WAVESPEED_API_KEY",
+  "WAVESPEED_WEBHOOK_SECRET"
 ] as const;
 
 function trimTrailingSlashes(value: string): string {

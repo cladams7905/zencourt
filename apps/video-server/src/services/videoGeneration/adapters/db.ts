@@ -169,8 +169,32 @@ export const videoGenerationDb = {
           isNotNull(videoJobs.requestId),
           lte(videoJobs.updatedAt, cutoff),
           sql.raw(
-            `(${videoJobs.generationSettings.name} ->> 'model') in (${runwayModelsSql})`
+            `(
+              (${videoJobs.generationSettings.name} ->> 'provider') = 'runway'
+              or (
+                (${videoJobs.generationSettings.name} ->> 'provider') is null
+                and (${videoJobs.generationSettings.name} ->> 'model') in (${runwayModelsSql})
+              )
+            )`
           )
+        )
+      )
+      .limit(limit);
+  },
+
+  findRecoverableWaveSpeedJobs(
+    cutoff: Date,
+    limit: number
+  ): Promise<DBVideoGenJob[]> {
+    return db
+      .select()
+      .from(videoJobs)
+      .where(
+        and(
+          eq(videoJobs.status, "processing"),
+          isNotNull(videoJobs.requestId),
+          lte(videoJobs.updatedAt, cutoff),
+          sql.raw(`(${videoJobs.generationSettings.name} ->> 'provider') = 'wavespeed'`)
         )
       )
       .limit(limit);

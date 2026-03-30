@@ -14,7 +14,7 @@ const mockGetCategoryForRoom = jest.fn();
 const mockSelectPrimaryImageForRoom = jest.fn();
 const mockSelectSecondaryImageForRoom = jest.fn();
 const mockBuildPrompt = jest.fn();
-const mockAssembleProviderPrompt = jest.fn();
+const mockBuildNegativePrompt = jest.fn();
 const mockGetVideoGenerationConfig = jest.fn();
 const mockIsPriorityCategory = jest.fn();
 const mockFetch = jest.fn();
@@ -70,8 +70,7 @@ jest.mock("@web/src/server/services/videoGeneration/domain/rooms", () => ({
 
 jest.mock("@web/src/server/services/videoGeneration/domain/prompt", () => ({
   buildPrompt: (...args: unknown[]) => mockBuildPrompt(...args),
-  assembleProviderPrompt: (...args: unknown[]) =>
-    mockAssembleProviderPrompt(...args)
+  buildNegativePrompt: (...args: unknown[]) => mockBuildNegativePrompt(...args)
 }));
 
 jest.mock("@web/src/server/services/videoGeneration/config", () => ({
@@ -145,9 +144,7 @@ describe("video actions/helpers", () => {
     mockUpdateVideoClip.mockResolvedValue(undefined);
     mockUpdateVideoGenJob.mockResolvedValue(undefined);
     mockGetLatestVideoClipVersionByClipId.mockResolvedValue(null);
-    mockAssembleProviderPrompt.mockImplementation(
-      (motionPrompt: string) => `${motionPrompt} [constraints]`
-    );
+    mockBuildNegativePrompt.mockReturnValue("[constraints]");
   });
 
   it("creates jobs in batch and enqueues video server request", async () => {
@@ -201,7 +198,8 @@ describe("video actions/helpers", () => {
           orientation: "vertical",
           category: "kitchen",
           clipIndex: 0,
-          prompt: "Forward pan through the Kitchen. [constraints]"
+          prompt: "Forward pan through the Kitchen.",
+          negativePrompt: "[constraints]"
         })
       })
     ]);
@@ -445,7 +443,8 @@ describe("video actions/helpers", () => {
         generationSettings: expect.objectContaining({
           roomName: "Kitchen",
           clipIndex: 0,
-          prompt: "Use warmer late afternoon light [constraints]"
+          prompt: "Use warmer late afternoon light",
+          negativePrompt: "[constraints]"
         })
       })
     ]);

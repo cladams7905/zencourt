@@ -1,5 +1,7 @@
 const submitImageToVideo = jest.fn();
 
+export {};
+
 jest.mock("@/services/providers/runway", () => ({
   runwayService: {
     submitImageToVideo: (...args: unknown[]) => submitImageToVideo(...args)
@@ -34,6 +36,7 @@ describe("runwayStrategy", () => {
       jobId: "job",
       videoId: "batch-1",
       prompt: "prompt",
+      negativePrompt: "negative prompt",
       imageUrls: ["https://image.jpg"],
       orientation: "vertical" as const,
       durationSeconds: 4,
@@ -87,6 +90,7 @@ describe("runwayStrategy", () => {
       jobId: "job-1",
       videoId: "batch-1",
       prompt: "prompt",
+      negativePrompt: "negative prompt",
       imageUrls: ["https://image.jpg"],
       orientation: "vertical",
       durationSeconds: 4,
@@ -94,7 +98,11 @@ describe("runwayStrategy", () => {
     });
 
     expect(submitImageToVideo).toHaveBeenCalledWith(
-      expect.objectContaining({ model: "veo3.1_fast", ratio: "1280:720" })
+      expect.objectContaining({
+        model: "veo3.1_fast",
+        ratio: "1280:720",
+        promptText: "prompt negative prompt"
+      })
     );
     expect(result.model).toBe("veo3.1_fast");
   });
@@ -111,6 +119,7 @@ describe("runwayStrategy", () => {
       jobId: "job-gen45",
       videoId: "batch-1",
       prompt: "prompt",
+      negativePrompt: "negative prompt",
       imageUrls: ["https://image.jpg"],
       orientation: "vertical",
       durationSeconds: 4,
@@ -136,6 +145,7 @@ describe("runwayStrategy", () => {
       jobId: "job-legacy",
       videoId: "batch-1",
       prompt: "prompt",
+      negativePrompt: "negative prompt",
       imageUrls: ["https://image.jpg"],
       orientation: "vertical",
       durationSeconds: 4,
@@ -144,7 +154,11 @@ describe("runwayStrategy", () => {
     } as never);
 
     expect(submitImageToVideo).toHaveBeenCalledWith(
-      expect.objectContaining({ model: "veo3.1_fast", ratio: "1280:720" })
+      expect.objectContaining({
+        model: "veo3.1_fast",
+        ratio: "1280:720",
+        promptText: "prompt negative prompt"
+      })
     );
     expect(result.model).toBe("veo3.1_fast");
   });

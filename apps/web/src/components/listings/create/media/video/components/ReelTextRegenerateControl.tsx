@@ -1,5 +1,5 @@
 import * as React from "react";
-import { RefreshCw, Sparkles } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { Button } from "@web/src/components/ui/button";
 import {
   Popover,
@@ -68,15 +68,15 @@ export function ReelTextRegenerateControl({
             <Button
               type="button"
               size="icon"
-              variant="ghost"
+              variant="outline"
               aria-label={`Regenerate ${label}`}
               disabled={isSubmitting}
-              className="h-7 w-7 shrink-0 rounded-full"
+              className="h-8 w-8 shrink-0 rounded-full bg-background text-foreground hover:bg-secondary hover:text-secondary-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50"
             >
               {isSubmitting ? (
                 <RefreshCw className="h-3.5 w-3.5 animate-spin" />
               ) : (
-                <Sparkles className="h-3.5 w-3.5" />
+                <RefreshCw className="h-3.5 w-3.5" />
               )}
             </Button>
           </PopoverTrigger>
@@ -104,7 +104,7 @@ export function ReelTextRegenerateControl({
                 Random regenerate
               </span>
               <span className="text-xs text-muted-foreground">
-                Generate another {label} using the standard reel prompt.
+                Randomly generate another {label}.
               </span>
             </button>
             <div className="h-px w-full shrink-0 bg-border/50" />

@@ -22,6 +22,7 @@ import { evaluateJobCompletionOrchestrator } from "@/services/videoGeneration/or
 import { dispatchJobOrchestrator } from "@/services/videoGeneration/orchestrators/dispatchJob";
 import { handleProviderSuccessOrchestrator } from "@/services/videoGeneration/orchestrators/providerSuccess";
 import { reconcileRunwayJobOrchestrator } from "@/services/videoGeneration/orchestrators/reconcileRunwayJob";
+import { reconcileWaveSpeedJobOrchestrator } from "@/services/videoGeneration/orchestrators/reconcileWaveSpeedJob";
 import { cancelBatchGenerationOrchestrator } from "@/services/videoGeneration/orchestrators/cancelBatchGeneration";
 import { handleJobExecutionFailureOrchestrator } from "@/services/videoGeneration/orchestrators/handleJobExecutionFailure";
 import { videoGenerationDb } from "@/services/videoGeneration/adapters/db";
@@ -34,8 +35,11 @@ import { storageService } from "@/services/storage";
 import { webhookService } from "@/services/webhook";
 import { runWithConcurrency } from "@/services/videoGeneration/domain/concurrency";
 import { FalWebhookPayload } from "@/routes/webhooks/domain/requests";
+import type { WaveSpeedWebhookPayload } from "@/routes/webhooks/domain/requests";
 import { runwayService } from "@/services/providers/runway";
 import { runwayTaskSlots } from "@/services/videoGeneration/domain/runwayTaskSlots";
+import { waveSpeedService } from "@/services/providers/wavespeed";
+import { waveSpeedTaskSlots } from "@/services/videoGeneration/domain/providerTaskSlots";
 import { cancelBatchById as markBatchCanceled } from "@/services/videoGeneration/adapters/cancel";
 
 interface GenerationResult {
@@ -52,6 +56,7 @@ interface VideoContext {
 
 class VideoGenerationService {
   private runwayRecoveryTimer: NodeJS.Timeout | null = null;
+  private waveSpeedRecoveryTimer: NodeJS.Timeout | null = null;
 
   private readonly primaryProviderFacade = new ProviderDispatchFacade(
     primaryProviderStrategies
@@ -70,6 +75,7 @@ class VideoGenerationService {
   constructor() {
     if (process.env.NODE_ENV !== "test") {
       this.startRunwayRecoveryLoop();
+      this.startWaveSpeedRecoveryLoop();
     }
   }
 
@@ -83,6 +89,18 @@ class VideoGenerationService {
 
   private getRunwayRecoveryBatchSize(): number {
     return Number(process.env.RUNWAY_RECOVERY_BATCH_SIZE) || 10;
+  }
+
+  private getWaveSpeedRecoveryIntervalMs(): number {
+    return Number(process.env.WAVESPEED_RECOVERY_INTERVAL_MS) || 15_000;
+  }
+
+  private getWaveSpeedRecoveryAgeMs(): number {
+    return Number(process.env.WAVESPEED_RECOVERY_AGE_MS) || 30_000;
+  }
+
+  private getWaveSpeedRecoveryBatchSize(): number {
+    return Number(process.env.WAVESPEED_RECOVERY_BATCH_SIZE) || 25;
   }
 
   private startRunwayRecoveryLoop(): void {
@@ -103,6 +121,26 @@ class VideoGenerationService {
     }, this.getRunwayRecoveryIntervalMs());
 
     this.runwayRecoveryTimer.unref?.();
+  }
+
+  private startWaveSpeedRecoveryLoop(): void {
+    if (this.waveSpeedRecoveryTimer) {
+      return;
+    }
+
+    this.waveSpeedRecoveryTimer = setInterval(() => {
+      this.reconcileRecoverableWaveSpeedJobs().catch((error) => {
+        logger.error(
+          {
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined
+          },
+          "[VideoGenerationService] WaveSpeed recovery loop failed"
+        );
+      });
+    }, this.getWaveSpeedRecoveryIntervalMs());
+
+    this.waveSpeedRecoveryTimer.unref?.();
   }
 
   private async getVideoContext(videoId: string): Promise<VideoContext> {
@@ -191,7 +229,14 @@ class VideoGenerationService {
     return cancelBatchGenerationOrchestrator(batchId, reason, {
       findCancelableJobsByBatchId: videoGenerationDb.findCancelableJobsByBatchId,
       cancelProviderTask: (taskId) => runwayService.cancelTask(taskId),
-      releaseRunwayTask: (taskId) => runwayTaskSlots.releaseByTaskId(taskId),
+      releaseProviderTask: (provider, taskId) => {
+        if (provider === "runway") {
+          runwayTaskSlots.releaseByTaskId(taskId);
+        }
+        if (provider === "wavespeed") {
+          waveSpeedTaskSlots.releaseByTaskId(taskId);
+        }
+      },
       markBatchCanceled
     });
   }
@@ -324,6 +369,46 @@ class VideoGenerationService {
     }
   }
 
+  async reconcileRecoverableWaveSpeedJobs(): Promise<void> {
+    const cutoff = new Date(Date.now() - this.getWaveSpeedRecoveryAgeMs());
+    const jobs = await videoGenerationDb.findRecoverableWaveSpeedJobs(
+      cutoff,
+      this.getWaveSpeedRecoveryBatchSize()
+    );
+
+    for (const job of jobs) {
+      const latestJob = await videoGenerationDb.findJobById(job.id);
+      if (
+        !latestJob ||
+        latestJob.status !== "processing" ||
+        !latestJob.requestId
+      ) {
+        continue;
+      }
+
+      const result = await reconcileWaveSpeedJobOrchestrator(latestJob, {
+        retrieveTask: (taskId) => waveSpeedService.retrieveTask(taskId),
+        handleProviderSuccess: (currentJob, outputUrl, metadata) =>
+          this.handleProviderSuccess(currentJob, outputUrl, metadata),
+        markJobFailed: videoGenerationDb.markJobFailed,
+        markVideoFailed: videoGenerationDb.markVideoFailed,
+        sendJobFailureWebhook: (currentJob, errorMessage, errorType, errorRetryable) =>
+          this.sendJobFailureWebhook(
+            currentJob,
+            errorMessage,
+            errorType,
+            errorRetryable
+          ),
+        getJobDurationSeconds: (currentJob) =>
+          this.getJobDurationSeconds(currentJob)
+      });
+
+      if (result.terminal) {
+        waveSpeedTaskSlots.releaseByTaskId(latestJob.requestId);
+      }
+    }
+  }
+
   /**
    * Handle provider webhook for job completion
    * Phase 3 implementation:
@@ -353,6 +438,62 @@ class VideoGenerationService {
         ),
       getJobDurationSeconds: (job) => this.getJobDurationSeconds(job)
     });
+  }
+
+  async handleWaveSpeedWebhook(
+    payload: WaveSpeedWebhookPayload,
+    fallbackJobId?: string
+  ): Promise<void> {
+    const byRequestId = payload.id
+      ? await videoGenerationDb.findJobByRequestId(payload.id)
+      : null;
+    const job =
+      byRequestId ??
+      (fallbackJobId ? await videoGenerationDb.findJobById(fallbackJobId) : null);
+
+    if (!job) {
+      return;
+    }
+
+    if (!job.requestId && payload.id) {
+      await videoGenerationDb.attachRequestIdToJob(job.id, payload.id);
+    }
+
+    const latestJob = await videoGenerationDb.findJobById(job.id);
+    if (
+      !latestJob ||
+      latestJob.status === "completed" ||
+      latestJob.status === "failed" ||
+      latestJob.status === "canceled"
+    ) {
+      return;
+    }
+
+    const requestId = payload.id || latestJob.requestId || undefined;
+
+    if (payload.status === "completed") {
+      const outputUrl = payload.outputs?.[0];
+      if (!outputUrl) {
+        await this.handleJobExecutionFailure(
+          latestJob.id,
+          "WaveSpeed task completed without an output URL"
+        );
+      } else {
+        await this.handleProviderSuccess(latestJob, outputUrl, {
+          durationSeconds: this.getJobDurationSeconds(latestJob),
+          thumbnailUrl: null
+        });
+      }
+    } else if (payload.status === "failed") {
+      await this.handleJobExecutionFailure(
+        latestJob.id,
+        payload.error || "WaveSpeed task failed"
+      );
+    }
+
+    if (requestId) {
+      waveSpeedTaskSlots.releaseByTaskId(requestId);
+    }
   }
 
   /**

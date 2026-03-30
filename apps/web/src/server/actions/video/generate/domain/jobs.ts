@@ -2,7 +2,7 @@ import { nanoid } from "nanoid";
 import { ApiError } from "@web/src/server/errors/api";
 import { isPriorityCategory } from "@shared/utils";
 import {
-  assembleProviderPrompt,
+  buildNegativePrompt,
   buildPrompt
 } from "@web/src/server/services/videoGeneration/domain/prompt";
 import {
@@ -79,6 +79,7 @@ async function buildPrimaryJobRecord(args: {
     perspective: primaryImage?.metadata?.perspective,
     previousTemplateKey
   });
+  const negativePrompt = buildNegativePrompt();
 
   return {
     record: {
@@ -92,7 +93,8 @@ async function buildPrimaryJobRecord(args: {
         model: config.model as JobGenerationSettings["model"],
         orientation,
         imageUrls: publicPrimaryUrls,
-        prompt: assembleProviderPrompt(primaryPrompt.prompt),
+        prompt: primaryPrompt.prompt,
+        negativePrompt,
         category,
         sortOrder,
         roomId: room.id,
@@ -150,6 +152,7 @@ async function buildSecondaryJobRecord(args: {
     perspective: secondaryImage?.metadata?.perspective,
     previousTemplateKey
   });
+  const negativePrompt = buildNegativePrompt();
 
   return {
     record: {
@@ -163,7 +166,8 @@ async function buildSecondaryJobRecord(args: {
         model: config.model as JobGenerationSettings["model"],
         orientation,
         imageUrls: publicSecondaryUrls,
-        prompt: assembleProviderPrompt(secondaryPrompt.prompt),
+        prompt: secondaryPrompt.prompt,
+        negativePrompt,
         category,
         sortOrder,
         roomId: room.id,
