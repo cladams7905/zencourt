@@ -165,13 +165,19 @@ Standard export remains the default path and should preserve current behavior.
 - polling and download endpoints
 - mapping reel draft segments to trusted clip version records and render contracts
 
-The web layer should never trust client-provided source URLs. Premium export should resolve clip version ids from the authenticated listing context, then pass trusted source URLs to `apps/video-server`.
+The web layer should never trust client-provided source URLs. Premium export should resolve clip version ids from the authenticated listing context, then pass trusted clip version metadata to `apps/video-server`, including:
+
+- clip version id
+- trusted original `videoUrl`
+- any render-specific duration or overlay data already derived from the reel draft
+
+`apps/web` should not perform WaveSpeed orchestration or write `upscaleUrl` itself. Its role is to authenticate the request, resolve trusted source records, and hand off the render job payload.
 
 ### 4. Add Premium Pre-Render Orchestration In `apps/video-server`
 
 `apps/video-server` should own a new premium-specific orchestration step before render:
 
-1. receive a reel export request with quality metadata and clip version references
+1. receive a reel export request with quality metadata and trusted clip version references from `apps/web`
 2. if quality is `standard`, proceed directly to render with original clip asset URLs
 3. if quality is `premium`:
    - inspect each referenced clip version
@@ -181,6 +187,11 @@ The web layer should never trust client-provided source URLs. Premium export sho
    - persist completed `upscaleUrl` values back to `video_clip_versions`
    - assemble the render clip list from the premium asset URLs
 4. enqueue the reel render once all required source assets are ready
+
+`apps/video-server` is the single owner of premium asset preparation after the listing-scoped request is authenticated. That means:
+
+- `apps/web` resolves and passes trusted clip version ids plus original source URLs
+- `apps/video-server` decides whether to reuse `upscaleUrl`, call WaveSpeed, and persist the result
 
 This should be implemented as a dedicated “ensure premium assets exist” step separate from the composition logic.
 
@@ -196,7 +207,7 @@ That separation keeps:
 
 ### 6. Job Status Model
 
-Premium exports need a clearer phase model than the current generic progress-only messaging. The export status returned to the modal should represent:
+Premium exports need a clearer phase model than the current generic progress-only messaging. For reel export APIs, the status enum should be:
 
 - `queued`
 - `upscaling`
@@ -204,6 +215,8 @@ Premium exports need a clearer phase model than the current generic progress-onl
 - `completed`
 - `failed`
 - `canceled`
+
+For reel export endpoints, `upscaling` and `rendering` replace the previous generic `in-progress` state. The modal should treat both as active in-flight states for polling and progress UI.
 
 Progress may still exist numerically, but the user-facing copy should lead with phase-based status such as:
 
@@ -284,7 +297,7 @@ Add tests for:
 - request parsing and validation for the new export quality field
 - listing access checks remaining unchanged for both qualities
 - mapping reel draft segments to trusted clip version references for premium export
-- status and artifact endpoints returning premium job phase metadata correctly
+- status and artifact endpoints returning the reel export status enum correctly, with `upscaling` and `rendering` replacing generic `in-progress`
 
 ### Model And Schema Tests
 
