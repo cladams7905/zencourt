@@ -9,6 +9,8 @@ const mockCreateContent = jest.fn();
 const mockGetContentById = jest.fn();
 const mockGetContentByListingId = jest.fn();
 const mockUpdateContent = jest.fn();
+const mockRunContentGenerationForUser = jest.fn();
+const mockGenerateTextForUseCase = jest.fn();
 
 jest.mock("@web/src/server/actions/shared/auth", () => ({
   requireAuthenticatedUser: (...args: unknown[]) =>
@@ -58,7 +60,18 @@ jest.mock("@web/src/server/models/content", () => ({
     (mockUpdateContent as (...a: unknown[]) => unknown)(...args)
 }));
 
+jest.mock("@web/src/server/actions/content/generate/helpers", () => ({
+  runContentGenerationForUser: (...args: unknown[]) =>
+    (mockRunContentGenerationForUser as (...a: unknown[]) => unknown)(...args)
+}));
+
+jest.mock("@web/src/server/services/ai", () => ({
+  generateTextForUseCase: (...args: unknown[]) =>
+    (mockGenerateTextForUseCase as (...a: unknown[]) => unknown)(...args)
+}));
+
 import {
+  regenerateListingVideoReelText,
   saveAndFavoriteListingVideoReel,
   saveListingVideoReel
 } from "@web/src/server/actions/listings/content/reels";
@@ -266,6 +279,240 @@ describe("saveListingVideoReel", () => {
       })
     );
     expect(mockDeleteCachedListingContentItem).not.toHaveBeenCalled();
+  });
+});
+
+describe("regenerateListingVideoReelText", () => {
+  beforeEach(() => {
+    jest.resetAllMocks();
+    mockRequireAuthenticatedUser.mockResolvedValue({ id: "user-1" });
+    mockRequireListingAccess.mockResolvedValue({
+      id: "listing-1",
+      userId: "user-1",
+      address: "123 Main St, Miami, FL 33101",
+      propertyDetails: {
+        address: "123 Main St, Miami, FL 33101",
+        beds: 3
+      }
+    });
+  });
+
+  it("rejects an invalid target field", async () => {
+    await expect(
+      regenerateListingVideoReelText("listing-1", {
+        targetField: "headline" as "hook",
+        mode: "random",
+        currentHook: "Current hook",
+        currentCaption: "Current caption",
+        orderedClipIds: ["clip-1"],
+        sequence: [
+          {
+            sourceType: "listing_clip",
+            sourceId: "clip-1",
+            durationSeconds: 2.5
+          }
+        ],
+        saveTarget: {
+          contentSource: "cached_create",
+          cacheKeyTimestamp: 123,
+          cacheKeyId: 4,
+          subcategory: "new_listing",
+          mediaType: "video"
+        }
+      })
+    ).rejects.toThrow("Target field must be hook or caption.");
+  });
+
+  it("rejects an invalid mode", async () => {
+    await expect(
+      regenerateListingVideoReelText("listing-1", {
+        targetField: "hook",
+        mode: "surprise" as "random",
+        currentHook: "Current hook",
+        currentCaption: "Current caption",
+        orderedClipIds: ["clip-1"],
+        sequence: [
+          {
+            sourceType: "listing_clip",
+            sourceId: "clip-1",
+            durationSeconds: 2.5
+          }
+        ],
+        saveTarget: {
+          contentSource: "cached_create",
+          cacheKeyTimestamp: 123,
+          cacheKeyId: 4,
+          subcategory: "new_listing",
+          mediaType: "video"
+        }
+      })
+    ).rejects.toThrow("Regeneration mode must be random or custom.");
+  });
+
+  it("returns only the requested field for random regeneration without persistence writes", async () => {
+    const encoder = new TextEncoder();
+    mockRunContentGenerationForUser.mockResolvedValue({
+      stream: new ReadableStream({
+        start(controller) {
+          controller.enqueue(
+            encoder.encode(
+              'data: {"type":"done","items":[{"hook":"Fresh hook","caption":"Fresh caption","broll_query":"kitchen","body":null,"cta":null}],"meta":{"model":"mock","batch_size":1}}\n\n'
+            )
+          );
+          controller.close();
+        }
+      }),
+      status: 200
+    });
+
+    const result = await regenerateListingVideoReelText("listing-1", {
+      targetField: "hook",
+      mode: "random",
+      currentHook: "Current hook",
+      currentCaption: "Current caption",
+      orderedClipIds: ["clip-1"],
+      sequence: [
+        {
+          sourceType: "listing_clip",
+          sourceId: "clip-1",
+          durationSeconds: 2.5
+        }
+      ],
+      saveTarget: {
+        contentSource: "cached_create",
+        cacheKeyTimestamp: 123,
+        cacheKeyId: 4,
+        subcategory: "new_listing",
+        mediaType: "video"
+      }
+    });
+
+    expect(result).toEqual({
+      targetField: "hook",
+      value: "Fresh hook"
+    });
+    expect(mockRunContentGenerationForUser).toHaveBeenCalled();
+    expect(mockCreateContent).not.toHaveBeenCalled();
+    expect(mockUpdateContent).not.toHaveBeenCalled();
+    expect(mockDeleteCachedListingContentItem).not.toHaveBeenCalled();
+  });
+
+  it("uses the reduced custom prompt path for custom regeneration", async () => {
+    mockGenerateTextForUseCase.mockResolvedValue({
+      provider: "anthropic",
+      text: '{"value":"Custom caption"}',
+      raw: {}
+    });
+
+    const result = await regenerateListingVideoReelText("listing-1", {
+      targetField: "caption",
+      mode: "custom",
+      customDirections: "Make it more upbeat and concise.",
+      currentHook: "Current hook",
+      currentCaption: "Current caption",
+      orderedClipIds: ["clip-1"],
+      sequence: [
+        {
+          sourceType: "listing_clip",
+          sourceId: "clip-1",
+          durationSeconds: 2.5
+        }
+      ],
+      saveTarget: {
+        contentSource: "cached_create",
+        cacheKeyTimestamp: 123,
+        cacheKeyId: 4,
+        subcategory: "new_listing",
+        mediaType: "video"
+      }
+    });
+
+    expect(result).toEqual({
+      targetField: "caption",
+      value: "Custom caption"
+    });
+    expect(mockGenerateTextForUseCase).toHaveBeenCalled();
+    expect(mockRunContentGenerationForUser).not.toHaveBeenCalled();
+  });
+
+  it("falls back to the random path when custom directions are empty", async () => {
+    const encoder = new TextEncoder();
+    mockRunContentGenerationForUser.mockResolvedValue({
+      stream: new ReadableStream({
+        start(controller) {
+          controller.enqueue(
+            encoder.encode(
+              'data: {"type":"done","items":[{"hook":"Fallback hook","caption":"Fallback caption","broll_query":"kitchen","body":null,"cta":null}],"meta":{"model":"mock","batch_size":1}}\n\n'
+            )
+          );
+          controller.close();
+        }
+      }),
+      status: 200
+    });
+
+    const result = await regenerateListingVideoReelText("listing-1", {
+      targetField: "caption",
+      mode: "custom",
+      customDirections: "   ",
+      currentHook: "Current hook",
+      currentCaption: "Current caption",
+      orderedClipIds: ["clip-1"],
+      sequence: [
+        {
+          sourceType: "listing_clip",
+          sourceId: "clip-1",
+          durationSeconds: 2.5
+        }
+      ],
+      saveTarget: {
+        contentSource: "cached_create",
+        cacheKeyTimestamp: 123,
+        cacheKeyId: 4,
+        subcategory: "new_listing",
+        mediaType: "video"
+      }
+    });
+
+    expect(result).toEqual({
+      targetField: "caption",
+      value: "Fallback caption"
+    });
+    expect(mockRunContentGenerationForUser).toHaveBeenCalled();
+    expect(mockGenerateTextForUseCase).not.toHaveBeenCalled();
+  });
+
+  it("rejects empty custom output", async () => {
+    mockGenerateTextForUseCase.mockResolvedValue({
+      provider: "anthropic",
+      text: '{"value":"  "}',
+      raw: {}
+    });
+
+    await expect(
+      regenerateListingVideoReelText("listing-1", {
+        targetField: "caption",
+        mode: "custom",
+        customDirections: "Make it shorter.",
+        currentHook: "Current hook",
+        currentCaption: "Current caption",
+        orderedClipIds: ["clip-1"],
+        sequence: [
+          {
+            sourceType: "listing_clip",
+            sourceId: "clip-1",
+            durationSeconds: 2.5
+          }
+        ],
+        saveTarget: {
+          contentSource: "cached_create",
+          cacheKeyTimestamp: 123,
+          cacheKeyId: 4,
+          subcategory: "new_listing",
+          mediaType: "video"
+        }
+      })
+    ).rejects.toThrow("Generated caption is required.");
   });
 });
 

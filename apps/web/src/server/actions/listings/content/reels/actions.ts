@@ -13,9 +13,15 @@ import {
 } from "@web/src/server/infra/cache/listingContent/cache";
 import { DomainValidationError } from "@web/src/server/errors/domain";
 import type { PlayablePreviewTextUpdate } from "@web/src/lib/domain/listings/content/create";
-import type { SavedListingReelMetadata } from "@web/src/lib/domain/listings/content/reels";
+import type {
+  RegenerateListingVideoReelTextParams,
+  SavedListingReelMetadata
+} from "@web/src/lib/domain/listings/content/reels";
 import { isSavedListingReelMetadata } from "@web/src/lib/domain/listings/content/reels";
 import { mapSavedReelContentToCreateItem } from "./mappers";
+import {
+  regenerateListingVideoReelTextForUser
+} from "./regenerate";
 
 type NormalizedReelInput = {
   hook: string;
@@ -244,4 +250,17 @@ export const saveAndFavoriteListingVideoReel = withServerActionCaller(
 
       return mapOrThrowSavedReel(favorited);
     })
+);
+
+export const regenerateListingVideoReelText = withServerActionCaller(
+  "regenerateListingVideoReelText",
+  async (listingId: string, params: RegenerateListingVideoReelTextParams) =>
+    withCurrentUserListingAccess(listingId, async ({ user, listing }) =>
+      regenerateListingVideoReelTextForUser({
+        userId: user.id,
+        listing,
+        listingId,
+        input: params
+      })
+    )
 );

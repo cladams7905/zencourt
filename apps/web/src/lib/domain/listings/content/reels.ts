@@ -5,6 +5,7 @@ import type {
   PreviewTextOverlayBackground,
   PreviewTextOverlayPosition
 } from "@shared/types/video";
+import type { PlayablePreviewSaveTarget } from "./create";
 import type { ReelSequenceItem } from "./index";
 
 export type SavedListingReelMetadata = {
@@ -56,6 +57,26 @@ export type ListingReelExportRequest = {
   filenameBase?: string;
   quality?: ListingReelExportQuality;
   segments: ListingReelExportSegment[];
+};
+
+export type ReelTextRegenerationField = "hook" | "caption";
+
+export type ReelTextRegenerationMode = "random" | "custom";
+
+export type RegenerateListingVideoReelTextParams = {
+  targetField: ReelTextRegenerationField;
+  mode: ReelTextRegenerationMode;
+  customDirections?: string;
+  currentHook: string;
+  currentCaption: string;
+  orderedClipIds: string[];
+  sequence: ReelSequenceItem[];
+  saveTarget: PlayablePreviewSaveTarget;
+};
+
+export type RegenerateListingVideoReelTextResult = {
+  targetField: ReelTextRegenerationField;
+  value: string;
 };
 
 export function isSavedListingReelMetadata(

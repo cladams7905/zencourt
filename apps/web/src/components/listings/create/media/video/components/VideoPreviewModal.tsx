@@ -56,7 +56,10 @@ import type {
   ListingReelExportJob,
   ListingReelExportQuality,
   ListingReelExportRequest,
-  ListingReelExportStatus
+  ListingReelExportStatus,
+  ReelTextRegenerationField,
+  RegenerateListingVideoReelTextParams,
+  RegenerateListingVideoReelTextResult
 } from "@web/src/lib/domain/listings/content/reels";
 import {
   fetchApiData,
@@ -78,6 +81,9 @@ type VideoPreviewModalProps = {
   onSaveAndFavoritePreview?: (
     params: PlayablePreviewTextUpdate
   ) => Promise<void>;
+  onRegeneratePreviewText?: (
+    params: RegenerateListingVideoReelTextParams
+  ) => Promise<RegenerateListingVideoReelTextResult>;
   downloadState?: {
     isDownloading: boolean;
     progress: number;
@@ -158,6 +164,7 @@ export function VideoPreviewModal({
   onOpenChange,
   onSavePreviewText,
   onSaveAndFavoritePreview,
+  onRegeneratePreviewText,
   downloadState,
   onDownloadPreview
 }: VideoPreviewModalProps) {
@@ -186,6 +193,8 @@ export function VideoPreviewModal({
   const resizeHistoryCapturedRef = React.useRef(false);
   const [isSaving, setIsSaving] = React.useState(false);
   const [isFavoriting, setIsFavoriting] = React.useState(false);
+  const [regeneratingField, setRegeneratingField] =
+    React.useState<ReelTextRegenerationField | null>(null);
   const [isDownloadStarting, setIsDownloadStarting] = React.useState(false);
   const [downloadProgress, setDownloadProgress] = React.useState(0);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
@@ -584,6 +593,57 @@ export function VideoPreviewModal({
       setIsFavoriting(false);
     }
   }, [buildDraftPayload, handleCancel, onSaveAndFavoritePreview]);
+
+  const handleRegenerateField = React.useCallback(
+    async (
+      targetField: ReelTextRegenerationField,
+      mode: RegenerateListingVideoReelTextParams["mode"],
+      customDirections?: string
+    ) => {
+      if (!onRegeneratePreviewText) {
+        return;
+      }
+
+      const payload = buildDraftPayload();
+      if (!payload) {
+        setErrorMessage("This preview cannot be edited yet.");
+        return;
+      }
+
+      setRegeneratingField(targetField);
+      setErrorMessage(null);
+
+      try {
+        const result = await onRegeneratePreviewText({
+          targetField,
+          mode,
+          customDirections,
+          currentHook: payload.hook,
+          currentCaption: payload.caption,
+          orderedClipIds: payload.orderedClipIds,
+          sequence: payload.sequence,
+          saveTarget: payload.saveTarget
+        });
+
+        if (result.targetField === "hook") {
+          setHookDraft(result.value);
+        } else {
+          setCaptionDraft(result.value);
+        }
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Failed to regenerate reel text."
+        );
+      } finally {
+        setRegeneratingField((current) =>
+          current === targetField ? null : current
+        );
+      }
+    },
+    [buildDraftPayload, onRegeneratePreviewText]
+  );
 
   const usesExternalDownloadState = typeof onDownloadPreview === "function";
   const isDownloading =
@@ -1189,6 +1249,42 @@ export function VideoPreviewModal({
                           ...current,
                           showAddress
                         }))
+                      }
+                      hookInputDisabled={regeneratingField === "hook"}
+                      captionInputDisabled={regeneratingField === "caption"}
+                      hookRegenerateState={
+                        onRegeneratePreviewText
+                          ? {
+                              isSubmitting: regeneratingField === "hook",
+                              onRandomRegenerate: () => {
+                                void handleRegenerateField("hook", "random");
+                              },
+                              onCustomRegenerate: (directions) => {
+                                void handleRegenerateField(
+                                  "hook",
+                                  "custom",
+                                  directions
+                                );
+                              }
+                            }
+                          : undefined
+                      }
+                      captionRegenerateState={
+                        onRegeneratePreviewText
+                          ? {
+                              isSubmitting: regeneratingField === "caption",
+                              onRandomRegenerate: () => {
+                                void handleRegenerateField("caption", "random");
+                              },
+                              onCustomRegenerate: (directions) => {
+                                void handleRegenerateField(
+                                  "caption",
+                                  "custom",
+                                  directions
+                                );
+                              }
+                            }
+                          : undefined
                       }
                     />
                   </div>
