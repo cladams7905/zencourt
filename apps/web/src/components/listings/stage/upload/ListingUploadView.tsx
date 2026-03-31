@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { ViewHeader } from "../../../view/ViewHeader";
 import {
   IMAGE_UPLOAD_LIMIT,
   MAX_IMAGE_BYTES,
@@ -19,6 +18,7 @@ import {
   UploadQueueList,
   UploadTips
 } from "@web/src/components/uploads/subcomponents";
+import { ListingStageShell } from "@web/src/components/listings/stage/shared";
 import { useRouter } from "next/navigation";
 
 type ListingUploadViewProps = {
@@ -79,70 +79,63 @@ export function ListingUploadView({ listingId }: ListingUploadViewProps = {}) {
   };
 
   return (
-    <>
-      <ViewHeader
-        title="Upload listing photos"
-        subtitle="Add your listing photos below."
-      />
+    <ListingStageShell stage="upload" wide>
+      <section className="space-y-4 rounded-lg bg-background p-6">
+        <p className="text-sm text-muted-foreground">
+          Add images up to {formatBytes(MAX_IMAGE_BYTES)}.
+        </p>
 
-      <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 px-8 py-10">
-        <section className="space-y-4 rounded-lg bg-background p-6">
-          <p className="text-sm text-muted-foreground">
-            Add images up to {formatBytes(MAX_IMAGE_BYTES)}.
-          </p>
+        <UploadDropzone
+          isDragging={isDragging}
+          setIsDragging={setIsDragging}
+          onDropFiles={(files) => {
+            void addFiles(files);
+          }}
+          accept="image/*"
+          dropTitle="Drag & drop photos here"
+          dropSubtitle="or click to select multiple images"
+          fileInputRef={fileInputRef}
+          onFileInputChange={handleFileInputChange}
+          onPickerOpenChange={setIsDrivePickerActive}
+          maxImageBytes={MAX_IMAGE_BYTES}
+          compressDriveImages
+          onDriveLoadingChange={setIsDriveLoading}
+          onDriveLoadingCountChange={setDriveLoadingCount}
+        />
 
-          <UploadDropzone
-            isDragging={isDragging}
-            setIsDragging={setIsDragging}
-            onDropFiles={(files) => {
-              void addFiles(files);
-            }}
-            accept="image/*"
-            dropTitle="Drag & drop photos here"
-            dropSubtitle="or click to select multiple images"
-            fileInputRef={fileInputRef}
-            onFileInputChange={handleFileInputChange}
-            onPickerOpenChange={setIsDrivePickerActive}
-            maxImageBytes={MAX_IMAGE_BYTES}
-            compressDriveImages
-            onDriveLoadingChange={setIsDriveLoading}
-            onDriveLoadingCountChange={setDriveLoadingCount}
+        <UploadTips
+          tipsTitle="What photos should I upload?"
+          tipsItems={[
+            `No more than ${IMAGE_UPLOAD_LIMIT} listing photos may be uploaded per listing.`,
+            `Limit each room category to ${MAX_IMAGES_PER_ROOM} photos for video generation.`,
+            "Include a wide variety well-framed shots of key rooms and exterior."
+          ]}
+        />
+
+        <UploadQueueList
+          pendingFiles={pendingFiles}
+          selectedLabel="photo"
+          isCompressing={isCompressing}
+          isDriveLoading={isDriveLoading}
+          driveLoadingCount={driveLoadingCount}
+          isUploading={isUploading}
+          fileMetaLabel={(file: File) => formatBytes(file.size)}
+          formatBytes={formatBytes}
+          onRemove={removePendingFile}
+        />
+
+        <div className="flex justify-end gap-2">
+          <UploadDialogActions
+            hasFailedUploads={hasFailedUploads}
+            onRetryFailed={handleRetryFailed}
+            onCancel={resetDialogState}
+            onUpload={handleUpload}
+            isUploading={isUploading || isDrivePickerActive}
+            hasPendingFiles={pendingFiles.length > 0}
+            primaryActionLabel="Upload photos"
           />
-
-          <UploadTips
-            tipsTitle="What photos should I upload?"
-            tipsItems={[
-              `No more than ${IMAGE_UPLOAD_LIMIT} listing photos may be uploaded per listing.`,
-              `Limit each room category to ${MAX_IMAGES_PER_ROOM} photos for video generation.`,
-              "Include a wide variety well-framed shots of key rooms and exterior."
-            ]}
-          />
-
-          <UploadQueueList
-            pendingFiles={pendingFiles}
-            selectedLabel="photo"
-            isCompressing={isCompressing}
-            isDriveLoading={isDriveLoading}
-            driveLoadingCount={driveLoadingCount}
-            isUploading={isUploading}
-            fileMetaLabel={(file: File) => formatBytes(file.size)}
-            formatBytes={formatBytes}
-            onRemove={removePendingFile}
-          />
-
-          <div className="flex justify-end gap-2">
-            <UploadDialogActions
-              hasFailedUploads={hasFailedUploads}
-              onRetryFailed={handleRetryFailed}
-              onCancel={resetDialogState}
-              onUpload={handleUpload}
-              isUploading={isUploading || isDrivePickerActive}
-              hasPendingFiles={pendingFiles.length > 0}
-              primaryActionLabel="Upload photos"
-            />
-          </div>
-        </section>
-      </div>
-    </>
+        </div>
+      </section>
+    </ListingStageShell>
   );
 }

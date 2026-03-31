@@ -2,7 +2,9 @@ import { redirect } from "next/navigation";
 import { runWithCaller } from "@web/src/server/infra/logger/callContext";
 import { getListingById } from "@web/src/server/models/listings";
 import { requireUserOrRedirect } from "@web/src/app/(dashboard)/_utils/requireUserOrRedirect";
+import { listingStreetLineFromAddress } from "@shared/utils/address";
 import { ListingProcessingView } from "@web/src/components/listings/stage/processing";
+import { ListingStageViewProvider } from "@web/src/components/listings/stage/shared";
 import { redirectToListingStage } from "../../_utils/redirectToListingStage";
 
 interface ListingStageReviewProcessingPageProps {
@@ -32,13 +34,24 @@ export default async function ListingStageReviewProcessingPage({
     redirectToListingStage(listingId, listing.listingStage, "review");
 
     return (
-      <ListingProcessingView
-        mode="review"
+      <ListingStageViewProvider
+        stage="review"
+        title={
+          listingStreetLineFromAddress(listing.address) ||
+          listing.title?.trim() ||
+          "Listing"
+        }
+        listingView
         listingId={listingId}
-        userId={user.id}
-        title={listing.title?.trim() || "Listing"}
-        address={listing.address ?? ""}
-      />
+        listingDbStage={listing.listingStage}
+      >
+        <ListingProcessingView
+          mode="review"
+          listingId={listingId}
+          userId={user.id}
+          address={listing.address ?? ""}
+        />
+      </ListingStageViewProvider>
     );
   });
 }

@@ -1,8 +1,11 @@
-"use client";
-
 import type { ListingStageStep } from "@web/src/components/listings/stage/shared";
 
 export type ListingStageKey = "address" | "upload" | "categorize" | "review" | "generate";
+
+export type ListingStageScaffoldCopy = {
+  stepTitle: string;
+  stepSubtitle?: string;
+};
 
 type StageStepDef = {
   key: ListingStageKey;
@@ -24,4 +27,40 @@ export function buildListingStageFlowSteps(activeStep: ListingStageKey): Listing
     sublabel: step.sublabel,
     active: step.key === activeStep
   }));
+}
+
+export function getListingStageScaffoldCopy(
+  stage: ListingStageKey
+): ListingStageScaffoldCopy {
+  switch (stage) {
+    case "address":
+      return {
+        stepTitle: "Step 1: Enter Listing Address",
+        stepSubtitle:
+          "We use this to title the listing and populate listing details."
+      };
+    case "upload":
+      return {
+        stepTitle: "Step 2: Upload listing photos",
+        stepSubtitle: "Add your listing photos below."
+      };
+    case "categorize":
+      return {
+        stepTitle: "Step 3: Categorize photos",
+        stepSubtitle:
+          "Group photos by room and confirm the listing address before continuing."
+      };
+    case "review":
+      return {
+        stepTitle: "Step 4: Review property details",
+        stepSubtitle:
+          "Confirm facts and sources before generating listing content."
+      };
+    case "generate":
+      return {
+        stepTitle: "Step 5: Generate content",
+        stepSubtitle:
+          "Video generation runs in the background. You can leave this page."
+      };
+  }
 }

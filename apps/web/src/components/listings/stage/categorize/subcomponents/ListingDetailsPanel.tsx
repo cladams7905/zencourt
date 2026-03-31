@@ -1,7 +1,6 @@
 import * as React from "react";
 import { AlertTriangle } from "lucide-react";
 import { AddressAutocomplete } from "@web/src/components/location";
-import { Button } from "@web/src/components/ui/button";
 import {
   MAX_CATEGORIES,
   MAX_IMAGES_PER_ROOM
@@ -11,28 +10,24 @@ type ListingDetailsPanelProps = {
   addressValue: string;
   setAddressValue: React.Dispatch<React.SetStateAction<string>>;
   googleMapsApiKey: string;
-  canContinue: boolean;
   hasUncategorized: boolean;
   hasEmptyCategory: boolean;
   needsAddress: boolean;
   hasOverLimit: boolean;
   hasTooManyCategories: boolean;
   handleAddressSelect: (selection: { formattedAddress?: string | null }) => void;
-  handleContinue: () => void | Promise<void>;
 };
 
 export function ListingDetailsPanel({
   addressValue,
   setAddressValue,
   googleMapsApiKey,
-  canContinue,
   hasUncategorized,
   hasEmptyCategory,
   needsAddress,
   hasOverLimit,
   hasTooManyCategories,
-  handleAddressSelect,
-  handleContinue
+  handleAddressSelect
 }: ListingDetailsPanelProps) {
   return (
     <aside className="w-full lg:w-72 mt-14">
@@ -104,10 +99,6 @@ export function ListingDetailsPanel({
               </div>
             ) : null}
           </div>
-          <div className="h-px my-4 w-full bg-border/60" />
-          <Button className="w-full" disabled={!canContinue} onClick={handleContinue}>
-            Continue
-          </Button>
         </div>
       </div>
     </aside>

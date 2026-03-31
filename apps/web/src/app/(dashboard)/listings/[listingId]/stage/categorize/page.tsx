@@ -5,7 +5,9 @@ import {
   getListingImages,
   mapListingImageToDisplayItem
 } from "@web/src/server/models/listings/images";
+import { listingStreetLineFromAddress } from "@shared/utils/address";
 import { ListingCategorizeView } from "@web/src/components/listings/stage/categorize";
+import { ListingStageViewProvider } from "@web/src/components/listings/stage/shared";
 import { redirectToListingStage } from "../_utils/redirectToListingStage";
 import { requireUserOrRedirect } from "@web/src/app/(dashboard)/_utils/requireUserOrRedirect";
 
@@ -36,14 +38,26 @@ export default async function ListingStageCategorizePage({
     const imageItems = images.map(mapListingImageToDisplayItem);
 
     return (
-      <ListingCategorizeView
-        title={listing.title?.trim() || "Listing"}
-        initialAddress={listing.address ?? ""}
+      <ListingStageViewProvider
+        stage="categorize"
+        title={
+          listingStreetLineFromAddress(listing.address) ||
+          listing.title?.trim() ||
+          "Listing"
+        }
+        listingView
         listingId={listingId}
-        initialImages={imageItems}
-        googleMapsApiKey={googleMapsApiKey}
-        hasPropertyDetails={Boolean(listing.propertyDetails)}
-      />
+        listingDbStage={listing.listingStage}
+      >
+        <ListingCategorizeView
+          title={listing.title?.trim() || "Listing"}
+          initialAddress={listing.address ?? ""}
+          listingId={listingId}
+          initialImages={imageItems}
+          googleMapsApiKey={googleMapsApiKey}
+          hasPropertyDetails={Boolean(listing.propertyDetails)}
+        />
+      </ListingStageViewProvider>
     );
   });
 }

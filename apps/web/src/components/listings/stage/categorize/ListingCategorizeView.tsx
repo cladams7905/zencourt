@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { ViewHeader } from "@web/src/components/view/ViewHeader";
 import { Loader2 } from "lucide-react";
 import { UploadDialog } from "@web/src/components/uploads";
 import {
@@ -34,9 +33,12 @@ import {
   useCategorizeUploads,
   useCategorizeDerivedState
 } from "@web/src/components/listings/stage/categorize/domain";
-import { ListingStageTimeline } from "@web/src/components/listings/stage/shared";
-import { buildListingStageFlowSteps } from "@web/src/components/listings/stage";
+import {
+  ListingStageFooter,
+  ListingStageShell
+} from "@web/src/components/listings/stage/shared";
 import { formatBytes } from "@web/src/lib/core/formatting/bytes";
+import { useRouter } from "next/navigation";
 
 export function ListingCategorizeView({
   title,
@@ -46,6 +48,7 @@ export function ListingCategorizeView({
   googleMapsApiKey,
   hasPropertyDetails
 }: ListingCategorizeViewProps) {
+  const router = useRouter();
   const [images, setImages] = React.useState<ListingImageItem[]>(initialImages);
   const [dragOverCategory, setDragOverCategory] = React.useState<string | null>(
     null
@@ -99,7 +102,6 @@ export function ListingCategorizeView({
     setImages
   });
   const {
-    draftTitle,
     addressValue,
     setAddressValue,
     handleAddressSelect,
@@ -251,17 +253,11 @@ export function ListingCategorizeView({
 
   return (
     <>
-      <ViewHeader
-        ref={headerRef}
-        title={draftTitle}
-        listingView
-        timeline={
-          <ListingStageTimeline
-            steps={buildListingStageFlowSteps("categorize")}
-            className="mb-0"
-          />
-        }
-        action={
+      <ListingStageShell
+        stage="categorize"
+        wide
+        headerRef={headerRef}
+        headerAction={
           isSavingDraft ? (
             <div className="flex items-center gap-2 rounded-full border border-border bg-secondary/80 px-3 py-1.5 text-xs font-medium text-foreground">
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -269,14 +265,24 @@ export function ListingCategorizeView({
             </div>
           ) : null
         }
-      />
-      <div
-        className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-8 py-10"
-        onDragOver={(event) => {
-          lastDragClientYRef.current = event.clientY;
-        }}
+        footer={
+          <ListingStageFooter
+            onContinue={() => void handleContinue()}
+            canContinue={canContinue}
+            isSubmitting={isSavingDraft}
+            continueLoadingLabel="Saving..."
+            onBack={() => router.push(`/listings/${listingId}/stage/upload`)}
+            canBack
+          />
+        }
       >
-        <div className="flex flex-col gap-8 lg:flex-row">
+        <div
+          className="flex w-full flex-col gap-6"
+          onDragOver={(event) => {
+            lastDragClientYRef.current = event.clientY;
+          }}
+        >
+          <div className="flex flex-col gap-8 lg:flex-row">
           <CategorizeImageWorkspace
             images={images}
             categoryOrder={categoryOrder}
@@ -305,17 +311,16 @@ export function ListingCategorizeView({
             addressValue={addressValue}
             setAddressValue={setAddressValue}
             googleMapsApiKey={googleMapsApiKey}
-            canContinue={canContinue}
             hasUncategorized={hasUncategorized}
             hasEmptyCategory={hasEmptyCategory}
             needsAddress={needsAddress}
             hasOverLimit={hasOverLimit}
             hasTooManyCategories={hasTooManyCategories}
             handleAddressSelect={handleAddressSelect}
-            handleContinue={handleContinue}
           />
+          </div>
         </div>
-      </div>
+      </ListingStageShell>
       <UploadDialog
         open={isUploadOpen}
         onOpenChange={setIsUploadOpen}

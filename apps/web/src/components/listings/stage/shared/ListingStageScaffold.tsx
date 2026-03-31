@@ -3,6 +3,7 @@ import {
   ListingStageTimeline,
   type ListingStageStep
 } from "@web/src/components/listings/stage/shared";
+import { cn } from "@web/src/components/ui/utils";
 import { ListingStageStepHeader } from "./ListingStageStepHeader";
 
 type ListingStageScaffoldProps = {
@@ -11,6 +12,8 @@ type ListingStageScaffoldProps = {
   stepSubtitle?: string;
   children: React.ReactNode;
   footer?: React.ReactNode;
+  /** Wider main column for multi-column stages (categorize, review, upload). */
+  wide?: boolean;
 };
 
 export function ListingStageScaffold({
@@ -18,7 +21,8 @@ export function ListingStageScaffold({
   stepTitle,
   stepSubtitle,
   children,
-  footer
+  footer,
+  wide = false
 }: ListingStageScaffoldProps) {
   return (
     <div className="mx-auto flex h-full w-full max-w-6xl rounded-lg px-6 py-6">
@@ -28,7 +32,12 @@ export function ListingStageScaffold({
         </div>
         <div className="h-px w-full bg-border/80 lg:mx-6 lg:h-auto lg:w-px lg:self-stretch" />
         <div className="flex w-full flex-1 flex-col">
-          <div className="mx-auto flex h-full w-full max-w-lg flex-1 flex-col">
+          <div
+            className={cn(
+              "mx-auto flex h-full w-full flex-1 flex-col",
+              wide ? "max-w-5xl" : "max-w-lg"
+            )}
+          >
             <ListingStageStepHeader title={stepTitle} subtitle={stepSubtitle} />
             <div className="flex w-full flex-1 flex-col">{children}</div>
             {footer}

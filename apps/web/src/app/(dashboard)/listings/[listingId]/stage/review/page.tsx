@@ -3,7 +3,9 @@ import { runWithCaller } from "@web/src/server/infra/logger/callContext";
 import { getListingById } from "@web/src/server/models/listings";
 import { requireUserOrRedirect } from "@web/src/app/(dashboard)/_utils/requireUserOrRedirect";
 import { getOrCreateUserAdditional } from "@web/src/server/models/user";
+import { listingStreetLineFromAddress } from "@shared/utils/address";
 import { ListingReviewView } from "@web/src/components/listings/stage/review";
+import { ListingStageViewProvider } from "@web/src/components/listings/stage/shared";
 import { redirectToListingStage } from "../_utils/redirectToListingStage";
 
 interface ListingStageReviewPageProps {
@@ -31,13 +33,24 @@ export default async function ListingStageReviewPage({
     const userAdditional = await getOrCreateUserAdditional(user.id);
 
     return (
-      <ListingReviewView
+      <ListingStageViewProvider
+        stage="review"
+        title={
+          listingStreetLineFromAddress(listing.address) ||
+          listing.title?.trim() ||
+          "Listing"
+        }
+        listingView
         listingId={listingId}
-        title={listing.title?.trim() || "Listing"}
-        address={listing.address ?? null}
-        propertyDetails={listing.propertyDetails ?? null}
-        targetAudiences={userAdditional.targetAudiences ?? []}
-      />
+        listingDbStage={listing.listingStage}
+      >
+        <ListingReviewView
+          listingId={listingId}
+          address={listing.address ?? null}
+          propertyDetails={listing.propertyDetails ?? null}
+          targetAudiences={userAdditional.targetAudiences ?? []}
+        />
+      </ListingStageViewProvider>
     );
   });
 }

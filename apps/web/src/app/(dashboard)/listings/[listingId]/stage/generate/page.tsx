@@ -3,7 +3,9 @@ import { runWithCaller } from "@web/src/server/infra/logger/callContext";
 import { getListingById } from "@web/src/server/models/listings";
 import { getLatestVideoGenBatchByListingId } from "@web/src/server/models/video";
 import { requireUserOrRedirect } from "@web/src/app/(dashboard)/_utils/requireUserOrRedirect";
+import { listingStreetLineFromAddress } from "@shared/utils/address";
 import { ListingProcessingView } from "@web/src/components/listings/stage/processing";
+import { ListingStageViewProvider } from "@web/src/components/listings/stage/shared";
 import { redirectToListingStage } from "../_utils/redirectToListingStage";
 
 interface ListingStageGeneratePageProps {
@@ -47,13 +49,24 @@ export default async function ListingStageGeneratePage({
     );
 
     return (
-      <ListingProcessingView
-        mode="generate"
+      <ListingStageViewProvider
+        stage="generate"
+        title={
+          listingStreetLineFromAddress(listing.address) ||
+          listing.title?.trim() ||
+          "Listing"
+        }
+        listingView
         listingId={listingId}
-        initialBatchId={getResumableBatchId(latestBatch)}
-        userId={user.id}
-        title={listing.title?.trim() || "Listing"}
-      />
+        listingDbStage={listing.listingStage}
+      >
+        <ListingProcessingView
+          mode="generate"
+          listingId={listingId}
+          initialBatchId={getResumableBatchId(latestBatch)}
+          userId={user.id}
+        />
+      </ListingStageViewProvider>
     );
   });
 }

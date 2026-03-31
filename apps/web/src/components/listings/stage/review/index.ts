@@ -8,5 +8,6 @@ export { ReviewOpenHouseEventsCard } from "./subcomponents/ReviewOpenHouseEvents
 export { ReviewPropertyBasicsCard } from "./subcomponents/ReviewPropertyBasicsCard";
 export { ReviewSaleHistoryCard } from "./subcomponents/ReviewSaleHistoryCard";
 export { ReviewSidebarActions } from "./subcomponents/ReviewSidebarActions";
+export { ReviewConfirmContinueDialog } from "./subcomponents/ReviewConfirmContinueDialog";
 export { ReviewSourcesDialog } from "./subcomponents/ReviewSourcesDialog";
 export { ReviewValuationEstimatesCard } from "./subcomponents/ReviewValuationEstimatesCard";

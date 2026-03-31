@@ -1,10 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { ViewHeader } from "@web/src/components/view/ViewHeader";
 import { Loader2 } from "lucide-react";
-import { ListingStageTimeline } from "@web/src/components/listings/stage/shared";
-import { buildListingStageFlowSteps } from "@web/src/components/listings/stage";
+import {
+  ListingStageFooter,
+  ListingStageShell
+} from "@web/src/components/listings/stage/shared";
 import { useRouter } from "next/navigation";
 import {
   ARCHITECTURE_OPTIONS,
@@ -20,6 +21,7 @@ import {
   useReviewValidation
 } from "@web/src/components/listings/stage/review/domain/hooks";
 import {
+  ReviewConfirmContinueDialog,
   ReviewExteriorFeaturesCard,
   ReviewInteriorFeaturesCard,
   ReviewLocationContextCard,
@@ -33,7 +35,6 @@ import {
 
 export function ListingReviewView({
   listingId,
-  title,
   address,
   propertyDetails,
   targetAudiences
@@ -126,27 +127,33 @@ export function ListingReviewView({
     []
   );
 
+  const [isContinueDialogOpen, setIsContinueDialogOpen] = React.useState(false);
+
   return (
     <>
-      <ViewHeader
-        title={title}
-        listingView
-        timeline={
-          <ListingStageTimeline
-            steps={buildListingStageFlowSteps("review")}
-            className="mb-0"
-          />
-        }
-        action={
-          isSaving ? (
-            <div className="flex items-center gap-2 rounded-full border border-border bg-secondary/80 px-3 py-1.5 text-xs font-medium text-foreground">
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              Saving...
-            </div>
-          ) : null
-        }
-      />
-      <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-8 py-10">
+    <ListingStageShell
+      stage="review"
+      wide
+      headerAction={
+        isSaving ? (
+          <div className="flex items-center gap-2 rounded-full border border-border bg-secondary/80 px-3 py-1.5 text-xs font-medium text-foreground">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            Saving...
+          </div>
+        ) : null
+      }
+      footer={
+        <ListingStageFooter
+          onBack={() => void handleGoBack()}
+          canBack={!isGoingBack}
+          onContinue={() => setIsContinueDialogOpen(true)}
+          canContinue={canContinue && !isSaving}
+          isSubmitting={isSaving}
+          continueLoadingLabel="Saving..."
+        />
+      }
+    >
+      <div className="flex w-full flex-col gap-6">
         <div className="flex flex-col gap-8 lg:flex-row">
           <section className="flex-1 space-y-6">
             <div className="flex w-full items-center gap-3">
@@ -236,18 +243,18 @@ export function ListingReviewView({
 
           <aside className="w-full lg:w-72 mt-14">
             <div className="sticky top-[124px] space-y-4">
-              <ReviewSidebarActions
-                requiredFixes={requiredFixes}
-                canContinue={canContinue}
-                isSaving={isSaving}
-                isGoingBack={isGoingBack}
-                onConfirmContinue={handleConfirmContinue}
-                onGoBack={handleGoBack}
-              />
+              <ReviewSidebarActions requiredFixes={requiredFixes} />
             </div>
           </aside>
         </div>
       </div>
+    </ListingStageShell>
+    <ReviewConfirmContinueDialog
+      open={isContinueDialogOpen}
+      onOpenChange={setIsContinueDialogOpen}
+      onConfirm={handleConfirmContinue}
+      canConfirm={canContinue}
+    />
     </>
   );
 }

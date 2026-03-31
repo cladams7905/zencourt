@@ -108,3 +108,5 @@ export {
   isPriorityCategory,
   getDurationSecondsForCategory
 } from "./priorityCategories";
+
+export { listingStreetLineFromAddress } from "./address";

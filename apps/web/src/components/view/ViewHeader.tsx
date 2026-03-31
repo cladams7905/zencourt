@@ -9,6 +9,8 @@ import { useRouter } from "next/navigation";
 interface ViewHeaderProps {
   title: string;
   subtitle?: string;
+  /** Shown inline to the right of the listing name (listing view only). */
+  titleAddon?: React.ReactNode;
   className?: string;
   action?: React.ReactNode;
   timeline?: React.ReactNode;
@@ -24,6 +26,7 @@ export const ViewHeader = React.forwardRef<HTMLElement, ViewHeaderProps>(
     {
       title,
       subtitle,
+      titleAddon,
       className,
       action,
       timeline,
@@ -61,9 +64,12 @@ export const ViewHeader = React.forwardRef<HTMLElement, ViewHeaderProps>(
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Listing name
               </p>
-              <h1 className="text-2xl font-header font-medium text-foreground">
-                {title}
-              </h1>
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-2xl font-header font-medium text-foreground">
+                  {title}
+                </h1>
+                <div className="ml-2 -mb-1">{titleAddon}</div>
+              </div>
               {subtitle ? (
                 <p className="text-sm text-muted-foreground">{subtitle}</p>
               ) : null}
@@ -128,7 +134,11 @@ export const ViewHeader = React.forwardRef<HTMLElement, ViewHeaderProps>(
             </Button>
           ) : null}
           {showNotifications ? (
-            <Button size="icon" variant="ghost" className="relative rounded-full">
+            <Button
+              size="icon"
+              variant="ghost"
+              className="relative rounded-full"
+            >
               <Bell className="h-5 w-5" />
               {hasNotifications ? (
                 <span className="absolute top-2 right-2 h-2 w-2 bg-primary rounded-full border-2 border-background" />

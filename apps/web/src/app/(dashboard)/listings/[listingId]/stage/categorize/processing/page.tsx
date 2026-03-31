@@ -2,7 +2,9 @@ import { redirect } from "next/navigation";
 import { runWithCaller } from "@web/src/server/infra/logger/callContext";
 import { getListingById } from "@web/src/server/models/listings";
 import { requireUserOrRedirect } from "@web/src/app/(dashboard)/_utils/requireUserOrRedirect";
+import { listingStreetLineFromAddress } from "@shared/utils/address";
 import { ListingProcessingView } from "@web/src/components/listings/stage/processing";
+import { ListingStageViewProvider } from "@web/src/components/listings/stage/shared";
 import { redirectToListingStage } from "../../_utils/redirectToListingStage";
 
 interface ListingStageCategorizeProcessingPageProps {
@@ -39,14 +41,25 @@ export default async function ListingStageCategorizeProcessingPage({
       redirectToListingStage(listingId, listing.listingStage, "categorize");
 
       return (
-        <ListingProcessingView
-          mode="categorize"
+        <ListingStageViewProvider
+          stage="categorize"
+          title={
+            listingStreetLineFromAddress(listing.address) ||
+            listing.title?.trim() ||
+            "Listing"
+          }
+          listingView
           listingId={listingId}
-          userId={user.id}
-          title={listing.title?.trim() || "Listing"}
-          batchCount={Number.isNaN(batchCount) ? null : batchCount}
-          batchStartedAt={Number.isNaN(batchStartedAt) ? null : batchStartedAt}
-        />
+          listingDbStage={listing.listingStage}
+        >
+          <ListingProcessingView
+            mode="categorize"
+            listingId={listingId}
+            userId={user.id}
+            batchCount={Number.isNaN(batchCount) ? null : batchCount}
+            batchStartedAt={Number.isNaN(batchStartedAt) ? null : batchStartedAt}
+          />
+        </ListingStageViewProvider>
       );
     }
   );

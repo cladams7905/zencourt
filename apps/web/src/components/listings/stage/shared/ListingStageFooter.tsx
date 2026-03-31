@@ -16,7 +16,7 @@ export function ListingStageFooter({
   onContinue,
   onBack,
   canContinue = true,
-  canBack = false,
+  canBack = true,
   isSubmitting = false,
   continueLabel = "Continue",
   continueLoadingLabel = "Submitting...",
@@ -24,8 +24,13 @@ export function ListingStageFooter({
 }: ListingStageFooterProps) {
   return (
     <div className="flex items-center justify-end gap-3 pt-8">
-      {onBack && canBack ? (
-        <Button type="button" variant="outline" onClick={onBack}>
+      {onBack ? (
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onBack}
+          disabled={!canBack}
+        >
           {backLabel}
         </Button>
       ) : null}
