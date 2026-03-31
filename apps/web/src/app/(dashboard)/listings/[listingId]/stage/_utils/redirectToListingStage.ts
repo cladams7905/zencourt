@@ -1,12 +1,18 @@
 import { redirect } from "next/navigation";
 
-type ListingStage = "categorize" | "create" | "generate" | "review";
+type ListingStage =
+  | "categorize"
+  | "complete"
+  | "generate"
+  | "review"
+  | "upload";
 
 const STAGE_PATHS: Record<ListingStage, (id: string) => string> = {
   categorize: (id) => `/listings/${id}/stage/categorize`,
-  create: (id) => `/listings/${id}/content`,
+  complete: (id) => `/listings/${id}/content`,
   generate: (id) => `/listings/${id}/stage/generate`,
-  review: (id) => `/listings/${id}/stage/review`
+  review: (id) => `/listings/${id}/stage/review`,
+  upload: (id) => `/listings/${id}/stage/upload`
 };
 
 /**

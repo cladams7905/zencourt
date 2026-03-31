@@ -13,11 +13,14 @@ describe("myListingsUtils", () => {
     expect(resolveListingPath({ id: "1", listingStage: "generate" })).toBe(
       "/listings/1/stage/generate"
     );
-    expect(resolveListingPath({ id: "1", listingStage: "create" })).toBe(
+    expect(resolveListingPath({ id: "1", listingStage: "complete" })).toBe(
       "/listings/1/content"
     );
     expect(resolveListingPath({ id: "1", listingStage: "categorize" })).toBe(
       "/listings/1/stage/categorize"
+    );
+    expect(resolveListingPath({ id: "1", listingStage: "upload" })).toBe(
+      "/listings/1/stage/upload"
     );
     expect(resolveListingPath({ id: "1", listingStage: null })).toBe(
       "/listings/1/stage/categorize"

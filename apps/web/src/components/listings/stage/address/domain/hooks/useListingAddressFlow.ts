@@ -48,15 +48,16 @@ export function useListingAddressFlow() {
         throw new Error("Draft listing could not be created.");
       }
 
-      await updateListingForCurrentUser(listing.id, {
+      const updated = await updateListingForCurrentUser(listing.id, {
         title: inferredTitle,
-        address: trimmedAddress
+        address: trimmedAddress,
+        listingStage: "upload"
       });
 
       emitListingSidebarUpdate({
         id: listing.id,
         title: inferredTitle,
-        listingStage: listing.listingStage ?? "categorize",
+        listingStage: updated.listingStage ?? "upload",
         lastOpenedAt: new Date().toISOString()
       });
 

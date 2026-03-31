@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { runWithCaller } from "@web/src/server/infra/logger/callContext";
 import { getListingById } from "@web/src/server/models/listings";
 import { requireUserOrRedirect } from "@web/src/app/(dashboard)/_utils/requireUserOrRedirect";
+import { redirectToListingStage } from "@web/src/app/(dashboard)/listings/[listingId]/stage/_utils/redirectToListingStage";
 import { ListingUploadView } from "@web/src/components/listings/stage/upload";
 
 interface ListingStageUploadPageProps {
@@ -23,6 +24,8 @@ export default async function ListingStageUploadPage({
     if (!listing) {
       redirect("/listings/create");
     }
+
+    redirectToListingStage(listingId, listing.listingStage, "upload");
 
     return <ListingUploadView listingId={listingId} />;
   });

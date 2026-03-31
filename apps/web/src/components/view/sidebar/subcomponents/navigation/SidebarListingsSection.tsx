@@ -79,7 +79,7 @@ export function SidebarListingsSection({
                   <div
                     className={cn(
                       "w-2 h-2 rotate-45 rounded-xs shrink-0",
-                      listing.listingStage === "create"
+                      listing.listingStage === "complete"
                         ? "bg-primary"
                         : "bg-muted-foreground/70"
                     )}
@@ -89,7 +89,7 @@ export function SidebarListingsSection({
               <TooltipContent side="right" sideOffset={8}>
                 {listing.title}{" "}
                 {listing.listingStage &&
-                  listing.listingStage !== "create" &&
+                  listing.listingStage !== "complete" &&
                   `(${formatListingStageLabel(listing.listingStage)})`}
               </TooltipContent>
             </Tooltip>
@@ -105,14 +105,14 @@ export function SidebarListingsSection({
                   <div
                     className={cn(
                       "w-1.5 h-1.5 rotate-45 rounded-xs shrink-0",
-                      listing.listingStage === "create"
+                      listing.listingStage === "complete"
                         ? "bg-primary"
                         : "bg-muted-foreground/70"
                     )}
                   />
                   <span className="text-sm truncate">{listing.title}</span>
                 </div>
-                {listing.listingStage !== "create" ? (
+                {listing.listingStage !== "complete" ? (
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Badge variant="muted" className="rounded-full py-1 px-1">

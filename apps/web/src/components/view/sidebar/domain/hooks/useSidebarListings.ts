@@ -16,7 +16,7 @@ const mergeSidebarListingUpdate = (
       {
         id: update.id,
         title: update.title ?? null,
-        listingStage: update.listingStage ?? "categorize",
+        listingStage: update.listingStage ?? "upload",
         lastOpenedAt: update.lastOpenedAt ?? new Date().toISOString()
       },
       ...previousItems

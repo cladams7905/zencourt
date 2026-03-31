@@ -53,7 +53,7 @@ describe("useListingContentEffects", () => {
     renderEffects();
 
     expect(mockEmitListingSidebarUpdate).toHaveBeenCalledWith(
-      expect.objectContaining({ id: "l1", listingStage: "create" })
+      expect.objectContaining({ id: "l1", listingStage: "complete" })
     );
     expect(window.location.search).toBe("?mediaType=photos&filter=new_listing");
   });

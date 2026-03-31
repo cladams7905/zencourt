@@ -96,7 +96,7 @@ describe("useSidebarListings", () => {
 
     expect(result.current.displayedListingItems[0].id).toBe("listing-new");
     expect(result.current.displayedListingItems[0].listingStage).toBe(
-      "categorize"
+      "upload"
     );
   });
 });

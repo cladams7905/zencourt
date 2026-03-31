@@ -13,7 +13,7 @@ import {
 
 export async function updateListingStage(
   listingId: string,
-  listingStage: "review" | "create"
+  listingStage: "review" | "complete"
 ) {
   await updateListingForCurrentUser(listingId, { listingStage });
 }

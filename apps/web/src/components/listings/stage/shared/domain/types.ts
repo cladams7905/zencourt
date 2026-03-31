@@ -1,4 +1,9 @@
-export type ListingStage = "categorize" | "review" | "create" | "generate";
+export type ListingStage =
+  | "upload"
+  | "categorize"
+  | "review"
+  | "complete"
+  | "generate";
 
 export type ListingStageStep = {
   label: string;

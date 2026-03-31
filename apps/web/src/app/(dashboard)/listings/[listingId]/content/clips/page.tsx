@@ -35,7 +35,7 @@ export default async function ListingContentClipsPage({
       redirect("/listings/create");
     }
 
-    redirectToListingStage(listingId, listing.listingStage, "create");
+    redirectToListingStage(listingId, listing.listingStage, "complete");
 
     const clipVersionItems =
       await getListingClipVersionItemsForCurrentUser(listingId);

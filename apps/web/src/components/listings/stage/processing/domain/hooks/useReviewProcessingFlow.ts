@@ -7,7 +7,7 @@ export function useReviewProcessingFlow(params: {
   listingId: string;
   address?: string | null;
   navigate: (url: string) => void;
-  updateStage: (stage: "review" | "create") => Promise<void>;
+  updateStage: (stage: "review" | "complete") => Promise<void>;
 }) {
   const { mode, listingId, address, navigate, updateStage } = params;
   const [status, setStatus] = React.useState<"loading" | "success" | "error">(

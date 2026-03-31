@@ -62,7 +62,7 @@ describe("useUploadFlow", () => {
       resolveDraft?.({
         id: "listing-1",
         title: null,
-        listingStage: "categorize"
+        listingStage: "upload"
       });
       await Promise.all([p1, p2]);
     });
@@ -76,7 +76,7 @@ describe("useUploadFlow", () => {
     mockCreateListing.mockResolvedValue({
       id: "listing-1",
       title: null,
-      listingStage: "categorize"
+      listingStage: "upload"
     });
     const { result } = renderHook(() => useUploadFlow({ navigate: jest.fn() }));
 
@@ -93,7 +93,7 @@ describe("useUploadFlow", () => {
     mockCreateListing.mockResolvedValue({
       id: "listing-1",
       title: "Title",
-      listingStage: "categorize"
+      listingStage: "upload"
     });
     mockCreateListingImageRecords.mockResolvedValue(undefined);
 

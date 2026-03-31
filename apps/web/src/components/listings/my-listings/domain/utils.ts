@@ -54,6 +54,6 @@ export const toListingRowViewModel = (
     remainingCount,
     stageLabel,
     draftTooltipLabel: `Draft (${formatStageLabel(listing.listingStage)})`,
-    showDraftBadge: listing.listingStage !== "create"
+    showDraftBadge: listing.listingStage !== "complete"
   };
 };

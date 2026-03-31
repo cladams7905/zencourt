@@ -19,14 +19,14 @@ export function useListingProcessingWorkflow(params: {
     params;
 
   const updateStage = React.useCallback(
-    async (listingStage: "review" | "create") => {
+    async (listingStage: "review" | "complete") => {
       await updateListingStage(listingId, listingStage);
     },
     [listingId]
   );
 
   const goToStage = React.useCallback(
-    async (stage: "review" | "create", path: string) => {
+    async (stage: "review" | "complete", path: string) => {
       try {
         await updateStage(stage);
       } catch {

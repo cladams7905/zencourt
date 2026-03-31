@@ -22,8 +22,8 @@ export function useGenerateProcessingFlow(params: {
   listingId: string;
   initialBatchId?: string | null;
   navigate: (url: string) => void;
-  goToStage: (stage: "review" | "create", path: string) => Promise<void>;
-  updateStage: (stage: "review" | "create") => Promise<void>;
+  goToStage: (stage: "review" | "complete", path: string) => Promise<void>;
+  updateStage: (stage: "review" | "complete") => Promise<void>;
 }) {
   const { mode, listingId, initialBatchId, navigate, goToStage, updateStage } =
     params;
@@ -276,7 +276,7 @@ export function useGenerateProcessingFlow(params: {
 
     hasNavigatedRef.current = true;
     void goToStage(
-      "create",
+      "complete",
       `/listings/${listingId}/content?mediaType=videos&filter=new_listing`
     );
   }, [generationSummary, goToStage, listingContentStatus, listingId, mode]);

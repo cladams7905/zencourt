@@ -12,8 +12,11 @@ describe("listings stage shared helpers", () => {
     expect(resolveListingPath({ id: "1", listingStage: "generate" })).toBe(
       "/listings/1/stage/generate"
     );
-    expect(resolveListingPath({ id: "1", listingStage: "create" })).toBe(
+    expect(resolveListingPath({ id: "1", listingStage: "complete" })).toBe(
       "/listings/1/content"
+    );
+    expect(resolveListingPath({ id: "1", listingStage: "upload" })).toBe(
+      "/listings/1/stage/upload"
     );
     expect(resolveListingPath({ id: "1", listingStage: null })).toBe(
       "/listings/1/stage/categorize"
@@ -28,9 +31,10 @@ describe("listings stage shared helpers", () => {
   it("builds stage step state based on active stage", () => {
     const steps = buildListingStageSteps("review");
 
-    expect(steps).toHaveLength(3);
-    expect(steps[0]).toMatchObject({ label: "Categorize", completed: true });
-    expect(steps[1]).toMatchObject({ label: "Review", active: true });
-    expect(steps[2]).toMatchObject({ label: "Create", active: false });
+    expect(steps).toHaveLength(4);
+    expect(steps[0]).toMatchObject({ label: "Upload", completed: true });
+    expect(steps[1]).toMatchObject({ label: "Categorize", completed: true });
+    expect(steps[2]).toMatchObject({ label: "Review", active: true });
+    expect(steps[3]).toMatchObject({ label: "Complete", active: false });
   });
 });

@@ -12,7 +12,13 @@ import { readJsonBodySafe } from "@shared/utils/api/validation";
 
 const ROUTE_CALLER = "api/v1/listings/.../stage";
 
-const ALLOWED_STAGES = new Set(["categorize", "create", "review", "generate"]);
+const ALLOWED_STAGES = new Set([
+  "upload",
+  "categorize",
+  "complete",
+  "review",
+  "generate"
+]);
 
 type StageUpdateBody = {
   listingStage?: string;
@@ -35,13 +41,18 @@ export async function POST(
         return apiErrorResponse(
           StatusCode.BAD_REQUEST,
           "INVALID_REQUEST",
-          "listingStage must be one of: categorize, create, review, generate",
+          "listingStage must be one of: upload, categorize, complete, review, generate",
           { message: "Invalid listingStage" }
         );
       }
 
       await updateListingForCurrentUser(listingId, {
-        listingStage: listingStage as "categorize" | "create" | "review" | "generate"
+        listingStage: listingStage as
+          | "upload"
+          | "categorize"
+          | "complete"
+          | "review"
+          | "generate"
       });
 
       return NextResponse.json({

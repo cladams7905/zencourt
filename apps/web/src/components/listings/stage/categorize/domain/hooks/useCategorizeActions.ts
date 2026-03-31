@@ -91,7 +91,7 @@ export function useCategorizeActions(params: UseCategorizeActionsParams) {
   const resolveCategoryValue = React.useCallback(
     (
       input: string,
-      mode: "create" | "edit",
+      mode: "add" | "edit",
       originalCategory?: string | null
     ) => {
       const nextCategory = input.trim();
@@ -131,7 +131,7 @@ export function useCategorizeActions(params: UseCategorizeActionsParams) {
 
   const handleCreateCategory = React.useCallback(
     (value: string) => {
-      const createdCategory = resolveCategoryValue(value, "create");
+      const createdCategory = resolveCategoryValue(value, "add");
       if (!createdCategory) {
         return;
       }

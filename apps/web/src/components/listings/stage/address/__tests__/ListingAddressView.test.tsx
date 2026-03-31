@@ -71,9 +71,12 @@ describe("ListingAddressView", () => {
   it("creates a listing and routes to listing upload", async () => {
     mockCreateListingForCurrentUser.mockResolvedValue({
       id: "listing-1",
-      listingStage: "categorize"
+      listingStage: "upload"
     });
-    mockUpdateListingForCurrentUser.mockResolvedValue(undefined);
+    mockUpdateListingForCurrentUser.mockResolvedValue({
+      id: "listing-1",
+      listingStage: "upload"
+    });
 
     render(<ListingAddressView googleMapsApiKey="test-key" />);
 
@@ -90,13 +93,14 @@ describe("ListingAddressView", () => {
     });
     expect(mockUpdateListingForCurrentUser).toHaveBeenCalledWith("listing-1", {
       title: "123 Main Street",
-      address: "123 Main Street, Seattle WA"
+      address: "123 Main Street, Seattle WA",
+      listingStage: "upload"
     });
     expect(mockEmitListingSidebarUpdate).toHaveBeenCalledWith(
       expect.objectContaining({
         id: "listing-1",
         title: "123 Main Street",
-        listingStage: "categorize"
+        listingStage: "upload"
       })
     );
     expect(mockPush).toHaveBeenCalledWith("/listings/listing-1/stage/upload");

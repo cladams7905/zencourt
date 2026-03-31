@@ -18,7 +18,7 @@ export const listings = pgTable(
     propertyDetailsRevision: text("property_details_revision"),
     listingStage: listingStageEnum("listing_stage")
       .notNull()
-      .default("categorize"),
+      .default("upload"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull()
   },

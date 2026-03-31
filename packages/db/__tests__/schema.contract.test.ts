@@ -26,10 +26,11 @@ describe("db schema contracts", () => {
       "canceled"
     ]);
     expect(listingStageEnum.enumValues).toEqual([
+      "upload",
       "categorize",
       "review",
       "generate",
-      "create"
+      "complete"
     ]);
     expect(mediaTypeEnum.enumValues).toEqual(["video", "image"]);
     expect(targetAudienceEnum.enumValues).toContain("first_time_homebuyers");

@@ -127,9 +127,12 @@ describe("useListingAddressFlow", () => {
   it("creates draft, updates listing, emits sidebar, and navigates on success", async () => {
     mockCreateListingForCurrentUser.mockResolvedValue({
       id: "listing-1",
-      listingStage: "categorize"
+      listingStage: "upload"
     });
-    mockUpdateListingForCurrentUser.mockResolvedValue(undefined);
+    mockUpdateListingForCurrentUser.mockResolvedValue({
+      id: "listing-1",
+      listingStage: "upload"
+    });
 
     const { result } = renderHook(() => useListingAddressFlow());
 
@@ -147,13 +150,14 @@ describe("useListingAddressFlow", () => {
     expect(mockCreateListingForCurrentUser).toHaveBeenCalledTimes(1);
     expect(mockUpdateListingForCurrentUser).toHaveBeenCalledWith("listing-1", {
       title: "456 Oak Ave",
-      address: "456 Oak Ave, Portland, OR"
+      address: "456 Oak Ave, Portland, OR",
+      listingStage: "upload"
     });
     expect(mockEmitListingSidebarUpdate).toHaveBeenCalledWith(
       expect.objectContaining({
         id: "listing-1",
         title: "456 Oak Ave",
-        listingStage: "categorize"
+        listingStage: "upload"
       })
     );
     expect(mockPush).toHaveBeenCalledWith("/listings/listing-1/stage/upload");
@@ -186,7 +190,7 @@ describe("useListingAddressFlow", () => {
   it("shows toast when update throws", async () => {
     mockCreateListingForCurrentUser.mockResolvedValue({
       id: "listing-1",
-      listingStage: "categorize"
+      listingStage: "upload"
     });
     mockUpdateListingForCurrentUser.mockRejectedValue(
       new Error("Network error")

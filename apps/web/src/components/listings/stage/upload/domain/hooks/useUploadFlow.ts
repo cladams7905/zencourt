@@ -51,7 +51,7 @@ export const useUploadFlow = ({ navigate, listingId }: UseUploadFlowParams) => {
       emitListingSidebarUpdate({
         id: listing.id,
         title: listing.title ?? null,
-        listingStage: listing.listingStage ?? "categorize",
+        listingStage: listing.listingStage ?? "upload",
         lastOpenedAt: new Date().toISOString()
       });
 

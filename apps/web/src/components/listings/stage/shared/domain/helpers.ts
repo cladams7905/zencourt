@@ -28,8 +28,10 @@ export function resolveListingPath(input: {
       return `/listings/${input.id}/stage/review`;
     case "generate":
       return `/listings/${input.id}/stage/generate`;
-    case "create":
+    case "complete":
       return `/listings/${input.id}/content`;
+    case "upload":
+      return `/listings/${input.id}/stage/upload`;
     case "categorize":
     default:
       return `/listings/${input.id}/stage/categorize`;

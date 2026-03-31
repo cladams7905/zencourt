@@ -30,7 +30,7 @@ const CATEGORY_OPTIONS = Object.values(ROOM_CATEGORIES)
 
 type ListingCategoryDialogProps = {
   open: boolean;
-  mode: "create" | "edit";
+  mode: "add" | "edit";
   initialCategory?: string | null;
   onOpenChange: (open: boolean) => void;
   onSubmit: (value: string) => void;
@@ -71,7 +71,7 @@ export function ListingCategoryDialog({
     mode === "edit"
       ? "Update the room category name for this section."
       : "Create a new category to organize listing photos.";
-  const primaryActionLabel = mode === "edit" ? "Save changes" : "Create";
+  const primaryActionLabel = mode === "edit" ? "Save changes" : "Add";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

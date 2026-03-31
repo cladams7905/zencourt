@@ -41,7 +41,7 @@ export default async function ListingContentPage({
       redirect("/listings/create");
     }
 
-    redirectToListingStage(listingId, listing.listingStage, "create");
+    redirectToListingStage(listingId, listing.listingStage, "complete");
 
     const {
       listingClipItems,

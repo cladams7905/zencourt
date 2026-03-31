@@ -17,7 +17,13 @@ const mockRedirect = jest.mocked(redirect);
 describe("redirectToListingStage", () => {
   beforeEach(() => mockRedirect.mockClear());
 
-  const stages = ["categorize", "create", "generate", "review"] as const;
+  const stages = [
+    "categorize",
+    "complete",
+    "generate",
+    "review",
+    "upload"
+  ] as const;
 
   it.each(stages)(
     "does not redirect when stage matches expectedStage (%s)",
@@ -31,13 +37,13 @@ describe("redirectToListingStage", () => {
 
   it("redirects to /stage/categorize when stage is categorize and expected is create", () => {
     expect(() =>
-      redirectToListingStage("abc123", "categorize", "create")
+      redirectToListingStage("abc123", "categorize", "complete")
     ).toThrow("REDIRECT:/listings/abc123/stage/categorize");
   });
 
   it("redirects to /content when stage is create and expected is categorize", () => {
     expect(() =>
-      redirectToListingStage("abc123", "create", "categorize")
+      redirectToListingStage("abc123", "complete", "categorize")
     ).toThrow("REDIRECT:/listings/abc123/content");
   });
 
@@ -53,9 +59,15 @@ describe("redirectToListingStage", () => {
     ).toThrow("REDIRECT:/listings/abc123/stage/review");
   });
 
+  it("redirects to /stage/upload when stage is upload", () => {
+    expect(() =>
+      redirectToListingStage("abc123", "upload", "categorize")
+    ).toThrow("REDIRECT:/listings/abc123/stage/upload");
+  });
+
   it("always uses the passed listingId in the redirect URL", () => {
     expect(() =>
-      redirectToListingStage("listing-xyz", "create", "categorize")
+      redirectToListingStage("listing-xyz", "complete", "categorize")
     ).toThrow("REDIRECT:/listings/listing-xyz/content");
   });
 

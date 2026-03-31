@@ -49,7 +49,7 @@ export function useListingContentEffects(params: {
   React.useEffect(() => {
     emitListingSidebarUpdate({
       id: listingId,
-      listingStage: "create",
+      listingStage: "complete",
       lastOpenedAt: new Date().toISOString()
     });
   }, [listingId]);

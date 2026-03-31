@@ -309,6 +309,20 @@
       "when": 1774878516350,
       "tag": "0043_supreme_winter_soldier",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1774990933175,
+      "tag": "0044_organic_tarantula",
+      "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1774991102699,
+      "tag": "0045_right_archangel",
+      "breakpoints": true
     }
   ]
 }

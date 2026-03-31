@@ -53,8 +53,8 @@ export function ListingCategorizeView({
   const [isUploadOpen, setIsUploadOpen] = React.useState(false);
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = React.useState(false);
   const [categoryDialogMode, setCategoryDialogMode] = React.useState<
-    "create" | "edit"
-  >("create");
+    "add" | "edit"
+  >("add");
   const [categoryDialogCategory, setCategoryDialogCategory] = React.useState<
     string | null
   >(null);
@@ -209,7 +209,7 @@ export function ListingCategorizeView({
     setIsUploadOpen(true);
   }, []);
   const handleOpenCreateCategory = React.useCallback(() => {
-    setCategoryDialogMode("create");
+    setCategoryDialogMode("add");
     setCategoryDialogCategory(null);
     setIsCategoryDialogOpen(true);
   }, []);
