@@ -3,7 +3,7 @@ import type { ListingContentSubcategory } from "@shared/types/models";
 import type { ListingContentItem as ContentItem } from "@web/src/lib/domain/listings/content";
 import { resolveContentMediaType } from "../shared/utils";
 
-export function useListingCreateActiveMediaItems(params: {
+export function useListingContentActiveMediaItems(params: {
   activeMediaTab: "videos" | "images";
   activeSubcategory: ListingContentSubcategory;
   bucketContentItems: ContentItem[];
@@ -15,7 +15,8 @@ export function useListingCreateActiveMediaItems(params: {
       bucketContentItems.filter(
         (item) =>
           item.listingSubcategory === activeSubcategory &&
-          resolveContentMediaType(item) === (activeMediaTab === "videos" ? "video" : "image")
+          resolveContentMediaType(item) ===
+            (activeMediaTab === "videos" ? "video" : "image")
       ),
     [activeMediaTab, activeSubcategory, bucketContentItems]
   );

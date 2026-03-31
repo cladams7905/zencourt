@@ -3,13 +3,13 @@
 import { getContentByListingId } from "@web/src/server/models/content";
 import {
   getCachedListingContentForCreateFilter,
-  type ListingCreateCachedContentItem,
+  type ListingContentCachedContentItem,
   type ListingMediaType
 } from "@web/src/server/infra/cache/listingContent/cache";
 import type { ListingContentItem as ContentItem } from "@web/src/lib/domain/listings/content";
 import {
   LISTING_CREATE_INITIAL_PAGE_SIZE,
-  type ListingCreateMediaTab
+  type ListingContentMediaTab
 } from "@web/src/lib/domain/listings/content/create";
 import { isSavedListingReelMetadata } from "@web/src/lib/domain/listings/content/reels";
 import type { ListingContentSubcategory } from "@shared/types/models";
@@ -20,7 +20,7 @@ import {
 
 const MAX_LISTING_CREATE_PAGE_SIZE = LISTING_CREATE_INITIAL_PAGE_SIZE;
 
-function normalizeListingCreatePageParams(params: {
+function normalizeListingContentPageParams(params: {
   limit?: number;
   offset?: number;
 }) {
@@ -73,7 +73,7 @@ function buildSavedCreatePageData(params: {
 export async function getListingContentItems(params: {
   userId: string;
   listingId: string;
-  mediaTab?: ListingCreateMediaTab;
+  mediaTab?: ListingContentMediaTab;
   subcategory?: ListingContentSubcategory;
   limit?: number;
   offset?: number;
@@ -83,7 +83,7 @@ export async function getListingContentItems(params: {
    * When set (e.g. from getAllCachedListingContentForCreate), filters in memory for the active
    * subcategory/media tab instead of calling getCachedListingContentForCreateFilter (avoids a second Redis scan).
    */
-  allCachedListingContentForCreate?: ListingCreateCachedContentItem[];
+  allCachedListingContentForCreate?: ListingContentCachedContentItem[];
 }) {
   const activeMediaType: ListingMediaType =
     params.mediaTab === "images" ? "image" : "video";
@@ -126,7 +126,7 @@ export async function getListingContentItems(params: {
         contentSource: "cached_create" as const
       }))
   ];
-  const { offset, limit } = normalizeListingCreatePageParams(params);
+  const { offset, limit } = normalizeListingContentPageParams(params);
   const items = allItems.slice(offset, offset + limit);
   const nextOffset = offset + items.length;
 

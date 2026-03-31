@@ -2,15 +2,15 @@ import * as React from "react";
 import type { ListingImagePreviewItem } from "@web/src/components/listings/content/shared/types";
 import type { ListingContentItem as ContentItem } from "@web/src/lib/domain/listings/content";
 import {
-  type ListingCreateImage,
+  type ListingContentImage,
   buildVariedImageSequence,
   rankListingImagesForItem
-} from "../shared/utils";
+} from "@web/src/components/listings/content/image/domain/listingImages";
 
-export function useListingCreateMediaItems(params: {
+export function useListingContentMediaItems(params: {
   activeMediaTab: "videos" | "images";
   activeContentItems: ContentItem[];
-  listingImages: ListingCreateImage[];
+  listingImages: ListingContentImage[];
   isGenerating: boolean;
   loadingCount: number;
   initialPageLoadingCount: number;

@@ -6,11 +6,11 @@ import {
   TooltipTrigger
 } from "@web/src/components/ui/tooltip";
 import { TableCell, TableRow } from "@web/src/components/ui/table";
-import { ListingImageStack } from "@web/src/components/listings/myListings/components/ListingImageStack";
+import { ListingImageStack } from "@web/src/components/listings/my-listings/components/ListingImageStack";
 import {
   MAX_LISTING_IMAGES,
   type ListingRowViewModel
-} from "@web/src/components/listings/myListings/shared";
+} from "@web/src/components/listings/my-listings/shared";
 
 type ListingRowProps = {
   row: ListingRowViewModel;

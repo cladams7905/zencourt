@@ -93,14 +93,16 @@
 ### Task 1: Add Modal Action Tests and Canonical Draft Builders
 
 **Files:**
+
 - Modify: `apps/web/src/components/listings/create/media/video/components/VideoPreviewModal.tsx`
 - Modify: `apps/web/src/components/listings/create/media/video/components/__tests__/VideoPreviewModal.test.tsx`
 - Reference: `apps/web/src/lib/domain/listings/content/create.ts`
-- Reference: `apps/web/src/components/listings/create/media/video/components/ListingTimelinePreviewComposition.tsx`
+- Reference: `apps/web/src/components/listings/create/media/video/components/ListingStageTimelinePreviewComposition.tsx`
 
 - [ ] **Step 1: Write failing modal tests for the new controls**
 
 Add tests that assert:
+
 - the modal renders `Download reel preview` and `Favorite reel preview` buttons in the player area
 - clicking favorite with dirty draft calls a new save-and-favorite callback with updated hook/caption/sequence/overlay fields
 - clicking download posts a reduced export payload built from dirty draft segments
@@ -170,6 +172,7 @@ git commit -m "test: cover reel modal favorite and download actions"
 ### Task 2: Wire Modal UI, Persisted Favorite State, and Client Download Flow
 
 **Files:**
+
 - Modify: `apps/web/src/components/listings/create/media/video/components/VideoPreviewModal.tsx`
 - Modify: `apps/web/src/components/listings/create/components/ListingVideoPreviewGrid.tsx`
 - Modify: `apps/web/src/components/listings/create/media/video/components/__tests__/VideoPreviewModal.test.tsx`
@@ -179,6 +182,7 @@ git commit -m "test: cover reel modal favorite and download actions"
 - [ ] **Step 1: Extend the modal props and grid expectations with failing tests**
 
 Add tests or update existing harnesses to verify:
+
 - `listingId` is passed through to the modal
 - modal receives `onSaveAndFavoritePreview`
 - the grid favorite state derives from persisted content rather than the local `Set`
@@ -189,6 +193,7 @@ Expected: FAIL because the grid still uses local-only favorite state and the mod
 - [ ] **Step 2: Thread the new props into `VideoPreviewModal`**
 
 Add props for:
+
 - `listingId`
 - `onSaveAndFavoritePreview`
 
@@ -234,6 +239,7 @@ git commit -m "feat: wire reel modal favorite and download controls"
 ### Task 3: Add Save-Then-Favorite Reel Action
 
 **Files:**
+
 - Modify: `apps/web/src/server/actions/listings/content/reels/actions.ts`
 - Modify: `apps/web/src/server/actions/listings/content/reels/index.ts`
 - Modify: `apps/web/src/server/actions/listings/content/reels/__tests__/actions.test.ts`
@@ -243,6 +249,7 @@ git commit -m "feat: wire reel modal favorite and download controls"
 - [ ] **Step 1: Write the failing action tests**
 
 Add tests for:
+
 - cached-create reel draft saves as new content and then updates `isFavorite=true`
 - saved-content reel draft updates metadata and then updates `isFavorite=true`
 - the returned mapped content item exposes `isFavorite: true`
@@ -254,6 +261,7 @@ Expected: FAIL because `saveAndFavoriteListingVideoReel` does not exist yet
 - [ ] **Step 2: Extract reusable normalized-save helpers from the current save action**
 
 Refactor `actions.ts` so save logic can be reused without duplicating:
+
 - `normalizeReelInput`
 - `saveCachedReelAsContent`
 - `updateSavedReelContent`
@@ -267,7 +275,11 @@ export const saveAndFavoriteListingVideoReel = withServerActionCaller(
   "saveAndFavoriteListingVideoReel",
   async (listingId: string, params: PlayablePreviewTextUpdate) =>
     withCurrentUserListingAccess(listingId, async ({ user }) => {
-      const saved = await saveListingVideoReelInternal(user.id, listingId, params);
+      const saved = await saveListingVideoReelInternal(
+        user.id,
+        listingId,
+        params
+      );
       const favorited = await updateContent(user.id, saved.savedContentId!, {
         isFavorite: true
       });
@@ -297,6 +309,7 @@ git commit -m "feat: add save and favorite reel action"
 ### Task 4: Add Web Reel Export Orchestration and Download Route
 
 **Files:**
+
 - Create: `apps/web/src/server/actions/listings/content/reels/export.ts`
 - Create: `apps/web/src/app/api/v1/listings/[listingId]/reels/download/route.ts`
 - Create: `apps/web/src/app/api/v1/listings/[listingId]/reels/download/__tests__/route.test.ts`
@@ -309,6 +322,7 @@ git commit -m "feat: add save and favorite reel action"
 - [ ] **Step 1: Write failing route and export-service tests**
 
 Add tests for:
+
 - POST body validation for missing or empty segments
 - listing access enforcement
 - missing clip/user-media source resolution failures
@@ -340,6 +354,7 @@ Keep this separate from `PlayablePreviewTextUpdate`.
 - [ ] **Step 3: Implement `export.ts` orchestration**
 
 Implement helpers to:
+
 - validate export payload
 - fetch/resolve listing clip versions and user media
 - build trusted clip URLs
@@ -361,6 +376,7 @@ const request: VideoServerReelExportRequest = {
 - [ ] **Step 4: Implement the listing-scoped POST route**
 
 In the route:
+
 - parse `listingId`
 - validate current user access
 - call the export orchestration
@@ -393,6 +409,7 @@ git commit -m "feat: add reel draft export route"
 ### Task 5: Add Video-Server Reel Export Endpoint and Render Mapping
 
 **Files:**
+
 - Create: `apps/video-server/src/routes/renders/domain/reelExportRequests.ts`
 - Create: `apps/video-server/src/services/render/domain/reelExport.ts`
 - Create: `apps/video-server/src/routes/renders/domain/__tests__/reelExportRequests.test.ts`
@@ -402,11 +419,12 @@ git commit -m "feat: add reel draft export route"
 - Modify: `apps/video-server/src/services/render/providers/remotion/composition/ListingVideo.tsx`
 - Modify: `apps/video-server/src/services/render/providers/remotion/provider.ts`
 - Reference: `apps/video-server/src/services/render/domain/composition.ts`
-- Reference: `apps/web/src/components/listings/create/media/video/components/ListingTimelinePreviewComposition.tsx`
+- Reference: `apps/web/src/components/listings/create/media/video/components/ListingStageTimelinePreviewComposition.tsx`
 
 - [ ] **Step 1: Write failing video-server tests**
 
 Add tests for:
+
 - parser rejects empty export clip arrays
 - mapping preserves clip order and durations
 - mapping carries primary overlays
@@ -481,6 +499,7 @@ git commit -m "feat: add reel export render endpoint"
 ### Task 6: Integrate, Verify, and Clean Up
 
 **Files:**
+
 - Modify: `apps/web/src/components/listings/create/media/video/components/VideoPreviewModal.tsx`
 - Modify: `apps/web/src/components/listings/create/components/ListingVideoPreviewGrid.tsx`
 - Modify: any touched tests from previous tasks
@@ -515,6 +534,7 @@ Expected: PASS or only unrelated pre-existing failures
 - [ ] **Step 4: Refactor only where duplication is now obvious**
 
 Allowed cleanup:
+
 - extract tiny shared helper for filename creation
 - extract tiny shared helper for button pending-state handling
 

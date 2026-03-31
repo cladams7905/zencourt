@@ -6,11 +6,11 @@ import { requireUserOrRedirect } from "@web/src/app/(dashboard)/_utils/requireUs
 import {
   ListingClipManager,
   ListingClipManagerBackButton
-} from "@web/src/components/listings/content/components/ListingClipManager";
+} from "@web/src/components/listings/content/clipManager/ListingClipManager";
 import { ViewHeader } from "@web/src/components/view/ViewHeader";
-import { redirectToListingStage } from "../../_utils/redirectToListingStage";
+import { redirectToListingStage } from "../../stage/_utils/redirectToListingStage";
 import { getListingClipVersionItemsForCurrentUser } from "@web/src/server/actions/listings/clips";
-import { stringifyListingCreateSearchParams } from "@web/src/components/listings/content/domain/editor/query";
+import { stringifyListingContentSearchParams } from "@web/src/components/listings/content/domain/query";
 
 interface ListingContentClipsPageProps {
   params: Promise<{ listingId: string }>;
@@ -39,7 +39,7 @@ export default async function ListingContentClipsPage({
 
     const clipVersionItems =
       await getListingClipVersionItemsForCurrentUser(listingId);
-    const query = stringifyListingCreateSearchParams(resolvedSearchParams);
+    const query = stringifyListingContentSearchParams(resolvedSearchParams);
     const backHref = query
       ? `/listings/${listingId}/content?${query}`
       : `/listings/${listingId}/content`;

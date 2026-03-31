@@ -1,10 +1,10 @@
 import { renderHook } from "@testing-library/react";
-import { useListingCreateMediaItems } from "../mediaItems";
+import { useListingContentMediaItems } from "../mediaItems";
 
-describe("useListingCreateMediaItems", () => {
+describe("useListingContentMediaItems", () => {
   it("falls back to generated image previews when template rendering is unavailable", () => {
     const { result } = renderHook(() =>
-      useListingCreateMediaItems({
+      useListingContentMediaItems({
         activeMediaTab: "images",
         activeContentItems: [
           {

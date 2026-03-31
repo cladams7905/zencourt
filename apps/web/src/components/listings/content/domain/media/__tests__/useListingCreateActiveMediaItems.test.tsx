@@ -1,7 +1,7 @@
 import { renderHook } from "@testing-library/react";
-import { useListingCreateActiveMediaItems } from "../activeMediaItems";
+import { useListingContentActiveMediaItems } from "../activeMediaItems";
 
-describe("useListingCreateActiveMediaItems", () => {
+describe("useListingContentActiveMediaItems", () => {
   it("filters by subcategory and media type", () => {
     const bucketContentItems = [
       { id: "1", listingSubcategory: "new_listing", mediaType: "image" },
@@ -10,7 +10,7 @@ describe("useListingCreateActiveMediaItems", () => {
     ] as never;
 
     const { result } = renderHook(() =>
-      useListingCreateActiveMediaItems({
+      useListingContentActiveMediaItems({
         activeMediaTab: "images",
         activeSubcategory: "new_listing",
         bucketContentItems

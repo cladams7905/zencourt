@@ -1,7 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { useInfiniteSwrPages } from "@web/src/components/shared/pagination";
-import { buildListingsPageUrl } from "@web/src/components/listings/myListings/domain/services";
-import { useListingPagination } from "@web/src/components/listings/myListings/domain/hooks/useListingPagination";
+import { buildListingsPageUrl } from "@web/src/components/listings/my-listings/domain/services";
+import { useListingPagination } from "@web/src/components/listings/my-listings/domain/hooks/useListingPagination";
 
 jest.mock("@web/src/components/shared/pagination", () => ({
   useInfiniteSwrPages: jest.fn()

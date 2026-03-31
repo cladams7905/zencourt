@@ -1,5 +1,5 @@
 import {
-  buildListingCreatePreviewPlans,
+  buildListingContentPreviewPlans,
   buildPreviewTimelinePlan,
   buildPreviewTimelinePlans,
   buildPreviewTimelineVariants,
@@ -102,35 +102,43 @@ describe("createPreviewPlans", () => {
 
   it("returns no listing create plans for non-video tabs or empty content", () => {
     expect(
-      buildListingCreatePreviewPlans({
+      buildListingContentPreviewPlans({
         listingId: "listing-1",
         activeMediaTab: "images",
         activeSubcategory: "new_listing",
         activeContentItems: [{ id: "caption-1" }],
-        listingClipItems: [{ id: "clip-1", videoUrl: "https://example.com/1.mp4" }]
+        listingClipItems: [
+          { id: "clip-1", videoUrl: "https://example.com/1.mp4" }
+        ]
       } as never)
     ).toEqual([]);
 
     expect(
-      buildListingCreatePreviewPlans({
+      buildListingContentPreviewPlans({
         listingId: "listing-1",
         activeMediaTab: "videos",
         activeSubcategory: "new_listing",
         activeContentItems: [],
-        listingClipItems: [{ id: "clip-1", videoUrl: "https://example.com/1.mp4" }]
+        listingClipItems: [
+          { id: "clip-1", videoUrl: "https://example.com/1.mp4" }
+        ]
       } as never)
     ).toEqual([]);
   });
 
   it("returns an empty plan when no valid video clip candidates exist", () => {
     expect(
-      buildListingCreatePreviewPlans({
+      buildListingContentPreviewPlans({
         listingId: "listing-1",
         activeMediaTab: "videos",
         activeSubcategory: "new_listing",
         activeContentItems: [{ id: "caption-1", hook: "Hook" }],
         listingClipItems: [
-          { id: "user-1", reelClipSource: "user_media", videoUrl: "https://example.com/u.mp4" },
+          {
+            id: "user-1",
+            reelClipSource: "user_media",
+            videoUrl: "https://example.com/u.mp4"
+          },
           { id: "clip-2", reelClipSource: "listing_clip", videoUrl: null }
         ]
       } as never)
@@ -144,7 +152,7 @@ describe("createPreviewPlans", () => {
   });
 
   it("filters property feature clips and clamps reel sequence and override durations", () => {
-    const [featurePlan] = buildListingCreatePreviewPlans({
+    const [featurePlan] = buildListingContentPreviewPlans({
       listingId: "listing-1",
       activeMediaTab: "videos",
       activeSubcategory: "property_features",
@@ -188,7 +196,7 @@ describe("createPreviewPlans", () => {
       ])
     );
 
-    const [savedPlan] = buildListingCreatePreviewPlans({
+    const [savedPlan] = buildListingContentPreviewPlans({
       listingId: "listing-1",
       activeMediaTab: "videos",
       activeSubcategory: "new_listing",
@@ -196,9 +204,21 @@ describe("createPreviewPlans", () => {
         {
           id: "saved-1",
           reelSequence: [
-            { sourceType: "listing_clip", sourceId: "clip-kitchen", durationSeconds: 9 },
-            { sourceType: "user_media", sourceId: "media-1", durationSeconds: 0.1 },
-            { sourceType: "listing_clip", sourceId: "missing", durationSeconds: 2 }
+            {
+              sourceType: "listing_clip",
+              sourceId: "clip-kitchen",
+              durationSeconds: 9
+            },
+            {
+              sourceType: "user_media",
+              sourceId: "media-1",
+              durationSeconds: 0.1
+            },
+            {
+              sourceType: "listing_clip",
+              sourceId: "missing",
+              durationSeconds: 2
+            }
           ]
         }
       ],
@@ -235,7 +255,7 @@ describe("createPreviewPlans", () => {
   });
 
   it("ignores slide body text when selecting video feature clips", () => {
-    const [plan] = buildListingCreatePreviewPlans({
+    const [plan] = buildListingContentPreviewPlans({
       listingId: "listing-1",
       activeMediaTab: "videos",
       activeSubcategory: "property_features",

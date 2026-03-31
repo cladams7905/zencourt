@@ -13,6 +13,7 @@
 ### Task 1: Route And Navigation Contract
 
 **Files:**
+
 - Modify: `apps/web/src/app/(dashboard)/listings/[listingId]/create/page.tsx`
 - Create: `apps/web/src/app/(dashboard)/listings/[listingId]/create/clips/page.tsx`
 - Test: `apps/web/src/app/(dashboard)/listings/[listingId]/create/__tests__/clipsPage.test.tsx`
@@ -25,7 +26,8 @@
 ### Task 2: Create View Navigation Refactor
 
 **Files:**
-- Modify: `apps/web/src/components/listings/create/components/ListingCreateView.tsx`
+
+- Modify: `apps/web/src/components/listings/create/components/ListingAddressView.tsx`
 - Modify: `apps/web/src/components/listings/create/components/ListingClipManager.tsx`
 - Test: `apps/web/src/components/listings/create/components/__tests__/ListingClipManager.test.tsx`
 
@@ -37,6 +39,7 @@
 ### Task 3: Verification
 
 **Files:**
+
 - Modify: `apps/web/src/components/listings/create/components/index.ts` (only if exports need adjustment)
 
 - [ ] **Step 1: Run focused Jest coverage for the changed route/component files**

@@ -15,7 +15,9 @@ jest.mock("@web/src/server/actions/shared/auth", () => ({
   requireAuthenticatedUser: (...args: unknown[]) =>
     (mockRequireAuthenticatedUser as (...a: unknown[]) => unknown)(...args),
   withCurrentUserListingAccess: async (
-    listingIdOrResolver: string | ((context: { user: { id: string } }) => string | Promise<string>),
+    listingIdOrResolver:
+      | string
+      | ((context: { user: { id: string } }) => string | Promise<string>),
     run: (context: { user: { id: string }; listing: unknown }) => unknown
   ) => {
     const user = await mockRequireAuthenticatedUser();
@@ -88,8 +90,8 @@ jest.mock("@web/src/lib/core/logging/logger", () => ({
 }));
 
 import {
-  getListingCreateViewData,
-  getListingCreateViewDataForCurrentUser
+  getListingAddressViewData,
+  getListingAddressViewDataForCurrentUser
 } from "@web/src/server/actions/listings/viewData";
 
 describe("listings viewData", () => {
@@ -130,10 +132,13 @@ describe("listings viewData", () => {
   });
 
   it("assembles listing create view data from clips, items, images, and user media", async () => {
-    const result = await getListingCreateViewData("user-1", "listing-1");
+    const result = await getListingAddressViewData("user-1", "listing-1");
 
     expect(mockGetListingClipVersionItems).toHaveBeenCalledWith("listing-1");
-    expect(mockGetContentByListingId).toHaveBeenCalledWith("user-1", "listing-1");
+    expect(mockGetContentByListingId).toHaveBeenCalledWith(
+      "user-1",
+      "listing-1"
+    );
     expect(mockGetAllCachedListingContentForCreate).toHaveBeenCalledWith({
       userId: "user-1",
       listingId: "listing-1"
@@ -156,7 +161,9 @@ describe("listings viewData", () => {
       ],
       clipVersionItems: [
         expect.objectContaining({
-          currentVersion: expect.objectContaining({ clipVersionId: "clip-version-1" })
+          currentVersion: expect.objectContaining({
+            clipVersionId: "clip-version-1"
+          })
         })
       ],
       listingContentItems: [{ id: "content-1" }],
@@ -166,10 +173,13 @@ describe("listings viewData", () => {
   });
 
   it("enforces auth/listing access before loading current-user view data", async () => {
-    await getListingCreateViewDataForCurrentUser("listing-1");
+    await getListingAddressViewDataForCurrentUser("listing-1");
 
     expect(mockRequireAuthenticatedUser).toHaveBeenCalled();
-    expect(mockRequireListingAccess).toHaveBeenCalledWith("listing-1", "user-1");
+    expect(mockRequireListingAccess).toHaveBeenCalledWith(
+      "listing-1",
+      "user-1"
+    );
     expect(mockGetListingClipVersionItems).toHaveBeenCalledWith("listing-1");
   });
 });

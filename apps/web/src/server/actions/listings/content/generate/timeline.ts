@@ -1,5 +1,5 @@
 import type { ListingContentItem as ContentItem } from "@web/src/lib/domain/listings/content";
-import { buildListingCreatePreviewPlans } from "@web/src/lib/domain/listings/content/createPreviewPlans";
+import { buildListingContentPreviewPlans } from "@web/src/lib/domain/listings/content/createPreviewPlans";
 import type { ListingContentSubcategory } from "@shared/types/models";
 import type { ListingGeneratedItem } from "@web/src/server/infra/cache/listingContent/cache";
 
@@ -47,7 +47,7 @@ export function addGeneratedVideoTimelines(params: {
       return item;
     }
 
-    const [plan] = buildListingCreatePreviewPlans({
+    const [plan] = buildListingContentPreviewPlans({
       listingId,
       activeMediaTab: "videos",
       activeSubcategory: subcategory,

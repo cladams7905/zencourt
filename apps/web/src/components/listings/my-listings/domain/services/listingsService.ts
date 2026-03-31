@@ -1,4 +1,4 @@
-import type { ListingSummaryItem } from "@web/src/components/listings/myListings/shared";
+import type { ListingSummaryItem } from "@web/src/components/listings/my-listings/shared";
 import { fetchJson } from "@web/src/lib/core/http/client";
 import type { OffsetPage } from "@web/src/lib/domain/pagination";
 

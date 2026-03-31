@@ -1,3 +1,3 @@
-export { useListingCreateActiveMediaItems } from "./activeMediaItems";
-export { useListingCreateMediaItems } from "./mediaItems";
+export { useListingContentActiveMediaItems } from "./activeMediaItems";
+export { useListingContentMediaItems } from "./mediaItems";
 export { useDeleteCachedPreviewItem } from "./deleteCachedPreviewItem";

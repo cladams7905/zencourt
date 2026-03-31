@@ -7,7 +7,7 @@ const mockRunContentGeneration = jest.fn();
 const mockParseAndValidateParams = jest.fn();
 const mockResolveListingContext = jest.fn();
 const mockBuildUpstreamRequestBody = jest.fn();
-const mockBuildListingCreatePreviewPlans = jest.fn();
+const mockBuildListingContentPreviewPlans = jest.fn();
 const mockEncodeSseEvent = jest.fn();
 const mockConsumeSseStream = jest.fn();
 const mockGetCurrentVideoClipsWithCurrentVersionsByListingId = jest.fn();
@@ -16,7 +16,9 @@ jest.mock("@web/src/server/actions/shared/auth", () => ({
   requireAuthenticatedUser: (...args: unknown[]) =>
     (mockRequireAuthenticatedUser as (...a: unknown[]) => unknown)(...args),
   withCurrentUserListingAccess: async (
-    listingIdOrResolver: string | ((context: { user: { id: string } }) => string | Promise<string>),
+    listingIdOrResolver:
+      | string
+      | ((context: { user: { id: string } }) => string | Promise<string>),
     run: (context: { user: { id: string }; listing: unknown }) => unknown
   ) => {
     const user = await mockRequireAuthenticatedUser();
@@ -54,8 +56,8 @@ jest.mock("@web/src/server/actions/listings/content/generate/helpers", () => ({
 }));
 
 jest.mock("@web/src/lib/domain/listings/content/createPreviewPlans", () => ({
-  buildListingCreatePreviewPlans: (...args: unknown[]) =>
-    (mockBuildListingCreatePreviewPlans as (...a: unknown[]) => unknown)(
+  buildListingContentPreviewPlans: (...args: unknown[]) =>
+    (mockBuildListingContentPreviewPlans as (...a: unknown[]) => unknown)(
       ...args
     )
 }));
@@ -115,7 +117,7 @@ describe("contentGeneration/commands", () => {
       mediaType: "image"
     });
     mockBuildUpstreamRequestBody.mockReturnValue({ category: "listing" });
-    mockBuildListingCreatePreviewPlans.mockReturnValue([]);
+    mockBuildListingContentPreviewPlans.mockReturnValue([]);
     mockGetCurrentVideoClipsWithCurrentVersionsByListingId.mockResolvedValue(
       []
     );
@@ -287,7 +289,7 @@ describe("contentGeneration/commands", () => {
         }
       }
     ]);
-    mockBuildListingCreatePreviewPlans.mockReturnValue([
+    mockBuildListingContentPreviewPlans.mockReturnValue([
       {
         id: "plan-1",
         totalDurationSeconds: 7,

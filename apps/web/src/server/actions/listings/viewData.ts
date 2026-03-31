@@ -17,7 +17,7 @@ import { mapUserMediaToVideoItem } from "./content/reels";
 import { collectReelReferencedUserMediaIdsFromSnapshot } from "./content/reels/userMedia";
 import {
   LISTING_CREATE_INITIAL_PAGE_SIZE,
-  type ListingCreateMediaTab
+  type ListingContentMediaTab
 } from "@web/src/lib/domain/listings/content/create";
 import type { ListingContentSubcategory } from "@shared/types/models";
 import { getListingContentItems } from "./content/items";
@@ -27,7 +27,7 @@ export async function getListingContentViewData(
   userId: string,
   listingId: string,
   options?: {
-    initialMediaTab?: ListingCreateMediaTab;
+    initialMediaTab?: ListingContentMediaTab;
     initialSubcategory?: ListingContentSubcategory;
   }
 ) {
@@ -86,12 +86,12 @@ export async function getListingContentViewData(
   };
 }
 
-export const getListingCreateViewDataForCurrentUser = withServerActionCaller(
-  "getListingCreateViewDataForCurrentUser",
+export const getListingAddressViewDataForCurrentUser = withServerActionCaller(
+  "getListingAddressViewDataForCurrentUser",
   async (listingId: string) =>
     withCurrentUserListingAccess(listingId, async ({ user }) =>
       getListingContentViewData(user.id, listingId)
     )
 );
 
-export const getListingCreateViewData = getListingContentViewData;
+export const getListingAddressViewData = getListingContentViewData;

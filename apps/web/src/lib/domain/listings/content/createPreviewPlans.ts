@@ -240,9 +240,8 @@ function applyOrderedClipIds(
   );
   const orderedSegments = orderedClipIds
     .map((clipId) => segmentByClipId.get(clipId))
-    .filter(
-      (segment): segment is PreviewTimelinePlan["segments"][number] =>
-        Boolean(segment)
+    .filter((segment): segment is PreviewTimelinePlan["segments"][number] =>
+      Boolean(segment)
     );
   const remainingSegments = plan.segments.filter(
     (segment) => !orderedClipIds.includes(segment.clipId)
@@ -303,9 +302,10 @@ function normalizeDurationSeconds(params: {
     minDurationSeconds = MIN_OVERRIDE_CLIP_DURATION_SECONDS
   } = params;
   return Number(
-    Math.min(maxDurationSeconds, Math.max(minDurationSeconds, durationSeconds)).toFixed(
-      2
-    )
+    Math.min(
+      maxDurationSeconds,
+      Math.max(minDurationSeconds, durationSeconds)
+    ).toFixed(2)
   );
 }
 
@@ -329,7 +329,9 @@ export function buildPreviewTimelinePlan(
   }));
 
   const totalDurationSeconds = Number(
-    segments.reduce((acc, segment) => acc + segment.durationSeconds, 0).toFixed(2)
+    segments
+      .reduce((acc, segment) => acc + segment.durationSeconds, 0)
+      .toFixed(2)
   );
 
   return {
@@ -365,7 +367,7 @@ export function buildPreviewTimelineVariants(
   return buildPreviewTimelinePlans(clips, listingId, 3);
 }
 
-export function buildListingCreatePreviewPlans(params: {
+export function buildListingContentPreviewPlans(params: {
   listingId: string;
   activeMediaTab: "videos" | "images";
   activeSubcategory: ListingContentSubcategory;
@@ -438,8 +440,8 @@ export function buildListingCreatePreviewPlans(params: {
             sourceId: sequenceItem.sourceId
           };
         })
-        .filter(
-          (segment): segment is NonNullable<typeof segment> => Boolean(segment)
+        .filter((segment): segment is NonNullable<typeof segment> =>
+          Boolean(segment)
         );
 
       return {

@@ -6,7 +6,7 @@ import type {
 } from "@shared/types/video";
 import type { ReelSequenceItem } from "./index";
 
-export type ListingCreateMediaTab = "videos" | "images";
+export type ListingContentMediaTab = "videos" | "images";
 
 export type PlayablePreviewCaptionItemKey = {
   contentSource: "cached_create";

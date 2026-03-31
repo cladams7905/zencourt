@@ -1,17 +1,21 @@
 import type { ListingContentItem as ContentItem } from "@web/src/lib/domain/listings/content";
 import {
   buildFeatureNeedle,
-  buildTemplateRenderCaptionItems,
-  buildVariedImageSequence,
   filterFeatureClips,
-  mapTemplateRenderItemsToPreviewItems,
-  rankListingImagesForItem,
   resolveContentMediaType,
-  type ListingCreateImage,
   type PreviewClipCandidate
 } from "../utils";
+import {
+  buildTemplateRenderCaptionItems,
+  mapTemplateRenderItemsToPreviewItems
+} from "@web/src/components/listings/content/image/domain/templateRender/utils";
+import {
+  buildVariedImageSequence,
+  rankListingImagesForItem,
+  type ListingContentImage
+} from "@web/src/components/listings/content/image/domain/listingImages";
 
-describe("listingCreateUtils", () => {
+describe("llistingContentUtils", () => {
   it("builds normalized feature needle from content fields", () => {
     const needle = buildFeatureNeedle({
       id: "item-1",
@@ -68,7 +72,7 @@ describe("listingCreateUtils", () => {
   });
 
   it("ranks listing images by primary, category relevance, score, and recency", () => {
-    const images: ListingCreateImage[] = [
+    const images: ListingContentImage[] = [
       {
         id: "old-primary",
         url: "",
@@ -108,7 +112,7 @@ describe("listingCreateUtils", () => {
   });
 
   it("builds deterministic varied image sequence", () => {
-    const images: ListingCreateImage[] = [
+    const images: ListingContentImage[] = [
       {
         id: "a",
         url: "",
@@ -144,7 +148,7 @@ describe("listingCreateUtils", () => {
   });
 
   it("keeps single-image array unchanged", () => {
-    const image: ListingCreateImage = {
+    const image: ListingContentImage = {
       id: "single",
       url: "",
       category: null,

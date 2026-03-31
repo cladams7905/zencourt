@@ -37,7 +37,7 @@ function mediaTypeSortIndex(mediaType: ListingMediaType): number {
   return mediaType === "image" ? 0 : 1;
 }
 
-export type ListingCreateCachedContentItem = {
+export type ListingContentCachedContentItem = {
   id: string;
   aspectRatio: "square";
   isFavorite: false;
@@ -70,9 +70,9 @@ function mapCachedListingItemToCreateContent(params: {
   item: ListingContentItemWithKey;
   subcategory: ListingContentSubcategory;
   mediaType: ListingMediaType;
-}): ListingCreateCachedContentItem {
+}): ListingContentCachedContentItem {
   const { item, subcategory, mediaType } = params;
-  const mapped: ListingCreateCachedContentItem = {
+  const mapped: ListingContentCachedContentItem = {
     id: `cached-${subcategory}-${mediaType}-${item.cacheKeyTimestamp}-${item.cacheKeyId}`,
     aspectRatio: "square",
     isFavorite: false,
@@ -355,7 +355,7 @@ export async function getAllCachedListingContentForFilter(params: {
 export async function getAllCachedListingContentForCreate(params: {
   userId: string;
   listingId: string;
-}): Promise<ListingCreateCachedContentItem[]> {
+}): Promise<ListingContentCachedContentItem[]> {
   const rows = await loadAllCachedListingContentRowsForListing(params);
   rows.sort(compareRowsForCreateSort);
   return rows.map((r) =>
@@ -372,7 +372,7 @@ export async function getCachedListingContentForCreateFilter(params: {
   listingId: string;
   subcategory: ListingContentSubcategory;
   mediaType: ListingMediaType;
-}): Promise<ListingCreateCachedContentItem[]> {
+}): Promise<ListingContentCachedContentItem[]> {
   const { userId, listingId, subcategory, mediaType } = params;
   const items = await getAllCachedListingContentForFilter({
     userId,

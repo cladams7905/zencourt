@@ -36,7 +36,7 @@ function normalizeTextSegment(
 
 /**
  * Renders a PreviewTextOverlay for video compositions (Remotion).
- * Used by both web preview (ListingTimelinePreviewComposition) and
+ * Used by both web preview (ListingStageTimelinePreviewComposition) and
  * video-server (ListingVideo) to ensure identical output.
  */
 export function PreviewTextOverlayRenderer({
@@ -102,35 +102,37 @@ export function PreviewTextOverlayRenderer({
               marginBottom: line.marginBottom
             }}
           >
-            {splitTextWithEmojiUrls(line.text).map((segment, index, segments) => {
-              if (segment.type === "text") {
-                const previousSegment = segments[index - 1];
+            {splitTextWithEmojiUrls(line.text).map(
+              (segment, index, segments) => {
+                if (segment.type === "text") {
+                  const previousSegment = segments[index - 1];
+                  return (
+                    <span key={`${line.text}-text-${index}`}>
+                      {normalizeTextSegment(
+                        segment.value,
+                        previousSegment?.type === "emoji"
+                          ? previousSegment.value
+                          : null
+                      )}
+                    </span>
+                  );
+                }
+
                 return (
-                  <span key={`${line.text}-text-${index}`}>
-                    {normalizeTextSegment(
-                      segment.value,
-                      previousSegment?.type === "emoji"
-                        ? previousSegment.value
-                        : null
-                    )}
-                  </span>
+                  <img
+                    key={`${line.text}-emoji-${index}`}
+                    src={segment.url}
+                    alt={segment.value}
+                    style={{
+                      display: "inline-block",
+                      width: "1em",
+                      height: "1em",
+                      verticalAlign: "-0.12em"
+                    }}
+                  />
                 );
               }
-
-              return (
-                <img
-                  key={`${line.text}-emoji-${index}`}
-                  src={segment.url}
-                  alt={segment.value}
-                  style={{
-                    display: "inline-block",
-                    width: "1em",
-                    height: "1em",
-                    verticalAlign: "-0.12em"
-                  }}
-                />
-              );
-            })}
+            )}
           </div>
         ))}
         {arrowPath ? (

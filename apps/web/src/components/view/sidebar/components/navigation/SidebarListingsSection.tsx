@@ -9,7 +9,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "../../../../ui/tooltip"
 import {
   formatListingStageLabel,
   resolveListingPath
-} from "@web/src/components/listings/shared";
+} from "@web/src/components/listings/stage/shared";
 import type { SidebarListingDisplayItem } from "@web/src/components/view/sidebar/domain/viewModel";
 
 type SidebarListingsSectionProps = {

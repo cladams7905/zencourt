@@ -1,0 +1,831 @@
+import * as React from "react";
+import { Clock, Plus, Redo2, Trash2, Undo2 } from "lucide-react";
+import Link from "next/link";
+import { LoadingImage } from "@web/src/components/ui/loading-image";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger
+} from "@web/src/components/ui/tooltip";
+import { Button } from "@web/src/components/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger
+} from "@web/src/components/ui/popover";
+import type { TimelinePreviewResolvedSegment } from "@web/src/components/listings/content/video/VideoPreviewTimelineComposition";
+import { useScrollFade } from "@web/src/components/listings/content/shared/hooks/useScrollFade";
+import { useHorizontalDragAutoScroll } from "@web/src/components/listings/content/shared/hooks/useHorizontalDragAutoScroll";
+import { VideoPreviewTimelineRuler } from "@web/src/components/listings/content/video/VideoPreviewTimelineRuler";
+import {
+  TIMELINE_CARD_GAP_PX,
+  TIMELINE_PIXELS_PER_SECOND,
+  buildVideoPreviewTimelineItems,
+  buildVideoPreviewTimelineLayout,
+  formatVideoPreviewClipLabel,
+  formatDurationLabel,
+  getVideoPreviewSegmentDisplayLabels,
+  getFrameFromTimelineOffset,
+  getPlayheadOffsetPx
+} from "@web/src/components/listings/content/video/domain/videoPreviewTimelineViewModel";
+import { cn } from "@web/src/components/ui/utils";
+import { VideoPreviewAddClipTileSkeleton } from "@web/src/components/listings/content/video/VideoPreviewAddClipTileSkeleton";
+import { USER_MEDIA_REEL_PICKER_PAGE_SIZE } from "@web/src/components/listings/content/video/domain/constants";
+
+function ClipThumbnailBadge({ text }: { text: string | null | undefined }) {
+  const trimmed = text?.trim();
+  if (!trimmed) {
+    return null;
+  }
+  return (
+    <span
+      className="pointer-events-none absolute right-1 top-1 z-10 max-w-[min(7rem,calc(100%-0.5rem))] truncate rounded bg-background/90 px-1 py-0.5 text-[10px] font-medium leading-tight text-foreground shadow-sm ring-1 ring-border/60"
+      title={trimmed}
+    >
+      {trimmed}
+    </span>
+  );
+}
+
+type VideoPreviewTimelineProps = {
+  segments: TimelinePreviewResolvedSegment[];
+  stableRoomLabelSegments?: TimelinePreviewResolvedSegment[];
+  /** Bumps when the parent wants the horizontal strip scrolled to the far right (e.g. after appending a clip). */
+  scrollToEndNonce?: number;
+  deletedClipOptions: TimelinePreviewResolvedSegment[];
+  userMediaClipOptions: Array<{
+    clipId: string;
+    thumbnailSrc?: string | null;
+    label: string;
+    fileName?: string | null;
+  }>;
+  userMediaVideoCount: number;
+  isAddClipPopoverOpen: boolean;
+  onAddClipPopoverOpenChange: (open: boolean) => void;
+  addClipActiveTab: "room_clips" | "user_media";
+  onAddClipActiveTabChange: (tab: "room_clips" | "user_media") => void;
+  userMediaPickerInitialLoading: boolean;
+  userMediaPickerLoadingMore: boolean;
+  userMediaPickerError: string | null;
+  userMediaPickerOnRetry: () => void;
+  userMediaPickerLoadMoreRef: React.RefCallback<HTMLDivElement | null>;
+  onUserMediaScrollRoot: (element: HTMLDivElement | null) => void;
+  previewFps: number;
+  currentFrame: number;
+  totalFrames: number;
+  onSeekFrame?: (frame: number) => void;
+  onReorder?: (fromIndex: number, toIndex: number) => void;
+  onDurationChangeStart?: () => void;
+  onDurationChangeEnd?: () => void;
+  onDurationChange?: (index: number, durationSeconds: number) => void;
+  onDeleteClip?: (index: number) => void;
+  onAddClip?: (clipId: string) => void;
+  canUndo?: boolean;
+  canRedo?: boolean;
+  onUndo?: () => void;
+  onRedo?: () => void;
+};
+
+const MIN_CLIP_DURATION_SECONDS = 0.5;
+type ResizeEdge = "left" | "right";
+type ResizeState = {
+  itemId: string;
+  index: number;
+  edge: ResizeEdge;
+  startClientX: number;
+  startDurationSeconds: number;
+  maxDurationSeconds: number;
+};
+
+const ADD_CLIP_TILE_CLASS =
+  "group mb-1.5 w-full max-w-[7.25rem] mx-auto break-inside-avoid overflow-hidden rounded-md bg-muted";
+
+export function VideoPreviewTimeline({
+  segments,
+  stableRoomLabelSegments,
+  scrollToEndNonce = 0,
+  deletedClipOptions,
+  userMediaClipOptions,
+  userMediaVideoCount,
+  isAddClipPopoverOpen,
+  onAddClipPopoverOpenChange,
+  addClipActiveTab,
+  onAddClipActiveTabChange,
+  userMediaPickerInitialLoading,
+  userMediaPickerLoadingMore,
+  userMediaPickerError,
+  userMediaPickerOnRetry,
+  userMediaPickerLoadMoreRef,
+  onUserMediaScrollRoot,
+  previewFps,
+  currentFrame,
+  totalFrames,
+  onSeekFrame,
+  onReorder,
+  onDurationChangeStart,
+  onDurationChangeEnd,
+  onDurationChange,
+  onDeleteClip,
+  onAddClip,
+  canUndo = false,
+  canRedo = false,
+  onUndo,
+  onRedo
+}: VideoPreviewTimelineProps) {
+  const items = React.useMemo(
+    () => buildVideoPreviewTimelineItems(segments, stableRoomLabelSegments),
+    [segments, stableRoomLabelSegments]
+  );
+  const deletedClipDisplayLabels = React.useMemo(
+    () =>
+      getVideoPreviewSegmentDisplayLabels({
+        segments: deletedClipOptions,
+        stableSegments: stableRoomLabelSegments
+      }),
+    [deletedClipOptions, stableRoomLabelSegments]
+  );
+  const { items: layoutItems, contentWidthPx } = React.useMemo(
+    () => buildVideoPreviewTimelineLayout({ items, fps: previewFps }),
+    [items, previewFps]
+  );
+  const { containerRef, maskImage } = useScrollFade();
+  React.useLayoutEffect(() => {
+    if (scrollToEndNonce === 0) {
+      return;
+    }
+    const el = containerRef.current;
+    if (!el) {
+      return;
+    }
+    el.scrollLeft = Math.max(0, el.scrollWidth - el.clientWidth);
+  }, [contentWidthPx, scrollToEndNonce, containerRef]);
+  const [draggedItemId, setDraggedItemId] = React.useState<string | null>(null);
+  const [dragTargetItemId, setDragTargetItemId] = React.useState<string | null>(
+    null
+  );
+  const [resizeState, setResizeState] = React.useState<ResizeState | null>(
+    null
+  );
+  const [isScrubbing, setIsScrubbing] = React.useState(false);
+  const startResize = React.useCallback(
+    (
+      event: React.MouseEvent<HTMLElement>,
+      params: {
+        itemId: string;
+        index: number;
+        edge: ResizeEdge;
+        startDurationSeconds: number;
+        maxDurationSeconds: number;
+      }
+    ) => {
+      event.preventDefault();
+      event.stopPropagation();
+      setResizeState({
+        itemId: params.itemId,
+        index: params.index,
+        edge: params.edge,
+        startClientX: event.clientX,
+        startDurationSeconds: params.startDurationSeconds,
+        maxDurationSeconds: params.maxDurationSeconds
+      });
+      onDurationChangeStart?.();
+    },
+    [onDurationChangeStart]
+  );
+  useHorizontalDragAutoScroll({
+    enabled: Boolean(onReorder && draggedItemId),
+    containerRef,
+    onDragSessionEnd: React.useCallback(() => setDraggedItemId(null), [])
+  });
+
+  React.useEffect(() => {
+    if (!resizeState || !onDurationChange) {
+      return;
+    }
+
+    const handleMouseMove = (event: MouseEvent) => {
+      const deltaX = event.clientX - resizeState.startClientX;
+      const directionalDelta = resizeState.edge === "left" ? -deltaX : deltaX;
+      const maxCap = Number.isFinite(resizeState.maxDurationSeconds)
+        ? resizeState.maxDurationSeconds
+        : 86_400;
+      const nextDuration = Number(
+        Math.min(
+          maxCap,
+          Math.max(
+            MIN_CLIP_DURATION_SECONDS,
+            resizeState.startDurationSeconds +
+              directionalDelta / TIMELINE_PIXELS_PER_SECOND
+          )
+        ).toFixed(2)
+      );
+
+      onDurationChange(resizeState.index, nextDuration);
+    };
+
+    const handleMouseUp = () => {
+      setResizeState(null);
+      onDurationChangeEnd?.();
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [onDurationChange, onDurationChangeEnd, resizeState]);
+
+  const playheadOffsetPx = React.useMemo(
+    () =>
+      getPlayheadOffsetPx({
+        currentFrame,
+        layoutItems,
+        contentWidthPx
+      }),
+    [contentWidthPx, currentFrame, layoutItems]
+  );
+
+  const seekFromClientX = React.useCallback(
+    (clientX: number) => {
+      if (!onSeekFrame || !containerRef.current) {
+        return;
+      }
+      const rect = containerRef.current.getBoundingClientRect();
+      const offsetPx = clientX - rect.left + containerRef.current.scrollLeft;
+      const frame = getFrameFromTimelineOffset({
+        offsetPx,
+        layoutItems,
+        contentWidthPx
+      });
+      onSeekFrame(Math.max(0, Math.min(totalFrames, frame)));
+    },
+    [containerRef, contentWidthPx, layoutItems, onSeekFrame, totalFrames]
+  );
+
+  React.useEffect(() => {
+    if (!isScrubbing) {
+      return;
+    }
+
+    const handleMouseMove = (event: MouseEvent) => {
+      seekFromClientX(event.clientX);
+    };
+    const handleMouseUp = () => {
+      setIsScrubbing(false);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isScrubbing, seekFromClientX]);
+
+  if (items.length === 0) {
+    return null;
+  }
+
+  const totalDurationSeconds = totalFrames / previewFps;
+  const canAddClip = deletedClipOptions.length > 0 || userMediaVideoCount > 0;
+
+  return (
+    <section
+      aria-label="Video timeline"
+      className="min-w-0 w-full max-w-full rounded-xl bg-card/70 min-[1050px]:flex min-[1050px]:h-full min-[1050px]:min-h-0 min-[1050px]:flex-col"
+    >
+      <div className="mb-4 flex items-center justify-between px-1 min-[1050px]:shrink-0">
+        <p className="text-sm font-semibold text-foreground">Timeline</p>
+        <div className="flex items-center gap-2">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                aria-label="Undo timeline change"
+                className="h-7 w-7 rounded-full"
+                disabled={!canUndo}
+                onClick={onUndo}
+              >
+                <Undo2 className="h-3.5 w-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top">Undo</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                aria-label="Redo timeline change"
+                className="h-7 w-7 rounded-full"
+                disabled={!canRedo}
+                onClick={onRedo}
+              >
+                <Redo2 className="h-3.5 w-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top">Redo</TooltipContent>
+          </Tooltip>
+          <Popover
+            open={isAddClipPopoverOpen}
+            onOpenChange={onAddClipPopoverOpenChange}
+          >
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    aria-label="Add clip to timeline"
+                    className="h-7 w-7 rounded-full"
+                    disabled={!canAddClip}
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                  </Button>
+                </PopoverTrigger>
+              </TooltipTrigger>
+              <TooltipContent side="top">Add clip</TooltipContent>
+            </Tooltip>
+            <PopoverContent
+              align="end"
+              side="top"
+              sideOffset={8}
+              className="z-100 w-[min(25rem,calc(100vw-2rem))] border-0 bg-transparent p-0 shadow-none overflow-visible"
+            >
+              <div className="relative w-full">
+                <div
+                  className="absolute bottom-full left-0 z-20 flex items-end"
+                  role="group"
+                  aria-label="Clip source"
+                >
+                  <button
+                    type="button"
+                    aria-pressed={addClipActiveTab === "room_clips"}
+                    className={cn(
+                      "rounded-t-lg px-3 py-1.5 text-xs font-semibold tracking-wide transition-colors",
+                      addClipActiveTab === "room_clips"
+                        ? "relative z-30 -mb-px border-x border-t border-border border-b-0 bg-card pb-2 text-card-foreground"
+                        : "z-10 border-x border-t border-border border-b-0 bg-muted text-muted-foreground hover:bg-secondary hover:text-card-foreground"
+                    )}
+                    onClick={() => onAddClipActiveTabChange("room_clips")}
+                  >
+                    Room Clips
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={addClipActiveTab === "user_media"}
+                    className={cn(
+                      "rounded-t-lg px-3 py-1.5 text-xs font-semibold tracking-wide transition-colors",
+                      addClipActiveTab === "user_media"
+                        ? "relative z-30 -mb-px border-x border-t border-border border-b-0 bg-card pb-2 text-card-foreground"
+                        : "z-10 border-x border-t border-border border-b-0 bg-muted text-muted-foreground hover:bg-secondary hover:text-card-foreground"
+                    )}
+                    onClick={() => onAddClipActiveTabChange("user_media")}
+                  >
+                    User Media
+                  </button>
+                </div>
+                <div className="overflow-hidden rounded-b-xl rounded-tr-xl rounded-tl-none border border-border/80 bg-popover text-popover-foreground shadow-lg">
+                  {addClipActiveTab === "room_clips" ? (
+                    deletedClipOptions.length === 0 ? (
+                      <div className="px-3 py-4 text-sm text-muted-foreground">
+                        No deleted room clips available.
+                      </div>
+                    ) : (
+                      <div className="flex max-h-72 min-h-0 flex-col">
+                        <div className="shrink-0 h-4" aria-hidden />
+                        <div
+                          className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 touch-pan-y [scrollbar-gutter:stable]"
+                          onWheel={(event) => event.stopPropagation()}
+                        >
+                          <div className="grid grid-cols-3 items-start justify-items-center gap-1.5">
+                            {deletedClipOptions.map((clipOption) => {
+                              const label =
+                                deletedClipDisplayLabels.get(
+                                  `${clipOption.sourceType ?? "listing_clip"}:${clipOption.sourceId ?? clipOption.clipId}`
+                                ) ??
+                                formatVideoPreviewClipLabel(
+                                  clipOption.category ?? clipOption.clipId
+                                );
+                              const roomBadgeText = (() => {
+                                return clipOption.roomName?.trim()
+                                  ? label
+                                  : null;
+                              })();
+                              return (
+                                <button
+                                  key={clipOption.clipId}
+                                  type="button"
+                                  aria-label={`Add ${label}`}
+                                  className={ADD_CLIP_TILE_CLASS}
+                                  onClick={() => {
+                                    onAddClip?.(clipOption.clipId);
+                                  }}
+                                >
+                                  <div className="relative aspect-9/16 w-full">
+                                    <ClipThumbnailBadge text={roomBadgeText} />
+                                    {clipOption.thumbnailSrc ? (
+                                      <LoadingImage
+                                        src={clipOption.thumbnailSrc}
+                                        alt=""
+                                        fill
+                                        className="object-cover"
+                                      />
+                                    ) : null}
+                                    <div
+                                      className="pointer-events-none absolute inset-0 z-1 flex items-center justify-center rounded-md bg-black/0 transition-colors group-hover:bg-black/55"
+                                      aria-hidden
+                                    >
+                                      <Plus
+                                        className="h-7 w-7 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                                        strokeWidth={2}
+                                        aria-hidden
+                                      />
+                                    </div>
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                        <div className="shrink-0 h-2" aria-hidden />
+                      </div>
+                    )
+                  ) : userMediaPickerInitialLoading ? (
+                    <div className="flex max-h-72 min-h-0 flex-col">
+                      <div className="shrink-0 h-4" aria-hidden />
+                      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 touch-pan-y [scrollbar-gutter:stable]">
+                        <div className="grid grid-cols-3 items-start justify-items-center gap-1.5">
+                          {[
+                            ...Array(USER_MEDIA_REEL_PICKER_PAGE_SIZE).keys()
+                          ].map((n) => (
+                            <VideoPreviewAddClipTileSkeleton
+                              key={`user-media-skel-${n}`}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                      <div className="shrink-0 h-2" aria-hidden />
+                    </div>
+                  ) : userMediaPickerError &&
+                    userMediaClipOptions.length === 0 ? (
+                    <div className="space-y-2 px-3 py-4">
+                      <p className="text-sm text-destructive">
+                        {userMediaPickerError}
+                      </p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        onClick={userMediaPickerOnRetry}
+                      >
+                        Retry
+                      </Button>
+                    </div>
+                  ) : userMediaClipOptions.length === 0 ? (
+                    <div className="px-3 py-4 text-sm text-muted-foreground">
+                      No user media videos available.{" "}
+                      <Link
+                        href="/media"
+                        className="font-medium text-foreground underline underline-offset-2 hover:text-primary"
+                      >
+                        Upload videos here
+                      </Link>
+                    </div>
+                  ) : (
+                    <div className="flex max-h-72 min-h-0 flex-col">
+                      <div className="shrink-0 h-4" aria-hidden />
+                      {userMediaPickerError ? (
+                        <div className="shrink-0 space-y-2 border-b border-border px-3 py-2">
+                          <p className="text-xs text-destructive">
+                            {userMediaPickerError}
+                          </p>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="w-full"
+                            onClick={userMediaPickerOnRetry}
+                          >
+                            Retry
+                          </Button>
+                        </div>
+                      ) : null}
+                      <div
+                        ref={onUserMediaScrollRoot}
+                        className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 touch-pan-y [scrollbar-gutter:stable]"
+                        onWheel={(event) => event.stopPropagation()}
+                      >
+                        <div className="grid grid-cols-3 h-fit items-start justify-items-center gap-1.5">
+                          {userMediaClipOptions.map((clipOption) => (
+                            <button
+                              key={clipOption.clipId}
+                              type="button"
+                              aria-label={`Add ${clipOption.label}`}
+                              className={ADD_CLIP_TILE_CLASS}
+                              onClick={() => {
+                                onAddClip?.(clipOption.clipId);
+                              }}
+                            >
+                              <div className="relative aspect-9/16 w-full">
+                                <ClipThumbnailBadge
+                                  text={clipOption.fileName}
+                                />
+                                {clipOption.thumbnailSrc ? (
+                                  <LoadingImage
+                                    src={clipOption.thumbnailSrc}
+                                    alt=""
+                                    fill
+                                    className="object-cover"
+                                  />
+                                ) : null}
+                                <div
+                                  className="pointer-events-none absolute inset-0 z-1 flex items-center justify-center rounded-md bg-black/0 transition-colors group-hover:bg-black/55"
+                                  aria-hidden
+                                >
+                                  <Plus
+                                    className="h-7 w-7 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                                    strokeWidth={2}
+                                    aria-hidden
+                                  />
+                                </div>
+                              </div>
+                            </button>
+                          ))}
+                          {userMediaPickerLoadingMore
+                            ? [
+                                ...Array(
+                                  USER_MEDIA_REEL_PICKER_PAGE_SIZE
+                                ).keys()
+                              ].map((n) => (
+                                <VideoPreviewAddClipTileSkeleton
+                                  key={`user-media-more-${n}`}
+                                />
+                              ))
+                            : null}
+                          <div
+                            ref={userMediaPickerLoadMoreRef}
+                            className="col-span-3 h-0.5 w-full shrink-0"
+                            aria-hidden
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+          <div
+            className="inline-flex h-7 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-border px-3 py-1 text-xs text-muted-foreground"
+            title="Total reel duration"
+          >
+            <Clock className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            <span
+              className="tabular-nums"
+              data-testid="timeline-total-duration"
+            >
+              {formatDurationLabel(totalDurationSeconds)}
+            </span>
+          </div>
+        </div>
+      </div>
+      <div
+        ref={containerRef}
+        className="min-w-0 w-full max-w-full overflow-x-auto overflow-y-hidden overscroll-x-contain pb-2 min-[1050px]:min-h-0 min-[1050px]:flex-1"
+        style={
+          maskImage ? { maskImage, WebkitMaskImage: maskImage } : undefined
+        }
+      >
+        <div
+          className="relative min-w-max pt-5"
+          style={{ width: `${contentWidthPx}px` }}
+        >
+          <div
+            data-testid="timeline-playhead"
+            data-current-frame={currentFrame}
+            className="absolute top-0 z-20 w-px bg-red-500"
+            style={{
+              left: `${playheadOffsetPx}px`,
+              top: "0",
+              height: "100%"
+            }}
+          >
+            <button
+              type="button"
+              aria-label="Scrub timeline playhead line"
+              data-testid="timeline-playhead-line-hitbox"
+              className="absolute top-0 -left-[6px] h-full w-3 cursor-ew-resize bg-transparent"
+              onMouseDown={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                setIsScrubbing(true);
+                seekFromClientX(event.clientX);
+              }}
+            />
+            <button
+              type="button"
+              aria-label="Scrub timeline playhead"
+              className="absolute top-0 -left-[5px] h-2.5 w-2.5 cursor-ew-resize rounded-full bg-red-500"
+              onMouseDown={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                setIsScrubbing(true);
+                seekFromClientX(event.clientX);
+              }}
+            />
+          </div>
+          <div
+            className="mt-2 flex items-stretch"
+            style={{ gap: `${TIMELINE_CARD_GAP_PX}px` }}
+          >
+            {items.map((item, index) => (
+              <div
+                key={item.id}
+                draggable={Boolean(onReorder)}
+                onDragStart={(event) => {
+                  if (
+                    event.target instanceof HTMLElement &&
+                    event.target.closest("[data-resize-zone='true']")
+                  ) {
+                    event.preventDefault();
+                    return;
+                  }
+
+                  setDraggedItemId(item.id);
+                  setDragTargetItemId(null);
+                }}
+                onDragEnd={() => {
+                  setDraggedItemId(null);
+                  setDragTargetItemId(null);
+                }}
+                onDragOver={(event) => {
+                  if (onReorder) {
+                    event.preventDefault();
+                    setDragTargetItemId(item.id);
+                  }
+                }}
+                onDragLeave={() => {
+                  setDragTargetItemId((currentTargetItemId) =>
+                    currentTargetItemId === item.id ? null : currentTargetItemId
+                  );
+                }}
+                onDrop={(event) => {
+                  if (!onReorder || !draggedItemId) {
+                    return;
+                  }
+                  event.preventDefault();
+                  const fromIndex = items.findIndex(
+                    (timelineItem) => timelineItem.id === draggedItemId
+                  );
+                  onReorder(fromIndex, index);
+                  setDraggedItemId(null);
+                  setDragTargetItemId(null);
+                }}
+                data-testid={`timeline-clip-${item.id}`}
+                className="group relative box-border overflow-hidden border border-border bg-background first:rounded-l-lg last:rounded-r-lg not-first:border-l-0"
+                style={{
+                  width: `${item.widthPx}px`,
+                  flex: "0 0 auto",
+                  cursor: onReorder
+                    ? draggedItemId === item.id
+                      ? "grabbing"
+                      : "grab"
+                    : "default",
+                  borderColor:
+                    draggedItemId === item.id || dragTargetItemId === item.id
+                      ? "hsl(var(--primary))"
+                      : undefined
+                }}
+              >
+                <button
+                  type="button"
+                  aria-label={`Remove ${item.label} clip`}
+                  data-testid={`timeline-delete-${item.id}`}
+                  className="absolute right-6 top-2 z-10 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-background/70 text-foreground opacity-0 shadow-sm backdrop-blur-sm transition-opacity hover:bg-background/85 group-hover:opacity-100 disabled:pointer-events-none disabled:opacity-30"
+                  disabled={!onDeleteClip || items.length <= 1}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    onDeleteClip?.(index);
+                  }}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  data-testid={`timeline-resize-left-${item.id}`}
+                  aria-label={`Resize ${item.label} from left edge`}
+                  className="absolute inset-y-0 left-0 z-10 w-2 cursor-ew-resize bg-transparent"
+                  data-resize-handle="true"
+                  data-resize-zone="true"
+                  onMouseDown={(event) =>
+                    startResize(event, {
+                      itemId: item.id,
+                      index,
+                      edge: "left",
+                      startDurationSeconds:
+                        segments[index]?.durationSeconds ??
+                        MIN_CLIP_DURATION_SECONDS,
+                      maxDurationSeconds: item.maxDurationSeconds
+                    })
+                  }
+                />
+                <div className="grid grid-cols-[minmax(0,1fr)_0px] transition-[grid-template-columns] duration-150 group-hover:grid-cols-[minmax(0,1fr)_16px]">
+                  <div>
+                    <div className="flex h-16 min-w-0 items-stretch overflow-hidden border-b border-border/80 bg-muted/30">
+                      {Array.from(
+                        { length: item.frameCount },
+                        (_, frameIndex) => (
+                          <div
+                            key={`${item.id}-frame-${frameIndex}`}
+                            className="relative min-w-0 flex-1 border-r border-border/70 last:border-r-0"
+                          >
+                            {item.thumbnailSrc ? (
+                              <LoadingImage
+                                src={item.thumbnailSrc}
+                                alt={`${item.label} clip thumbnail`}
+                                fill
+                                className="object-cover"
+                              />
+                            ) : (
+                              <div className="h-full w-full bg-muted" />
+                            )}
+                          </div>
+                        )
+                      )}
+                    </div>
+                    <div className="px-3 py-2">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="truncate text-sm font-medium text-foreground">
+                          {item.label}
+                        </p>
+                        <p className="shrink-0 text-xs text-muted-foreground">
+                          {item.durationLabel}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="overflow-hidden">
+                    <button
+                      type="button"
+                      data-testid={`timeline-resize-strip-${item.id}`}
+                      aria-label={`Resize ${item.label} from right strip`}
+                      className="flex h-full w-full cursor-ew-resize items-center justify-center border-l border-primary bg-primary opacity-0 transition-opacity group-hover:opacity-100"
+                      data-resize-handle="true"
+                      data-resize-zone="true"
+                      onMouseDown={(event) =>
+                        startResize(event, {
+                          itemId: item.id,
+                          index,
+                          edge: "right",
+                          startDurationSeconds:
+                            segments[index]?.durationSeconds ??
+                            MIN_CLIP_DURATION_SECONDS,
+                          maxDurationSeconds: item.maxDurationSeconds
+                        })
+                      }
+                    >
+                      <div
+                        className="grid grid-cols-2 place-items-center gap-x-0.5 gap-y-0.5"
+                        aria-hidden
+                      >
+                        {Array.from({ length: 8 }, (_, dotIndex) => (
+                          <span
+                            key={`${item.id}-dot-${dotIndex}`}
+                            className="h-0.5 w-0.5 rounded-full bg-background"
+                          />
+                        ))}
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div
+            className="mt-2"
+            onMouseDown={(event) => {
+              setIsScrubbing(true);
+              seekFromClientX(event.clientX);
+            }}
+          >
+            <VideoPreviewTimelineRuler
+              totalDurationSeconds={totalDurationSeconds}
+              totalFrames={totalFrames}
+              contentWidthPx={contentWidthPx}
+              layoutItems={layoutItems}
+            />
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}

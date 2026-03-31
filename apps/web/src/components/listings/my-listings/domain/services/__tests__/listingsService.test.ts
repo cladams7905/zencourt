@@ -1,7 +1,7 @@
 import {
   buildListingsPageUrl,
   fetchListingsPage
-} from "@web/src/components/listings/myListings/domain/services/listingsService";
+} from "@web/src/components/listings/my-listings/domain/services/listingsService";
 
 describe("listingsService", () => {
   const originalFetch = global.fetch;

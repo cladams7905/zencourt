@@ -2,7 +2,7 @@ import type { DBContent } from "@db/types/models";
 import { getContentByListingId } from "@web/src/server/models/content";
 import {
   getAllCachedListingContentForCreate,
-  type ListingCreateCachedContentItem
+  type ListingContentCachedContentItem
 } from "@web/src/server/infra/cache/listingContent/cache";
 import { isSavedListingReelMetadata } from "@web/src/lib/domain/listings/content/reels";
 
@@ -12,7 +12,7 @@ import { isSavedListingReelMetadata } from "@web/src/lib/domain/listings/content
  */
 export function collectReelReferencedUserMediaIdsFromSnapshot(
   savedRows: DBContent[],
-  cachedItems: ListingCreateCachedContentItem[]
+  cachedItems: ListingContentCachedContentItem[]
 ): string[] {
   const ids = new Set<string>();
 

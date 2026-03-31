@@ -5,11 +5,11 @@ import {
   buildListingsPageUrl,
   fetchListingsPage,
   type ListingsOffsetPage
-} from "@web/src/components/listings/myListings/domain/services";
+} from "@web/src/components/listings/my-listings/domain/services";
 import {
   MY_LISTINGS_PAGE_SIZE,
   type ListingSummaryItem
-} from "@web/src/components/listings/myListings/shared";
+} from "@web/src/components/listings/my-listings/shared";
 import { useInfiniteSwrPages } from "@web/src/components/shared/pagination";
 
 type UseListingPaginationParams = {

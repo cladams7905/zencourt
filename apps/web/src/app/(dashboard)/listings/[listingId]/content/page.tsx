@@ -2,13 +2,13 @@ import { redirect } from "next/navigation";
 import { runWithCaller } from "@web/src/server/infra/logger/callContext";
 import { getListingById } from "@web/src/server/models/listings";
 import { requireUserOrRedirect } from "@web/src/app/(dashboard)/_utils/requireUserOrRedirect";
-import { ListingContentView } from "@web/src/components/listings/content/components";
+import { ListingContentView } from "@web/src/components/listings/content/ListingContentView";
 import { resolveListingOpenHouseContext } from "@web/src/lib/domain/listings/content/openHouse";
 import {
   parseInitialMediaTab,
   parseInitialSubcategory
-} from "@web/src/components/listings/content/domain/editor/query";
-import { redirectToListingStage } from "../_utils/redirectToListingStage";
+} from "@web/src/components/listings/content/domain/query";
+import { redirectToListingStage } from "../stage/_utils/redirectToListingStage";
 import { getListingContentViewData } from "@web/src/server/actions/listings/viewData";
 import type { ListingPropertyDetails } from "@shared/types/models";
 

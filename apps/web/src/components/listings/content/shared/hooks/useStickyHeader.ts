@@ -1,15 +1,15 @@
 import * as React from "react";
-import type { ListingCreateFilterStickyTopOffsets } from "@web/src/components/listings/content/shared/listingCreateLayout";
+import type { ListingContentFilterStickyTopOffsets } from "@web/src/components/listings/content/shared/listingContentLayout";
 
 /**
  * Detects when a sentinel element scrolls past a sticky offset,
  * indicating the sticky header is actively "stuck".
  *
  * `stickyTopOffsets` must match the filter bar’s `sticky top` values
- * (see {@link getListingCreateFilterStickyTopOffsets}).
+ * (see {@link getListingContentFilterStickyTopOffsets}).
  */
 export function useStickyHeader(
-  stickyTopOffsets: ListingCreateFilterStickyTopOffsets
+  stickyTopOffsets: ListingContentFilterStickyTopOffsets
 ) {
   const sentinelRef = React.useRef<HTMLDivElement | null>(null);
   const [isSticky, setIsSticky] = React.useState(false);

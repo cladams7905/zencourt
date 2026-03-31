@@ -2,7 +2,7 @@
 
 import { withServerActionCaller } from "@web/src/server/infra/logger/callContext";
 import { withCurrentUserListingAccess } from "@web/src/server/actions/shared/auth";
-import type { ListingCreateMediaTab } from "@web/src/lib/domain/listings/content/create";
+import type { ListingContentMediaTab } from "@web/src/lib/domain/listings/content/create";
 import type { ListingContentSubcategory } from "@shared/types/models";
 import { getListingContentItems } from "./queries";
 
@@ -11,7 +11,7 @@ export const getListingContentItemsForCurrentUser = withServerActionCaller(
   async (
     listingId: string,
     params: {
-      mediaTab?: ListingCreateMediaTab;
+      mediaTab?: ListingContentMediaTab;
       subcategory?: ListingContentSubcategory;
       limit?: number;
       offset?: number;
