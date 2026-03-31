@@ -143,7 +143,7 @@ export function SidebarLayout({
                     onClick={(e) => {
                       e.stopPropagation();
                       onMobileClose?.();
-                      router.push("/listings/sync");
+                      router.push("/listings/upload");
                     }}
                   >
                     <Plus className="h-3 w-3" />

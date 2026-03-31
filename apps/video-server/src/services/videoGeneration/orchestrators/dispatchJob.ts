@@ -9,6 +9,10 @@ import type {
 type DispatchJobDeps = {
   primaryProviderFacade: ProviderDispatchFacade;
   fallbackProviderFacade: ProviderDispatchFacade;
+  prepareProviderSourceImages?: (args: {
+    job: DBVideoGenJob;
+    input: ProviderDispatchInput;
+  }) => Promise<string[]>;
   markJobProcessing: (
     jobId: string,
     requestId: string,
@@ -94,8 +98,19 @@ export async function dispatchJobOrchestrator(
   deps: DispatchJobDeps
 ): Promise<void> {
   const parsedInput = parseJobInput(job);
+  const preparedImageUrls = deps.prepareProviderSourceImages
+    ? await deps.prepareProviderSourceImages({
+        job,
+        input: {
+          ...parsedInput,
+          webhookUrl: "",
+          durationSeconds: deps.getJobDurationSeconds(job)
+        }
+      })
+    : parsedInput.imageUrls;
   const input: ProviderDispatchInput = {
     ...parsedInput,
+    imageUrls: preparedImageUrls,
     webhookUrl: deps.buildWebhookUrl(job.id),
     durationSeconds: deps.getJobDurationSeconds(job)
   };

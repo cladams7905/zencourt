@@ -42,7 +42,7 @@ describe("wavespeedStrategy", () => {
       duration: 4,
       aspectRatio: "16:9",
       resolution: "4k",
-      webhookUrl: "https://webhook"
+      webhookUrl: "https://webhook/webhooks/wavespeed?jobId=job-1"
     });
     expect(result).toEqual({
       provider: "wavespeed",
@@ -70,5 +70,38 @@ describe("wavespeedStrategy", () => {
         model: "gen4.5"
       } as never)
     ).toBe(false);
+  });
+
+  it("forces 16:9 for vertical jobs and prefers WAVESPEED_WEBHOOK_URL", async () => {
+    submitImageToVideo.mockResolvedValue({
+      id: "task-2",
+      status: "pending"
+    });
+    process.env.WAVESPEED_WEBHOOK_URL =
+      "https://tunnel.example.com/webhooks/wavespeed";
+
+    const { wavespeedStrategy } = await import(
+      "@/services/videoGeneration/strategies/wavespeedStrategy"
+    );
+    await wavespeedStrategy.dispatch({
+      jobId: "job-2",
+      videoId: "batch-2",
+      prompt: "prompt",
+      negativePrompt: "negative prompt",
+      imageUrls: ["https://image.jpg"],
+      orientation: "vertical",
+      durationSeconds: 4,
+      webhookUrl: "https://video.example.com/webhooks/fal?requestId=job-2",
+      model: "veo3.1_fast"
+    });
+
+    expect(submitImageToVideo).toHaveBeenCalledWith(
+      expect.objectContaining({
+        aspectRatio: "16:9",
+        webhookUrl: "https://tunnel.example.com/webhooks/wavespeed?jobId=job-2"
+      })
+    );
+
+    delete process.env.WAVESPEED_WEBHOOK_URL;
   });
 });

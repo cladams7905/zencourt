@@ -36,6 +36,9 @@ describe("dispatchJobOrchestrator", () => {
       markJobProcessing,
       onProviderOutputReady: jest.fn(),
       onProviderOutputFailure: jest.fn().mockResolvedValue(undefined),
+      prepareProviderSourceImages: jest
+        .fn()
+        .mockResolvedValue(["https://processed-image.jpg"]),
       buildWebhookUrl: () => "https://webhook?requestId=job-1",
       getJobDurationSeconds: () => 4
     });
@@ -45,7 +48,8 @@ describe("dispatchJobOrchestrator", () => {
     expect(primaryProviderFacade.dispatch).toHaveBeenCalledWith(
       expect.objectContaining({
         prompt: "prompt",
-        negativePrompt: "negative prompt"
+        negativePrompt: "negative prompt",
+        imageUrls: ["https://processed-image.jpg"]
       })
     );
     expect(markJobProcessing).toHaveBeenCalledWith(
@@ -54,7 +58,8 @@ describe("dispatchJobOrchestrator", () => {
       expect.objectContaining({
         model: expect.any(String),
         prompt: "prompt",
-        negativePrompt: "negative prompt"
+        negativePrompt: "negative prompt",
+        imageUrls: ["https://processed-image.jpg"]
       })
     );
   });
@@ -76,6 +81,9 @@ describe("dispatchJobOrchestrator", () => {
       markJobProcessing,
       onProviderOutputReady: jest.fn(),
       onProviderOutputFailure: jest.fn(),
+      prepareProviderSourceImages: jest
+        .fn()
+        .mockResolvedValue(["https://processed-image.jpg"]),
       buildWebhookUrl: () => "https://webhook",
       getJobDurationSeconds: () => 4
     });
@@ -127,6 +135,7 @@ describe("dispatchJobOrchestrator", () => {
         markJobProcessing: jest.fn(),
         onProviderOutputReady: jest.fn(),
         onProviderOutputFailure: jest.fn(),
+        prepareProviderSourceImages: jest.fn(),
         buildWebhookUrl: () => "https://webhook",
         getJobDurationSeconds: () => 4
       })
@@ -146,6 +155,7 @@ describe("dispatchJobOrchestrator", () => {
         markJobProcessing: jest.fn(),
         onProviderOutputReady: jest.fn(),
         onProviderOutputFailure: jest.fn(),
+        prepareProviderSourceImages: jest.fn(),
         buildWebhookUrl: () => "https://webhook",
         getJobDurationSeconds: () => 4
       })
@@ -169,6 +179,7 @@ describe("dispatchJobOrchestrator", () => {
         markJobProcessing: jest.fn(),
         onProviderOutputReady: jest.fn(),
         onProviderOutputFailure: jest.fn(),
+        prepareProviderSourceImages: jest.fn(),
         buildWebhookUrl: () => "https://webhook",
         getJobDurationSeconds: () => 4
       })
@@ -193,6 +204,9 @@ describe("dispatchJobOrchestrator", () => {
       markJobProcessing: jest.fn().mockResolvedValue(undefined),
       onProviderOutputReady,
       onProviderOutputFailure: jest.fn(),
+      prepareProviderSourceImages: jest
+        .fn()
+        .mockResolvedValue(["https://processed-image.jpg"]),
       buildWebhookUrl: () => "https://webhook",
       getJobDurationSeconds: () => 4
     });
@@ -224,6 +238,9 @@ describe("dispatchJobOrchestrator", () => {
       markJobProcessing: jest.fn().mockResolvedValue(undefined),
       onProviderOutputReady: jest.fn(),
       onProviderOutputFailure,
+      prepareProviderSourceImages: jest
+        .fn()
+        .mockResolvedValue(["https://processed-image.jpg"]),
       buildWebhookUrl: () => "https://webhook",
       getJobDurationSeconds: () => 4
     });
@@ -256,6 +273,9 @@ describe("dispatchJobOrchestrator", () => {
       markJobProcessing: jest.fn().mockResolvedValue(undefined),
       onProviderOutputReady: jest.fn(),
       onProviderOutputFailure,
+      prepareProviderSourceImages: jest
+        .fn()
+        .mockResolvedValue(["https://processed-image.jpg"]),
       buildWebhookUrl: () => "https://webhook",
       getJobDurationSeconds: () => 4
     });

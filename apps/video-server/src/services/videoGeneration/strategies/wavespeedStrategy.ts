@@ -19,9 +19,30 @@ function normalizeDuration(durationSeconds: number): 4 | 6 | 8 {
 }
 
 function resolveAspectRatio(
-  orientation: ProviderDispatchInput["orientation"]
+  _orientation: ProviderDispatchInput["orientation"]
 ): "16:9" | "9:16" {
-  return orientation === "landscape" ? "16:9" : "9:16";
+  return "16:9";
+}
+
+function resolveWebhookUrl(input: ProviderDispatchInput): string {
+  const configuredWebhookUrl = process.env.WAVESPEED_WEBHOOK_URL?.trim();
+  const baseWebhookUrl = configuredWebhookUrl || input.webhookUrl;
+
+  try {
+    const url = new URL(baseWebhookUrl);
+    url.pathname = "/webhooks/wavespeed";
+    url.searchParams.set("jobId", input.jobId);
+    url.searchParams.delete("requestId");
+    url.searchParams.delete("request_id");
+    return url.toString();
+  } catch {
+    const normalizedBaseUrl = baseWebhookUrl.replace(
+      /\/webhooks\/[^/?]+/,
+      "/webhooks/wavespeed"
+    );
+    const separator = normalizedBaseUrl.includes("?") ? "&" : "?";
+    return `${normalizedBaseUrl}${separator}jobId=${encodeURIComponent(input.jobId)}`;
+  }
 }
 
 export const wavespeedStrategy: VideoGenerationStrategy<
@@ -50,7 +71,7 @@ export const wavespeedStrategy: VideoGenerationStrategy<
         duration: normalizeDuration(input.durationSeconds),
         aspectRatio: resolveAspectRatio(input.orientation),
         resolution: "4k",
-        webhookUrl: input.webhookUrl
+        webhookUrl: resolveWebhookUrl(input)
       });
       lease.bind(task.id);
 

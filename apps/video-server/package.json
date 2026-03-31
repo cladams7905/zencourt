@@ -48,6 +48,7 @@
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
     "remotion": "^4.0.0",
+    "sharp": "^0.34.5",
     "tsconfig-paths": "^4.2.0",
     "wavespeed": "^0.2.3"
   },

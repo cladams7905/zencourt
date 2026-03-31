@@ -34,6 +34,10 @@ import {
 import { storageService } from "@/services/storage";
 import { webhookService } from "@/services/webhook";
 import { runWithConcurrency } from "@/services/videoGeneration/domain/concurrency";
+import {
+  prepareProviderSourceImage,
+  resolveProviderSourceImageSize
+} from "@/services/videoGeneration/domain/providerSourceImage";
 import { FalWebhookPayload } from "@/routes/webhooks/domain/requests";
 import type { WaveSpeedWebhookPayload } from "@/routes/webhooks/domain/requests";
 import { runwayService } from "@/services/providers/runway";
@@ -96,7 +100,7 @@ class VideoGenerationService {
   }
 
   private getWaveSpeedRecoveryAgeMs(): number {
-    return Number(process.env.WAVESPEED_RECOVERY_AGE_MS) || 30_000;
+    return Number(process.env.WAVESPEED_RECOVERY_AGE_MS) || 10 * 60_000;
   }
 
   private getWaveSpeedRecoveryBatchSize(): number {
@@ -245,6 +249,27 @@ class VideoGenerationService {
     return dispatchJobOrchestrator(job, {
       primaryProviderFacade: this.primaryProviderFacade,
       fallbackProviderFacade: this.fallbackProviderFacade,
+      prepareProviderSourceImages: async ({ input }) => {
+        if (input.imageUrls.length === 0) {
+          return input.imageUrls;
+        }
+
+        const context = await this.getVideoContext(job.videoGenBatchId);
+        const targetSize = resolveProviderSourceImageSize({
+          model: input.model,
+          orientation: input.orientation
+        });
+        const preparedPrimaryImageUrl = await prepareProviderSourceImage({
+          imageUrl: input.imageUrls[0],
+          userId: context.userId,
+          listingId: context.listingId,
+          videoId: context.videoId,
+          jobId: input.jobId,
+          targetSize
+        });
+
+        return [preparedPrimaryImageUrl, ...input.imageUrls.slice(1)];
+      },
       markJobProcessing: videoGenerationDb.markJobProcessing,
       onProviderOutputReady: (currentJob, outputUrl, metadata) =>
         this.handleProviderSuccess(currentJob, outputUrl, metadata),

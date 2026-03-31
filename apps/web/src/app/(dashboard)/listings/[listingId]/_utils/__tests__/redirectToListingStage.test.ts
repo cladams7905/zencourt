@@ -67,7 +67,7 @@ describe("redirectToListingStage", () => {
 
   it("uses the provided fallback for unknown stage values", () => {
     expect(() =>
-      redirectToListingStage("abc123", "unknown-stage", "categorize", "/listings/sync")
-    ).toThrow("REDIRECT:/listings/sync");
+      redirectToListingStage("abc123", "unknown-stage", "categorize", "/listings/upload")
+    ).toThrow("REDIRECT:/listings/upload");
   });
 });

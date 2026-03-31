@@ -56,6 +56,7 @@ declare global {
 
       // WaveSpeed
       WAVESPEED_API_KEY?: string;
+      WAVESPEED_WEBHOOK_URL?: string;
       WAVESPEED_WEBHOOK_SECRET?: string;
     }
   }

@@ -10,6 +10,18 @@ interface ListingGeneratePageProps {
   params: Promise<{ listingId: string }>;
 }
 
+function getResumableBatchId(
+  latestBatch: { id: string; status: string } | null
+): string | null {
+  if (!latestBatch) {
+    return null;
+  }
+
+  return latestBatch.status === "pending" || latestBatch.status === "processing"
+    ? latestBatch.id
+    : null;
+}
+
 export default async function ListingGeneratePage({
   params
 }: ListingGeneratePageProps) {
@@ -18,27 +30,27 @@ export default async function ListingGeneratePage({
     const user = await requireUserOrRedirect();
 
     if (!listingId?.trim()) {
-      redirect("/listings/sync");
+      redirect("/listings/upload");
     }
 
     const listing = await getListingById(user.id, listingId);
     const latestBatch = await getLatestVideoGenBatchByListingId(listingId);
     if (!listing) {
-      redirect("/listings/sync");
+      redirect("/listings/upload");
     }
 
     redirectToListingStage(
       listingId,
       listing.listingStage,
       "generate",
-      "/listings/sync"
+      "/listings/upload"
     );
 
     return (
       <ListingProcessingView
         mode="generate"
         listingId={listingId}
-        initialBatchId={latestBatch?.id ?? null}
+        initialBatchId={getResumableBatchId(latestBatch)}
         userId={user.id}
         title={listing.title?.trim() || "Listing"}
       />

@@ -18,7 +18,7 @@ describe("videoGeneration/domain/prompt", () => {
 
   it("builds the negative prompt as compliance constraints only", () => {
     expect(buildNegativePrompt()).toBe(
-      "No people. No added objects. Keep architecture and materials unchanged. Single continuous camera movement only. Full-bleed, edge-to-edge composition from the first frame, filling the entire video frame at all times. Start already full-screen. No framed or inset opening, no letterboxing or pillarboxing, and no fades, transitions, cuts, or scene changes."
+      "No people. No added objects. Keep architecture and materials unchanged. No scene changes. No added transitions. Single continuous camera movement at a fixed speed only."
     );
   });
 
@@ -29,7 +29,7 @@ describe("videoGeneration/domain/prompt", () => {
         negativePrompt: buildNegativePrompt()
       })
     ).toBe(
-      "Forward pan through the Kitchen. No people. No added objects. Keep architecture and materials unchanged. Single continuous camera movement only. Full-bleed, edge-to-edge composition from the first frame, filling the entire video frame at all times. Start already full-screen. No framed or inset opening, no letterboxing or pillarboxing, and no fades, transitions, cuts, or scene changes."
+      "Forward pan through the Kitchen. No people. No added objects. Keep architecture and materials unchanged. No scene changes. No added transitions. Single continuous camera movement at a fixed speed only."
     );
   });
 
@@ -38,15 +38,15 @@ describe("videoGeneration/domain/prompt", () => {
     const result = buildPrompt({
       roomName: "Bedroom 2",
       category: "bedroom-2",
-      previousTemplateKey: "bedroom-center-push",
+      previousTemplateKey: "interior-forward-pan",
       picker: (templates) => {
         seenKeys.push(...templates.map((template) => template.key));
         return templates[0];
       }
     });
 
-    expect(seenKeys).not.toContain("bedroom-center-push");
-    expect(result.templateKey).not.toBe("bedroom-center-push");
+    expect(seenKeys).not.toContain("interior-forward-pan");
+    expect(result.templateKey).not.toBe("interior-forward-pan");
   });
 
   it("uses non-reveal non-push interior motion templates", () => {

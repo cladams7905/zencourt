@@ -15,6 +15,8 @@ import {
   startVideoGeneration
 } from "./transport";
 
+const ESTIMATED_GENERATION_SECONDS = 7 * 60;
+
 export function useGenerateProcessingFlow(params: {
   mode: "categorize" | "review" | "generate";
   listingId: string;
@@ -45,6 +47,17 @@ export function useGenerateProcessingFlow(params: {
   const hasInitializedGenerationRef = React.useRef(false);
   const hasShownTimeoutRef = React.useRef(false);
 
+  const runContent = React.useCallback(async () => {
+    setListingContentStatus("running");
+    try {
+      await startListingContentGeneration(listingId);
+      setListingContentStatus("succeeded");
+    } catch (error) {
+      setListingContentStatus("failed");
+      throw error;
+    }
+  }, [listingId]);
+
   const generationSummary = React.useMemo(() => {
     if (mode !== "generate") {
       return {
@@ -73,8 +86,8 @@ export function useGenerateProcessingFlow(params: {
     if (mode !== "generate") {
       return 0;
     }
-    return generationSummary.total > 0 ? generationSummary.total * 10 : 90;
-  }, [generationSummary.total, mode]);
+    return ESTIMATED_GENERATION_SECONDS;
+  }, [mode]);
 
   const formattedEstimate = React.useMemo(() => {
     const minutes = Math.floor(remainingEstimateSeconds / 60);
@@ -104,67 +117,26 @@ export function useGenerateProcessingFlow(params: {
     if (mode !== "generate" || hasInitializedGenerationRef.current) return;
     hasInitializedGenerationRef.current = true;
 
-    const runContent = async () => {
-      setListingContentStatus("running");
-      try {
-        await startListingContentGeneration(listingId);
-        setListingContentStatus("succeeded");
-      } catch (error) {
-        setListingContentStatus("failed");
-        throw error;
-      }
-    };
-
     try {
       if (activeBatchId) {
         const status = await fetchVideoStatus(activeBatchId);
         if (status) {
           setGenerationStatus(status);
 
+          if (!status.isTerminal) {
+            return;
+          }
+
           if (status.failedJobs > 0 || status.canceledJobs > 0) {
             await goToStage("review", `/listings/${listingId}/review`);
             return;
           }
 
-          if (status.allSucceeded && status.isTerminal) {
-            try {
-              await runContent();
-            } catch (error) {
-              toast.error(
-                error instanceof Error
-                  ? error.message
-                  : "Failed to generate listing content."
-              );
-              await goToStage("review", `/listings/${listingId}/review`);
-              return;
-            }
-            await goToStage(
-              "create",
-              `/listings/${listingId}/create?mediaType=videos&filter=new_listing`
-            );
-            return;
-          }
-
-          if (!status.isTerminal) {
-            void runContent().catch((error) => {
-              toast.error(
-                error instanceof Error
-                  ? error.message
-                  : "Failed to generate listing content."
-              );
-            });
+          if (status.allSucceeded) {
             return;
           }
         }
       }
-
-      const contentPromise = runContent().catch((error) => {
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : "Failed to generate listing content."
-        );
-      });
 
       const startResult = await startVideoGeneration(listingId);
       setActiveBatchId(startResult.batchId);
@@ -182,7 +154,6 @@ export function useGenerateProcessingFlow(params: {
         isTerminal: false,
         allSucceeded: false
       });
-      void contentPromise;
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Failed to start generation."
@@ -190,6 +161,35 @@ export function useGenerateProcessingFlow(params: {
       await goToStage("review", `/listings/${listingId}/review`);
     }
   }, [activeBatchId, goToStage, listingId, mode]);
+
+  React.useEffect(() => {
+    if (mode !== "generate") {
+      return;
+    }
+    if (
+      !generationSummary.total ||
+      !generationSummary.isTerminal ||
+      !generationSummary.allSucceeded ||
+      listingContentStatus !== "idle"
+    ) {
+      return;
+    }
+
+    void runContent().catch((error) => {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to generate listing content."
+      );
+    });
+  }, [
+    generationSummary.allSucceeded,
+    generationSummary.isTerminal,
+    generationSummary.total,
+    listingContentStatus,
+    mode,
+    runContent
+  ]);
 
   React.useEffect(() => {
     if (

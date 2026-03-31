@@ -79,9 +79,12 @@ if [[ -z "${TUNNEL_URL}" ]]; then
 fi
 
 FAL_WEBHOOK_URL="${TUNNEL_URL%/}/webhooks/fal"
+WAVESPEED_WEBHOOK_URL="${TUNNEL_URL%/}/webhooks/wavespeed"
 echo "[ngrok] Tunnel ready: ${FAL_WEBHOOK_URL}"
+echo "[ngrok] WaveSpeed webhook: ${WAVESPEED_WEBHOOK_URL}"
 
 export FAL_WEBHOOK_URL
+export WAVESPEED_WEBHOOK_URL
 
 if [[ $# -eq 0 ]]; then
   set -- up
@@ -89,5 +92,5 @@ fi
 
 echo "[docker-compose] Starting video server with tunnel..."
 (
-  cd "${REPO_ROOT}" && FAL_WEBHOOK_URL="${FAL_WEBHOOK_URL}" docker compose -f "${COMPOSE_FILE}" "$@"
+  cd "${REPO_ROOT}" && FAL_WEBHOOK_URL="${FAL_WEBHOOK_URL}" WAVESPEED_WEBHOOK_URL="${WAVESPEED_WEBHOOK_URL}" docker compose -f "${COMPOSE_FILE}" "$@"
 )

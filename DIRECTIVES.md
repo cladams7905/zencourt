@@ -17,5 +17,6 @@ Use this loop to avoid repeating mistakes and to align with the user's preferenc
 - For optimistic UI around async workflows, never derive the rollback state from a potentially updated live snapshot at cancel time; preserve or reconstruct the last known completed state explicitly.
 - For Drizzle schema changes, do not hand-write migration files or journal entries; update the schema and run `npm run db:generate` to produce migration artifacts.
 - For third-party integrations, if the user provides an explicit API contract, implement against that contract directly instead of inferring alternate endpoints or response shapes.
+- For provider webhooks in local development, route callback URLs through the same public tunnel infrastructure already used for comparable providers instead of defaulting new providers to internal-only callback paths.
 
 ---
