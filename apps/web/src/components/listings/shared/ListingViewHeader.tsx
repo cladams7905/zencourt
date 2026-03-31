@@ -3,13 +3,6 @@
 import * as React from "react";
 import { cn } from "../../ui/utils";
 import { Button } from "../../ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger
-} from "../../ui/dropdown-menu";
 import { Plus, Bell } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -73,37 +66,14 @@ export function ListingViewHeader({
         <div className="flex items-center justify-end gap-4">
           {action ? action : null}
           {showCreate ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button size="default" className="gap-2 hidden md:flex">
-                  <Plus className="h-5 w-5" />
-                  <span>Create</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-72">
-                <DropdownMenuItem className="flex flex-col items-start gap-1 py-2.5">
-                  <span className="text-sm font-medium text-foreground">
-                    New Content
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    Build your own social media post.
-                  </span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator className="bg-border/50" />
-                <DropdownMenuItem
-                  className="flex flex-col items-start gap-1 py-2.5"
-                  onSelect={() => router.push("/listings/create")}
-                >
-                  <span className="text-sm font-medium text-foreground">
-                    New Listing Campaign
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    Generate a social media campaign from your active property
-                    listings.
-                  </span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <Button
+              size="default"
+              className="gap-2 hidden md:flex"
+              onClick={() => router.push("/listings/create")}
+            >
+              <Plus className="h-5 w-5" />
+              <span>Create</span>
+            </Button>
           ) : null}
           {showNotifications ? (
             <Button
