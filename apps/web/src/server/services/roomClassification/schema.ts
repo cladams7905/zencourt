@@ -1,4 +1,4 @@
-import { ROOM_CATEGORIES } from "@web/src/lib/domain/listings/media/roomCategories";
+import { ROOM_CATEGORIES } from "@web/src/lib/domain/listings/image/roomCategories";
 
 export const CLASSIFICATION_SCHEMA = {
   type: "object",

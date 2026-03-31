@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import type { ListingContentItem as ContentItem } from "@web/src/lib/domain/listings/content";
 import type { ListingContentSubcategory } from "@shared/types/models";
 import {
-  LISTING_CREATE_INITIAL_PAGE_SIZE,
+  LISTING_CONTENT_INITIAL_PAGE_SIZE,
   type ListingContentMediaTab
 } from "@web/src/components/listings/content/shared/constants";
 import {
@@ -184,7 +184,7 @@ export function useListingContentBuckets(params: {
       const promise = fetchListingContentItemsPageCached(listingId, {
         mediaTab,
         subcategory,
-        limit: LISTING_CREATE_INITIAL_PAGE_SIZE,
+        limit: LISTING_CONTENT_INITIAL_PAGE_SIZE,
         offset: 0
       })
         .then((page) => {
@@ -253,7 +253,7 @@ export function useListingContentBuckets(params: {
       const page = await fetchListingContentItemsPageCached(listingId, {
         mediaTab: activeMediaTab,
         subcategory: activeSubcategory,
-        limit: LISTING_CREATE_INITIAL_PAGE_SIZE,
+        limit: LISTING_CONTENT_INITIAL_PAGE_SIZE,
         offset: currentBucket.offset
       });
       if (!isCurrentListingRequestVersion(requestVersion)) {

@@ -6,8 +6,8 @@ import type {
   PreviewTextOverlayFont,
   PreviewTextOverlayPosition
 } from "@shared/types/video";
-import type { ReelSequenceItem } from "./index";
 import { buildReelSourceKey } from "./reels";
+import type { ReelSequenceItem } from "./listingContentTypes";
 
 export type {
   PreviewTextOverlay,
@@ -114,6 +114,13 @@ const FEATURE_KEYWORDS = [
   "lot",
   "suite"
 ];
+
+export type {
+  PlayablePreviewCaptionItemKey,
+  PlayablePreviewSavedContentKey,
+  PlayablePreviewSaveTarget,
+  PlayablePreviewTextUpdate
+} from "./listingContentTypes";
 
 function hashSeed(seed: string): number {
   let hash = 2166136261;

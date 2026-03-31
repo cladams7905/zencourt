@@ -4,7 +4,7 @@ import * as React from "react";
 import type { ListingContentItem as ContentItem } from "@web/src/lib/domain/listings/content";
 import { type ListingContentSubcategory } from "@shared/types/models";
 import {
-  LISTING_CREATE_INITIAL_PAGE_SIZE,
+  LISTING_CONTENT_INITIAL_PAGE_SIZE,
   type ListingContentMediaTab
 } from "@web/src/components/listings/content/shared/constants";
 import { buildFilterKey } from "../../data/filterBuckets";
@@ -119,10 +119,10 @@ export function useContentGeneration(params: {
   );
   const initialPageLoadingCount =
     currentBucket.isLoadingInitialPage && currentBucket.items.length === 0
-      ? LISTING_CREATE_INITIAL_PAGE_SIZE
+      ? LISTING_CONTENT_INITIAL_PAGE_SIZE
       : 0;
   const loadingMoreCount = currentBucket.isLoadingMore
-    ? LISTING_CREATE_INITIAL_PAGE_SIZE
+    ? LISTING_CONTENT_INITIAL_PAGE_SIZE
     : 0;
 
   return {

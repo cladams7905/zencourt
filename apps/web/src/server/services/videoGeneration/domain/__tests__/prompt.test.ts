@@ -13,7 +13,7 @@ describe("videoGeneration/domain/prompt", () => {
     });
 
     expect(result.templateKey).toBe("interior-forward-pan");
-    expect(result.prompt).toBe("Forward pan through the Kitchen.");
+    expect(result.prompt).toBe("Slow forward pan through the Kitchen.");
   });
 
   it("builds the negative prompt as compliance constraints only", () => {

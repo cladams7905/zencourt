@@ -6,11 +6,11 @@ import {
   type ListingContentCachedContentItem,
   type ListingMediaType
 } from "@web/src/server/infra/cache/listingContent/cache";
-import type { ListingContentItem as ContentItem } from "@web/src/lib/domain/listings/content";
-import {
-  LISTING_CREATE_INITIAL_PAGE_SIZE,
-  type ListingContentMediaTab
-} from "@web/src/lib/domain/listings/content/create";
+import type {
+  ListingContentItem as ContentItem,
+  ListingContentMediaTab
+} from "@web/src/lib/domain/listings/content";
+import { LISTING_CONTENT_INITIAL_PAGE_SIZE } from "@web/src/lib/domain/listings/content/constants";
 import { isSavedListingReelMetadata } from "@web/src/lib/domain/listings/content/reels";
 import type { ListingContentSubcategory } from "@shared/types/models";
 import {
@@ -18,7 +18,7 @@ import {
   mapSavedReelContentToCreateItem
 } from "../reels";
 
-const MAX_LISTING_CREATE_PAGE_SIZE = LISTING_CREATE_INITIAL_PAGE_SIZE;
+const MAX_LISTING_CONTENT_PAGE_SIZE = LISTING_CONTENT_INITIAL_PAGE_SIZE;
 
 function normalizeListingContentPageParams(params: {
   limit?: number;
@@ -27,8 +27,8 @@ function normalizeListingContentPageParams(params: {
   return {
     offset: Math.max(0, params.offset ?? 0),
     limit: Math.min(
-      MAX_LISTING_CREATE_PAGE_SIZE,
-      Math.max(1, params.limit ?? LISTING_CREATE_INITIAL_PAGE_SIZE)
+      MAX_LISTING_CONTENT_PAGE_SIZE,
+      Math.max(1, params.limit ?? LISTING_CONTENT_INITIAL_PAGE_SIZE)
     )
   };
 }
@@ -77,7 +77,7 @@ export async function getListingContentItems(params: {
   subcategory?: ListingContentSubcategory;
   limit?: number;
   offset?: number;
-  /** When set, skips an extra getContentByListingId (e.g. listing create view already loaded rows). */
+  /** When set, skips an extra getContentByListingId (e.g. content view already loaded rows). */
   savedContentRows?: Awaited<ReturnType<typeof getContentByListingId>>;
   /**
    * When set (e.g. from getAllCachedListingContentForCreate), filters in memory for the active
@@ -123,7 +123,7 @@ export async function getListingContentItems(params: {
       )
       .map((item) => ({
         ...item,
-        contentSource: "cached_create" as const
+        contentSource: "cached_content" as const
       }))
   ];
   const { offset, limit } = normalizeListingContentPageParams(params);

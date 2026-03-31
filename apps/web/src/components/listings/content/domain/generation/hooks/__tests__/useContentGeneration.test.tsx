@@ -17,7 +17,7 @@ jest.mock("sonner", () => ({
   }
 }));
 
-jest.mock("../stream", () => ({
+jest.mock("../../stream", () => ({
   requestContentGenerationStream: (...args: unknown[]) =>
     mockRequestStream(...args),
   streamContentGenerationEvents: (...args: unknown[]) =>
@@ -29,7 +29,7 @@ jest.mock("@web/src/lib/sse/contentExtractor", () => ({
     mockExtractJsonItems(...args)
 }));
 
-jest.mock("../../data/client", () => ({
+jest.mock("../../../data/client", () => ({
   buildListingContentItemsPageKey: (
     listingId: string,
     params: Record<string, unknown>

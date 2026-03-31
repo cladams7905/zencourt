@@ -4,7 +4,7 @@ import {
   buildPreviewTimelinePlans,
   buildPreviewTimelineVariants,
   type PreviewTimelineClip
-} from "@web/src/lib/domain/listings/content/createPreviewPlans";
+} from "@web/src/lib/domain/listings/content/previewTypes";
 
 const clips: PreviewTimelineClip[] = [
   {
@@ -37,7 +37,7 @@ const clips: PreviewTimelineClip[] = [
   }
 ];
 
-describe("createPreviewPlans", () => {
+describe("previewTypes (reel preview timeline plans)", () => {
   it("builds deterministic plans for the same seed", () => {
     const first = buildPreviewTimelinePlan({
       clips,
@@ -100,7 +100,7 @@ describe("createPreviewPlans", () => {
     expect(buildPreviewTimelinePlans(clips, "listing-4", 0)).toEqual([]);
   });
 
-  it("returns no listing create plans for non-video tabs or empty content", () => {
+  it("returns no content-view preview plans for non-video tabs or empty content", () => {
     expect(
       buildListingContentPreviewPlans({
         listingId: "listing-1",

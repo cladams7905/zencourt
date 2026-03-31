@@ -20,7 +20,7 @@ jest.mock("@web/src/lib/domain/listings/sidebarEvents", () => ({
     mockEmitListingSidebarUpdate(...args)
 }));
 
-jest.mock("@web/src/components/listings/processing/domain/transport", () => ({
+jest.mock("@web/src/components/listings/stage/processing/domain/transport", () => ({
   fetchVideoStatus: (...args: unknown[]) => mockFetchVideoStatus(...args),
   cancelVideoGeneration: (...args: unknown[]) =>
     mockCancelVideoGeneration(...args),

@@ -1,5 +1,5 @@
 import type { ListingContentItem as ContentItem } from "@web/src/lib/domain/listings/content";
-import { buildListingContentPreviewPlans } from "@web/src/lib/domain/listings/content/createPreviewPlans";
+import { buildListingContentPreviewPlans } from "@web/src/lib/domain/listings/content/previewTypes";
 import type { ListingContentSubcategory } from "@shared/types/models";
 import type { ListingGeneratedItem } from "@web/src/server/infra/cache/listingContent/cache";
 

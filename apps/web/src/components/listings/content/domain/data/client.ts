@@ -49,6 +49,6 @@ export async function fetchListingContentItemsPage(
   return fetchApiData<ListingContentItemsPage>(
     buildListingContentItemsPageKey(listingId, params),
     undefined,
-    "Failed to load listing create content."
+    "Failed to load listing content."
   );
 }

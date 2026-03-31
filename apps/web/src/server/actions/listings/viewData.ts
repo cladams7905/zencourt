@@ -15,10 +15,8 @@ import { getContentByListingId } from "@web/src/server/models/content";
 import { getAllCachedListingContentForCreate } from "@web/src/server/infra/cache/listingContent/cache";
 import { mapUserMediaToVideoItem } from "./content/reels";
 import { collectReelReferencedUserMediaIdsFromSnapshot } from "./content/reels/userMedia";
-import {
-  LISTING_CREATE_INITIAL_PAGE_SIZE,
-  type ListingContentMediaTab
-} from "@web/src/lib/domain/listings/content/create";
+import type { ListingContentMediaTab } from "@web/src/lib/domain/listings/content";
+import { LISTING_CONTENT_INITIAL_PAGE_SIZE } from "@web/src/lib/domain/listings/content/constants";
 import type { ListingContentSubcategory } from "@shared/types/models";
 import { getListingContentItems } from "./content/items";
 import { getListingClipVersionItems } from "./clips";
@@ -57,7 +55,7 @@ export async function getListingContentViewData(
       listingId,
       mediaTab: options?.initialMediaTab,
       subcategory: options?.initialSubcategory,
-      limit: LISTING_CREATE_INITIAL_PAGE_SIZE,
+      limit: LISTING_CONTENT_INITIAL_PAGE_SIZE,
       offset: 0,
       savedContentRows,
       allCachedListingContentForCreate: cachedAllForCreate

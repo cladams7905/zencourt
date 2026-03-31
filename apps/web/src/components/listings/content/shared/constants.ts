@@ -1,7 +1,7 @@
 import type { ListingContentSubcategory } from "@shared/types/models";
-import type { ListingContentMediaTab } from "@web/src/lib/domain/listings/content/create";
+import type { ListingContentMediaTab } from "@web/src/lib/domain/listings/content";
 
-export type { ListingContentMediaTab } from "@web/src/lib/domain/listings/content/create";
+export type { ListingContentMediaTab };
 
 export const MEDIA_TAB_LABELS: Record<ListingContentMediaTab, string> = {
   videos: "Videos",
@@ -17,4 +17,4 @@ export const SUBCATEGORY_LABELS: Record<ListingContentSubcategory, string> = {
 };
 
 export const GENERATED_BATCH_SIZE = 4;
-export const LISTING_CREATE_INITIAL_PAGE_SIZE = 8;
+export const LISTING_CONTENT_INITIAL_PAGE_SIZE = 8;

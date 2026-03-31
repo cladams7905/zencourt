@@ -143,7 +143,7 @@ describe("saveListingVideoReel", () => {
         }
       ],
       saveTarget: {
-        contentSource: "cached_create",
+        contentSource: "cached_content",
         cacheKeyTimestamp: 123,
         cacheKeyId: 4,
         subcategory: "new_listing",
@@ -313,7 +313,7 @@ describe("regenerateListingVideoReelText", () => {
           }
         ],
         saveTarget: {
-          contentSource: "cached_create",
+          contentSource: "cached_content",
           cacheKeyTimestamp: 123,
           cacheKeyId: 4,
           subcategory: "new_listing",
@@ -339,7 +339,7 @@ describe("regenerateListingVideoReelText", () => {
           }
         ],
         saveTarget: {
-          contentSource: "cached_create",
+          contentSource: "cached_content",
           cacheKeyTimestamp: 123,
           cacheKeyId: 4,
           subcategory: "new_listing",
@@ -379,7 +379,7 @@ describe("regenerateListingVideoReelText", () => {
         }
       ],
       saveTarget: {
-        contentSource: "cached_create",
+        contentSource: "cached_content",
         cacheKeyTimestamp: 123,
         cacheKeyId: 4,
         subcategory: "new_listing",
@@ -419,7 +419,7 @@ describe("regenerateListingVideoReelText", () => {
         }
       ],
       saveTarget: {
-        contentSource: "cached_create",
+        contentSource: "cached_content",
         cacheKeyTimestamp: 123,
         cacheKeyId: 4,
         subcategory: "new_listing",
@@ -466,7 +466,7 @@ describe("regenerateListingVideoReelText", () => {
         }
       ],
       saveTarget: {
-        contentSource: "cached_create",
+        contentSource: "cached_content",
         cacheKeyTimestamp: 123,
         cacheKeyId: 4,
         subcategory: "new_listing",
@@ -505,7 +505,7 @@ describe("regenerateListingVideoReelText", () => {
           }
         ],
         saveTarget: {
-          contentSource: "cached_create",
+          contentSource: "cached_content",
           cacheKeyTimestamp: 123,
           cacheKeyId: 4,
           subcategory: "new_listing",
@@ -611,7 +611,7 @@ describe("saveAndFavoriteListingVideoReel", () => {
         }
       ],
       saveTarget: {
-        contentSource: "cached_create",
+        contentSource: "cached_content",
         cacheKeyTimestamp: 123,
         cacheKeyId: 4,
         subcategory: "new_listing",

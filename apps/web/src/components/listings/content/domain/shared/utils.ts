@@ -1,4 +1,4 @@
-import type { PreviewTimelineClip } from "@web/src/lib/domain/listings/content/createPreviewPlans";
+import type { PreviewTimelineClip } from "@web/src/lib/domain/listings/content/previewTypes";
 import type { ListingContentItem as ContentItem } from "@web/src/lib/domain/listings/content";
 
 export type PreviewClipCandidate = PreviewTimelineClip & {
@@ -80,4 +80,3 @@ export function filterFeatureClips(
 export function resolveContentMediaType(item: ContentItem): "video" | "image" {
   return item.mediaType === "image" ? "image" : "video";
 }
-

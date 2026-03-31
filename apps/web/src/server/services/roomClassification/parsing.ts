@@ -2,7 +2,7 @@ import {
   ROOM_CATEGORIES,
   type RoomCategory,
   type RoomClassification
-} from "@web/src/lib/domain/listings/media/roomCategories";
+} from "@web/src/lib/domain/listings/image/roomCategories";
 import { RoomClassificationError } from "./errors";
 
 const VALID_CATEGORIES = Object.keys(ROOM_CATEGORIES) as RoomCategory[];

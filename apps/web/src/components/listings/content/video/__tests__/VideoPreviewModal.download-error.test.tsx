@@ -36,7 +36,10 @@ jest.mock("@web/src/components/ui/loading-image", () => ({
   LoadingImage: (props: Record<string, unknown>) => {
     const rest = { ...props };
     delete rest.fill;
-    return <img {...(rest as React.ComponentProps<"img">)} alt="" />;
+    return (
+      // eslint-disable-next-line @next/next/no-img-element -- test mocks LoadingImage with a plain img
+      <img {...(rest as React.ComponentProps<"img">)} alt="" />
+    );
   }
 }));
 
@@ -115,7 +118,7 @@ function createSelectedPreview() {
       cacheKeyId: 4
     },
     captionItemKey: {
-      contentSource: "cached_create" as const,
+      contentSource: "cached_content" as const,
       cacheKeyTimestamp: 123,
       cacheKeyId: 4,
       subcategory: "new_listing" as const,

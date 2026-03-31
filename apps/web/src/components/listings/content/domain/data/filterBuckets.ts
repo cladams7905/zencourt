@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  LISTING_CREATE_INITIAL_PAGE_SIZE,
+  LISTING_CONTENT_INITIAL_PAGE_SIZE,
   type ListingContentMediaTab
 } from "@web/src/components/listings/content/shared/constants";
 import type { ListingContentSubcategory } from "@shared/types/models";
@@ -35,7 +35,7 @@ export function buildInitialBucket(items: ContentItem[]): FilterBucket {
     isLoadingInitialPage: false,
     isLoadingMore: false,
     hasFetchedInitialPage: true,
-    hasMore: items.length === LISTING_CREATE_INITIAL_PAGE_SIZE,
+    hasMore: items.length === LISTING_CONTENT_INITIAL_PAGE_SIZE,
     offset: items.length,
     loadedCount: items.length
   };

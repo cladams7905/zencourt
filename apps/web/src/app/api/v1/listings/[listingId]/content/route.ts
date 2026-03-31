@@ -64,7 +64,7 @@ export async function GET(
       return apiErrorResponse(
         StatusCode.INTERNAL_SERVER_ERROR,
         "INTERNAL_ERROR",
-        "Failed to fetch listing create content"
+        "Failed to fetch listing content"
       );
     }
   });

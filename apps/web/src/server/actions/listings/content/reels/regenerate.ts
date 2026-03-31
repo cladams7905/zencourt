@@ -13,8 +13,7 @@ import {
   type ReelTextRegenerationField,
   type ReelTextRegenerationMode
 } from "@web/src/lib/domain/listings/content/reels";
-import type { PlayablePreviewSaveTarget } from "@web/src/lib/domain/listings/content/create";
-import type { ReelSequenceItem } from "@web/src/lib/domain/listings/content";
+import type { PlayablePreviewSaveTarget } from "@web/src/lib/domain/listings/content";
 import { generateTextForUseCase } from "@web/src/server/services/ai";
 
 type ListingRow = {
@@ -45,7 +44,7 @@ async function resolveListingSubcategory(params: {
   listingId: string;
   saveTarget: PlayablePreviewSaveTarget;
 }) {
-  if (params.saveTarget.contentSource === "cached_create") {
+  if (params.saveTarget.contentSource === "cached_content") {
     return params.saveTarget.subcategory;
   }
 

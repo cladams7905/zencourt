@@ -104,7 +104,8 @@ These boundaries are enforced with package-local ESLint rules and CI checks.
 
 - `components/*`
   - Keep components primarily UI/presentational.
-  - Move domain logic, types, and constants into local `domain/*`, hooks, or helper files in the same module.
+  - Move domain logic into local `domain/*`, hooks, or helper files in the same module.
+  - Keep orchestrator component(s) for a module at the module root, and move all other helper components into a `subcomponents` folder.
   - Do not import DB models or server services.
 - `app/api/v1/*/route.ts`
   - Parse HTTP input and params.

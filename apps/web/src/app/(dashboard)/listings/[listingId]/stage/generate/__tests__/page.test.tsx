@@ -24,14 +24,14 @@ jest.mock("@web/src/server/models/video", () => ({
 }));
 
 jest.mock(
-  "@web/src/app/(dashboard)/listings/[listingId]/_utils/redirectToListingStage",
+  "@web/src/app/(dashboard)/listings/[listingId]/stage/_utils/redirectToListingStage",
   () => ({
     redirectToListingStage: (...args: unknown[]) =>
       mockRedirectToListingStage(...args)
   })
 );
 
-jest.mock("@web/src/components/listings/processing", () => ({
+jest.mock("@web/src/components/listings/stage/processing", () => ({
   ListingProcessingView: (props: {
     mode: string;
     listingId: string;

@@ -2,7 +2,7 @@ import type { ListingContentItem as ContentItem } from "@web/src/lib/domain/list
 import type {
   PreviewTextOverlay,
   PreviewTimelinePlan
-} from "@web/src/lib/domain/listings/content/createPreviewPlans";
+} from "@web/src/lib/domain/listings/content/previewTypes";
 import type { ListingContentSubcategory } from "@shared/types/models";
 import type { ListingOpenHouseContext } from "@web/src/lib/domain/listings/content/openHouse";
 import {
@@ -358,7 +358,7 @@ export function buildPlayablePreviews(params: {
             typeof (captionItem as ContentItem & { cacheKeyId?: number })
               .cacheKeyId === "number"
           ? {
-              contentSource: "cached_create" as const,
+              contentSource: "cached_content" as const,
               cacheKeyTimestamp: (
                 captionItem as ContentItem & { cacheKeyTimestamp: number }
               ).cacheKeyTimestamp,

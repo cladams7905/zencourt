@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { toast } from "sonner";
-import type { PreviewTimelinePlan } from "@web/src/lib/domain/listings/content/createPreviewPlans";
+import type { PreviewTimelinePlan } from "@web/src/lib/domain/listings/content/previewTypes";
 import type { ListingContentSubcategory } from "@shared/types/models";
 import type { ListingContentItem as ContentItem } from "@web/src/lib/domain/listings/content";
 import type { ListingOpenHouseContext } from "@web/src/lib/domain/listings/content/openHouse";

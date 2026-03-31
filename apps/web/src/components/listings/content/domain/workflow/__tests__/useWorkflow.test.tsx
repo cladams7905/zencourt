@@ -78,7 +78,7 @@ describe("useListingContentWorkflow", () => {
     mockUseDeleteCachedPreviewItem.mockReturnValue(jest.fn());
   });
 
-  it("composes the create workflow hooks with active state", () => {
+  it("composes the listing content workflow hooks with active state", () => {
     const { result } = renderHook(() =>
       useListingContentWorkflow({
         listingId: "listing-1",

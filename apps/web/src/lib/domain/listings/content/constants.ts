@@ -1,0 +1,1 @@
+export const LISTING_CONTENT_INITIAL_PAGE_SIZE = 8;

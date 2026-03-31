@@ -7,7 +7,7 @@ jest.mock("sonner", () => ({
   toast: { error: (...args: unknown[]) => mockToastError(...args) }
 }));
 
-jest.mock("@web/src/components/listings/processing/domain/transport", () => ({
+jest.mock("@web/src/components/listings/stage/processing/domain/transport", () => ({
   fetchPropertyDetails: (...args: unknown[]) =>
     mockFetchPropertyDetails(...args)
 }));

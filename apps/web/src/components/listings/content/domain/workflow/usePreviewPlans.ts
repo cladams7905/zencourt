@@ -4,9 +4,9 @@ import {
   buildListingContentPreviewPlans,
   type PreviewPlanCaptionItem,
   type PreviewPlanClipItem
-} from "@web/src/lib/domain/listings/content/createPreviewPlans";
+} from "@web/src/lib/domain/listings/content/previewTypes";
 
-export { buildListingContentPreviewPlans } from "@web/src/lib/domain/listings/content/createPreviewPlans";
+export { buildListingContentPreviewPlans } from "@web/src/lib/domain/listings/content/previewTypes";
 
 export function useListingContentPreviewPlans(params: {
   listingId: string;

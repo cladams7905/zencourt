@@ -14,7 +14,7 @@ class TestApiError extends Error {
   }
 }
 
-describe("listing create content items route", () => {
+describe("listing content items API route", () => {
   async function loadRoute() {
     jest.resetModules();
 
@@ -34,7 +34,7 @@ describe("listing create content items route", () => {
     };
   }
 
-  it("returns paged create content items", async () => {
+  it("returns paged listing content items", async () => {
     const { GET, mockGetListingContentItemsForCurrentUser } = await loadRoute();
     mockGetListingContentItemsForCurrentUser.mockResolvedValueOnce({
       items: [{ id: "item-1" }],
@@ -154,7 +154,7 @@ describe("listing create content items route", () => {
     await expect(response.json()).resolves.toEqual({
       success: false,
       code: "INTERNAL_ERROR",
-      error: "Failed to fetch listing create content"
+      error: "Failed to fetch listing content"
     });
   });
 });

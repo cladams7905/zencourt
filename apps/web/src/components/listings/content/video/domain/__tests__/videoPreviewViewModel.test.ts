@@ -1,5 +1,5 @@
 import type { ListingContentItem as ContentItem } from "@web/src/lib/domain/listings/content";
-import type { PreviewTimelinePlan } from "@web/src/lib/domain/listings/content/createPreviewPlans";
+import type { PreviewTimelinePlan } from "@web/src/lib/domain/listings/content/previewTypes";
 import { appendRandomHeaderSuffix } from "@shared/utils";
 import { buildPlayablePreviews } from "@web/src/components/listings/content/video/domain/videoPreviewViewModel";
 
@@ -188,7 +188,7 @@ describe("videoPreviewViewModel", () => {
       cacheKeyId: 4,
       mediaType: "video",
       subcategory: "status_update",
-      contentSource: "cached_create"
+      contentSource: "cached_content"
     });
   });
 

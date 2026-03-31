@@ -1,15 +1,14 @@
 import type {
   ListingContentItem,
+  PlayablePreviewSaveTarget,
   TextOverlayInput
 } from "@web/src/lib/domain/listings/content";
 import type { PreviewTextOverlay } from "@shared/types/video";
 import type { TimelinePreviewResolvedSegment } from "@web/src/components/listings/content/video/subcomponents/VideoPreviewTimelineComposition";
-import type { PlayablePreviewSaveTarget } from "@web/src/lib/domain/listings/content/create";
-
 export type {
   PlayablePreviewSaveTarget,
   PlayablePreviewTextUpdate
-} from "@web/src/lib/domain/listings/content/create";
+} from "@web/src/lib/domain/listings/content";
 
 export type ListingImagePreviewSlide = {
   id: string;

@@ -131,7 +131,7 @@ describe("listings viewData", () => {
     });
   });
 
-  it("assembles listing create view data from clips, items, images, and user media", async () => {
+  it("assembles listing content view data from clips, items, images, and user media", async () => {
     const result = await getListingAddressViewData("user-1", "listing-1");
 
     expect(mockGetListingClipVersionItems).toHaveBeenCalledWith("listing-1");

@@ -217,7 +217,7 @@ function createSelectedPreview(
       ...overrides
     } as ContentItem,
     captionItemKey: {
-      contentSource: "cached_create",
+      contentSource: "cached_content",
       cacheKeyTimestamp: 123,
       cacheKeyId: 4,
       subcategory: "new_listing",
@@ -802,7 +802,7 @@ describe("VideoPreviewModal", () => {
         }
       ],
       saveTarget: {
-        contentSource: "cached_create",
+        contentSource: "cached_content",
         cacheKeyTimestamp: 123,
         cacheKeyId: 4,
         subcategory: "new_listing",
@@ -868,7 +868,7 @@ describe("VideoPreviewModal", () => {
         }
       ],
       saveTarget: {
-        contentSource: "cached_create",
+        contentSource: "cached_content",
         cacheKeyTimestamp: 123,
         cacheKeyId: 4,
         subcategory: "new_listing",
@@ -922,14 +922,14 @@ describe("VideoPreviewModal", () => {
       screen.getByRole("button", { name: "Download reel preview" })
     );
     expect(
-      await screen.findByRole("menuitem", { name: "Standard download" })
+      await screen.findByRole("menuitem", { name: /Standard download/i })
     ).toBeInTheDocument();
     expect(screen.getByRole("separator")).toBeInTheDocument();
     expect(
-      screen.getByRole("menuitem", { name: "Premium 4K download" })
+      screen.getByRole("menuitem", { name: /Premium 4K download/i })
     ).toBeInTheDocument();
     await user.click(
-      screen.getByRole("menuitem", { name: "Premium 4K download" })
+      screen.getByRole("menuitem", { name: /Premium 4K download/i })
     );
 
     expect(mockFetch).toHaveBeenCalledWith(
@@ -1162,7 +1162,7 @@ describe("VideoPreviewModal", () => {
         }
       ],
       saveTarget: {
-        contentSource: "cached_create",
+        contentSource: "cached_content",
         cacheKeyTimestamp: 123,
         cacheKeyId: 4,
         subcategory: "new_listing",
@@ -1564,7 +1564,7 @@ describe("VideoPreviewModal", () => {
         }
       ],
       saveTarget: {
-        contentSource: "cached_create",
+        contentSource: "cached_content",
         cacheKeyTimestamp: 123,
         cacheKeyId: 4,
         subcategory: "new_listing",

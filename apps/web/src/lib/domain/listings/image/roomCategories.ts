@@ -1,4 +1,4 @@
-import { ProcessedImage } from "./images";
+import { ProcessedImage } from "./types";
 
 export type RoomCategory =
   | "exterior-front"

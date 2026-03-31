@@ -43,7 +43,7 @@ jest.mock("@web/src/server/actions/listings/content/reels", () => ({
 }));
 
 jest.mock(
-  "@web/src/components/listings/content/video/VideoPreviewCard",
+  "@web/src/components/listings/content/video/subcomponents/VideoPreviewCard",
   () => ({
     VideoPreviewCard: (props: Record<string, unknown>) => (
       <button

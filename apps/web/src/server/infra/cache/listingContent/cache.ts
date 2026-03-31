@@ -204,7 +204,7 @@ type CachedListingContentRow = {
 };
 
 /**
- * Sort for create view: same order as iterating LISTING_CONTENT_SUBCATEGORIES × LISTING_MEDIA_TYPES,
+ * Sort for listing content view: same order as iterating LISTING_CONTENT_SUBCATEGORIES × LISTING_MEDIA_TYPES,
  * with timestamp then id within each (subcategory, mediaType) bucket — not a single global timestamp sort.
  */
 function compareRowsForCreateSort(

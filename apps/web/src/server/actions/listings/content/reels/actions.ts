@@ -12,7 +12,7 @@ import {
   getCachedListingContentItem
 } from "@web/src/server/infra/cache/listingContent/cache";
 import { DomainValidationError } from "@web/src/server/errors/domain";
-import type { PlayablePreviewTextUpdate } from "@web/src/lib/domain/listings/content/create";
+import type { PlayablePreviewTextUpdate } from "@web/src/lib/domain/listings/content";
 import type {
   RegenerateListingVideoReelTextParams,
   SavedListingReelMetadata
@@ -104,7 +104,7 @@ async function saveCachedReelAsContent(params: {
   listingId: string;
   saveTarget: Extract<
     PlayablePreviewTextUpdate["saveTarget"],
-    { contentSource: "cached_create" }
+    { contentSource: "cached_content" }
   >;
   normalizedInput: NormalizedReelInput;
 }) {
@@ -201,7 +201,7 @@ async function saveListingVideoReelForUser(params: {
 }) {
   const normalizedInput = normalizeReelInput(params.input);
 
-  if (params.input.saveTarget.contentSource === "cached_create") {
+  if (params.input.saveTarget.contentSource === "cached_content") {
     return saveCachedReelAsContent({
       userId: params.userId,
       listingId: params.listingId,

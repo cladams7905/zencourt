@@ -1,7 +1,7 @@
 import {
   ROOM_CATEGORIES,
   RoomCategory
-} from "@web/src/lib/domain/listings/media/roomCategories";
+} from "@web/src/lib/domain/listings/image/roomCategories";
 
 const PROMPT_CONSTRAINTS =
   "No people. No added objects. Keep architecture and materials unchanged. No scene changes. No added transitions. Single continuous camera movement at a fixed speed only.";

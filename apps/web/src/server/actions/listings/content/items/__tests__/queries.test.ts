@@ -93,7 +93,7 @@ describe("listing content item queries", () => {
         { id: "saved-item-1", contentSource: "saved_content" },
         expect.objectContaining({
           id: "cached-keep",
-          contentSource: "cached_create"
+          contentSource: "cached_content"
         })
       ],
       hasMore: false,
@@ -126,7 +126,7 @@ describe("listing content item queries", () => {
       items: [
         expect.objectContaining({
           id: "cached-2",
-          contentSource: "cached_create"
+          contentSource: "cached_content"
         })
       ],
       hasMore: false,
@@ -199,7 +199,7 @@ describe("listing content item queries", () => {
     expect(result.items).toEqual([
       expect.objectContaining({
         id: "cached-vid",
-        contentSource: "cached_create"
+        contentSource: "cached_content"
       })
     ]);
   });
