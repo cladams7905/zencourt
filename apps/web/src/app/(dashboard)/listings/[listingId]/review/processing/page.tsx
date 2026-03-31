@@ -17,12 +17,12 @@ export default async function ListingPropertyProcessingPage({
     const user = await requireUserOrRedirect();
 
     if (!listingId?.trim()) {
-      redirect("/listings/upload");
+      redirect("/listings/create");
     }
 
     const listing = await getListingById(user.id, listingId);
     if (!listing) {
-      redirect("/listings/upload");
+      redirect("/listings/create");
     }
 
     if (listing.propertyDetails) {

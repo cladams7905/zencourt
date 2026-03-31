@@ -30,20 +30,20 @@ export default async function ListingGeneratePage({
     const user = await requireUserOrRedirect();
 
     if (!listingId?.trim()) {
-      redirect("/listings/upload");
+      redirect("/listings/create");
     }
 
     const listing = await getListingById(user.id, listingId);
     const latestBatch = await getLatestVideoGenBatchByListingId(listingId);
     if (!listing) {
-      redirect("/listings/upload");
+      redirect("/listings/create");
     }
 
     redirectToListingStage(
       listingId,
       listing.listingStage,
       "generate",
-      "/listings/upload"
+      "/listings/create"
     );
 
     return (

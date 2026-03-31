@@ -277,7 +277,7 @@ export function useGenerateProcessingFlow(params: {
     hasNavigatedRef.current = true;
     void goToStage(
       "create",
-      `/listings/${listingId}/create?mediaType=videos&filter=new_listing`
+      `/listings/${listingId}/content?mediaType=videos&filter=new_listing`
     );
   }, [generationSummary, goToStage, listingContentStatus, listingId, mode]);
 

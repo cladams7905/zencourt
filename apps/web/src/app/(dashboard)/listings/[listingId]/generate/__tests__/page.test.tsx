@@ -75,7 +75,7 @@ describe("ListingGeneratePage", () => {
       "listing-1",
       "generate",
       "generate",
-      "/listings/upload"
+      "/listings/create"
     );
     expect(screen.getByTestId("processing-view")).toHaveAttribute(
       "data-initial-batch-id",

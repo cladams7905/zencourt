@@ -35,10 +35,10 @@ describe("redirectToListingStage", () => {
     ).toThrow("REDIRECT:/listings/abc123/categorize");
   });
 
-  it("redirects to /create when stage is create and expected is categorize", () => {
+  it("redirects to /content when stage is create and expected is categorize", () => {
     expect(() =>
       redirectToListingStage("abc123", "create", "categorize")
-    ).toThrow("REDIRECT:/listings/abc123/create");
+    ).toThrow("REDIRECT:/listings/abc123/content");
   });
 
   it("redirects to /generate when stage is generate", () => {
@@ -56,7 +56,7 @@ describe("redirectToListingStage", () => {
   it("always uses the passed listingId in the redirect URL", () => {
     expect(() =>
       redirectToListingStage("listing-xyz", "create", "categorize")
-    ).toThrow("REDIRECT:/listings/listing-xyz/create");
+    ).toThrow("REDIRECT:/listings/listing-xyz/content");
   });
 
   it("uses the default fallback for unknown stage values", () => {
@@ -67,7 +67,7 @@ describe("redirectToListingStage", () => {
 
   it("uses the provided fallback for unknown stage values", () => {
     expect(() =>
-      redirectToListingStage("abc123", "unknown-stage", "categorize", "/listings/upload")
-    ).toThrow("REDIRECT:/listings/upload");
+      redirectToListingStage("abc123", "unknown-stage", "categorize", "/listings/create")
+    ).toThrow("REDIRECT:/listings/create");
   });
 });

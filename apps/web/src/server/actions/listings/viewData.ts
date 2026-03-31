@@ -23,7 +23,7 @@ import type { ListingContentSubcategory } from "@shared/types/models";
 import { getListingContentItems } from "./content/items";
 import { getListingClipVersionItems } from "./clips";
 
-export async function getListingCreateViewData(
+export async function getListingContentViewData(
   userId: string,
   listingId: string,
   options?: {
@@ -90,6 +90,8 @@ export const getListingCreateViewDataForCurrentUser = withServerActionCaller(
   "getListingCreateViewDataForCurrentUser",
   async (listingId: string) =>
     withCurrentUserListingAccess(listingId, async ({ user }) =>
-      getListingCreateViewData(user.id, listingId)
+      getListingContentViewData(user.id, listingId)
     )
 );
+
+export const getListingCreateViewData = getListingContentViewData;

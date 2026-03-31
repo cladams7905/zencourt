@@ -13,7 +13,7 @@ describe("listings shared helpers", () => {
       "/listings/1/generate"
     );
     expect(resolveListingPath({ id: "1", listingStage: "create" })).toBe(
-      "/listings/1/create"
+      "/listings/1/content"
     );
     expect(resolveListingPath({ id: "1", listingStage: null })).toBe(
       "/listings/1/categorize"

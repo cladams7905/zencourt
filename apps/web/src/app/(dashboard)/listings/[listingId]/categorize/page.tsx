@@ -22,12 +22,12 @@ export default async function ListingCategorizePage({
     const googleMapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
 
     if (!listingId?.trim()) {
-      redirect("/listings/upload");
+      redirect("/listings/create");
     }
 
     const listing = await getListingById(user.id, listingId);
     if (!listing) {
-      redirect("/listings/upload");
+      redirect("/listings/create");
     }
 
     redirectToListingStage(listingId, listing.listingStage, "categorize");

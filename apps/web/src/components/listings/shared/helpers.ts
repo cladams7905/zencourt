@@ -29,7 +29,7 @@ export function resolveListingPath(input: {
     case "generate":
       return `/listings/${input.id}/generate`;
     case "create":
-      return `/listings/${input.id}/create`;
+      return `/listings/${input.id}/content`;
     case "categorize":
     default:
       return `/listings/${input.id}/categorize`;

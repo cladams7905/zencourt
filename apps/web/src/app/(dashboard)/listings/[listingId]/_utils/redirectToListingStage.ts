@@ -4,7 +4,7 @@ type ListingStage = "categorize" | "create" | "generate" | "review";
 
 const STAGE_PATHS: Record<ListingStage, (id: string) => string> = {
   categorize: (id) => `/listings/${id}/categorize`,
-  create: (id) => `/listings/${id}/create`,
+  create: (id) => `/listings/${id}/content`,
   generate: (id) => `/listings/${id}/generate`,
   review: (id) => `/listings/${id}/review`
 };

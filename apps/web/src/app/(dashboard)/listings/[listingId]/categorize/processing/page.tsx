@@ -26,12 +26,12 @@ export default async function ListingProcessingPage({
     const user = await requireUserOrRedirect();
 
     if (!listingId?.trim()) {
-      redirect("/listings/upload");
+      redirect("/listings/create");
     }
 
     const listing = await getListingById(user.id, listingId);
     if (!listing) {
-      redirect("/listings/upload");
+      redirect("/listings/create");
     }
 
     redirectToListingStage(listingId, listing.listingStage, "categorize");

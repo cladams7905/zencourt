@@ -8,8 +8,10 @@ import {
   MAX_IMAGES_PER_ROOM
 } from "@shared/utils/mediaUpload";
 import { formatBytes } from "@web/src/lib/core/formatting/bytes";
-import { validateImageFile } from "@web/src/components/listings/sync/domain";
-import { useSyncUploadFlow } from "@web/src/components/listings/sync/domain/hooks";
+import {
+  validateImageFile,
+  useUploadFlow
+} from "@web/src/components/listings/upload/domain";
 import { useUploadDialogState } from "@web/src/components/uploads/domain/hooks";
 import {
   UploadDialogActions,
@@ -19,7 +21,11 @@ import {
 } from "@web/src/components/uploads/components";
 import { useRouter } from "next/navigation";
 
-export function ListingUploadView() {
+type ListingUploadViewProps = {
+  listingId?: string;
+};
+
+export function ListingUploadView({ listingId }: ListingUploadViewProps = {}) {
   const router = useRouter();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const {
@@ -27,8 +33,9 @@ export function ListingUploadView() {
     buildRecordInput,
     onCreateRecords,
     onUploadsComplete
-  } = useSyncUploadFlow({
-    navigate: router.push
+  } = useUploadFlow({
+    navigate: router.push,
+    listingId
   });
   const {
     pendingFiles,

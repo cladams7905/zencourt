@@ -92,7 +92,7 @@ export function ListingViewHeader({
                 <DropdownMenuSeparator className="bg-border/50" />
                 <DropdownMenuItem
                   className="flex flex-col items-start gap-1 py-2.5"
-                  onSelect={() => router.push("/listings/upload")}
+                  onSelect={() => router.push("/listings/create")}
                 >
                   <span className="text-sm font-medium text-foreground">
                     New Listing Campaign
