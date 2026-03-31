@@ -1,9 +1,9 @@
 import * as React from "react";
 import { emitListingSidebarUpdate } from "@web/src/lib/domain/listings/sidebarEvents";
-import { updateListingStage } from "./transport";
+import { updateListingStage } from "../transport";
 import { useCategorizeProcessingFlow } from "./useCategorizeProcessingFlow";
 import { useGenerateProcessingFlow } from "./useGenerateProcessingFlow";
-import { useReviewProcessingFlow } from "./useReviewProcessingFlow";
+import { useReviewProcessingFlow } from "../useReviewProcessingFlow";
 
 type Mode = "categorize" | "review" | "generate";
 

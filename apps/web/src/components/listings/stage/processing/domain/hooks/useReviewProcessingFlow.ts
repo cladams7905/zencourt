@@ -1,6 +1,6 @@
 import * as React from "react";
 import { toast } from "sonner";
-import { fetchPropertyDetails } from "./transport";
+import { fetchPropertyDetails } from "../transport";
 
 export function useReviewProcessingFlow(params: {
   mode: "categorize" | "review" | "generate";
@@ -10,7 +10,9 @@ export function useReviewProcessingFlow(params: {
   updateStage: (stage: "review" | "create") => Promise<void>;
 }) {
   const { mode, listingId, address, navigate, updateStage } = params;
-  const [status, setStatus] = React.useState<"loading" | "success" | "error">("loading");
+  const [status, setStatus] = React.useState<"loading" | "success" | "error">(
+    "loading"
+  );
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const lastAutoFetchKeyRef = React.useRef<string | null>(null);
 
@@ -24,7 +26,9 @@ export function useReviewProcessingFlow(params: {
       navigate(`/listings/${listingId}/stage/review`);
     } catch (error) {
       setStatus("error");
-      setErrorMessage(error instanceof Error ? error.message : "Failed to fetch details.");
+      setErrorMessage(
+        error instanceof Error ? error.message : "Failed to fetch details."
+      );
     }
   }, [address, listingId, mode, navigate]);
 
@@ -43,7 +47,9 @@ export function useReviewProcessingFlow(params: {
       await updateStage("review");
       navigate(`/listings/${listingId}/stage/review`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to skip fetch.");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to skip fetch."
+      );
     }
   }, [listingId, navigate, updateStage]);
 

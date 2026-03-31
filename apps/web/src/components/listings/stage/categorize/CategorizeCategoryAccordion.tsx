@@ -19,7 +19,7 @@ import {
   UNCATEGORIZED_CATEGORY_ID,
   type ListingImageItem
 } from "@web/src/components/listings/stage/categorize/shared";
-import { CategorizeImageCard } from "@web/src/components/listings/stage/categorize/components/CategorizeImageCard";
+import { CategorizeImageCard } from "@web/src/components/listings/stage/categorize/CategorizeImageCard";
 
 type CategorizeCategoryAccordionProps = {
   categoryOrder: string[];

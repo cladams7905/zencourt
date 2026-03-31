@@ -12,7 +12,7 @@ jest.mock("@web/src/components/listings/processing/domain/transport", () => ({
     mockFetchPropertyDetails(...args)
 }));
 
-import { useReviewProcessingFlow } from "@web/src/components/listings/stage/processing/domain/useReviewProcessingFlow";
+import { useReviewProcessingFlow } from "@web/src/components/listings/stage/processing/domain/hooks/useReviewProcessingFlow";
 
 describe("useReviewProcessingFlow", () => {
   beforeEach(() => {

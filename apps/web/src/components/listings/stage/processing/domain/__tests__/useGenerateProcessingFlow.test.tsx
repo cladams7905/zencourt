@@ -30,7 +30,7 @@ jest.mock("@web/src/components/listings/processing/domain/transport", () => ({
     mockStartVideoGeneration(...args)
 }));
 
-import { useGenerateProcessingFlow } from "@web/src/components/listings/stage/processing/domain/useGenerateProcessingFlow";
+import { useGenerateProcessingFlow } from "@web/src/components/listings/stage/processing/domain/hooks/useGenerateProcessingFlow";
 
 describe("useGenerateProcessingFlow", () => {
   beforeEach(() => {

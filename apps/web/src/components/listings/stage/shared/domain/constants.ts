@@ -1,4 +1,4 @@
-import type { ListingStage } from "@web/src/components/listings/stage/shared/types";
+import type { ListingStage } from "@web/src/components/listings/stage/shared/domain/types";
 
 export const LISTING_STAGE_ORDER: ListingStage[] = [
   "categorize",

@@ -10,12 +10,12 @@ import { ListingVideoPreviewGrid } from "@web/src/components/listings/content/vi
 import { ListingImagePreviewGrid } from "@web/src/components/listings/content/image/ListingImagePreviewGrid";
 import { DevSingleTemplateRender } from "@web/src/components/listings/content/image/DevSingleTemplateRender";
 import { type ListingContentImage } from "@web/src/components/listings/content/image/domain/listingImages";
-import { useStickyHeader } from "@web/src/components/listings/content/shared/hooks/useStickyHeader";
+import { useStickyHeader } from "@web/src/components/shared/hooks/useStickyHeader";
 import {
   getListingContentFilterStickyTopOffsets,
   LISTING_CONTENT_FILTER_EXTRA_TOP_BANNER_PX
 } from "@web/src/components/listings/content/shared/listingContentLayout";
-import { useScrollFade } from "@web/src/components/listings/content/shared/hooks/useScrollFade";
+import { useScrollFade } from "@web/src/components/shared/hooks/useScrollFade";
 import {
   useListingContentEffects,
   useListingContentWorkflow

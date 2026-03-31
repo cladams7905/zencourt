@@ -1,4 +1,8 @@
 export { ListingCategorizeView } from "./ListingCategorizeView";
-export * from "./components";
+export { CategorizeImageCard } from "./CategorizeImageCard";
+export { CategorizeImageWorkspace } from "./CategorizeImageWorkspace";
+export { CategorizeCategoryAccordion } from "./CategorizeCategoryAccordion";
+export { ListingDetailsPanel } from "./ListingDetailsPanel";
+export * from "./dialogs";
 export * from "./shared";
 export * from "./domain";

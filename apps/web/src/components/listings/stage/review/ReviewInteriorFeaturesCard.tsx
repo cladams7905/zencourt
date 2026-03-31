@@ -6,7 +6,7 @@ import {
   CardTitle
 } from "@web/src/components/ui/card";
 import { Label } from "@web/src/components/ui/label";
-import { TagInput } from "@web/src/components/listings/stage/review/components/TagInput";
+import { TagInput } from "@web/src/components/listings/stage/review/TagInput";
 import type { ListingPropertyDetails } from "@shared/types/models";
 import type { UpdateReviewSection } from "@web/src/components/listings/stage/review/shared/types";
 

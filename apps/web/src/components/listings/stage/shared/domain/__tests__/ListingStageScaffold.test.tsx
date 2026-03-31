@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { ListingStageScaffold } from "@web/src/components/listings/stage/shared/components/ListingStageScaffold";
-import { ListingStageFooter } from "@web/src/components/listings/stage/shared/components/ListingStageFooter";
+import { ListingStageScaffold } from "@web/src/components/listings/stage/shared/ListingStageScaffold";
+import { ListingStageFooter } from "@web/src/components/listings/stage/shared/ListingStageFooter";
 
 describe("ListingStageScaffold", () => {
   beforeAll(() => {

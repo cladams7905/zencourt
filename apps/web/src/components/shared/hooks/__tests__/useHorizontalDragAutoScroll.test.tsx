@@ -1,6 +1,6 @@
 import * as React from "react";
 import { renderHook } from "@testing-library/react";
-import { useHorizontalDragAutoScroll } from "@web/src/components/listings/content/shared/hooks/useHorizontalDragAutoScroll";
+import { useHorizontalDragAutoScroll } from "@web/src/components/shared/hooks/useHorizontalDragAutoScroll";
 
 describe("useHorizontalDragAutoScroll", () => {
   const originalRaf = window.requestAnimationFrame;

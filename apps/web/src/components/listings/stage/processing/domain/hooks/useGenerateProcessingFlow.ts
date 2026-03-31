@@ -13,7 +13,7 @@ import {
   fetchVideoStatus,
   startListingContentGeneration,
   startVideoGeneration
-} from "./transport";
+} from "../transport";
 
 const ESTIMATED_GENERATION_SECONDS = 7 * 60;
 

@@ -15,7 +15,7 @@ jest.mock("@web/src/components/listings/processing/domain/transport", () => ({
     mockTriggerCategorization(...args)
 }));
 
-import { useCategorizeProcessingFlow } from "@web/src/components/listings/stage/processing/domain/useCategorizeProcessingFlow";
+import { useCategorizeProcessingFlow } from "@web/src/components/listings/stage/processing/domain/hooks/useCategorizeProcessingFlow";
 
 describe("useCategorizeProcessingFlow", () => {
   beforeEach(() => {

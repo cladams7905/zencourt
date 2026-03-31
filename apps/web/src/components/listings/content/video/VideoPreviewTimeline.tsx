@@ -14,8 +14,8 @@ import {
   PopoverTrigger
 } from "@web/src/components/ui/popover";
 import type { TimelinePreviewResolvedSegment } from "@web/src/components/listings/content/video/VideoPreviewTimelineComposition";
-import { useScrollFade } from "@web/src/components/listings/content/shared/hooks/useScrollFade";
-import { useHorizontalDragAutoScroll } from "@web/src/components/listings/content/shared/hooks/useHorizontalDragAutoScroll";
+import { useScrollFade } from "@web/src/components/shared/hooks/useScrollFade";
+import { useHorizontalDragAutoScroll } from "@web/src/components/shared/hooks/useHorizontalDragAutoScroll";
 import { VideoPreviewTimelineRuler } from "@web/src/components/listings/content/video/VideoPreviewTimelineRuler";
 import {
   TIMELINE_CARD_GAP_PX,

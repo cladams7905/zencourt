@@ -29,7 +29,7 @@ import {
   ReviewSidebarActions,
   ReviewSourcesDialog,
   ReviewValuationEstimatesCard
-} from "@web/src/components/listings/stage/review/components";
+} from "@web/src/components/listings/stage/review";
 
 export function ListingReviewView({
   listingId,

@@ -1,7 +1,7 @@
 import * as React from "react";
 import useSWR from "swr";
 import { emitListingSidebarUpdate } from "@web/src/lib/domain/listings/sidebarEvents";
-import { fetchListingImages, triggerCategorization } from "./transport";
+import { fetchListingImages, triggerCategorization } from "../transport";
 
 export function useCategorizeProcessingFlow(params: {
   mode: "categorize" | "review" | "generate";

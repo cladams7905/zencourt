@@ -8,7 +8,7 @@ import {
 import { Plus, Upload } from "lucide-react";
 import { IMAGE_UPLOAD_LIMIT } from "@shared/utils/mediaUpload";
 import { type ListingImageItem } from "@web/src/components/listings/stage/categorize/shared";
-import { CategorizeCategoryAccordion } from "@web/src/components/listings/stage/categorize/components/CategorizeCategoryAccordion";
+import { CategorizeCategoryAccordion } from "@web/src/components/listings/stage/categorize/CategorizeCategoryAccordion";
 
 type CategorizeImageWorkspaceProps = {
   images: ListingImageItem[];

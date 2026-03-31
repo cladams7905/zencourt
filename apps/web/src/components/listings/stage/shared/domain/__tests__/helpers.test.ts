@@ -2,7 +2,7 @@ import {
   buildListingStageSteps,
   formatListingStageLabel,
   resolveListingPath
-} from "@web/src/components/listings/stage/shared/helpers";
+} from "@web/src/components/listings/stage/shared/domain/helpers";
 
 describe("listings stage shared helpers", () => {
   it("resolves listing path by stage with categorize fallback", () => {

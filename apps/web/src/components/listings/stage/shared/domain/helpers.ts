@@ -1,11 +1,11 @@
 import {
   LISTING_STAGE_LABELS,
   LISTING_STAGE_ORDER
-} from "@web/src/components/listings/stage/shared/constants";
+} from "@web/src/components/listings/stage/shared/domain/constants";
 import type {
   ListingStage,
   ListingStageStep
-} from "@web/src/components/listings/stage/shared/types";
+} from "@web/src/components/listings/stage/shared/domain/types";
 
 export function buildListingStageSteps(
   currentStage: ListingStage

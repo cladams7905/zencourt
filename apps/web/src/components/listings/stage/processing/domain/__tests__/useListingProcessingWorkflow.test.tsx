@@ -40,7 +40,7 @@ jest.mock("@web/src/components/listings/processing/domain/transport", () => ({
     mockCancelVideoGeneration(...args)
 }));
 
-import { useListingProcessingWorkflow } from "@web/src/components/listings/stage/processing/domain/useListingProcessingWorkflow";
+import { useListingProcessingWorkflow } from "@web/src/components/listings/stage/processing/domain/hooks/useListingProcessingWorkflow";
 
 describe("useListingProcessingWorkflow", () => {
   beforeEach(() => {

@@ -16,7 +16,7 @@ import {
   ListingDetailsPanel,
   ListingImageDeleteDialog,
   ListingImageMoveDialog
-} from "@web/src/components/listings/stage/categorize/components";
+} from "@web/src/components/listings/stage/categorize";
 import { getImageMetadataFromFile } from "@web/src/lib/domain/media/imageMetadata";
 import { emitListingSidebarHeartbeat } from "@web/src/lib/domain/listings/sidebarEvents";
 import {

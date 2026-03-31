@@ -13,7 +13,7 @@ import {
   DialogHeader,
   DialogTitle
 } from "../../../ui/dialog";
-import { useListingProcessingWorkflow } from "@web/src/components/listings/stage/processing/domain";
+import { useListingProcessingWorkflow } from "@web/src/components/listings/stage/processing/domain/hooks";
 
 type ListingProcessingViewProps = {
   mode: "categorize" | "review" | "generate";

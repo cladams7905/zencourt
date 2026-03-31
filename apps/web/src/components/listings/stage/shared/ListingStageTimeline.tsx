@@ -2,8 +2,8 @@
 
 import * as React from "react";
 import { cn } from "@web/src/components/ui/utils";
-import { useScrollFade } from "@web/src/components/listings/content/shared/hooks/useScrollFade";
-import type { ListingStageStep } from "@web/src/components/listings/stage/shared/types";
+import { useScrollFade } from "@web/src/components/shared/hooks/useScrollFade";
+import type { ListingStageStep } from "@web/src/components/listings/stage/shared/domain/types";
 
 type ListingStageTimelineProps = {
   steps: ListingStageStep[];
