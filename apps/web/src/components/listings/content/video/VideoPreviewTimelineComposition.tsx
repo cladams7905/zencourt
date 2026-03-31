@@ -21,7 +21,7 @@ export interface TimelinePreviewResolvedSegment extends PreviewTimelineSegment {
   };
 }
 
-export interface ListingStageTimelinePreviewCompositionProps {
+export interface VideoPreviewTimelineCompositionProps {
   segments: TimelinePreviewResolvedSegment[];
 }
 
@@ -40,8 +40,8 @@ export function getTimelineDurationInFrames(
   }, 0);
 }
 
-export const ListingStageTimelinePreviewComposition: React.FC<
-  ListingStageTimelinePreviewCompositionProps
+export const VideoPreviewTimelineComposition: React.FC<
+  VideoPreviewTimelineCompositionProps
 > = ({ segments }) => {
   const { fps } = useVideoConfig();
 

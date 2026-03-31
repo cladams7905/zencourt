@@ -4,7 +4,7 @@ import * as React from "react";
 import { Player, type PlayerRef } from "@remotion/player";
 import { LoadingImage } from "@web/src/components/ui/loading-image";
 import {
-  ListingTimelinePreviewComposition,
+  VideoPreviewTimelineComposition,
   type TimelinePreviewResolvedSegment
 } from "@web/src/components/listings/content/video/VideoPreviewTimelineComposition";
 
@@ -47,7 +47,7 @@ export const VideoPreviewPlayer = React.memo(function VideoPreviewPlayer({
   return (
     <Player
       ref={playerRef}
-      component={ListingTimelinePreviewComposition}
+      component={VideoPreviewTimelineComposition}
       inputProps={inputProps}
       durationInFrames={durationInFrames}
       compositionWidth={1080}

@@ -9,7 +9,7 @@ import {
 import { Button } from "@web/src/components/ui/button";
 import { cn } from "@web/src/components/ui/utils";
 import { LoadingImage } from "@web/src/components/ui/loading-image";
-import { ListingTimelinePreviewComposition } from "@web/src/components/listings/content/video/VideoPreviewTimelineComposition";
+import { VideoPreviewTimelineComposition } from "@web/src/components/listings/content/video/VideoPreviewTimelineComposition";
 import type { PlayablePreview } from "@web/src/components/listings/content/shared/types";
 import { VideoThumbnailTextOverlay } from "@web/src/components/listings/content/video/VideoThumbnailTextOverlay";
 
@@ -134,7 +134,7 @@ export function VideoPreviewCard({
           ) : null}
           {isActive ? (
             <Player
-              component={ListingTimelinePreviewComposition}
+              component={VideoPreviewTimelineComposition}
               inputProps={{
                 segments: preview.resolvedSegments
               }}
