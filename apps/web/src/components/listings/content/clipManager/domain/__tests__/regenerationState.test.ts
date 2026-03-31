@@ -6,7 +6,7 @@ import {
   hasActiveClipRegenerationPoll,
   resetListingClipRegenerationStoreForTests,
   setOptimisticClipRegeneration
-} from "../../../domain/clipManager/regenerationState";
+} from "../regenerationState";
 
 describe("listingClipRegenerationState", () => {
   const listingId = "listing-1";

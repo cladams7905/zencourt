@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { ViewHeader } from "@web/src/components/view/ViewHeader";
-import { UploadDialog } from "@web/src/components/uploads/orchestrators/UploadDialog";
+import { UploadDialog } from "@web/src/components/uploads";
 import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES } from "@shared/utils/mediaUpload";
 import { getUserMediaUploadUrlsForCurrentUser } from "@web/src/server/actions/media/commands";
 import {
@@ -26,7 +26,7 @@ import {
   MediaFilterEmptyState,
   MediaHelpCard,
   MediaToolbar
-} from "@web/src/components/media/components";
+} from "@web/src/components/media/subcomponents";
 import { formatBytes } from "@web/src/lib/core/formatting/bytes";
 
 const MediaView = ({ initialMedia = [] }: MediaViewProps) => {

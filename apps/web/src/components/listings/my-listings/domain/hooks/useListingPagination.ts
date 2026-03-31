@@ -10,7 +10,7 @@ import {
   MY_LISTINGS_PAGE_SIZE,
   type ListingSummaryItem
 } from "@web/src/components/listings/my-listings/shared";
-import { useInfiniteSwrPages } from "@web/src/components/shared/pagination";
+import { useInfiniteSwrPages } from "@web/src/components/shared/hooks/useInfiniteSwrPages";
 
 type UseListingPaginationParams = {
   initialListings: ListingSummaryItem[];

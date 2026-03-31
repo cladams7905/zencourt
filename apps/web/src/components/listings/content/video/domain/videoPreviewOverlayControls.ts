@@ -1,7 +1,7 @@
 import type { PlayablePreview } from "@web/src/components/listings/content/shared/types";
 import type { OverlayLine, PreviewTextOverlay } from "@shared/types/video";
 import { buildOverlayTemplateLines } from "@shared/utils";
-import type { TimelinePreviewResolvedSegment } from "@web/src/components/listings/content/video/VideoPreviewTimelineComposition";
+import type { TimelinePreviewResolvedSegment } from "@web/src/components/listings/content/video/subcomponents/VideoPreviewTimelineComposition";
 
 export type ReelOverlayDraft = {
   background: PreviewTextOverlay["background"];

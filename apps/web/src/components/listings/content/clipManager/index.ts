@@ -1,3 +1,3 @@
 export * from "./ListingClipManager";
-export * from "./ListingClipManagerWorkspaceParts";
+export * from "./subcomponents";
 export * from "./domain";

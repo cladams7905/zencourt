@@ -2,7 +2,7 @@ import type { ListingContentItem as ContentItem } from "@web/src/lib/domain/list
 import type {
   PreviewTextOverlay,
   PreviewTimelinePlan
-} from "@web/src/components/listings/content/shared/previewTimelineTypes";
+} from "@web/src/lib/domain/listings/content/createPreviewPlans";
 import type { ListingContentSubcategory } from "@shared/types/models";
 import type { ListingOpenHouseContext } from "@web/src/lib/domain/listings/content/openHouse";
 import {
@@ -22,7 +22,7 @@ import type {
 import {
   getTimelineDurationInFrames,
   type TimelinePreviewResolvedSegment
-} from "@web/src/components/listings/content/video/VideoPreviewTimelineComposition";
+} from "@web/src/components/listings/content/video/subcomponents/VideoPreviewTimelineComposition";
 import type { PlayablePreview } from "@web/src/components/listings/content/shared/types";
 
 const LOCATION_EMOJI = "📍";

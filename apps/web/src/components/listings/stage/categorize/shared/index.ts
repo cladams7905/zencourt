@@ -1,3 +1,3 @@
 export * from "./constants";
 export * from "./types";
-export * from "./hooks";
+export { useDragAutoScroll } from "@web/src/components/shared/hooks/useDragAutoScroll";

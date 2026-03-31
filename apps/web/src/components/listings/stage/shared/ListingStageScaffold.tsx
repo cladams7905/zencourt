@@ -3,7 +3,7 @@ import {
   ListingStageTimeline,
   type ListingStageStep
 } from "@web/src/components/listings/stage/shared";
-import { ListingStageStepHeader } from "./components/ListingStageStepHeader";
+import { ListingStageStepHeader } from "./ListingStageStepHeader";
 
 type ListingStageScaffoldProps = {
   steps: ListingStageStep[];

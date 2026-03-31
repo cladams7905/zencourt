@@ -1,9 +1,9 @@
 import { act, renderHook } from "@testing-library/react";
-import { useInfiniteSwrPages } from "@web/src/components/shared/pagination";
+import { useInfiniteSwrPages } from "@web/src/components/shared/hooks/useInfiniteSwrPages";
 import { getUserMediaPageForReelPicker } from "@web/src/server/actions/media/commands";
 import { useUserMediaReelPickerInfinite } from "@web/src/components/listings/content/video/domain/hooks";
 
-jest.mock("@web/src/components/shared/pagination", () => ({
+jest.mock("@web/src/components/shared/hooks/useInfiniteSwrPages", () => ({
   useInfiniteSwrPages: jest.fn()
 }));
 

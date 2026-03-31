@@ -3,7 +3,7 @@ import type {
   TextOverlayInput
 } from "@web/src/lib/domain/listings/content";
 import type { PreviewTextOverlay } from "@shared/types/video";
-import type { TimelinePreviewResolvedSegment } from "@web/src/components/listings/content/video/VideoPreviewTimelineComposition";
+import type { TimelinePreviewResolvedSegment } from "@web/src/components/listings/content/video/subcomponents/VideoPreviewTimelineComposition";
 import type { PlayablePreviewSaveTarget } from "@web/src/lib/domain/listings/content/create";
 
 export type {

@@ -1,6 +1,5 @@
 import { runWithCaller } from "@web/src/server/infra/logger/callContext";
 import { SettingsView } from "@web/src/components/settings";
-import { MarkProfileCompleted } from "@web/src/components/settings/MarkProfileCompleted";
 import { requireUserOrRedirect } from "@web/src/app/(dashboard)/_utils/requireUserOrRedirect";
 import { getOrCreateUserAdditional } from "@web/src/server/models/user";
 import {
@@ -31,19 +30,18 @@ export default async function SettingsPage() {
     const googleMapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
 
     return (
-      <>
-        {needsProfileCompletion && <MarkProfileCompleted userId={user.id} />}
-        <SettingsView
-          userAdditional={userAdditional}
-          userEmail={email}
-          userName={userName}
-          defaultAgentName={defaultAgentName}
-          defaultHeadshotUrl={defaultHeadshotUrl}
-          paymentPlan={paymentPlanLabel}
-          location={userAdditional.location ?? undefined}
-          googleMapsApiKey={googleMapsApiKey}
-        />
-      </>
+      <SettingsView
+        userAdditional={userAdditional}
+        userEmail={email}
+        userName={userName}
+        defaultAgentName={defaultAgentName}
+        defaultHeadshotUrl={defaultHeadshotUrl}
+        paymentPlan={paymentPlanLabel}
+        location={userAdditional.location ?? undefined}
+        googleMapsApiKey={googleMapsApiKey}
+        needsProfileCompletion={needsProfileCompletion}
+        userId={user.id}
+      />
     );
   });
 }

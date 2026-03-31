@@ -3,7 +3,7 @@
 import * as React from "react";
 import { ViewHeader } from "@web/src/components/view/ViewHeader";
 import { Loader2 } from "lucide-react";
-import { UploadDialog } from "@web/src/components/uploads/orchestrators/UploadDialog";
+import { UploadDialog } from "@web/src/components/uploads";
 import {
   IMAGE_UPLOAD_LIMIT,
   MAX_IMAGE_BYTES,

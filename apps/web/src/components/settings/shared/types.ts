@@ -9,6 +9,9 @@ export interface SettingsViewProps {
   paymentPlan: string;
   location?: string;
   googleMapsApiKey: string;
+  /** When true, marks profile completed on mount (see `useMarkProfileCompleted`). */
+  needsProfileCompletion?: boolean;
+  userId?: string;
 }
 
 export interface AccountTabProps {

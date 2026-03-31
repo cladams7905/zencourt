@@ -7,8 +7,8 @@ import type { ListingContentItem as ContentItem } from "@web/src/lib/domain/list
 import type { ListingOpenHouseContext } from "@web/src/lib/domain/listings/content/openHouse";
 import { ListingClipManager } from "@web/src/components/listings/content/clipManager";
 import { ListingVideoPreviewGrid } from "@web/src/components/listings/content/video/VideoPreviewGrid";
-import { ListingImagePreviewGrid } from "@web/src/components/listings/content/image/ListingImagePreviewGrid";
-import { DevSingleTemplateRender } from "@web/src/components/listings/content/image/DevSingleTemplateRender";
+import { ImagePreviewGrid } from "@web/src/components/listings/content/image/ImagePreviewGrid";
+import { DevSingleTemplateRender } from "@web/src/components/listings/content/image/subcomponents/DevSingleTemplateRender";
 import { type ListingContentImage } from "@web/src/components/listings/content/image/domain/listingImages";
 import { useStickyHeader } from "@web/src/components/shared/hooks/useStickyHeader";
 import {
@@ -20,7 +20,7 @@ import {
   useListingContentEffects,
   useListingContentWorkflow
 } from "@web/src/components/listings/content/domain/workflow";
-import { useInfiniteIntersection } from "@web/src/components/shared/pagination";
+import { useInfiniteIntersection } from "@web/src/components/shared/hooks/useInfiniteIntersection";
 import {
   MEDIA_TAB_LABELS,
   SUBCATEGORY_LABELS,
@@ -303,7 +303,7 @@ export function ListingContentView({
             (activeImagePreviewItems.length > 0 ||
               isGenerating ||
               isTemplateRendering) ? (
-            <ListingImagePreviewGrid
+            <ImagePreviewGrid
               items={activeImagePreviewItems}
               captionSubcategoryLabel={SUBCATEGORY_LABELS[activeSubcategory]}
               loadingCount={imageLoadingCount}

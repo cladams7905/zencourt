@@ -3,7 +3,7 @@ import { emitListingSidebarUpdate } from "@web/src/lib/domain/listings/sidebarEv
 import { updateListingStage } from "../transport";
 import { useCategorizeProcessingFlow } from "./useCategorizeProcessingFlow";
 import { useGenerateProcessingFlow } from "./useGenerateProcessingFlow";
-import { useReviewProcessingFlow } from "../useReviewProcessingFlow";
+import { useReviewProcessingFlow } from "./useReviewProcessingFlow";
 
 type Mode = "categorize" | "review" | "generate";
 

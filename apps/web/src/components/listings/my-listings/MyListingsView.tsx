@@ -15,7 +15,7 @@ import { Button } from "@web/src/components/ui/button";
 import {
   ListingRow,
   ListingSkeletonRow
-} from "@web/src/components/listings/my-listings/components";
+} from "@web/src/components/listings/my-listings/subcomponents";
 import { useListingPagination } from "@web/src/components/listings/my-listings/domain";
 import { toListingRowViewModel } from "@web/src/components/listings/my-listings/domain/utils";
 import type { MyListingsViewProps } from "@web/src/components/listings/my-listings/shared";

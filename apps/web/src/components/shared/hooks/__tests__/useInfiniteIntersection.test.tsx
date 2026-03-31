@@ -1,5 +1,5 @@
 import { act, renderHook } from "@testing-library/react";
-import { useInfiniteIntersection } from "@web/src/components/shared/pagination/useInfiniteIntersection";
+import { useInfiniteIntersection } from "../useInfiniteIntersection";
 
 class IntersectionObserverMock {
   static instances: IntersectionObserverMock[] = [];

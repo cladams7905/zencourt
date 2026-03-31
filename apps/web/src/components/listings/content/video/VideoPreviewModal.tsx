@@ -32,13 +32,13 @@ import {
   TooltipContent,
   TooltipTrigger
 } from "@web/src/components/ui/tooltip";
-import { getTimelineDurationInFrames } from "@web/src/components/listings/content/video/VideoPreviewTimelineComposition";
-import { VideoPreviewPlayer } from "@web/src/components/listings/content/video/VideoPreviewPlayer";
+import { getTimelineDurationInFrames } from "@web/src/components/listings/content/video/subcomponents/VideoPreviewTimelineComposition";
+import { VideoPreviewPlayer } from "@web/src/components/listings/content/video/subcomponents/VideoPreviewPlayer";
 import {
   VideoPreviewEditorActions,
   VideoPreviewTextEditor
-} from "@web/src/components/listings/content/video/VideoPreviewTextEditor";
-import { VideoPreviewTimeline } from "@web/src/components/listings/content/video/VideoPreviewTimeline";
+} from "@web/src/components/listings/content/video/subcomponents/VideoPreviewTextEditor";
+import { VideoPreviewTimeline } from "@web/src/components/listings/content/video/subcomponents/VideoPreviewTimeline";
 import {
   applyOverlayDraftToSegments,
   seedOverlayDraftFromPreview,
@@ -69,7 +69,7 @@ import type {
   PlayablePreview,
   PlayablePreviewTextUpdate
 } from "@web/src/components/listings/content/shared/types";
-import type { TimelinePreviewResolvedSegment } from "@web/src/components/listings/content/video/VideoPreviewTimelineComposition";
+import type { TimelinePreviewResolvedSegment } from "@web/src/components/listings/content/video/subcomponents/VideoPreviewTimelineComposition";
 type VideoPreviewModalProps = {
   selectedPreview: PlayablePreview | null;
   listingId?: string;

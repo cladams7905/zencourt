@@ -7,6 +7,7 @@ import { CreditCard, PenTool, UserCircle } from "lucide-react";
 import type { SettingsViewProps } from "@web/src/components/settings/shared";
 import {
   buildBrandingPreviewModel,
+  useMarkProfileCompleted,
   useSettingsNavigation
 } from "@web/src/components/settings/domain";
 import {
@@ -16,7 +17,7 @@ import {
   SettingsSupportNote,
   SettingsUnsavedChangesDialog,
   SubscriptionTab
-} from "@web/src/components/settings/components";
+} from "@web/src/components/settings/subcomponents";
 
 export function SettingsView({
   userAdditional,
@@ -26,8 +27,11 @@ export function SettingsView({
   defaultHeadshotUrl,
   paymentPlan,
   location,
-  googleMapsApiKey
+  googleMapsApiKey,
+  needsProfileCompletion = false,
+  userId = ""
 }: SettingsViewProps) {
+  useMarkProfileCompleted(needsProfileCompletion, userId);
   const { activeTab, setActiveTab } = useSettingsNavigation();
   const [isBrandingDirty, setIsBrandingDirty] = React.useState(false);
   const [isLocationDirty, setIsLocationDirty] = React.useState(false);

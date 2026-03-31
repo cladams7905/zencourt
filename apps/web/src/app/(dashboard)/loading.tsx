@@ -1,7 +1,7 @@
 "use client";
 
 import { Loader2 } from "lucide-react";
-import { SidebarSkeleton } from "@web/src/components/view/sidebar/components";
+import { SidebarSkeleton } from "@web/src/components/view/sidebar/subcomponents";
 import { ZencourtLogo } from "@web/src/components/ui/zencourt-logo";
 
 export default function DashboardLoading() {

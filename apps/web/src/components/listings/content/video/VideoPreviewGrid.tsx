@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { toast } from "sonner";
-import type { PreviewTimelinePlan } from "@web/src/components/listings/content/shared/previewTimelineTypes";
+import type { PreviewTimelinePlan } from "@web/src/lib/domain/listings/content/createPreviewPlans";
 import type { ListingContentSubcategory } from "@shared/types/models";
 import type { ListingContentItem as ContentItem } from "@web/src/lib/domain/listings/content";
 import type { ListingOpenHouseContext } from "@web/src/lib/domain/listings/content/openHouse";
@@ -18,9 +18,9 @@ import {
   clampReelDownloadProgress,
   readReelDownloadBlob
 } from "@web/src/components/listings/content/video/domain/reelExportClient";
-import { VideoPreviewCard } from "@web/src/components/listings/content/video/VideoPreviewCard";
+import { VideoPreviewCard } from "@web/src/components/listings/content/video/subcomponents/VideoPreviewCard";
 import { VideoPreviewModal } from "@web/src/components/listings/content/video/VideoPreviewModal";
-import { VideoPreviewSkeletonCard } from "@web/src/components/listings/content/video/VideoPreviewSkeletonCard";
+import { VideoPreviewSkeletonCard } from "@web/src/components/listings/content/video/subcomponents/VideoPreviewSkeletonCard";
 import type { PlayablePreviewTextUpdate } from "@web/src/components/listings/content/shared/types";
 import type {
   ListingReelExportJob,

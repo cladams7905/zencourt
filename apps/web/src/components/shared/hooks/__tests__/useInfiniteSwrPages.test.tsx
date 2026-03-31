@@ -1,10 +1,10 @@
 import { renderHook } from "@testing-library/react";
 import useSWRInfinite from "swr/infinite";
-import { useInfiniteIntersection } from "@web/src/components/shared/pagination/useInfiniteIntersection";
-import { useInfiniteSwrPages } from "@web/src/components/shared/pagination/useInfiniteSwrPages";
+import { useInfiniteIntersection } from "../useInfiniteIntersection";
+import { useInfiniteSwrPages } from "../useInfiniteSwrPages";
 
 jest.mock("swr/infinite", () => jest.fn());
-jest.mock("@web/src/components/shared/pagination/useInfiniteIntersection", () => ({
+jest.mock("../useInfiniteIntersection", () => ({
   useInfiniteIntersection: jest.fn()
 }));
 

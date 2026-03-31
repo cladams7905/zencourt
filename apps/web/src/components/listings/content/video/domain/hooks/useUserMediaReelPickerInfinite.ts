@@ -6,7 +6,7 @@ import {
   type UserMediaReelPickerPage
 } from "@web/src/server/actions/media/commands";
 import { USER_MEDIA_REEL_PICKER_PAGE_SIZE } from "@web/src/components/listings/content/video/domain/constants";
-import { useInfiniteSwrPages } from "@web/src/components/shared/pagination";
+import { useInfiniteSwrPages } from "@web/src/components/shared/hooks/useInfiniteSwrPages";
 
 /** Stable key segment so SWR reuses the same cache across popover opens (cursor is null for page 0). */
 type UserMediaReelPickerKey = readonly [

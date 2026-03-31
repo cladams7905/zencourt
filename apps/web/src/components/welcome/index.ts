@@ -1,4 +1,4 @@
-export * from "./components";
+export * from "./subcomponents";
 export * from "./domain";
-export * from "./orchestrators";
 export * from "./shared";
+export { SurveyClient } from "./SurveyClient";

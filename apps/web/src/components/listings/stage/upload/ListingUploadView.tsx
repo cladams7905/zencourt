@@ -18,7 +18,7 @@ import {
   UploadDropzone,
   UploadQueueList,
   UploadTips
-} from "@web/src/components/uploads/components";
+} from "@web/src/components/uploads/subcomponents";
 import { useRouter } from "next/navigation";
 
 type ListingUploadViewProps = {

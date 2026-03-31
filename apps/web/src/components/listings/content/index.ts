@@ -1,5 +1,5 @@
 export { ListingContentView } from "./ListingContentView";
-export { DevSingleTemplateRender } from "./image/DevSingleTemplateRender";
+export { DevSingleTemplateRender } from "./image/subcomponents/DevSingleTemplateRender";
 export * from "./domain";
 export * from "./domain/workflow";
 export {

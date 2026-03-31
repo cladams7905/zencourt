@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import ListingGeneratePage from "@web/src/app/(dashboard)/listings/[listingId]/generate/page";
+import ListingGeneratePage from "@web/src/app/(dashboard)/listings/[listingId]/stage/generate/page";
 
 const mockRequireUserOrRedirect = jest.fn();
 const mockGetListingById = jest.fn();

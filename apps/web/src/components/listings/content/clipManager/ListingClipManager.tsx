@@ -28,7 +28,7 @@ import {
   ListingClipManagerClipList,
   ListingClipManagerDesktopDetail,
   ListingClipManagerVideoPlayer
-} from "@web/src/components/listings/content/clipManager/ListingClipManagerWorkspaceParts";
+} from "@web/src/components/listings/content/clipManager/subcomponents";
 
 type ListingClipManagerProps = {
   listingId: string;
