@@ -124,6 +124,46 @@ describe("useListingAddressFlow", () => {
     expect(mockCreateListingForCurrentUser).not.toHaveBeenCalled();
   });
 
+  it("updates existing listing when prefilled, without creating a draft", async () => {
+    mockUpdateListingForCurrentUser.mockResolvedValue({
+      id: "listing-existing",
+      listingStage: "upload"
+    });
+
+    const { result } = renderHook(() =>
+      useListingAddressFlow({
+        prefilledListingId: "listing-existing",
+        initialAddressFromListing: "100 Pine St, Austin, TX"
+      })
+    );
+
+    expect(result.current.canContinue).toBe(true);
+
+    await act(async () => {
+      await result.current.handleContinue();
+    });
+
+    expect(mockCreateListingForCurrentUser).not.toHaveBeenCalled();
+    expect(mockUpdateListingForCurrentUser).toHaveBeenCalledWith(
+      "listing-existing",
+      {
+        title: "100 Pine St",
+        address: "100 Pine St, Austin, TX",
+        listingStage: "upload"
+      }
+    );
+    expect(mockEmitListingSidebarUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "listing-existing",
+        title: "100 Pine St",
+        listingStage: "upload"
+      })
+    );
+    expect(mockPush).toHaveBeenCalledWith(
+      "/listings/listing-existing/stage/upload"
+    );
+  });
+
   it("creates draft, updates listing, emits sidebar, and navigates on success", async () => {
     mockCreateListingForCurrentUser.mockResolvedValue({
       id: "listing-1",

@@ -10,11 +10,20 @@ import {
 } from "@web/src/server/actions/listings/commands";
 import { emitListingSidebarUpdate } from "@web/src/lib/domain/listings/sidebarEvents";
 
-export function useListingAddressFlow() {
+export type UseListingAddressFlowOptions = {
+  prefilledListingId?: string | null;
+  initialAddressFromListing?: string | null;
+};
+
+export function useListingAddressFlow(options?: UseListingAddressFlowOptions) {
+  const prefilledListingId = options?.prefilledListingId?.trim() ?? null;
+  const initialFromListing = options?.initialAddressFromListing?.trim() ?? "";
+
   const router = useRouter();
-  const [address, setAddress] = React.useState("");
-  const [hasConfirmedSelection, setHasConfirmedSelection] =
-    React.useState(false);
+  const [address, setAddress] = React.useState(() => initialFromListing);
+  const [hasConfirmedSelection, setHasConfirmedSelection] = React.useState(
+    () => Boolean(prefilledListingId && initialFromListing)
+  );
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const handleAddressChange = React.useCallback((next: string) => {
@@ -43,6 +52,24 @@ export function useListingAddressFlow() {
 
     setIsSubmitting(true);
     try {
+      if (prefilledListingId) {
+        const updated = await updateListingForCurrentUser(prefilledListingId, {
+          title: inferredTitle,
+          address: trimmedAddress,
+          listingStage: "upload"
+        });
+
+        emitListingSidebarUpdate({
+          id: prefilledListingId,
+          title: inferredTitle,
+          listingStage: updated.listingStage ?? "upload",
+          lastOpenedAt: new Date().toISOString()
+        });
+
+        router.push(`/listings/${prefilledListingId}/stage/upload`);
+        return;
+      }
+
       const listing = await createListingForCurrentUser();
       if (!listing?.id) {
         throw new Error("Draft listing could not be created.");
@@ -71,7 +98,7 @@ export function useListingAddressFlow() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [address, hasConfirmedSelection, isSubmitting, router]);
+  }, [address, hasConfirmedSelection, isSubmitting, prefilledListingId, router]);
 
   const canContinue = Boolean(address.trim()) && hasConfirmedSelection;
   const showSelectionHint = Boolean(address.trim()) && !hasConfirmedSelection;

@@ -10,10 +10,16 @@ import { Label } from "../../../ui/label";
 
 type ListingAddressViewProps = {
   googleMapsApiKey: string;
+  /** When set, Continue updates this listing instead of creating a new draft. */
+  prefilledListingId?: string | null;
+  /** Address from that listing (if any) to show in the field. */
+  initialAddressFromListing?: string | null;
 };
 
 export function ListingAddressView({
-  googleMapsApiKey
+  googleMapsApiKey,
+  prefilledListingId,
+  initialAddressFromListing
 }: ListingAddressViewProps) {
   const {
     address,
@@ -23,7 +29,10 @@ export function ListingAddressView({
     isSubmitting,
     handleContinue,
     showSelectionHint
-  } = useListingAddressFlow();
+  } = useListingAddressFlow({
+    prefilledListingId,
+    initialAddressFromListing
+  });
 
   return (
     <ListingStageShell

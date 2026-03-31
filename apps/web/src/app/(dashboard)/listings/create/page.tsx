@@ -2,10 +2,30 @@ import { runWithCaller } from "@web/src/server/infra/logger/callContext";
 import { requireUserOrRedirect } from "@web/src/app/(dashboard)/_utils/requireUserOrRedirect";
 import { ListingAddressView } from "@web/src/components/listings/stage/address/ListingAddressView";
 import { ListingStageViewProvider } from "@web/src/components/listings/stage/shared";
+import { getListingById } from "@web/src/server/models/listings";
 
-export default async function ListingsCreatePage() {
+type ListingsCreatePageProps = {
+  searchParams: Promise<{ listingId?: string }>;
+};
+
+export default async function ListingsCreatePage({
+  searchParams
+}: ListingsCreatePageProps) {
   return runWithCaller("listings/create", async () => {
-    await requireUserOrRedirect();
+    const user = await requireUserOrRedirect();
+    const params = await searchParams;
+    const listingIdRaw = params.listingId?.trim();
+
+    let prefilledListingId: string | null = null;
+    let initialAddressFromListing: string | null = null;
+
+    if (listingIdRaw) {
+      const listing = await getListingById(user.id, listingIdRaw);
+      if (listing) {
+        prefilledListingId = listing.id;
+        initialAddressFromListing = listing.address?.trim() ?? null;
+      }
+    }
 
     return (
       <ListingStageViewProvider
@@ -17,6 +37,8 @@ export default async function ListingsCreatePage() {
       >
         <ListingAddressView
           googleMapsApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? ""}
+          prefilledListingId={prefilledListingId}
+          initialAddressFromListing={initialAddressFromListing}
         />
       </ListingStageViewProvider>
     );

@@ -18,7 +18,11 @@ export function ListingStageDefaultFooter() {
 
   return (
     <ListingStageFooter
-      onBack={() => router.push("/listings")}
+      onBack={() =>
+        router.push(
+          `/listings/create?listingId=${encodeURIComponent(listingId)}`
+        )
+      }
       onContinue={() =>
         router.push(`/listings/${listingId}/stage/categorize`)
       }
