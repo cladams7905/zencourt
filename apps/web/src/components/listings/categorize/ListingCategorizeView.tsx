@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ListingViewHeader } from "@web/src/components/listings/shared";
+import { ViewHeader } from "@web/src/components/view/ViewHeader";
 import { Loader2 } from "lucide-react";
 import { UploadDialog } from "@web/src/components/uploads/orchestrators/UploadDialog";
 import {
@@ -253,9 +253,10 @@ export function ListingCategorizeView({
 
   return (
     <>
-      <ListingViewHeader
+      <ViewHeader
         ref={headerRef}
         title={draftTitle}
+        listingView
         timeline={
           <ListingTimeline
             steps={buildListingStageSteps("categorize")}

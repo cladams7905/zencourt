@@ -7,7 +7,7 @@ import {
   ListingClipManager,
   ListingClipManagerBackButton
 } from "@web/src/components/listings/content/components/ListingClipManager";
-import { ListingViewHeader } from "@web/src/components/listings/shared";
+import { ViewHeader } from "@web/src/components/view/ViewHeader";
 import { redirectToListingStage } from "../../_utils/redirectToListingStage";
 import { getListingClipVersionItemsForCurrentUser } from "@web/src/server/actions/listings/clips";
 import { stringifyListingCreateSearchParams } from "@web/src/components/listings/content/domain/editor/query";
@@ -48,7 +48,7 @@ export default async function ListingContentClipsPage({
 
     return (
       <>
-        <ListingViewHeader title={listingTitle} />
+        <ViewHeader title={listingTitle} listingView />
         <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-4 px-4 py-8 space-y-4 md:px-8">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <ListingClipManagerBackButton href={backHref} />

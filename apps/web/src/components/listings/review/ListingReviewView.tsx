@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ListingViewHeader } from "@web/src/components/listings/shared";
+import { ViewHeader } from "@web/src/components/view/ViewHeader";
 import { Loader2 } from "lucide-react";
 import {
   ListingTimeline,
@@ -130,8 +130,9 @@ export function ListingReviewView({
 
   return (
     <>
-      <ListingViewHeader
+      <ViewHeader
         title={title}
+        listingView
         timeline={
           <ListingTimeline
             steps={buildListingStageSteps("review")}

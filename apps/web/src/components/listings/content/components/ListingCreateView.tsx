@@ -1,8 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { ListingViewHeader } from "@web/src/components/listings/shared";
 import { usePathname } from "next/navigation";
+import { ViewHeader } from "@web/src/components/view/ViewHeader";
 import type { ListingContentItem as ContentItem } from "@web/src/lib/domain/listings/content";
 import type { ListingOpenHouseContext } from "@web/src/lib/domain/listings/content/openHouse";
 import {
@@ -160,8 +160,9 @@ export function ListingContentView({
 
   return (
     <>
-      <ListingViewHeader
+      <ViewHeader
         title={title}
+        listingView
         className={isFilterStickyActive ? "shadow-none" : undefined}
       />
       <div ref={filterSentinelRef} className="h-0" aria-hidden />

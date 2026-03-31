@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { ListingViewHeader } from "@web/src/components/listings/shared";
+import { ViewHeader } from "@web/src/components/view/ViewHeader";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import { Button } from "../../ui/button";
 import {
@@ -65,7 +65,7 @@ export function ListingProcessingView({
 
   return (
     <>
-      <ListingViewHeader title={title} />
+      <ViewHeader title={title} listingView />
       <div className="mx-auto flex min-h-[calc(100vh-140px)] w-full max-w-5xl items-center justify-center px-8 py-10">
         <div className="w-full max-w-[520px] space-y-6 text-center bg-background shadow-xs hover:shadow-md transition-all border border-border p-6 rounded-xl">
           <div className="mx-auto mt-2 flex items-center justify-center">
