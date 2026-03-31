@@ -100,7 +100,12 @@ export type ListingContentItem = ReelOverlaySettings & {
   prompt?: string | null;
   versionNumber?: number | null;
   isCurrentVersion?: boolean;
-  versionStatus?: "pending" | "processing" | "completed" | "failed" | "canceled";
+  versionStatus?:
+    | "pending"
+    | "processing"
+    | "completed"
+    | "failed"
+    | "canceled";
   generatedAt?: string | Date | null;
   orderedClipIds?: string[] | null;
   clipDurationOverrides?: Record<string, number> | null;
@@ -119,7 +124,9 @@ export type ListingGeneratedContentState = Record<
 
 export type ListingContentStreamItem = {
   hook: string;
-  body?: { header: string; content: string; broll_query?: string | null }[] | null;
+  body?:
+    | { header: string; content: string; broll_query?: string | null }[]
+    | null;
   caption?: string | null;
   broll_query?: string | null;
 };
@@ -128,36 +135,3 @@ export type ListingContentGenerationEvent =
   | { type: "delta"; text: string }
   | { type: "done"; items: ListingContentStreamItem[] }
   | { type: "error"; message: string };
-
-// --- Playable reel preview (cache vs saved) ---
-
-/** Unsaved playable preview keyed by listing content cache (not yet saved to DB). */
-export type PlayablePreviewCaptionItemKey = {
-  contentSource: "cached_content";
-  cacheKeyTimestamp: number;
-  cacheKeyId: number;
-  subcategory: ListingContentSubcategory;
-  mediaType: "video";
-};
-
-export type PlayablePreviewSavedContentKey = {
-  contentSource: "saved_content";
-  savedContentId: string;
-};
-
-export type PlayablePreviewSaveTarget =
-  | PlayablePreviewCaptionItemKey
-  | PlayablePreviewSavedContentKey;
-
-export type PlayablePreviewTextUpdate = {
-  hook: string;
-  caption: string;
-  overlayBackground: PreviewTextOverlayBackground;
-  overlayPosition: PreviewTextOverlayPosition;
-  overlayFontPairing: OverlayFontPairing;
-  showAddress: boolean;
-  orderedClipIds: string[];
-  clipDurationOverrides: Record<string, number>;
-  sequence: ReelSequenceItem[];
-  saveTarget: PlayablePreviewSaveTarget;
-};

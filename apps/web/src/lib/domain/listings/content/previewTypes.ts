@@ -4,7 +4,8 @@ import type {
   PreviewTextOverlay,
   PreviewTextOverlayBackground,
   PreviewTextOverlayFont,
-  PreviewTextOverlayPosition
+  PreviewTextOverlayPosition,
+  OverlayFontPairing
 } from "@shared/types/video";
 import { buildReelSourceKey } from "./reels";
 import type { ReelSequenceItem } from "./listingContentTypes";
@@ -115,12 +116,36 @@ const FEATURE_KEYWORDS = [
   "suite"
 ];
 
-export type {
-  PlayablePreviewCaptionItemKey,
-  PlayablePreviewSavedContentKey,
-  PlayablePreviewSaveTarget,
-  PlayablePreviewTextUpdate
-} from "./listingContentTypes";
+/** Unsaved playable preview keyed by listing content cache (not yet saved to DB). */
+export type PlayablePreviewCaptionItemKey = {
+  contentSource: "cached_content";
+  cacheKeyTimestamp: number;
+  cacheKeyId: number;
+  subcategory: ListingContentSubcategory;
+  mediaType: "video";
+};
+
+export type PlayablePreviewSavedContentKey = {
+  contentSource: "saved_content";
+  savedContentId: string;
+};
+
+export type PlayablePreviewSaveTarget =
+  | PlayablePreviewCaptionItemKey
+  | PlayablePreviewSavedContentKey;
+
+export type PlayablePreviewTextUpdate = {
+  hook: string;
+  caption: string;
+  overlayBackground: PreviewTextOverlayBackground;
+  overlayPosition: PreviewTextOverlayPosition;
+  overlayFontPairing: OverlayFontPairing;
+  showAddress: boolean;
+  orderedClipIds: string[];
+  clipDurationOverrides: Record<string, number>;
+  sequence: ReelSequenceItem[];
+  saveTarget: PlayablePreviewSaveTarget;
+};
 
 function hashSeed(seed: string): number {
   let hash = 2166136261;

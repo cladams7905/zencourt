@@ -5,10 +5,8 @@ import type {
   PreviewTextOverlayBackground,
   PreviewTextOverlayPosition
 } from "@shared/types/video";
-import type {
-  PlayablePreviewSaveTarget,
-  ReelSequenceItem
-} from "./listingContentTypes";
+import type { ReelSequenceItem } from "./listingContentTypes";
+import { PlayablePreviewSaveTarget } from "./previewTypes";
 
 export type SavedListingReelMetadata = {
   source: "listing_reel";
