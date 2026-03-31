@@ -1,2 +1,6 @@
-export * from "@web/src/components/dashboard/DashboardView";
-export * from "@web/src/components/dashboard/shared";
+export { ContentFilterBar } from "@web/src/components/dashboard/ContentFilterBar";
+export { ContentGrid } from "@web/src/components/dashboard/ContentGrid";
+export { ProfileCompletionChecklist } from "@web/src/components/dashboard/ProfileCompletionChecklist";
+export { ScheduleCard } from "@web/src/components/dashboard/ScheduleCard";
+
+export { DashboardView } from "@web/src/components/dashboard/DashboardView";

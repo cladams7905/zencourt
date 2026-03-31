@@ -15,7 +15,7 @@ import {
   ContentGrid,
   ProfileCompletionChecklist,
   ScheduleCard
-} from "@web/src/components/dashboard/components";
+} from "@web/src/components/dashboard/";
 import {
   useDashboardContentActions,
   useDashboardContentGeneration,

@@ -1,10 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { cn } from "../../ui/utils";
-import { Button } from "../../ui/button";
-import { Tabs, TabsList, TabsTrigger } from "../../ui/tabs";
-import { Progress } from "../../ui/progress";
+import { cn } from "@web/src/components/ui/utils";
+import { Button } from "@web/src/components/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@web/src/components/ui/tabs";
+import { Progress } from "@web/src/components/ui/progress";
 import { ChevronDown, Settings } from "lucide-react";
 import {
   DASHBOARD_FILTERS,

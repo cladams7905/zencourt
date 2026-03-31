@@ -1,11 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { cn } from "../../ui/utils";
-import { Button } from "../../ui/button";
+import { cn } from "@web/src/components/ui/utils";
+import { Button } from "@web/src/components/ui/button";
 import { Heart, Edit, Download, Share2, Trash2 } from "lucide-react";
 import Image from "next/image";
-import { LoadingVideo } from "../../ui/loading-video";
+import { LoadingVideo } from "@web/src/components/ui/loading-video";
 import type {
   DashboardContentItem,
   TextOverlayInput

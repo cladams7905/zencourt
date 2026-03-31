@@ -6,7 +6,7 @@ import {
   TooltipTrigger
 } from "@web/src/components/ui/tooltip";
 import { TableCell, TableRow } from "@web/src/components/ui/table";
-import { ListingImageStack } from "@web/src/components/listings/my-listings/components/ListingImageStack";
+import { ListingImageStack } from "@web/src/components/listings/my-listings/ListingImageStack";
 import {
   MAX_LISTING_IMAGES,
   type ListingRowViewModel
