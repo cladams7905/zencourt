@@ -14,16 +14,36 @@ jest.mock("next/navigation", () => ({
 jest.mock("@web/src/components/location", () => ({
   AddressAutocomplete: ({
     value,
-    onChange
+    onChange,
+    onSelectAddress
   }: {
     value: string;
     onChange: (value: string) => void;
+    onSelectAddress?: (selection: {
+      formattedAddress: string;
+      placeId: string;
+    }) => void;
   }) => (
-    <input
-      aria-label="Listing address"
-      value={value}
-      onChange={(event) => onChange(event.target.value)}
-    />
+    <div>
+      <input
+        aria-label="Listing address"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      />
+      <button
+        type="button"
+        aria-label="Use suggested address"
+        onClick={() =>
+          onSelectAddress?.({
+            formattedAddress:
+              value.trim() || "123 Main Street, Seattle WA",
+            placeId: "place-mock"
+          })
+        }
+      >
+        Use suggestion
+      </button>
+    </div>
   )
 }));
 
@@ -62,6 +82,7 @@ describe("ListingAddressView", () => {
       screen.getByRole("textbox", { name: "Listing address" }),
       "123 Main Street, Seattle WA"
     );
+    await user.click(screen.getByRole("button", { name: "Use suggested address" }));
     await user.click(screen.getByRole("button", { name: /continue/i }));
 
     await waitFor(() => {
@@ -83,6 +104,16 @@ describe("ListingAddressView", () => {
 
   it("keeps continue disabled without an address", () => {
     render(<ListingAddressView googleMapsApiKey="test-key" />);
+    expect(screen.getByRole("button", { name: /continue/i })).toBeDisabled();
+  });
+
+  it("keeps continue disabled when address is typed but not chosen from suggestions", async () => {
+    render(<ListingAddressView googleMapsApiKey="test-key" />);
+    const user = userEvent.setup();
+    await user.type(
+      screen.getByRole("textbox", { name: "Listing address" }),
+      "123 Main Street"
+    );
     expect(screen.getByRole("button", { name: /continue/i })).toBeDisabled();
   });
 });
