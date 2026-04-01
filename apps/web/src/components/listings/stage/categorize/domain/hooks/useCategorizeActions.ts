@@ -5,8 +5,14 @@ import {
   type RoomCategory
 } from "@web/src/lib/domain/listings/image/roomCategories";
 import { MAX_IMAGES_PER_ROOM } from "@shared/utils/mediaUpload";
-import { UNCATEGORIZED_CATEGORY_ID } from "@web/src/components/listings/stage/categorize/shared";
-import type { ListingImageItem } from "@web/src/components/listings/stage/categorize/shared";
+import {
+  UNCATEGORIZED_CATEGORY_ID,
+  UNUSED_DOCK_DROP_ZONE_ID
+} from "@web/src/components/listings/stage/categorize/shared";
+import type {
+  ListingImageItem,
+  WorkspacePlacement
+} from "@web/src/components/listings/stage/categorize/shared";
 import {
   MULTI_ROOM_CATEGORIES,
   getNextCategoryValue,
@@ -16,13 +22,17 @@ import {
 type UseCategorizeActionsParams = {
   images: ListingImageItem[];
   categoryOrder: string[];
-  categorizedImages: Record<string, ListingImageItem[]>;
   customCategories: string[];
   categoryDialogCategory: string | null;
   deleteCategory: string | null;
   moveImageId: string | null;
   deleteImageId: string | null;
+  categoryUsageCounts: Record<string, number>;
+  placementOverrides: Record<string, WorkspacePlacement>;
   setImages: React.Dispatch<React.SetStateAction<ListingImageItem[]>>;
+  setPlacementOverrides: React.Dispatch<
+    React.SetStateAction<Record<string, WorkspacePlacement>>
+  >;
   setCustomCategories: React.Dispatch<React.SetStateAction<string[]>>;
   setIsCategoryDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
   setDeleteCategory: React.Dispatch<React.SetStateAction<string | null>>;
@@ -45,13 +55,15 @@ export function useCategorizeActions(params: UseCategorizeActionsParams) {
   const {
     images,
     categoryOrder,
-    categorizedImages,
     customCategories,
     categoryDialogCategory,
     deleteCategory,
     moveImageId,
     deleteImageId,
+    categoryUsageCounts,
+    placementOverrides,
     setImages,
+    setPlacementOverrides,
     setCustomCategories,
     setIsCategoryDialogOpen,
     setDeleteCategory,
@@ -68,9 +80,9 @@ export function useCategorizeActions(params: UseCategorizeActionsParams) {
       if (!category || category === UNCATEGORIZED_CATEGORY_ID) {
         return false;
       }
-      return (categorizedImages[category]?.length ?? 0) >= MAX_IMAGES_PER_ROOM;
+      return (categoryUsageCounts[category] ?? 0) >= MAX_IMAGES_PER_ROOM;
     },
-    [categorizedImages]
+    [categoryUsageCounts]
   );
 
   const activeMoveImage = React.useMemo(
@@ -255,12 +267,17 @@ export function useCategorizeActions(params: UseCategorizeActionsParams) {
         targetCategory === UNCATEGORIZED_CATEGORY_ID ? null : targetCategory;
       const previousImages = images;
       const previousImage = images.find((image) => image.id === moveImageId);
+      const previousPlacement =
+        placementOverrides[moveImageId] ??
+        previousImage?.workspacePlacement ??
+        "dock";
       if (previousImage?.category === resolvedCategory) {
         setMoveImageId(null);
         return;
       }
       if (
         resolvedCategory &&
+        previousPlacement === "used" &&
         previousImage?.category !== resolvedCategory &&
         isCategoryAtLimit(resolvedCategory)
       ) {
@@ -301,6 +318,7 @@ export function useCategorizeActions(params: UseCategorizeActionsParams) {
       images,
       isCategoryAtLimit,
       moveImageId,
+      placementOverrides,
       persistImageAssignments,
       setImages,
       setMoveImageId
@@ -322,8 +340,23 @@ export function useCategorizeActions(params: UseCategorizeActionsParams) {
     if (!success) {
       return;
     }
+    setPlacementOverrides((prev) => {
+      if (!prev[imageId]) {
+        return prev;
+      }
+      const next = { ...prev };
+      delete next[imageId];
+      return next;
+    });
     setDeleteImageId(null);
-  }, [deleteImageId, images, persistImageAssignments, setDeleteImageId, setImages]);
+  }, [
+    deleteImageId,
+    images,
+    persistImageAssignments,
+    setDeleteImageId,
+    setImages,
+    setPlacementOverrides
+  ]);
 
   const handleDragStart = React.useCallback(
     (imageId: string) => (event: React.DragEvent<HTMLDivElement>) => {
@@ -338,6 +371,17 @@ export function useCategorizeActions(params: UseCategorizeActionsParams) {
     endDragSession();
   }, [endDragSession]);
 
+  const moveImageToDock = React.useCallback(
+    (imageId: string) => {
+      setPlacementOverrides((prev) => ({
+        ...prev,
+        [imageId]: "dock"
+      }));
+      setDragOverCategory(null);
+    },
+    [setDragOverCategory, setPlacementOverrides]
+  );
+
   const handleDrop = React.useCallback(
     (category: string) => async (event: React.DragEvent<HTMLDivElement>) => {
       event.preventDefault();
@@ -345,56 +389,85 @@ export function useCategorizeActions(params: UseCategorizeActionsParams) {
       if (!imageId) {
         return;
       }
+      if (category === UNUSED_DOCK_DROP_ZONE_ID) {
+        moveImageToDock(imageId);
+        return;
+      }
       const nextCategory =
         category === UNCATEGORIZED_CATEGORY_ID ? null : category;
       const previousImages = images;
       const previousImage = images.find((image) => image.id === imageId);
-      if (previousImage?.category === nextCategory) {
+      const previousPlacement =
+        placementOverrides[imageId] ?? previousImage?.workspacePlacement ?? "dock";
+      const shouldPersistCategoryChange = previousImage?.category !== nextCategory;
+
+      if (
+        previousImage?.category === nextCategory &&
+        previousPlacement === "used"
+      ) {
         setDragOverCategory(null);
         return;
       }
-      if (
-        nextCategory &&
-        previousImage?.category !== nextCategory &&
-        isCategoryAtLimit(nextCategory)
-      ) {
+      const nextUsedCount =
+        (categoryUsageCounts[nextCategory ?? ""] ?? 0) +
+        (previousPlacement === "used" && previousImage?.category === nextCategory
+          ? 0
+          : 1);
+      if (nextCategory && nextUsedCount > MAX_IMAGES_PER_ROOM) {
         toast.error(
           `This room already has ${MAX_IMAGES_PER_ROOM} photos. Remove one before adding another.`
         );
         setDragOverCategory(null);
         return;
       }
-      const nextImages = images.map((image) =>
-        image.id === imageId
-          ? {
-              ...image,
-              category: nextCategory
-            }
-          : image
-      );
+      const nextImages = shouldPersistCategoryChange
+        ? images.map((image) =>
+            image.id === imageId
+              ? {
+                  ...image,
+                  category: nextCategory
+                }
+              : image
+          )
+        : images;
       const updatedImage = nextImages.find((image) => image.id === imageId);
       if (!updatedImage) {
         return;
       }
-      setImages(nextImages);
-      await persistImageAssignments(
-        [
-          {
-            id: updatedImage.id,
-            category: updatedImage.category ?? null
+      setPlacementOverrides((prev) => ({
+        ...prev,
+        [imageId]: "used"
+      }));
+      if (shouldPersistCategoryChange) {
+        setImages(nextImages);
+        await persistImageAssignments(
+          [
+            {
+              id: updatedImage.id,
+              category: updatedImage.category ?? null
+            }
+          ],
+          [],
+          () => {
+            setImages(previousImages);
+            setPlacementOverrides((prev) => ({
+              ...prev,
+              [imageId]: previousPlacement
+            }));
           }
-        ],
-        [],
-        () => setImages(previousImages)
-      );
+        );
+      }
       setDragOverCategory(null);
     },
     [
+      categoryUsageCounts,
       images,
-      isCategoryAtLimit,
+      moveImageToDock,
+      placementOverrides,
       persistImageAssignments,
       setDragOverCategory,
-      setImages
+      setImages,
+      setPlacementOverrides
     ]
   );
 
@@ -408,6 +481,7 @@ export function useCategorizeActions(params: UseCategorizeActionsParams) {
     handleDeleteImage,
     handleDragStart,
     handleDragEnd,
-    handleDrop
+    handleDrop,
+    moveImageToDock
   };
 }

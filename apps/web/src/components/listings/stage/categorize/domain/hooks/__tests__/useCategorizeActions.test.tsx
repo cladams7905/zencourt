@@ -1,5 +1,10 @@
 import { act, renderHook } from "@testing-library/react";
-import { useCategorizeActions } from "@web/src/components/listings/stage/categorize/domain/hooks/useCategorizeActions";
+import {
+  useCategorizeActions
+} from "@web/src/components/listings/stage/categorize/domain/hooks/useCategorizeActions";
+import {
+  UNUSED_DOCK_DROP_ZONE_ID
+} from "@web/src/components/listings/stage/categorize/shared";
 
 const mockToastError = jest.fn();
 
@@ -15,21 +20,26 @@ const buildParams = (
   const params: Parameters<typeof useCategorizeActions>[0] = {
     images: [
       { id: "img1", url: "", filename: "a.jpg", category: null },
-      { id: "img2", url: "", filename: "b.jpg", category: "kitchen" }
+      {
+        id: "img2",
+        url: "",
+        filename: "b.jpg",
+        category: "kitchen",
+        workspacePlacement: "used"
+      }
     ],
     categoryOrder: ["needs-categorization", "kitchen"],
-    categorizedImages: {
-      "needs-categorization": [
-        { id: "img1", url: "", filename: "a.jpg", category: null }
-      ],
-      kitchen: [{ id: "img2", url: "", filename: "b.jpg", category: "kitchen" }]
-    },
     customCategories: [],
     categoryDialogCategory: null,
     deleteCategory: null,
     moveImageId: "img1",
     deleteImageId: "img1",
+    categoryUsageCounts: {
+      kitchen: 1
+    },
+    placementOverrides: {},
     setImages: jest.fn(),
+    setPlacementOverrides: jest.fn(),
     setCustomCategories: jest.fn(),
     setIsCategoryDialogOpen: jest.fn(),
     setDeleteCategory: jest.fn(),
@@ -73,17 +83,24 @@ describe("useCategorizeActions", () => {
     expect(mockToastError).toHaveBeenCalledWith("That room already exists.");
   });
 
-  it("blocks moving images into full categories", async () => {
+  it("blocks moving used images into categories already at the used-image limit", async () => {
     const params = buildParams({
-      categorizedImages: {
-        "needs-categorization": [
-          { id: "img1", url: "", filename: "a.jpg", category: null }
-        ],
-        kitchen: [
-          { id: "k1", url: "", filename: "k1.jpg", category: "kitchen" },
-          { id: "k2", url: "", filename: "k2.jpg", category: "kitchen" },
-          { id: "k3", url: "", filename: "k3.jpg", category: "kitchen" }
-        ]
+      images: [
+        {
+          id: "img1",
+          url: "",
+          filename: "a.jpg",
+          category: "living-room",
+          workspacePlacement: "used"
+        }
+      ],
+      moveImageId: "img1",
+      categoryUsageCounts: {
+        kitchen: 3,
+        "living-room": 1
+      },
+      placementOverrides: {
+        img1: "used"
       }
     });
     const { result } = renderHook(() => useCategorizeActions(params));
@@ -97,7 +114,9 @@ describe("useCategorizeActions", () => {
   });
 
   it("deletes image and clears selected delete id on success", async () => {
-    const params = buildParams();
+    const params = buildParams({
+      placementOverrides: { img1: "dock" }
+    });
     const { result } = renderHook(() => useCategorizeActions(params));
 
     await act(async () => {
@@ -106,6 +125,7 @@ describe("useCategorizeActions", () => {
 
     expect(params.persistImageAssignments).toHaveBeenCalled();
     expect(params.setDeleteImageId).toHaveBeenCalledWith(null);
+    expect(params.setPlacementOverrides).toHaveBeenCalled();
   });
 
   it("renames categories and persists updates", async () => {
@@ -151,8 +171,20 @@ describe("useCategorizeActions", () => {
   it("moves image and clears move dialog state on success", async () => {
     const params = buildParams({
       images: [
-        { id: "img1", url: "", filename: "a.jpg", category: null },
-        { id: "img2", url: "", filename: "b.jpg", category: "kitchen" }
+        {
+          id: "img1",
+          url: "",
+          filename: "a.jpg",
+          category: null,
+          workspacePlacement: "dock"
+        },
+        {
+          id: "img2",
+          url: "",
+          filename: "b.jpg",
+          category: "kitchen",
+          workspacePlacement: "used"
+        }
       ],
       moveImageId: "img1"
     });
@@ -187,10 +219,52 @@ describe("useCategorizeActions", () => {
     expect(params.endDragSession).toHaveBeenCalled();
   });
 
-  it("drop handler clears highlight when dropped onto same category", async () => {
+  it("drops images into the dock without persisting category changes", async () => {
     const params = buildParams({
-      images: [{ id: "img1", url: "", filename: "a.jpg", category: "kitchen" }],
-      moveImageId: "img1"
+      images: [
+        {
+          id: "img2",
+          url: "",
+          filename: "b.jpg",
+          category: "kitchen",
+          workspacePlacement: "used"
+        }
+      ],
+      placementOverrides: {
+        img2: "used"
+      }
+    });
+    const { result } = renderHook(() => useCategorizeActions(params));
+    const dropEvent = {
+      preventDefault: jest.fn(),
+      dataTransfer: { getData: () => "img2" }
+    } as unknown as React.DragEvent<HTMLDivElement>;
+
+    await act(async () => {
+      await result.current.handleDrop(UNUSED_DOCK_DROP_ZONE_ID)(dropEvent);
+    });
+
+    expect(params.setPlacementOverrides).toHaveBeenCalled();
+    expect(params.persistImageAssignments).not.toHaveBeenCalled();
+  });
+
+  it("blocks dragging docked images into a full used category", async () => {
+    const params = buildParams({
+      images: [
+        {
+          id: "img1",
+          url: "",
+          filename: "a.jpg",
+          category: "kitchen",
+          workspacePlacement: "dock"
+        }
+      ],
+      categoryUsageCounts: {
+        kitchen: 3
+      },
+      placementOverrides: {
+        img1: "dock"
+      }
     });
     const { result } = renderHook(() => useCategorizeActions(params));
     const dropEvent = {
@@ -202,6 +276,7 @@ describe("useCategorizeActions", () => {
       await result.current.handleDrop("kitchen")(dropEvent);
     });
 
-    expect(params.setDragOverCategory).toHaveBeenCalledWith(null);
+    expect(mockToastError).toHaveBeenCalled();
+    expect(params.persistImageAssignments).not.toHaveBeenCalled();
   });
 });

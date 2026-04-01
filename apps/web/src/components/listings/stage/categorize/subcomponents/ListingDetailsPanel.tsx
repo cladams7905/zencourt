@@ -14,6 +14,10 @@ type ListingDetailsPanelProps = {
   hasEmptyCategory: boolean;
   needsAddress: boolean;
   hasOverLimit: boolean;
+  hasOverUsedLimit?: boolean;
+  usedImageCount?: number;
+  maxUsedImagesTotal?: number;
+  uncategorizedDockCount?: number;
   hasTooManyCategories: boolean;
   handleAddressSelect: (selection: { formattedAddress?: string | null }) => void;
 };
@@ -26,6 +30,10 @@ export function ListingDetailsPanel({
   hasEmptyCategory,
   needsAddress,
   hasOverLimit,
+  hasOverUsedLimit = false,
+  usedImageCount = 0,
+  maxUsedImagesTotal = 12,
+  uncategorizedDockCount = 0,
   hasTooManyCategories,
   handleAddressSelect
 }: ListingDetailsPanelProps) {
@@ -56,6 +64,7 @@ export function ListingDetailsPanel({
             hasEmptyCategory ||
             needsAddress ||
             hasOverLimit ||
+            hasOverUsedLimit ||
             hasTooManyCategories ? (
               <div className="mt-3 rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-3 text-xs text-destructive">
                 <p className="text-[11px] font-semibold uppercase tracking-wide">
@@ -65,7 +74,13 @@ export function ListingDetailsPanel({
                   {hasUncategorized ? (
                     <li className="flex items-start gap-2">
                       <AlertTriangle className="mt-0.5 h-3.5 w-3.5" />
-                      <span>One or more images are uncategorized.</span>
+                      <span>
+                        {uncategorizedDockCount > 0
+                          ? `${uncategorizedDockCount} photo${
+                              uncategorizedDockCount === 1 ? "" : "s"
+                            } still need a room category.`
+                          : "One or more images are uncategorized."}
+                      </span>
                     </li>
                   ) : null}
                   {hasEmptyCategory ? (
@@ -85,7 +100,16 @@ export function ListingDetailsPanel({
                       <AlertTriangle className="mt-0.5 h-3.5 w-3.5" />
                       <span>
                         One or more room categories have more than{" "}
-                        {MAX_IMAGES_PER_ROOM} photos.
+                        {MAX_IMAGES_PER_ROOM} used photos.
+                      </span>
+                    </li>
+                  ) : null}
+                  {hasOverUsedLimit ? (
+                    <li className="flex items-start gap-2">
+                      <AlertTriangle className="mt-0.5 h-3.5 w-3.5" />
+                      <span>
+                        Reduce the used photo selection to {maxUsedImagesTotal} or
+                        fewer. Currently selected: {usedImageCount}.
                       </span>
                     </li>
                   ) : null}

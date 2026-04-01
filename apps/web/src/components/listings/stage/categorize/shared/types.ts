@@ -1,3 +1,5 @@
+export type WorkspacePlacement = "used" | "dock";
+
 export type ListingImageItem = {
   id: string;
   url: string;
@@ -16,6 +18,10 @@ export type ListingImageItem = {
       storytelling: number;
     };
   } | null;
+  workspacePlacement?: WorkspacePlacement;
+  isOther?: boolean;
+  isUncategorized?: boolean;
+  isDetail?: boolean;
 };
 
 export interface ListingCategorizeViewProps {

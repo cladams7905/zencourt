@@ -15,87 +15,23 @@ describe("useCategorizeConstraints", () => {
     mockToastError.mockReset();
   });
 
-  it("moves overflow images out of categories and persists assignments", async () => {
-    const setImages = jest.fn();
-    const persistImageAssignments = jest.fn().mockResolvedValue(true);
-    renderHook(() =>
-      useCategorizeConstraints({
-        images: [
-          {
-            id: "a",
-            url: "",
-            filename: "a.jpg",
-            category: "kitchen",
-            recommendationScore: 10
-          },
-          {
-            id: "b",
-            url: "",
-            filename: "b.jpg",
-            category: "kitchen",
-            recommendationScore: 9
-          },
-          {
-            id: "c",
-            url: "",
-            filename: "c.jpg",
-            category: "kitchen",
-            recommendationScore: 8
-          },
-          {
-            id: "d",
-            url: "",
-            filename: "d.jpg",
-            category: "kitchen",
-            recommendationScore: 1
-          }
-        ],
-        categoryOrder: [UNCATEGORIZED_CATEGORY_ID, "kitchen"],
-        baseCategoryCounts: { kitchen: 1 },
-        setImages,
-        persistImageAssignments
-      })
-    );
-
-    await waitFor(() => {
-      expect(setImages).toHaveBeenCalled();
-      expect(persistImageAssignments).toHaveBeenCalled();
-    });
-  });
-
   it("toasts when max category limit is exceeded", async () => {
-    const setImages = jest.fn();
-    const persistImageAssignments = jest.fn().mockResolvedValue(true);
-    const categoryOrder = [
-      UNCATEGORIZED_CATEGORY_ID,
-      "c1",
-      "c2",
-      "c3",
-      "c4",
-      "c5",
-      "c6",
-      "c7",
-      "c8",
-      "c9",
-      "c10",
-      "c11"
-    ];
-
     renderHook(() =>
       useCategorizeConstraints({
-        images: [
-          {
-            id: "x",
-            url: "",
-            filename: "x.jpg",
-            category: "c11",
-            recommendationScore: 1
-          }
-        ],
-        categoryOrder,
-        baseCategoryCounts: {},
-        setImages,
-        persistImageAssignments
+        categoryOrder: [
+          UNCATEGORIZED_CATEGORY_ID,
+          "c1",
+          "c2",
+          "c3",
+          "c4",
+          "c5",
+          "c6",
+          "c7",
+          "c8",
+          "c9",
+          "c10",
+          "c11"
+        ]
       })
     );
 
@@ -103,6 +39,18 @@ describe("useCategorizeConstraints", () => {
       expect(mockToastError).toHaveBeenCalledWith(
         expect.stringContaining("maximum of 10 categories")
       );
+    });
+  });
+
+  it("does not toast when category count is within the limit", async () => {
+    renderHook(() =>
+      useCategorizeConstraints({
+        categoryOrder: [UNCATEGORIZED_CATEGORY_ID, "c1", "c2"]
+      })
+    );
+
+    await waitFor(() => {
+      expect(mockToastError).not.toHaveBeenCalled();
     });
   });
 });

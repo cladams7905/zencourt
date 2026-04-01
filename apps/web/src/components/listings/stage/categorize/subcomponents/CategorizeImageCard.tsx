@@ -18,6 +18,7 @@ import type { ListingImageItem } from "@web/src/components/listings/stage/catego
 
 type CategorizeImageCardProps = {
   image: ListingImageItem;
+  context?: "used" | "dock";
   openImageMenuId: string | null;
   onOpenImageMenuChange: (imageId: string | null) => void;
   onRequestMoveImage: (imageId: string) => void;
@@ -30,6 +31,7 @@ type CategorizeImageCardProps = {
 
 export function CategorizeImageCard({
   image,
+  context = "used",
   openImageMenuId,
   onOpenImageMenuChange,
   onRequestMoveImage,
@@ -39,7 +41,9 @@ export function CategorizeImageCard({
 }: CategorizeImageCardProps) {
   return (
     <div
-      className="group relative aspect-square overflow-hidden rounded-lg border border-border bg-secondary/40 cursor-grab"
+      className={`group relative overflow-hidden rounded-lg border border-border bg-secondary/40 cursor-grab ${
+        context === "dock" ? "aspect-[4/5] w-28 shrink-0" : "aspect-square"
+      }`}
       draggable
       onDragStart={handleDragStart(image.id)}
       onDragEnd={handleDragEnd}
@@ -59,11 +63,23 @@ export function CategorizeImageCard({
           </TooltipContent>
         </Tooltip>
       ) : null}
-      {image.shotType === "detail" ? (
-        <div className="absolute bottom-2 left-2 z-10 rounded-full bg-background/80 px-2 py-1 text-[11px] font-medium text-foreground backdrop-blur-sm">
-          Detail shot
-        </div>
-      ) : null}
+      <div className="absolute bottom-2 left-2 z-10 flex max-w-[calc(100%-1rem)] flex-wrap gap-1">
+        {image.shotType === "detail" ? (
+          <div className="rounded-full bg-background/80 px-2 py-1 text-[11px] font-medium text-foreground backdrop-blur-sm">
+            Detail shot
+          </div>
+        ) : null}
+        {image.isOther ? (
+          <div className="rounded-full bg-amber-500/80 px-2 py-1 text-[11px] font-medium text-white backdrop-blur-sm">
+            Other
+          </div>
+        ) : null}
+        {image.isUncategorized ? (
+          <div className="rounded-full bg-destructive/90 px-2 py-1 text-[11px] font-medium text-destructive-foreground backdrop-blur-sm">
+            Uncategorized
+          </div>
+        ) : null}
+      </div>
       <div
         className={`absolute top-2 right-2 z-10 transition-opacity ${
           openImageMenuId === image.id
@@ -116,6 +132,11 @@ export function CategorizeImageCard({
         className="h-full w-full object-cover transition-transform duration-200 ease-out group-hover:scale-[1.03]"
         fill
       />
+      {context === "dock" ? (
+        <div className="absolute inset-x-0 bottom-0 z-[1] bg-gradient-to-t from-background/90 to-transparent px-2 pb-2 pt-6 text-[11px] font-medium text-foreground">
+          <div className="truncate">{image.filename}</div>
+        </div>
+      ) : null}
     </div>
   );
 }

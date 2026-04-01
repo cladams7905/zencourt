@@ -1,17 +1,29 @@
 import * as React from "react";
 import { MAX_CATEGORIES, MAX_IMAGES_PER_ROOM } from "@shared/utils/mediaUpload";
-import type { ListingImageItem } from "@web/src/components/listings/stage/categorize/shared/types";
+import type {
+  ListingImageItem,
+  WorkspacePlacement
+} from "@web/src/components/listings/stage/categorize/shared/types";
 import { getCategoryBase } from "@web/src/components/listings/stage/categorize/domain/categoryRules";
 import { UNCATEGORIZED_CATEGORY_ID } from "@web/src/components/listings/stage/categorize/shared/constants";
 
 type UseCategorizeDerivedStateParams = {
   images: ListingImageItem[];
   customCategories: string[];
+  placementOverrides?: Record<string, WorkspacePlacement>;
 };
+
+const DEFAULT_USED_IMAGES_PER_CATEGORY = 2;
+const MAX_USED_IMAGES_TOTAL = 12;
+
+const getScore = (image: ListingImageItem) => image.recommendationScore ?? -1;
+const sortByRecommendationScore = (a: ListingImageItem, b: ListingImageItem) =>
+  getScore(b) - getScore(a);
 
 export function useCategorizeDerivedState({
   images,
-  customCategories
+  customCategories,
+  placementOverrides = {}
 }: UseCategorizeDerivedStateParams) {
   const categorizedImages = React.useMemo(
     () =>
@@ -27,10 +39,7 @@ export function useCategorizeDerivedState({
   );
 
   const categoryOrder = React.useMemo(() => {
-    const keys = new Set([
-      ...Object.keys(categorizedImages),
-      ...customCategories
-    ]);
+    const keys = new Set([...Object.keys(categorizedImages), ...customCategories]);
     return Array.from(keys).sort((a, b) => {
       if (a === UNCATEGORIZED_CATEGORY_ID) return -1;
       if (b === UNCATEGORIZED_CATEGORY_ID) return 1;
@@ -38,10 +47,19 @@ export function useCategorizeDerivedState({
     });
   }, [categorizedImages, customCategories]);
 
+  const workspaceCategoryOrder = React.useMemo(
+    () =>
+      categoryOrder.filter(
+        (category) =>
+          category !== UNCATEGORIZED_CATEGORY_ID && category !== "other"
+      ),
+    [categoryOrder]
+  );
+
   const baseCategoryCounts = React.useMemo(() => {
     const counts: Record<string, number> = {};
     categoryOrder.forEach((category) => {
-      if (category === UNCATEGORIZED_CATEGORY_ID) {
+      if (category === UNCATEGORIZED_CATEGORY_ID || category === "other") {
         return;
       }
       const base = getCategoryBase(category);
@@ -50,25 +68,121 @@ export function useCategorizeDerivedState({
     return counts;
   }, [categoryOrder]);
 
+  const defaultUsedImageIds = React.useMemo(() => {
+    const ids = new Set<string>();
+    workspaceCategoryOrder.forEach((category) => {
+      const ranked = [...(categorizedImages[category] ?? [])].sort(
+        sortByRecommendationScore
+      );
+      ranked
+        .slice(0, DEFAULT_USED_IMAGES_PER_CATEGORY)
+        .forEach((image) => ids.add(image.id));
+    });
+    return ids;
+  }, [categorizedImages, workspaceCategoryOrder]);
+
+  const workspaceImages = React.useMemo(
+    () =>
+      images.map((image) => {
+        const isOther = image.category === "other";
+        const isUncategorized = !image.category;
+        const isDetail = image.shotType === "detail";
+        const canBeUsed =
+          !isOther &&
+          !isUncategorized &&
+          workspaceCategoryOrder.includes(image.category ?? "");
+        const override = placementOverrides[image.id];
+        const workspacePlacement: WorkspacePlacement =
+          canBeUsed && override === "used"
+            ? "used"
+            : override === "dock"
+              ? "dock"
+              : canBeUsed && defaultUsedImageIds.has(image.id)
+                ? "used"
+                : "dock";
+
+        return {
+          ...image,
+          workspacePlacement,
+          isOther,
+          isUncategorized,
+          isDetail
+        };
+      }),
+    [defaultUsedImageIds, images, placementOverrides, workspaceCategoryOrder]
+  );
+
+  const usedImagesByCategory = React.useMemo(
+    () =>
+      workspaceImages.reduce<Record<string, ListingImageItem[]>>((acc, image) => {
+        if (
+          image.workspacePlacement !== "used" ||
+          !image.category ||
+          image.isOther
+        ) {
+          return acc;
+        }
+        if (!acc[image.category]) {
+          acc[image.category] = [];
+        }
+        acc[image.category].push(image);
+        acc[image.category].sort(sortByRecommendationScore);
+        return acc;
+      }, {}),
+    [workspaceImages]
+  );
+
+  const dockedImages = React.useMemo(
+    () =>
+      workspaceImages
+        .filter((image) => image.workspacePlacement !== "used")
+        .sort(sortByRecommendationScore),
+    [workspaceImages]
+  );
+
+  const categoryUsageCounts = React.useMemo(
+    () =>
+      workspaceCategoryOrder.reduce<Record<string, number>>((acc, category) => {
+        acc[category] = usedImagesByCategory[category]?.length ?? 0;
+        return acc;
+      }, {}),
+    [usedImagesByCategory, workspaceCategoryOrder]
+  );
+
   const hasUncategorized = images.some((image) => !image.category);
-  const hasEmptyCategory = categoryOrder.some(
+  const uncategorizedDockCount = dockedImages.filter(
+    (image) => image.isUncategorized
+  ).length;
+  const hasEmptyCategory = workspaceCategoryOrder.some(
     (category) => (categorizedImages[category]?.length ?? 0) === 0
   );
-  const activeCategoryCount = categoryOrder.filter(
-    (category) => category !== UNCATEGORIZED_CATEGORY_ID
-  ).length;
+  const activeCategoryCount = workspaceCategoryOrder.length;
   const hasTooManyCategories = activeCategoryCount > MAX_CATEGORIES;
-  const hasOverLimit = categoryOrder.some((category) => {
-    if (category === UNCATEGORIZED_CATEGORY_ID) {
-      return false;
-    }
-    return (categorizedImages[category]?.length ?? 0) > MAX_IMAGES_PER_ROOM;
-  });
+  const categoriesOverUsedLimit = workspaceCategoryOrder.filter(
+    (category) => (categoryUsageCounts[category] ?? 0) > MAX_IMAGES_PER_ROOM
+  );
+  const hasOverLimit = categoriesOverUsedLimit.length > 0;
+  const usedImageCount = Object.values(categoryUsageCounts).reduce(
+    (sum, count) => sum + count,
+    0
+  );
+  const hasOverUsedLimit = usedImageCount > MAX_USED_IMAGES_TOTAL;
 
   return {
     categorizedImages,
+    workspaceImages,
     categoryOrder,
+    workspaceCategoryOrder,
     baseCategoryCounts,
+    usedImagesByCategory,
+    dockedImages,
+    categoryUsageCounts,
+    categoriesOverUsedLimit,
+    usedImageCount,
+    hasOverUsedLimit,
+    maxUsedImagesTotal: MAX_USED_IMAGES_TOTAL,
+    defaultUsedImagesPerCategory: DEFAULT_USED_IMAGES_PER_CATEGORY,
+    uncategorizedDockCount,
     hasUncategorized,
     hasEmptyCategory,
     hasTooManyCategories,

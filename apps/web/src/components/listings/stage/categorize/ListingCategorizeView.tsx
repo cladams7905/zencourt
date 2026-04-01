@@ -21,11 +21,12 @@ import { emitListingSidebarHeartbeat } from "@web/src/lib/domain/listings/sideba
 import {
   UNCATEGORIZED_CATEGORY_ID,
   useDragAutoScroll,
+  UNUSED_DOCK_DROP_ZONE_ID,
   type ListingCategorizeViewProps,
-  type ListingImageItem
+  type ListingImageItem,
+  type WorkspacePlacement
 } from "@web/src/components/listings/stage/categorize/shared";
 import {
-  formatCategoryLabel,
   useCategorizeActions,
   useCategorizeConstraints,
   useCategorizeListingDetails,
@@ -33,6 +34,7 @@ import {
   useCategorizeUploads,
   useCategorizeDerivedState
 } from "@web/src/components/listings/stage/categorize/domain";
+import { formatCategoryLabel } from "@web/src/components/listings/stage/categorize/domain/categoryRules";
 import {
   ListingStageFooter,
   ListingStageShell
@@ -92,6 +94,9 @@ export function ListingCategorizeView({
     null
   );
   const [customCategories, setCustomCategories] = React.useState<string[]>([]);
+  const [placementOverrides, setPlacementOverrides] = React.useState<
+    Record<string, WorkspacePlacement>
+  >({});
   const [isDraggingImage, setIsDraggingImage] = React.useState(false);
   const headerRef = React.useRef<HTMLElement | null>(null);
 
@@ -103,7 +108,15 @@ export function ListingCategorizeView({
   }, [listingId]);
 
   const {
-    categorizedImages,
+    workspaceCategoryOrder,
+    usedImagesByCategory,
+    dockedImages,
+    categoryUsageCounts,
+    categoriesOverUsedLimit,
+    usedImageCount,
+    hasOverUsedLimit,
+    maxUsedImagesTotal,
+    uncategorizedDockCount,
     categoryOrder,
     baseCategoryCounts,
     hasUncategorized,
@@ -112,7 +125,8 @@ export function ListingCategorizeView({
     hasOverLimit
   } = useCategorizeDerivedState({
     images,
-    customCategories
+    customCategories,
+    placementOverrides
   });
   const {
     savingCount,
@@ -153,16 +167,16 @@ export function ListingCategorizeView({
   });
   const isInlineProcessing = processingBatch !== null;
   const [openCategories, setOpenCategories] = React.useState<string[]>(
-    () => categoryOrder
+    () => workspaceCategoryOrder
   );
 
   React.useEffect(() => {
     setOpenCategories((prev) => {
       const next = new Set(prev);
-      categoryOrder.forEach((category) => next.add(category));
+      workspaceCategoryOrder.forEach((category) => next.add(category));
       return Array.from(next);
     });
-  }, [categoryOrder]);
+  }, [workspaceCategoryOrder]);
 
   const endDragSession = React.useCallback(() => {
     setIsDraggingImage(false);
@@ -179,34 +193,36 @@ export function ListingCategorizeView({
     !hasEmptyCategory &&
     !needsAddress &&
     !hasOverLimit &&
-    !hasTooManyCategories;
+    !hasTooManyCategories &&
+    !hasOverUsedLimit;
   const isSavingDraft = savingCount > 0;
   const existingFileNames = React.useMemo(() => {
     return new Set(images.map((image) => image.filename.toLowerCase()));
   }, [images]);
   const moveCategoryOptions = React.useMemo(() => {
     return categoryOrder.map((category) => {
-      const count = categorizedImages[category]?.length ?? 0;
-      const isLimited = category !== UNCATEGORIZED_CATEGORY_ID;
-      const isFull = isLimited && count >= MAX_IMAGES_PER_ROOM;
       return {
         value: category,
         label:
           category === UNCATEGORIZED_CATEGORY_ID
             ? "Uncategorized"
-            : `${formatCategoryLabel(category, baseCategoryCounts)}${
-                isFull ? " (full)" : ""
-              }`
+            : formatCategoryLabel(category, baseCategoryCounts)
       };
     });
-  }, [baseCategoryCounts, categorizedImages, categoryOrder]);
+  }, [baseCategoryCounts, categoryOrder]);
   useCategorizeConstraints({
-    images,
-    categoryOrder,
-    baseCategoryCounts,
-    setImages,
-    persistImageAssignments
+    categoryOrder
   });
+
+  React.useEffect(() => {
+    const imageIds = new Set(images.map((image) => image.id));
+    setPlacementOverrides((prev) => {
+      const next = Object.fromEntries(
+        Object.entries(prev).filter(([id]) => imageIds.has(id))
+      );
+      return Object.keys(next).length === Object.keys(prev).length ? prev : next;
+    });
+  }, [images]);
 
   const {
     activeMoveImage,
@@ -222,13 +238,15 @@ export function ListingCategorizeView({
   } = useCategorizeActions({
     images,
     categoryOrder,
-    categorizedImages,
     customCategories,
     categoryDialogCategory,
     deleteCategory,
     moveImageId,
     deleteImageId,
+    categoryUsageCounts,
+    placementOverrides,
     setImages,
+    setPlacementOverrides,
     setCustomCategories,
     setIsCategoryDialogOpen,
     setDeleteCategory,
@@ -261,6 +279,16 @@ export function ListingCategorizeView({
   }, []);
   const handleCategoryDragLeave = React.useCallback(() => {
     setDragOverCategory(null);
+  }, []);
+  const handleDockDragOver = React.useCallback(() => {
+    setDragOverCategory((prev) =>
+      prev === UNUSED_DOCK_DROP_ZONE_ID ? prev : UNUSED_DOCK_DROP_ZONE_ID
+    );
+  }, []);
+  const handleDockDragLeave = React.useCallback(() => {
+    setDragOverCategory((prev) =>
+      prev === UNUSED_DOCK_DROP_ZONE_ID ? null : prev
+    );
   }, []);
   const handleOpenImageMenuChange = React.useCallback(
     (imageId: string | null) => {
@@ -332,9 +360,16 @@ export function ListingCategorizeView({
             <div className="flex flex-col gap-8 lg:flex-row">
             <CategorizeImageWorkspace
               images={images}
-              categoryOrder={categoryOrder}
-              categorizedImages={categorizedImages}
+              categoryOrder={workspaceCategoryOrder}
+              usedImagesByCategory={usedImagesByCategory}
+              dockedImages={dockedImages}
+              categoryUsageCounts={categoryUsageCounts}
               baseCategoryCounts={baseCategoryCounts}
+              usedImageCount={usedImageCount}
+              maxUsedImagesTotal={maxUsedImagesTotal}
+              uncategorizedDockCount={uncategorizedDockCount}
+              hasOverUsedLimit={hasOverUsedLimit}
+              categoriesOverUsedLimit={categoriesOverUsedLimit}
               openCategories={openCategories}
               dragOverCategory={dragOverCategory}
               openImageMenuId={openImageMenuId}
@@ -343,6 +378,8 @@ export function ListingCategorizeView({
               onOpenCategoriesChange={handleOpenCategoriesChange}
               onCategoryDragOver={handleCategoryDragOver}
               onCategoryDragLeave={handleCategoryDragLeave}
+              onDockDragOver={handleDockDragOver}
+              onDockDragLeave={handleDockDragLeave}
               onOpenImageMenuChange={handleOpenImageMenuChange}
               onEditCategory={handleOpenEditCategory}
               onDeleteCategory={handleRequestDeleteCategory}
@@ -351,6 +388,7 @@ export function ListingCategorizeView({
               handleDragStart={handleDragStart}
               handleDragEnd={handleDragEnd}
               handleDrop={handleDrop}
+              handleDockDrop={handleDrop(UNUSED_DOCK_DROP_ZONE_ID)}
             />
 
             <ListingDetailsPanel
@@ -361,6 +399,10 @@ export function ListingCategorizeView({
               hasEmptyCategory={hasEmptyCategory}
               needsAddress={needsAddress}
               hasOverLimit={hasOverLimit}
+              hasOverUsedLimit={hasOverUsedLimit}
+              usedImageCount={usedImageCount}
+              maxUsedImagesTotal={maxUsedImagesTotal}
+              uncategorizedDockCount={uncategorizedDockCount}
               hasTooManyCategories={hasTooManyCategories}
               handleAddressSelect={handleAddressSelect}
             />
