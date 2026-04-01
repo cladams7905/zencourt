@@ -297,40 +297,6 @@ html {
   scrollbar-width: none;
 }
 
-/* Hide scrollbar unless container is actively scrolling. */
-.scrollbar-autohide {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-.scrollbar-autohide::-webkit-scrollbar {
-  width: 0;
-  height: 0;
-}
-
-.scrollbar-autohide--scrolling {
-  scrollbar-width: thin;
-  scrollbar-color: var(--muted-foreground) transparent;
-}
-
-.scrollbar-autohide--scrolling::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-.scrollbar-autohide--scrolling::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.scrollbar-autohide--scrolling::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 9999px;
-}
-
-.scrollbar-autohide--scrolling::-webkit-scrollbar-thumb:hover {
-  background: var(--muted-foreground);
-}
-
 /* Grain texture effect */
 @keyframes grain {
   0%,

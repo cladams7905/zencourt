@@ -1,20 +1,30 @@
 "use client";
 
 import * as React from "react";
-import { Check } from "lucide-react";
+import { ImageIcon, Upload, X } from "lucide-react";
 import { IMAGE_UPLOAD_LIMIT, MAX_IMAGE_BYTES } from "@shared/utils/mediaUpload";
 import { formatBytes } from "@web/src/lib/core/formatting/bytes";
 import {
-  validateImageFile,
+  validateListingUploadRequirements,
   useUploadFlow
 } from "@web/src/components/listings/stage/upload/domain";
+import { UploadDialog } from "@web/src/components/uploads";
 import { useUploadDialogState } from "@web/src/components/uploads/domain/hooks";
 import {
   UploadDropzone,
-  UploadQueueList
+  UploadRequirementsCard
 } from "@web/src/components/uploads/subcomponents";
-import { ListingStageShell } from "@web/src/components/listings/stage/shared";
+import { Badge } from "@web/src/components/ui/badge";
+import { Button } from "@web/src/components/ui/button";
+import {
+  ListingStageFooter,
+  ListingStageShell
+} from "@web/src/components/listings/stage/shared";
+import { setListingUploadDraftImages } from "@web/src/components/listings/stage/shared/domain/clientUploadStore";
+import { updateListingForCurrentUser } from "@web/src/server/actions/listings/commands";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 type ListingUploadViewProps = {
   listingId?: string;
@@ -36,7 +46,6 @@ export function ListingUploadView({ listingId }: ListingUploadViewProps = {}) {
     pendingFiles,
     isDragging,
     setIsDragging,
-    isUploading,
     setIsDrivePickerActive,
     isCompressing,
     isDriveLoading,
@@ -50,21 +59,81 @@ export function ListingUploadView({ listingId }: ListingUploadViewProps = {}) {
     onOpenChange: () => {},
     selectedLabel: "photo",
     errorMessage: "Failed to upload photos. Please try again.",
-    maxFiles: IMAGE_UPLOAD_LIMIT,
+    maxFiles: undefined,
     maxImageBytes: MAX_IMAGE_BYTES,
-    compressOversizeImages: true,
-    fileValidator: validateImageFile,
+    compressOversizeImages: false,
+    fileValidator: (file) =>
+      file.type.startsWith("image/")
+        ? { accepted: true }
+        : {
+            accepted: false,
+            error: "Only image files are supported."
+          },
     getUploadUrls,
     buildRecordInput,
     onCreateRecords,
     onUploadsComplete
   });
 
+  const [isNavigatingToCategorize, setIsNavigatingToCategorize] =
+    React.useState(false);
+  const [isUploadMoreOpen, setIsUploadMoreOpen] = React.useState(false);
+
+  const hasUnsavedClientImages =
+    pendingFiles.length > 0 && !isNavigatingToCategorize;
+
+  const handleCandidateFiles = React.useCallback(
+    async (files: File[]) => {
+      const accepted: File[] = [];
+      let acceptedCount = pendingFiles.length;
+      const existingKeys = new Set(
+        pendingFiles.map(
+          (item) =>
+            `${item.file.name.toLowerCase()}-${item.file.size}-${item.file.lastModified}`
+        )
+      );
+      for (const file of files) {
+        const fileKey = `${file.name.toLowerCase()}-${file.size}-${file.lastModified}`;
+        if (existingKeys.has(fileKey)) {
+          toast.error(`"${file.name}" was rejected: duplicate image.`);
+          continue;
+        }
+        const validation = await validateListingUploadRequirements({
+          file,
+          maxImageBytes: MAX_IMAGE_BYTES
+        });
+        if (!validation.accepted) {
+          toast.error(validation.error);
+          continue;
+        }
+        if (acceptedCount >= IMAGE_UPLOAD_LIMIT) {
+          toast.error(
+            `"${file.name}" was rejected: no more than ${IMAGE_UPLOAD_LIMIT} images are allowed.`
+          );
+          continue;
+        }
+        accepted.push(file);
+        acceptedCount += 1;
+        existingKeys.add(fileKey);
+      }
+
+      if (accepted.length > 0) {
+        await addFiles(accepted);
+        toast.success(
+          `${accepted.length} photo${
+            accepted.length === 1 ? "" : "s"
+          } uploaded successfully`
+        );
+      }
+    },
+    [addFiles, pendingFiles]
+  );
+
   const handleFileInputChange = (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
     const files = Array.from(event.target.files ?? []);
-    void addFiles(files);
+    void handleCandidateFiles(files);
     event.target.value = "";
   };
 
@@ -78,58 +147,216 @@ export function ListingUploadView({ listingId }: ListingUploadViewProps = {}) {
     []
   );
 
-  return (
-    <ListingStageShell stage="upload" wide>
-      <section className="flex min-h-0 w-full flex-1 flex-col gap-3">
-        <UploadDropzone
-          fillContainer
-          isDragging={isDragging}
-          setIsDragging={setIsDragging}
-          onDropFiles={(files) => {
-            void addFiles(files);
-          }}
-          className="lg:min-h-[380px] min-h-[260px]"
-          accept="image/*"
-          dropTitle="Drag & drop photos here"
-          dropSubtitle="or click to select multiple images"
-          fileInputRef={fileInputRef}
-          onFileInputChange={handleFileInputChange}
-          onPickerOpenChange={setIsDrivePickerActive}
-          maxImageBytes={MAX_IMAGE_BYTES}
-          compressDriveImages
-          onDriveLoadingChange={setIsDriveLoading}
-          onDriveLoadingCountChange={setDriveLoadingCount}
-        />
-        <div className="w-full shrink-0 rounded-lg border border-border bg-background/60 p-3 text-left">
-          <div className="grid w-full grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2">
-            {uploadRequirements.map((requirement) => (
-              <div
-                key={requirement}
-                className="flex items-start gap-2 text-xs text-muted-foreground"
-              >
-                <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                  <Check className="h-2.5 w-2.5" />
-                </span>
-                <span>{requirement}</span>
-              </div>
-            ))}
-          </div>
-        </div>
+  const canContinue = pendingFiles.length >= 3;
 
-        <div className="shrink-0">
-          <UploadQueueList
-            pendingFiles={pendingFiles}
-            selectedLabel="photo"
-            isCompressing={isCompressing}
-            isDriveLoading={isDriveLoading}
-            driveLoadingCount={driveLoadingCount}
-            isUploading={isUploading}
-            fileMetaLabel={(file: File) => formatBytes(file.size)}
-            formatBytes={formatBytes}
-            onRemove={removePendingFile}
+  const handleContinue = React.useCallback(async () => {
+    if (!listingId?.trim() || !canContinue) {
+      return;
+    }
+    setListingUploadDraftImages(
+      listingId,
+      pendingFiles.map((item) => ({
+        id: item.id,
+        file: item.file,
+        previewUrl: item.previewUrl,
+        filename: item.file.name
+      }))
+    );
+    setIsNavigatingToCategorize(true);
+    try {
+      await updateListingForCurrentUser(listingId, {
+        listingStage: "categorize"
+      });
+      router.push(`/listings/${listingId}/stage/categorize`);
+    } catch (error) {
+      setIsNavigatingToCategorize(false);
+      toast.error(
+        (error as Error).message || "Unable to continue to categorize."
+      );
+    }
+  }, [canContinue, listingId, pendingFiles, router]);
+
+  const handleBack = React.useCallback(() => {
+    if (
+      hasUnsavedClientImages &&
+      !window.confirm("Unsaved uploaded images will be lost. Continue?")
+    ) {
+      return;
+    }
+    if (!listingId?.trim()) {
+      router.push("/listings/create");
+      return;
+    }
+    router.push(`/listings/create?listingId=${encodeURIComponent(listingId)}`);
+  }, [hasUnsavedClientImages, listingId, router]);
+
+  React.useEffect(() => {
+    if (!hasUnsavedClientImages) {
+      return;
+    }
+
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+
+    const handleDocumentClick = (event: MouseEvent) => {
+      if (event.defaultPrevented || event.button !== 0) {
+        return;
+      }
+      const target = event.target as HTMLElement | null;
+      const anchor = target?.closest("a");
+      if (!anchor || anchor.getAttribute("data-ignore-unsaved") === "true") {
+        return;
+      }
+      const href = anchor.getAttribute("href");
+      if (!href || href.startsWith("#")) {
+        return;
+      }
+      const nextUrl = new URL(href, window.location.href);
+      const currentUrl = new URL(window.location.href);
+      if (
+        nextUrl.origin !== currentUrl.origin ||
+        nextUrl.href === currentUrl.href
+      ) {
+        return;
+      }
+
+      if (!window.confirm("Unsaved uploaded images will be lost. Continue?")) {
+        event.preventDefault();
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    document.addEventListener("click", handleDocumentClick, true);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      document.removeEventListener("click", handleDocumentClick, true);
+    };
+  }, [hasUnsavedClientImages]);
+
+  return (
+    <ListingStageShell
+      stage="upload"
+      wide
+      footer={
+        <ListingStageFooter
+          onBack={handleBack}
+          onContinue={() => void handleContinue()}
+          canBack
+          canContinue={canContinue}
+        />
+      }
+    >
+      <section className="flex min-h-0 w-full flex-1 flex-col gap-3">
+        {pendingFiles.length === 0 ? (
+          <UploadDropzone
+            fillContainer
+            isDragging={isDragging}
+            setIsDragging={setIsDragging}
+            onDropFiles={(files) => {
+              void handleCandidateFiles(files);
+            }}
+            className="lg:min-h-[380px] min-h-[260px]"
+            accept="image/*"
+            dropTitle="Drag & drop photos here"
+            dropSubtitle="or click to select multiple images"
+            fileInputRef={fileInputRef}
+            onFileInputChange={handleFileInputChange}
+            onPickerOpenChange={setIsDrivePickerActive}
+            maxImageBytes={MAX_IMAGE_BYTES}
+            compressDriveImages
+            onDriveLoadingChange={setIsDriveLoading}
+            onDriveLoadingCountChange={setDriveLoadingCount}
           />
-        </div>
+        ) : null}
+        {pendingFiles.length === 0 ? (
+          <UploadRequirementsCard requirements={uploadRequirements} />
+        ) : null}
+
+        {pendingFiles.length > 0 ||
+        isCompressing ||
+        (isDriveLoading && driveLoadingCount > 0) ? (
+          <div className="shrink-0 rounded-lg border border-border bg-background p-3">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  My Listing Photos
+                </div>
+                <Badge variant="muted" className="text-muted-foreground">
+                  <ImageIcon className="size-3" aria-hidden />
+                  {pendingFiles.length}/{IMAGE_UPLOAD_LIMIT}
+                </Badge>
+              </div>
+              <Button
+                type="button"
+                variant="default"
+                onClick={() => setIsUploadMoreOpen(true)}
+              >
+                <Upload className="h-4 w-4" />
+                Upload more
+              </Button>
+            </div>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+              {pendingFiles.map((item) => (
+                <div
+                  key={item.id}
+                  className="group relative aspect-square overflow-hidden rounded-md border border-border bg-muted/20"
+                >
+                  <Image
+                    src={item.previewUrl}
+                    alt={item.file.name}
+                    fill
+                    unoptimized
+                    className="object-cover"
+                    sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removePendingFile(item.id)}
+                    className="absolute right-1 top-1 inline-flex h-6 w-6 items-center justify-center rounded-full bg-background/90 text-muted-foreground opacity-0 shadow-sm transition-opacity hover:text-foreground group-hover:opacity-100"
+                    aria-label={`Remove ${item.file.name}`}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
       </section>
+      <UploadDialog
+        open={isUploadMoreOpen}
+        onOpenChange={setIsUploadMoreOpen}
+        title="Upload more listing photos"
+        accept="image/*"
+        dropTitle="Drag & drop photos here"
+        dropSubtitle="or click to select multiple images"
+        primaryActionLabel="Upload"
+        selectedLabel="photo"
+        errorMessage="Failed to upload photos. Please try again."
+        maxFiles={IMAGE_UPLOAD_LIMIT}
+        maxImageBytes={MAX_IMAGE_BYTES}
+        compressDriveImages={false}
+        compressOversizeImages={false}
+        tipsTitle="Upload requirements"
+        tipsItems={uploadRequirements}
+        fileValidator={(file) =>
+          file.type.startsWith("image/")
+            ? { accepted: true }
+            : {
+                accepted: false,
+                error: "Only image files are supported."
+              }
+        }
+        getUploadUrls={async () => ({ uploads: [], failed: [] })}
+        buildRecordInput={async () => ({})}
+        onCreateRecords={async () => {}}
+        clientUploadHandler={async (files) => {
+          await handleCandidateFiles(files);
+        }}
+      />
     </ListingStageShell>
   );
 }

@@ -37,6 +37,10 @@ import {
   ListingStageFooter,
   ListingStageShell
 } from "@web/src/components/listings/stage/shared";
+import {
+  clearListingUploadDraftImages,
+  getListingUploadDraftImages
+} from "@web/src/components/listings/stage/shared/domain/clientUploadStore";
 import { formatBytes } from "@web/src/lib/core/formatting/bytes";
 import { useRouter } from "next/navigation";
 
@@ -50,6 +54,29 @@ export function ListingCategorizeView({
 }: ListingCategorizeViewProps) {
   const router = useRouter();
   const [images, setImages] = React.useState<ListingImageItem[]>(initialImages);
+  React.useEffect(() => {
+    const draftImages = getListingUploadDraftImages(listingId);
+    if (draftImages.length === 0) {
+      return;
+    }
+
+    setImages((prev) => {
+      const existing = new Set(prev.map((image) => image.filename.toLowerCase()));
+      const nextDraft = draftImages
+        .filter((image) => !existing.has(image.filename.toLowerCase()))
+        .map((image) => ({
+          id: image.id,
+          url: image.previewUrl,
+          filename: image.filename,
+          category: null,
+          isPrimary: false,
+          primaryScore: null
+        }));
+      return [...nextDraft, ...prev];
+    });
+
+    clearListingUploadDraftImages(listingId);
+  }, [listingId]);
   const [dragOverCategory, setDragOverCategory] = React.useState<string | null>(
     null
   );

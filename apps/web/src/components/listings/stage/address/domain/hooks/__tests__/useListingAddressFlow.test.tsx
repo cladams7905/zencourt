@@ -4,6 +4,7 @@ import { useListingAddressFlow } from "@web/src/components/listings/stage/addres
 const mockPush = jest.fn();
 const mockCreateListingForCurrentUser = jest.fn();
 const mockUpdateListingForCurrentUser = jest.fn();
+const mockTouchListingActivityForCurrentUser = jest.fn();
 const mockEmitListingSidebarUpdate = jest.fn();
 const mockToastError = jest.fn();
 
@@ -19,7 +20,9 @@ jest.mock("@web/src/server/actions/listings/commands", () => ({
   createListingForCurrentUser: (...args: unknown[]) =>
     mockCreateListingForCurrentUser(...args),
   updateListingForCurrentUser: (...args: unknown[]) =>
-    mockUpdateListingForCurrentUser(...args)
+    mockUpdateListingForCurrentUser(...args),
+  touchListingActivityForCurrentUser: (...args: unknown[]) =>
+    mockTouchListingActivityForCurrentUser(...args)
 }));
 
 jest.mock("@web/src/lib/domain/listings/sidebarEvents", () => ({
@@ -30,6 +33,7 @@ jest.mock("@web/src/lib/domain/listings/sidebarEvents", () => ({
 describe("useListingAddressFlow", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockTouchListingActivityForCurrentUser.mockResolvedValue({ touched: true });
   });
 
   it("starts with empty address and no continue or hint", () => {
@@ -152,6 +156,9 @@ describe("useListingAddressFlow", () => {
         listingStage: "upload"
       }
     );
+    expect(mockTouchListingActivityForCurrentUser).toHaveBeenCalledWith(
+      "listing-existing"
+    );
     expect(mockEmitListingSidebarUpdate).toHaveBeenCalledWith(
       expect.objectContaining({
         id: "listing-existing",
@@ -193,6 +200,9 @@ describe("useListingAddressFlow", () => {
       address: "456 Oak Ave, Portland, OR",
       listingStage: "upload"
     });
+    expect(mockTouchListingActivityForCurrentUser).toHaveBeenCalledWith(
+      "listing-1"
+    );
     expect(mockEmitListingSidebarUpdate).toHaveBeenCalledWith(
       expect.objectContaining({
         id: "listing-1",

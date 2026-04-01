@@ -64,4 +64,5 @@ export type UploadDialogProps<TRecord> = {
   maxImageBytes?: number;
   compressDriveImages?: boolean;
   compressOversizeImages?: boolean;
+  clientUploadHandler?: (files: File[]) => Promise<void> | void;
 };

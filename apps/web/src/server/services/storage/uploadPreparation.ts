@@ -23,7 +23,7 @@ import {
 } from "@web/src/server/models/shared/uploadValidation";
 import storageService from "./service";
 
-const MAX_LISTING_IMAGE_COUNT = 20;
+const MAX_LISTING_IMAGE_COUNT = 40;
 
 export async function prepareListingImageUploadUrls(
   userId: string,
@@ -36,7 +36,7 @@ export async function prepareListingImageUploadUrls(
   }
 
   if (existingImageCount + files.length > MAX_LISTING_IMAGE_COUNT) {
-    throw new Error("Listings can contain up to 20 photos.");
+    throw new Error("Listings can contain up to 40 photos.");
   }
 
   const uploads = [] as ListingImageUploadUrlResult["uploads"];

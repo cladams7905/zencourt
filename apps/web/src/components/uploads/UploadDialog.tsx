@@ -14,7 +14,7 @@ import { useUploadDialogState } from "./domain/hooks";
 import { UploadDialogActions } from "./subcomponents/UploadDialogActions";
 import { UploadDropzone } from "./subcomponents/UploadDropzone";
 import { UploadQueueList } from "./subcomponents/UploadQueueList";
-import { UploadTips } from "./subcomponents/UploadTips";
+import { UploadRequirementsCard } from "./subcomponents/UploadRequirementsCard";
 import type {
   UploadDialogProps,
   UploadDescriptor,
@@ -45,7 +45,8 @@ function UploadDialog<TRecord>({
   maxFiles,
   maxImageBytes,
   compressDriveImages,
-  compressOversizeImages
+  compressOversizeImages,
+  clientUploadHandler
 }: UploadDialogProps<TRecord>) {
   const {
     pendingFiles,
@@ -90,6 +91,16 @@ function UploadDialog<TRecord>({
     const files = Array.from(event.target.files ?? []);
     void addFiles(files);
     event.target.value = "";
+  };
+
+  const handleClientUpload = async () => {
+    if (!clientUploadHandler || pendingFiles.length === 0 || isUploading) {
+      return;
+    }
+
+    await clientUploadHandler(pendingFiles.map((item) => item.file));
+    resetDialogState();
+    onOpenChange(false);
   };
 
   return (
@@ -145,7 +156,7 @@ function UploadDialog<TRecord>({
             onDriveLoadingCountChange={setDriveLoadingCount}
           />
 
-          <UploadTips tipsTitle={tipsTitle} tipsItems={tipsItems} />
+          <UploadRequirementsCard requirements={tipsItems ?? []} />
 
           <UploadQueueList
             pendingFiles={pendingFiles}
@@ -164,7 +175,7 @@ function UploadDialog<TRecord>({
             hasFailedUploads={hasFailedUploads}
             onRetryFailed={handleRetryFailed}
             onCancel={() => onOpenChange(false)}
-            onUpload={handleUpload}
+            onUpload={clientUploadHandler ? handleClientUpload : handleUpload}
             isUploading={isUploading}
             hasPendingFiles={pendingFiles.length > 0}
             primaryActionLabel={primaryActionLabel}

@@ -99,4 +99,21 @@ describe("useSidebarListings", () => {
       "upload"
     );
   });
+
+  it("ignores updates that do not change listing values", () => {
+    const { result } = renderHook(() => useSidebarListings(baseListings));
+
+    act(() => {
+      emitListingSidebarUpdate({
+        id: "listing-1",
+        title: "First",
+        listingStage: "review",
+        lastOpenedAt: "2024-01-01T00:00:00.000Z"
+      });
+    });
+
+    expect(result.current.pendingListingIds.size).toBe(0);
+    expect(result.current.displayedListingItems[1].id).toBe("listing-1");
+    expect(result.current.displayedListingItems[1].title).toBe("First");
+  });
 });

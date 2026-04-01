@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import type { AddressSelection } from "@web/src/components/location/shared/types";
 import {
   createListingForCurrentUser,
+  touchListingActivityForCurrentUser,
   updateListingForCurrentUser
 } from "@web/src/server/actions/listings/commands";
 import { emitListingSidebarUpdate } from "@web/src/lib/domain/listings/sidebarEvents";
@@ -58,6 +59,7 @@ export function useListingAddressFlow(options?: UseListingAddressFlowOptions) {
           address: trimmedAddress,
           listingStage: "upload"
         });
+        await touchListingActivityForCurrentUser(prefilledListingId);
 
         emitListingSidebarUpdate({
           id: prefilledListingId,
@@ -80,6 +82,7 @@ export function useListingAddressFlow(options?: UseListingAddressFlowOptions) {
         address: trimmedAddress,
         listingStage: "upload"
       });
+      await touchListingActivityForCurrentUser(listing.id);
 
       emitListingSidebarUpdate({
         id: listing.id,

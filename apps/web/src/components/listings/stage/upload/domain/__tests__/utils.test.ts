@@ -1,7 +1,8 @@
 import {
   buildListingUploadRecordInput,
   buildProcessingRoute,
-  validateImageFile
+  validateImageFile,
+  validateListingUploadRequirements
 } from "@web/src/components/listings/stage/upload/domain/utils";
 
 describe("uploadUtils", () => {
@@ -14,6 +15,49 @@ describe("uploadUtils", () => {
       accepted: false,
       error: "Only image files are supported."
     });
+  });
+
+  it("rejects files over max size with explicit reason", async () => {
+    const oversized = new File(["a"], "big.jpg", { type: "image/jpeg" });
+    Object.defineProperty(oversized, "size", { value: 6 * 1024 * 1024 });
+
+    await expect(
+      validateListingUploadRequirements({
+        file: oversized,
+        maxImageBytes: 5 * 1024 * 1024
+      })
+    ).resolves.toEqual({
+      accepted: false,
+      error: "\"big.jpg\" exceeds the 5.0 MB limit."
+    });
+  });
+
+  it("rejects portrait images", async () => {
+    const originalImage = global.Image;
+    const imageMock = class {
+      onload: null | (() => void) = null;
+      onerror: null | (() => void) = null;
+      naturalWidth = 720;
+      naturalHeight = 1280;
+      set src(_value: string) {
+        this.onload?.();
+      }
+    };
+    // @ts-expect-error test shim for image loading
+    global.Image = imageMock;
+
+    const portrait = new File(["a"], "portrait.jpg", { type: "image/jpeg" });
+    await expect(
+      validateListingUploadRequirements({
+        file: portrait,
+        maxImageBytes: 5 * 1024 * 1024
+      })
+    ).resolves.toEqual({
+      accepted: false,
+      error: "\"portrait.jpg\" must be landscape orientation."
+    });
+
+    global.Image = originalImage;
   });
 
   it("builds processing route with batch parameters", () => {

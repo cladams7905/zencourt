@@ -23,6 +23,62 @@ export const validateImageFile = (file: File) => {
   };
 };
 
+const readImageDimensions = (file: File): Promise<{ width: number; height: number }> =>
+  new Promise((resolve, reject) => {
+    const objectUrl = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = () => {
+      const width = image.naturalWidth;
+      const height = image.naturalHeight;
+      URL.revokeObjectURL(objectUrl);
+      resolve({ width, height });
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error("Image could not be read."));
+    };
+    image.src = objectUrl;
+  });
+
+export const validateListingUploadRequirements = async ({
+  file,
+  maxImageBytes
+}: {
+  file: File;
+  maxImageBytes: number;
+}): Promise<{ accepted: true } | { accepted: false; error: string }> => {
+  if (!file.type.startsWith("image/")) {
+    return {
+      accepted: false,
+      error: `"${file.name}" is not an image.`
+    };
+  }
+
+  if (file.size > maxImageBytes) {
+    return {
+      accepted: false,
+      error: `"${file.name}" exceeds the 5.0 MB limit.`
+    };
+  }
+
+  try {
+    const { width, height } = await readImageDimensions(file);
+    if (width <= height) {
+      return {
+        accepted: false,
+        error: `"${file.name}" must be landscape orientation.`
+      };
+    }
+  } catch {
+    return {
+      accepted: false,
+      error: `"${file.name}" could not be validated. Please try another image.`
+    };
+  }
+
+  return { accepted: true };
+};
+
 export const buildProcessingRoute = (
   listingId: string,
   count: number,

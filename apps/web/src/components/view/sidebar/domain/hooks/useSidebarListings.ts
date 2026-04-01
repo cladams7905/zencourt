@@ -12,20 +12,23 @@ const mergeSidebarListingUpdate = (
 ) => {
   const index = previousItems.findIndex((item) => item.id === update.id);
   if (index === -1) {
-    return [
-      {
-        id: update.id,
-        title: update.title ?? null,
-        listingStage: update.listingStage ?? "upload",
-        lastOpenedAt: update.lastOpenedAt ?? new Date().toISOString()
-      },
-      ...previousItems
-    ];
+    return {
+      items: [
+        {
+          id: update.id,
+          title: update.title ?? null,
+          listingStage: update.listingStage ?? "upload",
+          lastOpenedAt: update.lastOpenedAt ?? new Date().toISOString()
+        },
+        ...previousItems
+      ],
+      changed: true
+    };
   }
 
   const next = [...previousItems];
   const existing = next[index];
-  next[index] = {
+  const merged = {
     ...existing,
     title: update.title !== undefined ? update.title : existing.title,
     listingStage:
@@ -37,7 +40,21 @@ const mergeSidebarListingUpdate = (
         ? update.lastOpenedAt
         : existing.lastOpenedAt
   };
-  return next;
+  const changed =
+    merged.title !== existing.title ||
+    merged.listingStage !== existing.listingStage ||
+    merged.lastOpenedAt !== existing.lastOpenedAt;
+  if (!changed) {
+    return {
+      items: previousItems,
+      changed: false
+    };
+  }
+  next[index] = merged;
+  return {
+    items: next,
+    changed: true
+  };
 };
 
 export const useSidebarListings = (listings: ListingSidebarItem[]) => {
@@ -95,9 +112,15 @@ export const useSidebarListings = (listings: ListingSidebarItem[]) => {
   React.useEffect(
     () =>
       addListingSidebarListener((update: ListingSidebarUpdate) => {
-        markListingPending(update.id);
         startListingsTransition(() =>
-          setVisibleListings((prev) => mergeSidebarListingUpdate(prev, update))
+          setVisibleListings((prev) => {
+            const merged = mergeSidebarListingUpdate(prev, update);
+            if (!merged.changed) {
+              return prev;
+            }
+            markListingPending(update.id);
+            return merged.items;
+          })
         );
       }),
     [markListingPending]

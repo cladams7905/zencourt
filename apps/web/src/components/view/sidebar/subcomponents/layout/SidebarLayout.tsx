@@ -51,30 +51,6 @@ export function SidebarLayout({
   const { displayedListingItems, hasMoreListings, pendingListingIds } =
     useSidebarListings(listings);
   const { isMobile } = useViewSidebar();
-  const [isNavScrolling, setIsNavScrolling] = React.useState(false);
-  const navScrollTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(
-    null
-  );
-
-  const handleNavScroll = React.useCallback(() => {
-    setIsNavScrolling(true);
-
-    if (navScrollTimeoutRef.current) {
-      clearTimeout(navScrollTimeoutRef.current);
-    }
-
-    navScrollTimeoutRef.current = setTimeout(() => {
-      setIsNavScrolling(false);
-    }, 500);
-  }, []);
-
-  React.useEffect(() => {
-    return () => {
-      if (navScrollTimeoutRef.current) {
-        clearTimeout(navScrollTimeoutRef.current);
-      }
-    };
-  }, []);
 
   const handleLinkClick = () => {
     onMobileClose?.();
@@ -136,13 +112,7 @@ export function SidebarLayout({
         <div className="h-px bg-border w-full" />
       </div>
 
-      <nav
-        className={cn(
-          "flex-1 px-4 space-y-1 overflow-y-auto scrollbar-autohide",
-          isNavScrolling && "scrollbar-autohide--scrolling"
-        )}
-        onScroll={handleNavScroll}
-      >
+      <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
         <SidebarPrimarySection onLinkClick={handleLinkClick} />
         <div className="py-4">
           <div className="h-px bg-border w-full" />
