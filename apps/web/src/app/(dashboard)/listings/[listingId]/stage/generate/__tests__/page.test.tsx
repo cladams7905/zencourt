@@ -4,7 +4,7 @@ import ListingGeneratePage from "@web/src/app/(dashboard)/listings/[listingId]/s
 const mockRequireUserOrRedirect = jest.fn();
 const mockGetListingById = jest.fn();
 const mockGetLatestVideoGenBatchByListingId = jest.fn();
-const mockRedirectToListingStage = jest.fn();
+const mockEnforceListingStageAccess = jest.fn();
 
 jest.mock("@web/src/server/infra/logger/callContext", () => ({
   runWithCaller: (_name: string, callback: () => Promise<unknown>) => callback()
@@ -26,8 +26,8 @@ jest.mock("@web/src/server/models/video", () => ({
 jest.mock(
   "@web/src/app/(dashboard)/listings/[listingId]/stage/_utils/redirectToListingStage",
   () => ({
-    redirectToListingStage: (...args: unknown[]) =>
-      mockRedirectToListingStage(...args)
+    enforceListingStageAccess: (...args: unknown[]) =>
+      mockEnforceListingStageAccess(...args)
   })
 );
 
@@ -71,7 +71,7 @@ describe("ListingGeneratePage", () => {
       })
     );
 
-    expect(mockRedirectToListingStage).toHaveBeenCalledWith(
+    expect(mockEnforceListingStageAccess).toHaveBeenCalledWith(
       "listing-1",
       "generate",
       "generate",

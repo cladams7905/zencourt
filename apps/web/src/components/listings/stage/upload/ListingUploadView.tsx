@@ -22,18 +22,71 @@ import {
   ListingStageFooter,
   ListingStageShell
 } from "@web/src/components/listings/stage/shared";
-import { ListingUploadAiProcessingPanel } from "@web/src/components/listings/stage/upload/subcomponents/ListingUploadAiProcessingPanel";
+import { ListingUploadProcessingOverlay } from "@web/src/components/listings/stage/upload/subcomponents/ListingUploadAiProcessingPanel";
 import Image from "next/image";
+import * as React from "react";
 
 type ListingUploadViewProps = {
   listingId?: string;
+  initialImages?: Array<{
+    id: string;
+    url: string;
+    filename: string;
+  }>;
 };
 
-export function ListingUploadView({ listingId }: ListingUploadViewProps = {}) {
+function BlurredProcessingGrid({
+  cells
+}: {
+  cells: Array<{ id: string; src: string; alt: string }>;
+}) {
+  const slots =
+    cells.length > 0
+      ? cells
+      : Array.from({ length: 6 }, (_, i) => ({
+          id: `placeholder-${i}`,
+          src: "",
+          alt: ""
+        }));
+
+  return (
+    <div
+      aria-hidden
+      className="pointer-events-none grid grid-cols-2 gap-2 select-none blur-xs border border-border sm:grid-cols-3 lg:grid-cols-4"
+    >
+      {slots.map((cell, index) => (
+        <div
+          key={cell.id ?? `ph-${index}`}
+          className="relative aspect-square overflow-hidden rounded-md border border-border bg-muted/20"
+        >
+          {cell.src ? (
+            <Image
+              src={cell.src}
+              alt={cell.alt}
+              fill
+              unoptimized
+              className="object-cover"
+              sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+            />
+          ) : (
+            <div className="h-full w-full animate-pulse bg-gradient-to-br from-muted to-secondary" />
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function ListingUploadView({
+  listingId,
+  initialImages = []
+}: ListingUploadViewProps = {}) {
   const {
     phase,
+    initialImages: existingImages,
     processingState,
     isInlineProcessing,
+    processingLocalPreviews,
     pendingFiles,
     isDragging,
     setIsDragging,
@@ -55,7 +108,34 @@ export function ListingUploadView({ listingId }: ListingUploadViewProps = {}) {
     removePendingFile,
     naturalSizeById,
     setNaturalSizeById
-  } = useListingUploadView({ listingId });
+  } = useListingUploadView({ listingId, initialImages });
+
+  const totalGalleryCount = existingImages.length + pendingFiles.length;
+
+  const processingGalleryCells = React.useMemo(() => {
+    if (processingLocalPreviews.length > 0) {
+      return processingLocalPreviews.map((p) => ({
+        id: p.id,
+        src: p.previewUrl,
+        alt: p.name
+      }));
+    }
+    if (phase === "analyzing" && processingState.batchImages.length > 0) {
+      return processingState.batchImages.map((img) => ({
+        id: img.id,
+        src: img.url ?? "",
+        alt: img.filename ?? "Listing image"
+      }));
+    }
+    return [];
+  }, [phase, processingLocalPreviews, processingState.batchImages]);
+
+  const processingPhotoCount =
+    processingLocalPreviews.length > 0
+      ? processingLocalPreviews.length
+      : phase === "analyzing"
+        ? processingState.batchTotal
+        : Math.max(pendingFiles.length, processingState.batchTotal);
 
   return (
     <>
@@ -74,27 +154,51 @@ export function ListingUploadView({ listingId }: ListingUploadViewProps = {}) {
         }
       >
         {isInlineProcessing ? (
-          <ListingUploadAiProcessingPanel
-            images={phase === "analyzing" ? processingState.batchImages : []}
-            batchCompleted={
-              phase === "analyzing" ? processingState.batchCompleted : 0
-            }
-            batchTotal={phase === "analyzing" ? processingState.batchTotal : 0}
-            isUploading={phase === "uploading"}
-            title={
-              phase === "uploading"
-                ? "Uploading your listing photos"
-                : "Analyzing your listing photos with AI"
-            }
-            subtitle={
-              phase === "uploading"
-                ? "We’re saving your photos and preparing the batch for room analysis."
-                : "We’re categorizing the new batch so the next step opens ready for review."
-            }
-          />
+          <div className="shrink-0 rounded-lg border border-border bg-background p-3">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  My Listing Photos
+                </div>
+                <Badge variant="muted" className="text-muted-foreground">
+                  <ImageIcon className="size-3" aria-hidden />
+                  {processingPhotoCount}/{IMAGE_UPLOAD_LIMIT}
+                </Badge>
+              </div>
+              <Button
+                type="button"
+                variant="default"
+                disabled
+                aria-disabled="true"
+                title="Available after processing finishes"
+              >
+                <Upload className="h-4 w-4" />
+                Upload more
+              </Button>
+            </div>
+            <div className="relative min-h-[260px] overflow-hidden rounded-md">
+              <BlurredProcessingGrid cells={processingGalleryCells} />
+              <div className="absolute inset-0 flex items-center justify-center bg-background/40 px-3 py-6">
+                <ListingUploadProcessingOverlay
+                  batchCompleted={
+                    phase === "analyzing" ? processingState.batchCompleted : 0
+                  }
+                  batchTotal={
+                    phase === "analyzing" ? processingState.batchTotal : 0
+                  }
+                  isUploading={phase === "uploading"}
+                  title={
+                    phase === "uploading"
+                      ? "Uploading your listing photos…"
+                      : "Analyzing your listing photos with AI…"
+                  }
+                />
+              </div>
+            </div>
+          </div>
         ) : (
           <section className="flex min-h-0 w-full flex-1 flex-col gap-3">
-            {pendingFiles.length === 0 ? (
+            {totalGalleryCount === 0 ? (
               <UploadDropzone
                 fillContainer
                 isDragging={isDragging}
@@ -115,11 +219,12 @@ export function ListingUploadView({ listingId }: ListingUploadViewProps = {}) {
                 onDriveLoadingCountChange={setDriveLoadingCount}
               />
             ) : null}
-            {pendingFiles.length === 0 ? (
+            {totalGalleryCount === 0 ? (
               <UploadRequirementsCard requirements={uploadRequirements} />
             ) : null}
 
-            {pendingFiles.length > 0 ||
+            {existingImages.length > 0 ||
+            pendingFiles.length > 0 ||
             isCompressing ||
             (isDriveLoading && driveLoadingCount > 0) ? (
               <div className="shrink-0 rounded-lg border border-border bg-background p-3">
@@ -130,7 +235,7 @@ export function ListingUploadView({ listingId }: ListingUploadViewProps = {}) {
                     </div>
                     <Badge variant="muted" className="text-muted-foreground">
                       <ImageIcon className="size-3" aria-hidden />
-                      {pendingFiles.length}/{IMAGE_UPLOAD_LIMIT}
+                      {totalGalleryCount}/{IMAGE_UPLOAD_LIMIT}
                     </Badge>
                   </div>
                   <Button
@@ -143,6 +248,21 @@ export function ListingUploadView({ listingId }: ListingUploadViewProps = {}) {
                   </Button>
                 </div>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+                  {existingImages.map((item) => (
+                    <div
+                      key={item.id}
+                      className="relative aspect-square overflow-hidden rounded-md border border-border bg-muted/20"
+                    >
+                      <Image
+                        src={item.url}
+                        alt={item.filename}
+                        fill
+                        unoptimized
+                        className="object-cover"
+                        sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+                      />
+                    </div>
+                  ))}
                   {pendingFiles.map((item) => {
                     const natural = naturalSizeById[item.id];
                     const recommendationIssues = natural
@@ -232,7 +352,7 @@ export function ListingUploadView({ listingId }: ListingUploadViewProps = {}) {
         primaryActionLabel="Upload"
         selectedLabel="photo"
         errorMessage="Failed to upload photos. Please try again."
-        maxFiles={IMAGE_UPLOAD_LIMIT}
+        maxFiles={Math.max(IMAGE_UPLOAD_LIMIT - totalGalleryCount, 0)}
         maxImageBytes={MAX_IMAGE_BYTES}
         compressDriveImages={false}
         compressOversizeImages={false}

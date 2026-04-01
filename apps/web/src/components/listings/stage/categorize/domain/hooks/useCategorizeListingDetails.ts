@@ -213,15 +213,9 @@ export function useCategorizeListingDetails({
       return;
     }
 
-    if (hasPropertyDetailsState) {
-      router.push(`/listings/${listingId}/stage/review`);
-      return;
-    }
-
-    router.push(`/listings/${listingId}/stage/review/processing`);
+    router.push(`/listings/${listingId}/stage/review`);
   }, [
     addressValue,
-    hasPropertyDetailsState,
     listingId,
     persistAddress,
     touchListingActivity,

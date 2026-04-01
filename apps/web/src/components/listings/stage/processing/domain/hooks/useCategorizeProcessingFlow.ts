@@ -75,7 +75,15 @@ export function useCategorizeProcessingFlow(params: {
     batchStartedAt ?? storedBatch?.batchStartedAt ?? null;
   const [isProcessing, setIsProcessing] = React.useState(true);
   const hasTriggeredCategorizeRef = React.useRef(false);
-  const hasNavigatedRef = React.useRef(false);
+  const completionHandledRef = React.useRef(false);
+  const batchSignature = React.useMemo(
+    () => resolvedBatchImageIds.join("|"),
+    [resolvedBatchImageIds]
+  );
+
+  React.useEffect(() => {
+    completionHandledRef.current = false;
+  }, [batchSignature]);
 
   React.useEffect(() => {
     if (mode !== "categorize" || !listingId.trim()) {
@@ -122,16 +130,17 @@ export function useCategorizeProcessingFlow(params: {
       void triggerCategorization(listingId).catch(() => null);
     }
 
-    if (isComplete && !hasNavigatedRef.current) {
-      hasNavigatedRef.current = true;
-      setIsProcessing(false);
-      clearStoredCategorizeProcessingBatch(listingId);
-      emitListingSidebarUpdate({
-        id: listingId,
-        lastOpenedAt: new Date().toISOString()
-      });
-      navigate(`/listings/${listingId}/stage/categorize`);
+    if (!isComplete || completionHandledRef.current) {
+      return;
     }
+    completionHandledRef.current = true;
+    setIsProcessing(false);
+    clearStoredCategorizeProcessingBatch(listingId);
+    emitListingSidebarUpdate({
+      id: listingId,
+      lastOpenedAt: new Date().toISOString()
+    });
+    navigate(`/listings/${listingId}/stage/categorize`);
   }, [isComplete, listingId, mode, navigate, resolvedBatchImageIds.length]);
 
   return {

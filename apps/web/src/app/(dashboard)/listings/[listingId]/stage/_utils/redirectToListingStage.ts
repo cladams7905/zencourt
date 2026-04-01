@@ -1,4 +1,8 @@
 import { redirect } from "next/navigation";
+import {
+  canAccessListingStage,
+  resolveListingResumePath
+} from "@web/src/components/listings/stage/shared/domain/helpers";
 
 type ListingStage =
   | "categorize"
@@ -15,18 +19,47 @@ const STAGE_PATHS: Record<ListingStage, (id: string) => string> = {
   upload: (id) => `/listings/${id}/stage/upload`
 };
 
-/**
- * If `stage` does not match `expectedStage`, redirects to the path for
- * `stage`. Pass a `fallback` URL for when `stage` is not a recognised value.
- */
+export function enforceListingStageAccess(
+  listingId: string,
+  stage: string,
+  requestedStage: Exclude<ListingStage, "complete">,
+  fallback = `/listings/${listingId}/stage/categorize`
+): void {
+  if (stage === "complete") {
+    redirect(STAGE_PATHS.complete(listingId));
+  }
+
+  if (canAccessListingStage(stage, requestedStage)) {
+    return;
+  }
+
+  if (stage in STAGE_PATHS) {
+    redirect(resolveListingResumePath({ id: listingId, listingStage: stage }));
+  }
+
+  redirect(fallback);
+}
+
 export function redirectToListingStage(
   listingId: string,
   stage: string,
-  expectedStage: ListingStage,
+  requestedStage: ListingStage,
   fallback = `/listings/${listingId}/stage/categorize`
 ): void {
-  if (stage === expectedStage) return;
+  if (requestedStage === "complete") {
+    if (stage === "complete") {
+      return;
+    }
+    if (stage in STAGE_PATHS) {
+      redirect(resolveListingResumePath({ id: listingId, listingStage: stage }));
+    }
+    redirect(fallback);
+  }
 
-  const pathFn = STAGE_PATHS[stage as ListingStage];
-  redirect(pathFn ? pathFn(listingId) : fallback);
+  enforceListingStageAccess(
+    listingId,
+    stage,
+    requestedStage as Exclude<ListingStage, "complete">,
+    fallback
+  );
 }

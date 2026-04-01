@@ -7,7 +7,7 @@ export function useReviewProcessingFlow(params: {
   listingId: string;
   address?: string | null;
   navigate: (url: string) => void;
-  updateStage: (stage: "review" | "complete") => Promise<void>;
+  updateStage?: (stage: "review" | "complete") => Promise<void>;
 }) {
   const { mode, listingId, address, navigate, updateStage } = params;
   const [status, setStatus] = React.useState<"loading" | "success" | "error">(
@@ -44,7 +44,7 @@ export function useReviewProcessingFlow(params: {
 
   const handleSkip = React.useCallback(async () => {
     try {
-      await updateStage("review");
+      await updateStage?.("review");
       navigate(`/listings/${listingId}/stage/review`);
     } catch (error) {
       toast.error(

@@ -1,8 +1,12 @@
 import { redirect } from "next/navigation";
 import { runWithCaller } from "@web/src/server/infra/logger/callContext";
 import { getListingById } from "@web/src/server/models/listings";
+import {
+  getListingImages,
+  mapListingImageToDisplayItem
+} from "@web/src/server/models/listings/images";
 import { requireUserOrRedirect } from "@web/src/app/(dashboard)/_utils/requireUserOrRedirect";
-import { redirectToListingStage } from "@web/src/app/(dashboard)/listings/[listingId]/stage/_utils/redirectToListingStage";
+import { enforceListingStageAccess } from "@web/src/app/(dashboard)/listings/[listingId]/stage/_utils/redirectToListingStage";
 import { listingStreetLineFromAddress } from "@shared/utils/address";
 import { ListingUploadView } from "@web/src/components/listings/stage/upload";
 import { ListingStageViewProvider } from "@web/src/components/listings/stage/shared";
@@ -27,7 +31,9 @@ export default async function ListingStageUploadPage({
       redirect("/listings/create");
     }
 
-    redirectToListingStage(listingId, listing.listingStage, "upload");
+    enforceListingStageAccess(listingId, listing.listingStage, "upload");
+    const images = await getListingImages(user.id, listingId);
+    const imageItems = images.map(mapListingImageToDisplayItem);
 
     return (
       <ListingStageViewProvider
@@ -41,7 +47,14 @@ export default async function ListingStageUploadPage({
         listingId={listingId}
         listingDbStage={listing.listingStage}
       >
-        <ListingUploadView listingId={listingId} />
+        <ListingUploadView
+          listingId={listingId}
+          initialImages={imageItems.map((image) => ({
+            id: image.id,
+            url: image.url,
+            filename: image.filename
+          }))}
+        />
       </ListingStageViewProvider>
     );
   });

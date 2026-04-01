@@ -24,12 +24,25 @@ type UploadProcessingBatch = {
   batchStartedAt: number;
 };
 
+/** Captured before upload clears `pendingFiles`, for the processing UI gallery. */
+export type ListingUploadProcessingPreview = {
+  id: string;
+  previewUrl: string;
+  name: string;
+};
+
 export type UseListingUploadViewParams = {
   listingId?: string;
+  initialImages?: Array<{
+    id: string;
+    url: string;
+    filename: string;
+  }>;
 };
 
 export function useListingUploadView({
-  listingId
+  listingId,
+  initialImages = []
 }: UseListingUploadViewParams = {}) {
   const router = useRouter();
   const initialStoredBatch = React.useMemo(
@@ -100,9 +113,16 @@ export function useListingUploadView({
   });
 
   const [isUploadMoreOpen, setIsUploadMoreOpen] = React.useState(false);
+  const [processingLocalPreviews, setProcessingLocalPreviews] = React.useState<
+    ListingUploadProcessingPreview[]
+  >([]);
   const [naturalSizeById, setNaturalSizeById] = React.useState<
     Record<string, { width: number; height: number }>
   >({});
+  const existingImageFileNames = React.useMemo(
+    () => new Set(initialImages.map((image) => image.filename.toLowerCase())),
+    [initialImages]
+  );
   const processingState = useCategorizeProcessingFlow({
     mode: "categorize",
     listingId: processingBatch?.listingId ?? listingId ?? "",
@@ -120,7 +140,7 @@ export function useListingUploadView({
   const handleCandidateFiles = React.useCallback(
     async (files: File[]) => {
       const accepted: File[] = [];
-      let acceptedCount = pendingFiles.length;
+      let acceptedCount = pendingFiles.length + initialImages.length;
       const existingKeys = new Set(
         pendingFiles.map(
           (item) =>
@@ -131,6 +151,10 @@ export function useListingUploadView({
         const fileKey = `${file.name.toLowerCase()}-${file.size}-${file.lastModified}`;
         if (existingKeys.has(fileKey)) {
           toast.error(`"${file.name}" was rejected: duplicate image.`);
+          continue;
+        }
+        if (existingImageFileNames.has(file.name.toLowerCase())) {
+          toast.error(`"${file.name}" was rejected: image already uploaded.`);
           continue;
         }
         const validation = await validateListingUploadRequirements({
@@ -161,7 +185,7 @@ export function useListingUploadView({
         );
       }
     },
-    [addFiles, pendingFiles]
+    [addFiles, existingImageFileNames, initialImages.length, pendingFiles]
   );
 
   const handleFileInputChange = (
@@ -182,18 +206,32 @@ export function useListingUploadView({
     []
   );
 
-  const canContinue = pendingFiles.length >= 1;
+  const canContinue = pendingFiles.length >= 1 || initialImages.length > 0;
 
   const handleContinue = React.useCallback(async () => {
     if (!canContinue || phase !== "editing") {
       return;
     }
+    if (pendingFiles.length === 0) {
+      if (listingId?.trim()) {
+        router.push(`/listings/${listingId}/stage/categorize`);
+      }
+      return;
+    }
+    setProcessingLocalPreviews(
+      pendingFiles.map((item) => ({
+        id: item.id,
+        previewUrl: item.previewUrl,
+        name: item.file.name
+      }))
+    );
     pendingProcessingBatchRef.current = null;
     setPhase("uploading");
     try {
       await handleUpload();
       const nextBatch = pendingProcessingBatchRef.current as UploadProcessingBatch | null;
       if (nextBatch === null) {
+        setProcessingLocalPreviews([]);
         setPhase("editing");
         return;
       }
@@ -203,12 +241,13 @@ export function useListingUploadView({
         listingStage: "categorize"
       }).catch(() => null);
     } catch (error) {
+      setProcessingLocalPreviews([]);
       setPhase("editing");
       toast.error(
         (error as Error).message || "Unable to continue to categorize."
       );
     }
-  }, [canContinue, handleUpload, phase]);
+  }, [canContinue, handleUpload, listingId, pendingFiles, phase, router]);
 
   const handleBack = React.useCallback(() => {
     if (
@@ -272,8 +311,10 @@ export function useListingUploadView({
 
   return {
     phase,
+    initialImages,
     processingState,
     isInlineProcessing,
+    processingLocalPreviews,
     pendingFiles,
     isDragging,
     setIsDragging,

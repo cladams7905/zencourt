@@ -7,6 +7,14 @@ import type {
   ListingStageStep
 } from "@web/src/components/listings/stage/shared/domain/types";
 
+const LISTING_STAGE_ACCESS_ORDER: ListingStage[] = [
+  "upload",
+  "categorize",
+  "review",
+  "generate",
+  "complete"
+];
+
 export function buildListingStageSteps(
   currentStage: ListingStage
 ): ListingStageStep[] {
@@ -19,7 +27,7 @@ export function buildListingStageSteps(
   }));
 }
 
-export function resolveListingPath(input: {
+export function resolveListingResumePath(input: {
   id: string;
   listingStage: string | null;
 }): string {
@@ -36,6 +44,33 @@ export function resolveListingPath(input: {
     default:
       return `/listings/${input.id}/stage/categorize`;
   }
+}
+
+export function resolveListingPath(input: {
+  id: string;
+  listingStage: string | null;
+}): string {
+  return resolveListingResumePath(input);
+}
+
+export function canAccessListingStage(
+  currentStage: string | null | undefined,
+  requestedStage: Exclude<ListingStage, "complete">
+): boolean {
+  if (!currentStage || currentStage === "complete") {
+    return false;
+  }
+
+  const currentIndex = LISTING_STAGE_ACCESS_ORDER.indexOf(
+    currentStage as ListingStage
+  );
+  const requestedIndex = LISTING_STAGE_ACCESS_ORDER.indexOf(requestedStage);
+
+  if (currentIndex === -1 || requestedIndex === -1) {
+    return false;
+  }
+
+  return requestedIndex <= currentIndex;
 }
 
 export function formatListingStageLabel(stage?: string | null): string {

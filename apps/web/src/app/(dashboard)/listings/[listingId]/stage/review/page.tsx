@@ -6,7 +6,7 @@ import { getOrCreateUserAdditional } from "@web/src/server/models/user";
 import { listingStreetLineFromAddress } from "@shared/utils/address";
 import { ListingReviewView } from "@web/src/components/listings/stage/review";
 import { ListingStageViewProvider } from "@web/src/components/listings/stage/shared";
-import { redirectToListingStage } from "../_utils/redirectToListingStage";
+import { enforceListingStageAccess } from "../_utils/redirectToListingStage";
 
 interface ListingStageReviewPageProps {
   params: Promise<{ listingId: string }>;
@@ -28,7 +28,7 @@ export default async function ListingStageReviewPage({
       redirect("/listings/create");
     }
 
-    redirectToListingStage(listingId, listing.listingStage, "review");
+    enforceListingStageAccess(listingId, listing.listingStage, "review");
 
     const userAdditional = await getOrCreateUserAdditional(user.id);
 

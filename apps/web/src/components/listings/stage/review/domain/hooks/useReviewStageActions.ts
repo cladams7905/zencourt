@@ -57,23 +57,18 @@ export const useReviewStageActions = ({
     isGoingBackRef.current = true;
     setIsGoingBack(true);
     try {
-      await updateListingStage("categorize");
-      emitListingSidebarUpdate({
-        id: listingId,
-        listingStage: "categorize",
-        lastOpenedAt: new Date().toISOString()
-      });
       navigate(`/listings/${listingId}/stage/categorize`);
     } catch (error) {
       toast.error(
         error instanceof Error
           ? error.message
-          : "Failed to return to categorize stage."
+          : "Failed to navigate back to categorize stage."
       );
       isGoingBackRef.current = false;
       setIsGoingBack(false);
+      return;
     }
-  }, [listingId, navigate, updateListingStage]);
+  }, [listingId, navigate]);
 
   React.useEffect(() => {
     emitListingSidebarHeartbeat({

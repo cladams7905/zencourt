@@ -10,76 +10,75 @@ jest.mock("next/navigation", () => ({
 
 import { redirect } from "next/navigation";
 
-import { redirectToListingStage } from "../redirectToListingStage";
+import {
+  enforceListingStageAccess,
+  redirectToListingStage
+} from "../redirectToListingStage";
 
 const mockRedirect = jest.mocked(redirect);
 
 describe("redirectToListingStage", () => {
   beforeEach(() => mockRedirect.mockClear());
 
-  const stages = [
-    "categorize",
-    "complete",
-    "generate",
-    "review",
-    "upload"
-  ] as const;
-
-  it.each(stages)(
-    "does not redirect when stage matches expectedStage (%s)",
-    (stage) => {
-      expect(() =>
-        redirectToListingStage("abc123", stage, stage)
-      ).not.toThrow();
-      expect(mockRedirect).not.toHaveBeenCalled();
-    }
-  );
-
-  it("redirects to /stage/categorize when stage is categorize and expected is create", () => {
+  it("allows current stage access", () => {
     expect(() =>
-      redirectToListingStage("abc123", "categorize", "complete")
+      enforceListingStageAccess("abc123", "categorize", "categorize")
+    ).not.toThrow();
+    expect(mockRedirect).not.toHaveBeenCalled();
+  });
+
+  it("allows previous stage access", () => {
+    expect(() =>
+      enforceListingStageAccess("abc123", "review", "categorize")
+    ).not.toThrow();
+    expect(mockRedirect).not.toHaveBeenCalled();
+  });
+
+  it("redirects future stage access back to current stage", () => {
+    expect(() =>
+      enforceListingStageAccess("abc123", "categorize", "review")
     ).toThrow("REDIRECT:/listings/abc123/stage/categorize");
   });
 
-  it("redirects to /content when stage is create and expected is categorize", () => {
+  it("redirects complete listings to content when a stage route is requested", () => {
     expect(() =>
-      redirectToListingStage("abc123", "complete", "categorize")
+      enforceListingStageAccess("abc123", "complete", "categorize")
     ).toThrow("REDIRECT:/listings/abc123/content");
-  });
-
-  it("redirects to /stage/generate when stage is generate", () => {
-    expect(() =>
-      redirectToListingStage("abc123", "generate", "categorize")
-    ).toThrow("REDIRECT:/listings/abc123/stage/generate");
-  });
-
-  it("redirects to /stage/review when stage is review", () => {
-    expect(() =>
-      redirectToListingStage("abc123", "review", "categorize")
-    ).toThrow("REDIRECT:/listings/abc123/stage/review");
-  });
-
-  it("redirects to /stage/upload when stage is upload", () => {
-    expect(() =>
-      redirectToListingStage("abc123", "upload", "categorize")
-    ).toThrow("REDIRECT:/listings/abc123/stage/upload");
   });
 
   it("always uses the passed listingId in the redirect URL", () => {
     expect(() =>
-      redirectToListingStage("listing-xyz", "complete", "categorize")
+      enforceListingStageAccess("listing-xyz", "complete", "categorize")
     ).toThrow("REDIRECT:/listings/listing-xyz/content");
   });
 
   it("uses the default fallback for unknown stage values", () => {
     expect(() =>
-      redirectToListingStage("abc123", "unknown-stage", "categorize")
+      enforceListingStageAccess("abc123", "unknown-stage", "categorize")
     ).toThrow("REDIRECT:/listings/abc123/stage/categorize");
   });
 
   it("uses the provided fallback for unknown stage values", () => {
     expect(() =>
-      redirectToListingStage("abc123", "unknown-stage", "categorize", "/listings/create")
+      enforceListingStageAccess(
+        "abc123",
+        "unknown-stage",
+        "categorize",
+        "/listings/create"
+      )
     ).toThrow("REDIRECT:/listings/create");
+  });
+
+  it("keeps exact-match behavior for complete route checks", () => {
+    expect(() =>
+      redirectToListingStage("abc123", "complete", "complete")
+    ).not.toThrow();
+    expect(mockRedirect).not.toHaveBeenCalled();
+  });
+
+  it("redirects content requests back to the current unlocked stage when incomplete", () => {
+    expect(() =>
+      redirectToListingStage("abc123", "review", "complete")
+    ).toThrow("REDIRECT:/listings/abc123/stage/review");
   });
 });

@@ -6,7 +6,7 @@ import { requireUserOrRedirect } from "@web/src/app/(dashboard)/_utils/requireUs
 import { listingStreetLineFromAddress } from "@shared/utils/address";
 import { ListingProcessingView } from "@web/src/components/listings/stage/processing";
 import { ListingStageViewProvider } from "@web/src/components/listings/stage/shared";
-import { redirectToListingStage } from "../_utils/redirectToListingStage";
+import { enforceListingStageAccess } from "../_utils/redirectToListingStage";
 
 interface ListingStageGeneratePageProps {
   params: Promise<{ listingId: string }>;
@@ -41,7 +41,7 @@ export default async function ListingStageGeneratePage({
       redirect("/listings/create");
     }
 
-    redirectToListingStage(
+    enforceListingStageAccess(
       listingId,
       listing.listingStage,
       "generate",

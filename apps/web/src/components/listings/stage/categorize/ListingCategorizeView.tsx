@@ -40,6 +40,7 @@ import {
   ListingStageShell
 } from "@web/src/components/listings/stage/shared";
 import {
+  clearStoredCategorizeProcessingBatch,
   getStoredCategorizeProcessingBatch,
   useCategorizeProcessingFlow
 } from "@web/src/components/listings/stage/processing/domain/hooks";
@@ -310,6 +311,11 @@ export function ListingCategorizeView({
   const handleRequestDeleteImage = React.useCallback((imageId: string) => {
     setDeleteImageId(imageId);
   }, []);
+  const handleBackToUpload = React.useCallback(() => {
+    clearStoredCategorizeProcessingBatch(listingId);
+    setProcessingBatch(null);
+    router.push(`/listings/${listingId}/stage/upload`);
+  }, [listingId, router]);
 
   return (
     <>
@@ -332,7 +338,7 @@ export function ListingCategorizeView({
               canContinue={canContinue}
               isSubmitting={isSavingDraft}
               continueLoadingLabel="Saving..."
-              onBack={() => router.push(`/listings/${listingId}/stage/upload`)}
+              onBack={handleBackToUpload}
               canBack
             />
           )
@@ -347,8 +353,6 @@ export function ListingCategorizeView({
             }
             batchCompleted={processingState.batchCompleted}
             batchTotal={processingState.batchTotal}
-            title="Analyzing your listing photos with AI"
-            subtitle="We’re categorizing the new upload batch so it drops into the right room groups."
           />
         ) : (
           <div

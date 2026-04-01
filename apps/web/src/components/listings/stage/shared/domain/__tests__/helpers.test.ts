@@ -1,26 +1,42 @@
 import {
   buildListingStageSteps,
+  canAccessListingStage,
   formatListingStageLabel,
-  resolveListingPath
+  resolveListingPath,
+  resolveListingResumePath
 } from "@web/src/components/listings/stage/shared/domain/helpers";
 
 describe("listings stage shared helpers", () => {
   it("resolves listing path by stage with categorize fallback", () => {
+    expect(resolveListingResumePath({ id: "1", listingStage: "review" })).toBe(
+      "/listings/1/stage/review"
+    );
+    expect(resolveListingResumePath({ id: "1", listingStage: "generate" })).toBe(
+      "/listings/1/stage/generate"
+    );
+    expect(resolveListingResumePath({ id: "1", listingStage: "complete" })).toBe(
+      "/listings/1/content"
+    );
+    expect(resolveListingResumePath({ id: "1", listingStage: "upload" })).toBe(
+      "/listings/1/stage/upload"
+    );
+    expect(resolveListingResumePath({ id: "1", listingStage: null })).toBe(
+      "/listings/1/stage/categorize"
+    );
     expect(resolveListingPath({ id: "1", listingStage: "review" })).toBe(
       "/listings/1/stage/review"
     );
-    expect(resolveListingPath({ id: "1", listingStage: "generate" })).toBe(
-      "/listings/1/stage/generate"
-    );
-    expect(resolveListingPath({ id: "1", listingStage: "complete" })).toBe(
-      "/listings/1/content"
-    );
-    expect(resolveListingPath({ id: "1", listingStage: "upload" })).toBe(
-      "/listings/1/stage/upload"
-    );
-    expect(resolveListingPath({ id: "1", listingStage: null })).toBe(
-      "/listings/1/stage/categorize"
-    );
+  });
+
+  it("allows current and previous stages but blocks future stages", () => {
+    expect(canAccessListingStage("categorize", "upload")).toBe(true);
+    expect(canAccessListingStage("categorize", "categorize")).toBe(true);
+    expect(canAccessListingStage("categorize", "review")).toBe(false);
+    expect(canAccessListingStage("review", "categorize")).toBe(true);
+    expect(canAccessListingStage("review", "generate")).toBe(false);
+    expect(canAccessListingStage("generate", "review")).toBe(true);
+    expect(canAccessListingStage("complete", "review")).toBe(false);
+    expect(canAccessListingStage(null, "categorize")).toBe(false);
   });
 
   it("formats stage labels with draft fallback", () => {

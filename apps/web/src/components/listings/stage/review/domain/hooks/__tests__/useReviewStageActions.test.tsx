@@ -56,9 +56,8 @@ describe("useReviewStageActions", () => {
     expect(navigate).toHaveBeenCalledWith("/listings/listing-1/stage/generate");
   });
 
-  it("handles go back failure and resets loading state", async () => {
+  it("navigates back without attempting to update the listing stage", async () => {
     const navigate = jest.fn();
-    mockFetchApiData.mockRejectedValue(new Error("failed"));
 
     const { result } = renderHook(() =>
       useReviewStageActions({
@@ -72,9 +71,10 @@ describe("useReviewStageActions", () => {
       await result.current.handleGoBack();
     });
 
-    expect(mockToastError).toHaveBeenCalledWith("failed");
-    expect(result.current.isGoingBack).toBe(false);
-    expect(navigate).not.toHaveBeenCalled();
+    expect(mockFetchApiData).not.toHaveBeenCalled();
+    expect(navigate).toHaveBeenCalledWith(
+      "/listings/listing-1/stage/categorize"
+    );
   });
 
   it("emits sidebar heartbeat on mount", async () => {
@@ -114,7 +114,7 @@ describe("useReviewStageActions", () => {
     expect(navigate).not.toHaveBeenCalled();
   });
 
-  it("navigates to categorize on go back success", async () => {
+  it("navigates to categorize on go back success without downgrading stage", async () => {
     const navigate = jest.fn();
     mockFetchApiData.mockResolvedValue(undefined);
 
@@ -130,13 +130,7 @@ describe("useReviewStageActions", () => {
       await result.current.handleGoBack();
     });
 
-    expect(mockFetchApiData).toHaveBeenCalledWith(
-      "/api/v1/listings/listing-1/stage",
-      expect.objectContaining({
-        method: "POST",
-        body: JSON.stringify({ listingStage: "categorize" })
-      })
-    );
+    expect(mockFetchApiData).not.toHaveBeenCalled();
     expect(navigate).toHaveBeenCalledWith(
       "/listings/listing-1/stage/categorize"
     );
@@ -144,14 +138,6 @@ describe("useReviewStageActions", () => {
 
   it("prevents duplicate go back transitions while in flight", async () => {
     const navigate = jest.fn();
-    let resolveUpdate: (() => void) | null = null;
-    mockFetchApiData.mockImplementation(
-      () =>
-        new Promise<void>((resolve) => {
-          resolveUpdate = resolve;
-        })
-    );
-
     const { result } = renderHook(() =>
       useReviewStageActions({
         listingId: "listing-1",
@@ -163,12 +149,9 @@ describe("useReviewStageActions", () => {
     await act(async () => {
       const first = result.current.handleGoBack();
       const second = result.current.handleGoBack();
-      await Promise.resolve();
-      resolveUpdate?.();
       await Promise.all([first, second]);
     });
 
-    expect(mockFetchApiData).toHaveBeenCalledTimes(1);
     expect(navigate).toHaveBeenCalledTimes(1);
   });
 
@@ -193,14 +176,10 @@ describe("useReviewStageActions", () => {
     );
 
     mockToastError.mockReset();
-    mockFetchApiData.mockRejectedValue("boom");
-
     await act(async () => {
       await result.current.handleGoBack();
     });
 
-    expect(mockToastError).toHaveBeenCalledWith(
-      "Failed to return to categorize stage."
-    );
+    expect(mockToastError).not.toHaveBeenCalled();
   });
 });

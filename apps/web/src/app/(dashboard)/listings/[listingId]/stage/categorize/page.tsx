@@ -8,7 +8,7 @@ import {
 import { listingStreetLineFromAddress } from "@shared/utils/address";
 import { ListingCategorizeView } from "@web/src/components/listings/stage/categorize";
 import { ListingStageViewProvider } from "@web/src/components/listings/stage/shared";
-import { redirectToListingStage } from "../_utils/redirectToListingStage";
+import { enforceListingStageAccess } from "../_utils/redirectToListingStage";
 import { requireUserOrRedirect } from "@web/src/app/(dashboard)/_utils/requireUserOrRedirect";
 
 interface ListingStageCategorizePageProps {
@@ -32,7 +32,7 @@ export default async function ListingStageCategorizePage({
       redirect("/listings/create");
     }
 
-    redirectToListingStage(listingId, listing.listingStage, "categorize");
+    enforceListingStageAccess(listingId, listing.listingStage, "categorize");
 
     const images = await getListingImages(user.id, listingId);
     const imageItems = images.map(mapListingImageToDisplayItem);

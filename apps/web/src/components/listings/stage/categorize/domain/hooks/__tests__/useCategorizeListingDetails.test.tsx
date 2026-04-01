@@ -114,7 +114,7 @@ describe("useCategorizeListingDetails", () => {
     expect(mockPush).toHaveBeenCalledWith("/listings/l1/stage/review");
   });
 
-  it("continues to processing route when property details are missing", async () => {
+  it("continues to review route when property details are missing", async () => {
     const { result } = renderHook(() =>
       useCategorizeListingDetails({
         title: "Listing",
@@ -129,8 +129,6 @@ describe("useCategorizeListingDetails", () => {
       await result.current.handleContinue();
     });
 
-    expect(mockPush).toHaveBeenCalledWith(
-      "/listings/l1/stage/review/processing"
-    );
+    expect(mockPush).toHaveBeenCalledWith("/listings/l1/stage/review");
   });
 });
