@@ -28,6 +28,8 @@ jest.mock("@web/src/server/actions/video/generate", () => ({
 
 import {
   cancelVideoGeneration,
+  countTerminalInBatch,
+  fetchPropertyDetails,
   fetchListingImages,
   fetchVideoStatus,
   startListingContentGeneration,
@@ -50,6 +52,7 @@ describe("processing transport", () => {
 
   it("delegates action-backed operations", async () => {
     await updateListingStage("l1", "review");
+    await fetchPropertyDetails("l1", undefined);
     await triggerCategorization("l1");
     await startVideoGeneration("l1");
     await cancelVideoGeneration("batch-1");
@@ -59,6 +62,10 @@ describe("processing transport", () => {
     });
     expect(mockCategorizeListingImagesForCurrentUser).toHaveBeenCalledWith(
       "l1"
+    );
+    expect(mockFetchPropertyDetailsForCurrentUser).toHaveBeenCalledWith(
+      "l1",
+      null
     );
     expect(mockStartListingVideoGeneration).toHaveBeenCalledWith({
       listingId: "l1"
@@ -114,5 +121,38 @@ describe("processing transport", () => {
     });
 
     await expect(startListingContentGeneration("l1")).rejects.toThrow("boom");
+  });
+
+  it("returns null or an empty list when api fetches fail", async () => {
+    (global.fetch as jest.Mock)
+      .mockRejectedValueOnce(new Error("status failed"))
+      .mockRejectedValueOnce(new Error("images failed"));
+
+    await expect(fetchVideoStatus("batch-1")).resolves.toBeNull();
+    await expect(fetchListingImages("l1")).resolves.toEqual([]);
+  });
+
+  it("counts terminal and processing images within a batch", () => {
+    expect(
+      countTerminalInBatch(
+        [
+          { id: "1", analysisStatus: "complete" },
+          { id: "2", analysisStatus: "failed" },
+          { id: "3", analysisStatus: "processing" },
+          { id: "4", analysisStatus: "pending" }
+        ],
+        ["1", "2", "3"]
+      )
+    ).toEqual({
+      batchImages: [
+        { id: "1", analysisStatus: "complete" },
+        { id: "2", analysisStatus: "failed" },
+        { id: "3", analysisStatus: "processing" }
+      ],
+      batchTotal: 3,
+      batchCompleted: 2,
+      processingCount: 1,
+      isComplete: false
+    });
   });
 });

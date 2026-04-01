@@ -54,6 +54,37 @@ describe("perplexity parsing", () => {
     expect(parsed?.items).toEqual([expect.objectContaining({ name: "Park" })]);
   });
 
+  it("parses audience-specific suitability and valid citations only", () => {
+    const parsed = parsePerplexityCategoryJson(
+      JSON.stringify({
+        items: [
+          {
+            name: "Cafe",
+            why_suitable_for_growing_families: "Play area",
+            citations: [
+              { source: "ignored-only-source" },
+              { title: "Guide", url: "https://example.com" }
+            ]
+          }
+        ]
+      }),
+      "growing_families"
+    );
+
+    expect(parsed?.items[0]).toEqual(
+      expect.objectContaining({
+        why_suitable_for_audience: "Play area",
+        citations: [{ title: "Guide", url: "https://example.com", source: undefined }]
+      })
+    );
+  });
+
+  it("returns null when wrapped content has no items array", () => {
+    expect(
+      parsePerplexityCategoryJson(JSON.stringify({ results: [] }), "growing_families")
+    ).toBeNull();
+  });
+
   it("returns null when response choice content is missing", () => {
     const payload = buildCommunityCategoryPayload({
       category: "dining",
@@ -96,6 +127,30 @@ describe("perplexity parsing", () => {
     ]);
   });
 
+  it("drops fallback citations that have neither title nor url", () => {
+    const response = {
+      choices: [
+        {
+          message: {
+            content: JSON.stringify({
+              items: [{ name: "Trail" }]
+            })
+          }
+        }
+      ],
+      search_results: [{ source: "no-title-or-url" }]
+    };
+
+    const payload = buildCommunityCategoryPayload({
+      category: "nature_outdoors",
+      zipCode: "78701",
+      response: response as never,
+      maxItems: 1
+    });
+
+    expect(payload?.items[0].citations).toBeUndefined();
+  });
+
   it("keeps cuisine only for dining/coffee and rounds drive time", () => {
     const response = {
       choices: [
@@ -129,6 +184,33 @@ describe("perplexity parsing", () => {
     expect(dining?.items[0].cuisine).toEqual(["coffee"]);
     expect(dining?.items[0].drive_distance_minutes).toBe(13);
     expect(entertainment?.items[0].cuisine).toBeUndefined();
+  });
+
+  it("drops disclaimers outside nature/outdoors categories", () => {
+    const response = {
+      choices: [
+        {
+          message: {
+            content: JSON.stringify({
+              items: [
+                {
+                  name: "Cafe",
+                  disclaimer: "Seasonal"
+                }
+              ]
+            })
+          }
+        }
+      ]
+    };
+
+    const payload = buildCommunityCategoryPayload({
+      category: "dining",
+      zipCode: "78701",
+      response: response as never
+    });
+
+    expect(payload?.items[0].disclaimer).toBeUndefined();
   });
 
   it("filters neighborhood variants of city/state names", () => {

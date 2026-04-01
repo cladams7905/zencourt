@@ -130,4 +130,182 @@ describe("reel export create route", () => {
 
     global.fetch = originalFetch;
   });
+
+  it("uses export id from the request when the video server omits jobId", async () => {
+    const originalFetch = global.fetch;
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true })
+    }) as typeof fetch;
+
+    const { POST, mockBuildListingReelExportRequestForCurrentUser } =
+      await loadRoute();
+    mockBuildListingReelExportRequestForCurrentUser.mockResolvedValueOnce({
+      filename: "reel-preview-1.mp4",
+      request: {
+        exportId: "export-from-request",
+        orientation: "vertical",
+        quality: "premium",
+        clips: []
+      }
+    });
+
+    const response = await POST(
+      new Request("http://localhost/api/v1/listings/listing-1/reels/exports", {
+        method: "POST",
+        body: JSON.stringify({
+          filenameBase: "reel-preview-1",
+          quality: "premium",
+          segments: []
+        })
+      }),
+      {
+        params: Promise.resolve({
+          listingId: "listing-1"
+        })
+      }
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      success: true,
+      data: {
+        exportId: "export-from-request",
+        status: "queued",
+        progress: 0,
+        downloadReady: false
+      }
+    });
+
+    global.fetch = originalFetch;
+  });
+
+  it("returns bad gateway with upstream JSON message when render start fails", async () => {
+    const originalFetch = global.fetch;
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      headers: new Headers({ "content-type": "application/json" }),
+      json: async () => ({ message: "queue full" })
+    }) as typeof fetch;
+
+    const { POST, mockBuildListingReelExportRequestForCurrentUser } =
+      await loadRoute();
+    mockBuildListingReelExportRequestForCurrentUser.mockResolvedValueOnce({
+      filename: "reel-preview-1.mp4",
+      request: {
+        exportId: "export-1",
+        orientation: "vertical",
+        quality: "premium",
+        clips: []
+      }
+    });
+
+    const response = await POST(
+      new Request("http://localhost/api/v1/listings/listing-1/reels/exports", {
+        method: "POST",
+        body: JSON.stringify({
+          filenameBase: "reel-preview-1",
+          quality: "premium",
+          segments: []
+        })
+      }),
+      {
+        params: Promise.resolve({
+          listingId: "listing-1"
+        })
+      }
+    );
+
+    expect(response.status).toBe(502);
+    await expect(response.json()).resolves.toEqual({
+      success: false,
+      code: "VIDEO_SERVER_ERROR",
+      error: "queue full",
+      message: "queue full"
+    });
+
+    global.fetch = originalFetch;
+  });
+
+  it("falls back to a generic message when upstream error is not JSON", async () => {
+    const originalFetch = global.fetch;
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      headers: new Headers({ "content-type": "text/plain" }),
+      json: async () => {
+        throw new Error("not json");
+      }
+    }) as typeof fetch;
+
+    const { POST, mockBuildListingReelExportRequestForCurrentUser } =
+      await loadRoute();
+    mockBuildListingReelExportRequestForCurrentUser.mockResolvedValueOnce({
+      filename: "reel-preview-1.mp4",
+      request: {
+        exportId: "export-1",
+        orientation: "vertical",
+        quality: "premium",
+        clips: []
+      }
+    });
+
+    const response = await POST(
+      new Request("http://localhost/api/v1/listings/listing-1/reels/exports", {
+        method: "POST",
+        body: JSON.stringify({
+          filenameBase: "reel-preview-1",
+          quality: "premium",
+          segments: []
+        })
+      }),
+      {
+        params: Promise.resolve({
+          listingId: "listing-1"
+        })
+      }
+    );
+
+    expect(response.status).toBe(502);
+    await expect(response.json()).resolves.toEqual(
+      expect.objectContaining({
+        success: false,
+        code: "VIDEO_SERVER_ERROR",
+        error: "Failed to start reel export"
+      })
+    );
+
+    global.fetch = originalFetch;
+  });
+
+  it("maps ApiError from export request building", async () => {
+    const { POST, mockBuildListingReelExportRequestForCurrentUser } =
+      await loadRoute();
+    mockBuildListingReelExportRequestForCurrentUser.mockRejectedValueOnce(
+      new TestApiError(400, "Invalid segments")
+    );
+
+    const response = await POST(
+      new Request("http://localhost/api/v1/listings/listing-1/reels/exports", {
+        method: "POST",
+        body: JSON.stringify({
+          filenameBase: "reel-preview-1",
+          quality: "premium",
+          segments: []
+        })
+      }),
+      {
+        params: Promise.resolve({
+          listingId: "listing-1"
+        })
+      }
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({
+      success: false,
+      code: "INVALID_REQUEST",
+      error: "Invalid segments",
+      message: "Invalid segments"
+    });
+  });
 });

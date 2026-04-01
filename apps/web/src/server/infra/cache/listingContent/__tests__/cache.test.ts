@@ -9,6 +9,7 @@ import {
   deleteCachedListingContentItem,
   getAllCachedListingContentForFilter,
   getAllCachedListingContentForCreate,
+  getCachedListingContentForCreateFilter,
   getCachedListingContentItem,
   getListingContentFilterPrefix,
   getListingContentListingScanMatch,
@@ -17,6 +18,7 @@ import {
   parseListingContentItemKey,
   setCachedListingContentItem,
   updateCachedListingContentText,
+  updateCachedListingContentTimeline,
   updateRenderedPreviewForItem
 } from "../cache";
 
@@ -494,6 +496,167 @@ describe("listingContent cache", () => {
       templateId: "tpl",
       modifications: { headline: "A" }
     });
+  });
+
+  it("updates cached timeline fields for an existing cached video item", async () => {
+    const get = jest.fn().mockResolvedValue({
+      hook: "Original hook",
+      broll_query: "q",
+      body: null,
+      cta: null,
+      caption: "Original caption",
+      orderedClipIds: ["clip-1"],
+      clipDurationOverrides: { "clip-1": 2.5 }
+    });
+    const set = jest.fn().mockResolvedValue("OK");
+    mockedGetSharedRedisClient.mockReturnValue({
+      get,
+      set
+    } as unknown as ReturnType<typeof getSharedRedisClient>);
+
+    const result = await updateCachedListingContentTimeline({
+      ...baseParams,
+      timestamp: 22,
+      id: 9,
+      orderedClipIds: ["clip-2", "clip-1"],
+      clipDurationOverrides: { "clip-2": 4.25 }
+    });
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        orderedClipIds: ["clip-2", "clip-1"],
+        clipDurationOverrides: { "clip-2": 4.25 }
+      })
+    );
+    expect(set).toHaveBeenCalledWith(
+      `${LISTING_CONTENT_CACHE_PREFIX}:user-1:listing-1:new_listing:video:22:9`,
+      expect.objectContaining({
+        orderedClipIds: ["clip-2", "clip-1"],
+        clipDurationOverrides: { "clip-2": 4.25 }
+      }),
+      { ex: LISTING_CONTENT_CACHE_TTL_SECONDS }
+    );
+  });
+
+  it("returns null when cached timeline update target is missing", async () => {
+    const get = jest.fn().mockResolvedValue(null);
+    const set = jest.fn().mockResolvedValue("OK");
+    mockedGetSharedRedisClient.mockReturnValue({
+      get,
+      set
+    } as unknown as ReturnType<typeof getSharedRedisClient>);
+
+    const result = await updateCachedListingContentTimeline({
+      ...baseParams,
+      timestamp: 22,
+      id: 9,
+      orderedClipIds: ["clip-2", "clip-1"]
+    });
+
+    expect(result).toBeNull();
+    expect(set).not.toHaveBeenCalled();
+  });
+
+  it("returns mapped create items for one filter", async () => {
+    const prefix = getListingContentFilterPrefix(baseParams);
+    mockedGetSharedRedisClient.mockReturnValue({
+      scan: jest.fn().mockResolvedValue([0, [`${prefix}:123:7`]]),
+      get: jest.fn().mockResolvedValue({
+        hook: "hook",
+        broll_query: "broll",
+        body: null,
+        cta: null,
+        caption: "caption",
+        renderedImageUrl: null
+      })
+    } as unknown as ReturnType<typeof getSharedRedisClient>);
+
+    const result = await getCachedListingContentForCreateFilter({
+      userId: baseParams.userId,
+      listingId: baseParams.listingId,
+      subcategory: baseParams.subcategory,
+      mediaType: baseParams.mediaType
+    });
+
+    expect(result).toEqual([
+      expect.objectContaining({
+        id: "cached-new_listing-video-123-7",
+        hook: "hook",
+        brollQuery: "broll",
+        listingSubcategory: "new_listing",
+        mediaType: "video"
+      })
+    ]);
+  });
+
+  it("orders create items by subcategory, media type, timestamp, and id", async () => {
+    const listingScanMatch = getListingContentListingScanMatch({
+      userId: "user-1",
+      listingId: "listing-1"
+    });
+
+    mockedGetSharedRedisClient.mockReturnValue({
+      scan: jest.fn().mockResolvedValue([
+        0,
+        [
+          `${LISTING_CONTENT_CACHE_PREFIX}:user-1:listing-1:open_house:video:200:2`,
+          `${LISTING_CONTENT_CACHE_PREFIX}:user-1:listing-1:new_listing:video:100:2`,
+          `${LISTING_CONTENT_CACHE_PREFIX}:user-1:listing-1:new_listing:image:100:1`,
+          `${LISTING_CONTENT_CACHE_PREFIX}:user-1:listing-1:new_listing:video:100:1`
+        ]
+      ]),
+      get: jest.fn(async (key: string) => {
+        if (!key.startsWith(listingScanMatch.replace("*", ""))) {
+          return null;
+        }
+        return {
+          hook: key,
+          broll_query: "",
+          body: null,
+          cta: null,
+          caption: ""
+        };
+      })
+    } as unknown as ReturnType<typeof getSharedRedisClient>);
+
+    const result = await getAllCachedListingContentForCreate({
+      userId: "user-1",
+      listingId: "listing-1"
+    });
+
+    expect(
+      result.map((item) => [
+        item.listingSubcategory,
+        item.mediaType,
+        item.cacheKeyTimestamp,
+        item.cacheKeyId
+      ])
+    ).toEqual([
+      ["new_listing", "image", 100, 1],
+      ["new_listing", "video", 100, 1],
+      ["new_listing", "video", 100, 2],
+      ["open_house", "video", 200, 2]
+    ]);
+  });
+
+  it("ignores scanned keys that belong to a different listing or user", async () => {
+    mockedGetSharedRedisClient.mockReturnValue({
+      scan: jest.fn().mockResolvedValue([
+        0,
+        [
+          `${LISTING_CONTENT_CACHE_PREFIX}:user-1:listing-2:new_listing:video:123:7`,
+          `${LISTING_CONTENT_CACHE_PREFIX}:user-2:listing-1:new_listing:video:124:8`
+        ]
+      ]),
+      get: jest.fn()
+    } as unknown as ReturnType<typeof getSharedRedisClient>);
+
+    const result = await getAllCachedListingContentForCreate({
+      userId: "user-1",
+      listingId: "listing-1"
+    });
+
+    expect(result).toEqual([]);
   });
 });
 

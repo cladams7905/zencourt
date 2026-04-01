@@ -1,4 +1,5 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
+import { toast } from "sonner";
 import { useLocationAutocomplete } from "@web/src/components/location/domain/hooks/useLocationAutocomplete";
 
 jest.mock("@shared/utils/logger", () => ({
@@ -9,6 +10,12 @@ jest.mock("@shared/utils/logger", () => ({
     info: jest.fn(),
     debug: jest.fn()
   })
+}));
+
+jest.mock("sonner", () => ({
+  toast: {
+    error: jest.fn()
+  }
 }));
 
 jest.mock("@web/src/components/location/domain/hooks/useGooglePlacesServices", () => ({
@@ -146,6 +153,40 @@ describe("useLocationAutocomplete", () => {
     });
 
     expect(result.current.shouldShowSuggestions).toBe(true);
+  });
+
+  it("shows an error when suggestion lookup fails", async () => {
+    const getPlacePredictions = jest
+      .fn()
+      .mockRejectedValue(new Error("lookup failed"));
+
+    useGooglePlacesServices.mockReturnValue({
+      isScriptLoaded: true,
+      autocompleteService: { current: { getPlacePredictions } },
+      placesService: { current: null }
+    });
+
+    const { result } = renderHook(() =>
+      useLocationAutocomplete({
+        value: null,
+        onChange: jest.fn(),
+        apiKey: "test-key",
+        initialValue: undefined,
+        autoFillFromGeolocation: false
+      })
+    );
+
+    await act(async () => {
+      result.current.handleInputChange("Seattle");
+      jest.advanceTimersByTime(350);
+      await flushAsyncUpdates();
+    });
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("Error fetching suggestions.");
+      expect(result.current.suggestions).toEqual([]);
+      expect(result.current.isLoading).toBe(false);
+    });
   });
 
   it("sets validation error when postal code cannot be resolved", async () => {
@@ -286,6 +327,140 @@ describe("useLocationAutocomplete", () => {
         })
       );
     });
+  });
+
+  it("clears the selected value and focuses the input", () => {
+    useGooglePlacesServices.mockReturnValue({
+      isScriptLoaded: true,
+      autocompleteService: { current: { getPlacePredictions: jest.fn() } },
+      placesService: { current: null }
+    });
+
+    const onChange = jest.fn();
+    const { result } = renderHook(() =>
+      useLocationAutocomplete({
+        value: {
+          city: "Seattle",
+          state: "WA",
+          country: "United States",
+          postalCode: "98101",
+          placeId: "p1",
+          formattedAddress: "Seattle, WA 98101"
+        },
+        onChange,
+        apiKey: "test-key",
+        initialValue: undefined,
+        autoFillFromGeolocation: false
+      })
+    );
+
+    const focus = jest.fn();
+    Object.defineProperty(result.current.inputRef, "current", {
+      configurable: true,
+      value: { focus }
+    });
+
+    act(() => {
+      result.current.handleClear();
+    });
+
+    expect(onChange).toHaveBeenCalledWith(null);
+    expect(result.current.inputValue).toBe("");
+    expect(result.current.validationError).toBeNull();
+    expect(focus).toHaveBeenCalled();
+  });
+
+  it("resolves selections without geometry by applying empty service areas", async () => {
+    const getDetails = jest.fn(
+      (
+        _request: unknown,
+        callback: (place: unknown, status: string) => void
+      ) => {
+        callback(
+          {
+            address_components: [],
+            place_id: "place-1",
+            formatted_address: "Seattle, WA"
+          },
+          "OK"
+        );
+      }
+    );
+
+    useGooglePlacesServices.mockReturnValue({
+      isScriptLoaded: true,
+      autocompleteService: { current: { getPlacePredictions: jest.fn() } },
+      placesService: { current: { getDetails } }
+    });
+
+    buildLocationDataFromPlace.mockReturnValue({
+      city: "Seattle",
+      state: "WA",
+      country: "United States",
+      postalCode: "98101",
+      placeId: "place-1",
+      formattedAddress: "Seattle, WA"
+    });
+
+    const onChange = jest.fn();
+    const { result } = renderHook(() =>
+      useLocationAutocomplete({
+        value: null,
+        onChange,
+        apiKey: "test-key",
+        initialValue: undefined,
+        autoFillFromGeolocation: false
+      })
+    );
+
+    await act(async () => {
+      result.current.handleSelectSuggestion({ place_id: "p1" } as never);
+      await flushAsyncUpdates();
+    });
+
+    await waitFor(() => {
+      expect(onChange).toHaveBeenCalledWith(
+        expect.objectContaining({
+          postalCode: "98101",
+          serviceAreas: []
+        })
+      );
+    });
+
+    expect(resolveServiceAreasFromDataset).not.toHaveBeenCalled();
+    expect(resolveGeoFallback).not.toHaveBeenCalled();
+  });
+
+  it("hides suggestions on focus when a value is already selected", () => {
+    useGooglePlacesServices.mockReturnValue({
+      isScriptLoaded: true,
+      autocompleteService: { current: { getPlacePredictions: jest.fn() } },
+      placesService: { current: null }
+    });
+
+    const { result } = renderHook(() =>
+      useLocationAutocomplete({
+        value: {
+          city: "Seattle",
+          state: "WA",
+          country: "United States",
+          postalCode: "98101",
+          placeId: "p1",
+          formattedAddress: "Seattle, WA 98101"
+        },
+        onChange: jest.fn(),
+        apiKey: "test-key",
+        initialValue: undefined,
+        autoFillFromGeolocation: false
+      })
+    );
+
+    act(() => {
+      result.current.handleFocus();
+    });
+
+    expect(result.current.shouldShowSuggestions).toBe(false);
+    expect(result.current.showClear).toBe(true);
   });
 
   it("resolves ZIP entry on blur when input is postal code", async () => {

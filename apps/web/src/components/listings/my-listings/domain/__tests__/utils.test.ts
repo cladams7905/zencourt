@@ -52,4 +52,39 @@ describe("myListingsUtils", () => {
     expect(row.stageLabel).toBe("Review");
     expect(row.showDraftBadge).toBe(true);
   });
+
+  it("applies fallback row values when listing fields are missing", () => {
+    const row = toListingRowViewModel({
+      id: "listing-2",
+      title: "   ",
+      listingStage: null,
+      lastOpenedAt: null,
+      imageCount: null,
+      previewImages: null
+    } as never);
+
+    expect(row.path).toBe("/listings/listing-2/stage/categorize");
+    expect(row.title).toBe("Untitled listing");
+    expect(row.lastOpenedLabel).toBe("Never");
+    expect(row.imageCount).toBe(0);
+    expect(row.previewImages).toEqual([]);
+    expect(row.remainingCount).toBe(0);
+    expect(row.stageLabel).toBe("Categorize");
+    expect(row.draftTooltipLabel).toBe("Draft (Draft)");
+    expect(row.showDraftBadge).toBe(true);
+  });
+
+  it("omits the draft badge for complete listings", () => {
+    const row = toListingRowViewModel({
+      id: "listing-3",
+      title: "Ready",
+      listingStage: "complete",
+      lastOpenedAt: null,
+      imageCount: 1,
+      previewImages: []
+    } as never);
+
+    expect(row.stageLabel).toBe("Complete");
+    expect(row.showDraftBadge).toBe(false);
+  });
 });

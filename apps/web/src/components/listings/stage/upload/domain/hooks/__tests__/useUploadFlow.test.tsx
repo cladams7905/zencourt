@@ -111,6 +111,17 @@ describe("useUploadFlow", () => {
     expect(mockCreateListingImageRecords).toHaveBeenCalledWith("listing-1", []);
   });
 
+  it("throws when draft creation does not return a listing id", async () => {
+    mockCreateListing.mockResolvedValue({});
+    const { result } = renderHook(() =>
+      useUploadFlow({ onUploadsComplete: jest.fn() })
+    );
+
+    await expect(result.current.ensureListingId()).rejects.toThrow(
+      "Draft listing could not be created."
+    );
+  });
+
   it("creates records and reports inline processing batch metadata after uploads complete", async () => {
     const onUploadsComplete = jest.fn();
     mockCreateListing.mockResolvedValue({
@@ -173,5 +184,18 @@ describe("useUploadFlow", () => {
       publicUrl: "https://cdn/x.jpg",
       metadata: { width: 10, height: 10 }
     });
+  });
+
+  it("does not emit upload completion without created image ids", () => {
+    const onUploadsComplete = jest.fn();
+    const { result } = renderHook(() =>
+      useUploadFlow({ onUploadsComplete, listingId: "listing-1" })
+    );
+
+    act(() => {
+      result.current.onUploadsComplete({ count: 1, batchStartedAt: 123 });
+    });
+
+    expect(onUploadsComplete).not.toHaveBeenCalled();
   });
 });

@@ -93,6 +93,34 @@ describe("videoGeneration/domain/rooms", () => {
     expect(rooms[2]?.name).toBe("Bedroom 2");
   });
 
+  it("returns no rooms when there are no grouped categories", () => {
+    expect(buildRoomsFromImages(new Map())).toEqual([]);
+  });
+
+  it("keeps explicit categories and appends unknown categories alphabetically", () => {
+    const grouped = new Map<string, DBListingImage[]>([
+      ["custom-loft", [makeImage({ id: "custom", category: "custom-loft" })]],
+      ["kitchen", [makeImage({ id: "kitchen", category: "kitchen" })]],
+      ["attic-suite-2", [makeImage({ id: "attic", category: "attic-suite-2" })]]
+    ]);
+
+    const rooms = buildRoomsFromImages(grouped);
+
+    expect(rooms.map((room) => room.id)).toEqual([
+      "kitchen",
+      "attic-suite-2",
+      "custom-loft"
+    ]);
+    expect(rooms[1]).toMatchObject({
+      name: "Attic Suite",
+      roomNumber: 2,
+      imageCount: 1
+    });
+    expect(getCategoryForRoom({ id: "ignored", category: "custom-loft" })).toBe(
+      "custom-loft"
+    );
+  });
+
   it("selects listing primary image and falls back for room primary", () => {
     const listingPrimary = selectListingPrimaryImage([
       makeImage({
@@ -119,6 +147,36 @@ describe("videoGeneration/domain/rooms", () => {
     );
 
     expect(selected).toBe("https://img/listing-primary.jpg");
+  });
+
+  it("prefers the highest-scoring non-detail room image", () => {
+    const selected = selectPrimaryImageForRoom(
+      { id: "kitchen", name: "Kitchen", category: "kitchen" },
+      new Map([
+        [
+          "kitchen",
+          [
+            makeImage({
+              id: "detail",
+              category: "kitchen",
+              shotType: "detail",
+              recommendationScore: 1,
+              url: "https://img/detail.jpg"
+            }),
+            makeImage({
+              id: "hero",
+              category: "kitchen",
+              shotType: "room",
+              recommendationScore: 0.8,
+              url: "https://img/hero.jpg"
+            })
+          ]
+        ]
+      ]),
+      "https://img/fallback.jpg"
+    );
+
+    expect(selected).toBe("https://img/hero.jpg");
   });
 
   it("throws when listing primary image is missing", () => {

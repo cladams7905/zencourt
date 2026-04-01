@@ -92,6 +92,9 @@ describe("useListingPagination", () => {
     expect(options.getKey(0, null)).toBe(
       buildListingsPageUrl({ offset: 1, limit: 10 })
     );
+    expect(options.getKey(1, { hasMore: true })).toBe(
+      buildListingsPageUrl({ offset: 11, limit: 10 })
+    );
     expect(options.getKey(1, { hasMore: false })).toBeNull();
   });
 

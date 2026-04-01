@@ -210,4 +210,119 @@ describe("reel draft download route", () => {
 
     global.fetch = originalFetch;
   });
+
+  it("returns bad gateway when upstream succeeds but omits a response body", async () => {
+    const originalFetch = global.fetch;
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      body: null,
+      headers: new Headers({ "content-type": "video/mp4" })
+    }) as typeof fetch;
+
+    const { POST, mockBuildListingReelExportRequestForCurrentUser } =
+      await loadRoute();
+    mockBuildListingReelExportRequestForCurrentUser.mockResolvedValueOnce({
+      filename: "reel-preview-1.mp4",
+      request: {
+        exportId: "export-1",
+        orientation: "vertical",
+        clips: [
+          {
+            src: "https://cdn.example.com/video.mp4",
+            durationSeconds: 2.5,
+            textOverlay: null,
+            supplementalAddressOverlay: null
+          }
+        ]
+      }
+    });
+
+    const response = await POST(
+      new Request("http://localhost/api/v1/listings/listing-1/reels/download", {
+        method: "POST",
+        body: JSON.stringify({
+          filenameBase: "reel-preview-1",
+          segments: [
+            {
+              sourceType: "listing_clip",
+              sourceId: "clip-1",
+              durationSeconds: 2.5,
+              textOverlay: null,
+              supplementalAddressOverlay: null
+            }
+          ]
+        })
+      }),
+      {
+        params: Promise.resolve({
+          listingId: "listing-1"
+        })
+      }
+    );
+
+    expect(response.status).toBe(502);
+    await expect(response.json()).resolves.toEqual(
+      expect.objectContaining({
+        success: false,
+        code: "VIDEO_SERVER_ERROR",
+        error: "Failed to download reel preview"
+      })
+    );
+
+    global.fetch = originalFetch;
+  });
+
+  it("uses default error text when upstream failure is not JSON", async () => {
+    const originalFetch = global.fetch;
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      body: null,
+      headers: new Headers({ "content-type": "text/plain" }),
+      json: async () => {
+        throw new Error("not json");
+      }
+    }) as typeof fetch;
+
+    const { POST, mockBuildListingReelExportRequestForCurrentUser } =
+      await loadRoute();
+    mockBuildListingReelExportRequestForCurrentUser.mockResolvedValueOnce({
+      filename: "reel-preview-1.mp4",
+      request: {
+        exportId: "export-1",
+        orientation: "vertical",
+        clips: [
+          {
+            src: "https://cdn.example.com/video.mp4",
+            durationSeconds: 2.5,
+            textOverlay: null,
+            supplementalAddressOverlay: null
+          }
+        ]
+      }
+    });
+
+    const response = await POST(
+      new Request("http://localhost/api/v1/listings/listing-1/reels/download", {
+        method: "POST",
+        body: JSON.stringify({
+          filenameBase: "reel-preview-1",
+          segments: []
+        })
+      }),
+      {
+        params: Promise.resolve({
+          listingId: "listing-1"
+        })
+      }
+    );
+
+    expect(response.status).toBe(502);
+    await expect(response.json()).resolves.toEqual(
+      expect.objectContaining({
+        error: "Failed to download reel preview"
+      })
+    );
+
+    global.fetch = originalFetch;
+  });
 });

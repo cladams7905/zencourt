@@ -264,4 +264,181 @@ describe("useGenerateProcessingFlow", () => {
       expect(mockStartListingContentGeneration).toHaveBeenCalledWith("l1");
     });
   });
+
+  it("returns to review when an existing terminal batch already has failed jobs", async () => {
+    const navigate = jest.fn();
+    const updateStage = jest.fn().mockResolvedValue(undefined);
+    const goToStage = jest.fn().mockResolvedValue(undefined);
+
+    mockFetchVideoStatus.mockResolvedValue({
+      batchId: "batch-1",
+      status: "completed",
+      createdAt: "2026-03-20T10:00:00.000Z",
+      totalJobs: 2,
+      completedJobs: 1,
+      failedJobs: 1,
+      canceledJobs: 0,
+      processingJobs: 0,
+      pendingJobs: 0,
+      isTerminal: true,
+      allSucceeded: false
+    });
+
+    renderHook(() =>
+      useGenerateProcessingFlow({
+        mode: "generate",
+        listingId: "l1",
+        initialBatchId: "batch-1",
+        navigate,
+        updateStage,
+        goToStage
+      })
+    );
+
+    await waitFor(() => {
+      expect(goToStage).toHaveBeenCalledWith(
+        "review",
+        "/listings/l1/stage/review"
+      );
+    });
+
+    expect(mockStartVideoGeneration).not.toHaveBeenCalled();
+  });
+
+  it("shows an error and returns to review when generation cannot start", async () => {
+    const navigate = jest.fn();
+    const updateStage = jest.fn().mockResolvedValue(undefined);
+    const goToStage = jest.fn().mockResolvedValue(undefined);
+
+    mockStartVideoGeneration.mockRejectedValueOnce(new Error("start failed"));
+
+    renderHook(() =>
+      useGenerateProcessingFlow({
+        mode: "generate",
+        listingId: "l1",
+        initialBatchId: null,
+        navigate,
+        updateStage,
+        goToStage
+      })
+    );
+
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith("start failed");
+      expect(goToStage).toHaveBeenCalledWith(
+        "review",
+        "/listings/l1/stage/review"
+      );
+    });
+  });
+
+  it("returns to review when listing content generation fails after successful videos", async () => {
+    const navigate = jest.fn();
+    const updateStage = jest.fn().mockResolvedValue(undefined);
+    const goToStage = jest.fn().mockResolvedValue(undefined);
+
+    mockFetchVideoStatus.mockResolvedValue({
+      batchId: "batch-1",
+      status: "completed",
+      createdAt: "2026-03-20T10:00:00.000Z",
+      totalJobs: 1,
+      completedJobs: 1,
+      failedJobs: 0,
+      canceledJobs: 0,
+      processingJobs: 0,
+      pendingJobs: 0,
+      isTerminal: true,
+      allSucceeded: true
+    });
+    mockStartListingContentGeneration.mockRejectedValueOnce(
+      new Error("content failed")
+    );
+
+    renderHook(() =>
+      useGenerateProcessingFlow({
+        mode: "generate",
+        listingId: "l1",
+        initialBatchId: "batch-1",
+        navigate,
+        updateStage,
+        goToStage
+      })
+    );
+
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith("content failed");
+      expect(goToStage).toHaveBeenCalledWith(
+        "review",
+        "/listings/l1/stage/review"
+      );
+    });
+  });
+
+  it("navigates to complete after videos and listing content both succeed", async () => {
+    const navigate = jest.fn();
+    const updateStage = jest.fn().mockResolvedValue(undefined);
+    const goToStage = jest.fn().mockResolvedValue(undefined);
+
+    mockFetchVideoStatus.mockResolvedValue({
+      batchId: "batch-1",
+      status: "completed",
+      createdAt: "2026-03-20T10:00:00.000Z",
+      totalJobs: 1,
+      completedJobs: 1,
+      failedJobs: 0,
+      canceledJobs: 0,
+      processingJobs: 0,
+      pendingJobs: 0,
+      isTerminal: true,
+      allSucceeded: true
+    });
+
+    renderHook(() =>
+      useGenerateProcessingFlow({
+        mode: "generate",
+        listingId: "l1",
+        initialBatchId: "batch-1",
+        navigate,
+        updateStage,
+        goToStage
+      })
+    );
+
+    await waitFor(() => {
+      expect(goToStage).toHaveBeenCalledWith(
+        "complete",
+        "/listings/l1/content?mediaType=videos&filter=new_listing"
+      );
+    });
+  });
+
+  it("shows cancel errors and resets modal state", async () => {
+    const navigate = jest.fn();
+    const updateStage = jest.fn().mockResolvedValue(undefined);
+
+    mockCancelVideoGeneration.mockRejectedValueOnce(new Error("cancel failed"));
+
+    const { result } = renderHook(() =>
+      useGenerateProcessingFlow({
+        mode: "generate",
+        listingId: "l1",
+        initialBatchId: "batch-1",
+        navigate,
+        updateStage,
+        goToStage: jest.fn().mockResolvedValue(undefined)
+      })
+    );
+
+    act(() => {
+      result.current.setIsCancelOpen(true);
+    });
+
+    await act(async () => {
+      await result.current.handleCancelGeneration();
+    });
+
+    expect(mockToastError).toHaveBeenCalledWith("cancel failed");
+    expect(result.current.isCanceling).toBe(false);
+    expect(result.current.isCancelOpen).toBe(false);
+  });
 });

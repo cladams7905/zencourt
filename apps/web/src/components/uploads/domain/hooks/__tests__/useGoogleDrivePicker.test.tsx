@@ -21,6 +21,10 @@ describe("useGoogleDrivePicker", () => {
   const originalGapi = window.gapi;
 
   afterEach(() => {
+    jest.clearAllTimers();
+    jest.useRealTimers();
+    document.getElementById("google-identity")?.remove();
+    document.getElementById("google-api")?.remove();
     process.env = { ...originalEnv };
     global.fetch = originalFetch;
     window.google = originalGoogle;
@@ -40,6 +44,112 @@ describe("useGoogleDrivePicker", () => {
     expect(toast.error).toHaveBeenCalledWith(
       "Google Drive client ID is missing."
     );
+  });
+
+  it("waits for pre-existing scripts to finish loading", async () => {
+    process.env.NEXT_PUBLIC_GOOGLE_DRIVE_CLIENT_ID = "client-id";
+    process.env.NEXT_PUBLIC_GOOGLE_DRIVE_API_KEY = "api-key";
+    process.env.NEXT_PUBLIC_GOOGLE_DRIVE_APP_ID = "app-id";
+
+    const identityScript = document.createElement("script");
+    identityScript.id = "google-identity";
+    const apiScript = document.createElement("script");
+    apiScript.id = "google-api";
+    document.head.appendChild(identityScript);
+    document.head.appendChild(apiScript);
+
+    const gapiLoad = jest.fn((_name, options: { callback: () => void }) =>
+      options.callback()
+    );
+    const initTokenClient = jest.fn(
+      ({
+        callback
+      }: {
+        callback: (response: {
+          access_token?: string;
+          error?: string;
+        }) => void;
+      }) => ({
+        requestAccessToken: () => callback({ access_token: "token" })
+      })
+    );
+
+    window.gapi = { load: gapiLoad };
+    (window as any).google = {
+      accounts: {
+        oauth2: {
+          initTokenClient
+        }
+      },
+      picker: {
+        Action: { LOADED: "LOADED", PICKED: "PICKED", CANCEL: "CANCEL" },
+        Feature: { MULTISELECT_ENABLED: "MULTISELECT_ENABLED" },
+        ViewId: { DOCS: "DOCS" },
+        View: function () {
+          return { setMimeTypes: jest.fn() };
+        } as unknown as new (viewId: string) => {
+          setMimeTypes: (mimeTypes: string) => void;
+        },
+        PickerBuilder: function () {
+          return {
+            addView: jest.fn().mockReturnThis(),
+            enableFeature: jest.fn().mockReturnThis(),
+            setOAuthToken: jest.fn().mockReturnThis(),
+            setDeveloperKey: jest.fn().mockReturnThis(),
+            setAppId: jest.fn().mockReturnThis(),
+            setCallback: jest.fn().mockReturnThis(),
+            build: jest.fn(() => ({ setVisible: jest.fn() }))
+          };
+        } as unknown as new () => {
+          addView: () => unknown;
+          enableFeature: () => unknown;
+          setOAuthToken: () => unknown;
+          setDeveloperKey: () => unknown;
+          setAppId: () => unknown;
+          setCallback: () => unknown;
+          build: () => { setVisible: (visible: boolean) => void };
+        }
+      }
+    } as unknown as Window["google"];
+
+    const { result } = renderHook(() => useGoogleDrivePicker({}));
+
+    act(() => {
+      result.current.openFromButton();
+      identityScript.dispatchEvent(new Event("load"));
+      apiScript.dispatchEvent(new Event("load"));
+    });
+
+    await waitFor(() => {
+      expect(initTokenClient).toHaveBeenCalledTimes(1);
+      expect(gapiLoad).toHaveBeenCalledWith(
+        "picker",
+        expect.objectContaining({ callback: expect.any(Function) })
+      );
+    });
+  });
+
+  it("surfaces script load failures during initialization", async () => {
+    process.env.NEXT_PUBLIC_GOOGLE_DRIVE_CLIENT_ID = "client-id";
+
+    const { result } = renderHook(() => useGoogleDrivePicker({}));
+
+    act(() => {
+      result.current.openFromButton();
+    });
+
+    const identityScript = document.getElementById("google-identity");
+    expect(identityScript).not.toBeNull();
+
+    act(() => {
+      identityScript?.dispatchEvent(new Event("error"));
+    });
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(
+        "Failed to load https://accounts.google.com/gsi/client"
+      );
+    });
   });
 
   it("downloads selected files and calls onFilesSelected", async () => {
@@ -78,22 +188,29 @@ describe("useGoogleDrivePicker", () => {
 
     const viewSetMimeTypes = jest.fn();
 
+    const gapiLoad = jest.fn((_name, options: { callback: () => void }) =>
+      options.callback()
+    );
+    const initTokenClient = jest.fn(
+      ({
+        callback
+      }: {
+        callback: (response: {
+          access_token?: string;
+          error?: string;
+        }) => void;
+      }) => ({
+        requestAccessToken: () => callback({ access_token: "token" })
+      })
+    );
+
     window.gapi = {
-      load: (_name, options) => options.callback()
+      load: gapiLoad
     };
     (window as any).google = {
       accounts: {
         oauth2: {
-          initTokenClient: ({
-            callback
-          }: {
-            callback: (response: {
-              access_token?: string;
-              error?: string;
-            }) => void;
-          }) => ({
-            requestAccessToken: () => callback({ access_token: "token" })
-          })
+          initTokenClient
         }
       },
       picker: {
@@ -226,7 +343,7 @@ describe("useGoogleDrivePicker", () => {
     } as unknown as Window["google"];
 
     const { result } = renderHook(() => useGoogleDrivePicker({}));
-    act(() => {
+    await act(async () => {
       result.current.openFromButton();
     });
 
@@ -508,6 +625,182 @@ describe("useGoogleDrivePicker", () => {
     apiScript.remove();
   });
 
+  it("falls back to a generic non-json download failure message", async () => {
+    process.env.NEXT_PUBLIC_GOOGLE_DRIVE_CLIENT_ID = "client-id";
+    process.env.NEXT_PUBLIC_GOOGLE_DRIVE_API_KEY = "api-key";
+    process.env.NEXT_PUBLIC_GOOGLE_DRIVE_APP_ID = "app-id";
+
+    const identityScript = document.createElement("script");
+    identityScript.id = "google-identity";
+    identityScript.dataset.loaded = "true";
+    const apiScript = document.createElement("script");
+    apiScript.id = "google-api";
+    apiScript.dataset.loaded = "true";
+    document.head.appendChild(identityScript);
+    document.head.appendChild(apiScript);
+
+    let pickerCallback:
+      | ((data: {
+          action?: string;
+          docs?: { id?: string; name?: string; mimeType?: string }[];
+        }) => void)
+      | null = null;
+    const pickerBuilder = {
+      addView: jest.fn().mockReturnThis(),
+      enableFeature: jest.fn().mockReturnThis(),
+      setOAuthToken: jest.fn().mockReturnThis(),
+      setDeveloperKey: jest.fn().mockReturnThis(),
+      setAppId: jest.fn().mockReturnThis(),
+      setCallback: jest.fn().mockImplementation((cb) => {
+        pickerCallback = cb;
+        return pickerBuilder;
+      }),
+      build: jest.fn(() => ({ setVisible: jest.fn() }))
+    };
+
+    window.gapi = { load: (_name, options) => options.callback() };
+    (window as any).google = {
+      accounts: {
+        oauth2: {
+          initTokenClient: ({
+            callback
+          }: {
+            callback: (response: {
+              access_token?: string;
+              error?: string;
+            }) => void;
+          }) => ({
+            requestAccessToken: () => callback({ access_token: "token" })
+          })
+        }
+      },
+      picker: {
+        Action: { LOADED: "LOADED", PICKED: "PICKED", CANCEL: "CANCEL" },
+        Feature: { MULTISELECT_ENABLED: "MULTISELECT_ENABLED" },
+        ViewId: { DOCS: "DOCS" },
+        View: function () {
+          return { setMimeTypes: jest.fn() };
+        } as unknown as new (viewId: string) => {
+          setMimeTypes: (mimeTypes: string) => void;
+        },
+        PickerBuilder: function () {
+          return pickerBuilder;
+        } as unknown as new () => typeof pickerBuilder
+      }
+    } as unknown as Window["google"];
+
+    global.fetch = jest.fn(async () => ({
+      ok: false,
+      status: 500,
+      headers: { get: () => "text/plain" },
+      blob: async () => new Blob(),
+      json: async () => {
+        throw new Error("not json");
+      }
+    })) as unknown as typeof fetch;
+
+    const { result } = renderHook(() => useGoogleDrivePicker({}));
+    act(() => {
+      result.current.openFromButton();
+    });
+
+    await waitFor(() => {
+      expect(pickerCallback).not.toBeNull();
+    });
+
+    await act(async () => {
+      pickerCallback?.({
+        action: "PICKED",
+        docs: [{ id: "file-1", name: "bad.jpg", mimeType: "image/jpeg" }]
+      });
+    });
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(
+        "Failed to download bad.jpg (500)"
+      );
+    });
+  });
+
+  it("reports missing drive file ids before fetch", async () => {
+    process.env.NEXT_PUBLIC_GOOGLE_DRIVE_CLIENT_ID = "client-id";
+    process.env.NEXT_PUBLIC_GOOGLE_DRIVE_API_KEY = "api-key";
+    process.env.NEXT_PUBLIC_GOOGLE_DRIVE_APP_ID = "app-id";
+
+    const identityScript = document.createElement("script");
+    identityScript.id = "google-identity";
+    identityScript.dataset.loaded = "true";
+    const apiScript = document.createElement("script");
+    apiScript.id = "google-api";
+    apiScript.dataset.loaded = "true";
+    document.head.appendChild(identityScript);
+    document.head.appendChild(apiScript);
+
+    let pickerCallback:
+      | ((data: {
+          action?: string;
+          docs?: { id?: string; name?: string; mimeType?: string }[];
+        }) => void)
+      | null = null;
+    const pickerBuilder = {
+      addView: jest.fn().mockReturnThis(),
+      enableFeature: jest.fn().mockReturnThis(),
+      setOAuthToken: jest.fn().mockReturnThis(),
+      setDeveloperKey: jest.fn().mockReturnThis(),
+      setAppId: jest.fn().mockReturnThis(),
+      setCallback: jest.fn().mockImplementation((cb) => {
+        pickerCallback = cb;
+        return pickerBuilder;
+      }),
+      build: jest.fn(() => ({ setVisible: jest.fn() }))
+    };
+
+    window.gapi = { load: (_name, options) => options.callback() };
+    (window as any).google = {
+      accounts: {
+        oauth2: {
+          initTokenClient: ({ callback }: { callback: (response: { access_token?: string }) => void }) => ({
+            requestAccessToken: () => callback({ access_token: "token" })
+          })
+        }
+      },
+      picker: {
+        Action: { LOADED: "LOADED", PICKED: "PICKED", CANCEL: "CANCEL" },
+        Feature: { MULTISELECT_ENABLED: "MULTISELECT_ENABLED" },
+        ViewId: { DOCS: "DOCS" },
+        View: function () {
+          return { setMimeTypes: jest.fn() };
+        } as unknown as new (viewId: string) => { setMimeTypes: (mimeTypes: string) => void },
+        PickerBuilder: function () {
+          return pickerBuilder;
+        } as unknown as new () => typeof pickerBuilder
+      }
+    } as unknown as Window["google"];
+
+    global.fetch = jest.fn() as unknown as typeof fetch;
+
+    const { result } = renderHook(() => useGoogleDrivePicker({}));
+    act(() => {
+      result.current.openFromButton();
+    });
+
+    await waitFor(() => {
+      expect(pickerCallback).not.toBeNull();
+    });
+
+    await act(async () => {
+      pickerCallback?.({
+        action: "PICKED",
+        docs: [{ name: "bad.jpg", mimeType: "image/jpeg" }]
+      });
+    });
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("Missing Drive file id.");
+    });
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
   it("shows error when app id is missing", async () => {
     process.env.NEXT_PUBLIC_GOOGLE_DRIVE_CLIENT_ID = "client-id";
     process.env.NEXT_PUBLIC_GOOGLE_DRIVE_API_KEY = "api-key";
@@ -774,6 +1067,183 @@ describe("useGoogleDrivePicker", () => {
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith("Failed to download 2 file(s).");
+    });
+
+    identityScript.remove();
+    apiScript.remove();
+  });
+
+  it("times out when Drive authorization is never completed", async () => {
+    jest.useFakeTimers();
+    process.env.NEXT_PUBLIC_GOOGLE_DRIVE_CLIENT_ID = "client-id";
+
+    const onPickerOpenChange = jest.fn();
+    const { result } = renderHook(() =>
+      useGoogleDrivePicker({ onPickerOpenChange })
+    );
+
+    act(() => {
+      result.current.openFromButton();
+    });
+
+    act(() => {
+      jest.advanceTimersByTime(12000);
+    });
+
+    expect(toast.error).toHaveBeenCalledWith(
+      "Google Drive authorization was not completed."
+    );
+    expect(onPickerOpenChange).toHaveBeenCalledWith(false);
+    jest.useRealTimers();
+  });
+
+  it("stops loading on focus when picker is not open", async () => {
+    jest.useFakeTimers();
+    process.env.NEXT_PUBLIC_GOOGLE_DRIVE_CLIENT_ID = "client-id";
+
+    const { result } = renderHook(() => useGoogleDrivePicker({}));
+
+    act(() => {
+      result.current.openFromButton();
+      window.dispatchEvent(new Event("focus"));
+    });
+
+    expect(result.current.isLoading).toBe(false);
+    jest.useRealTimers();
+  });
+
+  it("compresses oversized Drive images and reports compression failures", async () => {
+    process.env.NEXT_PUBLIC_GOOGLE_DRIVE_CLIENT_ID = "client-id";
+    process.env.NEXT_PUBLIC_GOOGLE_DRIVE_API_KEY = "api-key";
+    process.env.NEXT_PUBLIC_GOOGLE_DRIVE_APP_ID = "app-id";
+
+    const identityScript = document.createElement("script");
+    identityScript.id = "google-identity";
+    identityScript.dataset.loaded = "true";
+    const apiScript = document.createElement("script");
+    apiScript.id = "google-api";
+    apiScript.dataset.loaded = "true";
+    document.head.appendChild(identityScript);
+    document.head.appendChild(apiScript);
+
+    let pickerCallback:
+      | ((data: {
+          action?: string;
+          docs?: { id?: string; name?: string; mimeType?: string }[];
+        }) => void)
+      | null = null;
+    const pickerBuilder = {
+      addView: jest.fn().mockReturnThis(),
+      enableFeature: jest.fn().mockReturnThis(),
+      setOAuthToken: jest.fn().mockReturnThis(),
+      setDeveloperKey: jest.fn().mockReturnThis(),
+      setAppId: jest.fn().mockReturnThis(),
+      setCallback: jest.fn().mockImplementation((cb) => {
+        pickerCallback = cb;
+        return pickerBuilder;
+      }),
+      build: jest.fn(() => ({ setVisible: jest.fn() }))
+    };
+    const viewSetMimeTypes = jest.fn();
+
+    const gapiLoad = jest.fn((_name, options: { callback: () => void }) =>
+      options.callback()
+    );
+    const initTokenClient = jest.fn(
+      ({
+        callback
+      }: {
+        callback: (response: {
+          access_token?: string;
+          error?: string;
+        }) => void;
+      }) => ({
+        requestAccessToken: () => callback({ access_token: "token" })
+      })
+    );
+
+    window.gapi = {
+      load: gapiLoad
+    };
+    (window as any).google = {
+      accounts: {
+        oauth2: {
+          initTokenClient
+        }
+      },
+      picker: {
+        Action: { LOADED: "LOADED", PICKED: "PICKED", CANCEL: "CANCEL" },
+        Feature: { MULTISELECT_ENABLED: "MULTISELECT_ENABLED" },
+        ViewId: { DOCS: "DOCS" },
+        View: function () {
+          return {
+            setMimeTypes: viewSetMimeTypes
+          };
+        } as unknown as new (viewId: string) => {
+          setMimeTypes: (mimeTypes: string) => void;
+        },
+        PickerBuilder: function () {
+          return pickerBuilder;
+        } as unknown as new () => typeof pickerBuilder
+      }
+    } as unknown as Window["google"];
+
+    global.fetch = jest.fn(async () => ({
+      ok: true,
+      status: 200,
+      headers: { get: () => "image/jpeg" },
+      blob: async () => new Blob([new Uint8Array(20)], { type: "image/jpeg" })
+    })) as unknown as typeof fetch;
+
+    (compressImageToTarget as jest.Mock)
+      .mockResolvedValueOnce(new File(["compressed"], "ok.jpg", { type: "image/jpeg" }))
+      .mockResolvedValueOnce(null);
+
+    const onFilesSelected = jest.fn();
+    const onPickerOpenChange = jest.fn();
+    const { result } = renderHook(() =>
+      useGoogleDrivePicker({
+        onFilesSelected,
+        onPickerOpenChange,
+        compressImages: true,
+        maxImageBytes: 1
+      })
+    );
+
+    act(() => {
+      result.current.openFromButton();
+    });
+
+    await waitFor(() => {
+      expect(gapiLoad).toHaveBeenCalledWith(
+        "picker",
+        expect.objectContaining({
+          callback: expect.any(Function)
+        })
+      );
+      expect(initTokenClient).toHaveBeenCalledTimes(1);
+      expect(onPickerOpenChange).toHaveBeenCalledWith(true);
+      expect(viewSetMimeTypes).toHaveBeenCalled();
+      expect(pickerBuilder.setCallback).toHaveBeenCalledTimes(1);
+      expect(pickerCallback).not.toBeNull();
+    });
+
+    await act(async () => {
+      pickerCallback?.({
+        action: "PICKED",
+        docs: [
+          { id: "file-1", name: "ok.jpg", mimeType: "image/jpeg" },
+          { id: "file-2", name: "bad.jpg", mimeType: "image/jpeg" }
+        ]
+      });
+    });
+
+    await waitFor(() => {
+      expect(compressImageToTarget).toHaveBeenCalledTimes(2);
+      expect(onFilesSelected).toHaveBeenCalledTimes(1);
+      const files = onFilesSelected.mock.calls[0]?.[0] as File[];
+      expect(files[0]?.name).toBe("ok.jpg");
+      expect(toast.error).toHaveBeenCalledWith('Unable to compress "bad.jpg".');
     });
 
     identityScript.remove();

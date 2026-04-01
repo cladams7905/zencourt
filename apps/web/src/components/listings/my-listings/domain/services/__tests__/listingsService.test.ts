@@ -57,4 +57,30 @@ describe("listingsService", () => {
       nextOffset: 8
     });
   });
+
+  it("falls back to offset zero when the url offset is invalid", async () => {
+    (global.fetch as unknown as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        items: [{ id: "listing-1", previewImages: [] }],
+        hasMore: false
+      })
+    });
+
+    await expect(
+      fetchListingsPage("/api/v1/listings?offset=not-a-number&limit=2")
+    ).resolves.toEqual({
+      items: [expect.objectContaining({ id: "listing-1" })],
+      hasMore: false,
+      nextOffset: 1
+    });
+  });
+
+  it("throws a stable error when the fetch fails", async () => {
+    (global.fetch as unknown as jest.Mock).mockRejectedValue(new Error("boom"));
+
+    await expect(
+      fetchListingsPage(buildListingsPageUrl({ offset: 0, limit: 10 }))
+    ).rejects.toThrow("Failed to load more listings.");
+  });
 });

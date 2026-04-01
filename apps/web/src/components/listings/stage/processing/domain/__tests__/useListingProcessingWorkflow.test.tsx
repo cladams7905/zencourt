@@ -121,4 +121,23 @@ describe("useListingProcessingWorkflow", () => {
     expect(mockUpdateListingStage).toHaveBeenCalledWith("l1", "review");
     expect(navigate).toHaveBeenCalledWith("/listings/l1/stage/review");
   });
+
+  it("builds categorize copy and exposes non-generate workflow state", () => {
+    const { result } = renderHook(() =>
+      useListingProcessingWorkflow({
+        mode: "categorize",
+        listingId: "l1",
+        navigate: jest.fn()
+      })
+    );
+
+    expect(result.current.copy).toEqual({
+      title: "Processing listing photos",
+      subtitle:
+        "We’re categorizing your photos so you can review each room quickly.",
+      addressLine: null,
+      helperText: "This usually takes a few moments. Please keep this tab open."
+    });
+    expect(result.current.isGenerateMode).toBe(false);
+  });
 });

@@ -70,7 +70,7 @@ function BlurredProcessingGrid({
               sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
             />
           ) : (
-            <div className="h-full w-full animate-pulse bg-gradient-to-br from-muted to-secondary" />
+            <div className="h-full w-full animate-pulse bg-linear-to-br from-muted to-secondary" />
           )}
         </div>
       ))}

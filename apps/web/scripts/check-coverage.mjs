@@ -72,14 +72,66 @@ function modulePrefixes(root, srcRelative, { includeRoot = false } = {}) {
 
 function componentPrefixesWithDomain() {
   const componentsRoot = path.resolve(webRoot, "src/components");
-  return fs
-    .readdirSync(componentsRoot, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
-    .filter((entry) =>
-      fs.existsSync(path.join(componentsRoot, entry.name, "domain"))
-    )
-    .map((entry) => `src/components/${entry.name}/domain/`)
-    .sort();
+  const prefixes = new Set();
+
+  function walk(current) {
+    const entries = fs.readdirSync(current, { withFileTypes: true });
+    for (const entry of entries) {
+      if (!entry.isDirectory()) {
+        continue;
+      }
+
+      const fullPath = path.join(current, entry.name);
+      const relativePath = path
+        .relative(webRoot, fullPath)
+        .split(path.sep)
+        .join("/");
+
+      if (entry.name === "domain") {
+        prefixes.add(`${relativePath}/`);
+      }
+
+      walk(fullPath);
+    }
+  }
+
+  if (fs.existsSync(componentsRoot)) {
+    walk(componentsRoot);
+  }
+
+  return [...prefixes].sort();
+}
+
+function componentHookPrefixesOutsideDomain() {
+  const componentsRoot = path.resolve(webRoot, "src/components");
+  const prefixes = new Set();
+
+  function walk(current) {
+    const entries = fs.readdirSync(current, { withFileTypes: true });
+    for (const entry of entries) {
+      if (!entry.isDirectory()) {
+        continue;
+      }
+
+      const fullPath = path.join(current, entry.name);
+      const relativePath = path
+        .relative(webRoot, fullPath)
+        .split(path.sep)
+        .join("/");
+
+      if (entry.name === "hooks" && !relativePath.includes("/domain/")) {
+        prefixes.add(`${relativePath}/`);
+      }
+
+      walk(fullPath);
+    }
+  }
+
+  if (fs.existsSync(componentsRoot)) {
+    walk(componentsRoot);
+  }
+
+  return [...prefixes].sort();
 }
 
 function apiRoutePrefixes(root, srcRelative) {
@@ -115,6 +167,7 @@ function apiRoutePrefixes(root, srcRelative) {
 
 const MODULE_PREFIXES = [
   ...componentPrefixesWithDomain(),
+  ...componentHookPrefixesOutsideDomain(),
   ...modulePrefixes("src/server/actions", "src/server/actions", { includeRoot: true }),
   ...modulePrefixes("src/server/services", "src/server/services", { includeRoot: true }),
   ...modulePrefixes("src/server/models", "src/server/models", { includeRoot: true }),

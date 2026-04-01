@@ -105,4 +105,97 @@ describe("communityData/orchestrator", () => {
       })
     );
   });
+
+  it("returns empty content context when zip code is missing", async () => {
+    mockCreateRegistry.mockReturnValue({
+      getPrimaryProvider: () => ({}),
+      getFallbackProvider: () => null
+    });
+
+    const orchestrator = createCommunityDataOrchestrator();
+    const result = await orchestrator.getCommunityContentContext({
+      category: "community",
+      zipCode: ""
+    });
+
+    expect(result).toEqual({
+      communityData: null,
+      cityDescription: null,
+      communityCategoryKeys: null,
+      seasonalExtraSections: null
+    });
+  });
+
+  it("prefetches next categories and derives available category keys from returned data", async () => {
+    const primary = {
+      provider: "perplexity",
+      getCommunityDataByZip: jest.fn(),
+      getCommunityDataByZipAndAudience: jest.fn(),
+      getMonthlyEventsSectionByZip: jest.fn().mockResolvedValue({
+        key: "things_to_do_february",
+        value: "Events"
+      }),
+      getCommunityDataByZipAndAudienceForCategories: jest.fn().mockResolvedValue({
+        dining_list: "Cafe A",
+        shopping_list: "Mall B",
+        neighborhoods_list: "(none found)",
+        seasonal_geo_sections: {
+          things_to_do_february: "Festival"
+        }
+      }),
+      prefetchCategoriesByZip: jest.fn()
+    };
+    mockCreateRegistry.mockReturnValue({
+      getPrimaryProvider: () => primary,
+      getFallbackProvider: () => null
+    });
+
+    const orchestrator = createCommunityDataOrchestrator();
+    const result = await orchestrator.getCommunityContentContext({
+      category: "community",
+      zipCode: "78701",
+      nextCommunityCategoryKeys: ["shopping_list"],
+      selectedCommunityCategoryKeys: null
+    });
+
+    expect(result.communityCategoryKeys).toEqual(["dining_list", "shopping_list"]);
+    expect(primary.prefetchCategoriesByZip).toHaveBeenCalledWith(
+      expect.objectContaining({
+        zipCode: "78701",
+        categories: ["shopping"]
+      })
+    );
+  });
+
+  it("falls back to by-zip-and-audience lookup when category capabilities are unavailable", async () => {
+    const primary = {
+      provider: "perplexity",
+      getCommunityDataByZip: jest.fn(),
+      getCommunityDataByZipAndAudience: jest
+        .fn()
+        .mockRejectedValue(new Error("boom"))
+    };
+    const fallback = {
+      provider: "google",
+      getCommunityDataByZip: jest.fn(),
+      getCommunityDataByZipAndAudience: jest
+        .fn()
+        .mockResolvedValue({ dining_list: "Cafe A" })
+    };
+    mockCreateRegistry.mockReturnValue({
+      getPrimaryProvider: () => primary,
+      getFallbackProvider: () => fallback
+    });
+
+    const orchestrator = createCommunityDataOrchestrator();
+    const result = await orchestrator.getCommunityContentContext({
+      category: "community",
+      zipCode: "78701",
+      audienceSegment: "relocators"
+    });
+
+    expect(primary.getCommunityDataByZipAndAudience).toHaveBeenCalled();
+    expect(fallback.getCommunityDataByZipAndAudience).toHaveBeenCalled();
+    expect(result.communityData).toEqual({ dining_list: "Cafe A" });
+  });
 });

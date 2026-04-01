@@ -61,6 +61,27 @@ describe("useCategorizeListingDetails", () => {
     expect(mockEmitListingSidebarUpdate).toHaveBeenCalled();
   });
 
+  it("rolls back title changes and toasts when title persistence fails", async () => {
+    mockUpdateListing.mockRejectedValueOnce(new Error("save failed"));
+
+    const { result } = renderHook(() =>
+      useCategorizeListingDetails({
+        title: "Old",
+        initialAddress: "",
+        hasPropertyDetails: true,
+        listingId: "l1",
+        runDraftSave: async <T,>(fn: () => Promise<T>) => fn()
+      })
+    );
+
+    await act(async () => {
+      await result.current.persistListingTitle("New");
+    });
+
+    expect(result.current.draftTitle).toBe("Old");
+    expect(mockToastError).toHaveBeenCalledWith("save failed");
+  });
+
   it("updates address and clears property details when address changes", async () => {
     const { result } = renderHook(() =>
       useCategorizeListingDetails({
@@ -90,6 +111,24 @@ describe("useCategorizeListingDetails", () => {
     });
 
     expect(mockUpdateListing).toHaveBeenCalledTimes(1);
+  });
+
+  it("ignores empty address selections", () => {
+    const { result } = renderHook(() =>
+      useCategorizeListingDetails({
+        title: "Listing",
+        initialAddress: "123 Main St",
+        hasPropertyDetails: true,
+        listingId: "l1",
+        runDraftSave: async <T,>(fn: () => Promise<T>) => fn()
+      })
+    );
+
+    act(() => {
+      result.current.handleAddressSelect({});
+    });
+
+    expect(mockUpdateListing).not.toHaveBeenCalled();
   });
 
   it("continues to review route when property details already exist", async () => {
@@ -130,5 +169,52 @@ describe("useCategorizeListingDetails", () => {
     });
 
     expect(mockPush).toHaveBeenCalledWith("/listings/l1/stage/review");
+  });
+
+  it("stops continuation when address persistence fails", async () => {
+    mockUpdateListing.mockRejectedValueOnce(new Error("address failed"));
+
+    const { result } = renderHook(() =>
+      useCategorizeListingDetails({
+        title: "Listing",
+        initialAddress: "",
+        hasPropertyDetails: false,
+        listingId: "l1",
+        runDraftSave: async <T,>(fn: () => Promise<T>) => fn()
+      })
+    );
+
+    act(() => {
+      result.current.setAddressValue("456 Pine St");
+    });
+
+    await act(async () => {
+      await result.current.handleContinue();
+    });
+
+    expect(mockToastError).toHaveBeenCalledWith("address failed");
+    expect(mockPush).not.toHaveBeenCalled();
+    expect(mockUpdateListing).toHaveBeenCalledTimes(1);
+  });
+
+  it("toasts and does not navigate when the stage update fails", async () => {
+    mockUpdateListing.mockRejectedValueOnce(new Error("stage failed"));
+
+    const { result } = renderHook(() =>
+      useCategorizeListingDetails({
+        title: "Listing",
+        initialAddress: "",
+        hasPropertyDetails: false,
+        listingId: "l1",
+        runDraftSave: async <T,>(fn: () => Promise<T>) => fn()
+      })
+    );
+
+    await act(async () => {
+      await result.current.handleContinue();
+    });
+
+    expect(mockToastError).toHaveBeenCalledWith("stage failed");
+    expect(mockPush).not.toHaveBeenCalled();
   });
 });

@@ -272,5 +272,82 @@ describe("contentGeneration stream", () => {
         outputFormat?.schema?.items?.properties?.body?.anyOf ?? [];
       expect(bodyAnyOf).toEqual([{ type: "null" }]);
     });
+
+    it("updates recent hooks in redis and emits done metadata", async () => {
+      const upstream = makeUpstreamStream([
+        'data: {"type":"content_block_delta","delta":{"type":"text_delta","text":"[{\\"hook\\":\\"First\\"},{\\"hook\\":\\"Second\\"}]"}}\n\n',
+        'data: {"type":"message_stop"}\n\n'
+      ]);
+      const redis = {
+        lpush: jest.fn().mockResolvedValue(undefined),
+        ltrim: jest.fn().mockResolvedValue(undefined),
+        expire: jest.fn().mockResolvedValue(undefined)
+      };
+      mockGenerateStructuredStreamForUseCase.mockResolvedValue({
+        ok: true,
+        body: upstream
+      });
+
+      const result = await createSseResponse({
+        systemPrompt: "system",
+        userPrompt: "user",
+        mediaType: "image",
+        redis: redis as never,
+        recentHooksKey: "recent-hooks",
+        logger
+      });
+
+      const events = await readStreamToEvents(
+        result.stream as ReadableStream<Uint8Array>
+      );
+      const parsedEvents = events.map((event) => JSON.parse(event));
+      const doneEvent = parsedEvents.find((event) => event.type === "done");
+
+      expect(redis.lpush).toHaveBeenCalledWith(
+        "recent-hooks",
+        "First",
+        "Second"
+      );
+      expect(redis.ltrim).toHaveBeenCalled();
+      expect(redis.expire).toHaveBeenCalled();
+      expect(doneEvent.meta).toEqual({
+        model: "test-model",
+        batch_size: 2
+      });
+    });
+
+    it("emits a generic stream error when validation fails after parsing", async () => {
+      const upstream = makeUpstreamStream([
+        'data: {"type":"content_block_delta","delta":{"type":"text_delta","text":"[]"}}\n\n',
+        'data: {"type":"message_stop"}\n\n'
+      ]);
+      mockGenerateStructuredStreamForUseCase.mockResolvedValue({
+        ok: true,
+        body: upstream
+      });
+
+      const result = await createSseResponse({
+        systemPrompt: "s",
+        userPrompt: "u",
+        mediaType: "video",
+        redis: null,
+        recentHooksKey: "k",
+        logger
+      });
+
+      const events = await readStreamToEvents(
+        result.stream as ReadableStream<Uint8Array>
+      );
+      const parsed = events.map((e) => JSON.parse(e));
+      const errorEvent = parsed.find((p) => p.type === "error");
+      expect(errorEvent).toEqual({
+        type: "error",
+        message: "Failed to stream response"
+      });
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.objectContaining({ err: expect.any(Object) }),
+        "Streaming error"
+      );
+    });
   });
 });

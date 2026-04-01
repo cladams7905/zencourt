@@ -60,6 +60,25 @@ describe("google seasonal", () => {
     expect(used.size).toBeLessThanOrEqual(1);
   });
 
+  it("filters out already-used seasonal headers", () => {
+    const result = buildSeasonalQueries(
+      { state_id: "TX" } as never,
+      "community_events",
+      ["base query"],
+      new Date("2026-12-10"),
+      undefined,
+      new Set(["holiday markets in austin tx", "christmas events in austin tx"])
+    );
+
+    expect(result.queries).toContain("base query");
+    expect([...result.seasonalQueries]).not.toContain(
+      "holiday markets in austin tx"
+    );
+    expect([...result.seasonalQueries]).not.toContain(
+      "christmas events in austin tx"
+    );
+  });
+
   it("selects a capped set of seasonal categories", () => {
     const picked = pickSeasonalCategories(
       "seed",
@@ -67,6 +86,12 @@ describe("google seasonal", () => {
       2
     );
     expect(picked).toHaveLength(2);
+  });
+
+  it("returns all seasonal categories when the count is not restrictive", () => {
+    const categories = ["dining", "coffee_brunch"] as never;
+
+    expect(pickSeasonalCategories("seed", categories, 5)).toEqual(categories);
   });
 
   it("estimates search calls with seasonal overrides", () => {
@@ -77,6 +102,20 @@ describe("google seasonal", () => {
       4
     );
     expect(calls).toBe(5);
+  });
+
+  it("reduces anchor count for low-priority categories and empty query lists", () => {
+    expect(
+      estimateSearchCallsForQueries(
+        "education" as never,
+        ["Q1", "Q2"],
+        new Set(),
+        4
+      )
+    ).toBe(2);
+    expect(
+      estimateSearchCallsForQueries("dining" as never, [], new Set(), 4)
+    ).toBe(0);
   });
 
   it("builds seasonal query sections from source queries", () => {
@@ -103,6 +142,19 @@ describe("google seasonal", () => {
       3,
       1
     );
+    expect(sections).toEqual({});
+  });
+
+  it("returns empty sections when no places contain source queries", () => {
+    const sections = buildSeasonalQuerySections(
+      {
+        dining: [{ name: "Cafe" }]
+      } as never,
+      3,
+      1
+    );
+
+    expect(mockSampleRandom).toHaveBeenCalledWith([], 1);
     expect(sections).toEqual({});
   });
 });

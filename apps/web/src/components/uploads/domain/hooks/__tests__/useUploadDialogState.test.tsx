@@ -45,6 +45,7 @@ describe("useUploadDialogState", () => {
   const originalXhr = global.XMLHttpRequest;
   const originalCreateObjectUrl = URL.createObjectURL;
   const originalRevokeObjectUrl = URL.revokeObjectURL;
+  const originalFetch = global.fetch;
 
   type UploadUrlsResponse = {
     uploads: UploadDescriptor[];
@@ -93,6 +94,7 @@ describe("useUploadDialogState", () => {
     global.XMLHttpRequest = originalXhr;
     URL.createObjectURL = originalCreateObjectUrl;
     URL.revokeObjectURL = originalRevokeObjectUrl;
+    global.fetch = originalFetch;
   });
 
   it("adds files up to maxFiles and rejects duplicates", async () => {
@@ -407,5 +409,158 @@ describe("useUploadDialogState", () => {
 
     expect(result.current.pendingFiles).toHaveLength(0);
     expect(args.fileValidator).not.toHaveBeenCalled();
+  });
+
+  it("resets dialog state when the dialog closes", async () => {
+    const args = buildArgs();
+    const { result, rerender } = renderHook(
+      (props: ReturnType<typeof buildArgs>) => useUploadDialogState(props),
+      { initialProps: args }
+    );
+
+    await act(async () => {
+      await result.current.addFiles([
+        new File(["a"], "a.jpg", { type: "image/jpeg" })
+      ]);
+    });
+
+    rerender({ ...args, open: false });
+
+    await waitFor(() => {
+      expect(result.current.pendingFiles).toHaveLength(0);
+    });
+    expect(URL.revokeObjectURL).toHaveBeenCalled();
+  });
+
+  it("restores body pointer events after drive picker closes", () => {
+    document.body.style.pointerEvents = "none";
+    const args = buildArgs();
+    const { result, unmount } = renderHook(() => useUploadDialogState(args));
+
+    act(() => {
+      result.current.setIsDrivePickerActive(true);
+    });
+
+    expect(document.body.style.pointerEvents).toBe("");
+
+    unmount();
+
+    expect(document.body.style.pointerEvents).toBe("none");
+  });
+
+  it("keeps the original image when compression returns null", async () => {
+    const args = buildArgs();
+    (compressImageToTarget as jest.Mock).mockResolvedValue(null);
+
+    const { result } = renderHook(() =>
+      useUploadDialogState({
+        ...args,
+        maxImageBytes: 4,
+        compressOversizeImages: true
+      })
+    );
+
+    const oversized = new File([new Uint8Array(100)], "large.png", {
+      type: "image/png"
+    });
+
+    await act(async () => {
+      await result.current.addFiles([oversized]);
+    });
+
+    expect(toast.error).toHaveBeenCalledWith('Unable to compress "large.png".');
+    expect(result.current.pendingFiles[0]?.file.name).toBe("large.png");
+  });
+
+  it("reports thumbnail upload failures when the thumbnail PUT fails", async () => {
+    const args = buildArgs();
+    args.getUploadUrls = jest.fn(async (requests) => ({
+      uploads: requests.map((request) => ({
+        id: request.id,
+        uploadUrl: "https://example.com/video",
+        key: request.fileName,
+        type: request.fileType,
+        publicUrl: `https://cdn/${request.fileName}`,
+        thumbnailUploadUrl: "https://example.com/thumb",
+        thumbnailKey: "thumb-key"
+      })),
+      failed: []
+    }));
+
+    global.fetch = jest.fn(async () => ({ ok: false })) as never;
+    (createVideoThumbnailBlob as jest.Mock).mockResolvedValue(
+      new Blob(["thumb"], { type: "image/jpeg" })
+    );
+
+    const { result } = renderHook(() => useUploadDialogState(args));
+    const file = new File(["video"], "tour.mp4", { type: "video/mp4" });
+
+    await act(async () => {
+      await result.current.addFiles([file]);
+    });
+    await waitFor(() => {
+      expect(result.current.pendingFiles).toHaveLength(1);
+    });
+    await act(async () => {
+      await result.current.handleUpload();
+    });
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("1 thumbnail(s) failed");
+    });
+  });
+
+  it("uses the configured fallback error message for non-error upload failures", async () => {
+    const args = buildArgs();
+    args.errorMessage = "custom upload error";
+    args.getUploadUrls = jest.fn(async () => {
+      throw "boom";
+    });
+
+    const { result } = renderHook(() => useUploadDialogState(args));
+    const file = new File(["a"], "a.jpg", { type: "image/jpeg" });
+
+    await act(async () => {
+      await result.current.addFiles([file]);
+    });
+    await waitFor(() => {
+      expect(result.current.pendingFiles).toHaveLength(1);
+    });
+    await act(async () => {
+      await result.current.handleUpload();
+    });
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("custom upload error");
+    });
+  });
+
+  it("ignores upload requests when already uploading or everything is done", async () => {
+    const args = buildArgs();
+    const { result } = renderHook(() => useUploadDialogState(args));
+    const file = new File(["a"], "a.jpg", { type: "image/jpeg" });
+
+    await act(async () => {
+      await result.current.addFiles([file]);
+    });
+    await waitFor(() => {
+      expect(result.current.pendingFiles).toHaveLength(1);
+    });
+    await act(async () => {
+      await result.current.handleUpload();
+    });
+    await waitFor(() => {
+      expect(args.onCreateRecords).toHaveBeenCalledTimes(1);
+    });
+
+    const callsAfterFirstUpload = (args.getUploadUrls as jest.Mock).mock.calls.length;
+
+    await act(async () => {
+      await result.current.handleUpload();
+    });
+
+    expect((args.getUploadUrls as jest.Mock).mock.calls.length).toBe(
+      callsAfterFirstUpload
+    );
   });
 });

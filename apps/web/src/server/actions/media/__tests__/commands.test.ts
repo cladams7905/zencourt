@@ -155,6 +155,63 @@ describe("media commands", () => {
   });
 
   describe("getUserMediaPageForReelPicker", () => {
+    it("uses default page size and null cursor when params are omitted", async () => {
+      mockGetUserMediaVideoPage.mockResolvedValueOnce({
+        items: [],
+        nextCursor: null,
+        hasMore: false
+      });
+
+      await getUserMediaPageForReelPicker({});
+
+      expect(mockGetUserMediaVideoPage).toHaveBeenCalledWith("user-1", {
+        limit: 6,
+        cursor: null
+      });
+    });
+
+    it("drops rows that do not map to reel content (e.g. non-video types)", async () => {
+      mockGetUserMediaVideoPage.mockResolvedValueOnce({
+        items: [
+          {
+            id: "v1",
+            userId: "user-1",
+            type: "video",
+            url: "private://v",
+            thumbnailUrl: "private://t",
+            durationSeconds: 3,
+            usageCount: 0,
+            uploadedAt: new Date("2024-01-01T00:00:00.000Z")
+          },
+          {
+            id: "i1",
+            userId: "user-1",
+            type: "image",
+            url: "private://img",
+            thumbnailUrl: null,
+            durationSeconds: null,
+            usageCount: 0,
+            uploadedAt: new Date("2024-01-02T00:00:00.000Z")
+          }
+        ],
+        nextCursor: null,
+        hasMore: false
+      });
+      mockGetPublicDownloadUrlSafe.mockImplementation((url: string | null | undefined) =>
+        typeof url === "string" ? url : url
+      );
+
+      const result = await getUserMediaPageForReelPicker({
+        limit: 10,
+        cursor: null
+      });
+
+      expect(result.items).toHaveLength(1);
+      expect(result.items[0]).toEqual(
+        expect.objectContaining({ id: "user-media:v1" })
+      );
+    });
+
     it("maps video rows to content items with pagination metadata", async () => {
       mockGetUserMediaVideoPage.mockResolvedValueOnce({
         items: [
@@ -209,6 +266,25 @@ describe("media commands", () => {
   });
 
   describe("getUserMediaForCurrentUser", () => {
+    it("falls back to stored urls when public resolution returns null", async () => {
+      mockGetUserMedia.mockResolvedValueOnce([
+        {
+          id: "m1",
+          url: "private://media-1",
+          thumbnailUrl: "private://thumb-1",
+          durationSeconds: 4.25
+        }
+      ]);
+      mockGetPublicDownloadUrlSafe
+        .mockReturnValueOnce(null as unknown as string)
+        .mockReturnValueOnce(null as unknown as string);
+
+      const result = await getUserMediaForCurrentUser();
+
+      expect(result[0].url).toBe("private://media-1");
+      expect(result[0].thumbnailUrl).toBe("private://thumb-1");
+    });
+
     it("returns media with resolved public urls", async () => {
       mockGetUserMedia.mockResolvedValueOnce([
         {

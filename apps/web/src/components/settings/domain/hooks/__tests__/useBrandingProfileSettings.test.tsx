@@ -153,6 +153,23 @@ describe("useBrandingProfileSettings", () => {
     );
   });
 
+  it("surfaces google headshot seeding failures", async () => {
+    mockEnsureGoogleHeadshot.mockRejectedValueOnce(new Error("seed failed"));
+
+    renderHook(() =>
+      useBrandingProfileSettings({
+        ...baseArgs,
+        defaultHeadshotUrl: "https://google/avatar.png"
+      })
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(mockToastError).toHaveBeenCalledWith("seed failed");
+  });
+
   it("removes image and persists cleared value", async () => {
     const { result } = renderHook(() =>
       useBrandingProfileSettings({
@@ -174,6 +191,27 @@ describe("useBrandingProfileSettings", () => {
     );
   });
 
+  it("removes headshot images and persists the cleared value", async () => {
+    const { result } = renderHook(() =>
+      useBrandingProfileSettings({
+        ...baseArgs,
+        userAdditional: {
+          ...baseArgs.userAdditional,
+          headshotUrl: "https://cdn.example/headshot.png"
+        }
+      })
+    );
+
+    await act(async () => {
+      await result.current.handleImageRemove("headshotUrl", "Headshot");
+    });
+
+    expect(mockUpdateUserProfile).toHaveBeenCalled();
+    expect(mockToastSuccess).toHaveBeenCalledWith(
+      "Successfully updated Headshot to removed."
+    );
+  });
+
   it("surfaces upload failures", async () => {
     mockUploadFile.mockRejectedValueOnce(new Error("upload failed"));
     const { result } = renderHook(() => useBrandingProfileSettings(baseArgs));
@@ -190,5 +228,58 @@ describe("useBrandingProfileSettings", () => {
 
     expect(mockToastError).toHaveBeenCalledWith("upload failed");
     expect(result.current.isUploadingAvatar).toBe(false);
+  });
+
+  it("uploads broker logos through the broker-logo branch", async () => {
+    const { result } = renderHook(() => useBrandingProfileSettings(baseArgs));
+    const smallFile = new File([new Uint8Array([1, 2, 3])], "logo.png", {
+      type: "image/png"
+    });
+    Object.defineProperty(smallFile, "arrayBuffer", {
+      value: async () => new Uint8Array([1, 2, 3]).buffer
+    });
+
+    await act(async () => {
+      await result.current.handleImageUpload(
+        smallFile,
+        "personalLogoUrl",
+        "Logo"
+      );
+    });
+
+    expect(mockUploadFile).toHaveBeenCalled();
+    expect(mockToastSuccess).toHaveBeenCalledWith(
+      "Successfully updated Logo to logo.png."
+    );
+    expect(result.current.isUploadingBrokerLogo).toBe(false);
+  });
+
+  it("surfaces profile save failures", async () => {
+    mockUpdateUserProfile.mockRejectedValueOnce(new Error("save failed"));
+    const { result } = renderHook(() => useBrandingProfileSettings(baseArgs));
+
+    act(() => {
+      result.current.setAgentName("Updated Name");
+    });
+
+    await act(async () => {
+      await result.current.handleSaveAgentInfo();
+    });
+
+    expect(mockToastError).toHaveBeenCalledWith("save failed");
+    expect(result.current.isSavingProfile).toBe(false);
+  });
+
+  it("returns preview image props for blank and blob URLs", () => {
+    const { result } = renderHook(() => useBrandingProfileSettings(baseArgs));
+
+    expect(result.current.getPreviewImageProps("")).toEqual({
+      src: "",
+      unoptimized: false
+    });
+    expect(result.current.getPreviewImageProps("blob:test")).toEqual({
+      src: "blob:test",
+      unoptimized: true
+    });
   });
 });
