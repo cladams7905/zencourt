@@ -3,7 +3,6 @@ import { SidebarWrapper } from "@web/src/components/view/sidebar";
 import { SidebarSkeleton } from "@web/src/components/view/sidebar/subcomponents";
 import { ViewSidebarProvider } from "@web/src/components/view/sidebar/shared";
 import { MobileSidebarTrigger } from "@web/src/components/view/sidebar/subcomponents";
-import { MobileCreateFAB } from "@web/src/components/view/MobileCreateFAB";
 
 export default function DashboardLayout({
   children
@@ -22,7 +21,6 @@ export default function DashboardLayout({
             {children}
           </div>
         </main>
-        <MobileCreateFAB />
       </div>
     </ViewSidebarProvider>
   );

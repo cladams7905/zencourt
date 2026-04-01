@@ -39,7 +39,7 @@ export function MobileSidebarTrigger({
         <button
           className={cn(
             "relative flex items-center justify-center",
-            "h-10 w-10 rounded-lg",
+            "h-10 ml-2 w-10 rounded-lg",
             "hover:bg-foreground/5 cursor-pointer",
             "transition-colors duration-200"
           )}

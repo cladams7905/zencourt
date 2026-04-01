@@ -1,11 +1,7 @@
 "use client";
 
 import * as React from "react";
-import {
-  IMAGE_UPLOAD_LIMIT,
-  MAX_IMAGE_BYTES,
-  MAX_IMAGES_PER_ROOM
-} from "@shared/utils/mediaUpload";
+import { IMAGE_UPLOAD_LIMIT, MAX_IMAGE_BYTES } from "@shared/utils/mediaUpload";
 import { formatBytes } from "@web/src/lib/core/formatting/bytes";
 import {
   validateImageFile,
@@ -13,11 +9,15 @@ import {
 } from "@web/src/components/listings/stage/upload/domain";
 import { useUploadDialogState } from "@web/src/components/uploads/domain/hooks";
 import {
-  UploadDialogActions,
   UploadDropzone,
-  UploadQueueList,
-  UploadTips
+  UploadQueueList
 } from "@web/src/components/uploads/subcomponents";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger
+} from "@web/src/components/ui/accordion";
 import { ListingStageShell } from "@web/src/components/listings/stage/shared";
 import { useRouter } from "next/navigation";
 
@@ -42,7 +42,6 @@ export function ListingUploadView({ listingId }: ListingUploadViewProps = {}) {
     isDragging,
     setIsDragging,
     isUploading,
-    isDrivePickerActive,
     setIsDrivePickerActive,
     isCompressing,
     isDriveLoading,
@@ -50,10 +49,6 @@ export function ListingUploadView({ listingId }: ListingUploadViewProps = {}) {
     driveLoadingCount,
     setDriveLoadingCount,
     addFiles,
-    resetDialogState,
-    handleUpload,
-    hasFailedUploads,
-    handleRetryFailed,
     removePendingFile
   } = useUploadDialogState({
     open: true,
@@ -80,17 +75,42 @@ export function ListingUploadView({ listingId }: ListingUploadViewProps = {}) {
 
   return (
     <ListingStageShell stage="upload" wide>
-      <section className="space-y-4 rounded-lg bg-background p-6">
-        <p className="text-sm text-muted-foreground">
-          Add images up to {formatBytes(MAX_IMAGE_BYTES)}.
-        </p>
+      <section className="flex min-h-0 w-full flex-1 flex-col gap-3">
+        <Accordion type="single" collapsible className="w-full shrink-0">
+          <AccordionItem
+            value="photo-tips"
+            className="border border-border px-3"
+          >
+            <AccordionTrigger className="py-3 text-sm">
+              What listing photos should I upload?
+            </AccordionTrigger>
+            <AccordionContent className="text-muted-foreground">
+              <ul className="list-disc space-y-2 pb-1 pl-5 text-sm leading-relaxed">
+                <li>
+                  Add landscape orientation images at least 1080px for best
+                  results.
+                </li>
+                <li>
+                  Images should clearly show the room or feature you want to
+                  highlight with good lighting and quality.
+                </li>
+                <li>
+                  Each individual image cannot be above{" "}
+                  {formatBytes(MAX_IMAGE_BYTES)}.
+                </li>
+              </ul>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
 
         <UploadDropzone
+          fillContainer
           isDragging={isDragging}
           setIsDragging={setIsDragging}
           onDropFiles={(files) => {
             void addFiles(files);
           }}
+          className="lg:min-h-[380px] min-h-[260px]"
           accept="image/*"
           dropTitle="Drag & drop photos here"
           dropSubtitle="or click to select multiple images"
@@ -103,36 +123,17 @@ export function ListingUploadView({ listingId }: ListingUploadViewProps = {}) {
           onDriveLoadingCountChange={setDriveLoadingCount}
         />
 
-        <UploadTips
-          tipsTitle="What photos should I upload?"
-          tipsItems={[
-            `No more than ${IMAGE_UPLOAD_LIMIT} listing photos may be uploaded per listing.`,
-            `Limit each room category to ${MAX_IMAGES_PER_ROOM} photos for video generation.`,
-            "Include a wide variety well-framed shots of key rooms and exterior."
-          ]}
-        />
-
-        <UploadQueueList
-          pendingFiles={pendingFiles}
-          selectedLabel="photo"
-          isCompressing={isCompressing}
-          isDriveLoading={isDriveLoading}
-          driveLoadingCount={driveLoadingCount}
-          isUploading={isUploading}
-          fileMetaLabel={(file: File) => formatBytes(file.size)}
-          formatBytes={formatBytes}
-          onRemove={removePendingFile}
-        />
-
-        <div className="flex justify-end gap-2">
-          <UploadDialogActions
-            hasFailedUploads={hasFailedUploads}
-            onRetryFailed={handleRetryFailed}
-            onCancel={resetDialogState}
-            onUpload={handleUpload}
-            isUploading={isUploading || isDrivePickerActive}
-            hasPendingFiles={pendingFiles.length > 0}
-            primaryActionLabel="Upload photos"
+        <div className="shrink-0">
+          <UploadQueueList
+            pendingFiles={pendingFiles}
+            selectedLabel="photo"
+            isCompressing={isCompressing}
+            isDriveLoading={isDriveLoading}
+            driveLoadingCount={driveLoadingCount}
+            isUploading={isUploading}
+            fileMetaLabel={(file: File) => formatBytes(file.size)}
+            formatBytes={formatBytes}
+            onRemove={removePendingFile}
           />
         </div>
       </section>

@@ -1,6 +1,11 @@
 import type { ListingStageStep } from "@web/src/components/listings/stage/shared";
 
-export type ListingStageKey = "address" | "upload" | "categorize" | "review" | "generate";
+export type ListingStageKey =
+  | "address"
+  | "upload"
+  | "categorize"
+  | "review"
+  | "generate";
 
 export type ListingStageScaffoldCopy = {
   stepTitle: string;
@@ -14,14 +19,16 @@ type StageStepDef = {
 };
 
 const STAGE_STEP_DEFS: StageStepDef[] = [
-  { key: "address", label: "1. Enter address", sublabel: "~30 sec" },
-  { key: "upload", label: "2. Upload listing photos", sublabel: "~2 min" },
-  { key: "categorize", label: "3. Categorize photos", sublabel: "~2 min" },
-  { key: "review", label: "4. Review details", sublabel: "~1 min" },
-  { key: "generate", label: "5. Generate content", sublabel: "~4-7 min" }
+  { key: "address", label: "1. Enter Address", sublabel: "~30 sec" },
+  { key: "upload", label: "2. Upload", sublabel: "~2 min" },
+  { key: "categorize", label: "3. Categorize", sublabel: "~2 min" },
+  { key: "review", label: "4. Review", sublabel: "~1 min" },
+  { key: "generate", label: "5. Generate", sublabel: "~4-7 min" }
 ];
 
-export function buildListingStageFlowSteps(activeStep: ListingStageKey): ListingStageStep[] {
+export function buildListingStageFlowSteps(
+  activeStep: ListingStageKey
+): ListingStageStep[] {
   return STAGE_STEP_DEFS.map((step) => ({
     label: step.label,
     sublabel: step.sublabel,

@@ -117,7 +117,7 @@ export function ListingStageTimeline({
                 {step.label}
               </span>
               {step.sublabel ? (
-                <span className="text-[10px] font-medium text-muted-foreground">
+                <span className="text-[10px] -mt-1 font-medium text-muted-foreground">
                   {step.sublabel}
                 </span>
               ) : null}
