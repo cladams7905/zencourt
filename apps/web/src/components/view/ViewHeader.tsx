@@ -62,7 +62,7 @@ export const ViewHeader = React.forwardRef<HTMLElement, ViewHeaderProps>(
           >
             <div className="space-y-1">
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Listing name
+                Listing
               </p>
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="text-2xl font-header font-medium text-foreground">

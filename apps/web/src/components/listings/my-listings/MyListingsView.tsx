@@ -53,9 +53,7 @@ export function MyListingsView({
           <Table>
             <TableHeader className="h-14">
               <TableRow>
-                <TableHead className="w-[40%] rounded-tl-lg">
-                  Listing name
-                </TableHead>
+                <TableHead className="w-[40%] rounded-tl-lg">Listing</TableHead>
                 <TableHead>Last opened</TableHead>
                 <TableHead>Uploaded images</TableHead>
                 <TableHead className="rounded-tr-lg">Stage</TableHead>

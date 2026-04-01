@@ -1,5 +1,9 @@
 import type { ImageMetadata } from "@shared/types/models";
 
+/** Minimum recommended pixel size for listing photos (matches upload guidance copy). */
+export const RECOMMENDED_LISTING_IMAGE_WIDTH = 1280;
+export const RECOMMENDED_LISTING_IMAGE_HEIGHT = 720;
+
 export type ListingUploadRecordInput = {
   key: string;
   fileName: string;
@@ -78,6 +82,29 @@ export const validateListingUploadRequirements = async ({
 
   return { accepted: true };
 };
+
+/**
+ * Returns human-readable lines for tooltip when an image does not meet listing recommendations
+ * (minimum dimensions and/or landscape orientation).
+ */
+export function getListingImageRecommendationIssues(
+  width: number,
+  height: number
+): string[] {
+  const issues: string[] = [];
+  if (
+    width < RECOMMENDED_LISTING_IMAGE_WIDTH ||
+    height < RECOMMENDED_LISTING_IMAGE_HEIGHT
+  ) {
+    issues.push(
+      `This image is ${width}×${height}px. For best results, use at least ${RECOMMENDED_LISTING_IMAGE_WIDTH}×${RECOMMENDED_LISTING_IMAGE_HEIGHT}px.`
+    );
+  }
+  if (width <= height) {
+    issues.push("Listing photos should be landscape (wider than tall).");
+  }
+  return issues;
+}
 
 export const buildProcessingRoute = (
   listingId: string,

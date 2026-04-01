@@ -1,10 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { ImageIcon, Upload, X } from "lucide-react";
+import { AlertTriangle, ImageIcon, Upload, X } from "lucide-react";
 import { IMAGE_UPLOAD_LIMIT, MAX_IMAGE_BYTES } from "@shared/utils/mediaUpload";
 import { formatBytes } from "@web/src/lib/core/formatting/bytes";
 import {
+  getListingImageRecommendationIssues,
+  RECOMMENDED_LISTING_IMAGE_HEIGHT,
+  RECOMMENDED_LISTING_IMAGE_WIDTH,
   validateListingUploadRequirements,
   useUploadFlow
 } from "@web/src/components/listings/stage/upload/domain";
@@ -16,6 +19,11 @@ import {
 } from "@web/src/components/uploads/subcomponents";
 import { Badge } from "@web/src/components/ui/badge";
 import { Button } from "@web/src/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger
+} from "@web/src/components/ui/tooltip";
 import {
   ListingStageFooter,
   ListingStageShell
@@ -78,6 +86,9 @@ export function ListingUploadView({ listingId }: ListingUploadViewProps = {}) {
   const [isNavigatingToCategorize, setIsNavigatingToCategorize] =
     React.useState(false);
   const [isUploadMoreOpen, setIsUploadMoreOpen] = React.useState(false);
+  const [naturalSizeById, setNaturalSizeById] = React.useState<
+    Record<string, { width: number; height: number }>
+  >({});
 
   const hasUnsavedClientImages =
     pendingFiles.length > 0 && !isNavigatingToCategorize;
@@ -141,7 +152,7 @@ export function ListingUploadView({ listingId }: ListingUploadViewProps = {}) {
     () => [
       `Each image must be ${formatBytes(MAX_IMAGE_BYTES)} or less`,
       "Between 3 to 40 images (we'll organize them later for you)",
-      "Recommended 1280x720px or larger",
+      `Recommended ${RECOMMENDED_LISTING_IMAGE_WIDTH}×${RECOMMENDED_LISTING_IMAGE_HEIGHT}px or larger`,
       "Landscape orientation"
     ],
     []
@@ -299,29 +310,79 @@ export function ListingUploadView({ listingId }: ListingUploadViewProps = {}) {
               </Button>
             </div>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-              {pendingFiles.map((item) => (
-                <div
-                  key={item.id}
-                  className="group relative aspect-square overflow-hidden rounded-md border border-border bg-muted/20"
-                >
-                  <Image
-                    src={item.previewUrl}
-                    alt={item.file.name}
-                    fill
-                    unoptimized
-                    className="object-cover"
-                    sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removePendingFile(item.id)}
-                    className="absolute right-1 top-1 inline-flex h-6 w-6 items-center justify-center rounded-full bg-background/90 text-muted-foreground opacity-0 shadow-sm transition-opacity hover:text-foreground group-hover:opacity-100"
-                    aria-label={`Remove ${item.file.name}`}
+              {pendingFiles.map((item) => {
+                const natural = naturalSizeById[item.id];
+                const recommendationIssues = natural
+                  ? getListingImageRecommendationIssues(
+                      natural.width,
+                      natural.height
+                    )
+                  : [];
+                const showRecommendationWarning =
+                  recommendationIssues.length > 0;
+
+                return (
+                  <div
+                    key={item.id}
+                    className="group relative aspect-square overflow-hidden rounded-md border border-border bg-muted/20"
                   >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              ))}
+                    <Image
+                      src={item.previewUrl}
+                      alt={item.file.name}
+                      fill
+                      unoptimized
+                      className="object-cover"
+                      sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+                      onLoad={(event) => {
+                        const img = event.currentTarget;
+                        setNaturalSizeById((prev) => ({
+                          ...prev,
+                          [item.id]: {
+                            width: img.naturalWidth,
+                            height: img.naturalHeight
+                          }
+                        }));
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removePendingFile(item.id)}
+                      className="absolute right-1 top-1 z-10 inline-flex h-6 w-6 items-center justify-center rounded-full bg-background/90 text-muted-foreground opacity-0 shadow-sm transition-opacity hover:text-foreground group-hover:pointer-events-auto group-hover:opacity-100 pointer-events-none"
+                      aria-label={`Remove ${item.file.name}`}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                    {showRecommendationWarning ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            className="absolute right-1 top-1 z-5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-background/90 text-amber-600 shadow-sm transition-transform duration-200 ease-out group-hover:-translate-x-7"
+                            aria-label="Image does not match recommended dimensions"
+                          >
+                            <AlertTriangle
+                              className="h-3.5 w-3.5"
+                              aria-hidden
+                            />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent
+                          side="top"
+                          className="w-max max-w-[200px] text-left text-pretty"
+                        >
+                          <div className="flex min-w-0 flex-col items-start gap-1.5">
+                            {recommendationIssues.map((line, i) => (
+                              <p key={i} className="m-0 max-w-full">
+                                {line}
+                              </p>
+                            ))}
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    ) : null}
+                  </div>
+                );
+              })}
             </div>
           </div>
         ) : null}

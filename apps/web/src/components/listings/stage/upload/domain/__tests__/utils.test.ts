@@ -1,6 +1,7 @@
 import {
   buildListingUploadRecordInput,
   buildProcessingRoute,
+  getListingImageRecommendationIssues,
   validateImageFile,
   validateListingUploadRequirements
 } from "@web/src/components/listings/stage/upload/domain/utils";
@@ -30,6 +31,22 @@ describe("uploadUtils", () => {
       accepted: false,
       error: "\"big.jpg\" exceeds the 5.0 MB limit."
     });
+  });
+
+  it("returns no recommendation issues for sufficiently large landscape images", () => {
+    expect(getListingImageRecommendationIssues(1920, 1080)).toEqual([]);
+  });
+
+  it("flags images below recommended pixel dimensions", () => {
+    const issues = getListingImageRecommendationIssues(800, 600);
+    expect(issues).toHaveLength(1);
+    expect(issues[0]).toContain("800×600");
+    expect(issues[0]).toContain("1280×720");
+  });
+
+  it("flags non-landscape orientation in recommendation issues", () => {
+    const issues = getListingImageRecommendationIssues(720, 1280);
+    expect(issues.some((line) => line.includes("landscape"))).toBe(true);
   });
 
   it("rejects portrait images", async () => {
