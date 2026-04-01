@@ -143,7 +143,7 @@ export class RoomClassification {
     } = {}
   ): Promise<BatchClassificationResult[]> {
     const {
-      concurrency = 10,
+      concurrency = 5,
       timeout = 30000,
       maxRetries = 2,
       onProgress

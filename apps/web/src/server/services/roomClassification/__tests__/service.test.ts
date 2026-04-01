@@ -115,6 +115,24 @@ describe("roomClassification/service", () => {
     expect(progress).toHaveBeenCalledTimes(2);
   });
 
+  it("uses 5-way concurrency by default for batch classification", async () => {
+    const service = new RoomClassification({
+      clientFactory: () => ({}) as never,
+      logger: createLogger()
+    });
+    const processBatchSpy = jest
+      .spyOn(service as never, "processBatch")
+      .mockResolvedValueOnce([] as never);
+
+    await service.classifyRoomBatch(["https://example.com/1.jpg"]);
+
+    expect(processBatchSpy).toHaveBeenCalledWith(
+      ["https://example.com/1.jpg"],
+      expect.any(Function),
+      expect.objectContaining({ concurrency: 5 })
+    );
+  });
+
   it("rejects empty batch inputs", async () => {
     const service = new RoomClassification({
       clientFactory: () => ({}) as never,

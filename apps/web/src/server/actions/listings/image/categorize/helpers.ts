@@ -46,7 +46,7 @@ const logger = createChildLogger(baseLogger, {
 
 type ListingImageRow = typeof listingImages.$inferSelect;
 const ANALYSIS_STALE_MS = 10 * 60 * 1000;
-const DEFAULT_AI_CONCURRENCY = 10;
+const DEFAULT_AI_CONCURRENCY = 5;
 
 type BatchClassificationPayload = {
   category: string;

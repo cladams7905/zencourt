@@ -219,11 +219,18 @@ export function useListingUploadView({
       return;
     }
     setProcessingLocalPreviews(
-      pendingFiles.map((item) => ({
-        id: item.id,
-        previewUrl: item.previewUrl,
-        name: item.file.name
-      }))
+      [
+        ...pendingFiles.map((item) => ({
+          id: item.id,
+          previewUrl: item.previewUrl,
+          name: item.file.name
+        })),
+        ...initialImages.map((image) => ({
+          id: image.id,
+          previewUrl: image.url,
+          name: image.filename
+        }))
+      ]
     );
     pendingProcessingBatchRef.current = null;
     setPhase("uploading");

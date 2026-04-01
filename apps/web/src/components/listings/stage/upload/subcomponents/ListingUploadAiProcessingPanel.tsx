@@ -15,6 +15,7 @@ export type ListingProcessingImage = {
 type ProcessingOverlayProps = {
   batchCompleted: number;
   batchTotal: number;
+  processingCount?: number;
   /** Main status line above the progress bar (in the overlay). */
   title?: string;
   isUploading?: boolean;
@@ -23,22 +24,39 @@ type ProcessingOverlayProps = {
 export function ListingUploadProcessingOverlay({
   batchCompleted,
   batchTotal,
+  processingCount = 0,
   title,
   isUploading = false
 }: ProcessingOverlayProps) {
-  const progress = batchTotal > 0 ? (batchCompleted / batchTotal) * 100 : 0;
+  const hasProcessingProgress = !isUploading && batchTotal > 0;
+  const liveProgress = hasProcessingProgress
+    ? ((batchCompleted + processingCount * 0.5) / batchTotal) * 100
+    : 0;
+  const [displayProgress, setDisplayProgress] = React.useState(liveProgress);
+
+  React.useEffect(() => {
+    if (liveProgress > 0 || hasProcessingProgress) {
+      setDisplayProgress((prev) => Math.max(prev, liveProgress));
+    }
+  }, [hasProcessingProgress, liveProgress]);
+
+  React.useEffect(() => {
+    if (isUploading) {
+      setDisplayProgress(0);
+    }
+  }, [isUploading]);
+
   const label =
-    title ??
-    (isUploading
-      ? "Uploading your listing photos…"
-      : "Analyzing your listing photos with AI…");
+    title ?? "Analyzing your listing photos with AI…";
 
   const countLabel =
     batchTotal > 0
-      ? `${batchCompleted}/${batchTotal} images processed`
+      ? `${batchCompleted}/${batchTotal} images analyzed${
+          processingCount > 0 ? `, ${processingCount} in progress` : ""
+        }`
       : isUploading
         ? "Preparing your upload…"
-        : "Preparing…";
+        : "Preparing analysis…";
 
   return (
     <div className="w-full max-w-xl bg-background/70 border border-border backdrop-blur-sm shadow-lg py-3 rounded-xl space-y-3 px-6">
@@ -52,7 +70,7 @@ export function ListingUploadProcessingOverlay({
         ) : null}
       </div>
       <Progress
-        value={batchTotal > 0 ? progress : 0}
+        value={displayProgress}
         className="h-2 border-0 bg-muted/70"
       />
       <p className="text-sm tabular-nums text-foreground">{countLabel}</p>
@@ -64,6 +82,7 @@ type ListingUploadAiProcessingPanelProps = {
   images: ListingProcessingImage[];
   batchCompleted: number;
   batchTotal: number;
+  processingCount?: number;
   /** Main status line above the progress bar (in the overlay). */
   title?: string;
   isUploading?: boolean;
@@ -83,6 +102,7 @@ export function ListingUploadAiProcessingPanel({
   images,
   batchCompleted,
   batchTotal,
+  processingCount = 0,
   title,
   isUploading = false
 }: ListingUploadAiProcessingPanelProps) {
@@ -118,13 +138,17 @@ export function ListingUploadAiProcessingPanel({
         ))}
       </div>
 
-      <div className="absolute inset-0 flex items-center justify-center bg-background/45 p-6 backdrop-blur-md">
-        <ListingUploadProcessingOverlay
-          batchCompleted={batchCompleted}
-          batchTotal={batchTotal}
-          title={title}
-          isUploading={isUploading}
-        />
+      <div className="absolute inset-0 bg-background/45 backdrop-blur-md" />
+      <div className="pointer-events-none absolute inset-0 z-20 px-4 sm:px-6">
+        <div className="sticky top-[50vh] mx-auto flex -translate-y-1/2 justify-center">
+          <ListingUploadProcessingOverlay
+            batchCompleted={batchCompleted}
+            batchTotal={batchTotal}
+            processingCount={processingCount}
+            title={title}
+            isUploading={isUploading}
+          />
+        </div>
       </div>
     </div>
   );

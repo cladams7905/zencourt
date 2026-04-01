@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, ImageIcon, Upload, X } from "lucide-react";
+import { AlertTriangle, Check, ImageIcon, Upload, X } from "lucide-react";
 import { IMAGE_UPLOAD_LIMIT, MAX_IMAGE_BYTES } from "@shared/utils/mediaUpload";
 import {
   getListingImageRecommendationIssues,
@@ -23,6 +23,7 @@ import {
   ListingStageShell
 } from "@web/src/components/listings/stage/shared";
 import { ListingUploadProcessingOverlay } from "@web/src/components/listings/stage/upload/subcomponents/ListingUploadAiProcessingPanel";
+import { GalleryViewportCenteredOverlay } from "@web/src/components/listings/stage/upload/subcomponents/GalleryViewportCenteredOverlay";
 import Image from "next/image";
 import * as React from "react";
 
@@ -137,20 +138,30 @@ export function ListingUploadView({
         ? processingState.batchTotal
         : Math.max(pendingFiles.length, processingState.batchTotal);
 
+  const processingGalleryBoundaryRef = React.useRef<HTMLDivElement>(null);
+
+  React.useLayoutEffect(() => {
+    if (!isInlineProcessing) {
+      return;
+    }
+    processingGalleryBoundaryRef.current?.scrollIntoView({
+      block: "nearest",
+      behavior: "instant"
+    });
+  }, [isInlineProcessing]);
+
   return (
     <>
       <ListingStageShell
         stage="upload"
         wide
         footer={
-          isInlineProcessing ? null : (
-            <ListingStageFooter
-              onBack={handleBack}
-              onContinue={() => void handleContinue()}
-              canBack
-              canContinue={canContinue}
-            />
-          )
+          <ListingStageFooter
+            onBack={handleBack}
+            onContinue={() => void handleContinue()}
+            canBack={!isInlineProcessing}
+            canContinue={!isInlineProcessing && canContinue}
+          />
         }
       >
         {isInlineProcessing ? (
@@ -176,9 +187,18 @@ export function ListingUploadView({
                 Upload more
               </Button>
             </div>
-            <div className="relative min-h-[260px] overflow-hidden rounded-md">
+            <div
+              ref={processingGalleryBoundaryRef}
+              className="relative overflow-hidden rounded-md"
+            >
               <BlurredProcessingGrid cells={processingGalleryCells} />
-              <div className="absolute inset-0 flex items-center justify-center bg-background/40 px-3 py-6">
+              <div
+                className="pointer-events-none absolute inset-0 bg-background/40"
+                aria-hidden
+              />
+              <GalleryViewportCenteredOverlay
+                boundaryRef={processingGalleryBoundaryRef}
+              >
                 <ListingUploadProcessingOverlay
                   batchCompleted={
                     phase === "analyzing" ? processingState.batchCompleted : 0
@@ -186,14 +206,13 @@ export function ListingUploadView({
                   batchTotal={
                     phase === "analyzing" ? processingState.batchTotal : 0
                   }
-                  isUploading={phase === "uploading"}
-                  title={
-                    phase === "uploading"
-                      ? "Uploading your listing photos…"
-                      : "Analyzing your listing photos with AI…"
+                  processingCount={
+                    phase === "analyzing" ? processingState.processingCount : 0
                   }
+                  title="Analyzing your listing photos with AI…"
+                  isUploading={phase === "uploading"}
                 />
-              </div>
+              </GalleryViewportCenteredOverlay>
             </div>
           </div>
         ) : (
@@ -248,21 +267,6 @@ export function ListingUploadView({
                   </Button>
                 </div>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-                  {existingImages.map((item) => (
-                    <div
-                      key={item.id}
-                      className="relative aspect-square overflow-hidden rounded-md border border-border bg-muted/20"
-                    >
-                      <Image
-                        src={item.url}
-                        alt={item.filename}
-                        fill
-                        unoptimized
-                        className="object-cover"
-                        sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
-                      />
-                    </div>
-                  ))}
                   {pendingFiles.map((item) => {
                     const natural = naturalSizeById[item.id];
                     const recommendationIssues = natural
@@ -336,6 +340,34 @@ export function ListingUploadView({
                       </div>
                     );
                   })}
+                  {existingImages.map((item) => (
+                    <div
+                      key={item.id}
+                      className="relative aspect-square overflow-hidden rounded-md border border-border bg-muted/20"
+                    >
+                      <Image
+                        src={item.url}
+                        alt={item.filename}
+                        fill
+                        unoptimized
+                        className="object-cover"
+                        sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+                      />
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span
+                            className="absolute right-1 top-1 z-10 inline-flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm"
+                            aria-label="Previously uploaded listing photo"
+                          >
+                            <Check className="h-3.5 w-3.5" aria-hidden />
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">
+                          Previously uploaded to this listing
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                  ))}
                 </div>
               </div>
             ) : null}

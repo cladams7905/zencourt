@@ -115,7 +115,7 @@ export function useCategorizeProcessingFlow(params: {
       revalidateOnFocus: false
     }
   );
-  const { batchImages, batchTotal, batchCompleted, isComplete } =
+  const { batchImages, batchTotal, batchCompleted, processingCount, isComplete } =
     React.useMemo(
       () => countTerminalInBatch(images, resolvedBatchImageIds),
       [images, resolvedBatchImageIds]
@@ -148,6 +148,7 @@ export function useCategorizeProcessingFlow(params: {
     batchImages,
     batchTotal,
     batchCompleted,
+    processingCount,
     progress,
     isComplete,
     batchStartedAt: resolvedBatchStartedAt

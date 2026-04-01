@@ -332,16 +332,14 @@ export function ListingCategorizeView({
           ) : null
         }
         footer={
-          isInlineProcessing ? null : (
-            <ListingStageFooter
-              onContinue={() => void handleContinue()}
-              canContinue={canContinue}
-              isSubmitting={isSavingDraft}
-              continueLoadingLabel="Saving..."
-              onBack={handleBackToUpload}
-              canBack
-            />
-          )
+          <ListingStageFooter
+            onContinue={() => void handleContinue()}
+            canContinue={!isInlineProcessing && canContinue}
+            isSubmitting={!isInlineProcessing && isSavingDraft}
+            continueLoadingLabel="Saving..."
+            onBack={handleBackToUpload}
+            canBack={!isInlineProcessing}
+          />
         }
       >
         {isInlineProcessing ? (
@@ -353,6 +351,7 @@ export function ListingCategorizeView({
             }
             batchCompleted={processingState.batchCompleted}
             batchTotal={processingState.batchTotal}
+            processingCount={processingState.processingCount}
           />
         ) : (
           <div
