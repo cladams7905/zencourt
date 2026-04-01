@@ -11,7 +11,10 @@ import { createPortal } from "react-dom";
  * the card stays visible. When overlap height is 0 but width exists (first paint
  * before grid measures), uses the horizontal midline at that y.
  */
-function getViewportIntersectionCenter(el: HTMLElement): { x: number; y: number } {
+function getViewportIntersectionCenter(el: HTMLElement): {
+  x: number;
+  y: number;
+} {
   const rect = el.getBoundingClientRect();
   const vw = window.innerWidth;
   const vh = window.innerHeight;
@@ -115,7 +118,7 @@ export function GalleryViewportCenteredOverlay({
 
   return createPortal(
     <div
-      className="pointer-events-none max-w-[100vw]"
+      className="pointer-events-none"
       style={{
         position: "fixed",
         left: center.x,
@@ -124,7 +127,8 @@ export function GalleryViewportCenteredOverlay({
         zIndex
       }}
     >
-      <div className="pointer-events-auto px-4 sm:px-6">{children}</div>
+      {/* Explicit width so children with w-full can grow (shrink-wrapped fixed parents ignore max-w-*). */}
+      <div className="pointer-events-auto w-full px-1 sm:px-2">{children}</div>
     </div>,
     document.body
   );

@@ -46,8 +46,7 @@ export function ListingUploadProcessingOverlay({
     }
   }, [isUploading]);
 
-  const label =
-    title ?? "Analyzing your listing photos with AI…";
+  const label = title ?? "Analyzing your listing photos with AI…";
 
   const countLabel =
     batchTotal > 0
@@ -59,7 +58,7 @@ export function ListingUploadProcessingOverlay({
         : "Preparing analysis…";
 
   return (
-    <div className="w-full max-w-xl bg-background/70 border border-border backdrop-blur-sm shadow-lg py-3 rounded-xl space-y-3 px-6">
+    <div className="mx-auto w-full min-w-0 bg-background/70 border border-border backdrop-blur-sm shadow-lg py-3 rounded-xl space-y-3 px-6">
       <div className="flex items-center gap-2">
         <p className="min-w-0 flex-1 text-sm text-muted-foreground">{label}</p>
         {!isUploading ? (
@@ -69,10 +68,7 @@ export function ListingUploadProcessingOverlay({
           />
         ) : null}
       </div>
-      <Progress
-        value={displayProgress}
-        className="h-2 border-0 bg-muted/70"
-      />
+      <Progress value={displayProgress} className="h-2 border-0 bg-muted/70" />
       <p className="text-sm tabular-nums text-foreground">{countLabel}</p>
     </div>
   );

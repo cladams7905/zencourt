@@ -52,7 +52,7 @@ export function UploadDropzone({
   return (
     <div
       className={cn(
-        "border border-dashed text-center",
+        "min-w-0 max-w-full border border-dashed text-center",
         fillContainer
           ? "flex min-h-0 w-full flex-1 flex-col rounded-lg px-0 pt-0"
           : "rounded-lg px-6 py-10",

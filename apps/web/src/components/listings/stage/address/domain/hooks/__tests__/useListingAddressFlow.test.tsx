@@ -131,7 +131,7 @@ describe("useListingAddressFlow", () => {
   it("updates existing listing when prefilled, without creating a draft", async () => {
     mockUpdateListingForCurrentUser.mockResolvedValue({
       id: "listing-existing",
-      listingStage: "upload"
+      listingStage: "categorize"
     });
 
     const { result } = renderHook(() =>
@@ -152,8 +152,7 @@ describe("useListingAddressFlow", () => {
       "listing-existing",
       {
         title: "100 Pine St",
-        address: "100 Pine St, Austin, TX",
-        listingStage: "upload"
+        address: "100 Pine St, Austin, TX"
       }
     );
     expect(mockTouchListingActivityForCurrentUser).toHaveBeenCalledWith(
@@ -163,7 +162,7 @@ describe("useListingAddressFlow", () => {
       expect.objectContaining({
         id: "listing-existing",
         title: "100 Pine St",
-        listingStage: "upload"
+        listingStage: "categorize"
       })
     );
     expect(mockPush).toHaveBeenCalledWith(

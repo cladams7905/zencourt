@@ -36,12 +36,12 @@ export function UploadQueueList({
   }
 
   return (
-    <div className="rounded-lg border border-border bg-background p-3">
+    <div className="min-w-0 max-w-full rounded-lg border border-border bg-background p-3">
       <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
         {pendingFiles.length} {selectedLabel}
         {pendingFiles.length === 1 ? "" : "s"} selected
       </div>
-      <div className="mt-2 max-h-48 space-y-2 overflow-y-auto">
+      <div className="mt-2 max-h-48 min-w-0 space-y-2 overflow-y-auto overflow-x-hidden">
         {isCompressing || isDriveLoading
           ? Array.from(
               {
@@ -62,8 +62,11 @@ export function UploadQueueList({
             )
           : null}
         {pendingFiles.map((item) => (
-          <div key={item.id} className="flex items-center justify-between gap-3 text-sm">
-            <div className="flex items-center gap-3 min-w-0">
+          <div
+            key={item.id}
+            className="flex min-w-0 w-full items-center justify-between gap-3 text-sm"
+          >
+            <div className="flex min-w-0 flex-1 items-center gap-3">
               <div className="h-10 w-10 rounded-md border border-border overflow-hidden bg-secondary/40 shrink-0">
                 {item.previewType === "video" ? (
                   <video
@@ -85,13 +88,13 @@ export function UploadQueueList({
               </div>
               <div className="min-w-0">
                 <p className="truncate font-medium text-foreground">{item.file.name}</p>
-                <p className="text-xs text-muted-foreground">
+                <p className="truncate text-xs text-muted-foreground">
                   {fileMetaLabel?.(item.file) ?? formatBytes(item.file.size)}
                 </p>
               </div>
             </div>
             {item.status === "uploading" || (isUploading && item.status !== "error") ? (
-              <div className="w-24">
+              <div className="w-24 shrink-0">
                 <div className="h-2 w-full rounded-full bg-muted">
                   <div
                     className="h-2 rounded-full bg-primary transition-all"
@@ -107,6 +110,7 @@ export function UploadQueueList({
                 size="sm"
                 variant="ghost"
                 type="button"
+                className="shrink-0"
                 onClick={() => onRemove(item.id)}
               >
                 Remove

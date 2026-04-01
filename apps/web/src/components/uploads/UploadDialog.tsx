@@ -115,7 +115,7 @@ function UploadDialog<TRecord>({
       }}
     >
       <DialogContent
-        className="sm:max-w-[680px]"
+        className="max-w-[min(680px,calc(100vw-2rem))] sm:max-w-[min(680px,calc(100vw-2rem))]"
         style={isDrivePickerActive ? { pointerEvents: "none" } : undefined}
         overlayClassName={
           isDrivePickerActive ? "pointer-events-none" : undefined
@@ -137,7 +137,7 @@ function UploadDialog<TRecord>({
             <DialogDescription>{description}</DialogDescription>
           ) : null}
         </DialogHeader>
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           <UploadDropzone
             isDragging={isDragging}
             setIsDragging={setIsDragging}

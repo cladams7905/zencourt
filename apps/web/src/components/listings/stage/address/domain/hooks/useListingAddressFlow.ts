@@ -56,8 +56,7 @@ export function useListingAddressFlow(options?: UseListingAddressFlowOptions) {
       if (prefilledListingId) {
         const updated = await updateListingForCurrentUser(prefilledListingId, {
           title: inferredTitle,
-          address: trimmedAddress,
-          listingStage: "upload"
+          address: trimmedAddress
         });
         await touchListingActivityForCurrentUser(prefilledListingId);
 

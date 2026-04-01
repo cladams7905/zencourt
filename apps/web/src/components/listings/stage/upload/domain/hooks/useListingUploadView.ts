@@ -214,7 +214,17 @@ export function useListingUploadView({
     }
     if (pendingFiles.length === 0) {
       if (listingId?.trim()) {
-        router.push(`/listings/${listingId}/stage/categorize`);
+        try {
+          await updateListingForCurrentUser(listingId, {
+            listingStage: "categorize"
+          });
+          router.push(`/listings/${listingId}/stage/categorize`);
+        } catch (error) {
+          toast.error(
+            (error as Error).message ||
+              "Could not save listing progress. Try again."
+          );
+        }
       }
       return;
     }
@@ -243,10 +253,21 @@ export function useListingUploadView({
         return;
       }
       setProcessingBatch(nextBatch);
+      try {
+        await updateListingForCurrentUser(nextBatch.listingId, {
+          listingStage: "categorize"
+        });
+      } catch (error) {
+        setProcessingLocalPreviews([]);
+        setProcessingBatch(null);
+        setPhase("editing");
+        toast.error(
+          (error as Error).message ||
+            "Could not save listing progress. Try again."
+        );
+        return;
+      }
       setPhase("analyzing");
-      void updateListingForCurrentUser(nextBatch.listingId, {
-        listingStage: "categorize"
-      }).catch(() => null);
     } catch (error) {
       setProcessingLocalPreviews([]);
       setPhase("editing");
@@ -254,7 +275,7 @@ export function useListingUploadView({
         (error as Error).message || "Unable to continue to categorize."
       );
     }
-  }, [canContinue, handleUpload, listingId, pendingFiles, phase, router]);
+  }, [canContinue, handleUpload, initialImages, listingId, pendingFiles, phase, router]);
 
   const handleBack = React.useCallback(() => {
     if (
