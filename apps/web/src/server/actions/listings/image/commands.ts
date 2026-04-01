@@ -6,7 +6,6 @@ import {
   withCurrentUserListingAccess
 } from "@web/src/server/actions/shared/auth";
 import {
-  assignPrimaryListingImageForCategory,
   createListingImageRecords,
   getListingImages,
   updateListingImageAssignments,
@@ -84,15 +83,6 @@ export const deleteListingImageUploadsForCurrentUser = withServerActionCaller(
       );
     })
 );
-
-export const assignPrimaryListingImageForCategoryForCurrentUser =
-  withServerActionCaller(
-    "assignPrimaryListingImageForCategoryForCurrentUser",
-    async (listingId: string, category: string) =>
-      withCurrentUser(async ({ user }) =>
-        assignPrimaryListingImageForCategory(user.id, listingId, category)
-      )
-  );
 
 export const getListingImagesForCurrentUser = withServerActionCaller(
   "getListingImagesForCurrentUser",

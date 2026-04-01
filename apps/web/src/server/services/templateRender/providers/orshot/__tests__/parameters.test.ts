@@ -47,16 +47,16 @@ describe("templateRender/providers/orshot/parameters", () => {
       id: "img-1",
       url: "https://cdn.example.com/1.jpg",
       category: "kitchen",
-      isPrimary: true,
-      primaryScore: 0.8,
+      recommendationScore: 0.8,
+      shotType: "room",
       uploadedAt: new Date("2026-02-18T00:00:00.000Z")
     },
     {
       id: "img-2",
       url: "https://cdn.example.com/2.jpg",
       category: "bedroom",
-      isPrimary: false,
-      primaryScore: 0.7,
+      recommendationScore: 0.7,
+      shotType: "room",
       uploadedAt: new Date("2026-02-17T00:00:00.000Z")
     }
   ];
@@ -251,15 +251,15 @@ describe("templateRender/providers/orshot/parameters", () => {
     expect(result.arrowImage).toBe("");
   });
 
-  it("rotates primary images per render index", () => {
+  it("rotates ranked images per render index", () => {
     const rotatingImages = [
       ...listingImages,
       {
         id: "img-3",
         url: "https://cdn.example.com/3.jpg",
         category: "living room",
-        isPrimary: true,
-        primaryScore: 0.6,
+        recommendationScore: 0.6,
+        shotType: "room",
         uploadedAt: new Date("2026-02-16T00:00:00.000Z")
       }
     ];
@@ -283,25 +283,25 @@ describe("templateRender/providers/orshot/parameters", () => {
     });
 
     expect(first.backgroundImage1).toBe("https://cdn.example.com/1.jpg");
-    expect(second.backgroundImage1).toBe("https://cdn.example.com/3.jpg");
+    expect(second.backgroundImage1).toBe("https://cdn.example.com/2.jpg");
   });
 
-  it("prefers primary images before non-primary images", () => {
+  it("prefers higher recommendation scores for equally relevant room shots", () => {
     const mixedImages = [
       {
         id: "img-a",
         url: "https://cdn.example.com/non-primary.jpg",
         category: "kitchen",
-        isPrimary: false,
-        primaryScore: 0.99,
+        recommendationScore: 0.99,
+        shotType: "room",
         uploadedAt: new Date("2026-02-19T00:00:00.000Z")
       },
       {
         id: "img-b",
         url: "https://cdn.example.com/primary.jpg",
         category: "bedroom",
-        isPrimary: true,
-        primaryScore: 0.1,
+        recommendationScore: 0.1,
+        shotType: "room",
         uploadedAt: new Date("2026-02-18T00:00:00.000Z")
       }
     ];
@@ -314,34 +314,34 @@ describe("templateRender/providers/orshot/parameters", () => {
       captionItem
     });
 
-    expect(result.backgroundImage1).toBe("https://cdn.example.com/primary.jpg");
-    expect(result.backgroundImage1).not.toBe("https://cdn.example.com/non-primary.jpg");
+    expect(result.backgroundImage1).toBe("https://cdn.example.com/non-primary.jpg");
+    expect(result.backgroundImage1).not.toBe("https://cdn.example.com/primary.jpg");
   });
 
-  it("backfills extra background slots with non-primary images when primaries run out", () => {
+  it("fills background slots in descending recommendation order", () => {
     const mixedImages = [
       {
         id: "img-a",
         url: "https://cdn.example.com/primary-1.jpg",
         category: "kitchen",
-        isPrimary: true,
-        primaryScore: 0.9,
+        recommendationScore: 0.9,
+        shotType: "room",
         uploadedAt: new Date("2026-02-19T00:00:00.000Z")
       },
       {
         id: "img-b",
         url: "https://cdn.example.com/primary-2.jpg",
         category: "living room",
-        isPrimary: true,
-        primaryScore: 0.8,
+        recommendationScore: 0.8,
+        shotType: "room",
         uploadedAt: new Date("2026-02-18T00:00:00.000Z")
       },
       {
         id: "img-c",
         url: "https://cdn.example.com/non-primary-1.jpg",
         category: "bedroom",
-        isPrimary: false,
-        primaryScore: 0.7,
+        recommendationScore: 0.7,
+        shotType: "room",
         uploadedAt: new Date("2026-02-17T00:00:00.000Z")
       }
     ];
@@ -368,8 +368,8 @@ describe("templateRender/providers/orshot/parameters", () => {
         id: "img-3",
         url: "https://cdn.example.com/3.jpg",
         category: "living room",
-        isPrimary: true,
-        primaryScore: 0.6,
+        recommendationScore: 0.6,
+        shotType: "room",
         uploadedAt: new Date("2026-02-16T00:00:00.000Z")
       }
     ];
@@ -397,7 +397,7 @@ describe("templateRender/providers/orshot/parameters", () => {
     });
 
     expect(first.backgroundImage1).toBe("https://cdn.example.com/1.jpg");
-    expect(second.backgroundImage1).toBe("https://cdn.example.com/3.jpg");
+    expect(second.backgroundImage1).toBe("https://cdn.example.com/2.jpg");
   });
 
   it("seeds first rotation index from random when rotation key is first seen", () => {
@@ -407,8 +407,8 @@ describe("templateRender/providers/orshot/parameters", () => {
         id: "img-3",
         url: "https://cdn.example.com/3.jpg",
         category: "living room",
-        isPrimary: true,
-        primaryScore: 0.6,
+        recommendationScore: 0.6,
+        shotType: "room",
         uploadedAt: new Date("2026-02-16T00:00:00.000Z")
       }
     ];
@@ -423,6 +423,6 @@ describe("templateRender/providers/orshot/parameters", () => {
       random: () => 0.99
     });
 
-    expect(first.backgroundImage1).toBe("https://cdn.example.com/2.jpg");
+    expect(first.backgroundImage1).toBe("https://cdn.example.com/3.jpg");
   });
 });

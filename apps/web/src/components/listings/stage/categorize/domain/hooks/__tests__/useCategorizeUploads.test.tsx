@@ -69,8 +69,10 @@ describe("useCategorizeUploads", () => {
         url: "u",
         filename: "a.jpg",
         category: null,
-        isPrimary: false,
-        primaryScore: null
+        recommendationScore: null,
+        shotType: "room",
+        analysisStatus: "pending",
+        metadata: null
       }
     ]);
     const { result } = renderHook(() =>

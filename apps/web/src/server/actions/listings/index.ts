@@ -7,7 +7,6 @@ export {
   getListingImageUploadUrlsForCurrentUser,
   createListingImageRecordsForCurrentUser,
   updateListingImageAssignmentsForCurrentUser,
-  assignPrimaryListingImageForCategoryForCurrentUser,
   deleteListingImageUploadsForCurrentUser,
   getListingImagesForCurrentUser
 } from "./image";

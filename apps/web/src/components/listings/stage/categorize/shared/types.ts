@@ -3,8 +3,19 @@ export type ListingImageItem = {
   url: string;
   filename: string;
   category: string | null;
-  isPrimary?: boolean | null;
-  primaryScore?: number | null;
+  recommendationScore?: number | null;
+  shotType?: string | null;
+  analysisStatus?: string | null;
+  metadata?: {
+    featureTags?: string[];
+    detailType?: string;
+    scoreBreakdown?: {
+      total: number;
+      technical: number;
+      composition: number;
+      storytelling: number;
+    };
+  } | null;
 };
 
 export interface ListingCategorizeViewProps {

@@ -20,8 +20,8 @@ describe("useListingContentMediaItems", () => {
             url: "https://example.com/1.jpg",
             category: "kitchen",
             uploadedAtMs: 1,
-            isPrimary: true,
-            primaryScore: 0.9
+            recommendationScore: 0.9,
+            shotType: "room"
           }
         ],
         isGenerating: false,

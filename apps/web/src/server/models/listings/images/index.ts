@@ -1,11 +1,6 @@
 export { getListingImages } from "./queries";
 export { getListingImageUrlsByIds } from "./queries";
-export {
-  updateListingImageAssignments,
-  assignPrimaryListingImageForCategory,
-  assignPrimaryListingImageForCategoryTrusted,
-  createListingImageRecords
-} from "./mutations";
+export { updateListingImageAssignments, createListingImageRecords } from "./mutations";
 
 export type {
   ListingImageUploadRequest,

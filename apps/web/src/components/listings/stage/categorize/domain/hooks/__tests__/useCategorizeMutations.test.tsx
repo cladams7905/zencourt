@@ -3,7 +3,6 @@ import { useCategorizeMutations } from "@web/src/components/listings/stage/categ
 
 const mockToastError = jest.fn();
 const mockUpdateListingImageAssignments = jest.fn();
-const mockAssignPrimary = jest.fn();
 
 jest.mock("sonner", () => ({
   toast: {
@@ -13,32 +12,27 @@ jest.mock("sonner", () => ({
 
 jest.mock("@web/src/server/actions/listings/image", () => ({
   updateListingImageAssignmentsForCurrentUser: (...args: unknown[]) =>
-    mockUpdateListingImageAssignments(...args),
-  assignPrimaryListingImageForCategoryForCurrentUser: (...args: unknown[]) =>
-    mockAssignPrimary(...args)
+    mockUpdateListingImageAssignments(...args)
 }));
 
 describe("useCategorizeMutations", () => {
   beforeEach(() => {
     mockToastError.mockReset();
     mockUpdateListingImageAssignments.mockReset();
-    mockAssignPrimary.mockReset();
   });
 
   it("persists image assignments and returns true on success", async () => {
     mockUpdateListingImageAssignments.mockResolvedValue(undefined);
-    const setImages = jest.fn();
     const { result } = renderHook(() =>
       useCategorizeMutations({
-        listingId: "l1",
-        setImages
+        listingId: "l1"
       })
     );
 
     let ok = false;
     await act(async () => {
       ok = await result.current.persistImageAssignments(
-        [{ id: "img1", category: "kitchen", isPrimary: false }],
+        [{ id: "img1", category: "kitchen" }],
         []
       );
     });
@@ -46,7 +40,7 @@ describe("useCategorizeMutations", () => {
     expect(ok).toBe(true);
     expect(mockUpdateListingImageAssignments).toHaveBeenCalledWith(
       "l1",
-      [{ id: "img1", category: "kitchen", isPrimary: false }],
+      [{ id: "img1", category: "kitchen" }],
       []
     );
   });
@@ -56,8 +50,7 @@ describe("useCategorizeMutations", () => {
     const rollback = jest.fn();
     const { result } = renderHook(() =>
       useCategorizeMutations({
-        listingId: "l1",
-        setImages: jest.fn()
+        listingId: "l1"
       })
     );
 
@@ -69,49 +62,5 @@ describe("useCategorizeMutations", () => {
     expect(ok).toBe(false);
     expect(rollback).toHaveBeenCalled();
     expect(mockToastError).toHaveBeenCalled();
-  });
-
-  it("assigns primary when category has no primary", async () => {
-    mockAssignPrimary.mockResolvedValue({ primaryImageId: "img2" });
-    const setImages = jest.fn();
-    const { result } = renderHook(() =>
-      useCategorizeMutations({
-        listingId: "l1",
-        setImages
-      })
-    );
-
-    await act(async () => {
-      await result.current.ensurePrimaryForCategory("kitchen", [
-        { id: "img1", url: "", filename: "a.jpg", category: "kitchen" },
-        { id: "img2", url: "", filename: "b.jpg", category: "kitchen" }
-      ]);
-    });
-
-    expect(mockAssignPrimary).toHaveBeenCalledWith("l1", "kitchen");
-    expect(setImages).toHaveBeenCalledTimes(1);
-  });
-
-  it("does nothing when category already has primary", async () => {
-    const { result } = renderHook(() =>
-      useCategorizeMutations({
-        listingId: "l1",
-        setImages: jest.fn()
-      })
-    );
-
-    await act(async () => {
-      await result.current.ensurePrimaryForCategory("kitchen", [
-        {
-          id: "img1",
-          url: "",
-          filename: "a.jpg",
-          category: "kitchen",
-          isPrimary: true
-        }
-      ]);
-    });
-
-    expect(mockAssignPrimary).not.toHaveBeenCalled();
   });
 });

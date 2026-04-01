@@ -1,4 +1,11 @@
-import { and, db, eq, inArray, listingImages } from "@db/client";
+import { randomUUID } from "node:crypto";
+import { and, db, eq, inArray, listingImages, lt, or } from "@db/client";
+import type {
+  ImageMetadata,
+  ListingImageAiScores,
+  ListingImageAnalysisStatus,
+  ListingImageShotType
+} from "@shared/types/models";
 import type {
   CategorizationPhase,
   CategorizationProgress,
@@ -9,7 +16,6 @@ import {
   logger as baseLogger
 } from "@web/src/lib/core/logging/logger";
 import { getListingById } from "@web/src/server/models/listings";
-import { assignPrimaryListingImageForCategoryTrusted } from "@web/src/server/models/listings/images";
 import roomClassificationService from "@web/src/server/services/roomClassification";
 import type { CategorizationResult } from "./domain/types";
 import type { ImageCategorizationStats } from "./types";
@@ -19,6 +25,7 @@ import {
   categorizeAnalyzedImages,
   cloneSerializableImages
 } from "./domain/results";
+import { calculateRecommendationBreakdown } from "./domain/scoring";
 
 type ProgressCallback = (progress: CategorizationProgress) => void;
 
@@ -38,6 +45,17 @@ const logger = createChildLogger(baseLogger, {
 });
 
 type ListingImageRow = typeof listingImages.$inferSelect;
+const ANALYSIS_STALE_MS = 10 * 60 * 1000;
+const DEFAULT_AI_CONCURRENCY = 10;
+
+type BatchClassificationPayload = {
+  category: string;
+  confidence: number;
+  shotType: ListingImageShotType;
+  featureTags: string[];
+  scores: ListingImageAiScores;
+  perspective?: "aerial" | "ground";
+};
 
 function emitProgress(
   callback: ProgressCallback | undefined,
@@ -103,16 +121,41 @@ function getPublicImageUrl(image: SerializableImageData): string | null {
   return publicUrl ?? image.url;
 }
 
+function buildNextMetadata(args: {
+  image: SerializableImageData;
+  perspective?: "aerial" | "ground";
+  featureTags?: string[];
+  detailType?: string;
+  scoreBreakdown?: ImageMetadata["scoreBreakdown"];
+  analysisError?: string | null;
+}): ImageMetadata {
+  const existing = args.image.metadata ?? {
+    width: 0,
+    height: 0,
+    format: "",
+    size: 0,
+    lastModified: 0
+  };
+
+  return {
+    ...existing,
+    analysisVersion: "2026-04-01.1",
+    perspective: args.perspective ?? existing.perspective,
+    featureTags: args.featureTags ?? existing.featureTags,
+    detailType: args.detailType ?? existing.detailType,
+    scoreBreakdown: args.scoreBreakdown ?? existing.scoreBreakdown,
+    analysisError:
+      args.analysisError === undefined
+        ? (existing.analysisError ?? null)
+        : args.analysisError
+  };
+}
+
 function mapBatchResultToImage(
   image: SerializableImageData,
   batchResult: {
     success: boolean;
-    classification: {
-      category: string;
-      confidence: number;
-      primaryScore?: number;
-      perspective?: "aerial" | "ground";
-    } | null;
+    classification: BatchClassificationPayload | null;
     error: string | null;
   }
 ): SerializableImageData {
@@ -120,36 +163,46 @@ function mapBatchResultToImage(
     return {
       ...image,
       status: "error",
+      analysisStatus: "failed",
+      analysisRunId: null,
+      analysisCompletedAt: new Date(),
+      metadata: buildNextMetadata({
+        image,
+        analysisError: batchResult.error || "Analysis failed"
+      }),
       error: batchResult.error || "Analysis failed"
     };
   }
 
-  const isOther = batchResult.classification.category === "other";
+  const { classification } = batchResult;
+  const scoreBreakdown = calculateRecommendationBreakdown({
+    metadata: image.metadata,
+    scores: classification.scores,
+    shotType: classification.shotType,
+    confidence: classification.confidence
+  });
   let nextImage: SerializableImageData = {
     ...image,
-    category: isOther ? null : batchResult.classification.category,
-    confidence: batchResult.classification.confidence,
-    primaryScore: isOther
-      ? null
-      : (batchResult.classification.primaryScore ?? null),
-    status: "analyzed"
+    category: classification.category,
+    confidence: classification.confidence,
+    recommendationScore: scoreBreakdown.total,
+    shotType: classification.shotType,
+    analysisStatus: "complete",
+    analysisRunId: null,
+    analysisCompletedAt: new Date(),
+    status: "analyzed",
+    metadata: buildNextMetadata({
+      image,
+      perspective: classification.perspective,
+      featureTags: classification.featureTags,
+      detailType:
+        classification.shotType === "detail"
+          ? classification.featureTags[0]
+          : undefined,
+      scoreBreakdown,
+      analysisError: null
+    })
   };
-
-  if (batchResult.classification.perspective) {
-    nextImage = {
-      ...nextImage,
-      metadata: {
-        ...(image.metadata ?? {
-          width: 0,
-          height: 0,
-          format: "",
-          size: 0,
-          lastModified: 0
-        }),
-        perspective: batchResult.classification.perspective
-      }
-    };
-  }
 
   return nextImage;
 }
@@ -164,6 +217,13 @@ function buildAnalyzableTargets(
       imageById.set(image.id, {
         ...image,
         status: "error",
+        analysisStatus: "failed",
+        analysisRunId: null,
+        analysisCompletedAt: new Date(),
+        metadata: buildNextMetadata({
+          image,
+          analysisError: image.error || "Unable to access image for analysis"
+        }),
         error: image.error || "Unable to access image for analysis"
       });
       return null;
@@ -227,7 +287,7 @@ export async function runAnalyzeImagesWorkflow(
     aiConcurrency?: number;
   } = {}
 ): Promise<CategorizationResult> {
-  const { onProgress, aiConcurrency = 10 } = options;
+  const { onProgress, aiConcurrency = DEFAULT_AI_CONCURRENCY } = options;
   const startTime = Date.now();
 
   const analyzedImages = await analyzeImages(
@@ -291,9 +351,13 @@ export function toSerializableImageData(
     filename: image.filename,
     category: image.category ?? null,
     confidence: image.confidence ?? null,
-    primaryScore: image.primaryScore ?? null,
+    recommendationScore: image.recommendationScore ?? null,
     status: "uploaded",
-    isPrimary: image.isPrimary ?? false,
+    shotType: image.shotType,
+    analysisStatus: image.analysisStatus,
+    analysisRunId: image.analysisRunId ?? null,
+    analysisStartedAt: image.analysisStartedAt ?? null,
+    analysisCompletedAt: image.analysisCompletedAt ?? null,
     metadata: image.metadata ?? null,
     error: undefined,
     uploadUrl: undefined
@@ -309,7 +373,13 @@ export async function persistListingImageAnalysis(
     .set({
       category: image.category ?? null,
       confidence: image.confidence ?? null,
-      primaryScore: image.primaryScore ?? null,
+      recommendationScore: image.recommendationScore ?? null,
+      shotType: image.shotType ?? "room",
+      analysisStatus: (image.analysisStatus ??
+        "pending") as ListingImageAnalysisStatus,
+      analysisRunId: image.analysisRunId ?? null,
+      analysisStartedAt: image.analysisStartedAt ?? null,
+      analysisCompletedAt: image.analysisCompletedAt ?? null,
       metadata: image.metadata ?? undefined
     })
     .where(
@@ -318,21 +388,6 @@ export async function persistListingImageAnalysis(
         eq(listingImages.listingId, listingId)
       )
     );
-}
-
-async function assignPrimaryImagesByCategory(
-  listingId: string,
-  categories: string[]
-): Promise<void> {
-  const uniqueCategories = Array.from(
-    new Set(categories.filter((c) => c.trim() !== ""))
-  );
-  if (uniqueCategories.length === 0) return;
-  await Promise.all(
-    uniqueCategories.map((category) =>
-      assignPrimaryListingImageForCategoryTrusted(listingId, category)
-    )
-  );
 }
 
 function buildNoopStats(
@@ -350,6 +405,68 @@ function buildNoopStats(
   };
 }
 
+function getClaimableImages(
+  images: ListingImageRow[],
+  staleBefore: Date
+): ListingImageRow[] {
+  return images.filter((image) => {
+    if (image.analysisStatus === "pending") {
+      return true;
+    }
+    if (
+      image.analysisStatus === "processing" &&
+      image.analysisStartedAt &&
+      image.analysisStartedAt < staleBefore
+    ) {
+      return true;
+    }
+    return false;
+  });
+}
+
+async function claimListingImagesForAnalysis(params: {
+  listingId: string;
+  imageIds?: string[];
+  runId: string;
+  staleBefore: Date;
+}): Promise<ListingImageRow[]> {
+  const { listingId, imageIds, runId, staleBefore } = params;
+
+  await db
+    .update(listingImages)
+    .set({
+      analysisStatus: "processing",
+      analysisRunId: runId,
+      analysisStartedAt: new Date(),
+      analysisCompletedAt: null
+    })
+    .where(
+      and(
+        eq(listingImages.listingId, listingId),
+        ...(imageIds && imageIds.length > 0
+          ? [inArray(listingImages.id, imageIds)]
+          : []),
+        or(
+          eq(listingImages.analysisStatus, "pending"),
+          and(
+            eq(listingImages.analysisStatus, "processing"),
+            lt(listingImages.analysisStartedAt, staleBefore)
+          )
+        )
+      )
+    );
+
+  return db
+    .select()
+    .from(listingImages)
+    .where(
+      and(
+        eq(listingImages.listingId, listingId),
+        eq(listingImages.analysisRunId, runId)
+      )
+    );
+}
+
 export async function runListingImagesCategorizationWorkflow(
   userId: string,
   listingId: string,
@@ -362,13 +479,28 @@ export async function runListingImagesCategorizationWorkflow(
   }
 
   const images = await loadListingImagesForWorkflow(listingId, imageIds);
-  const needsAnalysis = images.filter((img) => !img.category);
+  const staleBefore = new Date(Date.now() - ANALYSIS_STALE_MS);
+  const claimableImages = getClaimableImages(images, staleBefore);
 
-  if (needsAnalysis.length === 0) {
-    return buildNoopStats(images.length, images.length);
+  if (claimableImages.length === 0) {
+    const analyzed = images.filter((img) => img.analysisStatus === "complete").length;
+    return buildNoopStats(images.length, analyzed);
   }
 
-  const serializableImages = needsAnalysis.map(toSerializableImageData);
+  const runId = randomUUID();
+  const claimedImages = await claimListingImagesForAnalysis({
+    listingId,
+    imageIds: claimableImages.map((image) => image.id),
+    runId,
+    staleBefore
+  });
+
+  if (claimedImages.length === 0) {
+    const analyzed = images.filter((img) => img.analysisStatus === "complete").length;
+    return buildNoopStats(images.length, analyzed);
+  }
+
+  const serializableImages = claimedImages.map(toSerializableImageData);
   const result = await runAnalyzeImagesWorkflow(serializableImages, {
     aiConcurrency: options.aiConcurrency,
     onProgress: (progress) => {
@@ -380,13 +512,6 @@ export async function runListingImagesCategorizationWorkflow(
 
   await Promise.all(
     result.images.map((image) => persistListingImageAnalysis(listingId, image))
-  );
-
-  await assignPrimaryImagesByCategory(
-    listingId,
-    result.images
-      .map((image) => image.category ?? "")
-      .filter((category) => category !== "")
   );
 
   return result.stats;

@@ -22,22 +22,37 @@ export function parseClassificationResponse(
 
     const parsed = JSON.parse(jsonContent);
 
-    const primaryScore =
-      typeof parsed.primary_score === "number"
-        ? parsed.primary_score
-        : typeof parsed.primaryScore === "number"
-          ? parsed.primaryScore
-          : undefined;
-
     const perspective =
       parsed.perspective === "aerial" || parsed.perspective === "ground"
         ? parsed.perspective
         : undefined;
 
+    const scores = parsed.scores ?? {};
+
     return {
       category: parsed.category as RoomCategory,
       confidence: parseFloat(parsed.confidence),
-      primaryScore,
+      shotType: parsed.shot_type,
+      featureTags: Array.isArray(parsed.feature_tags)
+        ? parsed.feature_tags.filter(
+            (value: unknown): value is string => typeof value === "string"
+          )
+        : [],
+      scores: {
+        lighting: parseFloat(scores.lighting),
+        framing: parseFloat(scores.framing),
+        coverage: parseFloat(scores.coverage),
+        clarity: parseFloat(scores.clarity),
+        motionPotential: parseFloat(scores.motion_potential),
+        roomRepresentativeness:
+          typeof scores.room_representativeness === "number"
+            ? scores.room_representativeness
+            : undefined,
+        featureAppeal:
+          typeof scores.feature_appeal === "number"
+            ? scores.feature_appeal
+            : undefined
+      },
       perspective
     };
   } catch (error) {
@@ -76,15 +91,27 @@ export function validateClassification(
   }
 
   if (
-    classification.primaryScore !== undefined &&
-    (typeof classification.primaryScore !== "number" ||
-      classification.primaryScore < 0 ||
-      classification.primaryScore > 1)
+    classification.shotType !== "room" &&
+    classification.shotType !== "detail" &&
+    classification.shotType !== "other"
   ) {
     throw new RoomClassificationError(
-      `Invalid primary_score value: ${classification.primaryScore}`,
+      `Invalid shot_type value: ${classification.shotType}`,
       "INVALID_RESPONSE",
       classification
     );
+  }
+
+  for (const [key, value] of Object.entries(classification.scores)) {
+    if (value === undefined) {
+      continue;
+    }
+    if (typeof value !== "number" || value < 0 || value > 1) {
+      throw new RoomClassificationError(
+        `Invalid score value for ${key}: ${value}`,
+        "INVALID_RESPONSE",
+        classification
+      );
+    }
   }
 }

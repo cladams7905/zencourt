@@ -101,7 +101,7 @@ export class RoomClassification {
             json_schema: {
               name: "room_classification",
               description:
-                "Room classification with confidence and primary image score.",
+                "Room classification with confidence, shot type, and score breakdown.",
               strict: true,
               schema: CLASSIFICATION_SCHEMA
             }
@@ -200,23 +200,28 @@ export class RoomClassification {
     }
   ): Promise<R[]> {
     const { concurrency, onProgress } = options;
-    const results: R[] = [];
+    const results = new Array<R>(items.length);
     let completed = 0;
+    let nextIndex = 0;
 
-    for (let i = 0; i < items.length; i += concurrency) {
-      const chunk = items.slice(i, i + concurrency);
+    const worker = async () => {
+      while (nextIndex < items.length) {
+        const currentIndex = nextIndex;
+        nextIndex += 1;
+        const item = items[currentIndex];
+        if (item === undefined) {
+          return;
+        }
+        const result = await processor(item);
+        results[currentIndex] = result;
+        completed += 1;
+        onProgress?.(completed, items.length, result);
+      }
+    };
 
-      const chunkResults = await Promise.all(
-        chunk.map(async (item) => {
-          const result = await processor(item);
-          completed += 1;
-          onProgress?.(completed, items.length, result);
-          return result;
-        })
-      );
-
-      results.push(...chunkResults);
-    }
+    await Promise.all(
+      Array.from({ length: Math.min(concurrency, items.length) }, () => worker())
+    );
 
     return results;
   }

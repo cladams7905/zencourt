@@ -17,8 +17,8 @@ describe("templateRender/providers/fallback buildFallbackRenderedItem", () => {
     const images = [
       {
         url: "https://example.com/img.jpg",
-        isPrimary: false,
-        primaryScore: null,
+        recommendationScore: null,
+        shotType: "room",
         uploadedAt: new Date(1000)
       }
     ];
@@ -32,18 +32,18 @@ describe("templateRender/providers/fallback buildFallbackRenderedItem", () => {
     expect(result?.parametersUsed).toEqual({});
   });
 
-  it("picks primary image first", () => {
+  it("prefers room shots over detail shots", () => {
     const images = [
       {
         url: "https://example.com/second.jpg",
-        isPrimary: false,
-        primaryScore: 1,
+        recommendationScore: 1,
+        shotType: "detail",
         uploadedAt: new Date(2000)
       },
       {
         url: "https://example.com/primary.jpg",
-        isPrimary: true,
-        primaryScore: 0,
+        recommendationScore: 0,
+        shotType: "room",
         uploadedAt: new Date(1000)
       }
     ];
@@ -52,18 +52,18 @@ describe("templateRender/providers/fallback buildFallbackRenderedItem", () => {
     expect(result?.imageUrl).toBe("https://example.com/primary.jpg");
   });
 
-  it("picks by primaryScore desc when isPrimary tied", () => {
+  it("picks by recommendationScore desc when shot type is tied", () => {
     const images = [
       {
         url: "https://example.com/low.jpg",
-        isPrimary: false,
-        primaryScore: 0.1,
+        recommendationScore: 0.1,
+        shotType: "room",
         uploadedAt: new Date(2000)
       },
       {
         url: "https://example.com/high.jpg",
-        isPrimary: false,
-        primaryScore: 0.9,
+        recommendationScore: 0.9,
+        shotType: "room",
         uploadedAt: new Date(1000)
       }
     ];
@@ -72,18 +72,18 @@ describe("templateRender/providers/fallback buildFallbackRenderedItem", () => {
     expect(result?.imageUrl).toBe("https://example.com/high.jpg");
   });
 
-  it("picks by uploadedAt desc when isPrimary and primaryScore tied", () => {
+  it("picks by uploadedAt desc when shot type and score tie", () => {
     const images = [
       {
         url: "https://example.com/older.jpg",
-        isPrimary: false,
-        primaryScore: null,
+        recommendationScore: null,
+        shotType: "room",
         uploadedAt: new Date(1000)
       },
       {
         url: "https://example.com/newer.jpg",
-        isPrimary: false,
-        primaryScore: null,
+        recommendationScore: null,
+        shotType: "room",
         uploadedAt: new Date(2000)
       }
     ];
@@ -96,8 +96,8 @@ describe("templateRender/providers/fallback buildFallbackRenderedItem", () => {
     const images = [
       {
         url: "",
-        isPrimary: true,
-        primaryScore: null,
+        recommendationScore: null,
+        shotType: "room",
         uploadedAt: new Date(1000)
       }
     ];

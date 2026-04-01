@@ -38,7 +38,6 @@ const buildParams = (
     setIsDraggingImage: jest.fn(),
     setDragOverCategory: jest.fn(),
     persistImageAssignments: jest.fn().mockResolvedValue(true),
-    ensurePrimaryForCategory: jest.fn().mockResolvedValue(undefined),
     endDragSession: jest.fn()
   };
   return { ...params, ...overrides };
@@ -109,7 +108,7 @@ describe("useCategorizeActions", () => {
     expect(params.setDeleteImageId).toHaveBeenCalledWith(null);
   });
 
-  it("renames categories, persists, and ensures primary", async () => {
+  it("renames categories and persists updates", async () => {
     const params = buildParams({
       images: [
         { id: "img1", url: "", filename: "a.jpg", category: "office" },
@@ -127,7 +126,6 @@ describe("useCategorizeActions", () => {
 
     expect(params.setImages).toHaveBeenCalled();
     expect(params.persistImageAssignments).toHaveBeenCalled();
-    expect(params.ensurePrimaryForCategory).toHaveBeenCalled();
     expect(params.setIsCategoryDialogOpen).toHaveBeenCalledWith(false);
   });
 
@@ -165,39 +163,7 @@ describe("useCategorizeActions", () => {
     });
 
     expect(params.persistImageAssignments).toHaveBeenCalled();
-    expect(params.ensurePrimaryForCategory).toHaveBeenCalled();
     expect(params.setMoveImageId).toHaveBeenCalledWith(null);
-  });
-
-  it("shows error when setting primary on uncategorized image", async () => {
-    const params = buildParams({
-      images: [{ id: "img1", url: "", filename: "a.jpg", category: null }]
-    });
-    const { result } = renderHook(() => useCategorizeActions(params));
-
-    await act(async () => {
-      await result.current.handleSetPrimaryImage("img1");
-    });
-
-    expect(mockToastError).toHaveBeenCalledWith(
-      "Assign a category before setting a primary photo."
-    );
-  });
-
-  it("sets primary and persists assignment", async () => {
-    const params = buildParams({
-      images: [
-        { id: "img1", url: "", filename: "a.jpg", category: "kitchen" },
-        { id: "img2", url: "", filename: "b.jpg", category: "kitchen" }
-      ]
-    });
-    const { result } = renderHook(() => useCategorizeActions(params));
-
-    await act(async () => {
-      await result.current.handleSetPrimaryImage("img2");
-    });
-
-    expect(params.persistImageAssignments).toHaveBeenCalled();
   });
 
   it("drag handlers set transfer payload and end drag session", () => {

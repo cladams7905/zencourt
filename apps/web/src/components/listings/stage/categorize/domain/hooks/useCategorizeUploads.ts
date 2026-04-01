@@ -45,8 +45,10 @@ export function useCategorizeUploads({
           url: image.url,
           filename: image.filename,
           category: image.category ?? null,
-          isPrimary: image.isPrimary ?? false,
-          primaryScore: image.primaryScore ?? null
+          recommendationScore: image.recommendationScore ?? null,
+          shotType: image.shotType,
+          analysisStatus: image.analysisStatus,
+          metadata: image.metadata ?? null
         }));
         try {
           router.push(

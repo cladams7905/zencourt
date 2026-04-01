@@ -490,8 +490,12 @@ describe("templateRender/service", () => {
         url: "https://cdn.example.com/photo.jpg",
         category: "kitchen",
         confidence: null,
-        primaryScore: 0.8,
-        isPrimary: true,
+        recommendationScore: 0.8,
+        shotType: "room",
+        analysisStatus: "complete",
+        analysisRunId: null,
+        analysisStartedAt: null,
+        analysisCompletedAt: null,
         metadata: null,
         uploadedAt: new Date(2000)
       } as DBListingImage
@@ -552,8 +556,12 @@ describe("templateRender/service", () => {
         url: "https://cdn.example.com/photo.jpg",
         category: null,
         confidence: null,
-        primaryScore: null,
-        isPrimary: false,
+        recommendationScore: null,
+        shotType: "room",
+        analysisStatus: "complete",
+        analysisRunId: null,
+        analysisStartedAt: null,
+        analysisCompletedAt: null,
         metadata: null,
         uploadedAt: new Date()
       } as DBListingImage
@@ -680,8 +688,12 @@ describe("templateRender/service", () => {
         url: signedUrl,
         category: "kitchen",
         confidence: null,
-        primaryScore: null,
-        isPrimary: true,
+        recommendationScore: null,
+        shotType: "room",
+        analysisStatus: "complete",
+        analysisRunId: null,
+        analysisStartedAt: null,
+        analysisCompletedAt: null,
         metadata: null,
         uploadedAt: new Date()
       } as DBListingImage

@@ -56,14 +56,18 @@ describe("db schema column contracts", () => {
   it("keeps expected listing image columns", () => {
     expect(columnKeys(listingImages)).toEqual(
       [
+        "analysisCompletedAt",
+        "analysisRunId",
+        "analysisStartedAt",
+        "analysisStatus",
         "category",
         "confidence",
         "filename",
         "id",
-        "isPrimary",
         "listingId",
         "metadata",
-        "primaryScore",
+        "recommendationScore",
+        "shotType",
         "uploadedAt",
         "url"
       ].sort()

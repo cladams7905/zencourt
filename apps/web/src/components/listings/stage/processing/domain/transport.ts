@@ -41,7 +41,8 @@ export async function fetchListingImages(listingId: string): Promise<
   Array<{
     category: string | null;
     confidence?: number | null;
-    primaryScore?: number | null;
+    recommendationScore?: number | null;
+    analysisStatus?: "pending" | "processing" | "complete" | "failed" | null;
     uploadedAt?: string | Date | null;
   }>
 > {
@@ -50,7 +51,8 @@ export async function fetchListingImages(listingId: string): Promise<
       Array<{
         category: string | null;
         confidence?: number | null;
-        primaryScore?: number | null;
+        recommendationScore?: number | null;
+        analysisStatus?: "pending" | "processing" | "complete" | "failed" | null;
         uploadedAt?: string | Date | null;
       }>
     >(`/api/v1/listings/${listingId}/images`);

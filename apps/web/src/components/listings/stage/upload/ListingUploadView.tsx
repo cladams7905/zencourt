@@ -151,14 +151,14 @@ export function ListingUploadView({ listingId }: ListingUploadViewProps = {}) {
   const uploadRequirements = React.useMemo(
     () => [
       `Each image must be ${formatBytes(MAX_IMAGE_BYTES)} or less`,
-      "Between 3 to 40 images (we'll organize them later for you)",
+      `Up to ${IMAGE_UPLOAD_LIMIT} images (we'll organize them for you)`,
       `Recommended ${RECOMMENDED_LISTING_IMAGE_WIDTH}×${RECOMMENDED_LISTING_IMAGE_HEIGHT}px or larger`,
       "Landscape orientation"
     ],
     []
   );
 
-  const canContinue = pendingFiles.length >= 3;
+  const canContinue = pendingFiles.length >= 1;
 
   const handleContinue = React.useCallback(async () => {
     if (!listingId?.trim() || !canContinue) {

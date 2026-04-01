@@ -29,13 +29,16 @@ function makeImage(
   return {
     id: "img-1",
     listingId: "listing-1",
-    userId: "user-1",
     filename: "image.jpg",
     url: "https://example.com/image.jpg",
     category: "kitchen",
     confidence: null,
-    primaryScore: null,
-    isPrimary: false,
+    recommendationScore: null,
+    shotType: "room",
+    analysisStatus: "complete",
+    analysisRunId: null,
+    analysisStartedAt: null,
+    analysisCompletedAt: null,
     metadata: null,
     uploadedAt: new Date("2024-01-01T00:00:00Z"),
     ...overrides
@@ -43,24 +46,24 @@ function makeImage(
 }
 
 describe("videoGeneration/domain/rooms", () => {
-  it("groups by category, excludes uncategorized, and sorts primary first", () => {
+  it("groups by category, excludes uncategorized, and sorts by recommendation score", () => {
     const grouped = groupImagesByCategory([
       makeImage({
         id: "1",
         category: "kitchen",
-        isPrimary: false,
+        recommendationScore: 0.2,
         uploadedAt: new Date("2024-01-02T00:00:00Z")
       }),
       makeImage({
         id: "2",
         category: "kitchen",
-        isPrimary: true,
+        recommendationScore: 0.9,
         uploadedAt: new Date("2024-01-03T00:00:00Z")
       }),
       makeImage({
         id: "3",
         category: "kitchen",
-        isPrimary: false,
+        recommendationScore: 0.5,
         uploadedAt: new Date("2024-01-01T00:00:00Z")
       }),
       makeImage({ id: "4", category: null }),
@@ -92,13 +95,26 @@ describe("videoGeneration/domain/rooms", () => {
 
   it("selects listing primary image and falls back for room primary", () => {
     const listingPrimary = selectListingPrimaryImage([
-      makeImage({ id: "lp-1", isPrimary: true, url: "https://img/listing-primary.jpg" }),
-      makeImage({ id: "lp-2", isPrimary: false, url: "https://img/other.jpg" })
+      makeImage({
+        id: "lp-1",
+        recommendationScore: 0.9,
+        url: "https://img/listing-primary.jpg"
+      }),
+      makeImage({
+        id: "lp-2",
+        recommendationScore: 0.4,
+        url: "https://img/other.jpg"
+      })
     ]);
 
     const selected = selectPrimaryImageForRoom(
       { id: "bathroom", name: "Bathroom", category: "bathroom" },
-      new Map([["bathroom", [makeImage({ category: "bathroom", isPrimary: false })]]]),
+      new Map([
+        [
+          "bathroom",
+          [makeImage({ category: "bathroom", shotType: "detail" })]
+        ]
+      ]),
       listingPrimary.url
     );
 
@@ -108,9 +124,12 @@ describe("videoGeneration/domain/rooms", () => {
   it("throws when listing primary image is missing", () => {
     expect(() =>
       selectListingPrimaryImage([
-        makeImage({ isPrimary: false, url: "https://img/1.jpg" })
+        makeImage({
+          shotType: "detail",
+          url: "https://img/1.jpg"
+        })
       ])
-    ).toThrow("Primary image missing for listing");
+    ).toThrow("Recommended listing image missing for listing");
   });
 
   it("normalizes category from room id and numbered suffix", () => {
@@ -128,19 +147,19 @@ describe("videoGeneration/domain/rooms", () => {
             id: "p",
             category: "kitchen",
             url: "https://img/primary.jpg",
-            primaryScore: 0.1
+            recommendationScore: 0.1
           }),
           makeImage({
             id: "s1",
             category: "kitchen",
             url: "https://img/second-1.jpg",
-            primaryScore: 0.9
+            recommendationScore: 0.9
           }),
           makeImage({
             id: "s2",
             category: "kitchen",
             url: "https://img/second-2.jpg",
-            primaryScore: 0.5
+            recommendationScore: 0.5
           })
         ]
       ]

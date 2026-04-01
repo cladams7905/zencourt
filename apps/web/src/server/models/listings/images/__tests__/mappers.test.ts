@@ -5,12 +5,15 @@ function makeImage(overrides: Partial<DBListingImage> = {}): DBListingImage {
   return {
     id: "img-1",
     listingId: "listing-1",
-    userId: "user-1",
     url: "https://example.com/image.jpg",
     filename: "image.jpg",
     category: "living-room",
-    isPrimary: true,
-    primaryScore: 0.95,
+    recommendationScore: 0.95,
+    shotType: "room",
+    analysisStatus: "complete",
+    analysisRunId: null,
+    analysisStartedAt: null,
+    analysisCompletedAt: null,
     uploadedAt: new Date("2024-01-15T12:00:00Z"),
     metadata: null,
     ...overrides
@@ -27,8 +30,10 @@ describe("mapListingImageToDisplayItem", () => {
       url: "https://example.com/image.jpg",
       filename: "image.jpg",
       category: "living-room",
-      isPrimary: true,
-      primaryScore: 0.95,
+      recommendationScore: 0.95,
+      shotType: "room",
+      analysisStatus: "complete",
+      metadata: null,
       uploadedAtMs: new Date("2024-01-15T12:00:00Z").getTime()
     });
   });
@@ -38,19 +43,23 @@ describe("mapListingImageToDisplayItem", () => {
     expect(result.category).toBeNull();
   });
 
-  it("coerces null isPrimary to false", () => {
-    const result = mapListingImageToDisplayItem(makeImage({ isPrimary: null as unknown as boolean }));
-    expect(result.isPrimary).toBe(false);
+  it("passes through shotType", () => {
+    const result = mapListingImageToDisplayItem(makeImage({ shotType: "detail" }));
+    expect(result.shotType).toBe("detail");
   });
 
-  it("coerces null primaryScore to null", () => {
-    const result = mapListingImageToDisplayItem(makeImage({ primaryScore: null }));
-    expect(result.primaryScore).toBeNull();
+  it("coerces null recommendationScore to null", () => {
+    const result = mapListingImageToDisplayItem(
+      makeImage({ recommendationScore: null })
+    );
+    expect(result.recommendationScore).toBeNull();
   });
 
-  it("coerces non-number primaryScore to null", () => {
-    const result = mapListingImageToDisplayItem(makeImage({ primaryScore: undefined as unknown as number }));
-    expect(result.primaryScore).toBeNull();
+  it("coerces non-number recommendationScore to null", () => {
+    const result = mapListingImageToDisplayItem(
+      makeImage({ recommendationScore: undefined as unknown as number })
+    );
+    expect(result.recommendationScore).toBeNull();
   });
 
   it("sets uploadedAtMs to image.uploadedAt.getTime()", () => {

@@ -1,6 +1,5 @@
 import { sql } from "drizzle-orm";
 import {
-  boolean,
   index,
   jsonb,
   pgTable,
@@ -14,6 +13,10 @@ import { authenticatedRole, crudPolicy } from "drizzle-orm/neon";
 import type { ImageMetadata } from "@shared/types/models";
 
 import { listings } from "./listings";
+import {
+  listingImageAnalysisStatusEnum,
+  listingImageShotTypeEnum
+} from "./enums";
 
 export const listingImages = pgTable(
   "listing_images",
@@ -26,8 +29,14 @@ export const listingImages = pgTable(
     url: text("url").notNull(),
     category: varchar("category", { length: 50 }),
     confidence: real("confidence"),
-    primaryScore: real("primary_score"),
-    isPrimary: boolean("is_primary").default(false),
+    recommendationScore: real("recommendation_score"),
+    shotType: listingImageShotTypeEnum("shot_type").default("room").notNull(),
+    analysisStatus: listingImageAnalysisStatusEnum("analysis_status")
+      .default("pending")
+      .notNull(),
+    analysisRunId: text("analysis_run_id"),
+    analysisStartedAt: timestamp("analysis_started_at"),
+    analysisCompletedAt: timestamp("analysis_completed_at"),
     metadata: jsonb("metadata").$type<ImageMetadata>(),
     uploadedAt: timestamp("uploaded_at").defaultNow().notNull()
   },

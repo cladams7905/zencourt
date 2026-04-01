@@ -71,30 +71,30 @@ describe("llistingContentUtils", () => {
     ).toBe("video");
   });
 
-  it("ranks listing images by primary, category relevance, score, and recency", () => {
+  it("ranks listing images by shot type, category relevance, score, and recency", () => {
     const images: ListingContentImage[] = [
       {
-        id: "old-primary",
+        id: "detail-match",
         url: "",
-        category: "kitchen",
-        isPrimary: true,
-        primaryScore: 0.1,
+        category: "bedroom",
+        recommendationScore: 0.95,
+        shotType: "detail",
         uploadedAtMs: 10
       },
       {
-        id: "new-non-primary",
+        id: "room-match",
         url: "",
-        category: "kitchen",
-        isPrimary: false,
-        primaryScore: 0.9,
+        category: "bedroom",
+        recommendationScore: 0.4,
+        shotType: "room",
         uploadedAtMs: 30
       },
       {
-        id: "new-primary",
+        id: "room-non-match",
         url: "",
-        category: "bedroom",
-        isPrimary: true,
-        primaryScore: 0.2,
+        category: "kitchen",
+        recommendationScore: 0.9,
+        shotType: "room",
         uploadedAtMs: 20
       }
     ];
@@ -105,9 +105,9 @@ describe("llistingContentUtils", () => {
     } as ContentItem);
 
     expect(ranked.map((image) => image.id)).toEqual([
-      "new-primary",
-      "old-primary",
-      "new-non-primary"
+      "room-match",
+      "room-non-match",
+      "detail-match"
     ]);
   });
 
@@ -117,24 +117,24 @@ describe("llistingContentUtils", () => {
         id: "a",
         url: "",
         category: null,
-        isPrimary: false,
-        primaryScore: null,
+        recommendationScore: null,
+        shotType: "room",
         uploadedAtMs: 1
       },
       {
         id: "b",
         url: "",
         category: null,
-        isPrimary: false,
-        primaryScore: null,
+        recommendationScore: null,
+        shotType: "room",
         uploadedAtMs: 2
       },
       {
         id: "c",
         url: "",
         category: null,
-        isPrimary: false,
-        primaryScore: null,
+        recommendationScore: null,
+        shotType: "room",
         uploadedAtMs: 3
       }
     ];
@@ -152,8 +152,8 @@ describe("llistingContentUtils", () => {
       id: "single",
       url: "",
       category: null,
-      isPrimary: false,
-      primaryScore: null,
+      recommendationScore: null,
+      shotType: "room",
       uploadedAtMs: 1
     };
     const input = [image];

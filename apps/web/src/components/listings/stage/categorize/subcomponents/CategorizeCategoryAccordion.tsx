@@ -36,7 +36,6 @@ type CategorizeCategoryAccordionProps = {
   onDeleteCategory: (category: string) => void;
   onRequestMoveImage: (imageId: string) => void;
   onRequestDeleteImage: (imageId: string) => void;
-  handleSetPrimaryImage: (imageId: string) => void | Promise<void>;
   handleDragStart: (
     imageId: string
   ) => (event: React.DragEvent<HTMLDivElement>) => void;
@@ -61,7 +60,6 @@ export function CategorizeCategoryAccordion({
   onDeleteCategory,
   onRequestMoveImage,
   onRequestDeleteImage,
-  handleSetPrimaryImage,
   handleDragStart,
   handleDragEnd,
   handleDrop
@@ -199,9 +197,9 @@ export function CategorizeCategoryAccordion({
                 <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
                   {[...categorizedImages[category]]
                     .sort((a, b) => {
-                      const primaryA = a.isPrimary ? 1 : 0;
-                      const primaryB = b.isPrimary ? 1 : 0;
-                      return primaryB - primaryA;
+                      const scoreA = a.recommendationScore ?? -1;
+                      const scoreB = b.recommendationScore ?? -1;
+                      return scoreB - scoreA;
                     })
                     .map((image) => (
                       <CategorizeImageCard
@@ -211,7 +209,6 @@ export function CategorizeCategoryAccordion({
                         onOpenImageMenuChange={onOpenImageMenuChange}
                         onRequestMoveImage={onRequestMoveImage}
                         onRequestDeleteImage={onRequestDeleteImage}
-                        handleSetPrimaryImage={handleSetPrimaryImage}
                         handleDragStart={handleDragStart}
                         handleDragEnd={handleDragEnd}
                       />

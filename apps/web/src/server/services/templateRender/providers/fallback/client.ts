@@ -4,14 +4,14 @@ import { FALLBACK_TEMPLATE_ID } from "./constants";
 
 export type ListingImageForFallback = {
   url: string;
-  isPrimary?: boolean | null;
-  primaryScore?: number | null;
+  recommendationScore?: number | null;
+  shotType?: string | null;
   uploadedAt?: Date | null;
 };
 
 /**
  * Picks one listing image for a caption item using deterministic order:
- * isPrimary (true first), then primaryScore (desc), then uploadedAt (desc).
+ * room shots first, then recommendationScore (desc), then uploadedAt (desc).
  * Returns one ListingTemplateRenderedItem with isFallback: true, or null if no images.
  */
 export function buildFallbackRenderedItem(
@@ -23,13 +23,13 @@ export function buildFallbackRenderedItem(
   }
 
   const sorted = [...listingImages].sort((a, b) => {
-    const aPrimary = a.isPrimary ? 1 : 0;
-    const bPrimary = b.isPrimary ? 1 : 0;
-    if (aPrimary !== bPrimary) {
-      return bPrimary - aPrimary;
+    const aRoom = a.shotType === "detail" ? 0 : 1;
+    const bRoom = b.shotType === "detail" ? 0 : 1;
+    if (aRoom !== bRoom) {
+      return bRoom - aRoom;
     }
-    const aScore = a.primaryScore ?? -Infinity;
-    const bScore = b.primaryScore ?? -Infinity;
+    const aScore = a.recommendationScore ?? -Infinity;
+    const bScore = b.recommendationScore ?? -Infinity;
     if (aScore !== bScore) {
       return bScore - aScore;
     }

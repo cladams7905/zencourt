@@ -13,7 +13,12 @@ describe("roomClassification/service", () => {
   it("classifies a room and reuses a cached OpenAI client", async () => {
     const createCompletion = jest.fn().mockResolvedValue({
       choices: [
-        { message: { content: '{"category":"kitchen","confidence":0.9}' } }
+        {
+          message: {
+            content:
+              '{"category":"kitchen","confidence":0.9,"shot_type":"room","feature_tags":[],"scores":{"lighting":0.8,"framing":0.8,"coverage":0.8,"clarity":0.8,"motion_potential":0.8,"room_representativeness":0.8}}'
+          }
+        }
       ]
     });
     const clientFactory = jest.fn(() => ({
@@ -30,7 +35,17 @@ describe("roomClassification/service", () => {
     ).resolves.toEqual({
       category: "kitchen",
       confidence: 0.9,
-      primaryScore: undefined,
+      shotType: "room",
+      featureTags: [],
+      scores: {
+        lighting: 0.8,
+        framing: 0.8,
+        coverage: 0.8,
+        clarity: 0.8,
+        motionPotential: 0.8,
+        roomRepresentativeness: 0.8,
+        featureAppeal: undefined
+      },
       perspective: undefined
     });
 
@@ -72,7 +87,17 @@ describe("roomClassification/service", () => {
       .spyOn(service, "classifyRoom")
       .mockResolvedValueOnce({
         category: "kitchen",
-        confidence: 0.8
+        confidence: 0.8,
+        shotType: "room",
+        featureTags: [],
+        scores: {
+          lighting: 0.8,
+          framing: 0.8,
+          coverage: 0.8,
+          clarity: 0.8,
+          motionPotential: 0.8,
+          roomRepresentativeness: 0.8
+        }
       })
       .mockRejectedValueOnce(new Error("failed"));
 

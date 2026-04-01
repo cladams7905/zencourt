@@ -101,10 +101,10 @@ function rankListingImagesForTemplate(
         return bPriority - aPriority;
       }
 
-      const aPrimary = a.isPrimary ? 1 : 0;
-      const bPrimary = b.isPrimary ? 1 : 0;
-      if (aPrimary !== bPrimary) {
-        return bPrimary - aPrimary;
+      const aRoom = a.shotType === "detail" ? 0 : 1;
+      const bRoom = b.shotType === "detail" ? 0 : 1;
+      if (aRoom !== bRoom) {
+        return bRoom - aRoom;
       }
 
       const aCategoryMatch =
@@ -116,9 +116,13 @@ function rankListingImagesForTemplate(
       }
 
       const aScore =
-        typeof a.primaryScore === "number" ? a.primaryScore : -Infinity;
+        typeof a.recommendationScore === "number"
+          ? a.recommendationScore
+          : -Infinity;
       const bScore =
-        typeof b.primaryScore === "number" ? b.primaryScore : -Infinity;
+        typeof b.recommendationScore === "number"
+          ? b.recommendationScore
+          : -Infinity;
       if (aScore !== bScore) {
         return bScore - aScore;
       }
@@ -126,14 +130,7 @@ function rankListingImagesForTemplate(
       return b.uploadedAt.getTime() - a.uploadedAt.getTime();
     });
 
-  const primaryImages = sortByRelevance(
-    images.filter((image) => image.isPrimary)
-  );
-  const secondaryImages = sortByRelevance(
-    images.filter((image) => !image.isPrimary)
-  );
-
-  return [...primaryImages, ...secondaryImages].reduce<string[]>(
+  return sortByRelevance(images).reduce<string[]>(
     (urls, image) => {
       const url = image.url.trim();
       if (!url || urls.includes(url)) {

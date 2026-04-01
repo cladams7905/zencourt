@@ -5,8 +5,8 @@ export type ListingContentImage = {
   id: string;
   url: string;
   category: string | null;
-  isPrimary: boolean;
-  primaryScore: number | null;
+  recommendationScore: number | null;
+  shotType?: string | null;
   uploadedAtMs: number;
 };
 
@@ -16,10 +16,10 @@ export function rankListingImagesForItem(
 ): ListingContentImage[] {
   const needle = buildFeatureNeedle(item);
   return [...images].sort((a, b) => {
-    const aPrimary = a.isPrimary ? 1 : 0;
-    const bPrimary = b.isPrimary ? 1 : 0;
-    if (aPrimary !== bPrimary) {
-      return bPrimary - aPrimary;
+    const aRoom = a.shotType === "detail" ? 0 : 1;
+    const bRoom = b.shotType === "detail" ? 0 : 1;
+    if (aRoom !== bRoom) {
+      return bRoom - aRoom;
     }
 
     const aCategoryMatch =
@@ -30,8 +30,8 @@ export function rankListingImagesForItem(
       return bCategoryMatch - aCategoryMatch;
     }
 
-    const aScore = a.primaryScore ?? -Infinity;
-    const bScore = b.primaryScore ?? -Infinity;
+    const aScore = a.recommendationScore ?? -Infinity;
+    const bScore = b.recommendationScore ?? -Infinity;
     if (aScore !== bScore) {
       return bScore - aScore;
     }

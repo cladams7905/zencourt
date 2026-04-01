@@ -5,8 +5,10 @@ export type ListingImageDisplayItem = {
   url: string;
   filename: string;
   category: string | null;
-  isPrimary: boolean;
-  primaryScore: number | null;
+  recommendationScore: number | null;
+  shotType: string;
+  analysisStatus: string;
+  metadata: DBListingImage["metadata"];
   uploadedAtMs: number;
 };
 
@@ -18,8 +20,13 @@ export function mapListingImageToDisplayItem(
     url: image.url,
     filename: image.filename,
     category: image.category ?? null,
-    isPrimary: Boolean(image.isPrimary),
-    primaryScore: typeof image.primaryScore === "number" ? image.primaryScore : null,
+    recommendationScore:
+      typeof image.recommendationScore === "number"
+        ? image.recommendationScore
+        : null,
+    shotType: image.shotType,
+    analysisStatus: image.analysisStatus,
+    metadata: image.metadata ?? null,
     uploadedAtMs: image.uploadedAt.getTime()
   };
 }

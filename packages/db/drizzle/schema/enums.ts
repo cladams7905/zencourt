@@ -73,3 +73,14 @@ export const videoStatusEnum = pgEnum("video_status", [
   "failed",
   "canceled"
 ]);
+
+export const listingImageShotTypeEnum = pgEnum("listing_image_shot_type", [
+  "room",
+  "detail",
+  "other"
+]);
+
+export const listingImageAnalysisStatusEnum = pgEnum(
+  "listing_image_analysis_status",
+  ["pending", "processing", "complete", "failed"]
+);

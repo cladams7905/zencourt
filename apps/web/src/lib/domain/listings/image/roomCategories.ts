@@ -1,3 +1,8 @@
+import type {
+  ImagePerspective,
+  ListingImageAiScores,
+  ListingImageShotType
+} from "@shared/types/models";
 import { ProcessedImage } from "./types";
 
 export type RoomCategory =
@@ -6,6 +11,7 @@ export type RoomCategory =
   | "living-room"
   | "kitchen"
   | "dining-room"
+  | "master-bedroom"
   | "bedroom"
   | "bathroom"
   | "garage"
@@ -17,8 +23,10 @@ export type RoomCategory =
 export interface RoomClassification {
   category: RoomCategory;
   confidence: number;
-  primaryScore?: number;
-  perspective?: "aerial" | "ground";
+  shotType: ListingImageShotType;
+  featureTags: string[];
+  scores: ListingImageAiScores;
+  perspective?: ImagePerspective;
 }
 
 export interface BatchClassificationResult {
@@ -125,11 +133,20 @@ export const ROOM_CATEGORIES: Record<RoomCategory, RoomCategoryMetadata> = {
     allowNumbering: false,
     group: "living"
   },
+  "master-bedroom": {
+    id: "master-bedroom",
+    label: "Master Bedroom",
+    icon: "BedDouble",
+    order: 6,
+    color: "#db2777",
+    allowNumbering: false,
+    group: "private"
+  },
   bedroom: {
     id: "bedroom",
     label: "Bedroom",
     icon: "Bed",
-    order: 6,
+    order: 7,
     color: "#ec4899", // pink-500
     allowNumbering: true,
     group: "private"
@@ -138,7 +155,7 @@ export const ROOM_CATEGORIES: Record<RoomCategory, RoomCategoryMetadata> = {
     id: "bathroom",
     label: "Bathroom",
     icon: "Bath",
-    order: 7,
+    order: 8,
     color: "#06b6d4", // cyan-500
     allowNumbering: true,
     group: "private"
@@ -147,7 +164,7 @@ export const ROOM_CATEGORIES: Record<RoomCategory, RoomCategoryMetadata> = {
     id: "office",
     label: "Office",
     icon: "Briefcase",
-    order: 8,
+    order: 9,
     color: "#14b8a6", // teal-500
     allowNumbering: true,
     group: "private"
@@ -156,7 +173,7 @@ export const ROOM_CATEGORIES: Record<RoomCategory, RoomCategoryMetadata> = {
     id: "laundry-room",
     label: "Laundry Room",
     icon: "WashingMachine",
-    order: 9,
+    order: 10,
     color: "#a855f7", // purple-500
     allowNumbering: false,
     group: "utility"
@@ -165,7 +182,7 @@ export const ROOM_CATEGORIES: Record<RoomCategory, RoomCategoryMetadata> = {
     id: "garage",
     label: "Garage",
     icon: "Car",
-    order: 10,
+    order: 11,
     color: "#6366f1", // indigo-500
     allowNumbering: true,
     group: "utility"
@@ -174,7 +191,7 @@ export const ROOM_CATEGORIES: Record<RoomCategory, RoomCategoryMetadata> = {
     id: "basement",
     label: "Basement",
     icon: "Warehouse",
-    order: 11,
+    order: 12,
     color: "#64748b", // slate-500
     allowNumbering: false,
     group: "utility"
@@ -183,7 +200,7 @@ export const ROOM_CATEGORIES: Record<RoomCategory, RoomCategoryMetadata> = {
     id: "other",
     label: "Other",
     icon: "MoreHorizontal",
-    order: 12,
+    order: 13,
     color: "#94a3b8", // slate-400
     allowNumbering: false,
     group: "other"

@@ -34,15 +34,10 @@ type UseCategorizeActionsParams = {
     updates: Array<{
       id: string;
       category: string | null;
-      isPrimary?: boolean;
     }>,
     deletions: string[],
     rollback?: () => void
   ) => Promise<boolean>;
-  ensurePrimaryForCategory: (
-    category: string | null,
-    candidateImages: ListingImageItem[]
-  ) => Promise<void>;
   endDragSession: () => void;
 };
 
@@ -65,7 +60,6 @@ export function useCategorizeActions(params: UseCategorizeActionsParams) {
     setIsDraggingImage,
     setDragOverCategory,
     persistImageAssignments,
-    ensurePrimaryForCategory,
     endDragSession
   } = params;
 
@@ -189,8 +183,7 @@ export function useCategorizeActions(params: UseCategorizeActionsParams) {
         .filter((image) => image.category === originalCategory)
         .map((image) => ({
           id: image.id,
-          category: updatedCategory,
-          isPrimary: image.isPrimary ?? false
+          category: updatedCategory
         }));
       const success = await persistImageAssignments(updates, [], () => {
         setImages(previousImages);
@@ -199,13 +192,11 @@ export function useCategorizeActions(params: UseCategorizeActionsParams) {
       if (!success) {
         return;
       }
-      await ensurePrimaryForCategory(updatedCategory, nextImages);
       setIsCategoryDialogOpen(false);
     },
     [
       categoryDialogCategory,
       customCategories,
-      ensurePrimaryForCategory,
       images,
       persistImageAssignments,
       resolveCategoryValue,
@@ -224,15 +215,14 @@ export function useCategorizeActions(params: UseCategorizeActionsParams) {
     const previousCategories = customCategories;
     const nextImages = images.map((image) =>
       image.category === categoryToDelete
-        ? { ...image, category: null, isPrimary: false }
+        ? { ...image, category: null }
         : image
     );
     const updates = previousImages
       .filter((image) => image.category === categoryToDelete)
       .map((image) => ({
         id: image.id,
-        category: null,
-        isPrimary: false
+        category: null
       }));
     setImages(nextImages);
     setCustomCategories(
@@ -283,9 +273,7 @@ export function useCategorizeActions(params: UseCategorizeActionsParams) {
         image.id === moveImageId
           ? {
               ...image,
-              category: resolvedCategory,
-              isPrimary:
-                image.category === resolvedCategory ? image.isPrimary : false
+              category: resolvedCategory
             }
           : image
       );
@@ -298,8 +286,7 @@ export function useCategorizeActions(params: UseCategorizeActionsParams) {
         [
           {
             id: updatedImage.id,
-            category: updatedImage.category ?? null,
-            isPrimary: updatedImage.isPrimary ?? false
+            category: updatedImage.category ?? null
           }
         ],
         [],
@@ -308,17 +295,9 @@ export function useCategorizeActions(params: UseCategorizeActionsParams) {
       if (!success) {
         return;
       }
-      if (previousImage?.category !== updatedImage.category) {
-        await ensurePrimaryForCategory(
-          previousImage?.category ?? null,
-          nextImages
-        );
-      }
-      await ensurePrimaryForCategory(updatedImage.category ?? null, nextImages);
       setMoveImageId(null);
     },
     [
-      ensurePrimaryForCategory,
       images,
       isCategoryAtLimit,
       moveImageId,
@@ -326,39 +305,6 @@ export function useCategorizeActions(params: UseCategorizeActionsParams) {
       setImages,
       setMoveImageId
     ]
-  );
-
-  const handleSetPrimaryImage = React.useCallback(
-    async (imageId: string) => {
-      const selected = images.find((image) => image.id === imageId);
-      if (!selected || !selected.category) {
-        toast.error("Assign a category before setting a primary photo.");
-        return;
-      }
-      const previousImages = images;
-      const nextImages = images.map((image) => {
-        if (image.category !== selected.category) {
-          return image;
-        }
-        return {
-          ...image,
-          isPrimary: image.id === imageId
-        };
-      });
-      setImages(nextImages);
-      await persistImageAssignments(
-        [
-          {
-            id: selected.id,
-            category: selected.category,
-            isPrimary: true
-          }
-        ],
-        [],
-        () => setImages(previousImages)
-      );
-    },
-    [images, persistImageAssignments, setImages]
   );
 
   const handleDeleteImage = React.useCallback(async () => {
@@ -376,18 +322,8 @@ export function useCategorizeActions(params: UseCategorizeActionsParams) {
     if (!success) {
       return;
     }
-    if (deletedImage?.category) {
-      await ensurePrimaryForCategory(deletedImage.category, remainingImages);
-    }
     setDeleteImageId(null);
-  }, [
-    deleteImageId,
-    ensurePrimaryForCategory,
-    images,
-    persistImageAssignments,
-    setDeleteImageId,
-    setImages
-  ]);
+  }, [deleteImageId, images, persistImageAssignments, setDeleteImageId, setImages]);
 
   const handleDragStart = React.useCallback(
     (imageId: string) => (event: React.DragEvent<HTMLDivElement>) => {
@@ -432,9 +368,7 @@ export function useCategorizeActions(params: UseCategorizeActionsParams) {
         image.id === imageId
           ? {
               ...image,
-              category: nextCategory,
-              isPrimary:
-                image.category === nextCategory ? image.isPrimary : false
+              category: nextCategory
             }
           : image
       );
@@ -447,24 +381,15 @@ export function useCategorizeActions(params: UseCategorizeActionsParams) {
         [
           {
             id: updatedImage.id,
-            category: updatedImage.category ?? null,
-            isPrimary: updatedImage.isPrimary ?? false
+            category: updatedImage.category ?? null
           }
         ],
         [],
         () => setImages(previousImages)
       );
-      if (previousImage?.category !== updatedImage.category) {
-        await ensurePrimaryForCategory(
-          previousImage?.category ?? null,
-          nextImages
-        );
-      }
-      await ensurePrimaryForCategory(updatedImage.category ?? null, nextImages);
       setDragOverCategory(null);
     },
     [
-      ensurePrimaryForCategory,
       images,
       isCategoryAtLimit,
       persistImageAssignments,
@@ -480,7 +405,6 @@ export function useCategorizeActions(params: UseCategorizeActionsParams) {
     handleEditCategory,
     handleDeleteCategory,
     handleMoveImage,
-    handleSetPrimaryImage,
     handleDeleteImage,
     handleDragStart,
     handleDragEnd,

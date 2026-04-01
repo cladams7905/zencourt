@@ -17,8 +17,9 @@ describe("listing images adapters", () => {
       filename: "photo.jpg",
       category: "kitchen",
       confidence: 0.9,
-      primaryScore: 0.7,
-      isPrimary: true,
+      recommendationScore: 0.7,
+      shotType: "room",
+      analysisStatus: "complete",
       metadata: {
         width: 1000,
         height: 750,
@@ -54,8 +55,12 @@ describe("listing images adapters", () => {
       url: "https://cdn.example.com/fallback.jpg",
       category: null,
       confidence: null,
-      primaryScore: null,
-      isPrimary: false,
+      recommendationScore: null,
+      shotType: "room",
+      analysisStatus: "pending",
+      analysisRunId: null,
+      analysisStartedAt: null,
+      analysisCompletedAt: null,
       metadata: null
     });
   });
@@ -68,8 +73,12 @@ describe("listing images adapters", () => {
       url: "https://cdn.example.com/db.jpg",
       category: null,
       confidence: null,
-      primaryScore: null,
-      isPrimary: false,
+      recommendationScore: null,
+      shotType: "room",
+      analysisStatus: "pending",
+      analysisRunId: null,
+      analysisStartedAt: null,
+      analysisCompletedAt: null,
       metadata: null,
       uploadedAt: new Date("2026-02-01T00:00:00.000Z")
     };

@@ -14,7 +14,6 @@ type UseCategorizeConstraintsParams = {
     updates: Array<{
       id: string;
       category: string | null;
-      isPrimary?: boolean;
     }>,
     deletions: string[],
     rollback?: () => void
@@ -63,8 +62,8 @@ export function useCategorizeConstraints({
         return;
       }
       const sorted = [...categoryImages].sort((a, b) => {
-        const scoreA = a.primaryScore ?? -1;
-        const scoreB = b.primaryScore ?? -1;
+        const scoreA = a.recommendationScore ?? -1;
+        const scoreB = b.recommendationScore ?? -1;
         return scoreB - scoreA;
       });
       const keepIds = new Set(
@@ -85,13 +84,10 @@ export function useCategorizeConstraints({
     const previousImages = images;
     const updates = Array.from(overflowIds).map((id) => ({
       id,
-      category: null,
-      isPrimary: false
+      category: null
     }));
     const nextImages = images.map((image) =>
-      overflowIds.has(image.id)
-        ? { ...image, category: null, isPrimary: false }
-        : image
+      overflowIds.has(image.id) ? { ...image, category: null } : image
     );
 
     setImages(nextImages);

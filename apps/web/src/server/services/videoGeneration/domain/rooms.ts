@@ -39,7 +39,7 @@ export function groupImagesByCategory(
   const grouped = new Map<string, DBListingImage[]>();
 
   listingImagesByCategory.forEach((image) => {
-    if (!image.category || !image.url) {
+    if (!image.category || !image.url || image.category === "other") {
       return;
     }
 
@@ -52,14 +52,14 @@ export function groupImagesByCategory(
 
   grouped.forEach((imagesForCategory) => {
     imagesForCategory.sort((a, b) => {
-      const primaryA = a.isPrimary ? 1 : 0;
-      const primaryB = b.isPrimary ? 1 : 0;
-      if (primaryA !== primaryB) {
-        return primaryB - primaryA;
+      const scoreA = a.recommendationScore ?? -Infinity;
+      const scoreB = b.recommendationScore ?? -Infinity;
+      if (scoreA !== scoreB) {
+        return scoreB - scoreA;
       }
       const timeA = a.uploadedAt ? new Date(a.uploadedAt).getTime() : 0;
       const timeB = b.uploadedAt ? new Date(b.uploadedAt).getTime() : 0;
-      return timeA - timeB;
+      return timeB - timeA;
     });
   });
 
@@ -69,14 +69,23 @@ export function groupImagesByCategory(
 export function selectListingPrimaryImage(
   listingImages: DBListingImage[]
 ): DBListingImage {
-  const primaryImage = listingImages.find(
-    (image) => image.isPrimary && image.url
-  );
+  const primaryImage = [...listingImages]
+    .filter(
+      (image) =>
+        image.url &&
+        image.analysisStatus === "complete" &&
+        image.category !== "other" &&
+        image.shotType !== "detail"
+    )
+    .sort(
+      (a, b) =>
+        (b.recommendationScore ?? -Infinity) - (a.recommendationScore ?? -Infinity)
+    )[0];
 
   if (!primaryImage?.url) {
     throw new ApiError(400, {
       error: "Missing images",
-      message: "Primary image missing for listing"
+      message: "Recommended listing image missing for listing"
     });
   }
 
@@ -172,9 +181,12 @@ export function selectPrimaryImageForRoom(
   listingPrimaryImageUrl: string
 ): string {
   const availableImages = groupedImages.get(room.category) || [];
-  const primaryImage = availableImages.find(
-    (image) => image.isPrimary && image.url
-  );
+  const primaryImage = [...availableImages]
+    .filter((image) => image.url && image.shotType !== "detail")
+    .sort(
+      (a, b) =>
+        (b.recommendationScore ?? -Infinity) - (a.recommendationScore ?? -Infinity)
+    )[0];
 
   if (primaryImage?.url) {
     return primaryImage.url;
@@ -193,8 +205,8 @@ export function selectSecondaryImageForRoom(
   const secondary = availableImages
     .filter((img) => img.url && img.url !== primaryImageUrl)
     .sort((a, b) => {
-      const scoreA = a.primaryScore ?? -1;
-      const scoreB = b.primaryScore ?? -1;
+      const scoreA = a.recommendationScore ?? -1;
+      const scoreB = b.recommendationScore ?? -1;
       return scoreB - scoreA;
     })[0];
 

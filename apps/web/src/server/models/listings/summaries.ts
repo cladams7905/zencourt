@@ -213,13 +213,13 @@ export async function getUserListingSummariesPage(
           .select({
             listingId: listingImages.listingId,
             url: listingImages.url,
-            isPrimary: listingImages.isPrimary,
+            recommendationScore: listingImages.recommendationScore,
             uploadedAt: listingImages.uploadedAt
           })
           .from(listingImages)
           .where(inArray(listingImages.listingId, listingIds))
           .orderBy(
-            desc(listingImages.isPrimary),
+            desc(listingImages.recommendationScore),
             desc(listingImages.uploadedAt)
           );
 

@@ -116,9 +116,13 @@ export function toSerializable(image: ProcessedImage): SerializableImageData {
     filename: image.filename,
     category: image.category,
     confidence: image.confidence,
-    primaryScore: image.primaryScore,
+    recommendationScore: image.recommendationScore,
     status: image.status,
-    isPrimary: image.isPrimary,
+    shotType: image.shotType,
+    analysisStatus: image.analysisStatus,
+    analysisRunId: image.analysisRunId,
+    analysisStartedAt: image.analysisStartedAt,
+    analysisCompletedAt: image.analysisCompletedAt,
     metadata: image.metadata,
     error: image.error,
     uploadUrl: image.uploadUrl
@@ -139,8 +143,12 @@ export function toInsertDBImage(
     url: image.url!,
     category: image.category ?? null,
     confidence: image.confidence ?? null,
-    primaryScore: image.primaryScore ?? null,
-    isPrimary: image.isPrimary ?? false,
+    recommendationScore: image.recommendationScore ?? null,
+    shotType: image.shotType ?? "room",
+    analysisStatus: image.analysisStatus ?? "pending",
+    analysisRunId: image.analysisRunId ?? null,
+    analysisStartedAt: image.analysisStartedAt ?? null,
+    analysisCompletedAt: image.analysisCompletedAt ?? null,
     metadata: image.metadata ?? null
   };
 }

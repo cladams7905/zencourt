@@ -40,11 +40,12 @@ export function useListingContentMediaItems(params: {
     }
 
     const fallbackSortedImages = [...listingImages].sort((a, b) => {
-      if (a.isPrimary !== b.isPrimary) {
-        return (b.isPrimary ? 1 : 0) - (a.isPrimary ? 1 : 0);
+      if ((a.shotType === "detail") !== (b.shotType === "detail")) {
+        return a.shotType === "detail" ? 1 : -1;
       }
       const scoreDelta =
-        (b.primaryScore ?? -Infinity) - (a.primaryScore ?? -Infinity);
+        (b.recommendationScore ?? -Infinity) -
+        (a.recommendationScore ?? -Infinity);
       if (scoreDelta !== 0) {
         return scoreDelta;
       }

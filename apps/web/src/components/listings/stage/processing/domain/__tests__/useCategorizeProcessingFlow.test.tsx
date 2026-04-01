@@ -28,7 +28,8 @@ describe("useCategorizeProcessingFlow", () => {
         id: "img1",
         category: "kitchen",
         confidence: 0.9,
-        primaryScore: 0.8,
+        recommendationScore: 0.8,
+        analysisStatus: "complete",
         uploadedAt: new Date().toISOString()
       }
     ]);

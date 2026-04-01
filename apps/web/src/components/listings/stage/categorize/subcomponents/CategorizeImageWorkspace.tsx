@@ -28,7 +28,6 @@ type CategorizeImageWorkspaceProps = {
   onDeleteCategory: (category: string) => void;
   onRequestMoveImage: (imageId: string) => void;
   onRequestDeleteImage: (imageId: string) => void;
-  handleSetPrimaryImage: (imageId: string) => void | Promise<void>;
   handleDragStart: (
     imageId: string
   ) => (event: React.DragEvent<HTMLDivElement>) => void;
@@ -56,7 +55,6 @@ export function CategorizeImageWorkspace({
   onDeleteCategory,
   onRequestMoveImage,
   onRequestDeleteImage,
-  handleSetPrimaryImage,
   handleDragStart,
   handleDragEnd,
   handleDrop
@@ -125,7 +123,6 @@ export function CategorizeImageWorkspace({
           onDeleteCategory={onDeleteCategory}
           onRequestMoveImage={onRequestMoveImage}
           onRequestDeleteImage={onRequestDeleteImage}
-          handleSetPrimaryImage={handleSetPrimaryImage}
           handleDragStart={handleDragStart}
           handleDragEnd={handleDragEnd}
           handleDrop={handleDrop}

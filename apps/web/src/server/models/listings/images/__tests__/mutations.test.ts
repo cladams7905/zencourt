@@ -1,7 +1,6 @@
 const mockSelectWhere = jest.fn();
 const mockSelectFrom = jest.fn(() => ({ where: mockSelectWhere }));
 const mockSelect = jest.fn(() => ({ from: mockSelectFrom }));
-
 const mockDeleteWhere = jest.fn();
 const mockDelete = jest.fn(() => ({ where: mockDeleteWhere }));
 
@@ -35,14 +34,10 @@ jest.mock("@db/client", () => ({
     id: "id",
     listingId: "listingId",
     url: "url",
-    category: "category",
-    primaryScore: "primaryScore",
-    uploadedAt: "uploadedAt",
-    isPrimary: "isPrimary"
+    category: "category"
   },
   eq: (...args: unknown[]) => args,
   and: (...args: unknown[]) => args,
-  ne: (...args: unknown[]) => args,
   inArray: (...args: unknown[]) => args
 }));
 
@@ -59,7 +54,6 @@ jest.mock("@web/src/server/models/shared/dbErrorHandling", () => ({
 }));
 
 import {
-  assignPrimaryListingImageForCategory,
   createListingImageRecords,
   updateListingImageAssignments
 } from "@web/src/server/models/listings/images/mutations";
@@ -83,13 +77,6 @@ describe("listingImages mutations", () => {
     mockWithDbErrorHandling.mockClear();
   });
 
-  it("returns null when category is empty", async () => {
-    await expect(
-      assignPrimaryListingImageForCategory("u1", "l1", "")
-    ).resolves.toEqual({ primaryImageId: null });
-    expect(mockSelect).not.toHaveBeenCalled();
-  });
-
   it("creates no rows when upload list is empty", async () => {
     await expect(createListingImageRecords("u1", "l1", [])).resolves.toEqual([]);
     expect(mockInsert).not.toHaveBeenCalled();
@@ -103,29 +90,6 @@ describe("listingImages mutations", () => {
     ).rejects.toThrow("Invalid listing image upload key");
   });
 
-  it("assigns best primary image by score", async () => {
-    mockSelectWhere.mockResolvedValueOnce([
-      {
-        id: "img-1",
-        primaryScore: 0.5,
-        uploadedAt: new Date("2025-01-01T00:00:00.000Z"),
-        isPrimary: true
-      },
-      {
-        id: "img-2",
-        primaryScore: 0.9,
-        uploadedAt: new Date("2025-01-02T00:00:00.000Z"),
-        isPrimary: false
-      }
-    ]);
-    mockUpdateWhere.mockResolvedValue(undefined);
-
-    const result = await assignPrimaryListingImageForCategory("u1", "l1", "kitchen");
-
-    expect(result).toEqual({ primaryImageId: "img-2" });
-    expect(mockUpdate).toHaveBeenCalledTimes(2);
-  });
-
   it("updates assignments and deletes selected rows", async () => {
     mockDeleteWhere.mockResolvedValueOnce(undefined);
     mockUpdateWhere.mockResolvedValue(undefined);
@@ -133,7 +97,7 @@ describe("listingImages mutations", () => {
     const result = await updateListingImageAssignments(
       "u1",
       "l1",
-      [{ id: "img-1", category: "kitchen", isPrimary: true }],
+      [{ id: "img-1", category: "kitchen" }],
       ["d1"]
     );
 
@@ -155,6 +119,11 @@ describe("listingImages mutations", () => {
 
     expect(result).toEqual([{ id: "img-generated", listingId: "l1" }]);
     expect(mockInsert).toHaveBeenCalled();
+    expect(mockInsertValues).toHaveBeenCalledWith([
+      expect.objectContaining({
+        shotType: "room",
+        analysisStatus: "pending"
+      })
+    ]);
   });
-
 });

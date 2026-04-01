@@ -1,25 +1,18 @@
 import * as React from "react";
 import { toast } from "sonner";
-import type { ListingImageItem } from "@web/src/components/listings/stage/categorize/shared";
-import {
-  assignPrimaryListingImageForCategoryForCurrentUser,
-  updateListingImageAssignmentsForCurrentUser
-} from "@web/src/server/actions/listings/image";
+import { updateListingImageAssignmentsForCurrentUser } from "@web/src/server/actions/listings/image";
 
 type UseCategorizeMutationsParams = {
   listingId: string;
-  setImages: React.Dispatch<React.SetStateAction<ListingImageItem[]>>;
 };
 
 type ImageAssignmentUpdate = {
   id: string;
   category: string | null;
-  isPrimary?: boolean;
 };
 
 export function useCategorizeMutations({
-  listingId,
-  setImages
+  listingId
 }: UseCategorizeMutationsParams) {
   const [savingCount, setSavingCount] = React.useState(0);
 
@@ -58,50 +51,9 @@ export function useCategorizeMutations({
     [listingId, runDraftSave]
   );
 
-  const ensurePrimaryForCategory = React.useCallback(
-    async (category: string | null, candidateImages: ListingImageItem[]) => {
-      if (!category) {
-        return;
-      }
-      const categoryImages = candidateImages.filter(
-        (image) => image.category === category
-      );
-      if (categoryImages.length === 0) {
-        return;
-      }
-      const hasPrimary = categoryImages.some((image) => image.isPrimary);
-      if (hasPrimary) {
-        return;
-      }
-      try {
-        const { primaryImageId } = await runDraftSave(() =>
-          assignPrimaryListingImageForCategoryForCurrentUser(
-            listingId,
-            category
-          )
-        );
-        if (primaryImageId) {
-          setImages((prev) =>
-            prev.map((image) =>
-              image.category === category
-                ? { ...image, isPrimary: image.id === primaryImageId }
-                : image
-            )
-          );
-        }
-      } catch (error) {
-        toast.error(
-          (error as Error).message || "Failed to update primary image."
-        );
-      }
-    },
-    [listingId, runDraftSave, setImages]
-  );
-
   return {
     savingCount,
     runDraftSave,
-    persistImageAssignments,
-    ensurePrimaryForCategory
+    persistImageAssignments
   };
 }

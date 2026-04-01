@@ -11,9 +11,13 @@ export function cloneSerializableImages(
     filename: image.filename,
     category: image.category,
     confidence: image.confidence,
-    primaryScore: image.primaryScore ?? null,
+    recommendationScore: image.recommendationScore ?? null,
     status: image.status,
-    isPrimary: image.isPrimary,
+    shotType: image.shotType,
+    analysisStatus: image.analysisStatus,
+    analysisRunId: image.analysisRunId,
+    analysisStartedAt: image.analysisStartedAt,
+    analysisCompletedAt: image.analysisCompletedAt,
     metadata: image.metadata,
     error: image.error,
     uploadUrl: image.uploadUrl
@@ -53,11 +57,11 @@ export function calculateProcessingStats(
   duration: number
 ): CategorizationResult["stats"] {
   const uploaded = images.filter((img) => img.url).length;
-  const analyzed = images.filter((img) => img.category).length;
-  const failed = images.filter((img) => img.status === "error").length;
+  const analyzed = images.filter((img) => img.analysisStatus === "complete").length;
+  const failed = images.filter((img) => img.analysisStatus === "failed").length;
 
   const confidences = images
-    .filter((img) => img.category)
+    .filter((img) => img.analysisStatus === "complete")
     .map((img) => img.confidence || 0);
 
   const avgConfidence =

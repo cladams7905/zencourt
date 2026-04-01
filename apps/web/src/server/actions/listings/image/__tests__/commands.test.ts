@@ -2,7 +2,6 @@
 const mockPrepareListingImageUploadUrls = jest.fn();
 const mockCreateListingImageRecords = jest.fn();
 const mockUpdateListingImageAssignments = jest.fn();
-const mockAssignPrimaryListingImageForCategory = jest.fn();
 const mockGetListingImages = jest.fn();
 const mockGetListingImageUrlsByIds = jest.fn();
 const mockRequireAuthenticatedUser = jest.fn();
@@ -15,10 +14,6 @@ jest.mock("@web/src/server/models/listings/images", () => ({
     (mockCreateListingImageRecords as (...a: unknown[]) => unknown)(...args),
   updateListingImageAssignments: (...args: unknown[]) =>
     (mockUpdateListingImageAssignments as (...a: unknown[]) => unknown)(
-      ...args
-    ),
-  assignPrimaryListingImageForCategory: (...args: unknown[]) =>
-    (mockAssignPrimaryListingImageForCategory as (...a: unknown[]) => unknown)(
       ...args
     ),
   getListingImageUrlsByIds: (...args: unknown[]) =>
@@ -77,7 +72,6 @@ import {
   getListingImageUploadUrlsForCurrentUser,
   createListingImageRecordsForCurrentUser,
   updateListingImageAssignmentsForCurrentUser,
-  assignPrimaryListingImageForCategoryForCurrentUser,
   deleteListingImageUploadsForCurrentUser,
   getListingImagesForCurrentUser
 } from "@web/src/server/actions/listings/image";
@@ -142,10 +136,6 @@ describe("listings image commands", () => {
     mockGetListingImages.mockResolvedValueOnce([{ id: "img-1" }]);
 
     await createListingImageRecordsForCurrentUser("listing-1", [{ key: "k1" }] as never[]);
-    await assignPrimaryListingImageForCategoryForCurrentUser(
-      "listing-1",
-      "living_room"
-    );
     await deleteListingImageUploadsForCurrentUser("listing-1", [
       "https://example.com/1.jpg"
     ]);
@@ -155,11 +145,6 @@ describe("listings image commands", () => {
       "user-1",
       "listing-1",
       [{ key: "k1" }]
-    );
-    expect(mockAssignPrimaryListingImageForCategory).toHaveBeenCalledWith(
-      "user-1",
-      "listing-1",
-      "living_room"
     );
     expect(mockDeleteStorageUrlsOrThrow).toHaveBeenCalledWith(
       ["https://example.com/1.jpg"],

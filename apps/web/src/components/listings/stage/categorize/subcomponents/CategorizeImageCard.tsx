@@ -13,7 +13,7 @@ import {
   TooltipContent,
   TooltipTrigger
 } from "@web/src/components/ui/tooltip";
-import { MoreHorizontal, Move, Star, Trash2 } from "lucide-react";
+import { MoreHorizontal, Move, Sparkles, Trash2 } from "lucide-react";
 import type { ListingImageItem } from "@web/src/components/listings/stage/categorize/shared";
 
 type CategorizeImageCardProps = {
@@ -22,7 +22,6 @@ type CategorizeImageCardProps = {
   onOpenImageMenuChange: (imageId: string | null) => void;
   onRequestMoveImage: (imageId: string) => void;
   onRequestDeleteImage: (imageId: string) => void;
-  handleSetPrimaryImage: (imageId: string) => void | Promise<void>;
   handleDragStart: (
     imageId: string
   ) => (event: React.DragEvent<HTMLDivElement>) => void;
@@ -35,7 +34,6 @@ export function CategorizeImageCard({
   onOpenImageMenuChange,
   onRequestMoveImage,
   onRequestDeleteImage,
-  handleSetPrimaryImage,
   handleDragStart,
   handleDragEnd
 }: CategorizeImageCardProps) {
@@ -46,19 +44,25 @@ export function CategorizeImageCard({
       onDragStart={handleDragStart(image.id)}
       onDragEnd={handleDragEnd}
     >
-      {image.isPrimary ? (
+      {typeof image.recommendationScore === "number" ? (
         <Tooltip>
           <TooltipTrigger asChild>
-            <div className="absolute top-2 left-2 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-primary/40 text-primary-foreground backdrop-blur-lg">
-              <Star className="h-4 w-4" />
-              <span className="sr-only">Primary</span>
+            <div className="absolute top-2 left-2 z-10 flex min-w-12 items-center justify-center gap-1 rounded-full bg-primary/40 px-2 py-1 text-primary-foreground backdrop-blur-lg">
+              <Sparkles className="h-3.5 w-3.5" />
+              <span className="text-[11px] font-semibold">
+                {Math.round(image.recommendationScore * 100)}
+              </span>
             </div>
           </TooltipTrigger>
           <TooltipContent sideOffset={6}>
-            Primary image — used as the starting <br />
-            frame for video generation.
+            Recommended score for video source selection.
           </TooltipContent>
         </Tooltip>
+      ) : null}
+      {image.shotType === "detail" ? (
+        <div className="absolute bottom-2 left-2 z-10 rounded-full bg-background/80 px-2 py-1 text-[11px] font-medium text-foreground backdrop-blur-sm">
+          Detail shot
+        </div>
       ) : null}
       <div
         className={`absolute top-2 right-2 z-10 transition-opacity ${
@@ -83,16 +87,6 @@ export function CategorizeImageCard({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" sideOffset={8}>
-            <DropdownMenuItem
-              disabled={!image.category || image.isPrimary || undefined}
-              onSelect={(event) => {
-                event.preventDefault();
-                handleSetPrimaryImage(image.id);
-              }}
-            >
-              <Star size={12} />
-              {image.isPrimary ? "Primary photo" : "Set as primary"}
-            </DropdownMenuItem>
             <DropdownMenuItem
               onSelect={(event) => {
                 event.preventDefault();

@@ -26,28 +26,28 @@ describe("useCategorizeConstraints", () => {
             url: "",
             filename: "a.jpg",
             category: "kitchen",
-            primaryScore: 10
+            recommendationScore: 10
           },
           {
             id: "b",
             url: "",
             filename: "b.jpg",
             category: "kitchen",
-            primaryScore: 9
+            recommendationScore: 9
           },
           {
             id: "c",
             url: "",
             filename: "c.jpg",
             category: "kitchen",
-            primaryScore: 8
+            recommendationScore: 8
           },
           {
             id: "d",
             url: "",
             filename: "d.jpg",
             category: "kitchen",
-            primaryScore: 1
+            recommendationScore: 1
           }
         ],
         categoryOrder: [UNCATEGORIZED_CATEGORY_ID, "kitchen"],
@@ -89,7 +89,7 @@ describe("useCategorizeConstraints", () => {
             url: "",
             filename: "x.jpg",
             category: "c11",
-            primaryScore: 1
+            recommendationScore: 1
           }
         ],
         categoryOrder,

@@ -2,7 +2,8 @@ export const PRIORITY_CATEGORIES = [
   "exterior-front",
   "exterior-backyard",
   "living-room",
-  "kitchen"
+  "kitchen",
+  "master-bedroom"
 ] as const;
 
 export type PriorityCategory = (typeof PRIORITY_CATEGORIES)[number];

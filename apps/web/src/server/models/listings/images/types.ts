@@ -30,5 +30,4 @@ export type ListingImageRecordInput = {
 export type ListingImageUpdate = {
   id: string;
   category: string | null;
-  isPrimary?: boolean | null;
 };

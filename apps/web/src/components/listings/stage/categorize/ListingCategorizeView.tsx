@@ -69,8 +69,10 @@ export function ListingCategorizeView({
           url: image.previewUrl,
           filename: image.filename,
           category: null,
-          isPrimary: false,
-          primaryScore: null
+          recommendationScore: null,
+          shotType: "room",
+          analysisStatus: "pending",
+          metadata: null
         }));
       return [...nextDraft, ...prev];
     });
@@ -122,11 +124,9 @@ export function ListingCategorizeView({
   const {
     savingCount,
     runDraftSave,
-    persistImageAssignments,
-    ensurePrimaryForCategory
+    persistImageAssignments
   } = useCategorizeMutations({
-    listingId,
-    setImages
+    listingId
   });
   const {
     addressValue,
@@ -208,7 +208,6 @@ export function ListingCategorizeView({
     handleEditCategory,
     handleDeleteCategory,
     handleMoveImage,
-    handleSetPrimaryImage,
     handleDeleteImage,
     handleDragStart,
     handleDragEnd,
@@ -231,7 +230,6 @@ export function ListingCategorizeView({
     setIsDraggingImage,
     setDragOverCategory,
     persistImageAssignments,
-    ensurePrimaryForCategory,
     endDragSession
   });
   const handleOpenUpload = React.useCallback(() => {
@@ -328,7 +326,6 @@ export function ListingCategorizeView({
             onDeleteCategory={handleRequestDeleteCategory}
             onRequestMoveImage={handleRequestMoveImage}
             onRequestDeleteImage={handleRequestDeleteImage}
-            handleSetPrimaryImage={handleSetPrimaryImage}
             handleDragStart={handleDragStart}
             handleDragEnd={handleDragEnd}
             handleDrop={handleDrop}

@@ -33,16 +33,8 @@ export function useCategorizeProcessingFlow(params: {
 
     const isProcessed = (image: {
       category: string | null;
-      confidence?: number | null;
-      primaryScore?: number | null;
-    }) =>
-      Boolean(
-        image.category &&
-        image.confidence !== null &&
-        image.confidence !== undefined &&
-        image.primaryScore !== null &&
-        image.primaryScore !== undefined
-      );
+      analysisStatus?: "pending" | "processing" | "complete" | "failed" | null;
+    }) => image.analysisStatus === "complete" || image.analysisStatus === "failed";
 
     const batchFiltered = batchStartedAt
       ? images.filter((image) => {
