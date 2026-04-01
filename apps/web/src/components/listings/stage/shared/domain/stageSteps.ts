@@ -29,10 +29,15 @@ const STAGE_STEP_DEFS: StageStepDef[] = [
 export function buildListingStageFlowSteps(
   activeStep: ListingStageKey
 ): ListingStageStep[] {
-  return STAGE_STEP_DEFS.map((step) => ({
+  const activeIndex = STAGE_STEP_DEFS.findIndex(
+    (step) => step.key === activeStep
+  );
+
+  return STAGE_STEP_DEFS.map((step, index) => ({
     label: step.label,
     sublabel: step.sublabel,
-    active: step.key === activeStep
+    active: step.key === activeStep,
+    completed: activeIndex > index
   }));
 }
 
@@ -49,7 +54,8 @@ export function getListingStageScaffoldCopy(
     case "upload":
       return {
         stepTitle: "Step 2: Upload listing photos",
-        stepSubtitle: "Add your listing photos below."
+        stepSubtitle:
+          "Upload your full photo collection, up to 40 photos. No need to narrow it down now."
       };
     case "categorize":
       return {

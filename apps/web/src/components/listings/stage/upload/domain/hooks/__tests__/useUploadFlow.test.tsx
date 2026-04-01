@@ -5,6 +5,7 @@ const mockCreateListing = jest.fn();
 const mockCreateListingImageRecords = jest.fn();
 const mockGetListingImageUploadUrls = jest.fn();
 const mockEmitListingSidebarUpdate = jest.fn();
+const mockEmitListingSidebarHeartbeat = jest.fn();
 const mockGetImageMetadataFromFile = jest.fn();
 
 jest.mock("@web/src/server/actions/listings/commands", () => ({
@@ -21,7 +22,9 @@ jest.mock("@web/src/server/actions/listings/image", () => ({
 
 jest.mock("@web/src/lib/domain/listings/sidebarEvents", () => ({
   emitListingSidebarUpdate: (...args: unknown[]) =>
-    mockEmitListingSidebarUpdate(...args)
+    mockEmitListingSidebarUpdate(...args),
+  emitListingSidebarHeartbeat: (...args: unknown[]) =>
+    mockEmitListingSidebarHeartbeat(...args)
 }));
 
 jest.mock("@web/src/lib/domain/media/imageMetadata", () => ({
@@ -35,7 +38,20 @@ describe("useUploadFlow", () => {
     mockCreateListingImageRecords.mockReset();
     mockGetListingImageUploadUrls.mockReset();
     mockEmitListingSidebarUpdate.mockReset();
+    mockEmitListingSidebarHeartbeat.mockReset();
     mockGetImageMetadataFromFile.mockReset();
+  });
+
+  it("emits sidebar heartbeat when mounted with an existing listing", () => {
+    renderHook(() =>
+      useUploadFlow({ navigate: jest.fn(), listingId: "listing-existing" })
+    );
+
+    expect(mockEmitListingSidebarHeartbeat).toHaveBeenCalledTimes(1);
+    expect(mockEmitListingSidebarHeartbeat).toHaveBeenCalledWith({
+      id: "listing-existing",
+      lastOpenedAt: expect.any(String)
+    });
   });
 
   it("dedupes concurrent listing creation", async () => {

@@ -1,5 +1,8 @@
 import * as React from "react";
-import { emitListingSidebarUpdate } from "@web/src/lib/domain/listings/sidebarEvents";
+import {
+  emitListingSidebarHeartbeat,
+  emitListingSidebarUpdate
+} from "@web/src/lib/domain/listings/sidebarEvents";
 import { getImageMetadataFromFile } from "@web/src/lib/domain/media/imageMetadata";
 import { createListingForCurrentUser } from "@web/src/server/actions/listings/commands";
 import {
@@ -27,6 +30,17 @@ type UseUploadFlowParams = {
 export const useUploadFlow = ({ navigate, listingId }: UseUploadFlowParams) => {
   const listingIdRef = React.useRef<string | null>(listingId ?? null);
   const inFlightListingPromiseRef = React.useRef<Promise<string> | null>(null);
+
+  React.useEffect(() => {
+    const existingListingId = listingId?.trim();
+    if (!existingListingId) {
+      return;
+    }
+    emitListingSidebarHeartbeat({
+      id: existingListingId,
+      lastOpenedAt: new Date().toISOString()
+    });
+  }, [listingId]);
 
   const ensureListingId = React.useCallback(async () => {
     if (listingIdRef.current) {

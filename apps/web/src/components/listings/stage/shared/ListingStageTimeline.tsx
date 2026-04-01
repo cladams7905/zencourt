@@ -102,9 +102,11 @@ export function ListingStageTimeline({
               ) : null}
               <div
                 className={`h-2.5 w-2.5 rotate-45 rounded-xs ring-4 ring-background shadow-sm ${
-                  step.completed || step.active
+                  step.active
                     ? "bg-primary"
-                    : "bg-background border border-border"
+                    : step.completed
+                      ? "bg-muted-foreground/70"
+                      : "bg-background border border-border"
                 }`}
               />
               <span
@@ -137,20 +139,22 @@ export function ListingStageTimeline({
       <div className="lg:hidden">{horizontalTimeline}</div>
       <div className="hidden lg:flex lg:w-full lg:justify-center">
         <div className="relative space-y-5 py-1">
-          <div className="pointer-events-none absolute left-[5px] top-[10px] bottom-[5px] w-px bg-border/60" />
+          <div className="pointer-events-none absolute left-[4.5px] top-[10px] bottom-[5px] w-px bg-border" />
           {steps.map((step) => (
             <div key={step.label} className="relative flex items-center gap-4">
               <div
-                className={`z-10 h-2.5 w-2.5 shrink-0 rotate-45 rounded-xs ring-4 ring-background shadow-sm ${
-                  step.completed || step.active
+                className={`z-10 h-2.5 w-2.5 shrink-0 rotate-45 rounded-xs ring-4 ring-background ${
+                  step.active
                     ? "bg-primary"
-                    : "bg-background border border-border"
+                    : step.completed
+                      ? "bg-muted-foreground/80"
+                      : "bg-background border border-black/20"
                 }`}
               />
-              <div className="flex min-h-[28px] items-center">
+              <div className="flex min-h-[30px] items-center">
                 <div className="space-y-0.5">
                   <span
-                    className={`block text-left text-[11px] uppercase tracking-widest leading-tight whitespace-normal text-balance ${
+                    className={`block text-left text-xs uppercase tracking-widest leading-tight whitespace-normal text-balance ${
                       step.active
                         ? "font-semibold text-foreground"
                         : "font-medium text-muted-foreground"
@@ -159,7 +163,7 @@ export function ListingStageTimeline({
                     {step.label}
                   </span>
                   {step.sublabel ? (
-                    <span className="block text-[10px] font-medium text-muted-foreground">
+                    <span className="block text-[11px] font-medium text-muted-foreground">
                       {step.sublabel}
                     </span>
                   ) : null}

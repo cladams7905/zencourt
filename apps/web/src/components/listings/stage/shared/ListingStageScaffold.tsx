@@ -58,7 +58,7 @@ export function ListingStageScaffold({
             </div>
           </div>
           {footer ? (
-            <div className={cn("shrink-0 bg-background py-2")}>
+            <div className={cn("shrink-0 bg-background py-2 lg:pb-0 pb-6")}>
               <div
                 className={cn(
                   "mx-auto w-full max-lg:max-w-none lg:px-0",

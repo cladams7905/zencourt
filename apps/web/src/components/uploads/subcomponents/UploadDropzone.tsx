@@ -81,33 +81,40 @@ export function UploadDropzone({
       />
       <div
         className={cn(
-          "flex flex-col items-center gap-2",
-          fillContainer && "min-h-0 flex-1 justify-center"
+          "flex flex-col items-center gap-2 space-y-2",
+          fillContainer && "min-h-0 flex-1"
         )}
       >
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-background border border-border">
-          <Upload className="h-5 w-5 text-muted-foreground" />
-        </div>
-        <div>
-          <p className="text-sm font-semibold text-foreground">{dropTitle}</p>
-          <p className="text-xs text-muted-foreground">{dropSubtitle}</p>
-        </div>
-        <div className="flex flex-wrap items-center justify-center gap-2">
-          <Button size="sm" variant="outline" type="button">
-            Browse files
-          </Button>
-          <GoogleDriveUploadButton
-            size="sm"
-            variant="outline"
-            className="gap-1"
-            onFilesSelected={onDropFiles}
-            accept={accept}
-            onPickerOpenChange={onPickerOpenChange}
-            maxImageBytes={maxImageBytes}
-            compressImages={compressDriveImages}
-            onLoadingChange={onDriveLoadingChange}
-            onLoadingCountChange={onDriveLoadingCountChange}
-          />
+        <div
+          className={cn(
+            "flex flex-col items-center gap-2 space-y-3",
+            fillContainer && "flex-1 justify-center"
+          )}
+        >
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-background border border-border">
+            <Upload className="h-5 w-5 text-muted-foreground" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-foreground">{dropTitle}</p>
+            <p className="text-xs text-muted-foreground">{dropSubtitle}</p>
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <Button size="sm" variant="outline" type="button">
+              Browse files
+            </Button>
+            <GoogleDriveUploadButton
+              size="sm"
+              variant="outline"
+              className="gap-1"
+              onFilesSelected={onDropFiles}
+              accept={accept}
+              onPickerOpenChange={onPickerOpenChange}
+              maxImageBytes={maxImageBytes}
+              compressImages={compressDriveImages}
+              onLoadingChange={onDriveLoadingChange}
+              onLoadingCountChange={onDriveLoadingCountChange}
+            />
+          </div>
         </div>
       </div>
     </div>

@@ -5,7 +5,11 @@ import { FileEdit } from "lucide-react";
 import { Badge } from "../../../../ui/badge";
 import { Button } from "../../../../ui/button";
 import { cn } from "../../../../ui/utils";
-import { Tooltip, TooltipContent, TooltipTrigger } from "../../../../ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger
+} from "../../../../ui/tooltip";
 import {
   formatListingStageLabel,
   resolveListingPath
@@ -81,7 +85,7 @@ export function SidebarListingsSection({
                       "w-2 h-2 rotate-45 rounded-xs shrink-0",
                       listing.listingStage === "complete"
                         ? "bg-primary"
-                        : "bg-muted-foreground/70"
+                        : "bg-muted-foreground"
                     )}
                   />
                 </Link>
@@ -129,7 +133,9 @@ export function SidebarListingsSection({
           )
         )
       ) : !isCollapsed ? (
-        <div className="px-2 text-xs text-muted-foreground">No listings yet.</div>
+        <div className="px-2 text-xs text-muted-foreground">
+          No listings yet.
+        </div>
       ) : null}
       {hasMoreListings && !isCollapsed ? (
         <Button
