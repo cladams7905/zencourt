@@ -115,4 +115,37 @@ describe("providerSourceImage", () => {
       })
     ).toEqual({ width: 1080, height: 1920 });
   });
+
+  it("defaults to veo3.1_fast size when model is omitted", () => {
+    expect(
+      resolveProviderSourceImageSize({ orientation: "vertical" })
+    ).toEqual({ width: 1920, height: 1080 });
+  });
+
+  it("uses landscape 16:9 for gen4.5 when orientation is landscape", () => {
+    expect(
+      resolveProviderSourceImageSize({
+        model: "gen4.5",
+        orientation: "landscape"
+      })
+    ).toEqual({ width: 1920, height: 1080 });
+  });
+
+  it("logs and returns the original url when prepare fails with a non-Error rejection", async () => {
+    const downloadBuffer = jest.fn().mockRejectedValue("network");
+
+    const result = await prepareProviderSourceImage(
+      {
+        imageUrl: "https://cdn/source.jpg",
+        userId: "user-1",
+        listingId: "listing-1",
+        videoId: "video-1",
+        jobId: "job-1",
+        targetSize: { width: 1920, height: 1080 }
+      },
+      { downloadBuffer, uploadFile: jest.fn() }
+    );
+
+    expect(result).toBe("https://cdn/source.jpg");
+  });
 });

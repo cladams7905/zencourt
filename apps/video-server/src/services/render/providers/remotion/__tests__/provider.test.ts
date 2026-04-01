@@ -36,4 +36,32 @@ describe("resolveEntryPoint", () => {
       "/workspace/apps/video-server/dist/apps/video-server/src/services/render/providers/remotion/composition/Root.js"
     );
   });
+
+  it("falls back to repo-root dist when the apps-scoped bundle is absent", () => {
+    const cwd = "/workspace";
+    const existsSync = jest.fn((candidate: string) =>
+      candidate ===
+      "/workspace/dist/apps/video-server/src/services/render/providers/remotion/composition/Root.js"
+    );
+
+    const entryPoint = resolveEntryPoint(cwd, existsSync);
+
+    expect(entryPoint).toBe(
+      "/workspace/dist/apps/video-server/src/services/render/providers/remotion/composition/Root.js"
+    );
+  });
+
+  it("falls back to the source composition when no dist entry exists", () => {
+    const cwd = "/workspace";
+    const existsSync = jest.fn((candidate: string) =>
+      candidate ===
+      "/workspace/apps/video-server/src/services/render/providers/remotion/composition/Root.tsx"
+    );
+
+    const entryPoint = resolveEntryPoint(cwd, existsSync);
+
+    expect(entryPoint).toBe(
+      "/workspace/apps/video-server/src/services/render/providers/remotion/composition/Root.tsx"
+    );
+  });
 });

@@ -11,6 +11,7 @@
     "type-check": "tsc --noEmit",
     "test": "jest",
     "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage --coverageThreshold=\"{}\"",
     "check-coverage": "node scripts/check-coverage.mjs",
     "upload:render-assets": "dotenv -e ../../.env.local -- node scripts/upload-render-assets.mjs",
     "upload:render-assets:prod": "node scripts/upload-render-assets-prod.mjs"

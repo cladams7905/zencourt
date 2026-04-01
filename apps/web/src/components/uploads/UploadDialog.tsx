@@ -32,6 +32,7 @@ function UploadDialog<TRecord>({
   primaryActionLabel,
   selectedLabel = "file",
   errorMessage = "Failed to upload files. Please try again.",
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- API surface; requirements list has no separate heading yet
   tipsTitle,
   tipsItems,
   fileValidator,

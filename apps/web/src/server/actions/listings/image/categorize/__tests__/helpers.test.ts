@@ -1,7 +1,6 @@
 const mockSelectWhere = jest.fn();
 const mockUpdateWhere = jest.fn();
 const mockGetListingById = jest.fn();
-const mockAssignPrimary = jest.fn();
 const mockClassifyRoomBatch = jest.fn();
 const mockGetPublicUrlForStorageUrl = jest.fn((url: string) => url);
 const mockLoggerError = jest.fn();
@@ -25,16 +24,13 @@ jest.mock("@db/client", () => ({
   },
   and: (...args: unknown[]) => ({ type: "and", args }),
   eq: (...args: unknown[]) => ({ type: "eq", args }),
-  inArray: (...args: unknown[]) => ({ type: "inArray", args })
+  inArray: (...args: unknown[]) => ({ type: "inArray", args }),
+  lt: (...args: unknown[]) => ({ type: "lt", args }),
+  or: (...args: unknown[]) => ({ type: "or", args })
 }));
 
 jest.mock("@web/src/server/models/listings", () => ({
   getListingById: (...args: unknown[]) => mockGetListingById(...args)
-}));
-
-jest.mock("@web/src/server/models/listings/images", () => ({
-  assignPrimaryListingImageForCategoryTrusted: (...args: unknown[]) =>
-    mockAssignPrimary(...args)
 }));
 
 jest.mock("@web/src/server/services/roomClassification", () => ({
@@ -132,8 +128,18 @@ describe("categorize helpers", () => {
   it("returns noop stats when every image already has a category", async () => {
     mockGetListingById.mockResolvedValueOnce({ id: "listing-1" });
     mockSelectWhere.mockResolvedValueOnce([
-      { id: "img-1", listingId: "listing-1", category: "kitchen" },
-      { id: "img-2", listingId: "listing-1", category: "bathroom" }
+      {
+        id: "img-1",
+        listingId: "listing-1",
+        category: "kitchen",
+        analysisStatus: "complete"
+      },
+      {
+        id: "img-2",
+        listingId: "listing-1",
+        category: "bathroom",
+        analysisStatus: "complete"
+      }
     ]);
     const { runListingImagesCategorizationWorkflow } = await import("../helpers");
 
@@ -152,7 +158,7 @@ describe("categorize helpers", () => {
 
   it("analyzes images and assigns primary categories", async () => {
     mockGetListingById.mockResolvedValueOnce({ id: "listing-1" });
-    mockSelectWhere.mockResolvedValueOnce([
+    const pendingRows = [
       {
         id: "img-1",
         listingId: "listing-1",
@@ -160,9 +166,13 @@ describe("categorize helpers", () => {
         url: "https://img-1",
         category: null,
         confidence: null,
-        primaryScore: null,
+        recommendationScore: null,
         isPrimary: false,
-        metadata: null
+        metadata: null,
+        analysisStatus: "pending",
+        analysisRunId: null,
+        analysisStartedAt: null,
+        analysisCompletedAt: null
       },
       {
         id: "img-2",
@@ -171,11 +181,28 @@ describe("categorize helpers", () => {
         url: "https://img-2",
         category: null,
         confidence: null,
-        primaryScore: null,
+        recommendationScore: null,
         isPrimary: false,
-        metadata: null
+        metadata: null,
+        analysisStatus: "pending",
+        analysisRunId: null,
+        analysisStartedAt: null,
+        analysisCompletedAt: null
       }
-    ]);
+    ];
+    mockSelectWhere
+      .mockResolvedValueOnce(pendingRows)
+      .mockResolvedValueOnce(pendingRows);
+
+    const sampleScores = {
+      lighting: 0.9,
+      framing: 0.88,
+      coverage: 0.9,
+      clarity: 0.9,
+      motionPotential: 0.8,
+      roomRepresentativeness: 0.94
+    };
+
     mockClassifyRoomBatch.mockImplementation(
       async (
         _urls: string[],
@@ -189,7 +216,9 @@ describe("categorize helpers", () => {
               classification: {
                 category: string;
                 confidence: number;
-                primaryScore?: number;
+                shotType: "room" | "detail" | "other";
+                featureTags: string[];
+                scores: typeof sampleScores;
                 perspective?: "aerial" | "ground";
               } | null;
               error: string | null;
@@ -203,7 +232,9 @@ describe("categorize helpers", () => {
           classification: {
             category: "kitchen",
             confidence: 0.9,
-            primaryScore: 0.8,
+            shotType: "room",
+            featureTags: ["island"],
+            scores: sampleScores,
             perspective: "ground"
           },
           error: null
@@ -213,7 +244,17 @@ describe("categorize helpers", () => {
           success: true,
           classification: {
             category: "other",
-            confidence: 0.4
+            confidence: 0.4,
+            shotType: "other",
+            featureTags: [],
+            scores: {
+              lighting: 0.5,
+              framing: 0.5,
+              coverage: 0.5,
+              clarity: 0.5,
+              motionPotential: 0.3,
+              roomRepresentativeness: 0.2
+            }
           },
           error: null
         });
@@ -232,7 +273,6 @@ describe("categorize helpers", () => {
       ["https://img-1", "https://img-2"],
       expect.objectContaining({ concurrency: 3, onProgress: expect.any(Function) })
     );
-    expect(mockAssignPrimary).toHaveBeenCalledWith("listing-1", "kitchen");
     expect(mockUpdateWhere).toHaveBeenCalled();
   });
 

@@ -8,7 +8,7 @@ describe("roomClassification prompt", () => {
     expect(CLASSIFICATION_PROMPT).toContain("RESPONSE FORMAT:");
     expect(CLASSIFICATION_PROMPT).toContain('"category"');
     expect(CLASSIFICATION_PROMPT).toContain('"confidence"');
-    expect(CLASSIFICATION_PROMPT).toContain('"primary_score"');
+    expect(CLASSIFICATION_PROMPT).toContain('"scores"');
     expect(CLASSIFICATION_PROMPT).toContain('"perspective"');
   });
 

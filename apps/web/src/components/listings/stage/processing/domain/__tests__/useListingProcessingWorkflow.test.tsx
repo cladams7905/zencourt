@@ -25,6 +25,28 @@ jest.mock("@web/src/lib/domain/listings/sidebarEvents", () => ({
 }));
 
 jest.mock("@web/src/components/listings/stage/processing/domain/transport", () => ({
+  countTerminalInBatch: (
+    images: { id: string; analysisStatus?: string | null }[],
+    batchImageIds: string[]
+  ) => {
+    const batchIdSet = new Set(batchImageIds);
+    const batchImages = images.filter((image) => batchIdSet.has(image.id));
+    const batchCompleted = batchImages.filter(
+      (image) =>
+        image.analysisStatus === "complete" || image.analysisStatus === "failed"
+    ).length;
+    const processingCount = batchImages.filter(
+      (image) => image.analysisStatus === "processing"
+    ).length;
+    return {
+      batchImages,
+      batchTotal: batchImageIds.length,
+      batchCompleted,
+      processingCount,
+      isComplete:
+        batchImageIds.length > 0 && batchCompleted >= batchImageIds.length
+    };
+  },
   fetchPropertyDetails: (...args: unknown[]) =>
     mockFetchPropertyDetails(...args),
   updateListingStage: (...args: unknown[]) => mockUpdateListingStage(...args),

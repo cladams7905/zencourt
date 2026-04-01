@@ -132,7 +132,7 @@ export const useUploadFlow = ({
   );
 
   const onUploadsComplete = React.useCallback(
-    ({ count, batchStartedAt }: { count: number; batchStartedAt: number }) => {
+    ({ batchStartedAt }: { count: number; batchStartedAt: number }) => {
       const activeListingId = listingIdRef.current;
       if (!activeListingId) {
         return;

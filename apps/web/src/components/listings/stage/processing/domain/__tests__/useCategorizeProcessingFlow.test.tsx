@@ -128,7 +128,7 @@ describe("useCategorizeProcessingFlow", () => {
       })
     );
 
-    const { result } = renderHook(() =>
+    renderHook(() =>
       useCategorizeProcessingFlow({
         mode: "categorize",
         listingId: "l1",

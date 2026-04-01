@@ -181,7 +181,7 @@ function mapBatchResultToImage(
     shotType: classification.shotType,
     confidence: classification.confidence
   });
-  let nextImage: SerializableImageData = {
+  const nextImage: SerializableImageData = {
     ...image,
     category: classification.category,
     confidence: classification.confidence,

@@ -130,4 +130,56 @@ describe("WaveSpeed provider service", () => {
       })
     ).rejects.toThrow("WaveSpeed submit failed (400): bad request");
   });
+
+  it("throws when the API key is not configured", async () => {
+    delete process.env.WAVESPEED_API_KEY;
+
+    const { waveSpeedService } = await import("@/services/providers/wavespeed");
+
+    await expect(
+      waveSpeedService.submitImageToVideo({
+        image: "https://cdn/image.jpg",
+        prompt: "p",
+        negativePrompt: "n",
+        duration: 4,
+        aspectRatio: "16:9",
+        resolution: "4k",
+        webhookUrl: "https://video.example.com/hook"
+      })
+    ).rejects.toThrow("WAVESPEED_API_KEY is not configured");
+  });
+
+  it("reuses the sdk client for subsequent retrievals", async () => {
+    getResultMock.mockResolvedValue({
+      data: { id: "t1", status: "pending" }
+    });
+
+    const WaveSpeed = (await import("wavespeed")).default;
+    const { waveSpeedService } = await import("@/services/providers/wavespeed");
+
+    await waveSpeedService.retrieveTask("t1");
+    await waveSpeedService.retrieveTask("t2");
+
+    expect(WaveSpeed).toHaveBeenCalledTimes(1);
+    expect(getResultMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("normalizes retrieveTask payloads with sparse data", async () => {
+    getResultMock.mockResolvedValue({
+      data: {
+        outputs: "not-an-array" as unknown as string[],
+        error: 404 as unknown as string
+      }
+    });
+
+    const { waveSpeedService } = await import("@/services/providers/wavespeed");
+    const result = await waveSpeedService.retrieveTask("external-id");
+
+    expect(result).toEqual({
+      id: "external-id",
+      status: "pending",
+      outputs: undefined,
+      error: null
+    });
+  });
 });

@@ -66,6 +66,108 @@ describe("renders orchestrators", () => {
     });
   });
 
+  it("maps queued jobs to queued status", () => {
+    const result = handleGetRenderJob("job-1", {
+      createJob: jest.fn(),
+      getJob: jest.fn().mockReturnValue({ status: "queued" }),
+      cancelJob: jest.fn()
+    });
+    expect(result.body).toEqual({
+      success: true,
+      job: { status: "queued", progress: 0 }
+    });
+  });
+
+  it("maps in-progress rendering phase to rendering status", () => {
+    const result = handleGetRenderJob("job-1", {
+      createJob: jest.fn(),
+      getJob: jest.fn().mockReturnValue({
+        status: "in-progress",
+        phase: "rendering",
+        progress: 0.5
+      }),
+      cancelJob: jest.fn()
+    });
+    expect(result.body).toEqual({
+      success: true,
+      job: { status: "rendering", progress: 0.5 }
+    });
+  });
+
+  it("maps completed jobs with artifact readiness", () => {
+    expect(
+      handleGetRenderJob("job-1", {
+        createJob: jest.fn(),
+        getJob: jest.fn().mockReturnValue({
+          status: "completed",
+          artifactReady: true
+        }),
+        cancelJob: jest.fn()
+      }).body
+    ).toEqual({
+      success: true,
+      job: {
+        status: "completed",
+        progress: 1,
+        artifactReady: true
+      }
+    });
+
+    expect(
+      handleGetRenderJob("job-1", {
+        createJob: jest.fn(),
+        getJob: jest.fn().mockReturnValue({
+          status: "completed",
+          artifactReady: false
+        }),
+        cancelJob: jest.fn()
+      }).body
+    ).toEqual({
+      success: true,
+      job: {
+        status: "completed",
+        progress: 1,
+        artifactReady: false
+      }
+    });
+  });
+
+  it("maps failed and canceled jobs", () => {
+    expect(
+      handleGetRenderJob("job-1", {
+        createJob: jest.fn(),
+        getJob: jest.fn().mockReturnValue({
+          status: "failed",
+          error: "render crashed"
+        }),
+        cancelJob: jest.fn()
+      }).body
+    ).toEqual({
+      success: true,
+      job: { status: "failed", error: "render crashed" }
+    });
+
+    expect(
+      handleGetRenderJob("job-1", {
+        createJob: jest.fn(),
+        getJob: jest.fn().mockReturnValue({ status: "canceled" }),
+        cancelJob: jest.fn()
+      }).body
+    ).toEqual({
+      success: true,
+      job: { status: "canceled" }
+    });
+  });
+
+  it("returns 404 for unknown queue status shapes", () => {
+    const result = handleGetRenderJob("job-1", {
+      createJob: jest.fn(),
+      getJob: jest.fn().mockReturnValue({ status: "unknown" } as never),
+      cancelJob: jest.fn()
+    });
+    expect(result.status).toBe(404);
+  });
+
   it("cancels render job", () => {
     const result = handleCancelRenderJob("job-1", {
       createJob: jest.fn(),
@@ -133,6 +235,16 @@ describe("renders orchestrators", () => {
       cancelJob: jest.fn()
     });
     expect(result.status).toBe(400);
+  });
+
+  it("returns 400 when cancel does not stop the queue job", () => {
+    const result = handleCancelRenderJob("job-1", {
+      createJob: jest.fn(),
+      getJob: jest.fn().mockReturnValue({ status: "queued" }),
+      cancelJob: jest.fn().mockReturnValue(false)
+    });
+    expect(result.status).toBe(400);
+    expect(result.body).toEqual({ success: false, error: "Cancel failed" });
   });
 
   it("invokes onStart, onProgress, onComplete when using real queue", async () => {

@@ -1,6 +1,19 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ListingAddressView } from "@web/src/components/listings/stage/address/ListingAddressView";
+import { ListingStageViewProvider } from "@web/src/components/listings/stage/shared/ListingStageViewContext";
+
+function renderListingAddressView() {
+  return render(
+    <ListingStageViewProvider
+      stage="address"
+      title="Address"
+      listingView={false}
+    >
+      <ListingAddressView googleMapsApiKey="test-key" />
+    </ListingStageViewProvider>
+  );
+}
 
 const mockPush = jest.fn();
 const mockCreateListingForCurrentUser = jest.fn();
@@ -51,7 +64,8 @@ jest.mock("@web/src/server/actions/listings/commands", () => ({
   createListingForCurrentUser: (...args: unknown[]) =>
     mockCreateListingForCurrentUser(...args),
   updateListingForCurrentUser: (...args: unknown[]) =>
-    mockUpdateListingForCurrentUser(...args)
+    mockUpdateListingForCurrentUser(...args),
+  touchListingActivityForCurrentUser: jest.fn().mockResolvedValue(undefined)
 }));
 
 jest.mock("@web/src/lib/domain/listings/sidebarEvents", () => ({
@@ -78,7 +92,7 @@ describe("ListingAddressView", () => {
       listingStage: "upload"
     });
 
-    render(<ListingAddressView googleMapsApiKey="test-key" />);
+    renderListingAddressView();
 
     const user = userEvent.setup();
     await user.type(
@@ -107,12 +121,12 @@ describe("ListingAddressView", () => {
   });
 
   it("keeps continue disabled without an address", () => {
-    render(<ListingAddressView googleMapsApiKey="test-key" />);
+    renderListingAddressView();
     expect(screen.getByRole("button", { name: /continue/i })).toBeDisabled();
   });
 
   it("keeps continue disabled when address is typed but not chosen from suggestions", async () => {
-    render(<ListingAddressView googleMapsApiKey="test-key" />);
+    renderListingAddressView();
     const user = userEvent.setup();
     await user.type(
       screen.getByRole("textbox", { name: "Listing address" }),

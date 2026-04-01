@@ -19,7 +19,7 @@ describe("image categorize results", () => {
         url: "u",
         filename: "a.jpg",
         category: "kitchen",
-        primaryScore: null
+        recommendationScore: null
       })
     );
     expect(cloned[0]).not.toBe(input[0]);
@@ -40,9 +40,26 @@ describe("image categorize results", () => {
   it("calculates processing stats including confidence and success rate", () => {
     const stats = calculateProcessingStats(
       [
-        { id: "1", url: "u1", category: "kitchen", confidence: 0.9, status: "ready" },
-        { id: "2", url: "u2", category: "bathroom", confidence: 0.7, status: "ready" },
-        { id: "3", url: null, category: null, status: "error" }
+        {
+          id: "1",
+          url: "u1",
+          category: "kitchen",
+          confidence: 0.9,
+          analysisStatus: "complete"
+        },
+        {
+          id: "2",
+          url: "u2",
+          category: "bathroom",
+          confidence: 0.7,
+          analysisStatus: "complete"
+        },
+        {
+          id: "3",
+          url: null,
+          category: null,
+          analysisStatus: "failed"
+        }
       ] as never,
       1250
     );

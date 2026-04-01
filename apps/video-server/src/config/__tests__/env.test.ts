@@ -12,7 +12,8 @@ describe("env config", () => {
     FAL_KEY: "fal-key",
     RUNWAY_API_KEY: "runway-key",
     VIDEO_SERVER_API_KEY: "server-key",
-    WAVESPEED_API_KEY: "wavespeed-key"
+    WAVESPEED_API_KEY: "wavespeed-key",
+    WAVESPEED_WEBHOOK_SECRET: "wavespeed-webhook-secret"
   };
 
   it("throws when VIDEO_SERVER_API_KEY is missing", () => {

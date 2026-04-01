@@ -331,7 +331,6 @@ export function useCategorizeActions(params: UseCategorizeActionsParams) {
     }
     const imageId = deleteImageId;
     const previousImages = images;
-    const deletedImage = images.find((image) => image.id === imageId) ?? null;
     const remainingImages = images.filter((image) => image.id !== imageId);
     setImages(remainingImages);
     const success = await persistImageAssignments([], [imageId], () =>

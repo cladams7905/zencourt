@@ -49,7 +49,9 @@ describe("remotion provider", () => {
       durationInFrames: 120,
       fps: 30
     });
-    mockRenderMedia.mockResolvedValue(undefined);
+    mockRenderMedia.mockImplementation(async (opts: { onProgress?: (p: { progress: number }) => void }) => {
+      opts.onProgress?.({ progress: 0.42 });
+    });
     mockRenderStill.mockResolvedValue(undefined);
     mockReadFile
       .mockResolvedValueOnce(Buffer.from("video-buffer"))
@@ -91,8 +93,17 @@ describe("remotion provider", () => {
         cacheDirectory: "/tmp/remotion"
       })
     );
+    expect(
+      bundleOptions.webpackOverride({ cache: false } as never).cache
+    ).toEqual(
+      expect.objectContaining({
+        type: "filesystem",
+        cacheDirectory: "/tmp/remotion"
+      })
+    );
     expect(mockSelectComposition).toHaveBeenCalledTimes(1);
     expect(mockRenderMedia).toHaveBeenCalledTimes(1);
+    expect(onProgress).toHaveBeenCalledWith(0.42);
     expect(mockRenderStill).toHaveBeenCalledTimes(1);
     expect(mockReadFile).toHaveBeenCalledTimes(2);
     expect(mockRm).toHaveBeenCalledTimes(2);

@@ -4,13 +4,16 @@ import { CategorizeImageWorkspace } from "@web/src/components/listings/stage/cat
 
 jest.mock("next/image", () => ({
   __esModule: true,
-  default: ({
-    fill: _fill,
-    ...props
-  }: React.ImgHTMLAttributes<HTMLImageElement> & { fill?: boolean }) => (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img {...props} />
-  )
+  default: (
+    props: React.ImgHTMLAttributes<HTMLImageElement> & { fill?: boolean }
+  ) => {
+    const { fill, ...rest } = props;
+    void fill;
+    return (
+      // eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text -- Next image stub; alt comes from props
+      <img {...rest} />
+    );
+  }
 }));
 
 describe("CategorizeImageWorkspace", () => {
