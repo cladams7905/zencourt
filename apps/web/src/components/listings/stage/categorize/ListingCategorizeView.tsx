@@ -38,9 +38,10 @@ import {
   ListingStageShell
 } from "@web/src/components/listings/stage/shared";
 import {
-  clearListingUploadDraftImages,
-  getListingUploadDraftImages
-} from "@web/src/components/listings/stage/shared/domain/clientUploadStore";
+  getStoredCategorizeProcessingBatch,
+  useCategorizeProcessingFlow
+} from "@web/src/components/listings/stage/processing/domain/hooks";
+import { ListingUploadAiProcessingPanel } from "@web/src/components/listings/stage/upload/subcomponents/ListingUploadAiProcessingPanel";
 import { formatBytes } from "@web/src/lib/core/formatting/bytes";
 import { useRouter } from "next/navigation";
 
@@ -54,31 +55,23 @@ export function ListingCategorizeView({
 }: ListingCategorizeViewProps) {
   const router = useRouter();
   const [images, setImages] = React.useState<ListingImageItem[]>(initialImages);
-  React.useEffect(() => {
-    const draftImages = getListingUploadDraftImages(listingId);
-    if (draftImages.length === 0) {
-      return;
+  const [processingBatch, setProcessingBatch] = React.useState<{
+    listingId: string;
+    batchImageIds: string[];
+    batchStartedAt: number;
+    createdImages: ListingImageItem[];
+  } | null>(() => {
+    const stored = getStoredCategorizeProcessingBatch(listingId);
+    if (!stored) {
+      return null;
     }
-
-    setImages((prev) => {
-      const existing = new Set(prev.map((image) => image.filename.toLowerCase()));
-      const nextDraft = draftImages
-        .filter((image) => !existing.has(image.filename.toLowerCase()))
-        .map((image) => ({
-          id: image.id,
-          url: image.previewUrl,
-          filename: image.filename,
-          category: null,
-          recommendationScore: null,
-          shotType: "room",
-          analysisStatus: "pending",
-          metadata: null
-        }));
-      return [...nextDraft, ...prev];
-    });
-
-    clearListingUploadDraftImages(listingId);
-  }, [listingId]);
+    return {
+      listingId,
+      batchImageIds: stored.batchImageIds,
+      batchStartedAt: stored.batchStartedAt ?? Date.now(),
+      createdImages: []
+    };
+  });
   const [dragOverCategory, setDragOverCategory] = React.useState<string | null>(
     null
   );
@@ -143,8 +136,22 @@ export function ListingCategorizeView({
   const { getUploadUrls, onCreateRecords } = useCategorizeUploads({
     listingId,
     runDraftSave,
-    setImages
+    setImages,
+    onProcessingBatchCreated: (batch) => {
+      setProcessingBatch(batch);
+    }
   });
+  const processingState = useCategorizeProcessingFlow({
+    mode: "categorize",
+    listingId,
+    batchImageIds: processingBatch?.batchImageIds,
+    batchStartedAt: processingBatch?.batchStartedAt,
+    navigate: (url) => {
+      setProcessingBatch(null);
+      router.replace(url);
+    }
+  });
+  const isInlineProcessing = processingBatch !== null;
   const [openCategories, setOpenCategories] = React.useState<string[]>(
     () => categoryOrder
   );
@@ -291,59 +298,75 @@ export function ListingCategorizeView({
           ) : null
         }
         footer={
-          <ListingStageFooter
-            onContinue={() => void handleContinue()}
-            canContinue={canContinue}
-            isSubmitting={isSavingDraft}
-            continueLoadingLabel="Saving..."
-            onBack={() => router.push(`/listings/${listingId}/stage/upload`)}
-            canBack
-          />
+          isInlineProcessing ? null : (
+            <ListingStageFooter
+              onContinue={() => void handleContinue()}
+              canContinue={canContinue}
+              isSubmitting={isSavingDraft}
+              continueLoadingLabel="Saving..."
+              onBack={() => router.push(`/listings/${listingId}/stage/upload`)}
+              canBack
+            />
+          )
         }
       >
-        <div
-          className="flex w-full flex-col gap-6"
-          onDragOver={(event) => {
-            lastDragClientYRef.current = event.clientY;
-          }}
-        >
-          <div className="flex flex-col gap-8 lg:flex-row">
-          <CategorizeImageWorkspace
-            images={images}
-            categoryOrder={categoryOrder}
-            categorizedImages={categorizedImages}
-            baseCategoryCounts={baseCategoryCounts}
-            openCategories={openCategories}
-            dragOverCategory={dragOverCategory}
-            openImageMenuId={openImageMenuId}
-            onOpenUpload={handleOpenUpload}
-            onOpenCreateCategory={handleOpenCreateCategory}
-            onOpenCategoriesChange={handleOpenCategoriesChange}
-            onCategoryDragOver={handleCategoryDragOver}
-            onCategoryDragLeave={handleCategoryDragLeave}
-            onOpenImageMenuChange={handleOpenImageMenuChange}
-            onEditCategory={handleOpenEditCategory}
-            onDeleteCategory={handleRequestDeleteCategory}
-            onRequestMoveImage={handleRequestMoveImage}
-            onRequestDeleteImage={handleRequestDeleteImage}
-            handleDragStart={handleDragStart}
-            handleDragEnd={handleDragEnd}
-            handleDrop={handleDrop}
+        {isInlineProcessing ? (
+          <ListingUploadAiProcessingPanel
+            images={
+              processingState.batchImages.length > 0
+                ? processingState.batchImages
+                : processingBatch.createdImages
+            }
+            batchCompleted={processingState.batchCompleted}
+            batchTotal={processingState.batchTotal}
+            title="Analyzing your listing photos with AI"
+            subtitle="We’re categorizing the new upload batch so it drops into the right room groups."
           />
+        ) : (
+          <div
+            className="flex w-full flex-col gap-6"
+            onDragOver={(event) => {
+              lastDragClientYRef.current = event.clientY;
+            }}
+          >
+            <div className="flex flex-col gap-8 lg:flex-row">
+            <CategorizeImageWorkspace
+              images={images}
+              categoryOrder={categoryOrder}
+              categorizedImages={categorizedImages}
+              baseCategoryCounts={baseCategoryCounts}
+              openCategories={openCategories}
+              dragOverCategory={dragOverCategory}
+              openImageMenuId={openImageMenuId}
+              onOpenUpload={handleOpenUpload}
+              onOpenCreateCategory={handleOpenCreateCategory}
+              onOpenCategoriesChange={handleOpenCategoriesChange}
+              onCategoryDragOver={handleCategoryDragOver}
+              onCategoryDragLeave={handleCategoryDragLeave}
+              onOpenImageMenuChange={handleOpenImageMenuChange}
+              onEditCategory={handleOpenEditCategory}
+              onDeleteCategory={handleRequestDeleteCategory}
+              onRequestMoveImage={handleRequestMoveImage}
+              onRequestDeleteImage={handleRequestDeleteImage}
+              handleDragStart={handleDragStart}
+              handleDragEnd={handleDragEnd}
+              handleDrop={handleDrop}
+            />
 
-          <ListingDetailsPanel
-            addressValue={addressValue}
-            setAddressValue={setAddressValue}
-            googleMapsApiKey={googleMapsApiKey}
-            hasUncategorized={hasUncategorized}
-            hasEmptyCategory={hasEmptyCategory}
-            needsAddress={needsAddress}
-            hasOverLimit={hasOverLimit}
-            hasTooManyCategories={hasTooManyCategories}
-            handleAddressSelect={handleAddressSelect}
-          />
+            <ListingDetailsPanel
+              addressValue={addressValue}
+              setAddressValue={setAddressValue}
+              googleMapsApiKey={googleMapsApiKey}
+              hasUncategorized={hasUncategorized}
+              hasEmptyCategory={hasEmptyCategory}
+              needsAddress={needsAddress}
+              hasOverLimit={hasOverLimit}
+              hasTooManyCategories={hasTooManyCategories}
+              handleAddressSelect={handleAddressSelect}
+            />
+            </div>
           </div>
-        </div>
+        )}
       </ListingStageShell>
       <UploadDialog
         open={isUploadOpen}

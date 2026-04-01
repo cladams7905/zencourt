@@ -11,6 +11,18 @@ import {
   fetchStreamResponse
 } from "@web/src/lib/core/http/client";
 
+export type ListingProcessingImage = {
+  id: string;
+  url?: string | null;
+  filename?: string | null;
+  category: string | null;
+  confidence?: number | null;
+  recommendationScore?: number | null;
+  shotType?: "room" | "detail" | "other" | null;
+  analysisStatus?: "pending" | "processing" | "complete" | "failed" | null;
+  uploadedAt?: string | Date | null;
+};
+
 export async function updateListingStage(
   listingId: string,
   listingStage: "review" | "complete"
@@ -38,27 +50,38 @@ export async function fetchVideoStatus(
 }
 
 export async function fetchListingImages(listingId: string): Promise<
-  Array<{
-    category: string | null;
-    confidence?: number | null;
-    recommendationScore?: number | null;
-    analysisStatus?: "pending" | "processing" | "complete" | "failed" | null;
-    uploadedAt?: string | Date | null;
-  }>
+  ListingProcessingImage[]
 > {
   try {
-    return await fetchApiData<
-      Array<{
-        category: string | null;
-        confidence?: number | null;
-        recommendationScore?: number | null;
-        analysisStatus?: "pending" | "processing" | "complete" | "failed" | null;
-        uploadedAt?: string | Date | null;
-      }>
-    >(`/api/v1/listings/${listingId}/images`);
+    return await fetchApiData<ListingProcessingImage[]>(
+      `/api/v1/listings/${listingId}/images`
+    );
   } catch {
     return [];
   }
+}
+
+export function countTerminalInBatch(
+  images: ListingProcessingImage[],
+  batchImageIds: string[]
+) {
+  const batchIdSet = new Set(batchImageIds);
+  const batchImages = images.filter((image) => batchIdSet.has(image.id));
+  const batchCompleted = batchImages.filter(
+    (image) =>
+      image.analysisStatus === "complete" || image.analysisStatus === "failed"
+  ).length;
+  const processingCount = batchImages.filter(
+    (image) => image.analysisStatus === "processing"
+  ).length;
+
+  return {
+    batchImages,
+    batchTotal: batchImageIds.length,
+    batchCompleted,
+    processingCount,
+    isComplete: batchImageIds.length > 0 && batchCompleted >= batchImageIds.length
+  };
 }
 
 export async function triggerCategorization(listingId: string) {

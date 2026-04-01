@@ -52,7 +52,7 @@ export type UploadDialogProps<TRecord> = {
     thumbnailKey?: string;
     thumbnailFailed: boolean;
   }) => TRecord | Promise<TRecord>;
-  onCreateRecords: (records: TRecord[]) => Promise<void>;
+  onCreateRecords: (records: TRecord[]) => Promise<unknown>;
   onSuccess?: () => void;
   onUploadsComplete?: (summary: {
     count: number;

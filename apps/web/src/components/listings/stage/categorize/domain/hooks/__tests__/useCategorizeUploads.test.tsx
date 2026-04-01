@@ -1,17 +1,10 @@
 import { act, renderHook } from "@testing-library/react";
 import { useCategorizeUploads } from "@web/src/components/listings/stage/categorize/domain/hooks/useCategorizeUploads";
 
-const mockPush = jest.fn();
 const mockToastError = jest.fn();
 const mockGetUploadUrls = jest.fn();
 const mockCreateListingImageRecords = jest.fn();
 const mockDeleteListingImageUploads = jest.fn();
-
-jest.mock("next/navigation", () => ({
-  useRouter: () => ({
-    push: mockPush
-  })
-}));
 
 jest.mock("sonner", () => ({
   toast: {
@@ -38,7 +31,6 @@ describe("useCategorizeUploads", () => {
   };
 
   beforeEach(() => {
-    mockPush.mockReset();
     mockToastError.mockReset();
     mockGetUploadUrls.mockReset();
     mockCreateListingImageRecords.mockReset();
@@ -62,7 +54,7 @@ describe("useCategorizeUploads", () => {
     expect(mockGetUploadUrls).toHaveBeenCalledWith("l1", []);
   });
 
-  it("navigates to processing after successful record creation", async () => {
+  it("reports an inline processing batch after successful record creation", async () => {
     mockCreateListingImageRecords.mockResolvedValue([
       {
         id: "img1",
@@ -75,11 +67,13 @@ describe("useCategorizeUploads", () => {
         metadata: null
       }
     ]);
+    const onProcessingBatchCreated = jest.fn();
     const { result } = renderHook(() =>
       useCategorizeUploads({
         listingId: "l1",
         runDraftSave: async <T,>(fn: () => Promise<T>) => fn(),
-        setImages: jest.fn()
+        setImages: jest.fn(),
+        onProcessingBatchCreated
       })
     );
 
@@ -89,11 +83,17 @@ describe("useCategorizeUploads", () => {
       ]);
     });
 
-    expect(mockPush).toHaveBeenCalledWith(
-      expect.stringContaining(
-        "/listings/l1/stage/categorize/processing?batch=1"
-      )
-    );
+    expect(onProcessingBatchCreated).toHaveBeenCalledWith({
+      listingId: "l1",
+      batchImageIds: ["img1"],
+      batchStartedAt: expect.any(Number),
+      createdImages: [
+        expect.objectContaining({
+          id: "img1",
+          analysisStatus: "pending"
+        })
+      ]
+    });
   });
 
   it("cleans up uploads when record creation fails", async () => {
@@ -103,7 +103,8 @@ describe("useCategorizeUploads", () => {
       useCategorizeUploads({
         listingId: "l1",
         runDraftSave: async <T,>(fn: () => Promise<T>) => fn(),
-        setImages: jest.fn()
+        setImages: jest.fn(),
+        onProcessingBatchCreated: jest.fn()
       })
     );
 

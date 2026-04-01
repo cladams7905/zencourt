@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import type { ListingImageItem } from "@web/src/components/listings/stage/categorize/shared";
 import {
@@ -16,15 +15,20 @@ type UseCategorizeUploadsParams = {
   listingId: string;
   runDraftSave: RunDraftSave;
   setImages: React.Dispatch<React.SetStateAction<ListingImageItem[]>>;
+  onProcessingBatchCreated?: (batch: {
+    listingId: string;
+    batchImageIds: string[];
+    batchStartedAt: number;
+    createdImages: ListingImageItem[];
+  }) => void;
 };
 
 export function useCategorizeUploads({
   listingId,
   runDraftSave,
-  setImages
+  setImages,
+  onProcessingBatchCreated
 }: UseCategorizeUploadsParams) {
-  const router = useRouter();
-
   const getUploadUrls = React.useCallback(
     (requests: Parameters<typeof getListingImageUploadUrlsForCurrentUser>[1]) =>
       getListingImageUploadUrlsForCurrentUser(listingId, requests),
@@ -50,16 +54,13 @@ export function useCategorizeUploads({
           analysisStatus: image.analysisStatus,
           metadata: image.metadata ?? null
         }));
-        try {
-          router.push(
-            `/listings/${listingId}/stage/categorize/processing?batch=${created.length}&batchStartedAt=${batchStartedAt}`
-          );
-        } catch (error) {
-          setImages((prev) => [...createdItems, ...prev]);
-          toast.error(
-            (error as Error).message || "Failed to navigate to processing."
-          );
-        }
+        setImages((prev) => [...createdItems, ...prev]);
+        onProcessingBatchCreated?.({
+          listingId,
+          batchImageIds: createdItems.map((image) => image.id),
+          batchStartedAt,
+          createdImages: createdItems
+        });
       } catch (error) {
         try {
           await runDraftSave(() =>
@@ -79,7 +80,7 @@ export function useCategorizeUploads({
         );
       }
     },
-    [listingId, router, runDraftSave, setImages]
+    [listingId, onProcessingBatchCreated, runDraftSave, setImages]
   );
 
   return {

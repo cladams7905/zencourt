@@ -106,19 +106,6 @@ export function getListingImageRecommendationIssues(
   return issues;
 }
 
-export const buildProcessingRoute = (
-  listingId: string,
-  count: number,
-  batchStartedAt: number
-) => {
-  const batchParam =
-    count > 0
-      ? `?batch=${count}&batchStartedAt=${batchStartedAt}`
-      : `?batchStartedAt=${batchStartedAt}`;
-
-  return `/listings/${listingId}/stage/categorize/processing${batchParam}`;
-};
-
 export const buildListingUploadRecordInput = (
   upload: UploadDescriptor,
   metadata?: ImageMetadata

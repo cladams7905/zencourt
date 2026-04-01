@@ -11,7 +11,6 @@ import {
 } from "@web/src/server/actions/listings/image";
 import {
   buildListingUploadRecordInput,
-  buildProcessingRoute,
   type ListingUploadRecordInput
 } from "@web/src/components/listings/stage/upload/domain/utils";
 
@@ -23,13 +22,21 @@ type UploadRequest = {
 };
 
 type UseUploadFlowParams = {
-  navigate: (path: string) => void;
   listingId?: string;
+  onUploadsComplete?: (summary: {
+    listingId: string;
+    batchImageIds: string[];
+    batchStartedAt: number;
+  }) => void;
 };
 
-export const useUploadFlow = ({ navigate, listingId }: UseUploadFlowParams) => {
+export const useUploadFlow = ({
+  listingId,
+  onUploadsComplete: onUploadsFinished
+}: UseUploadFlowParams) => {
   const listingIdRef = React.useRef<string | null>(listingId ?? null);
   const inFlightListingPromiseRef = React.useRef<Promise<string> | null>(null);
+  const lastCreatedImageIdsRef = React.useRef<string[]>([]);
 
   React.useEffect(() => {
     const existingListingId = listingId?.trim();
@@ -112,7 +119,14 @@ export const useUploadFlow = ({ navigate, listingId }: UseUploadFlowParams) => {
   const onCreateRecords = React.useCallback(
     async (records: ListingUploadRecordInput[]) => {
       const activeListingId = await ensureListingId();
-      await createListingImageRecordsForCurrentUser(activeListingId, records);
+      lastCreatedImageIdsRef.current = [];
+      const created = await createListingImageRecordsForCurrentUser(
+        activeListingId,
+        records
+      );
+      const createdRows = created ?? [];
+      lastCreatedImageIdsRef.current = createdRows.map((image) => image.id);
+      return createdRows;
     },
     [ensureListingId]
   );
@@ -123,10 +137,17 @@ export const useUploadFlow = ({ navigate, listingId }: UseUploadFlowParams) => {
       if (!activeListingId) {
         return;
       }
+      if (lastCreatedImageIdsRef.current.length === 0) {
+        return;
+      }
 
-      navigate(buildProcessingRoute(activeListingId, count, batchStartedAt));
+      onUploadsFinished?.({
+        listingId: activeListingId,
+        batchImageIds: lastCreatedImageIdsRef.current,
+        batchStartedAt
+      });
     },
-    [navigate]
+    [onUploadsFinished]
   );
 
   return {

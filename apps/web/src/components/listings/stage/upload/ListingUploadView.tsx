@@ -28,8 +28,12 @@ import {
   ListingStageFooter,
   ListingStageShell
 } from "@web/src/components/listings/stage/shared";
-import { setListingUploadDraftImages } from "@web/src/components/listings/stage/shared/domain/clientUploadStore";
+import { ListingUploadAiProcessingPanel } from "@web/src/components/listings/stage/upload/subcomponents/ListingUploadAiProcessingPanel";
 import { updateListingForCurrentUser } from "@web/src/server/actions/listings/commands";
+import {
+  getStoredCategorizeProcessingBatch,
+  useCategorizeProcessingFlow
+} from "@web/src/components/listings/stage/processing/domain/hooks";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -38,8 +42,36 @@ type ListingUploadViewProps = {
   listingId?: string;
 };
 
+type UploadProcessingBatch = {
+  listingId: string;
+  batchImageIds: string[];
+  batchStartedAt: number;
+};
+
 export function ListingUploadView({ listingId }: ListingUploadViewProps = {}) {
   const router = useRouter();
+  const initialStoredBatch = React.useMemo(
+    () =>
+      listingId
+        ? getStoredCategorizeProcessingBatch(listingId)
+        : null,
+    [listingId]
+  );
+  const [phase, setPhase] = React.useState<"editing" | "uploading" | "analyzing">(
+    initialStoredBatch ? "analyzing" : "editing"
+  );
+  const [processingBatch, setProcessingBatch] = React.useState<UploadProcessingBatch | null>(
+    initialStoredBatch && listingId
+      ? {
+          listingId,
+          batchImageIds: initialStoredBatch.batchImageIds,
+          batchStartedAt: initialStoredBatch.batchStartedAt ?? Date.now()
+        }
+      : null
+  );
+  const pendingProcessingBatchRef = React.useRef<UploadProcessingBatch | null>(
+    null
+  );
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const {
     getUploadUrls,
@@ -47,8 +79,10 @@ export function ListingUploadView({ listingId }: ListingUploadViewProps = {}) {
     onCreateRecords,
     onUploadsComplete
   } = useUploadFlow({
-    navigate: router.push,
-    listingId
+    listingId,
+    onUploadsComplete: (batch) => {
+      pendingProcessingBatchRef.current = batch;
+    }
   });
   const {
     pendingFiles,
@@ -61,6 +95,7 @@ export function ListingUploadView({ listingId }: ListingUploadViewProps = {}) {
     driveLoadingCount,
     setDriveLoadingCount,
     addFiles,
+    handleUpload,
     removePendingFile
   } = useUploadDialogState({
     open: true,
@@ -83,15 +118,23 @@ export function ListingUploadView({ listingId }: ListingUploadViewProps = {}) {
     onUploadsComplete
   });
 
-  const [isNavigatingToCategorize, setIsNavigatingToCategorize] =
-    React.useState(false);
   const [isUploadMoreOpen, setIsUploadMoreOpen] = React.useState(false);
   const [naturalSizeById, setNaturalSizeById] = React.useState<
     Record<string, { width: number; height: number }>
   >({});
+  const processingState = useCategorizeProcessingFlow({
+    mode: "categorize",
+    listingId: processingBatch?.listingId ?? listingId ?? "",
+    batchImageIds: processingBatch?.batchImageIds,
+    batchStartedAt: processingBatch?.batchStartedAt,
+    navigate: (url) => {
+      setProcessingBatch(null);
+      router.replace(url);
+    }
+  });
+  const isInlineProcessing = phase === "uploading" || phase === "analyzing";
 
-  const hasUnsavedClientImages =
-    pendingFiles.length > 0 && !isNavigatingToCategorize;
+  const hasUnsavedClientImages = pendingFiles.length > 0 && phase === "editing";
 
   const handleCandidateFiles = React.useCallback(
     async (files: File[]) => {
@@ -161,31 +204,30 @@ export function ListingUploadView({ listingId }: ListingUploadViewProps = {}) {
   const canContinue = pendingFiles.length >= 1;
 
   const handleContinue = React.useCallback(async () => {
-    if (!listingId?.trim() || !canContinue) {
+    if (!canContinue || phase !== "editing") {
       return;
     }
-    setListingUploadDraftImages(
-      listingId,
-      pendingFiles.map((item) => ({
-        id: item.id,
-        file: item.file,
-        previewUrl: item.previewUrl,
-        filename: item.file.name
-      }))
-    );
-    setIsNavigatingToCategorize(true);
+    pendingProcessingBatchRef.current = null;
+    setPhase("uploading");
     try {
-      await updateListingForCurrentUser(listingId, {
+      await handleUpload();
+      const nextBatch = pendingProcessingBatchRef.current as UploadProcessingBatch | null;
+      if (nextBatch === null) {
+        setPhase("editing");
+        return;
+      }
+      setProcessingBatch(nextBatch);
+      setPhase("analyzing");
+      void updateListingForCurrentUser(nextBatch.listingId, {
         listingStage: "categorize"
-      });
-      router.push(`/listings/${listingId}/stage/categorize`);
+      }).catch(() => null);
     } catch (error) {
-      setIsNavigatingToCategorize(false);
+      setPhase("editing");
       toast.error(
         (error as Error).message || "Unable to continue to categorize."
       );
     }
-  }, [canContinue, listingId, pendingFiles, router]);
+  }, [canContinue, handleUpload, phase]);
 
   const handleBack = React.useCallback(() => {
     if (
@@ -248,19 +290,42 @@ export function ListingUploadView({ listingId }: ListingUploadViewProps = {}) {
   }, [hasUnsavedClientImages]);
 
   return (
-    <ListingStageShell
-      stage="upload"
-      wide
-      footer={
-        <ListingStageFooter
-          onBack={handleBack}
-          onContinue={() => void handleContinue()}
-          canBack
-          canContinue={canContinue}
-        />
-      }
-    >
-      <section className="flex min-h-0 w-full flex-1 flex-col gap-3">
+    <>
+      <ListingStageShell
+        stage="upload"
+        wide
+        footer={
+          isInlineProcessing ? null : (
+            <ListingStageFooter
+              onBack={handleBack}
+              onContinue={() => void handleContinue()}
+              canBack
+              canContinue={canContinue}
+            />
+          )
+        }
+      >
+        {isInlineProcessing ? (
+          <ListingUploadAiProcessingPanel
+            images={phase === "analyzing" ? processingState.batchImages : []}
+            batchCompleted={
+              phase === "analyzing" ? processingState.batchCompleted : 0
+            }
+            batchTotal={phase === "analyzing" ? processingState.batchTotal : 0}
+            isUploading={phase === "uploading"}
+            title={
+              phase === "uploading"
+                ? "Uploading your listing photos"
+                : "Analyzing your listing photos with AI"
+            }
+            subtitle={
+              phase === "uploading"
+                ? "We’re saving your photos and preparing the batch for room analysis."
+                : "We’re categorizing the new batch so the next step opens ready for review."
+            }
+          />
+        ) : (
+        <section className="flex min-h-0 w-full flex-1 flex-col gap-3">
         {pendingFiles.length === 0 ? (
           <UploadDropzone
             fillContainer
@@ -387,6 +452,8 @@ export function ListingUploadView({ listingId }: ListingUploadViewProps = {}) {
           </div>
         ) : null}
       </section>
+        )}
+      </ListingStageShell>
       <UploadDialog
         open={isUploadMoreOpen}
         onOpenChange={setIsUploadMoreOpen}
@@ -418,6 +485,6 @@ export function ListingUploadView({ listingId }: ListingUploadViewProps = {}) {
           await handleCandidateFiles(files);
         }}
       />
-    </ListingStageShell>
+    </>
   );
 }

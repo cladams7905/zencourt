@@ -1,6 +1,5 @@
 import {
   buildListingUploadRecordInput,
-  buildProcessingRoute,
   getListingImageRecommendationIssues,
   validateImageFile,
   validateListingUploadRequirements
@@ -75,16 +74,6 @@ describe("uploadUtils", () => {
     });
 
     global.Image = originalImage;
-  });
-
-  it("builds processing route with batch parameters", () => {
-    expect(buildProcessingRoute("listing-1", 3, 100)).toBe(
-      "/listings/listing-1/stage/categorize/processing?batch=3&batchStartedAt=100"
-    );
-
-    expect(buildProcessingRoute("listing-1", 0, 100)).toBe(
-      "/listings/listing-1/stage/categorize/processing?batchStartedAt=100"
-    );
   });
 
   it("throws when upload descriptor is missing required metadata", () => {

@@ -44,7 +44,10 @@ describe("useUploadFlow", () => {
 
   it("emits sidebar heartbeat when mounted with an existing listing", () => {
     renderHook(() =>
-      useUploadFlow({ navigate: jest.fn(), listingId: "listing-existing" })
+      useUploadFlow({
+        listingId: "listing-existing",
+        onUploadsComplete: jest.fn()
+      })
     );
 
     expect(mockEmitListingSidebarHeartbeat).toHaveBeenCalledTimes(1);
@@ -60,7 +63,9 @@ describe("useUploadFlow", () => {
       () => new Promise((resolve) => (resolveDraft = resolve))
     );
 
-    const { result } = renderHook(() => useUploadFlow({ navigate: jest.fn() }));
+    const { result } = renderHook(() =>
+      useUploadFlow({ onUploadsComplete: jest.fn() })
+    );
 
     let id1 = "";
     let id2 = "";
@@ -94,7 +99,9 @@ describe("useUploadFlow", () => {
       title: null,
       listingStage: "upload"
     });
-    const { result } = renderHook(() => useUploadFlow({ navigate: jest.fn() }));
+    const { result } = renderHook(() =>
+      useUploadFlow({ onUploadsComplete: jest.fn() })
+    );
 
     await act(async () => {
       await result.current.onCreateRecords([]);
@@ -104,16 +111,21 @@ describe("useUploadFlow", () => {
     expect(mockCreateListingImageRecords).toHaveBeenCalledWith("listing-1", []);
   });
 
-  it("creates records and navigates after uploads complete", async () => {
-    const navigate = jest.fn();
+  it("creates records and reports inline processing batch metadata after uploads complete", async () => {
+    const onUploadsComplete = jest.fn();
     mockCreateListing.mockResolvedValue({
       id: "listing-1",
       title: "Title",
       listingStage: "upload"
     });
-    mockCreateListingImageRecords.mockResolvedValue(undefined);
+    mockCreateListingImageRecords.mockResolvedValue([
+      { id: "img-1" },
+      { id: "img-2" }
+    ]);
 
-    const { result } = renderHook(() => useUploadFlow({ navigate }));
+    const { result } = renderHook(() =>
+      useUploadFlow({ onUploadsComplete, listingId: "listing-1" })
+    );
 
     await act(async () => {
       await result.current.ensureListingId();
@@ -130,15 +142,19 @@ describe("useUploadFlow", () => {
       result.current.onUploadsComplete({ count: 2, batchStartedAt: 123 });
     });
 
-    expect(navigate).toHaveBeenCalledWith(
-      "/listings/listing-1/stage/categorize/processing?batch=2&batchStartedAt=123"
-    );
+    expect(onUploadsComplete).toHaveBeenCalledWith({
+      listingId: "listing-1",
+      batchImageIds: ["img-1", "img-2"],
+      batchStartedAt: 123
+    });
   });
 
   it("builds record input from upload metadata helper", async () => {
     mockGetImageMetadataFromFile.mockResolvedValue({ width: 10, height: 10 });
 
-    const { result } = renderHook(() => useUploadFlow({ navigate: jest.fn() }));
+    const { result } = renderHook(() =>
+      useUploadFlow({ onUploadsComplete: jest.fn() })
+    );
 
     const file = new File(["x"], "x.jpg", { type: "image/jpeg" });
     const record = await result.current.buildRecordInput({

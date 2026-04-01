@@ -425,15 +425,14 @@ export const useUploadDialogState = <TRecord>({
         (result): result is UploadBuildResult<TRecord> => result !== null
       );
 
-      if (failedIds.size === 0 && successfulUploads.length > 0) {
-        onUploadsComplete?.({
-          count: successfulUploads.length,
-          batchStartedAt: Date.now()
-        });
-      }
-
       if (successfulUploads.length > 0) {
         await onCreateRecords(successfulUploads.map((result) => result.record));
+        if (failedIds.size === 0) {
+          onUploadsComplete?.({
+            count: successfulUploads.length,
+            batchStartedAt: Date.now()
+          });
+        }
       }
 
       const thumbnailFailures = successfulUploads.filter(

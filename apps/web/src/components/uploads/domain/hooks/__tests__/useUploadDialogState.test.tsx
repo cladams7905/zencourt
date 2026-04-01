@@ -171,6 +171,11 @@ describe("useUploadDialogState", () => {
       expect(args.onUploadsComplete).toHaveBeenCalledTimes(1);
       expect(result.current.pendingFiles).toHaveLength(0);
     });
+    expect(
+      (args.onCreateRecords as jest.Mock).mock.invocationCallOrder[0]
+    ).toBeLessThan(
+      (args.onUploadsComplete as jest.Mock).mock.invocationCallOrder[0]
+    );
   });
 
   it("keeps failed uploads when record preparation throws", async () => {
