@@ -140,16 +140,6 @@ export function ListingUploadView({
 
   const processingGalleryBoundaryRef = React.useRef<HTMLDivElement>(null);
 
-  React.useLayoutEffect(() => {
-    if (!isInlineProcessing) {
-      return;
-    }
-    processingGalleryBoundaryRef.current?.scrollIntoView({
-      block: "nearest",
-      behavior: "instant"
-    });
-  }, [isInlineProcessing]);
-
   return (
     <>
       <ListingStageShell
