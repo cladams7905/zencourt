@@ -56,7 +56,7 @@ export function ListingStageViewProvider({
 
   return (
     <ListingStageViewContext.Provider value={value}>
-      {children}
+      <div className="flex h-full min-h-0 w-full flex-col">{children}</div>
     </ListingStageViewContext.Provider>
   );
 }

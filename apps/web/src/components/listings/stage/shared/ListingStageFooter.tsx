@@ -23,7 +23,7 @@ export function ListingStageFooter({
   backLabel = "Back"
 }: ListingStageFooterProps) {
   return (
-    <div className="flex items-center justify-end gap-3 pt-8">
+    <div className="flex items-center justify-end gap-3">
       {onBack ? (
         <Button
           type="button"

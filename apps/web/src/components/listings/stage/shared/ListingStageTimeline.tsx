@@ -26,25 +26,54 @@ export function ListingStageTimeline({
     [steps]
   );
 
+  const scrollActiveStepToCenter = React.useCallback(
+    (behavior: ScrollBehavior) => {
+      const container = containerRef.current;
+      if (!container) {
+        return;
+      }
+      const activeEl = container.querySelector<HTMLElement>(
+        `[data-timeline-index="${activeIndex}"]`
+      );
+      if (!activeEl) {
+        return;
+      }
+      if (container.clientWidth <= 0) {
+        return;
+      }
+      const maxScroll = Math.max(
+        0,
+        container.scrollWidth - container.clientWidth
+      );
+      const target =
+        activeEl.offsetLeft +
+        activeEl.offsetWidth / 2 -
+        container.clientWidth / 2;
+      container.scrollTo({
+        left: Math.min(maxScroll, Math.max(0, target)),
+        behavior
+      });
+    },
+    [activeIndex, containerRef]
+  );
+
+  React.useLayoutEffect(() => {
+    scrollActiveStepToCenter("auto");
+    const raf = requestAnimationFrame(() => scrollActiveStepToCenter("auto"));
+    return () => cancelAnimationFrame(raf);
+  }, [activeIndex, scrollActiveStepToCenter, steps.length]);
+
   React.useEffect(() => {
     const container = containerRef.current;
     if (!container) {
       return;
     }
-
-    const activeNode = container.querySelector<HTMLElement>(
-      `[data-timeline-index="${activeIndex}"]`
-    );
-    if (!activeNode) {
-      return;
-    }
-
-    activeNode.scrollIntoView({
-      behavior: "smooth",
-      block: "nearest",
-      inline: "center"
+    const observer = new ResizeObserver(() => {
+      scrollActiveStepToCenter("auto");
     });
-  }, [activeIndex, containerRef, steps.length]);
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [scrollActiveStepToCenter, containerRef]);
 
   const horizontalTimeline = (
     <div className={cn("mx-auto w-full", className)}>
@@ -105,8 +134,8 @@ export function ListingStageTimeline({
 
   return (
     <div className={cn("w-full", className)}>
-      <div className="md:hidden">{horizontalTimeline}</div>
-      <div className="hidden md:flex md:w-full md:justify-center">
+      <div className="lg:hidden">{horizontalTimeline}</div>
+      <div className="hidden lg:flex lg:w-full lg:justify-center">
         <div className="relative space-y-5 py-1">
           <div className="pointer-events-none absolute left-[5px] top-[10px] bottom-[5px] w-px bg-border/60" />
           {steps.map((step) => (

@@ -11,7 +11,6 @@ type ListingStageScaffoldProps = {
   stepTitle: string;
   stepSubtitle?: string;
   children: React.ReactNode;
-  footer?: React.ReactNode;
   /** Wider main column for multi-column stages (categorize, review, upload). */
   wide?: boolean;
 };
@@ -21,26 +20,31 @@ export function ListingStageScaffold({
   stepTitle,
   stepSubtitle,
   children,
-  footer,
   wide = false
 }: ListingStageScaffoldProps) {
   return (
-    <div className="mx-auto flex h-full w-full max-w-6xl rounded-lg px-6 py-6">
-      <section className="flex h-full w-full flex-col text-left lg:flex-row lg:items-stretch">
-        <div className="w-full pb-6 lg:flex lg:w-[260px] lg:shrink-0 lg:justify-center lg:pr-6 lg:pb-0">
+    <div className="mx-auto flex min-h-0 w-full max-w-6xl flex-1 flex-col rounded-lg lg:px-6 pt-6">
+      <section className="flex min-h-0 w-full flex-1 flex-col text-left lg:flex-row lg:items-stretch">
+        <div
+          className={cn(
+            "w-full shrink-0 lg:flex lg:w-[260px] lg:shrink-0 lg:justify-center lg:pr-6 lg:pb-0 lg:pt-0 lg:min-h-0",
+            "max-lg:flex max-lg:items-center max-lg:justify-center max-lg:pb-4"
+          )}
+        >
           <ListingStageTimeline steps={steps} desktopVertical />
         </div>
-        <div className="h-px w-full bg-border/80 lg:mx-6 lg:h-auto lg:w-px lg:self-stretch" />
-        <div className="flex w-full flex-1 flex-col">
+        <div className="h-px w-full shrink-0 bg-border/80 lg:mx-6 lg:h-auto lg:w-px lg:self-stretch" />
+        <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-y-auto overscroll-y-contain">
           <div
             className={cn(
-              "mx-auto flex h-full w-full flex-1 flex-col",
+              "mx-auto flex min-h-0 w-full flex-1 flex-col",
               wide ? "max-w-5xl" : "max-w-lg"
             )}
           >
             <ListingStageStepHeader title={stepTitle} subtitle={stepSubtitle} />
-            <div className="flex w-full flex-1 flex-col">{children}</div>
-            {footer}
+            <div className="flex min-h-0 w-full flex-1 flex-col">
+              {children}
+            </div>
           </div>
         </div>
       </section>
