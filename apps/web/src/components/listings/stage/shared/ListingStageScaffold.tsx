@@ -47,7 +47,9 @@ export function ListingStageScaffold({
 }: ListingStageScaffoldProps) {
   const bodyWrapperClass = cn(
     "w-full min-w-0 pb-6",
-    hasFooter && pinStepBodyToBottom ? "mt-auto" : "flex min-h-0 flex-1 flex-col"
+    hasFooter && pinStepBodyToBottom
+      ? "mt-auto"
+      : "flex min-h-0 flex-1 flex-col"
   );
 
   return (

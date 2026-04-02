@@ -1,5 +1,5 @@
 import * as React from "react";
-import { render, waitFor } from "@testing-library/react";
+import { render } from "@testing-library/react";
 import { ListingStageShell } from "../ListingStageShell";
 import { ListingStageViewProvider } from "../ListingStageViewContext";
 
@@ -54,29 +54,19 @@ function createRect(height: number, width = 390) {
 }
 
 describe("ListingStageShell", () => {
-  let matchMediaMock: jest.Mock;
   let getBoundingClientRectSpy: jest.SpiedFunction<
     typeof HTMLElement.prototype.getBoundingClientRect
   >;
 
   beforeEach(() => {
-    matchMediaMock = jest.fn(() => ({
-      matches: true,
-      addEventListener: jest.fn(),
-      removeEventListener: jest.fn(),
-      media: "(max-width: 767px)"
-    }));
-
-    Object.defineProperty(window, "matchMedia", {
-      configurable: true,
-      writable: true,
-      value: matchMediaMock
-    });
-
     getBoundingClientRectSpy = jest
       .spyOn(HTMLElement.prototype, "getBoundingClientRect")
       .mockImplementation(function (this: HTMLElement) {
         const slot = this.getAttribute("data-slot");
+
+        if (slot === "listing-stage-scroll-viewport") {
+          return createRect(390);
+        }
 
         if (slot === "mock-header") {
           return createRect(88);
@@ -94,7 +84,7 @@ describe("ListingStageShell", () => {
     getBoundingClientRectSpy.mockRestore();
   });
 
-  it("reserves bottom clearance for the fixed mobile footer and accessory", async () => {
+  it("reserves bottom clearance for the mobile footer and accessory", async () => {
     const { container } = render(
       <ListingStageViewProvider
         stage="categorize"
@@ -113,23 +103,22 @@ describe("ListingStageShell", () => {
       </ListingStageViewProvider>
     );
 
+    const scrollViewport = container.querySelector(
+      '[data-slot="listing-stage-scroll-viewport"]'
+    );
     const mobileFooter = container.querySelector(
       '[data-slot="listing-stage-mobile-footer"]'
     );
-
-    expect(mobileFooter).not.toBeNull();
-    expect(mobileFooter).toHaveTextContent("Footer accessory");
-
-    const scrollSpacer = container.querySelector(
-      '[data-slot="listing-stage-mobile-footer-spacer"]'
+    const contentSection = container.querySelector(
+      '[data-slot="listing-stage-scroll-viewport"] section'
     );
 
-    expect(scrollSpacer).not.toBeNull();
+    expect(scrollViewport).not.toBeNull();
+    expect(mobileFooter).not.toBeNull();
+    expect(contentSection).not.toBeNull();
+    expect(mobileFooter).toHaveTextContent("Footer accessory");
 
-    await waitFor(() => {
-      expect(scrollSpacer).toHaveStyle({ height: "204px" });
-    });
-
-    expect(matchMediaMock).toHaveBeenCalledWith("(max-width: 767px)");
+    expect(mobileFooter).not.toHaveClass("max-md:fixed");
+    expect(contentSection).toHaveStyle({ minHeight: "122px" });
   });
 });

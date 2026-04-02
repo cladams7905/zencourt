@@ -45,10 +45,7 @@ type ListingStageShellProps = {
 };
 
 /** Desktop: `top` aligns under sticky ListingStageViewHeader; +24px below previous `top-24`. */
-const LISTING_STAGE_TIMELINE_STICKY_TOP_CLASS = "lg:top-[calc(6rem+24px)]";
-
-/** Small extra mobile clearance so the fixed footer never clips the last content row. */
-const LISTING_STAGE_MOBILE_FOOTER_SCROLL_BUFFER_PX = 24;
+const LISTING_STAGE_TIMELINE_STICKY_TOP_CLASS = "lg:top-[calc(6rem)]";
 
 function ListingStageTimelineColumn({
   steps,
@@ -96,17 +93,14 @@ export function ListingStageShell({
   headerAction
 }: ListingStageShellProps) {
   const scrollViewportRef = React.useRef<HTMLDivElement>(null);
-  const mobileFooterRef = React.useRef<HTMLDivElement>(null);
   const headerMeasureRef = React.useRef<HTMLElement | null>(null);
+  const footerMeasureRef = React.useRef<HTMLDivElement | null>(null);
   const [viewportMinHeightPx, setViewportMinHeightPx] = React.useState<
     number | null
   >(null);
   const [contentMinHeightPx, setContentMinHeightPx] = React.useState<
     number | null
   >(null);
-  const [mobileFooterScrollSpacerPx, setMobileFooterScrollSpacerPx] =
-    React.useState(0);
-
   React.useLayoutEffect(() => {
     const viewportEl = scrollViewportRef.current;
     if (!viewportEl) return;
@@ -118,8 +112,14 @@ export function ListingStageShell({
       const headerHeight = Math.floor(
         headerMeasureRef.current?.getBoundingClientRect().height ?? 0
       );
+      const footerHeight = Math.floor(
+        footerMeasureRef.current?.getBoundingClientRect().height ?? 0
+      );
       const nextHeight = viewportHeight;
-      const nextContentHeight = Math.max(0, viewportHeight - headerHeight);
+      const nextContentHeight = Math.max(
+        0,
+        viewportHeight - headerHeight - footerHeight
+      );
       setViewportMinHeightPx((prev) =>
         prev === nextHeight ? prev : nextHeight
       );
@@ -137,6 +137,9 @@ export function ListingStageShell({
     resizeObserver?.observe(viewportEl);
     if (headerMeasureRef.current) {
       resizeObserver?.observe(headerMeasureRef.current);
+    }
+    if (footerMeasureRef.current) {
+      resizeObserver?.observe(footerMeasureRef.current);
     }
     window.addEventListener("resize", updateViewportMinHeight);
 
@@ -177,45 +180,6 @@ export function ListingStageShell({
     ? LISTING_STAGE_WIDE_MAX_W_CLASS
     : LISTING_STAGE_NARROW_MAX_W_CLASS;
 
-  React.useLayoutEffect(() => {
-    if (!hasFooter) return;
-
-    const footerEl = mobileFooterRef.current;
-    if (!footerEl) return;
-
-    const syncMobileFooterScrollSpacer = () => {
-      const isMobile = window.matchMedia("(max-width: 767px)").matches;
-      if (!isMobile) {
-        setMobileFooterScrollSpacerPx(0);
-        return;
-      }
-
-      setMobileFooterScrollSpacerPx(
-        Math.ceil(footerEl.getBoundingClientRect().height) +
-          LISTING_STAGE_MOBILE_FOOTER_SCROLL_BUFFER_PX
-      );
-    };
-
-    syncMobileFooterScrollSpacer();
-
-    const resizeObserver =
-      typeof ResizeObserver !== "undefined"
-        ? new ResizeObserver(syncMobileFooterScrollSpacer)
-        : null;
-    resizeObserver?.observe(footerEl);
-
-    const mql = window.matchMedia("(max-width: 767px)");
-    mql.addEventListener("change", syncMobileFooterScrollSpacer);
-    window.addEventListener("resize", syncMobileFooterScrollSpacer);
-
-    return () => {
-      resizeObserver?.disconnect();
-      mql.removeEventListener("change", syncMobileFooterScrollSpacer);
-      window.removeEventListener("resize", syncMobileFooterScrollSpacer);
-      setMobileFooterScrollSpacerPx(0);
-    };
-  }, [hasFooter]);
-
   const renderFooterSlot = (slotKey: string): React.ReactNode => {
     if (footer !== undefined) {
       if (React.isValidElement(footer)) {
@@ -255,11 +219,10 @@ export function ListingStageShell({
     <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
       <div
         ref={scrollViewportRef}
+        data-slot="listing-stage-scroll-viewport"
         className={cn(
           "flex min-h-0 w-full min-w-0 flex-1 flex-col",
-          hasFooter
-            ? "max-lg:overflow-hidden lg:overflow-y-auto lg:overscroll-y-contain"
-            : "overflow-y-auto overscroll-y-contain"
+          "overflow-y-auto overscroll-y-contain"
         )}
       >
         <div
@@ -303,7 +266,7 @@ export function ListingStageShell({
                   }
                   className={cn(
                     "grid min-h-0 w-full min-w-0 max-w-full grid-cols-1 grid-rows-[auto_minmax(0,1fr)]",
-                    "max-lg:flex-1 max-lg:min-h-0",
+                    "max-lg:min-h-0",
                     "lg:h-auto lg:items-stretch",
                     hasFooterDesktopGridRowsClass,
                     LISTING_STAGE_LG_MAIN_GRID_CLASS
@@ -316,8 +279,7 @@ export function ListingStageShell({
                       LISTING_STAGE_MAIN_COLUMN_CLASS,
                       "lg:col-start-2 lg:row-start-1",
                       "items-center",
-                      "lg:min-h-0 lg:overflow-visible",
-                      "max-md:pb-24"
+                      "lg:min-h-0 lg:overflow-visible"
                     )}
                   >
                     <ListingStageScaffold
@@ -351,16 +313,6 @@ export function ListingStageShell({
                   </div>
                 </section>
               </div>
-              <div
-                data-slot="listing-stage-mobile-footer-spacer"
-                className="shrink-0 md:hidden"
-                style={
-                  mobileFooterScrollSpacerPx > 0
-                    ? { height: `${mobileFooterScrollSpacerPx}px` }
-                    : { minHeight: "5rem" }
-                }
-                aria-hidden
-              />
             </div>
           ) : (
             <>
@@ -407,16 +359,14 @@ export function ListingStageShell({
 
           {hasFooter ? (
             <div
-              ref={mobileFooterRef}
               data-slot="listing-stage-mobile-footer"
+              ref={footerMeasureRef}
               className={cn(
                 "relative flex min-h-0 min-w-0 shrink-0 flex-col border-t border-border lg:hidden",
                 footerAccessory
                   ? "bg-background/90 px-4 pt-3 backdrop-blur-md supports-backdrop-filter:bg-background/90 md:px-6"
                   : "bg-background/90 px-4 py-4 backdrop-blur-md supports-backdrop-filter:bg-background/90 md:px-6",
-                "max-lg:pb-[calc(1rem+env(safe-area-inset-bottom,0px))]",
-                "max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-50",
-                "max-md:isolate"
+                "max-lg:pb-[calc(1rem+env(safe-area-inset-bottom,0px))]"
               )}
             >
               {footerAccessory ? (
