@@ -2,26 +2,20 @@
 
 import * as React from "react";
 import { Loader2 } from "lucide-react";
-import { UploadDialog } from "@web/src/components/uploads";
-import {
-  IMAGE_UPLOAD_LIMIT,
-  MAX_IMAGE_BYTES,
-  MAX_IMAGES_PER_ROOM
-} from "@shared/utils/mediaUpload";
 import {
   CategorizeImageWorkspace,
   ListingCategoryDeleteDialog,
   ListingCategoryDialog,
-  ListingDetailsPanel,
   ListingImageDeleteDialog,
   ListingImageMoveDialog
 } from "@web/src/components/listings/stage/categorize";
-import { getImageMetadataFromFile } from "@web/src/lib/domain/media/imageMetadata";
 import { emitListingSidebarHeartbeat } from "@web/src/lib/domain/listings/sidebarEvents";
 import {
+  categoryDockDropZoneId,
+  categoryUsedDropZoneId,
   UNCATEGORIZED_CATEGORY_ID,
-  useDragAutoScroll,
   UNUSED_DOCK_DROP_ZONE_ID,
+  useDragAutoScroll,
   type ListingCategorizeViewProps,
   type ListingImageItem,
   type WorkspacePlacement
@@ -31,7 +25,6 @@ import {
   useCategorizeConstraints,
   useCategorizeListingDetails,
   useCategorizeMutations,
-  useCategorizeUploads,
   useCategorizeDerivedState
 } from "@web/src/components/listings/stage/categorize/domain";
 import { formatCategoryLabel } from "@web/src/components/listings/stage/categorize/domain/categoryRules";
@@ -45,7 +38,6 @@ import {
   useCategorizeProcessingFlow
 } from "@web/src/components/listings/stage/processing/domain/hooks";
 import { ListingUploadAiProcessingPanel } from "@web/src/components/listings/stage/upload/subcomponents/ListingUploadAiProcessingPanel";
-import { formatBytes } from "@web/src/lib/core/formatting/bytes";
 import { useRouter } from "next/navigation";
 
 export function ListingCategorizeView({
@@ -53,7 +45,6 @@ export function ListingCategorizeView({
   initialAddress,
   listingId,
   initialImages,
-  googleMapsApiKey,
   hasPropertyDetails
 }: ListingCategorizeViewProps) {
   const router = useRouter();
@@ -78,7 +69,6 @@ export function ListingCategorizeView({
   const [dragOverCategory, setDragOverCategory] = React.useState<string | null>(
     null
   );
-  const [isUploadOpen, setIsUploadOpen] = React.useState(false);
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = React.useState(false);
   const [categoryDialogMode, setCategoryDialogMode] = React.useState<
     "add" | "edit"
@@ -109,15 +99,15 @@ export function ListingCategorizeView({
   }, [listingId]);
 
   const {
-    workspaceCategoryOrder,
-    usedImagesByCategory,
     dockedImages,
+    usedImagesByCategory,
+    dockedImagesByCategory,
+    workspaceCategoryOrder,
     categoryUsageCounts,
     categoriesOverUsedLimit,
     usedImageCount,
     hasOverUsedLimit,
     maxUsedImagesTotal,
-    uncategorizedDockCount,
     categoryOrder,
     baseCategoryCounts,
     hasUncategorized,
@@ -136,25 +126,12 @@ export function ListingCategorizeView({
   } = useCategorizeMutations({
     listingId
   });
-  const {
-    addressValue,
-    setAddressValue,
-    handleAddressSelect,
-    handleContinue
-  } = useCategorizeListingDetails({
+  const { addressValue, handleContinue } = useCategorizeListingDetails({
     title,
     initialAddress,
     hasPropertyDetails,
     listingId,
     runDraftSave
-  });
-  const { getUploadUrls, onCreateRecords } = useCategorizeUploads({
-    listingId,
-    runDraftSave,
-    setImages,
-    onProcessingBatchCreated: (batch) => {
-      setProcessingBatch(batch);
-    }
   });
   const processingState = useCategorizeProcessingFlow({
     mode: "categorize",
@@ -167,17 +144,6 @@ export function ListingCategorizeView({
     }
   });
   const isInlineProcessing = processingBatch !== null;
-  const [openCategories, setOpenCategories] = React.useState<string[]>(
-    () => workspaceCategoryOrder
-  );
-
-  React.useEffect(() => {
-    setOpenCategories((prev) => {
-      const next = new Set(prev);
-      workspaceCategoryOrder.forEach((category) => next.add(category));
-      return Array.from(next);
-    });
-  }, [workspaceCategoryOrder]);
 
   const endDragSession = React.useCallback(() => {
     setIsDraggingImage(false);
@@ -197,9 +163,6 @@ export function ListingCategorizeView({
     !hasTooManyCategories &&
     !hasOverUsedLimit;
   const isSavingDraft = savingCount > 0;
-  const existingFileNames = React.useMemo(() => {
-    return new Set(images.map((image) => image.filename.toLowerCase()));
-  }, [images]);
   const moveCategoryOptions = React.useMemo(() => {
     return categoryOrder.map((category) => {
       return {
@@ -235,7 +198,8 @@ export function ListingCategorizeView({
     handleDeleteImage,
     handleDragStart,
     handleDragEnd,
-    handleDrop
+    handleDrop,
+    handleDropOnCategoryUnusedStrip
   } = useCategorizeActions({
     images,
     categoryOrder,
@@ -258,53 +222,48 @@ export function ListingCategorizeView({
     persistImageAssignments,
     endDragSession
   });
-  const handleOpenUpload = React.useCallback(() => {
-    setIsUploadOpen(true);
-  }, []);
   const handleOpenCreateCategory = React.useCallback(() => {
     setCategoryDialogMode("add");
     setCategoryDialogCategory(null);
     setIsCategoryDialogOpen(true);
   }, []);
-  const handleOpenCategoriesChange = React.useCallback(
-    (categories: string[]) => {
-      setOpenCategories(categories);
+  const handleCategoryUsedDragOver = React.useCallback((category: string) => {
+    setDragOverCategory(categoryUsedDropZoneId(category));
+  }, []);
+  const handleCategoryUnusedDragOver = React.useCallback((category: string) => {
+    setDragOverCategory(categoryDockDropZoneId(category));
+  }, []);
+  const handleCategoryRowDragLeave = React.useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      if (
+        !event.currentTarget.contains(event.relatedTarget as Node | null)
+      ) {
+        setDragOverCategory(null);
+      }
     },
     []
   );
-  const handleCategoryDragOver = React.useCallback((category: string) => {
-    setOpenCategories((prev) =>
-      prev.includes(category) ? prev : [...prev, category]
-    );
-    setDragOverCategory((prev) => (prev === category ? prev : category));
-  }, []);
-  const handleCategoryDragLeave = React.useCallback(() => {
-    setDragOverCategory(null);
-  }, []);
-  const handleDockDragOver = React.useCallback(() => {
+  const handleGlobalUnusedDockDragOver = React.useCallback(() => {
     setDragOverCategory((prev) =>
       prev === UNUSED_DOCK_DROP_ZONE_ID ? prev : UNUSED_DOCK_DROP_ZONE_ID
     );
   }, []);
-  const handleDockDragLeave = React.useCallback(() => {
-    setDragOverCategory((prev) =>
-      prev === UNUSED_DOCK_DROP_ZONE_ID ? null : prev
-    );
-  }, []);
+  const handleGlobalUnusedDockDragLeave = React.useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      if (
+        !event.currentTarget.contains(event.relatedTarget as Node | null)
+      ) {
+        setDragOverCategory(null);
+      }
+    },
+    []
+  );
   const handleOpenImageMenuChange = React.useCallback(
     (imageId: string | null) => {
       setOpenImageMenuId(imageId);
     },
     []
   );
-  const handleOpenEditCategory = React.useCallback((category: string) => {
-    setCategoryDialogMode("edit");
-    setCategoryDialogCategory(category);
-    setIsCategoryDialogOpen(true);
-  }, []);
-  const handleRequestDeleteCategory = React.useCallback((category: string) => {
-    setDeleteCategory(category);
-  }, []);
   const handleRequestMoveImage = React.useCallback((imageId: string) => {
     setMoveImageId(imageId);
   }, []);
@@ -336,7 +295,6 @@ export function ListingCategorizeView({
             onContinue={() => void handleContinue()}
             canContinue={!isInlineProcessing && canContinue}
             isSubmitting={!isInlineProcessing && isSavingDraft}
-            continueLoadingLabel="Saving..."
             onBack={handleBackToUpload}
             canBack={!isInlineProcessing}
           />
@@ -360,117 +318,37 @@ export function ListingCategorizeView({
               lastDragClientYRef.current = event.clientY;
             }}
           >
-            <div className="flex flex-col gap-8 lg:flex-row">
             <CategorizeImageWorkspace
               images={images}
-              categoryOrder={workspaceCategoryOrder}
+              workspaceCategoryOrder={workspaceCategoryOrder}
               usedImagesByCategory={usedImagesByCategory}
-              dockedImages={dockedImages}
-              categoryUsageCounts={categoryUsageCounts}
+              dockedImagesByCategory={dockedImagesByCategory}
+              dockedImagesCount={dockedImages.length}
               baseCategoryCounts={baseCategoryCounts}
               usedImageCount={usedImageCount}
               maxUsedImagesTotal={maxUsedImagesTotal}
-              uncategorizedDockCount={uncategorizedDockCount}
               hasOverUsedLimit={hasOverUsedLimit}
               categoriesOverUsedLimit={categoriesOverUsedLimit}
-              openCategories={openCategories}
               dragOverCategory={dragOverCategory}
               openImageMenuId={openImageMenuId}
-              onOpenUpload={handleOpenUpload}
               onOpenCreateCategory={handleOpenCreateCategory}
-              onOpenCategoriesChange={handleOpenCategoriesChange}
-              onCategoryDragOver={handleCategoryDragOver}
-              onCategoryDragLeave={handleCategoryDragLeave}
-              onDockDragOver={handleDockDragOver}
-              onDockDragLeave={handleDockDragLeave}
+              onCategoryUsedDragOver={handleCategoryUsedDragOver}
+              onCategoryUnusedDragOver={handleCategoryUnusedDragOver}
+              onCategoryRowDragLeave={handleCategoryRowDragLeave}
+              onGlobalUnusedDockDragOver={handleGlobalUnusedDockDragOver}
+              onGlobalUnusedDockDragLeave={handleGlobalUnusedDockDragLeave}
               onOpenImageMenuChange={handleOpenImageMenuChange}
-              onEditCategory={handleOpenEditCategory}
-              onDeleteCategory={handleRequestDeleteCategory}
               onRequestMoveImage={handleRequestMoveImage}
               onRequestDeleteImage={handleRequestDeleteImage}
               handleDragStart={handleDragStart}
               handleDragEnd={handleDragEnd}
-              handleDrop={handleDrop}
-              handleDockDrop={handleDrop(UNUSED_DOCK_DROP_ZONE_ID)}
+              handleDropOnCategoryUsed={handleDrop}
+              handleDropOnCategoryUnusedStrip={handleDropOnCategoryUnusedStrip}
+              handleGlobalUnusedDockDrop={handleDrop(UNUSED_DOCK_DROP_ZONE_ID)}
             />
-
-            <ListingDetailsPanel
-              addressValue={addressValue}
-              setAddressValue={setAddressValue}
-              googleMapsApiKey={googleMapsApiKey}
-              hasUncategorized={hasUncategorized}
-              hasEmptyCategory={hasEmptyCategory}
-              needsAddress={needsAddress}
-              hasOverLimit={hasOverLimit}
-              hasOverUsedLimit={hasOverUsedLimit}
-              usedImageCount={usedImageCount}
-              maxUsedImagesTotal={maxUsedImagesTotal}
-              uncategorizedDockCount={uncategorizedDockCount}
-              hasTooManyCategories={hasTooManyCategories}
-              handleAddressSelect={handleAddressSelect}
-            />
-            </div>
           </div>
         )}
       </ListingStageShell>
-      <UploadDialog
-        open={isUploadOpen}
-        onOpenChange={setIsUploadOpen}
-        title="Upload listing photos"
-        description={`Add images up to ${formatBytes(MAX_IMAGE_BYTES)}.`}
-        accept="image/*"
-        dropTitle="Drag & drop photos here"
-        dropSubtitle="or click to select multiple images"
-        primaryActionLabel="Upload photos"
-        selectedLabel="photo"
-        errorMessage="Failed to upload photos. Please try again."
-        tipsTitle="What photos should I upload?"
-        tipsItems={[
-          `No more than ${IMAGE_UPLOAD_LIMIT} listing photos may be uploaded per listing.`,
-          `Limit each room category to ${MAX_IMAGES_PER_ROOM} photos for video generation.`,
-          "Include a wide variety well-framed shots of key rooms and exterior."
-        ]}
-        maxFiles={IMAGE_UPLOAD_LIMIT}
-        maxImageBytes={MAX_IMAGE_BYTES}
-        compressDriveImages
-        compressOversizeImages
-        fileMetaLabel={(file) => formatBytes(file.size)}
-        fileValidator={(file) => {
-          if (!file.type.startsWith("image/")) {
-            return {
-              accepted: false,
-              error: "Only image files are supported."
-            };
-          }
-          if (file.size > MAX_IMAGE_BYTES) {
-            return {
-              accepted: false,
-              error: `"${file.name}" exceeds the image size limit.`
-            };
-          }
-          if (existingFileNames.has(file.name.toLowerCase())) {
-            return {
-              accepted: false,
-              error: `"${file.name}" is already in this listing.`
-            };
-          }
-          return { accepted: true };
-        }}
-        getUploadUrls={(requests) => getUploadUrls(requests)}
-        buildRecordInput={async ({ upload, file }) => {
-          if (!upload.fileName || !upload.publicUrl) {
-            throw new Error("Listing upload is missing metadata.");
-          }
-          const metadata = await getImageMetadataFromFile(file);
-          return {
-            key: upload.key,
-            fileName: upload.fileName,
-            publicUrl: upload.publicUrl,
-            metadata
-          };
-        }}
-        onCreateRecords={onCreateRecords}
-      />
       <ListingCategoryDialog
         open={isCategoryDialogOpen}
         mode={categoryDialogMode}

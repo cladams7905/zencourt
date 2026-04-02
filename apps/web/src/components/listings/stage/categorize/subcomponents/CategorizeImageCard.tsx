@@ -1,5 +1,6 @@
 import * as React from "react";
 import { Button } from "@web/src/components/ui/button";
+import { cn } from "@web/src/components/ui/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,9 +17,13 @@ import {
 import { MoreHorizontal, Move, Sparkles, Trash2 } from "lucide-react";
 import type { ListingImageItem } from "@web/src/components/listings/stage/categorize/shared";
 
+type CategorizeImageCardSize = "accordion" | "strip" | "dock" | "row";
+
 type CategorizeImageCardProps = {
   image: ListingImageItem;
-  context?: "used" | "dock";
+  size?: CategorizeImageCardSize;
+  /** Muted styling for unused / not-selected-for-video thumbnails in a room row. */
+  visualVariant?: "default" | "muted";
   openImageMenuId: string | null;
   onOpenImageMenuChange: (imageId: string | null) => void;
   onRequestMoveImage: (imageId: string) => void;
@@ -31,7 +36,8 @@ type CategorizeImageCardProps = {
 
 export function CategorizeImageCard({
   image,
-  context = "used",
+  size = "accordion",
+  visualVariant = "default",
   openImageMenuId,
   onOpenImageMenuChange,
   onRequestMoveImage,
@@ -41,9 +47,18 @@ export function CategorizeImageCard({
 }: CategorizeImageCardProps) {
   return (
     <div
-      className={`group relative overflow-hidden rounded-lg border border-border bg-secondary/40 cursor-grab ${
-        context === "dock" ? "aspect-[4/5] w-28 shrink-0" : "aspect-square"
-      }`}
+      className={cn(
+        "group relative cursor-grab overflow-hidden rounded-lg border border-border bg-secondary/40",
+        size === "accordion" &&
+          "mx-auto aspect-3/4 w-full max-w-19 sm:max-w-21",
+        size === "strip" &&
+          "shrink-0 aspect-3/4 h-[min(50vh,20rem)] w-[min(78vw,12.5rem)] sm:h-[min(52vh,22rem)] sm:w-[min(42vw,14rem)] md:w-[min(36vw,15rem)]",
+        size === "dock" && "shrink-0 aspect-3/4 w-16 sm:w-18",
+        size === "row" &&
+          "shrink-0 aspect-3/4 h-28 w-[4.75rem] sm:h-32 sm:w-24",
+        visualVariant === "muted" &&
+          "opacity-55 saturate-[0.35] contrast-95 ring-1 ring-border/70"
+      )}
       draggable
       onDragStart={handleDragStart(image.id)}
       onDragEnd={handleDragEnd}
@@ -129,14 +144,9 @@ export function CategorizeImageCard({
       <LoadingImage
         src={image.url}
         alt={image.filename}
-        className="h-full w-full object-cover transition-transform duration-200 ease-out group-hover:scale-[1.03]"
+        className="h-full w-full object-cover object-center transition-transform duration-200 ease-out group-hover:scale-[1.03]"
         fill
       />
-      {context === "dock" ? (
-        <div className="absolute inset-x-0 bottom-0 z-[1] bg-gradient-to-t from-background/90 to-transparent px-2 pb-2 pt-6 text-[11px] font-medium text-foreground">
-          <div className="truncate">{image.filename}</div>
-        </div>
-      ) : null}
     </div>
   );
 }

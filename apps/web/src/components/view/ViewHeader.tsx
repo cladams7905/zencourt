@@ -6,6 +6,13 @@ import { Button } from "../ui/button";
 import { Plus, Bell } from "lucide-react";
 import { useRouter } from "next/navigation";
 
+/**
+ * Same utilities as the listing content filter bar; lives on its own layer so
+ * `backdrop-filter` samples content that scrolls underneath the sticky header.
+ */
+const listingHeaderFrostedBackdrop =
+  "pointer-events-none absolute inset-0 z-0 bg-background/90 backdrop-blur-md supports-backdrop-filter:bg-background/90";
+
 interface ViewHeaderProps {
   title: string;
   subtitle?: string;
@@ -47,14 +54,15 @@ export const ViewHeader = React.forwardRef<HTMLElement, ViewHeaderProps>(
         <header
           ref={ref}
           className={cn(
-            "top-0 z-30 bg-background shadow-none backdrop-blur-md px-4 md:px-8 py-4 md:py-5 border-b border-border md:rounded-t-xl",
+            "relative isolate top-0 z-30 overflow-hidden border-b border-border shadow-none md:rounded-t-xl px-4 md:px-8 py-4 md:py-5",
             sticky ? "sticky" : "static",
             className
           )}
         >
+          <div aria-hidden className={listingHeaderFrostedBackdrop} />
           <div
             className={cn(
-              "grid items-center gap-4 md:gap-6",
+              "relative z-1 grid items-center gap-4 md:gap-6",
               hasTimeline
                 ? "grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(360px,520px)_minmax(0,1fr)]"
                 : "grid-cols-[minmax(0,1fr)_auto]"
@@ -109,42 +117,45 @@ export const ViewHeader = React.forwardRef<HTMLElement, ViewHeaderProps>(
       <header
         ref={ref}
         className={cn(
-          "top-0 z-30 bg-background/90 shadow-none backdrop-blur-md px-4 md:px-8 py-4 md:py-5 flex justify-between items-center border-b border-border md:rounded-t-xl",
+          "relative isolate top-0 z-30 overflow-hidden border-b border-border shadow-none md:rounded-t-xl px-4 md:px-8 py-4 md:py-5",
           sticky ? "sticky" : "static",
           className
         )}
       >
-        <div>
-          <h1 className="text-2xl font-header font-medium text-foreground">
-            {title}
-          </h1>
-          {subtitle ? (
-            <p className="text-sm text-muted-foreground">{subtitle}</p>
-          ) : null}
-        </div>
-        <div className="hidden md:flex items-center gap-4">
-          {!hideCreateButton ? (
-            <Button
-              size="default"
-              className="gap-2"
-              onClick={() => router.push("/listings/create")}
-            >
-              <Plus className="h-5 w-5" />
-              <span>Create</span>
-            </Button>
-          ) : null}
-          {showNotifications ? (
-            <Button
-              size="icon"
-              variant="ghost"
-              className="relative rounded-full"
-            >
-              <Bell className="h-5 w-5" />
-              {hasNotifications ? (
-                <span className="absolute top-2 right-2 h-2 w-2 bg-primary rounded-full border-2 border-background" />
-              ) : null}
-            </Button>
-          ) : null}
+        <div aria-hidden className={listingHeaderFrostedBackdrop} />
+        <div className="relative z-1 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-header font-medium text-foreground">
+              {title}
+            </h1>
+            {subtitle ? (
+              <p className="text-sm text-muted-foreground">{subtitle}</p>
+            ) : null}
+          </div>
+          <div className="hidden md:flex items-center gap-4">
+            {!hideCreateButton ? (
+              <Button
+                size="default"
+                className="gap-2"
+                onClick={() => router.push("/listings/create")}
+              >
+                <Plus className="h-5 w-5" />
+                <span>Create</span>
+              </Button>
+            ) : null}
+            {showNotifications ? (
+              <Button
+                size="icon"
+                variant="ghost"
+                className="relative rounded-full"
+              >
+                <Bell className="h-5 w-5" />
+                {hasNotifications ? (
+                  <span className="absolute top-2 right-2 h-2 w-2 bg-primary rounded-full border-2 border-background" />
+                ) : null}
+              </Button>
+            ) : null}
+          </div>
         </div>
       </header>
     );

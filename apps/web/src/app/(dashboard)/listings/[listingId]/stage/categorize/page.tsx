@@ -21,8 +21,6 @@ export default async function ListingStageCategorizePage({
   return runWithCaller("listings/[id]/stage/categorize", async () => {
     const { listingId } = await params;
     const user = await requireUserOrRedirect();
-    const googleMapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
-
     if (!listingId?.trim()) {
       redirect("/listings/create");
     }
@@ -54,7 +52,6 @@ export default async function ListingStageCategorizePage({
           initialAddress={listing.address ?? ""}
           listingId={listingId}
           initialImages={imageItems}
-          googleMapsApiKey={googleMapsApiKey}
           hasPropertyDetails={Boolean(listing.propertyDetails)}
         />
       </ListingStageViewProvider>

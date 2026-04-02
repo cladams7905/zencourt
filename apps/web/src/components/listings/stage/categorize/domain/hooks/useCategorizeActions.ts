@@ -6,6 +6,7 @@ import {
 } from "@web/src/lib/domain/listings/image/roomCategories";
 import { MAX_IMAGES_PER_ROOM } from "@shared/utils/mediaUpload";
 import {
+  CATEGORIZE_MAX_USED_PHOTOS,
   UNCATEGORIZED_CATEGORY_ID,
   UNUSED_DOCK_DROP_ZONE_ID
 } from "@web/src/components/listings/stage/categorize/shared";
@@ -381,6 +382,166 @@ export function useCategorizeActions(params: UseCategorizeActionsParams) {
     [setDragOverCategory, setPlacementOverrides]
   );
 
+  const handleDropOnCategoryDock = React.useCallback(
+    (category: string) => (event: React.DragEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      const imageId = event.dataTransfer.getData("text/plain");
+      if (!imageId) {
+        return;
+      }
+      const previousImage = images.find((image) => image.id === imageId);
+      if (!previousImage) {
+        return;
+      }
+      const imageKey = previousImage.category ?? UNCATEGORIZED_CATEGORY_ID;
+      if (imageKey !== category) {
+        return;
+      }
+      moveImageToDock(imageId);
+    },
+    [images, moveImageToDock]
+  );
+
+  /** Drop on a room's unused (whitewashed) lane: dock in that room, reassigning category when needed. */
+  const handleDropOnCategoryUnusedStrip = React.useCallback(
+    (category: string) => async (event: React.DragEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      const imageId = event.dataTransfer.getData("text/plain");
+      if (!imageId) {
+        return;
+      }
+      const previousImage = images.find((image) => image.id === imageId);
+      if (!previousImage) {
+        return;
+      }
+      const prevKey = previousImage.category ?? UNCATEGORIZED_CATEGORY_ID;
+      if (prevKey === category) {
+        moveImageToDock(imageId);
+        setDragOverCategory(null);
+        return;
+      }
+      const nextCategory =
+        category === UNCATEGORIZED_CATEGORY_ID ? null : category;
+      const previousImages = images;
+      const previousPlacement =
+        placementOverrides[imageId] ??
+        previousImage.workspacePlacement ??
+        "dock";
+      const shouldPersistCategoryChange =
+        previousImage.category !== nextCategory;
+      const nextImages = shouldPersistCategoryChange
+        ? images.map((image) =>
+            image.id === imageId
+              ? {
+                  ...image,
+                  category: nextCategory
+                }
+              : image
+          )
+        : images;
+      const updatedImage = nextImages.find((image) => image.id === imageId);
+      if (!updatedImage) {
+        return;
+      }
+      setPlacementOverrides((prev) => ({
+        ...prev,
+        [imageId]: "dock"
+      }));
+      if (shouldPersistCategoryChange) {
+        setImages(nextImages);
+        const success = await persistImageAssignments(
+          [
+            {
+              id: updatedImage.id,
+              category: updatedImage.category ?? null
+            }
+          ],
+          [],
+          () => {
+            setImages(previousImages);
+            setPlacementOverrides((prev) => ({
+              ...prev,
+              [imageId]: previousPlacement
+            }));
+          }
+        );
+        if (!success) {
+          return;
+        }
+      }
+      setDragOverCategory(null);
+    },
+    [
+      images,
+      moveImageToDock,
+      persistImageAssignments,
+      placementOverrides,
+      setDragOverCategory,
+      setImages,
+      setPlacementOverrides
+    ]
+  );
+
+  const handleDropOnRecommendedStrip = React.useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      const imageId = event.dataTransfer.getData("text/plain");
+      if (!imageId) {
+        return;
+      }
+      const previousImage = images.find((image) => image.id === imageId);
+      if (!previousImage) {
+        return;
+      }
+      const nextCategory = previousImage.category;
+      if (!nextCategory || nextCategory === "other") {
+        toast.error(
+          "Assign a room category before adding to recommended photos."
+        );
+        setDragOverCategory(null);
+        return;
+      }
+      const previousPlacement =
+        placementOverrides[imageId] ?? previousImage.workspacePlacement ?? "dock";
+      if (previousPlacement === "used") {
+        setDragOverCategory(null);
+        return;
+      }
+      const roomUsed = categoryUsageCounts[nextCategory] ?? 0;
+      const nextRoomUsed = roomUsed + 1;
+      if (nextRoomUsed > MAX_IMAGES_PER_ROOM) {
+        toast.error(
+          `This room already has ${MAX_IMAGES_PER_ROOM} photos. Remove one before adding another.`
+        );
+        setDragOverCategory(null);
+        return;
+      }
+      const totalUsed = Object.values(categoryUsageCounts).reduce(
+        (sum, count) => sum + count,
+        0
+      );
+      if (totalUsed + 1 > CATEGORIZE_MAX_USED_PHOTOS) {
+        toast.error(
+          `Reduce the used photo selection to ${CATEGORIZE_MAX_USED_PHOTOS} or fewer before adding more.`
+        );
+        setDragOverCategory(null);
+        return;
+      }
+      setPlacementOverrides((prev) => ({
+        ...prev,
+        [imageId]: "used"
+      }));
+      setDragOverCategory(null);
+    },
+    [
+      categoryUsageCounts,
+      images,
+      placementOverrides,
+      setDragOverCategory,
+      setPlacementOverrides
+    ]
+  );
+
   const handleDrop = React.useCallback(
     (category: string) => async (event: React.DragEvent<HTMLDivElement>) => {
       event.preventDefault();
@@ -481,6 +642,9 @@ export function useCategorizeActions(params: UseCategorizeActionsParams) {
     handleDragStart,
     handleDragEnd,
     handleDrop,
+    handleDropOnCategoryDock,
+    handleDropOnCategoryUnusedStrip,
+    handleDropOnRecommendedStrip,
     moveImageToDock
   };
 }

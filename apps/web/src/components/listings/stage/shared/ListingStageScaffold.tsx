@@ -1,76 +1,58 @@
 import * as React from "react";
-import {
-  ListingStageTimeline,
-  type ListingStageStep
-} from "@web/src/components/listings/stage/shared";
 import { cn } from "@web/src/components/ui/utils";
 import { ListingStageStepHeader } from "./ListingStageStepHeader";
 
+/** Outer wrapper for the main column (step body + shell-level footer): horizontal padding matches across both. */
+export const LISTING_STAGE_MAIN_COLUMN_CLASS =
+  "min-h-0 min-w-0 flex flex-col px-4 md:px-6";
+
+/** Desktop: timeline vs step column ≈ 1:3 (25% / 75%). */
+export const LISTING_STAGE_LG_MAIN_GRID_CLASS =
+  "lg:grid-cols-[minmax(0,1fr)_minmax(0,3fr)]";
+
+/** Max width for step body + footer actions (narrow / wide stages). */
+export const LISTING_STAGE_NARROW_MAX_W_CLASS = "max-w-[30rem]";
+export const LISTING_STAGE_WIDE_MAX_W_CLASS = "max-w-4xl";
+
 type ListingStageScaffoldProps = {
-  steps: ListingStageStep[];
   stepTitle: string;
   stepSubtitle?: string;
   children: React.ReactNode;
   /** Wider main column for multi-column stages (categorize, review, upload). */
   wide?: boolean;
-  /** Renders at the bottom of the step-details column only (not under the timeline). */
-  footer?: React.ReactNode;
+  /**
+   * Bottom padding above a flush listing footer; `mt-auto` pins the body to the
+   * column bottom so spacing isn’t lost to flex-1 growth.
+   */
+  hasFooter?: boolean;
 };
 
+/**
+ * Step title + body only. Timeline and footer are composed in {@link ListingStageShell}
+ * so the footer can span the full width of the main column (page width minus timeline).
+ */
 export function ListingStageScaffold({
-  steps,
   stepTitle,
   stepSubtitle,
   children,
   wide = false,
-  footer
+  hasFooter = false
 }: ListingStageScaffoldProps) {
   return (
-    <div className="mx-auto flex min-h-0 w-full max-w-6xl flex-1 flex-col rounded-lg pt-6 lg:px-6 lg:pb-10">
-      <section className="flex min-h-0 w-full flex-1 flex-col text-left lg:flex-row lg:items-stretch">
-        <div
-          className={cn(
-            "w-full shrink-0 lg:flex lg:w-[260px] lg:shrink-0 lg:justify-center lg:pr-6 lg:pb-0 lg:pt-0 lg:min-h-0",
-            "max-lg:flex max-lg:items-center max-lg:justify-center max-lg:pb-4"
-          )}
-        >
-          <ListingStageTimeline steps={steps} desktopVertical />
+    <div
+      className={cn(
+        "flex min-h-0 w-full min-w-0 flex-1 flex-col",
+        wide ? LISTING_STAGE_WIDE_MAX_W_CLASS : LISTING_STAGE_NARROW_MAX_W_CLASS
+      )}
+    >
+      <ListingStageStepHeader title={stepTitle} subtitle={stepSubtitle} />
+      {hasFooter ? (
+        <div className="mt-auto w-full min-w-0 pb-6">{children}</div>
+      ) : (
+        <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col">
+          {children}
         </div>
-        <div
-          className="hidden shrink-0 bg-border/80 lg:mx-6 lg:block lg:h-auto lg:w-px lg:self-stretch"
-          aria-hidden
-        />
-        <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col">
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overscroll-y-contain">
-            <div
-              className={cn(
-                "mx-auto flex min-h-0 w-full flex-1 flex-col",
-                wide ? "max-w-5xl" : "max-w-lg"
-              )}
-            >
-              <ListingStageStepHeader
-                title={stepTitle}
-                subtitle={stepSubtitle}
-              />
-              <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col">
-                {children}
-              </div>
-            </div>
-          </div>
-          {footer ? (
-            <div className={cn("shrink-0 bg-background py-2 lg:pb-0 pb-6")}>
-              <div
-                className={cn(
-                  "mx-auto w-full max-lg:max-w-none lg:px-0",
-                  wide ? "lg:max-w-5xl" : "lg:max-w-lg"
-                )}
-              >
-                {footer}
-              </div>
-            </div>
-          ) : null}
-        </div>
-      </section>
+      )}
     </div>
   );
 }

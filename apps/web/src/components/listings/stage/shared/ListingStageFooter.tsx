@@ -9,7 +9,6 @@ type ListingStageFooterProps = {
   canBack?: boolean;
   isSubmitting?: boolean;
   continueLabel?: string;
-  continueLoadingLabel?: string;
   backLabel?: string;
 };
 
@@ -20,17 +19,25 @@ export function ListingStageFooter({
   canBack = true,
   isSubmitting = false,
   continueLabel = "Continue",
-  continueLoadingLabel = "Submitting...",
   backLabel = "Back"
 }: ListingStageFooterProps) {
+  const hasBack = Boolean(onBack);
+  const hasContinue = Boolean(onContinue);
+  const bothActions = hasBack && hasContinue;
+
   return (
-    <div className="flex w-full flex-col gap-3 lg:flex-row lg:items-center lg:justify-end">
+    <div
+      className={cn(
+        "flex w-full flex-row items-center gap-3 bg-background/90 pointer-events-none backdrop-blur-md supports-backdrop-filter:bg-background/90",
+        bothActions ? "justify-between lg:justify-end" : "justify-end"
+      )}
+    >
       {onBack ? (
         <Button
           type="button"
           size="lg"
           variant="outline"
-          className={cn("w-full lg:w-auto")}
+          className="min-w-0 w-full flex-1 lg:w-auto lg:flex-none lg:shrink"
           onClick={onBack}
           disabled={!canBack}
         >
@@ -41,11 +48,11 @@ export function ListingStageFooter({
         <Button
           type="button"
           size="lg"
-          className={cn("w-full lg:w-auto")}
+          className="w-full flex-1 lg:w-auto lg:flex-none lg:shrink-0"
           onClick={onContinue}
           disabled={!canContinue || isSubmitting}
         >
-          {isSubmitting ? continueLoadingLabel : continueLabel}
+          {continueLabel}
         </Button>
       ) : null}
     </div>

@@ -3,7 +3,7 @@ import { useCategorizeDerivedState } from "@web/src/components/listings/stage/ca
 import { UNCATEGORIZED_CATEGORY_ID } from "@web/src/components/listings/stage/categorize/shared";
 
 describe("useCategorizeDerivedState", () => {
-  it("builds category order with uncategorized first and excludes other from workspace accordions", () => {
+  it("builds category order with uncategorized first and includes uncategorized and other in workspace when they have images", () => {
     const { result } = renderHook(() =>
       useCategorizeDerivedState({
         images: [
@@ -27,9 +27,11 @@ describe("useCategorizeDerivedState", () => {
       "other"
     ]);
     expect(result.current.workspaceCategoryOrder).toEqual([
+      UNCATEGORIZED_CATEGORY_ID,
       "bedroom-1",
       "bedroom-2",
-      "kitchen"
+      "kitchen",
+      "other"
     ]);
     expect(result.current.baseCategoryCounts).toEqual({
       bedroom: 2,

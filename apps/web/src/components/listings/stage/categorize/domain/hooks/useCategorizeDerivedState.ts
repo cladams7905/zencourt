@@ -5,7 +5,10 @@ import type {
   WorkspacePlacement
 } from "@web/src/components/listings/stage/categorize/shared/types";
 import { getCategoryBase } from "@web/src/components/listings/stage/categorize/domain/categoryRules";
-import { UNCATEGORIZED_CATEGORY_ID } from "@web/src/components/listings/stage/categorize/shared/constants";
+import {
+  CATEGORIZE_MAX_USED_PHOTOS,
+  UNCATEGORIZED_CATEGORY_ID
+} from "@web/src/components/listings/stage/categorize/shared/constants";
 
 type UseCategorizeDerivedStateParams = {
   images: ListingImageItem[];
@@ -14,7 +17,6 @@ type UseCategorizeDerivedStateParams = {
 };
 
 const DEFAULT_USED_IMAGES_PER_CATEGORY = 2;
-const MAX_USED_IMAGES_TOTAL = 12;
 
 const getScore = (image: ListingImageItem) => image.recommendationScore ?? -1;
 const sortByRecommendationScore = (a: ListingImageItem, b: ListingImageItem) =>
@@ -47,14 +49,17 @@ export function useCategorizeDerivedState({
     });
   }, [categorizedImages, customCategories]);
 
-  const workspaceCategoryOrder = React.useMemo(
-    () =>
-      categoryOrder.filter(
-        (category) =>
-          category !== UNCATEGORIZED_CATEGORY_ID && category !== "other"
-      ),
-    [categoryOrder]
-  );
+  const workspaceCategoryOrder = React.useMemo(() => {
+    return categoryOrder.filter((category) => {
+      if (category === UNCATEGORIZED_CATEGORY_ID) {
+        return (categorizedImages[UNCATEGORIZED_CATEGORY_ID]?.length ?? 0) > 0;
+      }
+      if (category === "other") {
+        return (categorizedImages["other"]?.length ?? 0) > 0;
+      }
+      return true;
+    });
+  }, [categoryOrder, categorizedImages]);
 
   const baseCategoryCounts = React.useMemo(() => {
     const counts: Record<string, number> = {};
@@ -140,6 +145,27 @@ export function useCategorizeDerivedState({
     [workspaceImages]
   );
 
+  const dockedImagesByCategory = React.useMemo(() => {
+    const buckets: Record<string, ListingImageItem[]> = {};
+    workspaceCategoryOrder.forEach((category) => {
+      buckets[category] = [];
+    });
+    workspaceImages.forEach((image) => {
+      if (image.workspacePlacement === "used") {
+        return;
+      }
+      const key = image.category ?? UNCATEGORIZED_CATEGORY_ID;
+      if (!buckets[key]) {
+        return;
+      }
+      buckets[key].push(image);
+    });
+    workspaceCategoryOrder.forEach((category) => {
+      buckets[category]?.sort(sortByRecommendationScore);
+    });
+    return buckets;
+  }, [workspaceCategoryOrder, workspaceImages]);
+
   const categoryUsageCounts = React.useMemo(
     () =>
       workspaceCategoryOrder.reduce<Record<string, number>>((acc, category) => {
@@ -166,7 +192,7 @@ export function useCategorizeDerivedState({
     (sum, count) => sum + count,
     0
   );
-  const hasOverUsedLimit = usedImageCount > MAX_USED_IMAGES_TOTAL;
+  const hasOverUsedLimit = usedImageCount > CATEGORIZE_MAX_USED_PHOTOS;
 
   return {
     categorizedImages,
@@ -176,11 +202,12 @@ export function useCategorizeDerivedState({
     baseCategoryCounts,
     usedImagesByCategory,
     dockedImages,
+    dockedImagesByCategory,
     categoryUsageCounts,
     categoriesOverUsedLimit,
     usedImageCount,
     hasOverUsedLimit,
-    maxUsedImagesTotal: MAX_USED_IMAGES_TOTAL,
+    maxUsedImagesTotal: CATEGORIZE_MAX_USED_PHOTOS,
     defaultUsedImagesPerCategory: DEFAULT_USED_IMAGES_PER_CATEGORY,
     uncategorizedDockCount,
     hasUncategorized,

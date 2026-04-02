@@ -139,7 +139,7 @@ export function ListingStageTimeline({
       <div className="lg:hidden">{horizontalTimeline}</div>
       <div className="hidden lg:flex lg:w-full lg:justify-center">
         <div className="relative space-y-5 py-1">
-          <div className="pointer-events-none absolute left-[4.5px] top-[10px] bottom-[5px] w-px bg-border" />
+          <div className="pointer-events-none absolute bottom-[5px] left-[4.5px] top-[10px] w-px bg-border" />
           {steps.map((step) => (
             <div key={step.label} className="relative flex items-center gap-4">
               <div

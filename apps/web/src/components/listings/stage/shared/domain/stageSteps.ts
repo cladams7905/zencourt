@@ -61,7 +61,7 @@ export function getListingStageScaffoldCopy(
       return {
         stepTitle: "Step 3: Categorize photos",
         stepSubtitle:
-          "Group photos by room and confirm the listing address before continuing."
+          "Arrange photos by room and select which photos you'd like turned into video clips."
       };
     case "review":
       return {

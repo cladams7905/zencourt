@@ -11,9 +11,6 @@ describe("ListingStageScaffold", () => {
   it("renders step header and details slot content", () => {
     render(
       <ListingStageScaffold
-        steps={[
-          { label: "1. Enter address", active: true, sublabel: "~30 sec" }
-        ]}
         stepTitle="Step 1: Enter Listing Address"
         stepSubtitle="We use this to title the listing and populate listing details."
       >

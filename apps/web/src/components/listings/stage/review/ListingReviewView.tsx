@@ -174,7 +174,6 @@ export function ListingReviewView({
             onContinue={() => setIsContinueDialogOpen(true)}
             canContinue={canContinue && !isSaving}
             isSubmitting={isSaving}
-            continueLoadingLabel="Saving..."
           />
         )
       }
