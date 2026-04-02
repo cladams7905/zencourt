@@ -44,8 +44,8 @@ type ListingStageShellProps = {
   headerAction?: React.ReactNode;
 };
 
-/** Desktop: `top` aligns under sticky ListingStageViewHeader; +24px below previous `top-24`. */
-const LISTING_STAGE_TIMELINE_STICKY_TOP_CLASS = "lg:top-[calc(6rem)]";
+/** Desktop: sticky offset under ListingStageViewHeader plus 24px breathing room. */
+const LISTING_STAGE_TIMELINE_STICKY_TOP_CLASS = "lg:top-[calc(6rem+24px)]";
 
 function ListingStageTimelineColumn({
   steps,
