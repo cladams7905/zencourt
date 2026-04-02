@@ -514,7 +514,8 @@ describe("useUploadDialogState", () => {
   it("uses the configured fallback error message for non-error upload failures", async () => {
     const args = buildArgs();
     args.errorMessage = "custom upload error";
-    args.getUploadUrls = jest.fn(async (_requests: UploadRequest[]) => {
+    args.getUploadUrls = jest.fn(async (requests: UploadRequest[]) => {
+      void requests;
       throw "boom";
     });
 
