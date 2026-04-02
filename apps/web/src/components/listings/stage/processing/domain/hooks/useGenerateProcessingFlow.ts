@@ -285,8 +285,7 @@ export function useGenerateProcessingFlow(params: {
     if (mode !== "generate") return;
     emitListingSidebarUpdate({
       id: listingId,
-      listingStage: "generate",
-      lastOpenedAt: new Date().toISOString()
+      listingStage: "generate"
     });
   }, [listingId, mode]);
 
@@ -298,8 +297,7 @@ export function useGenerateProcessingFlow(params: {
       await updateStage("review");
       emitListingSidebarUpdate({
         id: listingId,
-        listingStage: "review",
-        lastOpenedAt: new Date().toISOString()
+        listingStage: "review"
       });
       toast.success("Video generation canceled.");
       navigate(`/listings/${listingId}/stage/review`);

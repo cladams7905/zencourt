@@ -63,8 +63,7 @@ export function useListingAddressFlow(options?: UseListingAddressFlowOptions) {
         emitListingSidebarUpdate({
           id: prefilledListingId,
           title: inferredTitle,
-          listingStage: updated.listingStage ?? "upload",
-          lastOpenedAt: new Date().toISOString()
+          listingStage: updated.listingStage ?? "upload"
         });
 
         router.push(`/listings/${prefilledListingId}/stage/upload`);
@@ -86,8 +85,7 @@ export function useListingAddressFlow(options?: UseListingAddressFlowOptions) {
       emitListingSidebarUpdate({
         id: listing.id,
         title: inferredTitle,
-        listingStage: updated.listingStage ?? "upload",
-        lastOpenedAt: new Date().toISOString()
+        listingStage: updated.listingStage ?? "upload"
       });
 
       router.push(`/listings/${listing.id}/stage/upload`);

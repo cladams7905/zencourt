@@ -9,7 +9,6 @@ import {
   ListingImageDeleteDialog,
   ListingImageMoveDialog
 } from "@web/src/components/listings/stage/categorize";
-import { emitListingSidebarHeartbeat } from "@web/src/lib/domain/listings/sidebarEvents";
 import {
   categoryDockDropZoneId,
   categoryUsedDropZoneId,
@@ -90,13 +89,6 @@ export function ListingCategorizeView({
   >({});
   const [isDraggingImage, setIsDraggingImage] = React.useState(false);
   const headerRef = React.useRef<HTMLElement | null>(null);
-
-  React.useEffect(() => {
-    emitListingSidebarHeartbeat({
-      id: listingId,
-      lastOpenedAt: new Date().toISOString()
-    });
-  }, [listingId]);
 
   const {
     dockedImages,

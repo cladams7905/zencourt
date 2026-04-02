@@ -1,6 +1,5 @@
 import * as React from "react";
 import useSWR from "swr";
-import { emitListingSidebarUpdate } from "@web/src/lib/domain/listings/sidebarEvents";
 import {
   countTerminalInBatch,
   fetchListingImages,
@@ -136,10 +135,6 @@ export function useCategorizeProcessingFlow(params: {
     completionHandledRef.current = true;
     setIsProcessing(false);
     clearStoredCategorizeProcessingBatch(listingId);
-    emitListingSidebarUpdate({
-      id: listingId,
-      lastOpenedAt: new Date().toISOString()
-    });
     navigate(`/listings/${listingId}/stage/categorize`);
   }, [isComplete, listingId, mode, navigate, resolvedBatchImageIds.length]);
 

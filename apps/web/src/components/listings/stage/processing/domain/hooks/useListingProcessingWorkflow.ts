@@ -34,8 +34,7 @@ export function useListingProcessingWorkflow(params: {
       }
       emitListingSidebarUpdate({
         id: listingId,
-        listingStage: stage,
-        lastOpenedAt: new Date().toISOString()
+        listingStage: stage
       });
       navigate(path);
     },

@@ -139,7 +139,7 @@ describe("useCategorizeProcessingFlow", () => {
     await waitFor(() => {
       expect(navigate).toHaveBeenCalledWith("/listings/l1/stage/categorize");
     });
-    expect(mockEmitListingSidebarUpdate).toHaveBeenCalled();
+    expect(mockEmitListingSidebarUpdate).not.toHaveBeenCalled();
     expect(window.sessionStorage.getItem("listing-categorize-processing:l1")).toBeNull();
   });
 });

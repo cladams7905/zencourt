@@ -90,8 +90,7 @@ export function useCategorizeListingDetails({
         );
         emitListingSidebarUpdate({
           id: listingId,
-          title: nextTitle,
-          lastOpenedAt: new Date().toISOString()
+          title: nextTitle
         });
         await touchListingActivity();
         return true;
@@ -169,8 +168,7 @@ export function useCategorizeListingDetails({
           if (nextTitle) {
             emitListingSidebarUpdate({
               id: listingId,
-              title: nextTitle,
-              lastOpenedAt: new Date().toISOString()
+              title: nextTitle
             });
           }
           await touchListingActivity();
@@ -202,8 +200,7 @@ export function useCategorizeListingDetails({
       });
       emitListingSidebarUpdate({
         id: listingId,
-        listingStage: "review",
-        lastOpenedAt: new Date().toISOString()
+        listingStage: "review"
       });
       await touchListingActivity();
     } catch (error) {

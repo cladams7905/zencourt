@@ -24,8 +24,9 @@ type SidebarListingsSectionProps = {
   onLinkClick?: () => void;
 };
 
-function ListingRowSkeleton({
-  id,
+/** Same row used when a listing is pending after a sidebar update; shared with `SidebarSkeleton`. */
+export function ListingRowSkeleton({
+  id: _id,
   isCollapsed
 }: {
   id: string;
@@ -33,7 +34,6 @@ function ListingRowSkeleton({
 }) {
   return (
     <div
-      key={`listing-skeleton-${id}`}
       className={cn(
         "flex items-center gap-2 rounded-md px-2 py-2",
         isCollapsed ? "justify-center" : "justify-between"

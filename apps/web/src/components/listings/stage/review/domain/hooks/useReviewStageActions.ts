@@ -1,9 +1,6 @@
 import * as React from "react";
 import { toast } from "sonner";
-import {
-  emitListingSidebarHeartbeat,
-  emitListingSidebarUpdate
-} from "@web/src/lib/domain/listings/sidebarEvents";
+import { emitListingSidebarUpdate } from "@web/src/lib/domain/listings/sidebarEvents";
 import { fetchApiData } from "@web/src/lib/core/http/client";
 
 type UseReviewStageActionsParams = {
@@ -37,8 +34,7 @@ export const useReviewStageActions = ({
       await updateListingStage("generate");
       emitListingSidebarUpdate({
         id: listingId,
-        listingStage: "generate",
-        lastOpenedAt: new Date().toISOString()
+        listingStage: "generate"
       });
       navigate(`/listings/${listingId}/stage/generate`);
     } catch (error) {
@@ -69,13 +65,6 @@ export const useReviewStageActions = ({
       return;
     }
   }, [listingId, navigate]);
-
-  React.useEffect(() => {
-    emitListingSidebarHeartbeat({
-      id: listingId,
-      lastOpenedAt: new Date().toISOString()
-    });
-  }, [listingId]);
 
   return {
     isGoingBack,

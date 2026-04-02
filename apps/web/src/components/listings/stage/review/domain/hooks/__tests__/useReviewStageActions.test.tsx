@@ -1,9 +1,8 @@
-import { act, renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook } from "@testing-library/react";
 import { useReviewStageActions } from "@web/src/components/listings/stage/review/domain/hooks/useReviewStageActions";
 
 const mockFetchApiData = jest.fn();
 const mockEmitListingSidebarUpdate = jest.fn();
-const mockEmitListingSidebarHeartbeat = jest.fn();
 const mockToastError = jest.fn();
 
 afterEach(() => {
@@ -16,9 +15,7 @@ jest.mock("@web/src/lib/core/http/client", () => ({
 
 jest.mock("@web/src/lib/domain/listings/sidebarEvents", () => ({
   emitListingSidebarUpdate: (...args: unknown[]) =>
-    mockEmitListingSidebarUpdate(...args),
-  emitListingSidebarHeartbeat: (...args: unknown[]) =>
-    mockEmitListingSidebarHeartbeat(...args)
+    mockEmitListingSidebarUpdate(...args)
 }));
 
 jest.mock("sonner", () => ({
@@ -77,7 +74,7 @@ describe("useReviewStageActions", () => {
     );
   });
 
-  it("emits sidebar heartbeat on mount", async () => {
+  it("does not emit sidebar events on mount", () => {
     renderHook(() =>
       useReviewStageActions({
         listingId: "listing-1",
@@ -86,11 +83,7 @@ describe("useReviewStageActions", () => {
       })
     );
 
-    await waitFor(() => {
-      expect(mockEmitListingSidebarHeartbeat).toHaveBeenCalledWith(
-        expect.objectContaining({ id: "listing-1" })
-      );
-    });
+    expect(mockEmitListingSidebarUpdate).not.toHaveBeenCalled();
   });
 
   it("shows error when continue transition fails", async () => {

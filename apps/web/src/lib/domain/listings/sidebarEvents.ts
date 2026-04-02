@@ -1,3 +1,4 @@
+/** Prefer omitting `lastOpenedAt` unless you have a server-backed value; client "now" timestamps cause noisy merges. */
 export type ListingSidebarUpdate = {
   id: string;
   title?: string | null;
