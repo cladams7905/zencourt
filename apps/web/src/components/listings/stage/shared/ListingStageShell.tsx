@@ -25,6 +25,11 @@ type ListingStageShellProps = {
   /** Wider main column for multi-column or rich layouts. */
   wide?: boolean;
   /**
+   * Optional content rendered in the footer band above the action buttons.
+   * Used for listing-specific docks such as unused photos.
+   */
+  footerAccessory?: React.ReactNode;
+  /**
    * Custom footer. When omitted, a default footer is used when applicable
    * (e.g. upload stage with a listing id).
    */
@@ -41,6 +46,9 @@ type ListingStageShellProps = {
 
 /** Desktop: `top` aligns under sticky ListingStageViewHeader; +24px below previous `top-24`. */
 const LISTING_STAGE_TIMELINE_STICKY_TOP_CLASS = "lg:top-[calc(6rem+24px)]";
+
+/** Small extra mobile clearance so the fixed footer never clips the last content row. */
+const LISTING_STAGE_MOBILE_FOOTER_SCROLL_BUFFER_PX = 24;
 
 function ListingStageTimelineColumn({
   steps,
@@ -80,6 +88,7 @@ function ListingStageTimelineColumn({
 export function ListingStageShell({
   stage,
   wide,
+  footerAccessory,
   footer,
   pinStepBodyToBottom = true,
   children,
@@ -87,6 +96,7 @@ export function ListingStageShell({
   headerAction
 }: ListingStageShellProps) {
   const scrollViewportRef = React.useRef<HTMLDivElement>(null);
+  const mobileFooterRef = React.useRef<HTMLDivElement>(null);
   const headerMeasureRef = React.useRef<HTMLElement | null>(null);
   const [viewportMinHeightPx, setViewportMinHeightPx] = React.useState<
     number | null
@@ -94,19 +104,25 @@ export function ListingStageShell({
   const [contentMinHeightPx, setContentMinHeightPx] = React.useState<
     number | null
   >(null);
+  const [mobileFooterScrollSpacerPx, setMobileFooterScrollSpacerPx] =
+    React.useState(0);
 
   React.useLayoutEffect(() => {
     const viewportEl = scrollViewportRef.current;
     if (!viewportEl) return;
 
     const updateViewportMinHeight = () => {
-      const viewportHeight = Math.floor(viewportEl.getBoundingClientRect().height);
+      const viewportHeight = Math.floor(
+        viewportEl.getBoundingClientRect().height
+      );
       const headerHeight = Math.floor(
         headerMeasureRef.current?.getBoundingClientRect().height ?? 0
       );
       const nextHeight = viewportHeight;
       const nextContentHeight = Math.max(0, viewportHeight - headerHeight);
-      setViewportMinHeightPx((prev) => (prev === nextHeight ? prev : nextHeight));
+      setViewportMinHeightPx((prev) =>
+        prev === nextHeight ? prev : nextHeight
+      );
       setContentMinHeightPx((prev) =>
         prev === nextContentHeight ? prev : nextContentHeight
       );
@@ -157,6 +173,48 @@ export function ListingStageShell({
     stage === "address"
       ? "lg:grid-rows-[minmax(0,1fr)_auto]"
       : "lg:grid-rows-[minmax(0,auto)_auto]";
+  const footerMaxWidthClass = wide
+    ? LISTING_STAGE_WIDE_MAX_W_CLASS
+    : LISTING_STAGE_NARROW_MAX_W_CLASS;
+
+  React.useLayoutEffect(() => {
+    if (!hasFooter) return;
+
+    const footerEl = mobileFooterRef.current;
+    if (!footerEl) return;
+
+    const syncMobileFooterScrollSpacer = () => {
+      const isMobile = window.matchMedia("(max-width: 767px)").matches;
+      if (!isMobile) {
+        setMobileFooterScrollSpacerPx(0);
+        return;
+      }
+
+      setMobileFooterScrollSpacerPx(
+        Math.ceil(footerEl.getBoundingClientRect().height) +
+          LISTING_STAGE_MOBILE_FOOTER_SCROLL_BUFFER_PX
+      );
+    };
+
+    syncMobileFooterScrollSpacer();
+
+    const resizeObserver =
+      typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(syncMobileFooterScrollSpacer)
+        : null;
+    resizeObserver?.observe(footerEl);
+
+    const mql = window.matchMedia("(max-width: 767px)");
+    mql.addEventListener("change", syncMobileFooterScrollSpacer);
+    window.addEventListener("resize", syncMobileFooterScrollSpacer);
+
+    return () => {
+      resizeObserver?.disconnect();
+      mql.removeEventListener("change", syncMobileFooterScrollSpacer);
+      window.removeEventListener("resize", syncMobileFooterScrollSpacer);
+      setMobileFooterScrollSpacerPx(0);
+    };
+  }, [hasFooter]);
 
   const renderFooterSlot = (slotKey: string): React.ReactNode => {
     if (footer !== undefined) {
@@ -176,15 +234,22 @@ export function ListingStageShell({
       <div
         className={cn(
           "flex w-full min-w-0 flex-row items-center justify-end gap-3",
-          wide
-            ? LISTING_STAGE_WIDE_MAX_W_CLASS
-            : LISTING_STAGE_NARROW_MAX_W_CLASS
+          footerMaxWidthClass
         )}
       >
         {renderFooterSlot(slotKey)}
       </div>
     </div>
   );
+
+  const footerAccessoryRow = () =>
+    footerAccessory ? (
+      <div className="flex w-full flex-col items-center lg:px-6">
+        <div className={cn("w-full min-w-0", footerMaxWidthClass)}>
+          {footerAccessory}
+        </div>
+      </div>
+    ) : null;
 
   return (
     <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
@@ -213,13 +278,18 @@ export function ListingStageShell({
         >
           {hasFooter ? (
             <div
+              data-slot="listing-stage-mobile-scroll-surface"
               className={cn(
                 "flex max-lg:min-h-0 max-lg:flex-1 max-lg:flex-col max-lg:overflow-y-auto max-lg:overscroll-y-contain",
                 "lg:contents"
               )}
             >
-              <ListingStageViewHeader ref={setHeaderRefs} action={headerAction} />
+              <ListingStageViewHeader
+                ref={setHeaderRefs}
+                action={headerAction}
+              />
               <div
+                data-slot="listing-stage-mobile-scroll-viewport"
                 className={cn(
                   "flex min-h-0 w-full flex-1 flex-col max-lg:min-h-0",
                   "lg:h-auto lg:min-h-0"
@@ -264,20 +334,40 @@ export function ListingStageShell({
                   <div
                     className={cn(
                       "relative hidden min-h-0 min-w-0 shrink-0 flex-col border-t border-border lg:flex",
-                      "px-4 py-4 lg:px-0",
+                      "px-4 pt-4 py-3 lg:px-0",
                       "lg:sticky lg:bottom-0 lg:z-30",
                       "lg:border-border/80 lg:bg-background/90 lg:backdrop-blur-md lg:supports-backdrop-filter:bg-background/90",
                       "lg:col-start-2 lg:col-end-3 lg:row-start-2"
                     )}
                   >
+                    {footerAccessoryRow()}
+                    {footerAccessory ? (
+                      <div
+                        className="my-3 h-px w-full shrink-0 bg-border/80"
+                        aria-hidden
+                      />
+                    ) : null}
                     {footerActionsRow("listing-stage-footer-lg")}
                   </div>
                 </section>
               </div>
+              <div
+                data-slot="listing-stage-mobile-footer-spacer"
+                className="shrink-0 md:hidden"
+                style={
+                  mobileFooterScrollSpacerPx > 0
+                    ? { height: `${mobileFooterScrollSpacerPx}px` }
+                    : { minHeight: "5rem" }
+                }
+                aria-hidden
+              />
             </div>
           ) : (
             <>
-              <ListingStageViewHeader ref={setHeaderRefs} action={headerAction} />
+              <ListingStageViewHeader
+                ref={setHeaderRefs}
+                action={headerAction}
+              />
               <section
                 style={
                   contentMinHeightPx === null
@@ -317,14 +407,33 @@ export function ListingStageShell({
 
           {hasFooter ? (
             <div
+              ref={mobileFooterRef}
+              data-slot="listing-stage-mobile-footer"
               className={cn(
                 "relative flex min-h-0 min-w-0 shrink-0 flex-col border-t border-border lg:hidden",
-                "bg-background/90 px-4 py-4 backdrop-blur-md supports-backdrop-filter:bg-background/90 md:px-6",
+                footerAccessory
+                  ? "bg-background/90 px-4 pt-3 backdrop-blur-md supports-backdrop-filter:bg-background/90 md:px-6"
+                  : "bg-background/90 px-4 py-4 backdrop-blur-md supports-backdrop-filter:bg-background/90 md:px-6",
                 "max-lg:pb-[calc(1rem+env(safe-area-inset-bottom,0px))]",
                 "max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-50",
                 "max-md:isolate"
               )}
             >
+              {footerAccessory ? (
+                <>
+                  {footerAccessoryRow()}
+                  <div
+                    className={cn(
+                      "my-3 h-px shrink-0 bg-border/80",
+                      /* max-md: footer is fixed full-bleed; w-full + -mx fails in flex — span viewport */
+                      "max-md:relative max-md:left-1/2 max-md:w-screen max-md:max-w-none max-md:-translate-x-1/2",
+                      /* md–lg: break out of footer px-6 only */
+                      "md:left-auto md:w-[calc(100%+3rem)] md:translate-x-0 md:-mx-6"
+                    )}
+                    aria-hidden
+                  />
+                </>
+              ) : null}
               {footerActionsRow("listing-stage-footer-max-lg")}
             </div>
           ) : null}

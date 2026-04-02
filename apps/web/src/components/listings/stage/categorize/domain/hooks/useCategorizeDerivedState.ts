@@ -49,17 +49,17 @@ export function useCategorizeDerivedState({
     });
   }, [categorizedImages, customCategories]);
 
-  const workspaceCategoryOrder = React.useMemo(() => {
-    return categoryOrder.filter((category) => {
-      if (category === UNCATEGORIZED_CATEGORY_ID) {
-        return (categorizedImages[UNCATEGORIZED_CATEGORY_ID]?.length ?? 0) > 0;
-      }
-      if (category === "other") {
-        return (categorizedImages["other"]?.length ?? 0) > 0;
-      }
-      return true;
-    });
-  }, [categoryOrder, categorizedImages]);
+  /**
+   * Categories that participate in workspace placement (≥1 photo). Drives
+   * canBeUsed, default “used” picks, and drop-zone bookkeeping.
+   */
+  const workspaceCategoryOrder = React.useMemo(
+    () =>
+      categoryOrder.filter(
+        (category) => (categorizedImages[category]?.length ?? 0) > 0
+      ),
+    [categoryOrder, categorizedImages]
+  );
 
   const baseCategoryCounts = React.useMemo(() => {
     const counts: Record<string, number> = {};
@@ -137,6 +137,15 @@ export function useCategorizeDerivedState({
     [workspaceImages]
   );
 
+  /** Room accordions only when at least one image is selected as a video frame. */
+  const accordionCategoryOrder = React.useMemo(
+    () =>
+      workspaceCategoryOrder.filter(
+        (category) => (usedImagesByCategory[category]?.length ?? 0) > 0
+      ),
+    [usedImagesByCategory, workspaceCategoryOrder]
+  );
+
   const dockedImages = React.useMemo(
     () =>
       workspaceImages
@@ -179,7 +188,7 @@ export function useCategorizeDerivedState({
   const uncategorizedDockCount = dockedImages.filter(
     (image) => image.isUncategorized
   ).length;
-  const hasEmptyCategory = workspaceCategoryOrder.some(
+  const hasEmptyCategory = categoryOrder.some(
     (category) => (categorizedImages[category]?.length ?? 0) === 0
   );
   const activeCategoryCount = workspaceCategoryOrder.length;
@@ -199,6 +208,7 @@ export function useCategorizeDerivedState({
     workspaceImages,
     categoryOrder,
     workspaceCategoryOrder,
+    accordionCategoryOrder,
     baseCategoryCounts,
     usedImagesByCategory,
     dockedImages,

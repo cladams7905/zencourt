@@ -26,8 +26,6 @@ type UseCategorizeActionsParams = {
   customCategories: string[];
   categoryDialogCategory: string | null;
   deleteCategory: string | null;
-  moveImageId: string | null;
-  deleteImageId: string | null;
   categoryUsageCounts: Record<string, number>;
   placementOverrides: Record<string, WorkspacePlacement>;
   setImages: React.Dispatch<React.SetStateAction<ListingImageItem[]>>;
@@ -37,8 +35,6 @@ type UseCategorizeActionsParams = {
   setCustomCategories: React.Dispatch<React.SetStateAction<string[]>>;
   setIsCategoryDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
   setDeleteCategory: React.Dispatch<React.SetStateAction<string | null>>;
-  setMoveImageId: React.Dispatch<React.SetStateAction<string | null>>;
-  setDeleteImageId: React.Dispatch<React.SetStateAction<string | null>>;
   setIsDraggingImage: React.Dispatch<React.SetStateAction<boolean>>;
   setDragOverCategory: React.Dispatch<React.SetStateAction<string | null>>;
   persistImageAssignments: (
@@ -59,8 +55,6 @@ export function useCategorizeActions(params: UseCategorizeActionsParams) {
     customCategories,
     categoryDialogCategory,
     deleteCategory,
-    moveImageId,
-    deleteImageId,
     categoryUsageCounts,
     placementOverrides,
     setImages,
@@ -68,32 +62,11 @@ export function useCategorizeActions(params: UseCategorizeActionsParams) {
     setCustomCategories,
     setIsCategoryDialogOpen,
     setDeleteCategory,
-    setMoveImageId,
-    setDeleteImageId,
     setIsDraggingImage,
     setDragOverCategory,
     persistImageAssignments,
     endDragSession
   } = params;
-
-  const isCategoryAtLimit = React.useCallback(
-    (category: string | null) => {
-      if (!category || category === UNCATEGORIZED_CATEGORY_ID) {
-        return false;
-      }
-      return (categoryUsageCounts[category] ?? 0) >= MAX_IMAGES_PER_ROOM;
-    },
-    [categoryUsageCounts]
-  );
-
-  const activeMoveImage = React.useMemo(
-    () => images.find((image) => image.id === moveImageId) ?? null,
-    [images, moveImageId]
-  );
-  const activeDeleteImage = React.useMemo(
-    () => images.find((image) => image.id === deleteImageId) ?? null,
-    [images, deleteImageId]
-  );
 
   const resolveCategoryValue = React.useCallback(
     (
@@ -257,105 +230,6 @@ export function useCategorizeActions(params: UseCategorizeActionsParams) {
     setCustomCategories,
     setDeleteCategory,
     setImages
-  ]);
-
-  const handleMoveImage = React.useCallback(
-    async (targetCategory: string) => {
-      if (!moveImageId) {
-        return;
-      }
-      const resolvedCategory =
-        targetCategory === UNCATEGORIZED_CATEGORY_ID ? null : targetCategory;
-      const previousImages = images;
-      const previousImage = images.find((image) => image.id === moveImageId);
-      const previousPlacement =
-        placementOverrides[moveImageId] ??
-        previousImage?.workspacePlacement ??
-        "dock";
-      if (previousImage?.category === resolvedCategory) {
-        setMoveImageId(null);
-        return;
-      }
-      if (
-        resolvedCategory &&
-        previousPlacement === "used" &&
-        previousImage?.category !== resolvedCategory &&
-        isCategoryAtLimit(resolvedCategory)
-      ) {
-        toast.error(
-          `This room already has ${MAX_IMAGES_PER_ROOM} photos. Remove one before adding another.`
-        );
-        return;
-      }
-      const nextImages = images.map((image) =>
-        image.id === moveImageId
-          ? {
-              ...image,
-              category: resolvedCategory
-            }
-          : image
-      );
-      const updatedImage = nextImages.find((image) => image.id === moveImageId);
-      if (!updatedImage) {
-        return;
-      }
-      setImages(nextImages);
-      const success = await persistImageAssignments(
-        [
-          {
-            id: updatedImage.id,
-            category: updatedImage.category ?? null
-          }
-        ],
-        [],
-        () => setImages(previousImages)
-      );
-      if (!success) {
-        return;
-      }
-      setMoveImageId(null);
-    },
-    [
-      images,
-      isCategoryAtLimit,
-      moveImageId,
-      placementOverrides,
-      persistImageAssignments,
-      setImages,
-      setMoveImageId
-    ]
-  );
-
-  const handleDeleteImage = React.useCallback(async () => {
-    if (!deleteImageId) {
-      return;
-    }
-    const imageId = deleteImageId;
-    const previousImages = images;
-    const remainingImages = images.filter((image) => image.id !== imageId);
-    setImages(remainingImages);
-    const success = await persistImageAssignments([], [imageId], () =>
-      setImages(previousImages)
-    );
-    if (!success) {
-      return;
-    }
-    setPlacementOverrides((prev) => {
-      if (!prev[imageId]) {
-        return prev;
-      }
-      const next = { ...prev };
-      delete next[imageId];
-      return next;
-    });
-    setDeleteImageId(null);
-  }, [
-    deleteImageId,
-    images,
-    persistImageAssignments,
-    setDeleteImageId,
-    setImages,
-    setPlacementOverrides
   ]);
 
   const handleDragStart = React.useCallback(
@@ -632,13 +506,9 @@ export function useCategorizeActions(params: UseCategorizeActionsParams) {
   );
 
   return {
-    activeMoveImage,
-    activeDeleteImage,
     handleCreateCategory,
     handleEditCategory,
     handleDeleteCategory,
-    handleMoveImage,
-    handleDeleteImage,
     handleDragStart,
     handleDragEnd,
     handleDrop,

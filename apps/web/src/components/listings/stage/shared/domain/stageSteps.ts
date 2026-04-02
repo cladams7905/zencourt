@@ -59,9 +59,9 @@ export function getListingStageScaffoldCopy(
       };
     case "categorize":
       return {
-        stepTitle: "Step 3: Categorize photos",
+        stepTitle: "Step 3: Plan video scenes",
         stepSubtitle:
-          "Arrange photos by room and select which photos you'd like turned into video clips."
+          "Select which photos you'd like to use as starting frames for your room videos."
       };
     case "review":
       return {

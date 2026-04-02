@@ -28,15 +28,19 @@ describe("useCategorizeDerivedState", () => {
     ]);
     expect(result.current.workspaceCategoryOrder).toEqual([
       UNCATEGORIZED_CATEGORY_ID,
-      "bedroom-1",
       "bedroom-2",
       "kitchen",
       "other"
+    ]);
+    expect(result.current.accordionCategoryOrder).toEqual([
+      "bedroom-2",
+      "kitchen"
     ]);
     expect(result.current.baseCategoryCounts).toEqual({
       bedroom: 2,
       kitchen: 1
     });
+    expect(result.current.hasEmptyCategory).toBe(true);
   });
 
   it("seeds top two images per category into used images and docks the rest", () => {
@@ -102,6 +106,7 @@ describe("useCategorizeDerivedState", () => {
       isUncategorized: true,
       workspacePlacement: "dock"
     });
+    expect(result.current.accordionCategoryOrder).toEqual(["kitchen"]);
   });
 
   it("honors manual placement overrides and computes used limits", () => {
@@ -153,5 +158,9 @@ describe("useCategorizeDerivedState", () => {
     expect(result.current.usedImageCount).toBe(3);
     expect(result.current.hasOverUsedLimit).toBe(false);
     expect(result.current.hasOverLimit).toBe(false);
+    expect(result.current.accordionCategoryOrder).toEqual([
+      "kitchen",
+      "living-room"
+    ]);
   });
 });

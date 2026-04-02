@@ -58,7 +58,7 @@ function BlurredProcessingGrid({
       {slots.map((cell, index) => (
         <div
           key={cell.id ?? `ph-${index}`}
-          className="relative aspect-square overflow-hidden rounded-md border border-border bg-muted/20"
+          className="relative aspect-square overflow-hidden rounded-lg border border-border bg-muted/20"
         >
           {cell.src ? (
             <Image
@@ -155,7 +155,7 @@ export function ListingUploadView({
         }
       >
         {isInlineProcessing ? (
-          <div className="shrink-0 rounded-lg border border-border bg-background p-3">
+          <div className="shrink-0 rounded-xl border border-border bg-background p-3">
             <div className="mb-2 flex items-center justify-between gap-2">
               <div className="flex min-w-0 flex-wrap items-center gap-2">
                 <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -179,7 +179,7 @@ export function ListingUploadView({
             </div>
             <div
               ref={processingGalleryBoundaryRef}
-              className="relative overflow-hidden rounded-md"
+              className="relative overflow-hidden rounded-lg"
             >
               <BlurredProcessingGrid cells={processingGalleryCells} />
               <div
@@ -236,7 +236,7 @@ export function ListingUploadView({
             pendingFiles.length > 0 ||
             isCompressing ||
             (isDriveLoading && driveLoadingCount > 0) ? (
-              <div className="shrink-0 rounded-lg border border-border bg-background p-3">
+              <div className="shrink-0 rounded-xl border border-border bg-background p-3">
                 <div className="mb-2 flex items-center justify-between gap-2">
                   <div className="flex min-w-0 flex-wrap items-center gap-2">
                     <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -271,7 +271,7 @@ export function ListingUploadView({
                     return (
                       <div
                         key={item.id}
-                        className="group relative aspect-square overflow-hidden rounded-md border border-border bg-muted/20"
+                        className="group relative aspect-square overflow-hidden rounded-lg border border-border bg-muted/20"
                       >
                         <Image
                           src={item.previewUrl}
@@ -333,7 +333,7 @@ export function ListingUploadView({
                   {existingImages.map((item) => (
                     <div
                       key={item.id}
-                      className="relative aspect-square overflow-hidden rounded-md border border-border bg-muted/20"
+                      className="relative aspect-square overflow-hidden rounded-lg border border-border bg-muted/20"
                     >
                       <Image
                         src={item.url}

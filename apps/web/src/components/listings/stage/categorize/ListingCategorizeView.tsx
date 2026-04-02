@@ -4,15 +4,12 @@ import * as React from "react";
 import { Loader2 } from "lucide-react";
 import {
   CategorizeImageWorkspace,
+  CategorizeUnusedDock,
   ListingCategoryDeleteDialog,
-  ListingCategoryDialog,
-  ListingImageDeleteDialog,
-  ListingImageMoveDialog
+  ListingCategoryDialog
 } from "@web/src/components/listings/stage/categorize";
 import {
-  categoryDockDropZoneId,
   categoryUsedDropZoneId,
-  UNCATEGORIZED_CATEGORY_ID,
   UNUSED_DOCK_DROP_ZONE_ID,
   useDragAutoScroll,
   type ListingCategorizeViewProps,
@@ -78,11 +75,6 @@ export function ListingCategorizeView({
   const [deleteCategory, setDeleteCategory] = React.useState<string | null>(
     null
   );
-  const [moveImageId, setMoveImageId] = React.useState<string | null>(null);
-  const [deleteImageId, setDeleteImageId] = React.useState<string | null>(null);
-  const [openImageMenuId, setOpenImageMenuId] = React.useState<string | null>(
-    null
-  );
   const [customCategories, setCustomCategories] = React.useState<string[]>([]);
   const [placementOverrides, setPlacementOverrides] = React.useState<
     Record<string, WorkspacePlacement>
@@ -93,8 +85,8 @@ export function ListingCategorizeView({
   const {
     dockedImages,
     usedImagesByCategory,
-    dockedImagesByCategory,
     workspaceCategoryOrder,
+    accordionCategoryOrder,
     categoryUsageCounts,
     categoriesOverUsedLimit,
     usedImageCount,
@@ -155,17 +147,6 @@ export function ListingCategorizeView({
     !hasTooManyCategories &&
     !hasOverUsedLimit;
   const isSavingDraft = savingCount > 0;
-  const moveCategoryOptions = React.useMemo(() => {
-    return categoryOrder.map((category) => {
-      return {
-        value: category,
-        label:
-          category === UNCATEGORIZED_CATEGORY_ID
-            ? "Uncategorized"
-            : formatCategoryLabel(category, baseCategoryCounts)
-      };
-    });
-  }, [baseCategoryCounts, categoryOrder]);
   useCategorizeConstraints({
     categoryOrder
   });
@@ -181,25 +162,18 @@ export function ListingCategorizeView({
   }, [images]);
 
   const {
-    activeMoveImage,
-    activeDeleteImage,
     handleCreateCategory,
     handleEditCategory,
     handleDeleteCategory,
-    handleMoveImage,
-    handleDeleteImage,
     handleDragStart,
     handleDragEnd,
-    handleDrop,
-    handleDropOnCategoryUnusedStrip
+    handleDrop
   } = useCategorizeActions({
     images,
     categoryOrder,
     customCategories,
     categoryDialogCategory,
     deleteCategory,
-    moveImageId,
-    deleteImageId,
     categoryUsageCounts,
     placementOverrides,
     setImages,
@@ -207,8 +181,6 @@ export function ListingCategorizeView({
     setCustomCategories,
     setIsCategoryDialogOpen,
     setDeleteCategory,
-    setMoveImageId,
-    setDeleteImageId,
     setIsDraggingImage,
     setDragOverCategory,
     persistImageAssignments,
@@ -221,9 +193,6 @@ export function ListingCategorizeView({
   }, []);
   const handleCategoryUsedDragOver = React.useCallback((category: string) => {
     setDragOverCategory(categoryUsedDropZoneId(category));
-  }, []);
-  const handleCategoryUnusedDragOver = React.useCallback((category: string) => {
-    setDragOverCategory(categoryDockDropZoneId(category));
   }, []);
   const handleCategoryRowDragLeave = React.useCallback(
     (event: React.DragEvent<HTMLDivElement>) => {
@@ -250,18 +219,6 @@ export function ListingCategorizeView({
     },
     []
   );
-  const handleOpenImageMenuChange = React.useCallback(
-    (imageId: string | null) => {
-      setOpenImageMenuId(imageId);
-    },
-    []
-  );
-  const handleRequestMoveImage = React.useCallback((imageId: string) => {
-    setMoveImageId(imageId);
-  }, []);
-  const handleRequestDeleteImage = React.useCallback((imageId: string) => {
-    setDeleteImageId(imageId);
-  }, []);
   const handleBackToUpload = React.useCallback(() => {
     clearStoredCategorizeProcessingBatch(listingId);
     setProcessingBatch(null);
@@ -291,6 +248,19 @@ export function ListingCategorizeView({
             canBack={!isInlineProcessing}
           />
         }
+        footerAccessory={
+          isInlineProcessing ? undefined : (
+            <CategorizeUnusedDock
+              dockedImages={dockedImages}
+              dragOverCategory={dragOverCategory}
+              onGlobalUnusedDockDragOver={handleGlobalUnusedDockDragOver}
+              onGlobalUnusedDockDragLeave={handleGlobalUnusedDockDragLeave}
+              handleDragStart={handleDragStart}
+              handleDragEnd={handleDragEnd}
+              handleGlobalUnusedDockDrop={handleDrop(UNUSED_DOCK_DROP_ZONE_ID)}
+            />
+          )
+        }
       >
         {isInlineProcessing ? (
           <ListingUploadAiProcessingPanel
@@ -312,31 +282,20 @@ export function ListingCategorizeView({
           >
             <CategorizeImageWorkspace
               images={images}
-              workspaceCategoryOrder={workspaceCategoryOrder}
+              accordionCategoryOrder={accordionCategoryOrder}
               usedImagesByCategory={usedImagesByCategory}
-              dockedImagesByCategory={dockedImagesByCategory}
-              dockedImagesCount={dockedImages.length}
               baseCategoryCounts={baseCategoryCounts}
               usedImageCount={usedImageCount}
               maxUsedImagesTotal={maxUsedImagesTotal}
               hasOverUsedLimit={hasOverUsedLimit}
               categoriesOverUsedLimit={categoriesOverUsedLimit}
               dragOverCategory={dragOverCategory}
-              openImageMenuId={openImageMenuId}
               onOpenCreateCategory={handleOpenCreateCategory}
               onCategoryUsedDragOver={handleCategoryUsedDragOver}
-              onCategoryUnusedDragOver={handleCategoryUnusedDragOver}
               onCategoryRowDragLeave={handleCategoryRowDragLeave}
-              onGlobalUnusedDockDragOver={handleGlobalUnusedDockDragOver}
-              onGlobalUnusedDockDragLeave={handleGlobalUnusedDockDragLeave}
-              onOpenImageMenuChange={handleOpenImageMenuChange}
-              onRequestMoveImage={handleRequestMoveImage}
-              onRequestDeleteImage={handleRequestDeleteImage}
               handleDragStart={handleDragStart}
               handleDragEnd={handleDragEnd}
               handleDropOnCategoryUsed={handleDrop}
-              handleDropOnCategoryUnusedStrip={handleDropOnCategoryUnusedStrip}
-              handleGlobalUnusedDockDrop={handleDrop(UNUSED_DOCK_DROP_ZONE_ID)}
             />
           </div>
         )}
@@ -364,32 +323,6 @@ export function ListingCategorizeView({
           }
         }}
         onConfirm={handleDeleteCategory}
-      />
-      <ListingImageMoveDialog
-        open={Boolean(moveImageId)}
-        imageName={activeMoveImage?.filename ?? null}
-        options={moveCategoryOptions}
-        currentValue={
-          activeMoveImage?.category
-            ? activeMoveImage.category
-            : UNCATEGORIZED_CATEGORY_ID
-        }
-        onOpenChange={(open) => {
-          if (!open) {
-            setMoveImageId(null);
-          }
-        }}
-        onSubmit={handleMoveImage}
-      />
-      <ListingImageDeleteDialog
-        open={Boolean(deleteImageId)}
-        imageName={activeDeleteImage?.filename ?? null}
-        onOpenChange={(open) => {
-          if (!open) {
-            setDeleteImageId(null);
-          }
-        }}
-        onConfirm={handleDeleteImage}
       />
     </>
   );
