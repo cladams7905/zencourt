@@ -10,9 +10,10 @@ export const LISTING_STAGE_MAIN_COLUMN_CLASS =
 export const LISTING_STAGE_LG_MAIN_GRID_CLASS =
   "lg:grid-cols-[minmax(0,1fr)_minmax(0,3fr)]";
 
-/** Max width for step body + footer actions (narrow / wide stages). */
-export const LISTING_STAGE_NARROW_MAX_W_CLASS = "max-w-[30rem]";
-export const LISTING_STAGE_WIDE_MAX_W_CLASS = "max-w-4xl";
+/** Max width for step body + footer actions (narrow / wide stages). `lg:` tightens desktop only. */
+export const LISTING_STAGE_NARROW_MAX_W_CLASS =
+  "max-w-[30rem] lg:max-w-[27rem]";
+export const LISTING_STAGE_WIDE_MAX_W_CLASS = "max-w-4xl lg:max-w-3xl";
 
 type ListingStageScaffoldProps = {
   stepTitle: string;
@@ -25,6 +26,11 @@ type ListingStageScaffoldProps = {
    * column bottom so spacing isn’t lost to flex-1 growth.
    */
   hasFooter?: boolean;
+  /**
+   * When `hasFooter` is true, set to false to keep step body directly under the
+   * step header (e.g. address form) instead of pinning it above the footer.
+   */
+  pinStepBodyToBottom?: boolean;
 };
 
 /**
@@ -36,8 +42,14 @@ export function ListingStageScaffold({
   stepSubtitle,
   children,
   wide = false,
-  hasFooter = false
+  hasFooter = false,
+  pinStepBodyToBottom = true
 }: ListingStageScaffoldProps) {
+  const bodyWrapperClass = cn(
+    "w-full min-w-0 pb-6",
+    hasFooter && pinStepBodyToBottom ? "mt-auto" : "flex min-h-0 flex-1 flex-col"
+  );
+
   return (
     <div
       className={cn(
@@ -47,7 +59,7 @@ export function ListingStageScaffold({
     >
       <ListingStageStepHeader title={stepTitle} subtitle={stepSubtitle} />
       {hasFooter ? (
-        <div className="mt-auto w-full min-w-0 pb-6">{children}</div>
+        <div className={bodyWrapperClass}>{children}</div>
       ) : (
         <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col">
           {children}

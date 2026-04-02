@@ -11,17 +11,26 @@ import { writePropertyDetailsProviderLog } from "../logging";
 describe("property details logging", () => {
   const originalEnv = process.env.NODE_ENV;
 
+  function setNodeEnv(value: string | undefined) {
+    Object.defineProperty(process.env, "NODE_ENV", {
+      value: value ?? "test",
+      writable: true,
+      configurable: true,
+      enumerable: true
+    });
+  }
+
   beforeEach(() => {
     jest.clearAllMocks();
-    process.env.NODE_ENV = "development";
+    setNodeEnv("development");
   });
 
   afterEach(() => {
-    process.env.NODE_ENV = originalEnv;
+    setNodeEnv(originalEnv);
   });
 
   it("skips writing logs during tests", async () => {
-    process.env.NODE_ENV = "test";
+    setNodeEnv("test");
 
     await writePropertyDetailsProviderLog({
       provider: "perplexity",

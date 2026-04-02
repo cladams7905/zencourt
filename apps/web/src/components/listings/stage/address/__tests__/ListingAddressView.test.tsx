@@ -15,6 +15,11 @@ function renderListingAddressView() {
   );
 }
 
+/** Shell renders separate desktop and mobile footers; both stay in the DOM. */
+function getContinueButtons() {
+  return screen.getAllByRole("button", { name: /continue/i });
+}
+
 const mockPush = jest.fn();
 const mockCreateListingForCurrentUser = jest.fn();
 const mockUpdateListingForCurrentUser = jest.fn();
@@ -100,7 +105,7 @@ describe("ListingAddressView", () => {
       "123 Main Street, Seattle WA"
     );
     await user.click(screen.getByRole("button", { name: "Use suggested address" }));
-    await user.click(screen.getByRole("button", { name: /continue/i }));
+    await user.click(getContinueButtons()[0]);
 
     await waitFor(() => {
       expect(mockCreateListingForCurrentUser).toHaveBeenCalledTimes(1);
@@ -122,7 +127,9 @@ describe("ListingAddressView", () => {
 
   it("keeps continue disabled without an address", () => {
     renderListingAddressView();
-    expect(screen.getByRole("button", { name: /continue/i })).toBeDisabled();
+    for (const btn of getContinueButtons()) {
+      expect(btn).toBeDisabled();
+    }
   });
 
   it("keeps continue disabled when address is typed but not chosen from suggestions", async () => {
@@ -132,6 +139,8 @@ describe("ListingAddressView", () => {
       screen.getByRole("textbox", { name: "Listing address" }),
       "123 Main Street"
     );
-    expect(screen.getByRole("button", { name: /continue/i })).toBeDisabled();
+    for (const btn of getContinueButtons()) {
+      expect(btn).toBeDisabled();
+    }
   });
 });

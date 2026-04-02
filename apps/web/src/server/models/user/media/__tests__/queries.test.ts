@@ -119,7 +119,7 @@ describe("userMedia queries", () => {
 
   describe("countUserMediaVideos", () => {
     it("returns aggregate count for the user’s video rows", async () => {
-      mockSelect.mockImplementationOnce((arg: unknown) => {
+      (mockSelect as jest.Mock).mockImplementationOnce((arg: unknown) => {
         if (arg && typeof arg === "object" && arg !== null && "n" in arg) {
           return {
             from: () => ({

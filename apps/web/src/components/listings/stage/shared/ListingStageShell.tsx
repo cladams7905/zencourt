@@ -29,10 +29,18 @@ type ListingStageShellProps = {
    * (e.g. upload stage with a listing id).
    */
   footer?: React.ReactNode;
+  /**
+   * When a footer is shown, false keeps the step body under the step header
+   * instead of pinning it above the footer (default true).
+   */
+  pinStepBodyToBottom?: boolean;
   children: React.ReactNode;
   headerRef?: React.Ref<HTMLElement>;
   headerAction?: React.ReactNode;
 };
+
+/** Desktop: `top` aligns under sticky ListingStageViewHeader; +24px below previous `top-24`. */
+const LISTING_STAGE_TIMELINE_STICKY_TOP_CLASS = "lg:top-[calc(6rem+24px)]";
 
 function ListingStageTimelineColumn({
   steps,
@@ -45,19 +53,25 @@ function ListingStageTimelineColumn({
     <div
       className={cn(
         "flex flex-col border-b border-border pb-4 pt-6",
-        "lg:col-start-1 lg:row-start-1 lg:h-full lg:min-h-0 lg:self-stretch",
-        "lg:border-b-0 lg:border-r lg:border-border/80 lg:py-6 lg:pl-4",
+        /* Full height for border-r; sticky is on the inner desktop wrapper so it can pin (tall sticky boxes never stick). */
+        "lg:col-start-1 lg:row-start-1 lg:relative lg:min-h-0 lg:h-full lg:self-stretch",
+        "lg:border-b-0 lg:border-r lg:border-border/80",
         hasFooter && "lg:row-span-2"
       )}
     >
       <div className="flex w-full shrink-0 justify-center lg:hidden">
         <ListingStageTimeline steps={steps} desktopVertical />
       </div>
-      <div className="hidden lg:flex lg:h-full lg:min-h-0 lg:w-full lg:flex-col">
+      <div
+        className={cn(
+          "hidden min-h-0 w-full flex-col justify-start lg:flex",
+          "lg:sticky lg:z-20 lg:pl-4",
+          LISTING_STAGE_TIMELINE_STICKY_TOP_CLASS
+        )}
+      >
         <div className="shrink-0">
           <ListingStageTimeline steps={steps} desktopVertical />
         </div>
-        {hasFooter ? <div className="min-h-0 flex-1" aria-hidden /> : null}
       </div>
     </div>
   );
@@ -67,10 +81,68 @@ export function ListingStageShell({
   stage,
   wide,
   footer,
+  pinStepBodyToBottom = true,
   children,
   headerRef,
   headerAction
 }: ListingStageShellProps) {
+  const scrollViewportRef = React.useRef<HTMLDivElement>(null);
+  const headerMeasureRef = React.useRef<HTMLElement | null>(null);
+  const [viewportMinHeightPx, setViewportMinHeightPx] = React.useState<
+    number | null
+  >(null);
+  const [contentMinHeightPx, setContentMinHeightPx] = React.useState<
+    number | null
+  >(null);
+
+  React.useLayoutEffect(() => {
+    const viewportEl = scrollViewportRef.current;
+    if (!viewportEl) return;
+
+    const updateViewportMinHeight = () => {
+      const viewportHeight = Math.floor(viewportEl.getBoundingClientRect().height);
+      const headerHeight = Math.floor(
+        headerMeasureRef.current?.getBoundingClientRect().height ?? 0
+      );
+      const nextHeight = viewportHeight;
+      const nextContentHeight = Math.max(0, viewportHeight - headerHeight);
+      setViewportMinHeightPx((prev) => (prev === nextHeight ? prev : nextHeight));
+      setContentMinHeightPx((prev) =>
+        prev === nextContentHeight ? prev : nextContentHeight
+      );
+    };
+
+    updateViewportMinHeight();
+
+    const canObserveResize = typeof ResizeObserver !== "undefined";
+    const resizeObserver = canObserveResize
+      ? new ResizeObserver(updateViewportMinHeight)
+      : null;
+    resizeObserver?.observe(viewportEl);
+    if (headerMeasureRef.current) {
+      resizeObserver?.observe(headerMeasureRef.current);
+    }
+    window.addEventListener("resize", updateViewportMinHeight);
+
+    return () => {
+      resizeObserver?.disconnect();
+      window.removeEventListener("resize", updateViewportMinHeight);
+    };
+  }, []);
+
+  const setHeaderRefs = React.useCallback(
+    (node: HTMLElement | null) => {
+      headerMeasureRef.current = node;
+      if (!headerRef) return;
+      if (typeof headerRef === "function") {
+        headerRef(node);
+        return;
+      }
+      (headerRef as React.MutableRefObject<HTMLElement | null>).current = node;
+    },
+    [headerRef]
+  );
+
   const ctx = useListingStageViewContext();
   const steps = buildListingStageFlowSteps(stage);
   const copy = getListingStageScaffoldCopy(stage);
@@ -81,6 +153,10 @@ export function ListingStageShell({
     Boolean(ctx.listingId?.trim());
 
   const hasFooter = footer !== undefined || showDefaultFooter;
+  const hasFooterDesktopGridRowsClass =
+    stage === "address"
+      ? "lg:grid-rows-[minmax(0,1fr)_auto]"
+      : "lg:grid-rows-[minmax(0,auto)_auto]";
 
   const renderFooterSlot = (slotKey: string): React.ReactNode => {
     if (footer !== undefined) {
@@ -113,6 +189,7 @@ export function ListingStageShell({
   return (
     <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
       <div
+        ref={scrollViewportRef}
         className={cn(
           "flex min-h-0 w-full min-w-0 flex-1 flex-col",
           hasFooter
@@ -120,13 +197,16 @@ export function ListingStageShell({
             : "overflow-y-auto overscroll-y-contain"
         )}
       >
-        {!hasFooter ? (
-          <ListingStageViewHeader ref={headerRef} action={headerAction} />
-        ) : null}
         <div
+          style={
+            viewportMinHeightPx === null
+              ? undefined
+              : { minHeight: `${viewportMinHeightPx}px` }
+          }
           className={cn(
             "mx-auto flex h-full min-h-0 w-full min-w-0 flex-1 flex-col bg-background",
-            hasFooter && "lg:min-h-[calc(100dvh-8.5rem)]",
+            /* lg: single scroll surface — step body passes under sticky header/footer (frosted blur). */
+            "lg:h-auto lg:flex-none",
             hasFooter &&
               "max-lg:flex max-lg:min-h-0 max-lg:flex-1 max-lg:flex-col max-lg:overflow-hidden"
           )}
@@ -138,13 +218,24 @@ export function ListingStageShell({
                 "lg:contents"
               )}
             >
-              <ListingStageViewHeader ref={headerRef} action={headerAction} />
-              <div className="flex min-h-0 w-full flex-1 flex-col max-lg:min-h-0 lg:min-h-0 lg:flex-1">
+              <ListingStageViewHeader ref={setHeaderRefs} action={headerAction} />
+              <div
+                className={cn(
+                  "flex min-h-0 w-full flex-1 flex-col max-lg:min-h-0",
+                  "lg:h-auto lg:min-h-0"
+                )}
+              >
                 <section
+                  style={
+                    contentMinHeightPx === null
+                      ? undefined
+                      : { minHeight: `${contentMinHeightPx}px` }
+                  }
                   className={cn(
-                    "grid min-h-0 w-full min-w-0 max-w-full flex-1 grid-cols-1 grid-rows-[auto_minmax(0,1fr)]",
-                    "lg:min-h-0 lg:h-full lg:items-stretch",
-                    "lg:grid-rows-[minmax(0,1fr)_auto]",
+                    "grid min-h-0 w-full min-w-0 max-w-full grid-cols-1 grid-rows-[auto_minmax(0,1fr)]",
+                    "max-lg:flex-1 max-lg:min-h-0",
+                    "lg:h-auto lg:items-stretch",
+                    hasFooterDesktopGridRowsClass,
                     LISTING_STAGE_LG_MAIN_GRID_CLASS
                   )}
                 >
@@ -154,7 +245,8 @@ export function ListingStageShell({
                     className={cn(
                       LISTING_STAGE_MAIN_COLUMN_CLASS,
                       "lg:col-start-2 lg:row-start-1",
-                      "lg:min-h-0 lg:items-center lg:overflow-y-auto lg:overscroll-y-contain",
+                      "items-center",
+                      "lg:min-h-0 lg:overflow-visible",
                       "max-md:pb-24"
                     )}
                   >
@@ -163,6 +255,7 @@ export function ListingStageShell({
                       stepSubtitle={copy.stepSubtitle}
                       wide={wide}
                       hasFooter
+                      pinStepBodyToBottom={pinStepBodyToBottom}
                     >
                       {children}
                     </ListingStageScaffold>
@@ -170,9 +263,11 @@ export function ListingStageShell({
 
                   <div
                     className={cn(
-                      "relative hidden min-h-0 min-w-0 flex-col border-t border-border lg:flex",
+                      "relative hidden min-h-0 min-w-0 shrink-0 flex-col border-t border-border lg:flex",
                       "px-4 py-4 lg:px-0",
-                      "lg:col-start-2 lg:row-start-2 lg:static lg:z-auto"
+                      "lg:sticky lg:bottom-0 lg:z-30",
+                      "lg:border-border/80 lg:bg-background/90 lg:backdrop-blur-md lg:supports-backdrop-filter:bg-background/90",
+                      "lg:col-start-2 lg:col-end-3 lg:row-start-2"
                     )}
                   >
                     {footerActionsRow("listing-stage-footer-lg")}
@@ -181,42 +276,52 @@ export function ListingStageShell({
               </div>
             </div>
           ) : (
-            <section
-              className={cn(
-                "grid min-h-0 w-full min-w-0 max-w-full flex-1 grid-cols-1 grid-rows-[auto_minmax(0,1fr)]",
-                "lg:min-h-0 lg:h-full lg:items-stretch lg:grid-rows-[minmax(0,1fr)]",
-                LISTING_STAGE_LG_MAIN_GRID_CLASS
-              )}
-            >
-              <ListingStageTimelineColumn steps={steps} hasFooter={false} />
-
-              <div
+            <>
+              <ListingStageViewHeader ref={setHeaderRefs} action={headerAction} />
+              <section
+                style={
+                  contentMinHeightPx === null
+                    ? undefined
+                    : { minHeight: `${contentMinHeightPx}px` }
+                }
                 className={cn(
-                  LISTING_STAGE_MAIN_COLUMN_CLASS,
-                  "lg:col-start-2 lg:row-start-1",
-                  "lg:min-h-0 lg:items-center lg:overflow-y-auto lg:overscroll-y-contain"
+                  "grid min-h-0 w-full min-w-0 max-w-full grid-cols-1 grid-rows-[auto_minmax(0,1fr)]",
+                  "max-lg:flex-1 max-lg:min-h-0",
+                  "lg:h-auto lg:items-stretch lg:flex-none",
+                  "lg:grid-rows-[minmax(0,auto)]",
+                  LISTING_STAGE_LG_MAIN_GRID_CLASS
                 )}
               >
-                <ListingStageScaffold
-                  stepTitle={copy.stepTitle}
-                  stepSubtitle={copy.stepSubtitle}
-                  wide={wide}
-                  hasFooter={false}
+                <ListingStageTimelineColumn steps={steps} hasFooter={false} />
+
+                <div
+                  className={cn(
+                    LISTING_STAGE_MAIN_COLUMN_CLASS,
+                    "lg:col-start-2 lg:row-start-1",
+                    "items-center",
+                    "lg:min-h-0 lg:overflow-visible"
+                  )}
                 >
-                  {children}
-                </ListingStageScaffold>
-              </div>
-            </section>
+                  <ListingStageScaffold
+                    stepTitle={copy.stepTitle}
+                    stepSubtitle={copy.stepSubtitle}
+                    wide={wide}
+                    hasFooter={false}
+                  >
+                    {children}
+                  </ListingStageScaffold>
+                </div>
+              </section>
+            </>
           )}
 
           {hasFooter ? (
             <div
               className={cn(
                 "relative flex min-h-0 min-w-0 shrink-0 flex-col border-t border-border lg:hidden",
-                "px-4 py-4 md:px-6",
+                "bg-background/90 px-4 py-4 backdrop-blur-md supports-backdrop-filter:bg-background/90 md:px-6",
                 "max-lg:pb-[calc(1rem+env(safe-area-inset-bottom,0px))]",
-                "max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-50 max-md:bg-background",
-                "md:max-lg:bg-background",
+                "max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-50",
                 "max-md:isolate"
               )}
             >

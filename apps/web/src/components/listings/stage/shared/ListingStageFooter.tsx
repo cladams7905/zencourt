@@ -28,7 +28,7 @@ export function ListingStageFooter({
   return (
     <div
       className={cn(
-        "flex w-full flex-row items-center gap-3 bg-background/90 pointer-events-none backdrop-blur-md supports-backdrop-filter:bg-background/90",
+        "flex w-full flex-row items-center gap-3",
         bothActions ? "justify-between lg:justify-end" : "justify-end"
       )}
     >

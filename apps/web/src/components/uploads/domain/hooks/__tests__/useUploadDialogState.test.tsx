@@ -56,6 +56,7 @@ describe("useUploadDialogState", () => {
     open: true,
     onOpenChange: jest.fn(),
     selectedLabel: "file",
+    errorMessage: "Failed to upload files. Please try again.",
     fileValidator: jest.fn(() => ({ accepted: true })),
     getUploadUrls: jest.fn(
       async (requests: UploadRequest[]): Promise<UploadUrlsResponse> => ({
@@ -513,7 +514,7 @@ describe("useUploadDialogState", () => {
   it("uses the configured fallback error message for non-error upload failures", async () => {
     const args = buildArgs();
     args.errorMessage = "custom upload error";
-    args.getUploadUrls = jest.fn(async () => {
+    args.getUploadUrls = jest.fn(async (_requests: UploadRequest[]) => {
       throw "boom";
     });
 

@@ -166,7 +166,7 @@ export function CategorizeImageWorkspace({
                     </AccordionTrigger>
                     <AccordionContent className="pb-3 pt-0">
                       <div className="min-w-0 overflow-x-auto scrollbar-hide pb-1">
-                        <div className="flex min-h-[7.25rem] min-w-min items-stretch gap-2">
+                        <div className="flex min-h-29 min-w-min items-stretch gap-2">
                           <div
                             className={cn(
                               "flex shrink-0 items-center gap-2 rounded-lg border border-dashed px-2 py-2 transition-colors",
@@ -196,7 +196,7 @@ export function CategorizeImageWorkspace({
                                 />
                               ))
                             ) : (
-                              <div className="flex min-w-[8rem] max-w-[14rem] items-center px-2 text-[11px] leading-snug text-muted-foreground">
+                              <div className="flex min-w-32 max-w-56 items-center px-2 text-[11px] leading-snug text-muted-foreground">
                                 Drag here to use in video (this room).
                               </div>
                             )}
@@ -235,7 +235,7 @@ export function CategorizeImageWorkspace({
                                 />
                               ))
                             ) : (
-                              <div className="flex min-w-[8rem] max-w-[14rem] items-center px-2 text-[11px] leading-snug text-muted-foreground">
+                              <div className="flex min-w-32 max-w-56 items-center px-2 text-[11px] leading-snug text-muted-foreground">
                                 Unused in this room — drag here from other rooms
                                 or from video picks.
                               </div>

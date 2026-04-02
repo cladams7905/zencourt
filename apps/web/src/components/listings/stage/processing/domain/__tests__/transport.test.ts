@@ -136,18 +136,18 @@ describe("processing transport", () => {
     expect(
       countTerminalInBatch(
         [
-          { id: "1", analysisStatus: "complete" },
-          { id: "2", analysisStatus: "failed" },
-          { id: "3", analysisStatus: "processing" },
-          { id: "4", analysisStatus: "pending" }
+          { id: "1", category: null, analysisStatus: "complete" },
+          { id: "2", category: null, analysisStatus: "failed" },
+          { id: "3", category: null, analysisStatus: "processing" },
+          { id: "4", category: null, analysisStatus: "pending" }
         ],
         ["1", "2", "3"]
       )
     ).toEqual({
       batchImages: [
-        { id: "1", analysisStatus: "complete" },
-        { id: "2", analysisStatus: "failed" },
-        { id: "3", analysisStatus: "processing" }
+        { id: "1", category: null, analysisStatus: "complete" },
+        { id: "2", category: null, analysisStatus: "failed" },
+        { id: "3", category: null, analysisStatus: "processing" }
       ],
       batchTotal: 3,
       batchCompleted: 2,

@@ -98,7 +98,7 @@ describe("image categorize scoring", () => {
         motionPotential: 0.5,
         roomRepresentativeness: 0.4
       } as never,
-      shotType: "wide",
+      shotType: "room",
       confidence: 0.8
     });
 

@@ -6,6 +6,8 @@ import {
   resetListingClipRegenerationStoreForTests,
   setOptimisticClipRegeneration
 } from "../regenerationState";
+import type { ListingClipVersionItem } from "@web/src/components/listings/content/shared/types";
+import type { ListingContentItem } from "@web/src/lib/domain/listings/content";
 import { useListingClipManagerWorkspaceSync } from "../sync";
 
 jest.mock("swr", () => jest.fn());
@@ -25,7 +27,9 @@ const mockUseSWR = jest.mocked(useSWR);
 const mockToastSuccess = jest.mocked(toast.success);
 const mockToastError = jest.mocked(toast.error);
 
-function buildClipVersion(overrides: Record<string, unknown> = {}) {
+function buildClipVersion(
+  overrides: Partial<ListingContentItem> = {}
+): ListingContentItem {
   return {
     id: "content-1",
     clipVersionId: "version-1",
@@ -39,7 +43,9 @@ function buildClipVersion(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function buildClipItem(overrides: Record<string, unknown> = {}) {
+function buildClipItem(
+  overrides: Partial<ListingClipVersionItem> = {}
+): ListingClipVersionItem {
   const currentVersion = buildClipVersion();
   return {
     clipId: "clip-1",
@@ -161,7 +167,7 @@ describe("useListingClipManagerWorkspaceSync", () => {
       versionNumber: 2,
       versionStatus: "failed",
       videoUrl: null,
-      thumbnail: null
+      thumbnail: undefined
     });
     const params = createParams({
       previousStatusesRef: { current: new Map([["clip-1", "pending"]]) },

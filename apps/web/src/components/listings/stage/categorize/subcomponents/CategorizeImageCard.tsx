@@ -54,8 +54,7 @@ export function CategorizeImageCard({
         size === "strip" &&
           "shrink-0 aspect-3/4 h-[min(50vh,20rem)] w-[min(78vw,12.5rem)] sm:h-[min(52vh,22rem)] sm:w-[min(42vw,14rem)] md:w-[min(36vw,15rem)]",
         size === "dock" && "shrink-0 aspect-3/4 w-16 sm:w-18",
-        size === "row" &&
-          "shrink-0 aspect-3/4 h-28 w-[4.75rem] sm:h-32 sm:w-24",
+        size === "row" && "shrink-0 aspect-3/4 h-28 w-19 sm:h-32 sm:w-24",
         visualVariant === "muted" &&
           "opacity-55 saturate-[0.35] contrast-95 ring-1 ring-border/70"
       )}

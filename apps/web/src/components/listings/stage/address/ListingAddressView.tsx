@@ -37,6 +37,7 @@ export function ListingAddressView({
   return (
     <ListingStageShell
       stage="address"
+      pinStepBodyToBottom={false}
       footer={
         <ListingStageFooter
           onContinue={() => {

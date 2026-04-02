@@ -1,5 +1,11 @@
 import { renderHook } from "@testing-library/react";
+import type { ListingImagePreviewItem } from "@web/src/components/listings/content/shared/types";
+import type { ListingContentItem } from "@web/src/lib/domain/listings/content";
 import { useListingContentMediaItems } from "../mediaItems";
+
+type ListingContentMediaItemsProps = Parameters<
+  typeof useListingContentMediaItems
+>[0];
 
 describe("useListingContentMediaItems", () => {
   it("falls back to generated image previews when template rendering is unavailable", () => {
@@ -129,12 +135,11 @@ describe("useListingContentMediaItems", () => {
 
   it("derives loading count from initial page load, loading more, generation, and template expectations", () => {
     const { result, rerender } = renderHook(
-      (props: Record<string, unknown>) =>
-        useListingContentMediaItems(props as never),
+      (props: ListingContentMediaItemsProps) => useListingContentMediaItems(props),
       {
         initialProps: {
           activeMediaTab: "images",
-          activeContentItems: [],
+          activeContentItems: [] as ListingContentItem[],
           listingImages: [],
           isGenerating: false,
           loadingCount: 0,
@@ -143,7 +148,7 @@ describe("useListingContentMediaItems", () => {
           isTemplateRendering: false,
           isTemplateRenderingUnavailable: false,
           templatePreviewItems: []
-        }
+        } as ListingContentMediaItemsProps
       }
     );
 
@@ -160,7 +165,7 @@ describe("useListingContentMediaItems", () => {
       isTemplateRendering: false,
       isTemplateRenderingUnavailable: false,
       templatePreviewItems: []
-    });
+    } as ListingContentMediaItemsProps);
     expect(result.current.imageLoadingCount).toBe(2);
 
     rerender({
@@ -174,7 +179,7 @@ describe("useListingContentMediaItems", () => {
       isTemplateRendering: false,
       isTemplateRenderingUnavailable: false,
       templatePreviewItems: []
-    });
+    } as ListingContentMediaItemsProps);
     expect(result.current.imageLoadingCount).toBe(4);
 
     rerender({
@@ -187,8 +192,8 @@ describe("useListingContentMediaItems", () => {
       loadingMoreCount: 0,
       isTemplateRendering: true,
       isTemplateRenderingUnavailable: false,
-      templatePreviewItems: [{ id: "preview-1" }]
-    });
+      templatePreviewItems: [{ id: "preview-1" }] as ListingImagePreviewItem[]
+    } as ListingContentMediaItemsProps);
     expect(result.current.imageLoadingCount).toBe(1);
   });
 });
