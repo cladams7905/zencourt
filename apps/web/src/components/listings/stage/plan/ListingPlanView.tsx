@@ -24,7 +24,7 @@ import {
   usePlanDerivedState
 } from "@web/src/components/listings/stage/plan/domain";
 import { formatCategoryLabel } from "@web/src/components/listings/stage/plan/domain/categoryRules";
-import { normalizeMotionVariantId } from "@web/src/server/services/videoGeneration/domain/prompt";
+import { normalizeMotionVariantId } from "@web/src/lib/domain/videoGeneration/cameraMotionOptions";
 import {
   ListingStageFooter,
   ListingStageShell

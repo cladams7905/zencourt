@@ -10,7 +10,7 @@ import { Button } from "@web/src/components/ui/button";
 import { Film } from "lucide-react";
 import { cn } from "@web/src/components/ui/utils";
 import { formatCategoryLabel } from "@web/src/components/listings/stage/plan/domain/categoryRules";
-import { getAvailableMotionVariants } from "@web/src/server/services/videoGeneration/domain/prompt";
+import { getAvailableMotionVariants } from "@web/src/lib/domain/videoGeneration/cameraMotionOptions";
 import {
   categoryUsedDropZoneId,
   UNCATEGORIZED_CATEGORY_ID,

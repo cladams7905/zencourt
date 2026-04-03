@@ -26,14 +26,13 @@ const dockImage = {
   workspacePlacement: "dock" as const
 };
 
+type MediaQueryChangeListener = (event: MediaQueryListEvent) => void;
+
 describe("PlanUnusedDock", () => {
   let matchMediaState = false;
-  let matchMediaChangeListener: ((event: MediaQueryListEvent) => void) | null =
-    null;
 
   beforeEach(() => {
     matchMediaState = false;
-    matchMediaChangeListener = null;
     Object.defineProperty(window, "matchMedia", {
       writable: true,
       value: jest.fn().mockImplementation(() => ({
@@ -42,8 +41,8 @@ describe("PlanUnusedDock", () => {
         },
         media: "(min-width: 1024px)",
         onchange: null,
-        addEventListener: (_event: string, listener: typeof matchMediaChangeListener) => {
-          matchMediaChangeListener = listener;
+        addEventListener: (_event: string, listener: MediaQueryChangeListener) => {
+          void listener;
         },
         removeEventListener: jest.fn(),
         addListener: jest.fn(),

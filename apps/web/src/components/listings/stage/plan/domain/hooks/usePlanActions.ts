@@ -10,7 +10,7 @@ import {
   UNCATEGORIZED_CATEGORY_ID,
   UNUSED_DOCK_DROP_ZONE_ID
 } from "@web/src/components/listings/stage/plan/shared";
-import { normalizeMotionVariantId } from "@web/src/server/services/videoGeneration/domain/prompt";
+import { normalizeMotionVariantId } from "@web/src/lib/domain/videoGeneration/cameraMotionOptions";
 import type {
   ListingImageItem,
   WorkspacePlacement
@@ -410,12 +410,9 @@ export function usePlanActions(params: UsePlanActionsParams) {
     [
       buildImageWithSceneSelection,
       images,
-      moveImageToDock,
       persistSingleImage,
       placementOverrides,
-      setDragOverCategory,
-      setImages,
-      setPlacementOverrides
+      setDragOverCategory
     ]
   );
 
@@ -483,9 +480,7 @@ export function usePlanActions(params: UsePlanActionsParams) {
       images,
       placementOverrides,
       persistSingleImage,
-      setDragOverCategory,
-      setImages,
-      setPlacementOverrides
+      setDragOverCategory
     ]
   );
 
@@ -565,12 +560,9 @@ export function usePlanActions(params: UsePlanActionsParams) {
       buildImageWithSceneSelection,
       categoryUsageCounts,
       images,
-      moveImageToDock,
       placementOverrides,
       persistSingleImage,
-      setDragOverCategory,
-      setImages,
-      setPlacementOverrides
+      setDragOverCategory
     ]
   );
 
