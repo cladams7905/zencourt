@@ -20,7 +20,7 @@ import {
 import type { ListingStageKey } from "@web/src/components/listings/stage/shared/domain/stageSteps";
 
 type ListingProcessingViewProps = {
-  mode: "categorize" | "review" | "generate";
+  mode: "plan" | "review" | "generate";
   listingId: string;
   initialBatchId?: string | null;
   userId: string;
@@ -66,15 +66,15 @@ export function ListingProcessingView({
   });
 
   const stageKey: ListingStageKey =
-    mode === "categorize"
-      ? "categorize"
+    mode === "plan"
+      ? "plan"
       : mode === "review"
         ? "review"
         : "generate";
 
   const processingBackHref =
-    mode === "categorize"
-      ? `/listings/${listingId}/stage/categorize`
+    mode === "plan"
+      ? `/listings/${listingId}/stage/plan`
       : `/listings/${listingId}/stage/review`;
 
   return (

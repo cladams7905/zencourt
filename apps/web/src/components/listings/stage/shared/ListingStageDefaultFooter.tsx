@@ -24,7 +24,7 @@ export function ListingStageDefaultFooter() {
         )
       }
       onContinue={() =>
-        router.push(`/listings/${listingId}/stage/categorize`)
+        router.push(`/listings/${listingId}/stage/plan`)
       }
       canContinue
       canBack

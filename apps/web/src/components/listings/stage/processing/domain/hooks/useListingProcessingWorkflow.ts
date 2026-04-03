@@ -1,11 +1,11 @@
 import * as React from "react";
 import { emitListingSidebarUpdate } from "@web/src/lib/domain/listings/sidebarEvents";
 import { updateListingStage } from "../transport";
-import { useCategorizeProcessingFlow } from "./useCategorizeProcessingFlow";
+import { usePlanProcessingFlow } from "./usePlanProcessingFlow";
 import { useGenerateProcessingFlow } from "./useGenerateProcessingFlow";
 import { useReviewProcessingFlow } from "./useReviewProcessingFlow";
 
-type Mode = "categorize" | "review" | "generate";
+type Mode = "plan" | "review" | "generate";
 
 export function useListingProcessingWorkflow(params: {
   mode: Mode;
@@ -41,7 +41,7 @@ export function useListingProcessingWorkflow(params: {
     [listingId, navigate, updateStage]
   );
 
-  useCategorizeProcessingFlow({
+  usePlanProcessingFlow({
     mode,
     listingId,
     batchStartedAt,

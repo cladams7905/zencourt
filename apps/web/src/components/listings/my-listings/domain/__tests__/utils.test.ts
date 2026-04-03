@@ -16,14 +16,14 @@ describe("myListingsUtils", () => {
     expect(resolveListingPath({ id: "1", listingStage: "complete" })).toBe(
       "/listings/1/content"
     );
-    expect(resolveListingPath({ id: "1", listingStage: "categorize" })).toBe(
-      "/listings/1/stage/categorize"
+    expect(resolveListingPath({ id: "1", listingStage: "plan" })).toBe(
+      "/listings/1/stage/plan"
     );
     expect(resolveListingPath({ id: "1", listingStage: "upload" })).toBe(
       "/listings/1/stage/upload"
     );
     expect(resolveListingPath({ id: "1", listingStage: null })).toBe(
-      "/listings/1/stage/categorize"
+      "/listings/1/stage/plan"
     );
   });
 
@@ -63,13 +63,13 @@ describe("myListingsUtils", () => {
       previewImages: null
     } as never);
 
-    expect(row.path).toBe("/listings/listing-2/stage/categorize");
+    expect(row.path).toBe("/listings/listing-2/stage/plan");
     expect(row.title).toBe("Untitled listing");
     expect(row.lastOpenedLabel).toBe("Never");
     expect(row.imageCount).toBe(0);
     expect(row.previewImages).toEqual([]);
     expect(row.remainingCount).toBe(0);
-    expect(row.stageLabel).toBe("Categorize");
+    expect(row.stageLabel).toBe("Plan");
     expect(row.draftTooltipLabel).toBe("Draft (Draft)");
     expect(row.showDraftBadge).toBe(true);
   });

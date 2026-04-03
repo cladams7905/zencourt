@@ -42,7 +42,7 @@ export const toListingRowViewModel = (
   const remainingCount = Math.max(imageCount - previewImages.length, 0);
   const stageLabel =
     LISTING_STAGE_LABELS[(listing.listingStage ?? "") as ListingStage] ??
-    "Categorize";
+    "Plan";
 
   return {
     id: listing.id,

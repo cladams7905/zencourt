@@ -19,7 +19,7 @@ type ListingStageScaffoldProps = {
   stepTitle: string;
   stepSubtitle?: string;
   children: React.ReactNode;
-  /** Wider main column for multi-column stages (categorize, review, upload). */
+  /** Wider main column for multi-column stages (plan, review, upload). */
   wide?: boolean;
   /**
    * Bottom padding above a flush listing footer; `mt-auto` pins the body to the

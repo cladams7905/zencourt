@@ -7,7 +7,7 @@ const mockRouterReplace = jest.fn();
 const mockRouterPush = jest.fn();
 const mockUpdateListing = jest.fn();
 const mockGetStoredBatch = jest.fn();
-const mockUseCategorizeProcessingFlow = jest.fn();
+const mockUsePlanProcessingFlow = jest.fn();
 const mockUseUploadFlow = jest.fn();
 const mockUseUploadDialogState = jest.fn();
 const mockToastError = jest.fn();
@@ -35,10 +35,10 @@ jest.mock("@web/src/server/actions/listings/commands", () => ({
 jest.mock(
   "@web/src/components/listings/stage/processing/domain/hooks",
   () => ({
-    getStoredCategorizeProcessingBatch: (...args: unknown[]) =>
+    getStoredPlanProcessingBatch: (...args: unknown[]) =>
       mockGetStoredBatch(...args),
-    useCategorizeProcessingFlow: (...args: unknown[]) =>
-      mockUseCategorizeProcessingFlow(...args)
+    usePlanProcessingFlow: (...args: unknown[]) =>
+      mockUsePlanProcessingFlow(...args)
   })
 );
 
@@ -69,7 +69,7 @@ describe("useListingUploadView", () => {
     jest.clearAllMocks();
     flowWrappedOnUploadsComplete = null;
     mockGetStoredBatch.mockReturnValue(null);
-    mockUseCategorizeProcessingFlow.mockReturnValue({
+    mockUsePlanProcessingFlow.mockReturnValue({
       batchTotal: 0,
       batchCompleted: 0,
       processingCount: 0,
@@ -169,7 +169,7 @@ describe("useListingUploadView", () => {
       useListingUploadView({ listingId: "l1", initialImages: [] })
     );
     expect(result.current.phase).toBe("analyzing");
-    expect(mockUseCategorizeProcessingFlow).toHaveBeenCalledWith(
+    expect(mockUsePlanProcessingFlow).toHaveBeenCalledWith(
       expect.objectContaining({
         batchImageIds: ["a", "b"],
         batchStartedAt: 99
@@ -187,21 +187,21 @@ describe("useListingUploadView", () => {
       useListingUploadView({ listingId: "l1", initialImages: [] })
     );
 
-    const processingArgs = mockUseCategorizeProcessingFlow.mock.calls[0]?.[0];
+    const processingArgs = mockUsePlanProcessingFlow.mock.calls[0]?.[0];
 
     act(() => {
-      processingArgs.navigate("/listings/l1/stage/categorize");
+      processingArgs.navigate("/listings/l1/stage/plan");
     });
 
     expect(mockRouterReplace).toHaveBeenCalledWith(
-      "/listings/l1/stage/categorize"
+      "/listings/l1/stage/plan"
     );
     expect(result.current.phase).toBe("analyzing");
   });
 
-  it("continues to categorize with only initial images when there are no pending files", async () => {
+  it("continues to plan with only initial images when there are no pending files", async () => {
     setupDialogState({ pendingFiles: [] });
-    mockUpdateListing.mockResolvedValue({ listingStage: "categorize" });
+    mockUpdateListing.mockResolvedValue({ listingStage: "plan" });
 
     const { result } = renderHook(() =>
       useListingUploadView({
@@ -215,10 +215,10 @@ describe("useListingUploadView", () => {
     });
 
     expect(mockUpdateListing).toHaveBeenCalledWith("listing-99", {
-      listingStage: "categorize"
+      listingStage: "plan"
     });
     expect(mockRouterPush).toHaveBeenCalledWith(
-      "/listings/listing-99/stage/categorize"
+      "/listings/listing-99/stage/plan"
     );
   });
 
@@ -350,7 +350,7 @@ describe("useListingUploadView", () => {
       addFiles,
       handleUpload
     });
-    mockUpdateListing.mockResolvedValue({ listingStage: "categorize" });
+    mockUpdateListing.mockResolvedValue({ listingStage: "plan" });
 
     const { result } = renderHook(() =>
       useListingUploadView({
@@ -365,7 +365,7 @@ describe("useListingUploadView", () => {
 
     expect(handleUpload).toHaveBeenCalled();
     expect(mockUpdateListing).toHaveBeenCalledWith("listing-2", {
-      listingStage: "categorize"
+      listingStage: "plan"
     });
     expect(result.current.phase).toBe("analyzing");
   });
@@ -395,7 +395,7 @@ describe("useListingUploadView", () => {
     expect(result.current.processingLocalPreviews).toEqual([]);
   });
 
-  it("resets to editing and toasts when saving categorize stage fails after upload", async () => {
+  it("resets to editing and toasts when saving plan stage fails after upload", async () => {
     const handleUpload = jest.fn().mockImplementation(async () => {
       flowWrappedOnUploadsComplete?.();
     });

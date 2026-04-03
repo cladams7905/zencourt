@@ -2,14 +2,14 @@ import type { ListingStage } from "@web/src/components/listings/stage/shared/dom
 
 export const LISTING_STAGE_ORDER: ListingStage[] = [
   "upload",
-  "categorize",
+  "plan",
   "review",
   "complete"
 ];
 
 export const LISTING_STAGE_LABELS: Record<ListingStage, string> = {
   upload: "Upload",
-  categorize: "Categorize",
+  plan: "Plan",
   review: "Review",
   complete: "Complete",
   generate: "Generate"

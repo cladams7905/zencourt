@@ -18,7 +18,7 @@ export const useReviewStageActions = ({
   const isGoingBackRef = React.useRef(false);
 
   const updateListingStage = React.useCallback(
-    async (listingStage: "categorize" | "generate") => {
+    async (listingStage: "plan" | "generate") => {
       await fetchApiData(`/api/v1/listings/${listingId}/stage`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -53,12 +53,12 @@ export const useReviewStageActions = ({
     isGoingBackRef.current = true;
     setIsGoingBack(true);
     try {
-      navigate(`/listings/${listingId}/stage/categorize`);
+      navigate(`/listings/${listingId}/stage/plan`);
     } catch (error) {
       toast.error(
         error instanceof Error
           ? error.message
-          : "Failed to navigate back to categorize stage."
+          : "Failed to navigate back to plan stage."
       );
       isGoingBackRef.current = false;
       setIsGoingBack(false);

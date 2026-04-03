@@ -5,14 +5,14 @@ import {
 } from "@web/src/components/listings/stage/shared/domain/helpers";
 
 type ListingStage =
-  | "categorize"
+  | "plan"
   | "complete"
   | "generate"
   | "review"
   | "upload";
 
 const STAGE_PATHS: Record<ListingStage, (id: string) => string> = {
-  categorize: (id) => `/listings/${id}/stage/categorize`,
+  plan: (id) => `/listings/${id}/stage/plan`,
   complete: (id) => `/listings/${id}/content`,
   generate: (id) => `/listings/${id}/stage/generate`,
   review: (id) => `/listings/${id}/stage/review`,
@@ -23,7 +23,7 @@ export function enforceListingStageAccess(
   listingId: string,
   stage: string,
   requestedStage: Exclude<ListingStage, "complete">,
-  fallback = `/listings/${listingId}/stage/categorize`
+  fallback = `/listings/${listingId}/stage/plan`
 ): void {
   if (stage === "complete") {
     redirect(STAGE_PATHS.complete(listingId));
@@ -44,7 +44,7 @@ export function redirectToListingStage(
   listingId: string,
   stage: string,
   requestedStage: ListingStage,
-  fallback = `/listings/${listingId}/stage/categorize`
+  fallback = `/listings/${listingId}/stage/plan`
 ): void {
   if (requestedStage === "complete") {
     if (stage === "complete") {

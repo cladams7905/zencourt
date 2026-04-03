@@ -9,7 +9,7 @@ describe("sidebarListingsViewModel", () => {
       {
         id: "a",
         title: "  ",
-        listingStage: "categorize",
+        listingStage: "plan",
         lastOpenedAt: "2026-01-01T00:00:00.000Z"
       },
       {
@@ -26,10 +26,10 @@ describe("sidebarListingsViewModel", () => {
 
   it("returns top three displayed listings and hasMore flag", () => {
     const result = buildSidebarListingsViewModel([
-      { id: "1", title: "One", listingStage: "categorize" },
-      { id: "2", title: "Two", listingStage: "categorize" },
-      { id: "3", title: "Three", listingStage: "categorize" },
-      { id: "4", title: "Four", listingStage: "categorize" }
+      { id: "1", title: "One", listingStage: "plan" },
+      { id: "2", title: "Two", listingStage: "plan" },
+      { id: "3", title: "Three", listingStage: "plan" },
+      { id: "4", title: "Four", listingStage: "plan" }
     ]);
 
     expect(result.displayedListingItems).toHaveLength(3);

@@ -87,14 +87,14 @@ describe("ListingStageShell", () => {
   it("reserves bottom clearance for the mobile footer and accessory", async () => {
     const { container } = render(
       <ListingStageViewProvider
-        stage="categorize"
+        stage="plan"
         title="123 Main St"
         listingView={false}
         hideCreateButton
         listingId="listing-1"
       >
         <ListingStageShell
-          stage="categorize"
+          stage="plan"
           footer={<div>Footer actions</div>}
           footerAccessory={<div>Footer accessory</div>}
         >

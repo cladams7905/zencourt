@@ -9,7 +9,7 @@ import type {
 
 const LISTING_STAGE_ACCESS_ORDER: ListingStage[] = [
   "upload",
-  "categorize",
+  "plan",
   "review",
   "generate",
   "complete"
@@ -40,9 +40,9 @@ export function resolveListingResumePath(input: {
       return `/listings/${input.id}/content`;
     case "upload":
       return `/listings/${input.id}/stage/upload`;
-    case "categorize":
+    case "plan":
     default:
-      return `/listings/${input.id}/stage/categorize`;
+      return `/listings/${input.id}/stage/plan`;
   }
 }
 

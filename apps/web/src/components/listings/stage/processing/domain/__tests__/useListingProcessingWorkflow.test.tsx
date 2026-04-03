@@ -122,10 +122,10 @@ describe("useListingProcessingWorkflow", () => {
     expect(navigate).toHaveBeenCalledWith("/listings/l1/stage/review");
   });
 
-  it("builds categorize copy and exposes non-generate workflow state", () => {
+  it("builds plan-stage copy and exposes non-generate workflow state", () => {
     const { result } = renderHook(() =>
       useListingProcessingWorkflow({
-        mode: "categorize",
+        mode: "plan",
         listingId: "l1",
         navigate: jest.fn()
       })

@@ -14,7 +14,7 @@ const ROUTE_CALLER = "api/v1/listings/.../stage";
 
 const ALLOWED_STAGES = new Set([
   "upload",
-  "categorize",
+  "plan",
   "complete",
   "review",
   "generate"
@@ -41,7 +41,7 @@ export async function POST(
         return apiErrorResponse(
           StatusCode.BAD_REQUEST,
           "INVALID_REQUEST",
-          "listingStage must be one of: upload, categorize, complete, review, generate",
+          "listingStage must be one of: upload, plan, complete, review, generate",
           { message: "Invalid listingStage" }
         );
       }
@@ -49,7 +49,7 @@ export async function POST(
       await updateListingForCurrentUser(listingId, {
         listingStage: listingStage as
           | "upload"
-          | "categorize"
+          | "plan"
           | "complete"
           | "review"
           | "generate"

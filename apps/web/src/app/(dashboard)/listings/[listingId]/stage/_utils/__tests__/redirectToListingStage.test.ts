@@ -22,40 +22,40 @@ describe("redirectToListingStage", () => {
 
   it("allows current stage access", () => {
     expect(() =>
-      enforceListingStageAccess("abc123", "categorize", "categorize")
+      enforceListingStageAccess("abc123", "plan", "plan")
     ).not.toThrow();
     expect(mockRedirect).not.toHaveBeenCalled();
   });
 
   it("allows previous stage access", () => {
     expect(() =>
-      enforceListingStageAccess("abc123", "review", "categorize")
+      enforceListingStageAccess("abc123", "review", "plan")
     ).not.toThrow();
     expect(mockRedirect).not.toHaveBeenCalled();
   });
 
   it("redirects future stage access back to current stage", () => {
     expect(() =>
-      enforceListingStageAccess("abc123", "categorize", "review")
-    ).toThrow("REDIRECT:/listings/abc123/stage/categorize");
+      enforceListingStageAccess("abc123", "plan", "review")
+    ).toThrow("REDIRECT:/listings/abc123/stage/plan");
   });
 
   it("redirects complete listings to content when a stage route is requested", () => {
     expect(() =>
-      enforceListingStageAccess("abc123", "complete", "categorize")
+      enforceListingStageAccess("abc123", "complete", "plan")
     ).toThrow("REDIRECT:/listings/abc123/content");
   });
 
   it("always uses the passed listingId in the redirect URL", () => {
     expect(() =>
-      enforceListingStageAccess("listing-xyz", "complete", "categorize")
+      enforceListingStageAccess("listing-xyz", "complete", "plan")
     ).toThrow("REDIRECT:/listings/listing-xyz/content");
   });
 
   it("uses the default fallback for unknown stage values", () => {
     expect(() =>
-      enforceListingStageAccess("abc123", "unknown-stage", "categorize")
-    ).toThrow("REDIRECT:/listings/abc123/stage/categorize");
+      enforceListingStageAccess("abc123", "unknown-stage", "plan")
+    ).toThrow("REDIRECT:/listings/abc123/stage/plan");
   });
 
   it("uses the provided fallback for unknown stage values", () => {
@@ -63,7 +63,7 @@ describe("redirectToListingStage", () => {
       enforceListingStageAccess(
         "abc123",
         "unknown-stage",
-        "categorize",
+        "plan",
         "/listings/create"
       )
     ).toThrow("REDIRECT:/listings/create");

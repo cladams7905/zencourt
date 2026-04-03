@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { fetchPropertyDetails } from "../transport";
 
 export function useReviewProcessingFlow(params: {
-  mode: "categorize" | "review" | "generate";
+  mode: "plan" | "review" | "generate";
   listingId: string;
   address?: string | null;
   navigate: (url: string) => void;

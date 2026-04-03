@@ -18,7 +18,7 @@ import {
 const ESTIMATED_GENERATION_SECONDS = 7 * 60;
 
 export function useGenerateProcessingFlow(params: {
-  mode: "categorize" | "review" | "generate";
+  mode: "plan" | "review" | "generate";
   listingId: string;
   initialBatchId?: string | null;
   navigate: (url: string) => void;

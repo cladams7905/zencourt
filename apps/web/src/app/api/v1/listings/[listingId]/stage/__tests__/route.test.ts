@@ -40,7 +40,7 @@ describe("listing stage route", () => {
       new Request("http://localhost/api/v1/listings/l1/stage", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ listingStage: "categorize" })
+        body: JSON.stringify({ listingStage: "plan" })
       }) as never,
       { params: Promise.resolve({ listingId: "l1" }) }
     );
@@ -48,10 +48,10 @@ describe("listing stage route", () => {
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({
       success: true,
-      data: { listingId: "l1", listingStage: "categorize" }
+      data: { listingId: "l1", listingStage: "plan" }
     });
     expect(mockUpdateListingForCurrentUser).toHaveBeenCalledWith("l1", {
-      listingStage: "categorize"
+      listingStage: "plan"
     });
   });
 

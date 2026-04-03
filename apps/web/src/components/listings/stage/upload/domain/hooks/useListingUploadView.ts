@@ -12,8 +12,8 @@ import { useUploadFlow } from "./useUploadFlow";
 import { useUploadDialogState } from "@web/src/components/uploads/domain/hooks";
 import { updateListingForCurrentUser } from "@web/src/server/actions/listings/commands";
 import {
-  getStoredCategorizeProcessingBatch,
-  useCategorizeProcessingFlow
+  getStoredPlanProcessingBatch,
+  usePlanProcessingFlow
 } from "@web/src/components/listings/stage/processing/domain/hooks";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -47,7 +47,7 @@ export function useListingUploadView({
   const router = useRouter();
   const initialStoredBatch = React.useMemo(
     () =>
-      listingId ? getStoredCategorizeProcessingBatch(listingId) : null,
+      listingId ? getStoredPlanProcessingBatch(listingId) : null,
     [listingId]
   );
   const [phase, setPhase] = React.useState<"editing" | "uploading" | "analyzing">(
@@ -123,8 +123,8 @@ export function useListingUploadView({
     () => new Set(initialImages.map((image) => image.filename.toLowerCase())),
     [initialImages]
   );
-  const processingState = useCategorizeProcessingFlow({
-    mode: "categorize",
+  const processingState = usePlanProcessingFlow({
+    mode: "plan",
     listingId: processingBatch?.listingId ?? listingId ?? "",
     batchImageIds: processingBatch?.batchImageIds,
     batchStartedAt: processingBatch?.batchStartedAt,
@@ -216,9 +216,9 @@ export function useListingUploadView({
       if (listingId?.trim()) {
         try {
           await updateListingForCurrentUser(listingId, {
-            listingStage: "categorize"
+            listingStage: "plan"
           });
-          router.push(`/listings/${listingId}/stage/categorize`);
+          router.push(`/listings/${listingId}/stage/plan`);
         } catch (error) {
           toast.error(
             (error as Error).message ||
@@ -255,7 +255,7 @@ export function useListingUploadView({
       setProcessingBatch(nextBatch);
       try {
         await updateListingForCurrentUser(nextBatch.listingId, {
-          listingStage: "categorize"
+          listingStage: "plan"
         });
       } catch (error) {
         setProcessingLocalPreviews([]);
@@ -272,7 +272,7 @@ export function useListingUploadView({
       setProcessingLocalPreviews([]);
       setPhase("editing");
       toast.error(
-        (error as Error).message || "Unable to continue to categorize."
+        (error as Error).message || "Unable to continue to plan."
       );
     }
   }, [canContinue, handleUpload, initialImages, listingId, pendingFiles, phase, router]);

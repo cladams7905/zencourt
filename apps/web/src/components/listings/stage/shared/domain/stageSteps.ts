@@ -3,7 +3,7 @@ import type { ListingStageStep } from "@web/src/components/listings/stage/shared
 export type ListingStageKey =
   | "address"
   | "upload"
-  | "categorize"
+  | "plan"
   | "review"
   | "generate";
 
@@ -21,7 +21,7 @@ type StageStepDef = {
 const STAGE_STEP_DEFS: StageStepDef[] = [
   { key: "address", label: "1. Enter Address", sublabel: "~30 sec" },
   { key: "upload", label: "2. Upload", sublabel: "~2 min" },
-  { key: "categorize", label: "3. Categorize", sublabel: "~2 min" },
+  { key: "plan", label: "3. Plan", sublabel: "~2 min" },
   { key: "review", label: "4. Review", sublabel: "~1 min" },
   { key: "generate", label: "5. Generate", sublabel: "~4-7 min" }
 ];
@@ -49,7 +49,7 @@ export function getListingStageScaffoldCopy(
       return {
         stepTitle: "Step 1: Enter Listing Address",
         stepSubtitle:
-          "We use this to title the listing and populate listing details."
+          "We use this to title the listing and gather relevant information about the property."
       };
     case "upload":
       return {
@@ -57,7 +57,7 @@ export function getListingStageScaffoldCopy(
         stepSubtitle:
           "Upload your full photo collection, up to 40 photos. No need to narrow it down now."
       };
-    case "categorize":
+    case "plan":
       return {
         stepTitle: "Step 3: Plan video scenes",
         stepSubtitle:

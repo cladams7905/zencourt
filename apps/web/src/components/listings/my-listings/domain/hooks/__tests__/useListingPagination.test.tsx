@@ -17,7 +17,7 @@ describe("useListingPagination", () => {
         {
           id: "listing-1",
           title: "One",
-          listingStage: "categorize",
+          listingStage: "plan",
           lastOpenedAt: null,
           imageCount: 0,
           previewImages: []
@@ -44,7 +44,7 @@ describe("useListingPagination", () => {
       {
         id: "listing-1",
         title: "One",
-        listingStage: "categorize",
+        listingStage: "plan",
         lastOpenedAt: null,
         imageCount: 0,
         previewImages: []
@@ -77,7 +77,7 @@ describe("useListingPagination", () => {
           {
             id: "listing-1",
             title: "One",
-            listingStage: "categorize",
+            listingStage: "plan",
             lastOpenedAt: null,
             imageCount: 0,
             previewImages: []

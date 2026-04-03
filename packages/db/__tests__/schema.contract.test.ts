@@ -27,7 +27,7 @@ describe("db schema contracts", () => {
     ]);
     expect(listingStageEnum.enumValues).toEqual([
       "upload",
-      "categorize",
+      "plan",
       "review",
       "generate",
       "complete"

@@ -1,6 +1,6 @@
 export type ListingStage =
   | "upload"
-  | "categorize"
+  | "plan"
   | "review"
   | "complete"
   | "generate";

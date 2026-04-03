@@ -70,7 +70,7 @@ describe("useReviewStageActions", () => {
 
     expect(mockFetchApiData).not.toHaveBeenCalled();
     expect(navigate).toHaveBeenCalledWith(
-      "/listings/listing-1/stage/categorize"
+      "/listings/listing-1/stage/plan"
     );
   });
 
@@ -107,7 +107,7 @@ describe("useReviewStageActions", () => {
     expect(navigate).not.toHaveBeenCalled();
   });
 
-  it("navigates to categorize on go back success without downgrading stage", async () => {
+  it("navigates to plan on go back success without downgrading stage", async () => {
     const navigate = jest.fn();
     mockFetchApiData.mockResolvedValue(undefined);
 
@@ -125,7 +125,7 @@ describe("useReviewStageActions", () => {
 
     expect(mockFetchApiData).not.toHaveBeenCalled();
     expect(navigate).toHaveBeenCalledWith(
-      "/listings/listing-1/stage/categorize"
+      "/listings/listing-1/stage/plan"
     );
   });
 

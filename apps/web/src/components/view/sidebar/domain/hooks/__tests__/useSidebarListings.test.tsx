@@ -14,7 +14,7 @@ describe("useSidebarListings", () => {
     {
       id: "listing-2",
       title: "Second",
-      listingStage: "categorize",
+      listingStage: "plan",
       lastOpenedAt: "2024-01-02T00:00:00.000Z"
     }
   ];

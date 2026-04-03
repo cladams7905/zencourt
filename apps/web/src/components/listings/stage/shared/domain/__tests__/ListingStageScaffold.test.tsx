@@ -12,7 +12,7 @@ describe("ListingStageScaffold", () => {
     render(
       <ListingStageScaffold
         stepTitle="Step 1: Enter Listing Address"
-        stepSubtitle="We use this to title the listing and populate listing details."
+        stepSubtitle="We use this to title the listing and gather relevant information about the property."
       >
         <div>details-panel-body</div>
       </ListingStageScaffold>
@@ -23,7 +23,7 @@ describe("ListingStageScaffold", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "We use this to title the listing and populate listing details."
+        "We use this to title the listing and gather relevant information about the property."
       )
     ).toBeInTheDocument();
     expect(screen.getByText("details-panel-body")).toBeInTheDocument();

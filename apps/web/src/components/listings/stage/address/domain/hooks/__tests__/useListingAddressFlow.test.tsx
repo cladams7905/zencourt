@@ -131,7 +131,7 @@ describe("useListingAddressFlow", () => {
   it("updates existing listing when prefilled, without creating a draft", async () => {
     mockUpdateListingForCurrentUser.mockResolvedValue({
       id: "listing-existing",
-      listingStage: "categorize"
+      listingStage: "plan"
     });
 
     const { result } = renderHook(() =>
@@ -162,7 +162,7 @@ describe("useListingAddressFlow", () => {
       expect.objectContaining({
         id: "listing-existing",
         title: "100 Pine St",
-        listingStage: "categorize"
+        listingStage: "plan"
       })
     );
     expect(mockPush).toHaveBeenCalledWith(

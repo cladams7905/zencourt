@@ -7,7 +7,7 @@ import {
 } from "@web/src/components/listings/stage/shared/domain/helpers";
 
 describe("listings stage shared helpers", () => {
-  it("resolves listing path by stage with categorize fallback", () => {
+  it("resolves listing path by stage with plan fallback", () => {
     expect(resolveListingResumePath({ id: "1", listingStage: "review" })).toBe(
       "/listings/1/stage/review"
     );
@@ -21,7 +21,7 @@ describe("listings stage shared helpers", () => {
       "/listings/1/stage/upload"
     );
     expect(resolveListingResumePath({ id: "1", listingStage: null })).toBe(
-      "/listings/1/stage/categorize"
+      "/listings/1/stage/plan"
     );
     expect(resolveListingPath({ id: "1", listingStage: "review" })).toBe(
       "/listings/1/stage/review"
@@ -29,14 +29,14 @@ describe("listings stage shared helpers", () => {
   });
 
   it("allows current and previous stages but blocks future stages", () => {
-    expect(canAccessListingStage("categorize", "upload")).toBe(true);
-    expect(canAccessListingStage("categorize", "categorize")).toBe(true);
-    expect(canAccessListingStage("categorize", "review")).toBe(false);
-    expect(canAccessListingStage("review", "categorize")).toBe(true);
+    expect(canAccessListingStage("plan", "upload")).toBe(true);
+    expect(canAccessListingStage("plan", "plan")).toBe(true);
+    expect(canAccessListingStage("plan", "review")).toBe(false);
+    expect(canAccessListingStage("review", "plan")).toBe(true);
     expect(canAccessListingStage("review", "generate")).toBe(false);
     expect(canAccessListingStage("generate", "review")).toBe(true);
     expect(canAccessListingStage("complete", "review")).toBe(false);
-    expect(canAccessListingStage(null, "categorize")).toBe(false);
+    expect(canAccessListingStage(null, "plan")).toBe(false);
   });
 
   it("formats stage labels with draft fallback", () => {
@@ -49,7 +49,7 @@ describe("listings stage shared helpers", () => {
 
     expect(steps).toHaveLength(4);
     expect(steps[0]).toMatchObject({ label: "Upload", completed: true });
-    expect(steps[1]).toMatchObject({ label: "Categorize", completed: true });
+    expect(steps[1]).toMatchObject({ label: "Plan", completed: true });
     expect(steps[2]).toMatchObject({ label: "Review", active: true });
     expect(steps[3]).toMatchObject({ label: "Complete", active: false });
   });
