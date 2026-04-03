@@ -123,7 +123,7 @@ function PlanWorkspaceCategoryRow({
           ))
         ) : (
           <div className="flex min-w-32 max-w-56 items-center px-2 text-[11px] leading-snug text-muted-foreground">
-            Drag an image here to use as a video starting frame for this room.
+            Drag an image here to use as a video starting frame for this space.
           </div>
         )}
       </div>
@@ -194,7 +194,7 @@ export function PlanImageWorkspace({
           className="shrink-0"
           onClick={onOpenCreateCategory}
         >
-          Add Room
+          Add Space
         </Button>
         <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
           <Badge
@@ -272,7 +272,7 @@ export function PlanImageWorkspace({
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent side="top">
-                          Delete room
+                          Delete space
                         </TooltipContent>
                       </Tooltip>
                       <AccordionTrigger

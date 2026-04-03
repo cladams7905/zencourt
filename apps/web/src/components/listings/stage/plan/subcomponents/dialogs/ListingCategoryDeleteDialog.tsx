@@ -28,9 +28,9 @@ export function ListingCategoryDeleteDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[420px]">
         <DialogHeader>
-          <DialogTitle>Delete room</DialogTitle>
+          <DialogTitle>Delete space</DialogTitle>
           <DialogDescription>
-            Delete &quot;{categoryLabel}&quot;? All images in this room will be
+            Delete &quot;{categoryLabel}&quot;? All images in this space will be
             moved to &quot;Unused photos&quot;.
           </DialogDescription>
         </DialogHeader>

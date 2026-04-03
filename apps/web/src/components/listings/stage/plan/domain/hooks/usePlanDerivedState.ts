@@ -7,6 +7,9 @@ import type {
 import { getCategoryBase } from "@web/src/components/listings/stage/plan/domain/categoryRules";
 import {
   CATEGORIZE_MAX_USED_PHOTOS,
+  DEFAULT_RECOMMENDED_MAX_USED_PHOTOS,
+  DEFAULT_RECOMMENDED_MIN_USED_PHOTOS,
+  DEFAULT_RECOMMENDED_TARGET_USED_PHOTOS,
   UNCATEGORIZED_CATEGORY_ID
 } from "@web/src/components/listings/stage/plan/shared/constants";
 
@@ -16,42 +19,192 @@ type UsePlanDerivedStateParams = {
   placementOverrides?: Record<string, WorkspacePlacement>;
 };
 
-const DEFAULT_USED_IMAGES_PER_CATEGORY = 2;
+const DEFAULT_USED_IMAGES_PER_CATEGORY = 1;
+const DEFAULT_RECOMMENDATION_FLOORS = [0.88, 0.85, 0.82, 0.79, 0.76, 0.72];
+const DEFAULT_STRETCH_FLOOR = 0.88;
+const DEFAULT_STRONG_DETAIL_FLOOR = 0.95;
+const DEFAULT_DETAIL_RECOMMENDATION_CAP = 1;
 
 const getScore = (image: ListingImageItem) => image.recommendationScore ?? -1;
 const sortByRecommendationScore = (a: ListingImageItem, b: ListingImageItem) =>
   getScore(b) - getScore(a);
+
+function resolveRecommendationFloor(
+  images: ListingImageItem[],
+  minimumTarget: number
+): number | null {
+  for (const floor of DEFAULT_RECOMMENDATION_FLOORS) {
+    if (images.filter((image) => getScore(image) >= floor).length >= minimumTarget) {
+      return floor;
+    }
+  }
+
+  return null;
+}
+
+function addCandidates(args: {
+  candidates: ListingImageItem[];
+  limit: number;
+  selectedIds: Set<string>;
+  selectedCountsByCategory: Record<string, number>;
+  preferUnusedCategories?: boolean;
+  maxPerCategory?: number;
+}): void {
+  const {
+    candidates,
+    limit,
+    selectedIds,
+    selectedCountsByCategory,
+    preferUnusedCategories = false,
+    maxPerCategory
+  } = args;
+
+  candidates.forEach((image) => {
+    const category = image.category;
+    if (!category || selectedIds.size >= limit || selectedIds.has(image.id)) {
+      return;
+    }
+
+    const categoryCount = selectedCountsByCategory[category] ?? 0;
+    if (preferUnusedCategories && categoryCount > 0) {
+      return;
+    }
+    if (maxPerCategory !== undefined && categoryCount >= maxPerCategory) {
+      return;
+    }
+
+    selectedIds.add(image.id);
+    selectedCountsByCategory[category] = categoryCount + 1;
+  });
+}
+
+function addDetailCandidates(args: {
+  candidates: ListingImageItem[];
+  limit: number;
+  selectedIds: Set<string>;
+  maxDetails: number;
+}): void {
+  const { candidates, limit, selectedIds, maxDetails } = args;
+  let selectedDetailCount = candidates.filter((image) => selectedIds.has(image.id)).length;
+
+  candidates.forEach((image) => {
+    if (
+      selectedIds.size >= limit ||
+      selectedIds.has(image.id) ||
+      selectedDetailCount >= maxDetails
+    ) {
+      return;
+    }
+
+    selectedIds.add(image.id);
+    selectedDetailCount += 1;
+  });
+}
 
 function buildDefaultUsedImageIds(args: {
   categorizedImages: Record<string, ListingImageItem[]>;
   workspaceCategoryOrder: string[];
 }): Set<string> {
   const { categorizedImages, workspaceCategoryOrder } = args;
-  const selectedIds = new Set<string>();
-  const selectedCountsByCategory: Record<string, number> = {};
-
-  const rankedEligibleImages = workspaceCategoryOrder
+  const eligibleImages = workspaceCategoryOrder
     .flatMap((category) => categorizedImages[category] ?? [])
     .filter((image) => Boolean(image.category) && image.category !== "other")
     .sort(sortByRecommendationScore);
 
-  rankedEligibleImages.forEach((image) => {
-    const category = image.category;
-    if (!category) {
-      return;
-    }
-    if (selectedIds.size >= CATEGORIZE_MAX_USED_PHOTOS) {
-      return;
-    }
-    if (
-      (selectedCountsByCategory[category] ?? 0) >=
-      DEFAULT_USED_IMAGES_PER_CATEGORY
-    ) {
-      return;
-    }
-    selectedIds.add(image.id);
-    selectedCountsByCategory[category] =
-      (selectedCountsByCategory[category] ?? 0) + 1;
+  if (eligibleImages.length <= DEFAULT_RECOMMENDED_MIN_USED_PHOTOS) {
+    return new Set(eligibleImages.map((image) => image.id));
+  }
+
+  const selectedIds = new Set<string>();
+  const selectedCountsByCategory: Record<string, number> = {};
+  const roomCandidates = eligibleImages.filter((image) => image.shotType !== "detail");
+  const detailCandidates = eligibleImages.filter(
+    (image) => image.shotType === "detail"
+  );
+  const minimumRecommendationCount = Math.min(
+    DEFAULT_RECOMMENDED_MIN_USED_PHOTOS,
+    eligibleImages.length
+  );
+  const dynamicFloor =
+    resolveRecommendationFloor(
+      eligibleImages,
+      DEFAULT_RECOMMENDED_TARGET_USED_PHOTOS
+    ) ??
+    resolveRecommendationFloor(eligibleImages, minimumRecommendationCount);
+  const qualifiedRoomCandidates =
+    dynamicFloor === null
+      ? roomCandidates
+      : roomCandidates.filter((image) => getScore(image) >= dynamicFloor);
+  const stretchRoomCandidates = roomCandidates.filter(
+    (image) => getScore(image) >= DEFAULT_STRETCH_FLOOR
+  );
+  const strongDetailCandidates = detailCandidates.filter(
+    (image) => getScore(image) >= DEFAULT_STRONG_DETAIL_FLOOR
+  );
+
+  addCandidates({
+    candidates: qualifiedRoomCandidates,
+    limit: DEFAULT_RECOMMENDED_TARGET_USED_PHOTOS,
+    selectedIds,
+    selectedCountsByCategory,
+    preferUnusedCategories: true,
+    maxPerCategory: DEFAULT_USED_IMAGES_PER_CATEGORY
+  });
+  addCandidates({
+    candidates: qualifiedRoomCandidates,
+    limit: DEFAULT_RECOMMENDED_TARGET_USED_PHOTOS,
+    selectedIds,
+    selectedCountsByCategory
+  });
+
+  addCandidates({
+    candidates: roomCandidates,
+    limit: minimumRecommendationCount,
+    selectedIds,
+    selectedCountsByCategory,
+    preferUnusedCategories: true,
+    maxPerCategory: DEFAULT_USED_IMAGES_PER_CATEGORY
+  });
+  addCandidates({
+    candidates: detailCandidates,
+    limit: minimumRecommendationCount,
+    selectedIds,
+    selectedCountsByCategory,
+    preferUnusedCategories: true,
+    maxPerCategory: minimumRecommendationCount
+  });
+  addCandidates({
+    candidates: roomCandidates,
+    limit: minimumRecommendationCount,
+    selectedIds,
+    selectedCountsByCategory
+  });
+  addDetailCandidates({
+    candidates: detailCandidates,
+    limit: minimumRecommendationCount,
+    selectedIds,
+    maxDetails: minimumRecommendationCount
+  });
+
+  addCandidates({
+    candidates: stretchRoomCandidates,
+    limit: DEFAULT_RECOMMENDED_MAX_USED_PHOTOS,
+    selectedIds,
+    selectedCountsByCategory,
+    preferUnusedCategories: true,
+    maxPerCategory: DEFAULT_USED_IMAGES_PER_CATEGORY
+  });
+  addDetailCandidates({
+    candidates: strongDetailCandidates,
+    limit: DEFAULT_RECOMMENDED_MAX_USED_PHOTOS,
+    selectedIds,
+    maxDetails: DEFAULT_DETAIL_RECOMMENDATION_CAP
+  });
+  addCandidates({
+    candidates: stretchRoomCandidates,
+    limit: DEFAULT_RECOMMENDED_MAX_USED_PHOTOS,
+    selectedIds,
+    selectedCountsByCategory
   });
 
   return selectedIds;

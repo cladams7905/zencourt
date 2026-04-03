@@ -141,7 +141,7 @@ export function ListingPlanView({
     hasEmptyCategory || hasCategoryWithoutPlannedVideo;
   const footerValidationMessages = [
     hasEmptyRoomValidation
-      ? `You have ${emptyRoomCount} room(s) with no scenes assigned to them. Please assign at least one scene to each room or remove the empty room(s) to continue.`
+      ? `You have ${emptyRoomCount} space(s) with no scenes assigned to them. Please assign at least one scene to each space or remove the empty space(s) to continue.`
       : null,
     hasTooFewUsedImages
       ? "You need to plan at least one video scene to continue."

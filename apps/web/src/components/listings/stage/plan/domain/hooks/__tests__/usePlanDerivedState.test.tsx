@@ -45,7 +45,7 @@ describe("usePlanDerivedState", () => {
     expect(result.current.dockedImages.map((image) => image.id)).toContain("4");
   });
 
-  it("seeds top two images per category into used images and docks the rest", () => {
+  it("recommends the minimum viable three images before docking the rest", () => {
     const { result } = renderHook(() =>
       usePlanDerivedState({
         images: [
@@ -92,11 +92,11 @@ describe("usePlanDerivedState", () => {
 
     expect(result.current.usedImagesByCategory.kitchen?.map((img) => img.id)).toEqual([
       "k1",
-      "k2"
+      "k2",
+      "k3"
     ]);
     expect(result.current.dockedImages.map((img) => img.id)).toEqual([
       "o1",
-      "k3",
       "u1"
     ]);
     expect(result.current.dockedImages[0]).toMatchObject({
@@ -104,7 +104,7 @@ describe("usePlanDerivedState", () => {
       isDetail: true,
       workspacePlacement: "dock"
     });
-    expect(result.current.dockedImages[2]).toMatchObject({
+    expect(result.current.dockedImages[1]).toMatchObject({
       isUncategorized: true,
       workspacePlacement: "dock"
     });
@@ -382,7 +382,7 @@ describe("usePlanDerivedState", () => {
       })
     );
 
-    expect(result.current.usedImageCount).toBe(10);
+    expect(result.current.usedImageCount).toBe(8);
     expect(result.current.hasOverUsedLimit).toBe(false);
     expect(result.current.hasTooManyUsedImages).toBe(false);
     expect(result.current.isUsedImageCountValid).toBe(true);
@@ -390,12 +390,211 @@ describe("usePlanDerivedState", () => {
       Object.values(result.current.usedImagesByCategory).flatMap((roomImages) =>
         roomImages.map((image) => image.id)
       )
-    ).toHaveLength(10);
+    ).toHaveLength(8);
     expect(result.current.dockedImages.map((image) => image.id)).toEqual([
-      "img-11",
+      "img-4",
+      "img-6",
+      "img-8",
+      "img-10",
       "img-12",
-      "img-13",
       "img-14"
+    ]);
+  });
+
+  it("recommends all eligible images when only three are available", () => {
+    const { result } = renderHook(() =>
+      usePlanDerivedState({
+        images: [
+          {
+            id: "kitchen",
+            url: "u1",
+            filename: "kitchen.jpg",
+            category: "kitchen",
+            recommendationScore: 0.4
+          },
+          {
+            id: "living",
+            url: "u2",
+            filename: "living.jpg",
+            category: "living-room",
+            recommendationScore: 0.3
+          },
+          {
+            id: "bath",
+            url: "u3",
+            filename: "bath.jpg",
+            category: "bathroom",
+            recommendationScore: 0.2
+          }
+        ],
+        customCategories: []
+      })
+    );
+
+    expect(result.current.usedImageCount).toBe(3);
+    expect(
+      Object.values(result.current.usedImagesByCategory).flatMap((roomImages) =>
+        roomImages.map((image) => image.id)
+      )
+    ).toEqual(["kitchen", "living", "bath"]);
+  });
+
+  it("keeps weak listings at the minimum viable default of three images", () => {
+    const { result } = renderHook(() =>
+      usePlanDerivedState({
+        images: [
+          {
+            id: "kitchen-1",
+            url: "u1",
+            filename: "k1.jpg",
+            category: "kitchen",
+            recommendationScore: 0.81
+          },
+          {
+            id: "living-1",
+            url: "u2",
+            filename: "l1.jpg",
+            category: "living-room",
+            recommendationScore: 0.8
+          },
+          {
+            id: "bed-1",
+            url: "u3",
+            filename: "b1.jpg",
+            category: "bedroom",
+            recommendationScore: 0.79
+          },
+          {
+            id: "bath-1",
+            url: "u4",
+            filename: "ba1.jpg",
+            category: "bathroom",
+            recommendationScore: 0.76
+          },
+          {
+            id: "office-1",
+            url: "u5",
+            filename: "o1.jpg",
+            category: "office",
+            recommendationScore: 0.74
+          }
+        ],
+        customCategories: []
+      })
+    );
+
+    const usedIds = Object.values(result.current.usedImagesByCategory).flatMap(
+      (roomImages) => roomImages.map((image) => image.id)
+    );
+
+    expect(result.current.usedImageCount).toBe(3);
+    expect(usedIds).toEqual(["kitchen-1", "living-1", "bed-1"]);
+    expect(result.current.dockedImages.map((image) => image.id)).toEqual([
+      "bath-1",
+      "office-1"
+    ]);
+  });
+
+  it("prioritizes room coverage before details and caps default detail recommendations", () => {
+    const { result } = renderHook(() =>
+      usePlanDerivedState({
+        images: [
+          {
+            id: "kitchen-room",
+            url: "u1",
+            filename: "kitchen-room.jpg",
+            category: "kitchen",
+            recommendationScore: 0.94,
+            shotType: "room"
+          },
+          {
+            id: "living-room",
+            url: "u2",
+            filename: "living-room.jpg",
+            category: "living-room",
+            recommendationScore: 0.93,
+            shotType: "room"
+          },
+          {
+            id: "bedroom-room",
+            url: "u3",
+            filename: "bedroom-room.jpg",
+            category: "bedroom",
+            recommendationScore: 0.92,
+            shotType: "room"
+          },
+          {
+            id: "bath-room",
+            url: "u4",
+            filename: "bath-room.jpg",
+            category: "bathroom",
+            recommendationScore: 0.91,
+            shotType: "room"
+          },
+          {
+            id: "office-room",
+            url: "u5",
+            filename: "office-room.jpg",
+            category: "office",
+            recommendationScore: 0.9,
+            shotType: "room"
+          },
+          {
+            id: "garage-room",
+            url: "u6",
+            filename: "garage-room.jpg",
+            category: "garage",
+            recommendationScore: 0.89,
+            shotType: "room"
+          },
+          {
+            id: "kitchen-detail",
+            url: "u7",
+            filename: "kitchen-detail.jpg",
+            category: "kitchen",
+            recommendationScore: 0.99,
+            shotType: "detail"
+          },
+          {
+            id: "bath-detail",
+            url: "u8",
+            filename: "bath-detail.jpg",
+            category: "bathroom",
+            recommendationScore: 0.98,
+            shotType: "detail"
+          },
+          {
+            id: "living-detail",
+            url: "u9",
+            filename: "living-detail.jpg",
+            category: "living-room",
+            recommendationScore: 0.97,
+            shotType: "detail"
+          }
+        ],
+        customCategories: []
+      })
+    );
+
+    const usedIds = Object.values(result.current.usedImagesByCategory).flatMap(
+      (roomImages) => roomImages.map((image) => image.id)
+    );
+    const usedDetails = usedIds.filter((id) => id.includes("detail"));
+
+    expect(result.current.usedImageCount).toBe(7);
+    expect(usedIds).toEqual([
+      "kitchen-room",
+      "kitchen-detail",
+      "living-room",
+      "bedroom-room",
+      "bath-room",
+      "office-room",
+      "garage-room"
+    ]);
+    expect(usedDetails).toEqual(["kitchen-detail"]);
+    expect(result.current.dockedImages.map((image) => image.id)).toEqual([
+      "bath-detail",
+      "living-detail"
     ]);
   });
 
@@ -496,7 +695,7 @@ describe("usePlanDerivedState", () => {
       (roomImages) => roomImages.map((image) => image.id)
     );
 
-    expect(result.current.usedImageCount).toBe(10);
+    expect(result.current.usedImageCount).toBe(8);
     expect(usedIds).toContain("new-high");
     expect(usedIds).not.toContain("existing-low");
     expect(result.current.dockedImages.map((image) => image.id)).toContain(

@@ -122,14 +122,14 @@ describe("ListingStageFooter", () => {
       <ListingStageFooter
         onContinue={() => undefined}
         validationMessages={[
-          "Remove any empty room categories to continue.",
+          "Remove any empty space categories to continue.",
           'You are only allowed 10 videos per listing. Please move 2 scene(s) to "Unused photos" to continue.'
         ]}
       />
     );
 
     expect(
-      screen.getByText("Remove any empty room categories to continue.")
+      screen.getByText("Remove any empty space categories to continue.")
     ).toBeInTheDocument();
     expect(
       screen.getByText(

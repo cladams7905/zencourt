@@ -79,7 +79,7 @@ describe("PlanImageWorkspace", () => {
     expect(screen.getByText("Kitchen")).toBeInTheDocument();
     expect(screen.queryByText(/Quick unused dock/i)).not.toBeInTheDocument();
     expect(screen.queryByText("Recommended for video")).not.toBeInTheDocument();
-    expect(screen.getByText("Add Room")).toBeInTheDocument();
+    expect(screen.getByText("Add Space")).toBeInTheDocument();
     expect(screen.getAllByAltText("used.jpg").length).toBeGreaterThanOrEqual(1);
     expect(screen.queryByAltText("dock.jpg")).not.toBeInTheDocument();
     expect(screen.getByText("1/10 videos")).toBeInTheDocument();
@@ -122,7 +122,7 @@ describe("PlanImageWorkspace", () => {
     );
 
     expect(screen.queryByText("Uncategorized")).not.toBeInTheDocument();
-    expect(screen.getByText("Add Room")).toBeInTheDocument();
+    expect(screen.getByText("Add Space")).toBeInTheDocument();
   });
 
   it("shows over-limit warning state in the summary chips", () => {
@@ -201,7 +201,7 @@ describe("PlanImageWorkspace", () => {
       screen.getByRole("button", { name: /delete kitchen/i })
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/drag an image here to use as a video starting frame/i)
+      screen.getByText(/drag an image here to use as a video starting frame for this space/i)
     ).toBeInTheDocument();
   });
 
@@ -268,7 +268,7 @@ describe("PlanImageWorkspace", () => {
 
     await user.hover(screen.getByRole("button", { name: /delete kitchen/i }));
 
-    expect(screen.getByRole("tooltip", { name: "Delete room" })).toBeInTheDocument();
+    expect(screen.getByRole("tooltip", { name: "Delete space" })).toBeInTheDocument();
   });
 
   it("opens a newly added room accordion by default", async () => {

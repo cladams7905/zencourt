@@ -91,7 +91,7 @@ describe("usePlanActions", () => {
       result.current.handleCreateCategory("Kitchen");
     });
 
-    expect(mockToastError).toHaveBeenCalledWith("That room already exists.");
+    expect(mockToastError).toHaveBeenCalledWith("That space already exists.");
   });
 
   it("rejects vague other categories", () => {
@@ -103,7 +103,7 @@ describe("usePlanActions", () => {
     });
 
     expect(mockToastError).toHaveBeenCalledWith(
-      "Please choose a specific room category."
+      "Please choose a specific space category."
     );
     expect(params.setCustomCategories).not.toHaveBeenCalled();
   });

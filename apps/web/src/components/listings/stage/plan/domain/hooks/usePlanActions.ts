@@ -89,7 +89,7 @@ export function usePlanActions(params: UsePlanActionsParams) {
       }
       const normalizedNext = normalizeCategory(nextCategory);
       if (normalizedNext === "other") {
-        toast.error("Please choose a specific room category.");
+        toast.error("Please choose a specific space category.");
         return null;
       }
       if (mode === "edit" && originalCategory) {
@@ -107,7 +107,7 @@ export function usePlanActions(params: UsePlanActionsParams) {
         normalizedNext as RoomCategory
       );
       if (!isMultiRoom && existingNormalized.has(normalizedNext)) {
-        toast.error("That room already exists.");
+        toast.error("That space already exists.");
         return null;
       }
       if (isMultiRoom) {

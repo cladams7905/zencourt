@@ -14,7 +14,7 @@ describe("ListingCategoryDeleteDialog", () => {
 
     expect(
       screen.getByText(
-        'Delete "Kitchen"? All images in this room will be moved to "Unused photos".'
+        'Delete "Kitchen"? All images in this space will be moved to "Unused photos".'
       )
     ).toBeInTheDocument();
   });

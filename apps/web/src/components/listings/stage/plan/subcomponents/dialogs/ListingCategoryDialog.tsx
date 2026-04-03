@@ -66,11 +66,11 @@ export function ListingCategoryDialog({
   const resolvedCategory =
     selectedCategory === "custom" ? customCategory.trim() : selectedCategory;
 
-  const title = mode === "edit" ? "Rename category" : "Add a room category";
+  const title = mode === "edit" ? "Rename space" : "Add a space";
   const description =
     mode === "edit"
-      ? "Update the room category name for this section."
-      : "Create a new category to organize listing photos.";
+      ? "Edit the space name."
+      : "Add a new property space to your video plan.";
   const primaryActionLabel = mode === "edit" ? "Save changes" : "Add";
 
   return (
@@ -83,14 +83,14 @@ export function ListingCategoryDialog({
         <div className="space-y-4">
           <div className="space-y-2">
             <label className="text-xs font-medium text-muted-foreground">
-              Category
+              Space{" "}
             </label>
             <Select
               value={selectedCategory}
               onValueChange={setSelectedCategory}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Select a category" />
+                <SelectValue placeholder="Select a space" />
               </SelectTrigger>
               <SelectContent>
                 {CATEGORY_OPTIONS.map((category) => (
@@ -105,7 +105,7 @@ export function ListingCategoryDialog({
           {selectedCategory === "custom" && (
             <div className="space-y-2">
               <label className="text-xs font-medium text-muted-foreground">
-                Custom category
+                Custom space
               </label>
               <Input
                 placeholder="e.g., Sunroom"
