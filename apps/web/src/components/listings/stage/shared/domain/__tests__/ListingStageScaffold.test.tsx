@@ -57,4 +57,85 @@ describe("ListingStageFooter", () => {
     expect(onBack).toHaveBeenCalledTimes(1);
     expect(onContinue).toHaveBeenCalledTimes(1);
   });
+
+  it("renders an inline validation message when configured", () => {
+    render(
+      <ListingStageFooter
+        onContinue={() => undefined}
+        validationMessages={[
+          "You need to plan at least one video clip to continue."
+        ]}
+      />
+    );
+
+    expect(
+      screen.getByText("You need to plan at least one video clip to continue.")
+    ).toBeInTheDocument();
+  });
+
+  it("does not render a validation message when none is provided", () => {
+    render(<ListingStageFooter onContinue={() => undefined} />);
+
+    expect(
+      screen.queryByText(/you need to plan at least one video clip/i)
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Continue" })).toHaveTextContent(
+      "Continue"
+    );
+  });
+
+  it("keeps the continue text and does not render a warning icon in the button", () => {
+    render(
+      <ListingStageFooter
+        onContinue={() => undefined}
+        validationMessages={[
+          "You need to plan at least one video clip to continue."
+        ]}
+      />
+    );
+
+    const continueButton = screen.getByRole("button", { name: "Continue" });
+
+    expect(continueButton).toHaveTextContent("Continue");
+    expect(continueButton.querySelector("svg")).toBeNull();
+  });
+
+  it("renders an over-limit inline validation message", () => {
+    render(
+      <ListingStageFooter
+        onContinue={() => undefined}
+        validationMessages={[
+          'You are only allowed 10 videos per listing. Please move 2 scene(s) to "Unused photos" to continue.'
+        ]}
+      />
+    );
+
+    expect(
+      screen.getByText(
+        'You are only allowed 10 videos per listing. Please move 2 scene(s) to "Unused photos" to continue.'
+      )
+    ).toBeInTheDocument();
+  });
+
+  it("renders multiple validation messages when more than one rule is failing", () => {
+    render(
+      <ListingStageFooter
+        onContinue={() => undefined}
+        validationMessages={[
+          "Remove any empty room categories to continue.",
+          'You are only allowed 10 videos per listing. Please move 2 scene(s) to "Unused photos" to continue.'
+        ]}
+      />
+    );
+
+    expect(
+      screen.getByText("Remove any empty room categories to continue.")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'You are only allowed 10 videos per listing. Please move 2 scene(s) to "Unused photos" to continue.'
+      )
+    ).toBeInTheDocument();
+    expect(screen.getAllByTestId("footer-validation-icon")).toHaveLength(2);
+  });
 });

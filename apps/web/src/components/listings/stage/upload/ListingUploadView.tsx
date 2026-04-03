@@ -304,7 +304,7 @@ export function ListingUploadView({
                             <TooltipTrigger asChild>
                               <button
                                 type="button"
-                                className="absolute right-1 top-1 z-5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-background/90 text-amber-600 shadow-sm transition-transform duration-200 ease-out group-hover:-translate-x-7"
+                                className="absolute right-1 top-1 z-5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-background/90 text-warning shadow-sm transition-transform duration-200 ease-out group-hover:-translate-x-7"
                                 aria-label="Image does not match recommended dimensions"
                               >
                                 <AlertTriangle

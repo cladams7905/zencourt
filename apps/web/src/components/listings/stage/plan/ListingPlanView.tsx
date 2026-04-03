@@ -88,17 +88,17 @@ export function ListingPlanView({
     dockedImages,
     usedImagesByCategory,
     accordionCategoryOrder,
-    categoryUsageCounts,
-    categoriesOverUsedLimit,
     usedImageCount,
-    hasOverUsedLimit,
+    hasTooFewUsedImages,
+    hasTooManyUsedImages,
+    isUsedImageCountValid,
     maxUsedImagesTotal,
     categoryOrder,
     baseCategoryCounts,
-    hasUncategorized,
     hasEmptyCategory,
-    hasTooManyCategories,
-    hasOverLimit
+    emptyRoomCount,
+    hasCategoryWithoutPlannedVideo,
+    hasTooManyCategories
   } = usePlanDerivedState({
     images,
     customCategories,
@@ -137,13 +137,24 @@ export function ListingPlanView({
     onDragSessionEnd: endDragSession
   });
   const needsAddress = addressValue.trim() === "";
+  const hasEmptyRoomValidation =
+    hasEmptyCategory || hasCategoryWithoutPlannedVideo;
+  const footerValidationMessages = [
+    hasEmptyRoomValidation
+      ? `You have ${emptyRoomCount} room(s) with no scenes assigned to them. Please assign at least one scene to each room or remove the empty room(s) to continue.`
+      : null,
+    hasTooFewUsedImages
+      ? "You need to plan at least one video scene to continue."
+      : null,
+    hasTooManyUsedImages
+      ? `You are only allowed ${maxUsedImagesTotal} videos per listing. Please move ${usedImageCount - maxUsedImagesTotal} scene(s) to "Unused photos" to continue.`
+      : null
+  ].filter((message): message is string => Boolean(message));
   const canContinue =
-    !hasUncategorized &&
-    !hasEmptyCategory &&
+    !hasEmptyRoomValidation &&
     !needsAddress &&
-    !hasOverLimit &&
     !hasTooManyCategories &&
-    !hasOverUsedLimit;
+    isUsedImageCountValid;
   const isSavingDraft = savingCount > 0;
   usePlanConstraints({
     categoryOrder
@@ -175,7 +186,7 @@ export function ListingPlanView({
     customCategories,
     categoryDialogCategory,
     deleteCategory,
-    categoryUsageCounts,
+    usedImagesByCategory,
     placementOverrides,
     setImages,
     setPlacementOverrides,
@@ -184,7 +195,6 @@ export function ListingPlanView({
     setDeleteCategory,
     setIsDraggingImage,
     setDragOverCategory,
-    persistImageAssignments,
     endDragSession
   });
   const handleOpenCreateCategory = React.useCallback(() => {
@@ -231,7 +241,7 @@ export function ListingPlanView({
               image.metadata.perspective,
               image.metadata.videoScene?.motionVariantId ?? "default"
             )
-          : image.metadata?.videoScene?.motionVariantId ?? "default";
+          : (image.metadata?.videoScene?.motionVariantId ?? "default");
 
       return {
         id: image.id,
@@ -290,6 +300,9 @@ export function ListingPlanView({
             isSubmitting={!isInlineProcessing && isSavingDraft}
             onBack={handleBackToUpload}
             canBack={!isInlineProcessing}
+            validationMessages={
+              !isInlineProcessing ? footerValidationMessages : undefined
+            }
           />
         }
         footerAccessory={
@@ -331,10 +344,10 @@ export function ListingPlanView({
               baseCategoryCounts={baseCategoryCounts}
               usedImageCount={usedImageCount}
               maxUsedImagesTotal={maxUsedImagesTotal}
-              hasOverUsedLimit={hasOverUsedLimit}
-              categoriesOverUsedLimit={categoriesOverUsedLimit}
+              hasOverUsedLimit={hasTooManyUsedImages}
               dragOverCategory={dragOverCategory}
               onOpenCreateCategory={handleOpenCreateCategory}
+              onDeleteCategory={setDeleteCategory}
               onCategoryUsedDragOver={handleCategoryUsedDragOver}
               onCategoryRowDragLeave={handleCategoryRowDragLeave}
               handleDragStart={handleDragStart}

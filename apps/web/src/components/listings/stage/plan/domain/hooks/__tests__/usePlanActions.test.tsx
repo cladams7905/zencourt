@@ -7,10 +7,12 @@ import {
 } from "@web/src/components/listings/stage/plan/shared";
 
 const mockToastError = jest.fn();
+const mockToastSuccess = jest.fn();
 
 jest.mock("sonner", () => ({
   toast: {
-    error: (...args: unknown[]) => mockToastError(...args)
+    error: (...args: unknown[]) => mockToastError(...args),
+    success: (...args: unknown[]) => mockToastSuccess(...args)
   }
 }));
 
@@ -32,9 +34,7 @@ const buildParams = (
     customCategories: [],
     categoryDialogCategory: null,
     deleteCategory: null,
-    categoryUsageCounts: {
-      kitchen: 1
-    },
+    usedImagesByCategory: {},
     placementOverrides: {},
     setImages: jest.fn(),
     setPlacementOverrides: jest.fn(),
@@ -43,7 +43,6 @@ const buildParams = (
     setDeleteCategory: jest.fn(),
     setIsDraggingImage: jest.fn(),
     setDragOverCategory: jest.fn(),
-    persistImageAssignments: jest.fn().mockResolvedValue(true),
     endDragSession: jest.fn()
   };
   return { ...params, ...overrides };
@@ -52,6 +51,7 @@ const buildParams = (
 describe("usePlanActions", () => {
   beforeEach(() => {
     mockToastError.mockReset();
+    mockToastSuccess.mockReset();
   });
 
   it("creates a category and closes the dialog", () => {
@@ -64,6 +64,7 @@ describe("usePlanActions", () => {
 
     expect(params.setCustomCategories).toHaveBeenCalledTimes(1);
     expect(params.setIsCategoryDialogOpen).toHaveBeenCalledWith(false);
+    expect(mockToastSuccess).toHaveBeenCalledWith("Sunroom added to plan");
   });
 
   it("creates incremented multi-room categories", () => {
@@ -107,7 +108,7 @@ describe("usePlanActions", () => {
     expect(params.setCustomCategories).not.toHaveBeenCalled();
   });
 
-  it("renames categories and persists updates", async () => {
+  it("renames categories locally and closes the dialog", async () => {
     const params = buildParams({
       images: [
         { id: "img1", url: "", filename: "a.jpg", category: "office" },
@@ -124,7 +125,6 @@ describe("usePlanActions", () => {
     });
 
     expect(params.setImages).toHaveBeenCalled();
-    expect(params.persistImageAssignments).toHaveBeenCalled();
     expect(params.setIsCategoryDialogOpen).toHaveBeenCalledWith(false);
   });
 
@@ -139,11 +139,10 @@ describe("usePlanActions", () => {
       await result.current.handleEditCategory("Kitchen");
     });
 
-    expect(params.persistImageAssignments).not.toHaveBeenCalled();
     expect(params.setIsCategoryDialogOpen).toHaveBeenCalledWith(false);
   });
 
-  it("deletes category and moves images to uncategorized", async () => {
+  it("deletes category locally and moves images to uncategorized", async () => {
     const params = buildParams({
       images: [
         { id: "img1", url: "", filename: "a.jpg", category: "office" },
@@ -158,11 +157,12 @@ describe("usePlanActions", () => {
       await result.current.handleDeleteCategory();
     });
 
-    expect(params.persistImageAssignments).toHaveBeenCalled();
+    expect(params.setImages).toHaveBeenCalled();
     expect(params.setDeleteCategory).toHaveBeenCalledWith(null);
+    expect(mockToastSuccess).toHaveBeenCalledWith("Office removed from plan");
   });
 
-  it("rolls back category edits when persistence fails", async () => {
+  it("does not depend on persistence to keep edited categories locally", async () => {
     const params = buildParams({
       images: [
         { id: "img1", url: "", filename: "a.jpg", category: "office" },
@@ -170,17 +170,7 @@ describe("usePlanActions", () => {
       ],
       categoryOrder: ["office"],
       customCategories: ["office"],
-      categoryDialogCategory: "office",
-      persistImageAssignments: jest.fn().mockImplementation(
-        async (
-          _updates: Array<{ id: string; category: string | null }>,
-          _deletions: string[],
-          rollback?: () => void
-        ) => {
-          rollback?.();
-          return false;
-        }
-      )
+      categoryDialogCategory: "office"
     });
     const { result } = renderHook(() => usePlanActions(params));
 
@@ -188,9 +178,9 @@ describe("usePlanActions", () => {
       await result.current.handleEditCategory("study");
     });
 
-    expect(params.setImages).toHaveBeenCalledTimes(2);
-    expect(params.setCustomCategories).toHaveBeenCalledTimes(2);
-    expect(params.setIsCategoryDialogOpen).not.toHaveBeenCalledWith(false);
+    expect(params.setImages).toHaveBeenCalledTimes(1);
+    expect(params.setCustomCategories).toHaveBeenCalledTimes(1);
+    expect(params.setIsCategoryDialogOpen).toHaveBeenCalledWith(false);
   });
 
   it("returns early when delete category is not selected", async () => {
@@ -203,10 +193,10 @@ describe("usePlanActions", () => {
       await result.current.handleDeleteCategory();
     });
 
-    expect(params.persistImageAssignments).not.toHaveBeenCalled();
+    expect(params.setImages).not.toHaveBeenCalled();
   });
 
-  it("moves dropped images into the dock and persists deselection metadata", async () => {
+  it("moves dropped images into the dock locally without persisting", async () => {
     const params = buildParams();
     const { result } = renderHook(() => usePlanActions(params));
     const preventDefault = jest.fn();
@@ -221,22 +211,7 @@ describe("usePlanActions", () => {
 
     expect(preventDefault).toHaveBeenCalled();
     expect(params.setPlacementOverrides).toHaveBeenCalledTimes(1);
-    expect(params.persistImageAssignments).toHaveBeenCalledWith(
-      [
-        expect.objectContaining({
-          id: "img1",
-          category: null,
-          metadata: expect.objectContaining({
-            videoScene: {
-              selected: false,
-              motionVariantId: "default"
-            }
-          })
-        })
-      ],
-      [],
-      expect.any(Function)
-    );
+    expect(params.setImages).toHaveBeenCalledTimes(1);
     expect(params.setDragOverCategory).toHaveBeenCalledWith(null);
   });
 
@@ -266,11 +241,10 @@ describe("usePlanActions", () => {
       } as never);
     });
 
-    expect(params.persistImageAssignments).not.toHaveBeenCalled();
     expect(params.setDragOverCategory).toHaveBeenCalledWith(null);
   });
 
-  it("restores placement and images when a dropped category change rolls back", async () => {
+  it("updates placement and images locally when dropping into a new used category", async () => {
     const params = buildParams({
       images: [
         {
@@ -280,16 +254,7 @@ describe("usePlanActions", () => {
           category: "living-room",
           workspacePlacement: "dock"
         }
-      ],
-      persistImageAssignments: jest.fn().mockImplementation(
-        async (
-          _updates: Array<{ id: string; category: string | null }>,
-          _deletions: string[],
-          rollback?: () => void
-        ) => {
-          rollback?.();
-        }
-      )
+      ]
     });
     const { result } = renderHook(() => usePlanActions(params));
 
@@ -302,8 +267,8 @@ describe("usePlanActions", () => {
       } as never);
     });
 
-    expect(params.setImages).toHaveBeenCalledTimes(2);
-    expect(params.setPlacementOverrides).toHaveBeenCalledTimes(2);
+    expect(params.setImages).toHaveBeenCalledTimes(1);
+    expect(params.setPlacementOverrides).toHaveBeenCalledTimes(1);
     expect(params.setDragOverCategory).toHaveBeenCalledWith(null);
   });
 
@@ -328,7 +293,7 @@ describe("usePlanActions", () => {
     expect(params.endDragSession).toHaveBeenCalled();
   });
 
-  it("drops images into the dock and persists deselection metadata", async () => {
+  it("drops images into the dock locally and preserves mutable planning state", async () => {
     const params = buildParams({
       images: [
         {
@@ -354,22 +319,7 @@ describe("usePlanActions", () => {
     });
 
     expect(params.setPlacementOverrides).toHaveBeenCalled();
-    expect(params.persistImageAssignments).toHaveBeenCalledWith(
-      [
-        expect.objectContaining({
-          id: "img2",
-          category: "kitchen",
-          metadata: expect.objectContaining({
-            videoScene: {
-              selected: false,
-              motionVariantId: "default"
-            }
-          })
-        })
-      ],
-      [],
-      expect.any(Function)
-    );
+    expect(params.setImages).toHaveBeenCalled();
   });
 
   it("clears drag-over state when dropping a used image into the same category", async () => {
@@ -398,7 +348,6 @@ describe("usePlanActions", () => {
     });
 
     expect(params.setDragOverCategory).toHaveBeenCalledWith(null);
-    expect(params.persistImageAssignments).not.toHaveBeenCalled();
   });
 
   it("ignores drops with no dragged image id", async () => {
@@ -414,7 +363,6 @@ describe("usePlanActions", () => {
     });
 
     expect(params.setPlacementOverrides).not.toHaveBeenCalled();
-    expect(params.persistImageAssignments).not.toHaveBeenCalled();
   });
 
   it("blocks dragging docked images into a full used category", async () => {
@@ -428,9 +376,6 @@ describe("usePlanActions", () => {
           workspacePlacement: "dock"
         }
       ],
-      categoryUsageCounts: {
-        kitchen: 3
-      },
       placementOverrides: {
         img1: "dock"
       }
@@ -445,7 +390,221 @@ describe("usePlanActions", () => {
       await result.current.handleDrop("kitchen")(dropEvent);
     });
 
-    expect(mockToastError).toHaveBeenCalled();
-    expect(params.persistImageAssignments).not.toHaveBeenCalled();
+    expect(mockToastError).not.toHaveBeenCalled();
+    expect(params.setImages).toHaveBeenCalledTimes(1);
+    expect(params.setPlacementOverrides).toHaveBeenCalledTimes(1);
+  });
+
+  it("allows adding a recommended image even when the listing already exceeds the total cap", async () => {
+    const params = buildParams({
+      images: [
+        {
+          id: "img1",
+          url: "",
+          filename: "a.jpg",
+          category: "kitchen",
+          workspacePlacement: "dock"
+        }
+      ],
+      placementOverrides: {
+        img1: "dock"
+      }
+    });
+    const { result } = renderHook(() => usePlanActions(params));
+    const dropEvent = {
+      preventDefault: jest.fn(),
+      dataTransfer: { getData: () => "img1" }
+    } as unknown as React.DragEvent<HTMLDivElement>;
+
+    await act(async () => {
+      await result.current.handleDrop("kitchen")(dropEvent);
+    });
+
+    expect(mockToastError).not.toHaveBeenCalled();
+    expect(params.setImages).toHaveBeenCalledTimes(1);
+    expect(params.setPlacementOverrides).toHaveBeenCalledTimes(1);
+  });
+
+  it("preserves existing used images in the destination category when dragging another image into it", async () => {
+    const params = buildParams({
+      images: [
+        {
+          id: "src",
+          url: "",
+          filename: "src.jpg",
+          category: "bedroom"
+        },
+        {
+          id: "dest-1",
+          url: "",
+          filename: "dest-1.jpg",
+          category: "kitchen"
+        },
+        {
+          id: "dest-2",
+          url: "",
+          filename: "dest-2.jpg",
+          category: "kitchen"
+        }
+      ],
+      usedImagesByCategory: {
+        kitchen: [
+          {
+            id: "dest-1",
+            url: "",
+            filename: "dest-1.jpg",
+            category: "kitchen"
+          },
+          {
+            id: "dest-2",
+            url: "",
+            filename: "dest-2.jpg",
+            category: "kitchen"
+          }
+        ]
+      },
+      placementOverrides: {
+        src: "used"
+      }
+    });
+    const { result } = renderHook(() => usePlanActions(params));
+
+    await act(async () => {
+      await result.current.handleDrop("kitchen")({
+        preventDefault: jest.fn(),
+        dataTransfer: { getData: () => "src" }
+      } as never);
+    });
+
+    expect(params.setPlacementOverrides).toHaveBeenCalledWith(
+      expect.any(Function)
+    );
+
+    const updateOverrides = (params.setPlacementOverrides as jest.Mock).mock
+      .calls[0][0] as (value: Record<string, "used" | "dock">) => Record<
+      string,
+      "used" | "dock"
+    >;
+
+    expect(updateOverrides({ src: "used" })).toEqual({
+      src: "used",
+      "dest-1": "used",
+      "dest-2": "used"
+    });
+  });
+
+  it("appends a cross-category drop to the end of the destination room list", async () => {
+    const params = buildParams({
+      images: [
+        {
+          id: "src",
+          url: "",
+          filename: "src.jpg",
+          category: "bedroom",
+          workspacePlacement: "used"
+        },
+        {
+          id: "dest-1",
+          url: "",
+          filename: "dest-1.jpg",
+          category: "kitchen",
+          workspacePlacement: "used"
+        },
+        {
+          id: "dest-2",
+          url: "",
+          filename: "dest-2.jpg",
+          category: "kitchen",
+          workspacePlacement: "used"
+        },
+        {
+          id: "other-room",
+          url: "",
+          filename: "other-room.jpg",
+          category: "living-room",
+          workspacePlacement: "used"
+        }
+      ],
+      usedImagesByCategory: {
+        kitchen: [
+          {
+            id: "dest-1",
+            url: "",
+            filename: "dest-1.jpg",
+            category: "kitchen",
+            workspacePlacement: "used"
+          },
+          {
+            id: "dest-2",
+            url: "",
+            filename: "dest-2.jpg",
+            category: "kitchen",
+            workspacePlacement: "used"
+          }
+        ]
+      },
+      placementOverrides: {
+        src: "used"
+      }
+    });
+    const { result } = renderHook(() => usePlanActions(params));
+
+    await act(async () => {
+      await result.current.handleDrop("kitchen")({
+        preventDefault: jest.fn(),
+        dataTransfer: { getData: () => "src" }
+      } as never);
+    });
+
+    expect(params.setImages).toHaveBeenCalledWith(expect.any(Function));
+
+    const updateImages = (params.setImages as jest.Mock).mock
+      .calls[0][0] as (value: typeof params.images) => typeof params.images;
+
+    expect(updateImages(params.images).map((image) => ({
+      id: image.id,
+      category: image.category
+    }))).toEqual([
+      { id: "dest-1", category: "kitchen" },
+      { id: "dest-2", category: "kitchen" },
+      { id: "src", category: "kitchen" },
+      { id: "other-room", category: "living-room" }
+    ]);
+  });
+
+  it("preserves a source category as an empty room when its last image is dragged away", async () => {
+    const params = buildParams({
+      images: [
+        {
+          id: "src",
+          url: "",
+          filename: "src.jpg",
+          category: "bedroom"
+        },
+        {
+          id: "dest-1",
+          url: "",
+          filename: "dest-1.jpg",
+          category: "kitchen"
+        }
+      ],
+      customCategories: []
+    });
+    const { result } = renderHook(() => usePlanActions(params));
+
+    await act(async () => {
+      await result.current.handleDrop("kitchen")({
+        preventDefault: jest.fn(),
+        dataTransfer: { getData: () => "src" }
+      } as never);
+    });
+
+    expect(params.setCustomCategories).toHaveBeenCalledWith(expect.any(Function));
+
+    const updateCategories = (params.setCustomCategories as jest.Mock).mock
+      .calls[0][0] as (value: string[]) => string[];
+
+    expect(updateCategories([])).toEqual(["bedroom"]);
+    expect(updateCategories(["bedroom"])).toEqual(["bedroom"]);
   });
 });

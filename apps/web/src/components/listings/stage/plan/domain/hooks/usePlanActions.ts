@@ -4,9 +4,7 @@ import {
   ROOM_CATEGORIES,
   type RoomCategory
 } from "@web/src/lib/domain/listings/image/roomCategories";
-import { MAX_IMAGES_PER_ROOM } from "@shared/utils/mediaUpload";
 import {
-  CATEGORIZE_MAX_USED_PHOTOS,
   UNCATEGORIZED_CATEGORY_ID,
   UNUSED_DOCK_DROP_ZONE_ID
 } from "@web/src/components/listings/stage/plan/shared";
@@ -18,6 +16,8 @@ import type {
 import type { CameraMotionVariantId } from "@shared/types/models";
 import {
   MULTI_ROOM_CATEGORIES,
+  formatCategoryLabel,
+  getCategoryBase,
   getNextCategoryValue,
   normalizeCategory
 } from "@web/src/components/listings/stage/plan/domain/categoryRules";
@@ -28,7 +28,7 @@ type UsePlanActionsParams = {
   customCategories: string[];
   categoryDialogCategory: string | null;
   deleteCategory: string | null;
-  categoryUsageCounts: Record<string, number>;
+  usedImagesByCategory: Record<string, ListingImageItem[]>;
   placementOverrides: Record<string, WorkspacePlacement>;
   setImages: React.Dispatch<React.SetStateAction<ListingImageItem[]>>;
   setPlacementOverrides: React.Dispatch<
@@ -39,15 +39,6 @@ type UsePlanActionsParams = {
   setDeleteCategory: React.Dispatch<React.SetStateAction<string | null>>;
   setIsDraggingImage: React.Dispatch<React.SetStateAction<boolean>>;
   setDragOverCategory: React.Dispatch<React.SetStateAction<string | null>>;
-  persistImageAssignments: (
-    updates: Array<{
-      id: string;
-      category: string | null;
-      metadata?: ListingImageItem["metadata"];
-    }>,
-    deletions: string[],
-    rollback?: () => void
-  ) => Promise<boolean>;
   endDragSession: () => void;
 };
 
@@ -58,7 +49,7 @@ export function usePlanActions(params: UsePlanActionsParams) {
     customCategories,
     categoryDialogCategory,
     deleteCategory,
-    categoryUsageCounts,
+    usedImagesByCategory,
     placementOverrides,
     setImages,
     setPlacementOverrides,
@@ -67,9 +58,24 @@ export function usePlanActions(params: UsePlanActionsParams) {
     setDeleteCategory,
     setIsDraggingImage,
     setDragOverCategory,
-    persistImageAssignments,
     endDragSession
   } = params;
+
+  const getCategoryToastLabel = React.useCallback(
+    (category: string, extraCategories: string[] = []) => {
+      const counts = [...categoryOrder, ...extraCategories].reduce<Record<string, number>>(
+        (acc, value) => {
+          const base = getCategoryBase(value);
+          acc[base] = (acc[base] ?? 0) + 1;
+          return acc;
+        },
+        {}
+      );
+
+      return formatCategoryLabel(category, counts);
+    },
+    [categoryOrder]
+  );
 
   const resolveCategoryValue = React.useCallback(
     (
@@ -124,9 +130,15 @@ export function usePlanActions(params: UsePlanActionsParams) {
         }
         return [...prev, createdCategory];
       });
+      toast.success(`${getCategoryToastLabel(createdCategory, [createdCategory])} added to plan`);
       setIsCategoryDialogOpen(false);
     },
-    [resolveCategoryValue, setCustomCategories, setIsCategoryDialogOpen]
+    [
+      getCategoryToastLabel,
+      resolveCategoryValue,
+      setCustomCategories,
+      setIsCategoryDialogOpen
+    ]
   );
 
   const handleEditCategory = React.useCallback(
@@ -147,8 +159,6 @@ export function usePlanActions(params: UsePlanActionsParams) {
         setIsCategoryDialogOpen(false);
         return;
       }
-      const previousImages = images;
-      const previousCategories = customCategories;
       const nextImages = images.map((image) =>
         image.category === originalCategory
           ? { ...image, category: updatedCategory }
@@ -168,26 +178,12 @@ export function usePlanActions(params: UsePlanActionsParams) {
       })();
       setImages(nextImages);
       setCustomCategories(nextCategories);
-      const updates = previousImages
-        .filter((image) => image.category === originalCategory)
-        .map((image) => ({
-          id: image.id,
-          category: updatedCategory
-        }));
-      const success = await persistImageAssignments(updates, [], () => {
-        setImages(previousImages);
-        setCustomCategories(previousCategories);
-      });
-      if (!success) {
-        return;
-      }
       setIsCategoryDialogOpen(false);
     },
     [
       categoryDialogCategory,
       customCategories,
       images,
-      persistImageAssignments,
       resolveCategoryValue,
       setCustomCategories,
       setImages,
@@ -200,36 +196,22 @@ export function usePlanActions(params: UsePlanActionsParams) {
       return;
     }
     const categoryToDelete = deleteCategory;
-    const previousImages = images;
-    const previousCategories = customCategories;
     const nextImages = images.map((image) =>
       image.category === categoryToDelete
         ? { ...image, category: null }
         : image
     );
-    const updates = previousImages
-      .filter((image) => image.category === categoryToDelete)
-      .map((image) => ({
-        id: image.id,
-        category: null
-      }));
     setImages(nextImages);
     setCustomCategories(
       customCategories.filter((category) => category !== categoryToDelete)
     );
-    const success = await persistImageAssignments(updates, [], () => {
-      setImages(previousImages);
-      setCustomCategories(previousCategories);
-    });
-    if (!success) {
-      return;
-    }
+    toast.success(`${getCategoryToastLabel(categoryToDelete)} removed from plan`);
     setDeleteCategory(null);
   }, [
     customCategories,
     deleteCategory,
+    getCategoryToastLabel,
     images,
-    persistImageAssignments,
     setCustomCategories,
     setDeleteCategory,
     setImages
@@ -287,44 +269,81 @@ export function usePlanActions(params: UsePlanActionsParams) {
     []
   );
 
-  const persistSingleImage = React.useCallback(
-    async (
+  const updateSingleImageLocally = React.useCallback(
+    (
       updatedImage: ListingImageItem,
-      previousImages: ListingImageItem[],
-      previousPlacement: WorkspacePlacement,
-      nextPlacement: WorkspacePlacement
+      nextPlacement: WorkspacePlacement,
+      preservedUsedCategory?: string | null,
+      emptiedCategory?: string | null,
+      appendToCategoryEnd?: boolean
     ) => {
-      setImages((current) =>
-        current.map((image) =>
+      setImages((current) => {
+        const nextImages = current.map((image) =>
           image.id === updatedImage.id ? updatedImage : image
-        )
-      );
+        );
+
+        if (!appendToCategoryEnd || !updatedImage.category) {
+          return nextImages;
+        }
+
+        const reordered = nextImages.filter((image) => image.id !== updatedImage.id);
+        const destinationIndexes = reordered.reduce<number[]>((acc, image, index) => {
+          if (image.category === updatedImage.category) {
+            acc.push(index);
+          }
+          return acc;
+        }, []);
+
+        if (destinationIndexes.length === 0) {
+          return [...reordered, updatedImage];
+        }
+
+        const insertAt = destinationIndexes[destinationIndexes.length - 1] + 1;
+        reordered.splice(insertAt, 0, updatedImage);
+        return reordered;
+      });
+      if (emptiedCategory) {
+        setCustomCategories((prev) => {
+          if (prev.includes(emptiedCategory)) {
+            return prev;
+          }
+          return [...prev, emptiedCategory];
+        });
+      }
       setPlacementOverrides((prev) => ({
         ...prev,
+        ...(preservedUsedCategory
+          ? Object.fromEntries(
+              (usedImagesByCategory[preservedUsedCategory] ?? [])
+                .filter((image) => image.id !== updatedImage.id)
+                .map((image) => [image.id, "used" as const])
+            )
+          : {}),
         [updatedImage.id]: nextPlacement
       }));
-
-      const success = await persistImageAssignments(
-        [
-          {
-            id: updatedImage.id,
-            category: updatedImage.category ?? null,
-            metadata: updatedImage.metadata ?? null
-          }
-        ],
-        [],
-        () => {
-          setImages(previousImages);
-          setPlacementOverrides((prev) => ({
-            ...prev,
-            [updatedImage.id]: previousPlacement
-          }));
-        }
-      );
-
-      return success;
     },
-    [persistImageAssignments, setImages, setPlacementOverrides]
+    [setCustomCategories, setImages, setPlacementOverrides, usedImagesByCategory]
+  );
+
+  const resolveEmptiedSourceCategory = React.useCallback(
+    (previousImage: ListingImageItem, nextCategory: string | null) => {
+      const sourceCategory = previousImage.category;
+      if (
+        !sourceCategory ||
+        sourceCategory === nextCategory ||
+        sourceCategory === "other"
+      ) {
+        return null;
+      }
+
+      const remainingImagesInSourceCategory = images.filter(
+        (image) =>
+          image.id !== previousImage.id && image.category === sourceCategory
+      ).length;
+
+      return remainingImagesInSourceCategory === 0 ? sourceCategory : null;
+    },
+    [images]
   );
 
   const moveImageToDock = React.useCallback(
@@ -370,8 +389,6 @@ export function usePlanActions(params: UsePlanActionsParams) {
       if (!previousImage) {
         return;
       }
-      const previousPlacement =
-        placementOverrides[imageId] ?? previousImage.workspacePlacement ?? "dock";
       const prevKey = previousImage.category ?? UNCATEGORIZED_CATEGORY_ID;
       if (prevKey === category) {
         const updatedImage = buildImageWithSceneSelection(
@@ -379,40 +396,37 @@ export function usePlanActions(params: UsePlanActionsParams) {
           previousImage.category ?? null,
           false
         );
-        await persistSingleImage(
-          updatedImage,
-          images,
-          previousPlacement,
-          "dock"
-        );
+        updateSingleImageLocally(updatedImage, "dock");
         setDragOverCategory(null);
         return;
       }
       const nextCategory =
         category === UNCATEGORIZED_CATEGORY_ID ? null : category;
-      const previousImages = images;
       const updatedImage = buildImageWithSceneSelection(
         previousImage,
         nextCategory,
         false
       );
-      const success = await persistSingleImage(
-        updatedImage,
-        previousImages,
-        previousPlacement,
-        "dock"
+      const emptiedCategory = resolveEmptiedSourceCategory(
+        previousImage,
+        nextCategory
       );
-      if (!success) {
-        return;
-      }
+      updateSingleImageLocally(
+        updatedImage,
+        "dock",
+        undefined,
+        emptiedCategory,
+        previousImage.category !== nextCategory
+      );
       setDragOverCategory(null);
     },
     [
       buildImageWithSceneSelection,
       images,
-      persistSingleImage,
       placementOverrides,
-      setDragOverCategory
+      resolveEmptiedSourceCategory,
+      setDragOverCategory,
+      updateSingleImageLocally
     ]
   );
 
@@ -441,46 +455,31 @@ export function usePlanActions(params: UsePlanActionsParams) {
         setDragOverCategory(null);
         return;
       }
-      const roomUsed = categoryUsageCounts[nextCategory] ?? 0;
-      const nextRoomUsed = roomUsed + 1;
-      if (nextRoomUsed > MAX_IMAGES_PER_ROOM) {
-        toast.error(
-          `This room already has ${MAX_IMAGES_PER_ROOM} photos. Remove one before adding another.`
-        );
-        setDragOverCategory(null);
-        return;
-      }
-      const totalUsed = Object.values(categoryUsageCounts).reduce(
-        (sum, count) => sum + count,
-        0
-      );
-      if (totalUsed + 1 > CATEGORIZE_MAX_USED_PHOTOS) {
-        toast.error(
-          `Reduce the used photo selection to ${CATEGORIZE_MAX_USED_PHOTOS} or fewer before adding more.`
-        );
-        setDragOverCategory(null);
-        return;
-      }
       const updatedImage = buildImageWithSceneSelection(
         previousImage,
         nextCategory,
         true
       );
-      void persistSingleImage(
+      const emptiedCategory = resolveEmptiedSourceCategory(
+        previousImage,
+        nextCategory
+      );
+      updateSingleImageLocally(
         updatedImage,
-        images,
-        previousPlacement,
-        "used"
+        "used",
+        nextCategory,
+        emptiedCategory,
+        false
       );
       setDragOverCategory(null);
     },
     [
       buildImageWithSceneSelection,
-      categoryUsageCounts,
       images,
       placementOverrides,
-      persistSingleImage,
-      setDragOverCategory
+      resolveEmptiedSourceCategory,
+      setDragOverCategory,
+      updateSingleImageLocally
     ]
   );
 
@@ -496,27 +495,17 @@ export function usePlanActions(params: UsePlanActionsParams) {
         if (!previousImage) {
           return;
         }
-        const previousPlacement =
-          placementOverrides[imageId] ??
-          previousImage.workspacePlacement ??
-          "dock";
         const updatedImage = buildImageWithSceneSelection(
           previousImage,
           previousImage.category ?? null,
           false
         );
-        await persistSingleImage(
-          updatedImage,
-          images,
-          previousPlacement,
-          "dock"
-        );
+        updateSingleImageLocally(updatedImage, "dock");
         setDragOverCategory(null);
         return;
       }
       const nextCategory =
         category === UNCATEGORIZED_CATEGORY_ID ? null : category;
-      const previousImages = images;
       const previousImage = images.find((image) => image.id === imageId);
       if (!previousImage) {
         return;
@@ -531,38 +520,31 @@ export function usePlanActions(params: UsePlanActionsParams) {
         setDragOverCategory(null);
         return;
       }
-      const nextUsedCount =
-        (categoryUsageCounts[nextCategory ?? ""] ?? 0) +
-        (previousPlacement === "used" && previousImage.category === nextCategory
-          ? 0
-          : 1);
-      if (nextCategory && nextUsedCount > MAX_IMAGES_PER_ROOM) {
-        toast.error(
-          `This room already has ${MAX_IMAGES_PER_ROOM} photos. Remove one before adding another.`
-        );
-        setDragOverCategory(null);
-        return;
-      }
       const updatedImage = buildImageWithSceneSelection(
         previousImage,
         nextCategory,
         true
       );
-      await persistSingleImage(
+      const emptiedCategory = resolveEmptiedSourceCategory(
+        previousImage,
+        nextCategory
+      );
+      updateSingleImageLocally(
         updatedImage,
-        previousImages,
-        previousPlacement,
-        "used"
+        "used",
+        nextCategory,
+        emptiedCategory,
+        previousImage.category !== nextCategory
       );
       setDragOverCategory(null);
     },
     [
       buildImageWithSceneSelection,
-      categoryUsageCounts,
       images,
       placementOverrides,
-      persistSingleImage,
-      setDragOverCategory
+      resolveEmptiedSourceCategory,
+      setDragOverCategory,
+      updateSingleImageLocally
     ]
   );
 
@@ -582,14 +564,14 @@ export function usePlanActions(params: UsePlanActionsParams) {
       const previousPlacement =
         placementOverrides[imageId] ?? previousImage.workspacePlacement ?? "dock";
 
-      await persistSingleImage(
-        updatedImage,
-        images,
-        previousPlacement,
-        previousPlacement
-      );
+      updateSingleImageLocally(updatedImage, previousPlacement);
     },
-    [buildImageWithSceneSelection, images, persistSingleImage, placementOverrides]
+    [
+      buildImageWithSceneSelection,
+      images,
+      placementOverrides,
+      updateSingleImageLocally
+    ]
   );
 
   return {

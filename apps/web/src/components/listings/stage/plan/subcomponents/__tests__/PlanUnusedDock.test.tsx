@@ -2,6 +2,7 @@ import type * as React from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { PlanUnusedDock } from "@web/src/components/listings/stage/plan/subcomponents/PlanUnusedDock";
+import { UNUSED_DOCK_DROP_ZONE_ID } from "@web/src/components/listings/stage/plan/shared";
 
 jest.mock("next/image", () => ({
   __esModule: true,
@@ -26,33 +27,8 @@ const dockImage = {
   workspacePlacement: "dock" as const
 };
 
-type MediaQueryChangeListener = (event: MediaQueryListEvent) => void;
-
 describe("PlanUnusedDock", () => {
-  let matchMediaState = false;
-
-  beforeEach(() => {
-    matchMediaState = false;
-    Object.defineProperty(window, "matchMedia", {
-      writable: true,
-      value: jest.fn().mockImplementation(() => ({
-        get matches() {
-          return matchMediaState;
-        },
-        media: "(min-width: 1024px)",
-        onchange: null,
-        addEventListener: (_event: string, listener: MediaQueryChangeListener) => {
-          void listener;
-        },
-        removeEventListener: jest.fn(),
-        addListener: jest.fn(),
-        removeListener: jest.fn(),
-        dispatchEvent: jest.fn()
-      }))
-    });
-  });
-
-  it("renders unused accordion with thumbnails when images are docked", () => {
+  it("renders the unused dock collapsed by default when images are docked", () => {
     render(
       <PlanUnusedDock
         dockedImages={[dockImage]}
@@ -69,7 +45,7 @@ describe("PlanUnusedDock", () => {
     expect(
       screen.getByText("1 photos will not be used in any videos")
     ).toBeInTheDocument();
-    expect(screen.getByAltText("dock.jpg")).toBeInTheDocument();
+    expect(screen.queryByAltText("dock.jpg")).not.toBeInTheDocument();
   });
 
   it("shows zero count in the trigger when there are no docked images", async () => {
@@ -93,9 +69,7 @@ describe("PlanUnusedDock", () => {
     ).toBeInTheDocument();
   });
 
-  it("keeps the dock visible by default on desktop", () => {
-    matchMediaState = true;
-
+  it("stays collapsed by default on desktop", () => {
     render(
       <PlanUnusedDock
         dockedImages={[]}
@@ -109,7 +83,41 @@ describe("PlanUnusedDock", () => {
     );
 
     expect(
-      screen.getByText("Drag photos here to remove them as a video starting frame.")
+      screen.queryByText("Drag photos here to remove them as a video starting frame.")
+    ).not.toBeInTheDocument();
+  });
+
+  it("opens the unused dock when dragging over it while closed", async () => {
+    const { rerender } = render(
+      <PlanUnusedDock
+        dockedImages={[dockImage]}
+        dragOverCategory={null}
+        onGlobalUnusedDockDragOver={jest.fn()}
+        onGlobalUnusedDockDragLeave={jest.fn()}
+        handleDragStart={() => jest.fn()}
+        handleDragEnd={jest.fn()}
+        handleGlobalUnusedDockDrop={jest.fn()}
+      />
+    );
+
+    expect(
+      screen.queryByAltText("dock.jpg")
+    ).not.toBeInTheDocument();
+
+    rerender(
+      <PlanUnusedDock
+        dockedImages={[dockImage]}
+        dragOverCategory={UNUSED_DOCK_DROP_ZONE_ID}
+        onGlobalUnusedDockDragOver={jest.fn()}
+        onGlobalUnusedDockDragLeave={jest.fn()}
+        handleDragStart={() => jest.fn()}
+        handleDragEnd={jest.fn()}
+        handleGlobalUnusedDockDrop={jest.fn()}
+      />
+    );
+
+    expect(
+      screen.getByAltText("dock.jpg")
     ).toBeInTheDocument();
   });
 });

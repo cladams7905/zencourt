@@ -67,8 +67,8 @@ export function DevSingleTemplateRender({
   }
 
   return (
-    <div className="rounded-lg border border-amber-500/40 bg-amber-500/5 p-4">
-      <div className="mb-2 text-xs font-medium uppercase tracking-wide text-amber-700 dark:text-amber-400">
+    <div className="rounded-lg border border-warning/40 bg-warning/5 p-4">
+      <div className="mb-2 text-xs font-medium uppercase tracking-wide text-warning">
         Dev: Single template render
       </div>
       <div className="flex flex-wrap items-end gap-3">

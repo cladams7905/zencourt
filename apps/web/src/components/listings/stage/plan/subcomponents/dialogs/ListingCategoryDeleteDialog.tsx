@@ -28,10 +28,10 @@ export function ListingCategoryDeleteDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[420px]">
         <DialogHeader>
-          <DialogTitle>Delete category</DialogTitle>
+          <DialogTitle>Delete room</DialogTitle>
           <DialogDescription>
-            Delete &quot;{categoryLabel}&quot;? Photos in this category will
-            move to Uncategorized.
+            Delete &quot;{categoryLabel}&quot;? All images in this room will be
+            moved to &quot;Unused photos&quot;.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>

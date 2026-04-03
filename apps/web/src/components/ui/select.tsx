@@ -73,6 +73,7 @@ function SelectContent({
         {...props}
       >
         <SelectPrimitive.Viewport
+          data-slot="select-viewport"
           className={cn(
             "max-h-(--radix-select-content-available-height) overflow-y-auto p-1",
             position === "popper" &&

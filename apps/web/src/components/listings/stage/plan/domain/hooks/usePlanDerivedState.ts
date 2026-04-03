@@ -1,5 +1,5 @@
 import * as React from "react";
-import { MAX_CATEGORIES, MAX_IMAGES_PER_ROOM } from "@shared/utils/mediaUpload";
+import { MAX_CATEGORIES } from "@shared/utils/mediaUpload";
 import type {
   ListingImageItem,
   WorkspacePlacement
@@ -29,10 +29,6 @@ function buildDefaultUsedImageIds(args: {
   const { categorizedImages, workspaceCategoryOrder } = args;
   const selectedIds = new Set<string>();
   const selectedCountsByCategory: Record<string, number> = {};
-  const perCategoryLimit = Math.min(
-    DEFAULT_USED_IMAGES_PER_CATEGORY,
-    MAX_IMAGES_PER_ROOM
-  );
 
   const rankedEligibleImages = workspaceCategoryOrder
     .flatMap((category) => categorizedImages[category] ?? [])
@@ -47,7 +43,10 @@ function buildDefaultUsedImageIds(args: {
     if (selectedIds.size >= CATEGORIZE_MAX_USED_PHOTOS) {
       return;
     }
-    if ((selectedCountsByCategory[category] ?? 0) >= perCategoryLimit) {
+    if (
+      (selectedCountsByCategory[category] ?? 0) >=
+      DEFAULT_USED_IMAGES_PER_CATEGORY
+    ) {
       return;
     }
     selectedIds.add(image.id);
@@ -96,7 +95,8 @@ export function usePlanDerivedState({
   const workspaceCategoryOrder = React.useMemo(
     () =>
       categoryOrder.filter(
-        (category) => (categorizedImages[category]?.length ?? 0) > 0
+        (category) =>
+          category !== "other" && (categorizedImages[category]?.length ?? 0) > 0
       ),
     [categoryOrder, categorizedImages]
   );
@@ -192,19 +192,18 @@ export function usePlanDerivedState({
           acc[image.category] = [];
         }
         acc[image.category].push(image);
-        acc[image.category].sort(sortByRecommendationScore);
         return acc;
       }, {}),
     [workspaceImages]
   );
 
-  /** Room accordions only when at least one image is selected as a video frame. */
   const accordionCategoryOrder = React.useMemo(
     () =>
-      workspaceCategoryOrder.filter(
-        (category) => (usedImagesByCategory[category]?.length ?? 0) > 0
+      categoryOrder.filter(
+        (category) =>
+          category !== UNCATEGORIZED_CATEGORY_ID && category !== "other"
       ),
-    [usedImagesByCategory, workspaceCategoryOrder]
+    [categoryOrder]
   );
 
   const dockedImages = React.useMemo(
@@ -252,16 +251,34 @@ export function usePlanDerivedState({
   const hasEmptyCategory = categoryOrder.some(
     (category) => (categorizedImages[category]?.length ?? 0) === 0
   );
+  const emptyCategoryCount = categoryOrder.filter(
+    (category) => (categorizedImages[category]?.length ?? 0) === 0
+  ).length;
+  const hasCategoryWithoutPlannedVideo = workspaceCategoryOrder.some(
+    (category) =>
+      category !== UNCATEGORIZED_CATEGORY_ID &&
+      (categorizedImages[category]?.length ?? 0) > 0 &&
+      (categoryUsageCounts[category] ?? 0) === 0
+  );
+  const categoriesWithoutPlannedVideoCount = workspaceCategoryOrder.filter(
+    (category) =>
+      category !== UNCATEGORIZED_CATEGORY_ID &&
+      (categorizedImages[category]?.length ?? 0) > 0 &&
+      (categoryUsageCounts[category] ?? 0) === 0
+  ).length;
+  const emptyRoomCount =
+    emptyCategoryCount + categoriesWithoutPlannedVideoCount;
   const activeCategoryCount = workspaceCategoryOrder.length;
   const hasTooManyCategories = activeCategoryCount > MAX_CATEGORIES;
-  const categoriesOverUsedLimit = workspaceCategoryOrder.filter(
-    (category) => (categoryUsageCounts[category] ?? 0) > MAX_IMAGES_PER_ROOM
-  );
-  const hasOverLimit = categoriesOverUsedLimit.length > 0;
   const usedImageCount = Object.values(categoryUsageCounts).reduce(
     (sum, count) => sum + count,
     0
   );
+  const hasAnyUsedImages = usedImageCount > 0;
+  const hasTooFewUsedImages = usedImageCount < 1;
+  const hasTooManyUsedImages = usedImageCount > CATEGORIZE_MAX_USED_PHOTOS;
+  const isUsedImageCountValid =
+    !hasTooFewUsedImages && !hasTooManyUsedImages;
   const hasOverUsedLimit = usedImageCount > CATEGORIZE_MAX_USED_PHOTOS;
 
   return {
@@ -275,15 +292,19 @@ export function usePlanDerivedState({
     dockedImages,
     dockedImagesByCategory,
     categoryUsageCounts,
-    categoriesOverUsedLimit,
     usedImageCount,
+    hasAnyUsedImages,
+    hasTooFewUsedImages,
+    hasTooManyUsedImages,
+    isUsedImageCountValid,
     hasOverUsedLimit,
     maxUsedImagesTotal: CATEGORIZE_MAX_USED_PHOTOS,
     defaultUsedImagesPerCategory: DEFAULT_USED_IMAGES_PER_CATEGORY,
     uncategorizedDockCount,
     hasUncategorized,
     hasEmptyCategory,
+    emptyRoomCount,
+    hasCategoryWithoutPlannedVideo,
     hasTooManyCategories,
-    hasOverLimit
   };
 }

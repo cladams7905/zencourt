@@ -3,7 +3,7 @@ import { usePlanDerivedState } from "@web/src/components/listings/stage/plan/dom
 import { UNCATEGORIZED_CATEGORY_ID } from "@web/src/components/listings/stage/plan/shared";
 
 describe("usePlanDerivedState", () => {
-  it("builds category order with uncategorized first and includes uncategorized and other in workspace when they have images", () => {
+  it("builds category order with uncategorized first and excludes other from room workspace participation", () => {
     const { result } = renderHook(() =>
       usePlanDerivedState({
         images: [
@@ -29,10 +29,10 @@ describe("usePlanDerivedState", () => {
     expect(result.current.workspaceCategoryOrder).toEqual([
       UNCATEGORIZED_CATEGORY_ID,
       "bedroom-2",
-      "kitchen",
-      "other"
+      "kitchen"
     ]);
     expect(result.current.accordionCategoryOrder).toEqual([
+      "bedroom-1",
       "bedroom-2",
       "kitchen"
     ]);
@@ -41,6 +41,8 @@ describe("usePlanDerivedState", () => {
       kitchen: 1
     });
     expect(result.current.hasEmptyCategory).toBe(true);
+    expect(result.current.emptyRoomCount).toBe(1);
+    expect(result.current.dockedImages.map((image) => image.id)).toContain("4");
   });
 
   it("seeds top two images per category into used images and docks the rest", () => {
@@ -157,11 +159,158 @@ describe("usePlanDerivedState", () => {
     expect(result.current.dockedImages.map((img) => img.id)).toContain("b");
     expect(result.current.usedImageCount).toBe(3);
     expect(result.current.hasOverUsedLimit).toBe(false);
-    expect(result.current.hasOverLimit).toBe(false);
+    expect(result.current.hasAnyUsedImages).toBe(true);
+    expect(result.current.hasTooFewUsedImages).toBe(false);
+    expect(result.current.hasTooManyUsedImages).toBe(false);
+    expect(result.current.isUsedImageCountValid).toBe(true);
     expect(result.current.accordionCategoryOrder).toEqual([
       "kitchen",
       "living-room"
     ]);
+  });
+
+  it("preserves manual image order within a room's used scene row", () => {
+    const { result } = renderHook(() =>
+      usePlanDerivedState({
+        images: [
+          {
+            id: "dest-1",
+            url: "u1",
+            filename: "dest-1.jpg",
+            category: "kitchen",
+            recommendationScore: 0.5
+          },
+          {
+            id: "dest-2",
+            url: "u2",
+            filename: "dest-2.jpg",
+            category: "kitchen",
+            recommendationScore: 0.4
+          },
+          {
+            id: "src",
+            url: "u3",
+            filename: "src.jpg",
+            category: "kitchen",
+            recommendationScore: 0.95
+          }
+        ],
+        customCategories: [],
+        placementOverrides: {
+          "dest-1": "used",
+          "dest-2": "used",
+          src: "used"
+        }
+      })
+    );
+
+    expect(result.current.usedImagesByCategory.kitchen?.map((img) => img.id)).toEqual([
+      "dest-1",
+      "dest-2",
+      "src"
+    ]);
+  });
+
+  it("reports an invalid continue state when no images are selected for video", () => {
+    const { result } = renderHook(() =>
+      usePlanDerivedState({
+        images: [
+          {
+            id: "room-1",
+            url: "u1",
+            filename: "room-1.jpg",
+            category: "kitchen",
+            recommendationScore: 0.9
+          }
+        ],
+        customCategories: [],
+        placementOverrides: {
+          "room-1": "dock"
+        }
+      })
+    );
+
+    expect(result.current.usedImageCount).toBe(0);
+    expect(result.current.hasAnyUsedImages).toBe(false);
+    expect(result.current.hasTooFewUsedImages).toBe(true);
+    expect(result.current.hasTooManyUsedImages).toBe(false);
+    expect(result.current.isUsedImageCountValid).toBe(false);
+  });
+
+  it("flags room categories with photos but zero planned scenes", () => {
+    const { result } = renderHook(() =>
+      usePlanDerivedState({
+        images: [
+          {
+            id: "kitchen-1",
+            url: "u1",
+            filename: "kitchen-1.jpg",
+            category: "kitchen",
+            recommendationScore: 0.9
+          },
+          {
+            id: "bedroom-1",
+            url: "u2",
+            filename: "bedroom-1.jpg",
+            category: "bedroom",
+            recommendationScore: 0.8
+          }
+        ],
+        customCategories: [],
+        placementOverrides: {
+          "kitchen-1": "used",
+          "bedroom-1": "dock"
+        }
+      })
+    );
+
+    expect(result.current.categoryUsageCounts).toEqual({
+      bedroom: 0,
+      kitchen: 1
+    });
+    expect(result.current.hasCategoryWithoutPlannedVideo).toBe(true);
+    expect(result.current.emptyRoomCount).toBe(1);
+  });
+
+  it("counts both truly empty rooms and zero-scene rooms in emptyRoomCount", () => {
+    const { result } = renderHook(() =>
+      usePlanDerivedState({
+        images: [
+          {
+            id: "kitchen-1",
+            url: "u1",
+            filename: "kitchen-1.jpg",
+            category: "kitchen",
+            recommendationScore: 0.9
+          }
+        ],
+        customCategories: ["bedroom"],
+        placementOverrides: {
+          "kitchen-1": "dock"
+        }
+      })
+    );
+
+    expect(result.current.hasEmptyCategory).toBe(true);
+    expect(result.current.hasCategoryWithoutPlannedVideo).toBe(true);
+    expect(result.current.emptyRoomCount).toBe(2);
+  });
+
+  it("includes empty custom room categories in the accordion order", () => {
+    const { result } = renderHook(() =>
+      usePlanDerivedState({
+        images: [],
+        customCategories: ["kitchen"]
+      })
+    );
+
+    expect(result.current.categoryOrder).toEqual([
+      "kitchen"
+    ]);
+    expect(result.current.accordionCategoryOrder).toEqual([
+      "kitchen"
+    ]);
+    expect(result.current.hasEmptyCategory).toBe(true);
   });
 
   it("prefers persisted scene selection over score-based defaults", () => {
@@ -235,6 +384,8 @@ describe("usePlanDerivedState", () => {
 
     expect(result.current.usedImageCount).toBe(10);
     expect(result.current.hasOverUsedLimit).toBe(false);
+    expect(result.current.hasTooManyUsedImages).toBe(false);
+    expect(result.current.isUsedImageCountValid).toBe(true);
     expect(
       Object.values(result.current.usedImagesByCategory).flatMap((roomImages) =>
         roomImages.map((image) => image.id)
@@ -351,5 +502,33 @@ describe("usePlanDerivedState", () => {
     expect(result.current.dockedImages.map((image) => image.id)).toContain(
       "existing-low"
     );
+  });
+
+  it("reports an invalid continue state when selected images exceed the total video limit", () => {
+    const images = Array.from({ length: 11 }, (_, index) => ({
+      id: `img-${index + 1}`,
+      url: `u${index + 1}`,
+      filename: `img-${index + 1}.jpg`,
+      category: `room-${index + 1}`,
+      recommendationScore: 1 - index * 0.01
+    }));
+
+    const placementOverrides = Object.fromEntries(
+      images.map((image) => [image.id, "used" as const])
+    );
+
+    const { result } = renderHook(() =>
+      usePlanDerivedState({
+        images,
+        customCategories: [],
+        placementOverrides
+      })
+    );
+
+    expect(result.current.usedImageCount).toBe(11);
+    expect(result.current.hasAnyUsedImages).toBe(true);
+    expect(result.current.hasTooFewUsedImages).toBe(false);
+    expect(result.current.hasTooManyUsedImages).toBe(true);
+    expect(result.current.isUsedImageCountValid).toBe(false);
   });
 });
