@@ -61,7 +61,7 @@ export function getListingStageScaffoldCopy(
       return {
         stepTitle: "Step 3: Plan video scenes",
         stepSubtitle:
-          "Select which photos you'd like to use as the opening scenes for each space in your property. Drag and drop to rearrange."
+          "Select which photos you'd like to use as the opening video scenes for each space in your property. Drag and drop to rearrange."
       };
     case "review":
       return {

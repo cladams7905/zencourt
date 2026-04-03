@@ -72,18 +72,18 @@ describe("videoGeneration/domain/prompt", () => {
 
   it("normalizes exterior room names in prompt output", () => {
     const front = buildPrompt({
-      roomName: "Exterior Front",
+      roomName: "Exterior (Front)",
       category: "exterior-front",
       picker: (templates) => templates[0]
     });
-    const backyard = buildPrompt({
-      roomName: "Exterior Backyard",
-      category: "exterior-backyard",
+    const back = buildPrompt({
+      roomName: "Exterior (Back)",
+      category: "exterior-back",
       picker: (templates) => templates[0]
     });
 
     expect(front.prompt).toContain("front of the house");
-    expect(backyard.prompt).toContain("back of the house");
+    expect(back.prompt).toContain("back of the house");
   });
 
   it("exposes available motion variants for interior rooms", () => {

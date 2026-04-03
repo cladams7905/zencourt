@@ -13,6 +13,7 @@ describe("utils/priorityCategories", () => {
     expect(normalizeRoomCategory("kitchen-1")).toBe("kitchen");
     expect(normalizeRoomCategory("living-room-12")).toBe("living-room");
     expect(normalizeRoomCategory("exterior-front")).toBe("exterior-front");
+    expect(normalizeRoomCategory("exterior-back-2")).toBe("exterior-back");
   });
 
   it("detects priority categories with and without numeric suffixes", () => {

@@ -63,14 +63,13 @@ export function usePlanActions(params: UsePlanActionsParams) {
 
   const getCategoryToastLabel = React.useCallback(
     (category: string, extraCategories: string[] = []) => {
-      const counts = [...categoryOrder, ...extraCategories].reduce<Record<string, number>>(
-        (acc, value) => {
-          const base = getCategoryBase(value);
-          acc[base] = (acc[base] ?? 0) + 1;
-          return acc;
-        },
-        {}
-      );
+      const counts = [...categoryOrder, ...extraCategories].reduce<
+        Record<string, number>
+      >((acc, value) => {
+        const base = getCategoryBase(value);
+        acc[base] = (acc[base] ?? 0) + 1;
+        return acc;
+      }, {});
 
       return formatCategoryLabel(category, counts);
     },
@@ -78,11 +77,7 @@ export function usePlanActions(params: UsePlanActionsParams) {
   );
 
   const resolveCategoryValue = React.useCallback(
-    (
-      input: string,
-      mode: "add" | "edit",
-      originalCategory?: string | null
-    ) => {
+    (input: string, mode: "add" | "edit", originalCategory?: string | null) => {
       const nextCategory = input.trim();
       if (!nextCategory) {
         return null;
@@ -130,7 +125,9 @@ export function usePlanActions(params: UsePlanActionsParams) {
         }
         return [...prev, createdCategory];
       });
-      toast.success(`${getCategoryToastLabel(createdCategory, [createdCategory])} added to plan`);
+      toast.success(
+        `${getCategoryToastLabel(createdCategory, [createdCategory])} added to plan`
+      );
       setIsCategoryDialogOpen(false);
     },
     [
@@ -197,15 +194,15 @@ export function usePlanActions(params: UsePlanActionsParams) {
     }
     const categoryToDelete = deleteCategory;
     const nextImages = images.map((image) =>
-      image.category === categoryToDelete
-        ? { ...image, category: null }
-        : image
+      image.category === categoryToDelete ? { ...image, category: null } : image
     );
     setImages(nextImages);
     setCustomCategories(
       customCategories.filter((category) => category !== categoryToDelete)
     );
-    toast.success(`${getCategoryToastLabel(categoryToDelete)} removed from plan`);
+    toast.success(
+      `${getCategoryToastLabel(categoryToDelete)} removed from plan`
+    );
     setDeleteCategory(null);
   }, [
     customCategories,
@@ -286,13 +283,18 @@ export function usePlanActions(params: UsePlanActionsParams) {
           return nextImages;
         }
 
-        const reordered = nextImages.filter((image) => image.id !== updatedImage.id);
-        const destinationIndexes = reordered.reduce<number[]>((acc, image, index) => {
-          if (image.category === updatedImage.category) {
-            acc.push(index);
-          }
-          return acc;
-        }, []);
+        const reordered = nextImages.filter(
+          (image) => image.id !== updatedImage.id
+        );
+        const destinationIndexes = reordered.reduce<number[]>(
+          (acc, image, index) => {
+            if (image.category === updatedImage.category) {
+              acc.push(index);
+            }
+            return acc;
+          },
+          []
+        );
 
         if (destinationIndexes.length === 0) {
           return [...reordered, updatedImage];
@@ -322,7 +324,12 @@ export function usePlanActions(params: UsePlanActionsParams) {
         [updatedImage.id]: nextPlacement
       }));
     },
-    [setCustomCategories, setImages, setPlacementOverrides, usedImagesByCategory]
+    [
+      setCustomCategories,
+      setImages,
+      setPlacementOverrides,
+      usedImagesByCategory
+    ]
   );
 
   const resolveEmptiedSourceCategory = React.useCallback(
@@ -423,7 +430,6 @@ export function usePlanActions(params: UsePlanActionsParams) {
     [
       buildImageWithSceneSelection,
       images,
-      placementOverrides,
       resolveEmptiedSourceCategory,
       setDragOverCategory,
       updateSingleImageLocally
@@ -450,7 +456,9 @@ export function usePlanActions(params: UsePlanActionsParams) {
         return;
       }
       const previousPlacement =
-        placementOverrides[imageId] ?? previousImage.workspacePlacement ?? "dock";
+        placementOverrides[imageId] ??
+        previousImage.workspacePlacement ??
+        "dock";
       if (previousPlacement === "used") {
         setDragOverCategory(null);
         return;
@@ -511,7 +519,9 @@ export function usePlanActions(params: UsePlanActionsParams) {
         return;
       }
       const previousPlacement =
-        placementOverrides[imageId] ?? previousImage.workspacePlacement ?? "dock";
+        placementOverrides[imageId] ??
+        previousImage.workspacePlacement ??
+        "dock";
 
       if (
         previousImage.category === nextCategory &&
@@ -562,7 +572,9 @@ export function usePlanActions(params: UsePlanActionsParams) {
         motionVariantId
       );
       const previousPlacement =
-        placementOverrides[imageId] ?? previousImage.workspacePlacement ?? "dock";
+        placementOverrides[imageId] ??
+        previousImage.workspacePlacement ??
+        "dock";
 
       updateSingleImageLocally(updatedImage, previousPlacement);
     },

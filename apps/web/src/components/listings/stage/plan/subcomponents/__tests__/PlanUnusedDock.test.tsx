@@ -65,7 +65,9 @@ describe("PlanUnusedDock", () => {
     expect(screen.getByText("0")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /Unused photos/i }));
     expect(
-      screen.getByText("Drag photos here to remove them as a video starting frame.")
+      screen.getByText(
+        "Drag photos here to remove them as a video starting frame."
+      )
     ).toBeInTheDocument();
   });
 
@@ -83,7 +85,9 @@ describe("PlanUnusedDock", () => {
     );
 
     expect(
-      screen.queryByText("Drag photos here to remove them as a video starting frame.")
+      screen.queryByText(
+        "Drag photos here to remove them as a video starting frame."
+      )
     ).not.toBeInTheDocument();
   });
 
@@ -100,9 +104,7 @@ describe("PlanUnusedDock", () => {
       />
     );
 
-    expect(
-      screen.queryByAltText("dock.jpg")
-    ).not.toBeInTheDocument();
+    expect(screen.queryByAltText("dock.jpg")).not.toBeInTheDocument();
 
     rerender(
       <PlanUnusedDock
@@ -116,8 +118,30 @@ describe("PlanUnusedDock", () => {
       />
     );
 
-    expect(
-      screen.getByAltText("dock.jpg")
-    ).toBeInTheDocument();
+    expect(screen.getByAltText("dock.jpg")).toBeInTheDocument();
+  });
+
+  it("shows an explanation tooltip for the unused photo ranking badge", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <PlanUnusedDock
+        dockedImages={[dockImage]}
+        dragOverCategory={null}
+        onGlobalUnusedDockDragOver={jest.fn()}
+        onGlobalUnusedDockDragLeave={jest.fn()}
+        handleDragStart={() => jest.fn()}
+        handleDragEnd={jest.fn()}
+        handleGlobalUnusedDockDrop={jest.fn()}
+      />
+    );
+
+    await user.hover(
+      screen.getByRole("button", { name: /unused photo ranking info/i })
+    );
+
+    expect(screen.getByRole("tooltip")).toHaveTextContent(
+      "We use an AI ranking algorithm to determine which photos would make the best starting video scenes for each property. Any unused photos can still be added as video scenes if preferred."
+    );
   });
 });

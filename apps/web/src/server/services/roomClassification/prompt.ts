@@ -32,7 +32,7 @@ SCORING RUBRIC (0-1):
 - feature_appeal: for shot_type "detail", how visually compelling the feature shot is
 
 PERSPECTIVE CLASSIFICATION:
-For exterior images ONLY (exterior-front, exterior-backyard), classify the camera perspective:
+For exterior images ONLY (exterior-front, exterior-back), classify the camera perspective:
 - "aerial": taken from above (elevated vantage point, bird's-eye view, looking down at the property)
 - "ground": taken from ground level (street view, eye-level, standing perspective)
 For all interior and non-exterior categories, always use "none".
@@ -96,4 +96,4 @@ EXAMPLES:
 
 Now analyze the provided image and respond with the classification JSON:`;
 
-export const CLASSIFICATION_PROMPT_VERSION = "2026-04-01.1";
+export const CLASSIFICATION_PROMPT_VERSION = "2026-04-03.1";

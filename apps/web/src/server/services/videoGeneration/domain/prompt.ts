@@ -101,7 +101,7 @@ export function buildPrompt(args: {
   const displayRoomName =
     baseCategory === "exterior-front"
       ? "front of the house"
-      : baseCategory === "exterior-backyard"
+      : baseCategory === "exterior-back"
         ? "back of the house"
         : roomName;
 

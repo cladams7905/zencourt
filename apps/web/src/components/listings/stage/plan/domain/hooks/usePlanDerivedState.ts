@@ -17,6 +17,7 @@ type UsePlanDerivedStateParams = {
   images: ListingImageItem[];
   customCategories: string[];
   placementOverrides?: Record<string, WorkspacePlacement>;
+  ignorePersistedSceneSelection?: boolean;
 };
 
 const DEFAULT_USED_IMAGES_PER_CATEGORY = 1;
@@ -217,7 +218,8 @@ function hasPersistedVideoSceneSelection(image: ListingImageItem): boolean {
 export function usePlanDerivedState({
   images,
   customCategories,
-  placementOverrides = {}
+  placementOverrides = {},
+  ignorePersistedSceneSelection = false
 }: UsePlanDerivedStateParams) {
   const categorizedImages = React.useMemo(
     () =>
@@ -274,6 +276,10 @@ export function usePlanDerivedState({
   }, [categorizedImages, workspaceCategoryOrder]);
 
   const categoriesWithPersistedSceneSelection = React.useMemo(() => {
+    if (ignorePersistedSceneSelection) {
+      return new Set<string>();
+    }
+
     const selectedCategories = new Set<string>();
 
     workspaceCategoryOrder.forEach((category) => {
@@ -284,7 +290,7 @@ export function usePlanDerivedState({
     });
 
     return selectedCategories;
-  }, [categorizedImages, workspaceCategoryOrder]);
+  }, [categorizedImages, ignorePersistedSceneSelection, workspaceCategoryOrder]);
 
   const workspaceImages = React.useMemo(
     () =>

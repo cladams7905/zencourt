@@ -28,7 +28,7 @@ export function ListingCategoryDeleteDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[420px]">
         <DialogHeader>
-          <DialogTitle>Delete space</DialogTitle>
+          <DialogTitle>{`Delete ${categoryLabel}`}</DialogTitle>
           <DialogDescription>
             Delete &quot;{categoryLabel}&quot;? All images in this space will be
             moved to &quot;Unused photos&quot;.
@@ -43,7 +43,7 @@ export function ListingCategoryDeleteDialog({
             Cancel
           </Button>
           <Button type="button" variant="destructive" onClick={onConfirm}>
-            Delete category
+            Delete
           </Button>
         </DialogFooter>
       </DialogContent>

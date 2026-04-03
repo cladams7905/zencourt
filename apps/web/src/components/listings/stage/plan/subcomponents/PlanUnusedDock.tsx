@@ -10,6 +10,11 @@ import {
 import { cn } from "@web/src/components/ui/utils";
 import { useScrollFade } from "@web/src/components/shared/hooks/useScrollFade";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger
+} from "@web/src/components/ui/tooltip";
+import {
   UNUSED_DOCK_DROP_ZONE_ID,
   type ListingImageItem
 } from "@web/src/components/listings/stage/plan/shared";
@@ -42,6 +47,8 @@ export function PlanUnusedDock({
   const globalDockHighlight = dragOverCategory === UNUSED_DOCK_DROP_ZONE_ID;
   const count = dockedImages.length;
   const [value, setValue] = React.useState<string>("");
+  const unusedPhotosSummary =
+    count === 0 ? `${count}` : `${count} photos will not be used in any videos`;
 
   React.useEffect(() => {
     if (dragOverCategory !== UNUSED_DOCK_DROP_ZONE_ID) {
@@ -77,10 +84,48 @@ export function PlanUnusedDock({
             <AccordionTrigger className="min-h-10 gap-2 py-2 text-xs font-medium hover:no-underline sm:text-sm">
               <span className="flex min-w-0 flex-1 flex-col items-start gap-0.5 text-left sm:flex-row sm:items-baseline sm:gap-2">
                 <span>Unused photos</span>
-                <span className="font-normal text-muted-foreground">
-                  {count === 0
-                    ? `${count}`
-                    : `${count} photos will not be used in any videos`}
+                <span className="flex items-center gap-1.5 font-normal text-muted-foreground">
+                  <span>{unusedPhotosSummary}</span>
+                  {count > 0 ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span
+                          role="button"
+                          tabIndex={0}
+                          aria-label="Unused photo ranking info"
+                          className="inline-flex size-4 items-center justify-center rounded-full border border-border bg-background shadow-sm text-[10px] font-semibold text-muted-foreground transition-colors hover:border-border hover:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] outline-none"
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                          }}
+                          onPointerDown={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                          }}
+                          onKeyDown={(event) => {
+                            if (event.key !== "Enter" && event.key !== " ") {
+                              return;
+                            }
+
+                            event.preventDefault();
+                            event.stopPropagation();
+                          }}
+                        >
+                          ?
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent
+                        side="top"
+                        sideOffset={8}
+                        className="max-w-64"
+                      >
+                        We use an AI ranking algorithm to determine which photos
+                        would make the best starting video scenes for each
+                        property. Any unused photos can still be added as video
+                        scenes if preferred.
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : null}
                 </span>
               </span>
             </AccordionTrigger>

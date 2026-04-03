@@ -229,7 +229,7 @@ export function PlanImageCard({
                   >
                     <div className="flex items-center gap-3">
                       <MotionPreviewVideo
-                        className="mt-0.5 aspect-[9/16] h-20 shrink-0 rounded-lg"
+                        className="mt-0.5 aspect-9/16 h-20 shrink-0 rounded-lg"
                         isActive={activePreviewMotionId === option.id}
                       />
                       <div className="flex min-w-0 flex-col justify-center">

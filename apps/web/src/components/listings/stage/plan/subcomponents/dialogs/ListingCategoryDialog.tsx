@@ -22,6 +22,10 @@ import {
   ROOM_CATEGORIES,
   type RoomCategory
 } from "@web/src/lib/domain/listings/image/roomCategories";
+import {
+  getCategoryBase,
+  MULTI_ROOM_CATEGORIES
+} from "@web/src/components/listings/stage/plan/domain/categoryRules";
 
 const MAX_CUSTOM_CATEGORY_LENGTH = 20;
 const CATEGORY_OPTIONS = Object.values(ROOM_CATEGORIES)
@@ -32,16 +36,16 @@ type ListingCategoryDialogProps = {
   open: boolean;
   mode: "add" | "edit";
   initialCategory?: string | null;
+  existingCategories: string[];
   onOpenChange: (open: boolean) => void;
   onSubmit: (value: string) => void;
 };
-
-const getCategoryBase = (value: string) => value.replace(/-\d+$/, "");
 
 export function ListingCategoryDialog({
   open,
   mode,
   initialCategory,
+  existingCategories,
   onOpenChange,
   onSubmit
 }: ListingCategoryDialogProps) {
@@ -65,8 +69,32 @@ export function ListingCategoryDialog({
 
   const resolvedCategory =
     selectedCategory === "custom" ? customCategory.trim() : selectedCategory;
+  const existingSingleCategoryBases = React.useMemo(
+    () =>
+      new Set(
+        existingCategories
+          .map((category) => getCategoryBase(category))
+          .filter((category) => !MULTI_ROOM_CATEGORIES.has(category as RoomCategory))
+      ),
+    [existingCategories]
+  );
+  const availableCategoryOptions = React.useMemo(() => {
+    if (mode !== "add") {
+      return CATEGORY_OPTIONS;
+    }
 
-  const title = mode === "edit" ? "Rename space" : "Add a space";
+    return CATEGORY_OPTIONS.filter(
+      (category) =>
+        category.allowNumbering || !existingSingleCategoryBases.has(category.id)
+    );
+  }, [existingSingleCategoryBases, mode]);
+
+  const title =
+    mode === "edit" && initialCategory
+      ? `Edit ${initialCategory}`
+      : mode === "edit"
+        ? "Edit space"
+        : "Add a space";
   const description =
     mode === "edit"
       ? "Edit the space name."
@@ -93,7 +121,7 @@ export function ListingCategoryDialog({
                 <SelectValue placeholder="Select a space" />
               </SelectTrigger>
               <SelectContent>
-                {CATEGORY_OPTIONS.map((category) => (
+                {availableCategoryOptions.map((category) => (
                   <SelectItem key={category.id} value={category.id}>
                     {category.label}
                   </SelectItem>

@@ -7,7 +7,7 @@ import {
 } from "@web/src/components/ui/accordion";
 import { Badge } from "@web/src/components/ui/badge";
 import { Button } from "@web/src/components/ui/button";
-import { Film, Trash2 } from "lucide-react";
+import { Film, PlusIcon, Trash2 } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -88,9 +88,7 @@ function PlanWorkspaceCategoryRow({
       ref={containerRef}
       data-testid={`category-scroll-container-${category}`}
       className="min-w-0 overflow-x-auto [scrollbar-gutter:stable_both-edges] pb-1"
-      style={
-        maskImage ? { maskImage, WebkitMaskImage: maskImage } : undefined
-      }
+      style={maskImage ? { maskImage, WebkitMaskImage: maskImage } : undefined}
     >
       <div
         className={cn(
@@ -194,6 +192,7 @@ export function PlanImageWorkspace({
           className="shrink-0"
           onClick={onOpenCreateCategory}
         >
+          <PlusIcon className="size-4" />
           Add Space
         </Button>
         <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
@@ -250,7 +249,8 @@ export function PlanImageWorkspace({
                             |
                           </span>
                           <span className="text-sm font-normal text-muted-foreground">
-                            {used.length} {used.length === 1 ? "scene" : "scenes"}
+                            {used.length}{" "}
+                            {used.length === 1 ? "scene" : "scenes"}
                           </span>
                         </span>
                       </span>
@@ -271,9 +271,7 @@ export function PlanImageWorkspace({
                             <Trash2 className="size-4" />
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent side="top">
-                          Delete space
-                        </TooltipContent>
+                        <TooltipContent side="top">Delete space</TooltipContent>
                       </Tooltip>
                       <AccordionTrigger
                         className="w-auto shrink-0 py-3.5 text-sm font-medium hover:no-underline [&>span]:hidden"

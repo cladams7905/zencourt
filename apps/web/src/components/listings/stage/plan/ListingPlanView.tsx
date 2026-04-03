@@ -25,6 +25,7 @@ import {
 } from "@web/src/components/listings/stage/plan/domain";
 import { formatCategoryLabel } from "@web/src/components/listings/stage/plan/domain/categoryRules";
 import { normalizeMotionVariantId } from "@web/src/lib/domain/videoGeneration/cameraMotionOptions";
+import { useUnsavedNavigationGuard } from "@web/src/components/shared/hooks/useUnsavedNavigationGuard";
 import {
   ListingStageFooter,
   ListingStageShell
@@ -36,6 +37,10 @@ import {
 } from "@web/src/components/listings/stage/processing/domain/hooks";
 import { ListingUploadAiProcessingPanel } from "@web/src/components/listings/stage/upload/subcomponents/ListingUploadAiProcessingPanel";
 import { useRouter } from "next/navigation";
+import {
+  createPlanNavigationSnapshot,
+  isPlanDirtyAgainstDefault
+} from "@web/src/components/listings/stage/plan/domain/navigationGuard";
 
 export function ListingPlanView({
   title,
@@ -104,10 +109,16 @@ export function ListingPlanView({
     customCategories,
     placementOverrides
   });
+  const defaultPlanState = usePlanDerivedState({
+    images,
+    customCategories: [],
+    ignorePersistedSceneSelection: true
+  });
   const { savingCount, runDraftSave, persistImageAssignments } =
     usePlanMutations({
       listingId
     });
+  const isSavingDraft = savingCount > 0;
   const { addressValue, handleContinue } = usePlanListingDetails({
     title,
     initialAddress,
@@ -126,6 +137,33 @@ export function ListingPlanView({
     }
   });
   const isInlineProcessing = processingBatch !== null;
+  const currentPlanSnapshot = React.useMemo(
+    () =>
+      createPlanNavigationSnapshot({
+        workspaceImages,
+        explicitCategories: customCategories
+      }),
+    [customCategories, workspaceImages]
+  );
+  const defaultPlanSnapshot = React.useMemo(
+    () =>
+      createPlanNavigationSnapshot({
+        workspaceImages: defaultPlanState.workspaceImages,
+        explicitCategories: []
+      }),
+    [defaultPlanState.workspaceImages]
+  );
+  const initialPlanSnapshotRef = React.useRef(currentPlanSnapshot);
+  const hasUnsavedPlanChanges = isPlanDirtyAgainstDefault({
+    currentSnapshot: currentPlanSnapshot,
+    defaultSnapshot: defaultPlanSnapshot,
+    initialSnapshot: initialPlanSnapshotRef.current
+  });
+  const { confirmNavigation } = useUnsavedNavigationGuard({
+    enabled: hasUnsavedPlanChanges && !isSavingDraft && !isInlineProcessing,
+    message:
+      "Unsaved changes to your video plan will be lost. Continue?"
+  });
 
   const endDragSession = React.useCallback(() => {
     setIsDraggingImage(false);
@@ -155,7 +193,6 @@ export function ListingPlanView({
     !needsAddress &&
     !hasTooManyCategories &&
     isUsedImageCountValid;
-  const isSavingDraft = savingCount > 0;
   usePlanConstraints({
     categoryOrder
   });
@@ -227,10 +264,12 @@ export function ListingPlanView({
     []
   );
   const handleBackToUpload = React.useCallback(() => {
-    clearStoredPlanProcessingBatch(listingId);
-    setProcessingBatch(null);
-    router.push(`/listings/${listingId}/stage/upload`);
-  }, [listingId, router]);
+    confirmNavigation(() => {
+      clearStoredPlanProcessingBatch(listingId);
+      setProcessingBatch(null);
+      router.push(`/listings/${listingId}/stage/upload`);
+    });
+  }, [confirmNavigation, listingId, router]);
 
   const persistCurrentSceneSelections = React.useCallback(async () => {
     const updates = workspaceImages.map((image) => {
@@ -362,6 +401,9 @@ export function ListingPlanView({
         open={isCategoryDialogOpen}
         mode={categoryDialogMode}
         initialCategory={categoryDialogCategory ?? undefined}
+        existingCategories={categoryOrder.filter(
+          (category) => category !== "needs-categorization" && category !== "other"
+        )}
         onOpenChange={setIsCategoryDialogOpen}
         onSubmit={
           categoryDialogMode === "edit"

@@ -7,7 +7,7 @@ import { ProcessedImage } from "./types";
 
 export type RoomCategory =
   | "exterior-front"
-  | "exterior-backyard"
+  | "exterior-back"
   | "living-room"
   | "kitchen"
   | "dining-room"
@@ -90,16 +90,16 @@ export interface CategorizedGroup {
 export const ROOM_CATEGORIES: Record<RoomCategory, RoomCategoryMetadata> = {
   "exterior-front": {
     id: "exterior-front",
-    label: "Exterior - Front",
+    label: "Exterior (Front)",
     icon: "Home",
     order: 1,
     color: "#10b981", // green-500
     allowNumbering: false,
     group: "exterior"
   },
-  "exterior-backyard": {
-    id: "exterior-backyard",
-    label: "Exterior - Backyard",
+  "exterior-back": {
+    id: "exterior-back",
+    label: "Exterior (Back)",
     icon: "Trees",
     order: 2,
     color: "#059669", // green-600

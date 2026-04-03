@@ -1,6 +1,6 @@
 export const PRIORITY_CATEGORIES = [
   "exterior-front",
-  "exterior-backyard",
+  "exterior-back",
   "living-room",
   "kitchen",
   "master-bedroom"
