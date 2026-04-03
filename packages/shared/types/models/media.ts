@@ -1,5 +1,17 @@
 export type ImagePerspective = "aerial" | "ground";
 
+export type CameraMotionVariantId =
+  | "default"
+  | "pan"
+  | "tracking"
+  | "orbital"
+  | "blur-to-focus";
+
+export type VideoSceneSelection = {
+  selected: boolean;
+  motionVariantId: CameraMotionVariantId;
+};
+
 export type ListingImageShotType = "room" | "detail" | "other";
 
 export type ListingImageAnalysisStatus =
@@ -34,6 +46,7 @@ export type ImageMetadata = {
   size: number;
   lastModified: number;
   perspective?: ImagePerspective;
+  videoScene?: VideoSceneSelection;
   analysisVersion?: string;
   scoreBreakdown?: ListingImageScoreBreakdown;
   featureTags?: string[];

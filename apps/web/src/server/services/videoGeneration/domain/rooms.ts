@@ -3,6 +3,7 @@ import {
   ROOM_CATEGORIES,
   RoomCategory
 } from "@web/src/lib/domain/listings/image/roomCategories";
+import type { CameraMotionVariantId } from "@shared/types/models";
 import type { DBListingImage } from "@db/types/models";
 
 export type DerivedRoom = {
@@ -193,6 +194,43 @@ export function selectPrimaryImageForRoom(
   }
 
   return listingPrimaryImageUrl;
+}
+
+export function hasPersistedSceneSelectionForRoom(
+  room: { category: string },
+  groupedImages: Map<string, DBListingImage[]>
+): boolean {
+  const availableImages = groupedImages.get(room.category) || [];
+  return availableImages.some(
+    (image) => typeof image.metadata?.videoScene?.selected === "boolean"
+  );
+}
+
+export function getSelectedSceneImagesForRoom(
+  room: { category: string },
+  groupedImages: Map<string, DBListingImage[]>
+): DBListingImage[] {
+  const availableImages = groupedImages.get(room.category) || [];
+
+  return [...availableImages]
+    .filter((image) => image.metadata?.videoScene?.selected === true)
+    .sort((a, b) => {
+      const scoreA = a.recommendationScore ?? -Infinity;
+      const scoreB = b.recommendationScore ?? -Infinity;
+      if (scoreA !== scoreB) {
+        return scoreB - scoreA;
+      }
+
+      const timeA = a.uploadedAt ? new Date(a.uploadedAt).getTime() : 0;
+      const timeB = b.uploadedAt ? new Date(b.uploadedAt).getTime() : 0;
+      return timeB - timeA;
+    });
+}
+
+export function getImageMotionVariantId(
+  image: DBListingImage | undefined
+): CameraMotionVariantId {
+  return image?.metadata?.videoScene?.motionVariantId ?? "default";
 }
 
 export function selectSecondaryImageForRoom(

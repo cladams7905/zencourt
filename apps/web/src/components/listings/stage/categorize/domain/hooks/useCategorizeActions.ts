@@ -10,10 +10,12 @@ import {
   UNCATEGORIZED_CATEGORY_ID,
   UNUSED_DOCK_DROP_ZONE_ID
 } from "@web/src/components/listings/stage/categorize/shared";
+import { normalizeMotionVariantId } from "@web/src/server/services/videoGeneration/domain/prompt";
 import type {
   ListingImageItem,
   WorkspacePlacement
 } from "@web/src/components/listings/stage/categorize/shared";
+import type { CameraMotionVariantId } from "@shared/types/models";
 import {
   MULTI_ROOM_CATEGORIES,
   getNextCategoryValue,
@@ -41,6 +43,7 @@ type UseCategorizeActionsParams = {
     updates: Array<{
       id: string;
       category: string | null;
+      metadata?: ListingImageItem["metadata"];
     }>,
     deletions: string[],
     rollback?: () => void
@@ -245,6 +248,85 @@ export function useCategorizeActions(params: UseCategorizeActionsParams) {
     endDragSession();
   }, [endDragSession]);
 
+  const buildImageWithSceneSelection = React.useCallback(
+    (
+      image: ListingImageItem,
+      nextCategory: string | null,
+      selected: boolean,
+      motionVariantId?: CameraMotionVariantId
+    ): ListingImageItem => {
+      const existingMotionVariantId =
+        motionVariantId ??
+        image.metadata?.videoScene?.motionVariantId ??
+        "default";
+      const resolvedMotionVariantId = nextCategory
+        ? normalizeMotionVariantId(
+            nextCategory,
+            image.metadata?.perspective,
+            existingMotionVariantId
+          )
+        : existingMotionVariantId;
+
+      return {
+        ...image,
+        category: nextCategory,
+        metadata: {
+          width: image.metadata?.width ?? 0,
+          height: image.metadata?.height ?? 0,
+          format: image.metadata?.format ?? "unknown",
+          size: image.metadata?.size ?? 0,
+          lastModified: image.metadata?.lastModified ?? 0,
+          ...image.metadata,
+          videoScene: {
+            selected,
+            motionVariantId: resolvedMotionVariantId
+          }
+        }
+      };
+    },
+    []
+  );
+
+  const persistSingleImage = React.useCallback(
+    async (
+      updatedImage: ListingImageItem,
+      previousImages: ListingImageItem[],
+      previousPlacement: WorkspacePlacement,
+      nextPlacement: WorkspacePlacement
+    ) => {
+      setImages((current) =>
+        current.map((image) =>
+          image.id === updatedImage.id ? updatedImage : image
+        )
+      );
+      setPlacementOverrides((prev) => ({
+        ...prev,
+        [updatedImage.id]: nextPlacement
+      }));
+
+      const success = await persistImageAssignments(
+        [
+          {
+            id: updatedImage.id,
+            category: updatedImage.category ?? null,
+            metadata: updatedImage.metadata ?? null
+          }
+        ],
+        [],
+        () => {
+          setImages(previousImages);
+          setPlacementOverrides((prev) => ({
+            ...prev,
+            [updatedImage.id]: previousPlacement
+          }));
+        }
+      );
+
+      return success;
+    },
+    [persistImageAssignments, setImages, setPlacementOverrides]
+  );
+
   const moveImageToDock = React.useCallback(
     (imageId: string) => {
       setPlacementOverrides((prev) => ({
@@ -288,67 +370,48 @@ export function useCategorizeActions(params: UseCategorizeActionsParams) {
       if (!previousImage) {
         return;
       }
+      const previousPlacement =
+        placementOverrides[imageId] ?? previousImage.workspacePlacement ?? "dock";
       const prevKey = previousImage.category ?? UNCATEGORIZED_CATEGORY_ID;
       if (prevKey === category) {
-        moveImageToDock(imageId);
+        const updatedImage = buildImageWithSceneSelection(
+          previousImage,
+          previousImage.category ?? null,
+          false
+        );
+        await persistSingleImage(
+          updatedImage,
+          images,
+          previousPlacement,
+          "dock"
+        );
         setDragOverCategory(null);
         return;
       }
       const nextCategory =
         category === UNCATEGORIZED_CATEGORY_ID ? null : category;
       const previousImages = images;
-      const previousPlacement =
-        placementOverrides[imageId] ??
-        previousImage.workspacePlacement ??
-        "dock";
-      const shouldPersistCategoryChange =
-        previousImage.category !== nextCategory;
-      const nextImages = shouldPersistCategoryChange
-        ? images.map((image) =>
-            image.id === imageId
-              ? {
-                  ...image,
-                  category: nextCategory
-                }
-              : image
-          )
-        : images;
-      const updatedImage = nextImages.find((image) => image.id === imageId);
-      if (!updatedImage) {
+      const updatedImage = buildImageWithSceneSelection(
+        previousImage,
+        nextCategory,
+        false
+      );
+      const success = await persistSingleImage(
+        updatedImage,
+        previousImages,
+        previousPlacement,
+        "dock"
+      );
+      if (!success) {
         return;
-      }
-      setPlacementOverrides((prev) => ({
-        ...prev,
-        [imageId]: "dock"
-      }));
-      if (shouldPersistCategoryChange) {
-        setImages(nextImages);
-        const success = await persistImageAssignments(
-          [
-            {
-              id: updatedImage.id,
-              category: updatedImage.category ?? null
-            }
-          ],
-          [],
-          () => {
-            setImages(previousImages);
-            setPlacementOverrides((prev) => ({
-              ...prev,
-              [imageId]: previousPlacement
-            }));
-          }
-        );
-        if (!success) {
-          return;
-        }
       }
       setDragOverCategory(null);
     },
     [
+      buildImageWithSceneSelection,
       images,
       moveImageToDock,
-      persistImageAssignments,
+      persistSingleImage,
       placementOverrides,
       setDragOverCategory,
       setImages,
@@ -401,17 +464,27 @@ export function useCategorizeActions(params: UseCategorizeActionsParams) {
         setDragOverCategory(null);
         return;
       }
-      setPlacementOverrides((prev) => ({
-        ...prev,
-        [imageId]: "used"
-      }));
+      const updatedImage = buildImageWithSceneSelection(
+        previousImage,
+        nextCategory,
+        true
+      );
+      void persistSingleImage(
+        updatedImage,
+        images,
+        previousPlacement,
+        "used"
+      );
       setDragOverCategory(null);
     },
     [
+      buildImageWithSceneSelection,
       categoryUsageCounts,
       images,
       placementOverrides,
+      persistSingleImage,
       setDragOverCategory,
+      setImages,
       setPlacementOverrides
     ]
   );
@@ -424,19 +497,40 @@ export function useCategorizeActions(params: UseCategorizeActionsParams) {
         return;
       }
       if (category === UNUSED_DOCK_DROP_ZONE_ID) {
-        moveImageToDock(imageId);
+        const previousImage = images.find((image) => image.id === imageId);
+        if (!previousImage) {
+          return;
+        }
+        const previousPlacement =
+          placementOverrides[imageId] ??
+          previousImage.workspacePlacement ??
+          "dock";
+        const updatedImage = buildImageWithSceneSelection(
+          previousImage,
+          previousImage.category ?? null,
+          false
+        );
+        await persistSingleImage(
+          updatedImage,
+          images,
+          previousPlacement,
+          "dock"
+        );
+        setDragOverCategory(null);
         return;
       }
       const nextCategory =
         category === UNCATEGORIZED_CATEGORY_ID ? null : category;
       const previousImages = images;
       const previousImage = images.find((image) => image.id === imageId);
+      if (!previousImage) {
+        return;
+      }
       const previousPlacement =
-        placementOverrides[imageId] ?? previousImage?.workspacePlacement ?? "dock";
-      const shouldPersistCategoryChange = previousImage?.category !== nextCategory;
+        placementOverrides[imageId] ?? previousImage.workspacePlacement ?? "dock";
 
       if (
-        previousImage?.category === nextCategory &&
+        previousImage.category === nextCategory &&
         previousPlacement === "used"
       ) {
         setDragOverCategory(null);
@@ -444,7 +538,7 @@ export function useCategorizeActions(params: UseCategorizeActionsParams) {
       }
       const nextUsedCount =
         (categoryUsageCounts[nextCategory ?? ""] ?? 0) +
-        (previousPlacement === "used" && previousImage?.category === nextCategory
+        (previousPlacement === "used" && previousImage.category === nextCategory
           ? 0
           : 1);
       if (nextCategory && nextUsedCount > MAX_IMAGES_PER_ROOM) {
@@ -454,55 +548,56 @@ export function useCategorizeActions(params: UseCategorizeActionsParams) {
         setDragOverCategory(null);
         return;
       }
-      const nextImages = shouldPersistCategoryChange
-        ? images.map((image) =>
-            image.id === imageId
-              ? {
-                  ...image,
-                  category: nextCategory
-                }
-              : image
-          )
-        : images;
-      const updatedImage = nextImages.find((image) => image.id === imageId);
-      if (!updatedImage) {
-        return;
-      }
-      setPlacementOverrides((prev) => ({
-        ...prev,
-        [imageId]: "used"
-      }));
-      if (shouldPersistCategoryChange) {
-        setImages(nextImages);
-        await persistImageAssignments(
-          [
-            {
-              id: updatedImage.id,
-              category: updatedImage.category ?? null
-            }
-          ],
-          [],
-          () => {
-            setImages(previousImages);
-            setPlacementOverrides((prev) => ({
-              ...prev,
-              [imageId]: previousPlacement
-            }));
-          }
-        );
-      }
+      const updatedImage = buildImageWithSceneSelection(
+        previousImage,
+        nextCategory,
+        true
+      );
+      await persistSingleImage(
+        updatedImage,
+        previousImages,
+        previousPlacement,
+        "used"
+      );
       setDragOverCategory(null);
     },
     [
+      buildImageWithSceneSelection,
       categoryUsageCounts,
       images,
       moveImageToDock,
       placementOverrides,
-      persistImageAssignments,
+      persistSingleImage,
       setDragOverCategory,
       setImages,
       setPlacementOverrides
     ]
+  );
+
+  const handleSceneMotionChange = React.useCallback(
+    async (imageId: string, motionVariantId: CameraMotionVariantId) => {
+      const previousImage = images.find((image) => image.id === imageId);
+      if (!previousImage) {
+        return;
+      }
+
+      const updatedImage = buildImageWithSceneSelection(
+        previousImage,
+        previousImage.category ?? null,
+        previousImage.workspacePlacement === "used",
+        motionVariantId
+      );
+      const previousPlacement =
+        placementOverrides[imageId] ?? previousImage.workspacePlacement ?? "dock";
+
+      await persistSingleImage(
+        updatedImage,
+        images,
+        previousPlacement,
+        previousPlacement
+      );
+    },
+    [buildImageWithSceneSelection, images, persistSingleImage, placementOverrides]
   );
 
   return {
@@ -512,6 +607,7 @@ export function useCategorizeActions(params: UseCategorizeActionsParams) {
     handleDragStart,
     handleDragEnd,
     handleDrop,
+    handleSceneMotionChange,
     handleDropOnCategoryDock,
     handleDropOnCategoryUnusedStrip,
     handleDropOnRecommendedStrip,

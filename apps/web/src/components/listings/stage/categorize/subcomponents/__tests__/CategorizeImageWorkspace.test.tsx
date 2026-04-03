@@ -46,7 +46,7 @@ describe("CategorizeImageWorkspace", () => {
         usedImagesByCategory={{ kitchen: [kitchenUsed] }}
         baseCategoryCounts={{ kitchen: 1 }}
         usedImageCount={1}
-        maxUsedImagesTotal={12}
+        maxUsedImagesTotal={10}
         hasOverUsedLimit={false}
         categoriesOverUsedLimit={[]}
         dragOverCategory={null}
@@ -55,6 +55,7 @@ describe("CategorizeImageWorkspace", () => {
         onCategoryRowDragLeave={noopDragLeave}
         handleDragStart={() => jest.fn()}
         handleDragEnd={jest.fn()}
+        onSceneMotionChange={jest.fn()}
         handleDropOnCategoryUsed={() => jest.fn()}
       />
     );
@@ -65,10 +66,10 @@ describe("CategorizeImageWorkspace", () => {
     expect(screen.getByText("Add Room")).toBeInTheDocument();
     expect(screen.getAllByAltText("used.jpg").length).toBeGreaterThanOrEqual(1);
     expect(screen.queryByAltText("dock.jpg")).not.toBeInTheDocument();
-    expect(screen.getByText("1/12 videos")).toBeInTheDocument();
+    expect(screen.getByText("1/10 videos")).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: /photo options/i })
-    ).not.toBeInTheDocument();
+      screen.getByRole("combobox", { name: /camera motion for used\.jpg/i })
+    ).toBeInTheDocument();
   });
 
   it("does not render an uncategorized accordion when no photos are used for video", () => {
@@ -87,7 +88,7 @@ describe("CategorizeImageWorkspace", () => {
         usedImagesByCategory={{ [UNCATEGORIZED_CATEGORY_ID]: [] }}
         baseCategoryCounts={{}}
         usedImageCount={0}
-        maxUsedImagesTotal={12}
+        maxUsedImagesTotal={10}
         hasOverUsedLimit={false}
         categoriesOverUsedLimit={[]}
         dragOverCategory={null}
@@ -96,6 +97,7 @@ describe("CategorizeImageWorkspace", () => {
         onCategoryRowDragLeave={noopDragLeave}
         handleDragStart={() => jest.fn()}
         handleDragEnd={jest.fn()}
+        onSceneMotionChange={jest.fn()}
         handleDropOnCategoryUsed={() => jest.fn()}
       />
     );
@@ -121,8 +123,8 @@ describe("CategorizeImageWorkspace", () => {
         accordionCategoryOrder={[]}
         usedImagesByCategory={{}}
         baseCategoryCounts={{}}
-        usedImageCount={13}
-        maxUsedImagesTotal={12}
+        usedImageCount={11}
+        maxUsedImagesTotal={10}
         hasOverUsedLimit
         categoriesOverUsedLimit={["kitchen"]}
         dragOverCategory={null}
@@ -131,6 +133,7 @@ describe("CategorizeImageWorkspace", () => {
         onCategoryRowDragLeave={noopDragLeave}
         handleDragStart={() => jest.fn()}
         handleDragEnd={jest.fn()}
+        onSceneMotionChange={jest.fn()}
         handleDropOnCategoryUsed={() => jest.fn()}
       />
     );
@@ -138,6 +141,6 @@ describe("CategorizeImageWorkspace", () => {
     expect(
       screen.getByText("1 room over the video limit")
     ).toBeInTheDocument();
-    expect(screen.getByText("13/12 videos")).toBeInTheDocument();
+    expect(screen.getByText("11/10 videos")).toBeInTheDocument();
   });
 });

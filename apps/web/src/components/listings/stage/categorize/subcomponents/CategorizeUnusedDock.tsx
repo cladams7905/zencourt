@@ -41,6 +41,50 @@ export function CategorizeUnusedDock({
   const { containerRef, maskImage } = useScrollFade();
   const globalDockHighlight = dragOverCategory === UNUSED_DOCK_DROP_ZONE_ID;
   const count = dockedImages.length;
+  const getInitialValue = React.useCallback(() => {
+    if (typeof window !== "undefined" && typeof window.matchMedia === "function") {
+      return window.matchMedia("(min-width: 1024px)").matches
+        ? "unused-dock"
+        : count > 0
+          ? "unused-dock"
+          : "";
+    }
+
+    return count > 0 ? "unused-dock" : "";
+  }, [count]);
+  const [value, setValue] = React.useState<string | undefined>(() =>
+    getInitialValue()
+  );
+
+  React.useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+      return;
+    }
+
+    const desktopQuery = window.matchMedia("(min-width: 1024px)");
+    const syncValue = (matchesDesktop: boolean) => {
+      setValue((current) => {
+        if (matchesDesktop) {
+          return "unused-dock";
+        }
+        if (current) {
+          return current;
+        }
+        return count > 0 ? "unused-dock" : "";
+      });
+    };
+
+    syncValue(desktopQuery.matches);
+
+    const handleChange = (event: MediaQueryListEvent) => {
+      syncValue(event.matches);
+    };
+
+    desktopQuery.addEventListener("change", handleChange);
+    return () => {
+      desktopQuery.removeEventListener("change", handleChange);
+    };
+  }, [count]);
 
   return (
     <div className="w-full min-w-0">
@@ -62,7 +106,8 @@ export function CategorizeUnusedDock({
           type="single"
           collapsible
           className="w-full"
-          defaultValue={count > 0 ? "unused-dock" : undefined}
+          value={value}
+          onValueChange={(nextValue) => setValue(nextValue || "")}
         >
           <AccordionItem value="unused-dock" className="border-0 shadow-none!">
             <AccordionTrigger className="min-h-10 gap-2 py-2 text-xs font-medium hover:no-underline sm:text-sm">
@@ -83,7 +128,7 @@ export function CategorizeUnusedDock({
               ) : (
                 <div
                   ref={containerRef}
-                  className="relative overflow-x-auto scrollbar-hide"
+                  className="relative overflow-x-auto [scrollbar-gutter:stable_both-edges]"
                   style={
                     maskImage
                       ? { maskImage, WebkitMaskImage: maskImage }

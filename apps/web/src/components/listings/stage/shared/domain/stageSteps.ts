@@ -61,7 +61,7 @@ export function getListingStageScaffoldCopy(
       return {
         stepTitle: "Step 3: Plan video scenes",
         stepSubtitle:
-          "Select which photos you'd like to use as starting frames for your room videos."
+          "Select which photos you'd like to use as scenes for your property video clips."
       };
     case "review":
       return {

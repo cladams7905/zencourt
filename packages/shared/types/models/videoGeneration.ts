@@ -3,6 +3,8 @@ export type VideoResolution = {
   height: number;
 };
 
+import type { CameraMotionVariantId } from "./media";
+
 export type VideoOrientation = "landscape" | "vertical";
 
 export type VideoMetadata = {
@@ -35,6 +37,7 @@ export type JobGenerationSettings = {
   imageUrls: string[];
   prompt: string;
   negativePrompt?: string;
+  motionVariantId?: CameraMotionVariantId;
   category: string;
   sortOrder: number;
   roomId?: string;

@@ -30,4 +30,5 @@ export type ListingImageRecordInput = {
 export type ListingImageUpdate = {
   id: string;
   category: string | null;
+  metadata?: ImageMetadata | null;
 };

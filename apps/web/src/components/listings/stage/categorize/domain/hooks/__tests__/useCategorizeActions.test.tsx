@@ -206,7 +206,7 @@ describe("useCategorizeActions", () => {
     expect(params.persistImageAssignments).not.toHaveBeenCalled();
   });
 
-  it("moves dropped images into the dock without persisting category changes", async () => {
+  it("moves dropped images into the dock and persists deselection metadata", async () => {
     const params = buildParams();
     const { result } = renderHook(() => useCategorizeActions(params));
     const preventDefault = jest.fn();
@@ -221,7 +221,22 @@ describe("useCategorizeActions", () => {
 
     expect(preventDefault).toHaveBeenCalled();
     expect(params.setPlacementOverrides).toHaveBeenCalledTimes(1);
-    expect(params.persistImageAssignments).not.toHaveBeenCalled();
+    expect(params.persistImageAssignments).toHaveBeenCalledWith(
+      [
+        expect.objectContaining({
+          id: "img1",
+          category: null,
+          metadata: expect.objectContaining({
+            videoScene: {
+              selected: false,
+              motionVariantId: "default"
+            }
+          })
+        })
+      ],
+      [],
+      expect.any(Function)
+    );
     expect(params.setDragOverCategory).toHaveBeenCalledWith(null);
   });
 
@@ -313,7 +328,7 @@ describe("useCategorizeActions", () => {
     expect(params.endDragSession).toHaveBeenCalled();
   });
 
-  it("drops images into the dock without persisting category changes", async () => {
+  it("drops images into the dock and persists deselection metadata", async () => {
     const params = buildParams({
       images: [
         {
@@ -339,7 +354,22 @@ describe("useCategorizeActions", () => {
     });
 
     expect(params.setPlacementOverrides).toHaveBeenCalled();
-    expect(params.persistImageAssignments).not.toHaveBeenCalled();
+    expect(params.persistImageAssignments).toHaveBeenCalledWith(
+      [
+        expect.objectContaining({
+          id: "img2",
+          category: "kitchen",
+          metadata: expect.objectContaining({
+            videoScene: {
+              selected: false,
+              motionVariantId: "default"
+            }
+          })
+        })
+      ],
+      [],
+      expect.any(Function)
+    );
   });
 
   it("clears drag-over state when dropping a used image into the same category", async () => {

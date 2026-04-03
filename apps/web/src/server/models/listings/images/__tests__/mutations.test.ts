@@ -106,6 +106,43 @@ describe("listingImages mutations", () => {
     expect(mockUpdate).toHaveBeenCalled();
   });
 
+  it("persists video scene metadata alongside category updates", async () => {
+    mockUpdateWhere.mockResolvedValue(undefined);
+
+    await updateListingImageAssignments(
+      "u1",
+      "l1",
+      [
+        {
+          id: "img-1",
+          category: "kitchen",
+          metadata: {
+            width: 1000,
+            height: 800,
+            format: "jpeg",
+            size: 100,
+            lastModified: 1,
+            videoScene: {
+              selected: true,
+              motionVariantId: "tracking"
+            }
+          }
+        }
+      ],
+      []
+    );
+
+    expect(mockUpdateSet).toHaveBeenCalledWith({
+      category: "kitchen",
+      metadata: expect.objectContaining({
+        videoScene: {
+          selected: true,
+          motionVariantId: "tracking"
+        }
+      })
+    });
+  });
+
   it("saves listing image records for valid uploads", async () => {
     mockInsertReturning.mockResolvedValueOnce([{ id: "img-generated", listingId: "l1" }]);
 

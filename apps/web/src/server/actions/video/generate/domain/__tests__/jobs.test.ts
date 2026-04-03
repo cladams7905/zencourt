@@ -1,6 +1,9 @@
 const mockNanoid = jest.fn();
 const mockBuildRoomsFromImages = jest.fn();
 const mockGetCategoryForRoom = jest.fn();
+const mockGetSelectedSceneImagesForRoom = jest.fn();
+const mockHasPersistedSceneSelectionForRoom = jest.fn();
+const mockGetImageMotionVariantId = jest.fn();
 const mockSelectPrimaryImageForRoom = jest.fn();
 const mockSelectSecondaryImageForRoom = jest.fn();
 const mockBuildPrompt = jest.fn();
@@ -15,6 +18,12 @@ jest.mock("nanoid", () => ({
 jest.mock("@web/src/server/services/videoGeneration/domain/rooms", () => ({
   buildRoomsFromImages: (...args: unknown[]) => mockBuildRoomsFromImages(...args),
   getCategoryForRoom: (...args: unknown[]) => mockGetCategoryForRoom(...args),
+  getSelectedSceneImagesForRoom: (...args: unknown[]) =>
+    mockGetSelectedSceneImagesForRoom(...args),
+  hasPersistedSceneSelectionForRoom: (...args: unknown[]) =>
+    mockHasPersistedSceneSelectionForRoom(...args),
+  getImageMotionVariantId: (...args: unknown[]) =>
+    mockGetImageMotionVariantId(...args),
   selectPrimaryImageForRoom: (...args: unknown[]) =>
     mockSelectPrimaryImageForRoom(...args),
   selectSecondaryImageForRoom: (...args: unknown[]) =>
@@ -50,6 +59,11 @@ describe("video jobs domain", () => {
       enablePrioritySecondary: true
     });
     mockBuildNegativePrompt.mockReturnValue("[constraints]");
+    mockHasPersistedSceneSelectionForRoom.mockReturnValue(false);
+    mockGetImageMotionVariantId.mockImplementation(
+      (image: { metadata?: { videoScene?: { motionVariantId?: string } } }) =>
+        image.metadata?.videoScene?.motionVariantId ?? "default"
+    );
   });
 
   it("throws when no rooms are available", async () => {
@@ -80,6 +94,7 @@ describe("video jobs domain", () => {
       { id: "room-1", name: "Kitchen", roomNumber: 1 }
     ]);
     mockGetCategoryForRoom.mockReturnValue("kitchen");
+    mockGetSelectedSceneImagesForRoom.mockReturnValue([]);
     mockSelectPrimaryImageForRoom.mockReturnValue("https://img/primary.jpg");
     mockIsPriorityCategory.mockReturnValue(false);
     mockBuildPrompt.mockReturnValue({ prompt: "Primary prompt", templateKey: "t1" });
@@ -117,6 +132,7 @@ describe("video jobs domain", () => {
       { id: "room-1", name: "Kitchen", roomNumber: 1 }
     ]);
     mockGetCategoryForRoom.mockReturnValue("kitchen");
+    mockGetSelectedSceneImagesForRoom.mockReturnValue([]);
     mockSelectPrimaryImageForRoom.mockReturnValue("https://img/primary.jpg");
     mockSelectSecondaryImageForRoom.mockReturnValue("https://img/secondary.jpg");
     mockIsPriorityCategory.mockReturnValue(true);
@@ -162,6 +178,65 @@ describe("video jobs domain", () => {
     expect(mockBuildPrompt).toHaveBeenNthCalledWith(
       2,
       expect.objectContaining({ previousTemplateKey: "tpl-a" })
+    );
+  });
+
+  it("builds jobs only from persisted selected scenes and forwards motion variant ids", async () => {
+    mockNanoid.mockReturnValueOnce("job-1").mockReturnValueOnce("job-2");
+    mockBuildRoomsFromImages.mockReturnValue([
+      { id: "room-1", name: "Kitchen", roomNumber: 1 }
+    ]);
+    mockGetCategoryForRoom.mockReturnValue("kitchen");
+    mockHasPersistedSceneSelectionForRoom.mockReturnValue(true);
+    mockGetSelectedSceneImagesForRoom.mockReturnValue([
+      {
+        url: "https://img/selected-1.jpg",
+        metadata: {
+          videoScene: { selected: true, motionVariantId: "tracking" }
+        }
+      },
+      {
+        url: "https://img/selected-2.jpg",
+        metadata: {
+          videoScene: { selected: true, motionVariantId: "default" }
+        }
+      }
+    ]);
+    mockIsPriorityCategory.mockReturnValue(true);
+    mockBuildPrompt
+      .mockReturnValueOnce({ prompt: "Tracking prompt", templateKey: "tpl-a" })
+      .mockReturnValueOnce({ prompt: "Default prompt", templateKey: "tpl-b" });
+
+    const groupedImages = new Map([["kitchen", []]]);
+
+    const records = await buildJobRecords({
+      parentVideoId: "video-1",
+      groupedImages: groupedImages as never,
+      listingPrimaryImageUrl: "https://img/listing.jpg",
+      orientation: "vertical",
+      resolvePublicDownloadUrls: (urls) => urls
+    });
+
+    expect(records).toHaveLength(2);
+    expect(records[0].generationSettings).toEqual(
+      expect.objectContaining({
+        imageUrls: ["https://img/selected-1.jpg"],
+        motionVariantId: "tracking"
+      })
+    );
+    expect(records[1].generationSettings).toEqual(
+      expect.objectContaining({
+        imageUrls: ["https://img/selected-2.jpg"],
+        motionVariantId: "default"
+      })
+    );
+    expect(mockBuildPrompt).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ motionVariantId: "tracking" })
+    );
+    expect(mockBuildPrompt).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ motionVariantId: "default" })
     );
   });
 

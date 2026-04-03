@@ -27,6 +27,32 @@ const dockImage = {
 };
 
 describe("CategorizeUnusedDock", () => {
+  let matchMediaState = false;
+  let matchMediaChangeListener: ((event: MediaQueryListEvent) => void) | null =
+    null;
+
+  beforeEach(() => {
+    matchMediaState = false;
+    matchMediaChangeListener = null;
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      value: jest.fn().mockImplementation(() => ({
+        get matches() {
+          return matchMediaState;
+        },
+        media: "(min-width: 1024px)",
+        onchange: null,
+        addEventListener: (_event: string, listener: typeof matchMediaChangeListener) => {
+          matchMediaChangeListener = listener;
+        },
+        removeEventListener: jest.fn(),
+        addListener: jest.fn(),
+        removeListener: jest.fn(),
+        dispatchEvent: jest.fn()
+      }))
+    });
+  });
+
   it("renders unused accordion with thumbnails when images are docked", () => {
     render(
       <CategorizeUnusedDock
@@ -63,6 +89,26 @@ describe("CategorizeUnusedDock", () => {
 
     expect(screen.getByText("0")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /Unused photos/i }));
+    expect(
+      screen.getByText("Drag photos here to remove them as a video starting frame.")
+    ).toBeInTheDocument();
+  });
+
+  it("keeps the dock visible by default on desktop", () => {
+    matchMediaState = true;
+
+    render(
+      <CategorizeUnusedDock
+        dockedImages={[]}
+        dragOverCategory={null}
+        onGlobalUnusedDockDragOver={jest.fn()}
+        onGlobalUnusedDockDragLeave={jest.fn()}
+        handleDragStart={() => jest.fn()}
+        handleDragEnd={jest.fn()}
+        handleGlobalUnusedDockDrop={jest.fn()}
+      />
+    );
+
     expect(
       screen.getByText("Drag photos here to remove them as a video starting frame.")
     ).toBeInTheDocument();

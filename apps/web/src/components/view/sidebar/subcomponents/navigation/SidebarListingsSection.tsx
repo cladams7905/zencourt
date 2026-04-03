@@ -26,7 +26,6 @@ type SidebarListingsSectionProps = {
 
 /** Same row used when a listing is pending after a sidebar update; shared with `SidebarSkeleton`. */
 export function ListingRowSkeleton({
-  id: _id,
   isCollapsed
 }: {
   id: string;

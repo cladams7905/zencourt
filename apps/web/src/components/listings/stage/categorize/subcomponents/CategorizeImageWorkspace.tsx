@@ -10,12 +10,14 @@ import { Button } from "@web/src/components/ui/button";
 import { Film } from "lucide-react";
 import { cn } from "@web/src/components/ui/utils";
 import { formatCategoryLabel } from "@web/src/components/listings/stage/categorize/domain/categoryRules";
+import { getAvailableMotionVariants } from "@web/src/server/services/videoGeneration/domain/prompt";
 import {
   categoryUsedDropZoneId,
   UNCATEGORIZED_CATEGORY_ID,
   type ListingImageItem
 } from "@web/src/components/listings/stage/categorize/shared";
 import { CategorizeImageCard } from "./CategorizeImageCard";
+import type { CameraMotionVariantId } from "@shared/types/models";
 
 type CategorizeImageWorkspaceProps = {
   images: ListingImageItem[];
@@ -34,6 +36,10 @@ type CategorizeImageWorkspaceProps = {
     imageId: string
   ) => (event: React.DragEvent<HTMLDivElement>) => void;
   handleDragEnd: () => void;
+  onSceneMotionChange: (
+    imageId: string,
+    motionVariantId: CameraMotionVariantId
+  ) => void | Promise<void>;
   handleDropOnCategoryUsed: (
     category: string
   ) => (event: React.DragEvent<HTMLDivElement>) => void | Promise<void>;
@@ -54,6 +60,7 @@ export function CategorizeImageWorkspace({
   onCategoryRowDragLeave,
   handleDragStart,
   handleDragEnd,
+  onSceneMotionChange,
   handleDropOnCategoryUsed
 }: CategorizeImageWorkspaceProps) {
   const defaultOpenCategories = React.useMemo(
@@ -64,7 +71,14 @@ export function CategorizeImageWorkspace({
   return (
     <section className="flex min-h-0 flex-1 flex-col">
       <div className="flex w-full flex-wrap items-center justify-between gap-3">
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
+        <Button
+          type="button"
+          className="shrink-0"
+          onClick={onOpenCreateCategory}
+        >
+          Add Room
+        </Button>
+        <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
           <Badge
             variant="muted"
             className={cn(
@@ -85,13 +99,6 @@ export function CategorizeImageWorkspace({
             </div>
           ) : null}
         </div>
-        <Button
-          type="button"
-          className="shrink-0"
-          onClick={onOpenCreateCategory}
-        >
-          Add Room
-        </Button>
       </div>
       {images.length === 0 ? (
         <div className="mt-6 rounded-lg border border-border bg-secondary p-6 text-sm text-muted-foreground">
@@ -130,7 +137,7 @@ export function CategorizeImageWorkspace({
                           |
                         </span>
                         <span className="text-sm font-normal text-muted-foreground">
-                          {used.length} {used.length === 1 ? "video" : "videos"}
+                          {used.length} {used.length === 1 ? "scene" : "scenes"}
                         </span>
                       </span>
                     </span>
@@ -156,9 +163,14 @@ export function CategorizeImageWorkspace({
                             <CategorizeImageCard
                               key={image.id}
                               image={image}
-                              size="row"
+                              size="categoryRow"
                               handleDragStart={handleDragStart}
                               handleDragEnd={handleDragEnd}
+                              motionOptions={getAvailableMotionVariants(
+                                image.category ?? category,
+                                image.metadata?.perspective
+                              )}
+                              onMotionChange={onSceneMotionChange}
                             />
                           ))
                         ) : (

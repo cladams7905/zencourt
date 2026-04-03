@@ -19,6 +19,6 @@ Use this loop to avoid repeating mistakes and to align with the user's preferenc
 - For third-party integrations, if the user provides an explicit API contract, implement against that contract directly instead of inferring alternate endpoints or response shapes.
 - For provider webhooks in local development, route callback URLs through the same public tunnel infrastructure already used for comparable providers instead of defaulting new providers to internal-only callback paths.
 - For early-stage clean-break refactors, prefer replacing outdated fields and semantics outright instead of preserving backward compatibility layers or soft-deprecated aliases.
-- For listing image room taxonomy, use `master-bedroom` as the canonical internal category id unless the user explicitly requests a different taxonomy.
+- For storage-hosted example media, use the explicit CDN URL pattern the user provides rather than assuming app-relative `/assets/...` paths.
 
 ---

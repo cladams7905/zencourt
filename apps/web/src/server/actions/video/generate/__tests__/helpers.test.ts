@@ -11,6 +11,9 @@ const mockGroupImagesByCategory = jest.fn();
 const mockSelectListingPrimaryImage = jest.fn();
 const mockBuildRoomsFromImages = jest.fn();
 const mockGetCategoryForRoom = jest.fn();
+const mockGetSelectedSceneImagesForRoom = jest.fn();
+const mockHasPersistedSceneSelectionForRoom = jest.fn();
+const mockGetImageMotionVariantId = jest.fn();
 const mockSelectPrimaryImageForRoom = jest.fn();
 const mockSelectSecondaryImageForRoom = jest.fn();
 const mockBuildPrompt = jest.fn();
@@ -62,6 +65,12 @@ jest.mock("@web/src/server/services/videoGeneration/domain/rooms", () => ({
   buildRoomsFromImages: (...args: unknown[]) =>
     mockBuildRoomsFromImages(...args),
   getCategoryForRoom: (...args: unknown[]) => mockGetCategoryForRoom(...args),
+  getSelectedSceneImagesForRoom: (...args: unknown[]) =>
+    mockGetSelectedSceneImagesForRoom(...args),
+  hasPersistedSceneSelectionForRoom: (...args: unknown[]) =>
+    mockHasPersistedSceneSelectionForRoom(...args),
+  getImageMotionVariantId: (...args: unknown[]) =>
+    mockGetImageMotionVariantId(...args),
   selectPrimaryImageForRoom: (...args: unknown[]) =>
     mockSelectPrimaryImageForRoom(...args),
   selectSecondaryImageForRoom: (...args: unknown[]) =>
@@ -145,6 +154,11 @@ describe("video actions/helpers", () => {
     mockUpdateVideoGenJob.mockResolvedValue(undefined);
     mockGetLatestVideoClipVersionByClipId.mockResolvedValue(null);
     mockBuildNegativePrompt.mockReturnValue("[constraints]");
+    mockHasPersistedSceneSelectionForRoom.mockReturnValue(false);
+    mockGetImageMotionVariantId.mockImplementation(
+      (image: { metadata?: { videoScene?: { motionVariantId?: string } } }) =>
+        image.metadata?.videoScene?.motionVariantId ?? "default"
+    );
   });
 
   it("creates jobs in batch and enqueues video server request", async () => {

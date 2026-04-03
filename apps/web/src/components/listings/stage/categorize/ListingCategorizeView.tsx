@@ -24,6 +24,7 @@ import {
   useCategorizeDerivedState
 } from "@web/src/components/listings/stage/categorize/domain";
 import { formatCategoryLabel } from "@web/src/components/listings/stage/categorize/domain/categoryRules";
+import { normalizeMotionVariantId } from "@web/src/server/services/videoGeneration/domain/prompt";
 import {
   ListingStageFooter,
   ListingStageShell
@@ -83,9 +84,9 @@ export function ListingCategorizeView({
   const headerRef = React.useRef<HTMLElement | null>(null);
 
   const {
+    workspaceImages,
     dockedImages,
     usedImagesByCategory,
-    workspaceCategoryOrder,
     accordionCategoryOrder,
     categoryUsageCounts,
     categoriesOverUsedLimit,
@@ -103,13 +104,10 @@ export function ListingCategorizeView({
     customCategories,
     placementOverrides
   });
-  const {
-    savingCount,
-    runDraftSave,
-    persistImageAssignments
-  } = useCategorizeMutations({
-    listingId
-  });
+  const { savingCount, runDraftSave, persistImageAssignments } =
+    useCategorizeMutations({
+      listingId
+    });
   const { addressValue, handleContinue } = useCategorizeListingDetails({
     title,
     initialAddress,
@@ -157,7 +155,9 @@ export function ListingCategorizeView({
       const next = Object.fromEntries(
         Object.entries(prev).filter(([id]) => imageIds.has(id))
       );
-      return Object.keys(next).length === Object.keys(prev).length ? prev : next;
+      return Object.keys(next).length === Object.keys(prev).length
+        ? prev
+        : next;
     });
   }, [images]);
 
@@ -167,7 +167,8 @@ export function ListingCategorizeView({
     handleDeleteCategory,
     handleDragStart,
     handleDragEnd,
-    handleDrop
+    handleDrop,
+    handleSceneMotionChange
   } = useCategorizeActions({
     images,
     categoryOrder,
@@ -196,9 +197,7 @@ export function ListingCategorizeView({
   }, []);
   const handleCategoryRowDragLeave = React.useCallback(
     (event: React.DragEvent<HTMLDivElement>) => {
-      if (
-        !event.currentTarget.contains(event.relatedTarget as Node | null)
-      ) {
+      if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
         setDragOverCategory(null);
       }
     },
@@ -211,9 +210,7 @@ export function ListingCategorizeView({
   }, []);
   const handleGlobalUnusedDockDragLeave = React.useCallback(
     (event: React.DragEvent<HTMLDivElement>) => {
-      if (
-        !event.currentTarget.contains(event.relatedTarget as Node | null)
-      ) {
+      if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
         setDragOverCategory(null);
       }
     },
@@ -224,6 +221,53 @@ export function ListingCategorizeView({
     setProcessingBatch(null);
     router.push(`/listings/${listingId}/stage/upload`);
   }, [listingId, router]);
+
+  const persistCurrentSceneSelections = React.useCallback(async () => {
+    const updates = workspaceImages.map((image) => {
+      const motionVariantId =
+        image.category && image.metadata
+          ? normalizeMotionVariantId(
+              image.category,
+              image.metadata.perspective,
+              image.metadata.videoScene?.motionVariantId ?? "default"
+            )
+          : image.metadata?.videoScene?.motionVariantId ?? "default";
+
+      return {
+        id: image.id,
+        category: image.category ?? null,
+        metadata: {
+          width: image.metadata?.width ?? 0,
+          height: image.metadata?.height ?? 0,
+          format: image.metadata?.format ?? "unknown",
+          size: image.metadata?.size ?? 0,
+          lastModified: image.metadata?.lastModified ?? 0,
+          ...image.metadata,
+          videoScene: {
+            selected: image.workspacePlacement === "used",
+            motionVariantId
+          }
+        }
+      };
+    });
+
+    setImages((current) =>
+      current.map((image) => {
+        const matching = updates.find((update) => update.id === image.id);
+        return matching ? { ...image, metadata: matching.metadata } : image;
+      })
+    );
+
+    return persistImageAssignments(updates, []);
+  }, [persistImageAssignments, workspaceImages]);
+
+  const handleContinueWithScenes = React.useCallback(async () => {
+    const saved = await persistCurrentSceneSelections();
+    if (!saved) {
+      return;
+    }
+    await handleContinue();
+  }, [handleContinue, persistCurrentSceneSelections]);
 
   return (
     <>
@@ -241,7 +285,7 @@ export function ListingCategorizeView({
         }
         footer={
           <ListingStageFooter
-            onContinue={() => void handleContinue()}
+            onContinue={() => void handleContinueWithScenes()}
             canContinue={!isInlineProcessing && canContinue}
             isSubmitting={!isInlineProcessing && isSavingDraft}
             onBack={handleBackToUpload}
@@ -295,6 +339,7 @@ export function ListingCategorizeView({
               onCategoryRowDragLeave={handleCategoryRowDragLeave}
               handleDragStart={handleDragStart}
               handleDragEnd={handleDragEnd}
+              onSceneMotionChange={handleSceneMotionChange}
               handleDropOnCategoryUsed={handleDrop}
             />
           </div>

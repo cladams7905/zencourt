@@ -22,6 +22,46 @@ const getScore = (image: ListingImageItem) => image.recommendationScore ?? -1;
 const sortByRecommendationScore = (a: ListingImageItem, b: ListingImageItem) =>
   getScore(b) - getScore(a);
 
+function buildDefaultUsedImageIds(args: {
+  categorizedImages: Record<string, ListingImageItem[]>;
+  workspaceCategoryOrder: string[];
+}): Set<string> {
+  const { categorizedImages, workspaceCategoryOrder } = args;
+  const selectedIds = new Set<string>();
+  const selectedCountsByCategory: Record<string, number> = {};
+  const perCategoryLimit = Math.min(
+    DEFAULT_USED_IMAGES_PER_CATEGORY,
+    MAX_IMAGES_PER_ROOM
+  );
+
+  const rankedEligibleImages = workspaceCategoryOrder
+    .flatMap((category) => categorizedImages[category] ?? [])
+    .filter((image) => Boolean(image.category) && image.category !== "other")
+    .sort(sortByRecommendationScore);
+
+  rankedEligibleImages.forEach((image) => {
+    const category = image.category;
+    if (!category) {
+      return;
+    }
+    if (selectedIds.size >= CATEGORIZE_MAX_USED_PHOTOS) {
+      return;
+    }
+    if ((selectedCountsByCategory[category] ?? 0) >= perCategoryLimit) {
+      return;
+    }
+    selectedIds.add(image.id);
+    selectedCountsByCategory[category] =
+      (selectedCountsByCategory[category] ?? 0) + 1;
+  });
+
+  return selectedIds;
+}
+
+function hasPersistedVideoSceneSelection(image: ListingImageItem): boolean {
+  return typeof image.metadata?.videoScene?.selected === "boolean";
+}
+
 export function useCategorizeDerivedState({
   images,
   customCategories,
@@ -74,16 +114,23 @@ export function useCategorizeDerivedState({
   }, [categoryOrder]);
 
   const defaultUsedImageIds = React.useMemo(() => {
-    const ids = new Set<string>();
-    workspaceCategoryOrder.forEach((category) => {
-      const ranked = [...(categorizedImages[category] ?? [])].sort(
-        sortByRecommendationScore
-      );
-      ranked
-        .slice(0, DEFAULT_USED_IMAGES_PER_CATEGORY)
-        .forEach((image) => ids.add(image.id));
+    return buildDefaultUsedImageIds({
+      categorizedImages,
+      workspaceCategoryOrder
     });
-    return ids;
+  }, [categorizedImages, workspaceCategoryOrder]);
+
+  const categoriesWithPersistedSceneSelection = React.useMemo(() => {
+    const selectedCategories = new Set<string>();
+
+    workspaceCategoryOrder.forEach((category) => {
+      const roomImages = categorizedImages[category] ?? [];
+      if (roomImages.some(hasPersistedVideoSceneSelection)) {
+        selectedCategories.add(category);
+      }
+    });
+
+    return selectedCategories;
   }, [categorizedImages, workspaceCategoryOrder]);
 
   const workspaceImages = React.useMemo(
@@ -97,14 +144,22 @@ export function useCategorizeDerivedState({
           !isUncategorized &&
           workspaceCategoryOrder.includes(image.category ?? "");
         const override = placementOverrides[image.id];
+        const hasPersistedSelectionForCategory =
+          !!image.category &&
+          categoriesWithPersistedSceneSelection.has(image.category);
+        const persistedSelected = image.metadata?.videoScene?.selected;
         const workspacePlacement: WorkspacePlacement =
           canBeUsed && override === "used"
             ? "used"
             : override === "dock"
               ? "dock"
-              : canBeUsed && defaultUsedImageIds.has(image.id)
-                ? "used"
-                : "dock";
+              : canBeUsed && hasPersistedSelectionForCategory
+                ? persistedSelected
+                  ? "used"
+                  : "dock"
+                : canBeUsed && defaultUsedImageIds.has(image.id)
+                  ? "used"
+                  : "dock";
 
         return {
           ...image,
@@ -114,7 +169,13 @@ export function useCategorizeDerivedState({
           isDetail
         };
       }),
-    [defaultUsedImageIds, images, placementOverrides, workspaceCategoryOrder]
+    [
+      categoriesWithPersistedSceneSelection,
+      defaultUsedImageIds,
+      images,
+      placementOverrides,
+      workspaceCategoryOrder
+    ]
   );
 
   const usedImagesByCategory = React.useMemo(

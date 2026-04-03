@@ -1,3 +1,5 @@
+import type { ImageMetadata } from "@shared/types/models";
+
 export type WorkspacePlacement = "used" | "dock";
 
 export type ListingImageItem = {
@@ -8,16 +10,7 @@ export type ListingImageItem = {
   recommendationScore?: number | null;
   shotType?: string | null;
   analysisStatus?: string | null;
-  metadata?: {
-    featureTags?: string[];
-    detailType?: string;
-    scoreBreakdown?: {
-      total: number;
-      technical: number;
-      composition: number;
-      storytelling: number;
-    };
-  } | null;
+  metadata?: ImageMetadata | null;
   workspacePlacement?: WorkspacePlacement;
   isOther?: boolean;
   isUncategorized?: boolean;

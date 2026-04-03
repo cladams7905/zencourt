@@ -1,4 +1,5 @@
 import {
+  getAvailableMotionVariants,
   buildNegativePrompt,
   buildPrompt,
   combinePromptPartsForProvider
@@ -83,5 +84,45 @@ describe("videoGeneration/domain/prompt", () => {
 
     expect(front.prompt).toContain("front of the house");
     expect(backyard.prompt).toContain("back of the house");
+  });
+
+  it("exposes available motion variants for interior rooms", () => {
+    expect(getAvailableMotionVariants("kitchen")).toEqual([
+      expect.objectContaining({ id: "default", label: "Default" }),
+      expect.objectContaining({ id: "pan", label: "Pan" }),
+      expect.objectContaining({ id: "tracking", label: "Tracking" }),
+      expect.objectContaining({ id: "orbital", label: "Orbital" }),
+      expect.objectContaining({ id: "blur-to-focus", label: "Blur to Focus" })
+    ]);
+  });
+
+  it("honors an explicit motion variant instead of random selection", () => {
+    const result = buildPrompt({
+      roomName: "Kitchen",
+      category: "kitchen",
+      motionVariantId: "tracking",
+      picker: () => {
+        throw new Error("picker should not be called for explicit variants");
+      }
+    });
+
+    expect(result.templateKey).toBe("interior-lateral-track");
+    expect(result.prompt).toBe("Steady lateral tracking shot across the Kitchen.");
+  });
+
+  it("guides blur-to-focus prompts to add only subtle foreground motivation when needed", () => {
+    const result = buildPrompt({
+      roomName: "Kitchen",
+      category: "kitchen",
+      motionVariantId: "blur-to-focus"
+    });
+
+    expect(result.templateKey).toBe("interior-rack-focus");
+    expect(result.prompt).toContain(
+      "If the source image has no natural foreground occlusion"
+    );
+    expect(result.prompt).toContain(
+      "keeping the room layout, architecture, and materials unchanged"
+    );
   });
 });

@@ -7,7 +7,10 @@ import {
 } from "@web/src/server/services/videoGeneration/domain/prompt";
 import {
   buildRoomsFromImages,
+  getImageMotionVariantId,
   getCategoryForRoom,
+  getSelectedSceneImagesForRoom,
+  hasPersistedSceneSelectionForRoom,
   selectPrimaryImageForRoom,
   selectSecondaryImageForRoom
 } from "@web/src/server/services/videoGeneration/domain/rooms";
@@ -41,15 +44,16 @@ async function buildPrimaryJobRecord(args: {
   parentVideoId: string;
   room: ListingRoom;
   category: string;
-  groupedImages: GroupedListingImages;
-  listingPrimaryImageUrl: string;
+  imageUrl: string;
+  imageMotionVariantId: JobGenerationSettings["motionVariantId"];
+  imagePerspective?: "aerial" | "ground";
   orientation: VideoOrientation;
   sortOrder: number;
+  clipIndex: number;
   previousTemplateKey: string | null;
   resolvePublicDownloadUrls: ResolvePublicDownloadUrls;
 }): Promise<{
   record: InsertDBVideoGenJob;
-  primaryImageUrl: string;
   nextTemplateKey: string | null;
 }> {
   const config = getVideoGenerationConfig();
@@ -57,26 +61,22 @@ async function buildPrimaryJobRecord(args: {
     parentVideoId,
     room,
     category,
-    groupedImages,
-    listingPrimaryImageUrl,
+    imageUrl,
+    imageMotionVariantId,
+    imagePerspective,
     orientation,
     sortOrder,
+    clipIndex,
     previousTemplateKey,
     resolvePublicDownloadUrls
   } = args;
 
-  const roomWithCategory = { ...room, category };
-  const primaryImageUrl = selectPrimaryImageForRoom(
-    roomWithCategory,
-    groupedImages,
-    listingPrimaryImageUrl
-  );
-  const primaryImage = findImageByUrl(groupedImages, category, primaryImageUrl);
-  const publicPrimaryUrls = resolvePublicDownloadUrls([primaryImageUrl]);
+  const publicPrimaryUrls = resolvePublicDownloadUrls([imageUrl]);
   const primaryPrompt = buildPrompt({
     roomName: room.name,
     category,
-    perspective: primaryImage?.metadata?.perspective,
+    perspective: imagePerspective,
+    motionVariantId: imageMotionVariantId,
     previousTemplateKey
   });
   const negativePrompt = buildNegativePrompt();
@@ -95,17 +95,17 @@ async function buildPrimaryJobRecord(args: {
         imageUrls: publicPrimaryUrls,
         prompt: primaryPrompt.prompt,
         negativePrompt,
+        motionVariantId: imageMotionVariantId,
         category,
         sortOrder,
         roomId: room.id,
         roomName: room.name,
         roomNumber: room.roomNumber,
-        clipIndex: 0
+        clipIndex
       } as JobGenerationSettings,
       metadata: { orientation },
       errorMessage: null
     },
-    primaryImageUrl,
     nextTemplateKey: primaryPrompt.templateKey
   };
 }
@@ -150,6 +150,7 @@ async function buildSecondaryJobRecord(args: {
     roomName: room.name,
     category,
     perspective: secondaryImage?.metadata?.perspective,
+    motionVariantId: "default",
     previousTemplateKey
   });
   const negativePrompt = buildNegativePrompt();
@@ -168,6 +169,7 @@ async function buildSecondaryJobRecord(args: {
         imageUrls: publicSecondaryUrls,
         prompt: secondaryPrompt.prompt,
         negativePrompt,
+        motionVariantId: "default",
         category,
         sortOrder,
         roomId: room.id,
@@ -179,6 +181,65 @@ async function buildSecondaryJobRecord(args: {
       errorMessage: null
     },
     nextTemplateKey: secondaryPrompt.templateKey
+  };
+}
+
+async function buildPersistedSceneJobRecords(args: {
+  parentVideoId: string;
+  room: ListingRoom;
+  category: string;
+  groupedImages: GroupedListingImages;
+  orientation: VideoOrientation;
+  sortOrder: number;
+  previousTemplateKey: string | null;
+  resolvePublicDownloadUrls: ResolvePublicDownloadUrls;
+}): Promise<{
+  records: InsertDBVideoGenJob[];
+  nextSortOrder: number;
+  nextTemplateKey: string | null;
+}> {
+  const {
+    parentVideoId,
+    room,
+    category,
+    groupedImages,
+    orientation,
+    sortOrder,
+    previousTemplateKey,
+    resolvePublicDownloadUrls
+  } = args;
+
+  const selectedImages = getSelectedSceneImagesForRoom(
+    { ...room, category },
+    groupedImages
+  );
+  const records: InsertDBVideoGenJob[] = [];
+  let nextSortOrder = sortOrder;
+  let nextTemplateKey = previousTemplateKey;
+
+  for (const [index, image] of selectedImages.entries()) {
+    const result = await buildPrimaryJobRecord({
+      parentVideoId,
+      room,
+      category,
+      imageUrl: image.url,
+      imageMotionVariantId: getImageMotionVariantId(image),
+      imagePerspective: image.metadata?.perspective,
+      orientation,
+      sortOrder: nextSortOrder,
+      clipIndex: index,
+      previousTemplateKey: nextTemplateKey,
+      resolvePublicDownloadUrls
+    });
+    records.push(result.record);
+    nextSortOrder += 1;
+    nextTemplateKey = result.nextTemplateKey;
+  }
+
+  return {
+    records,
+    nextSortOrder,
+    nextTemplateKey
   };
 }
 
@@ -211,14 +272,38 @@ async function processRoomForJobRecords(args: {
   const category = getCategoryForRoom(room);
   const records: InsertDBVideoGenJob[] = [];
 
+  if (
+    hasPersistedSceneSelectionForRoom({ ...room, category }, groupedImages)
+  ) {
+    return buildPersistedSceneJobRecords({
+      parentVideoId,
+      room,
+      category,
+      groupedImages,
+      orientation,
+      sortOrder,
+      previousTemplateKey,
+      resolvePublicDownloadUrls
+    });
+  }
+
+  const roomWithCategory = { ...room, category };
+  const primaryImageUrl = selectPrimaryImageForRoom(
+    roomWithCategory,
+    groupedImages,
+    listingPrimaryImageUrl
+  );
+  const primaryImage = findImageByUrl(groupedImages, category, primaryImageUrl);
   const primaryResult = await buildPrimaryJobRecord({
     parentVideoId,
     room,
     category,
-    groupedImages,
-    listingPrimaryImageUrl,
+    imageUrl: primaryImageUrl,
+    imageMotionVariantId: "default",
+    imagePerspective: primaryImage?.metadata?.perspective,
     orientation,
     sortOrder,
+    clipIndex: 0,
     previousTemplateKey,
     resolvePublicDownloadUrls
   });
@@ -235,7 +320,7 @@ async function processRoomForJobRecords(args: {
       room,
       category,
       groupedImages,
-      primaryImageUrl: primaryResult.primaryImageUrl,
+      primaryImageUrl,
       orientation,
       sortOrder: currentSortOrder,
       previousTemplateKey: currentTemplateKey,

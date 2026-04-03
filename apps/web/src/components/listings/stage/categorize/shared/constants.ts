@@ -3,7 +3,7 @@ export const UNUSED_DOCK_DROP_ZONE_ID = "unused-dock";
 export const RECOMMENDED_STRIP_DROP_ZONE_ID = "recommended-strip";
 
 /** Max photos selected as “used” for video across the whole listing */
-export const CATEGORIZE_MAX_USED_PHOTOS = 12;
+export const CATEGORIZE_MAX_USED_PHOTOS = 10;
 
 /** Drag-over id for dropping onto a room's "used for video" strip */
 export const categoryUsedDropZoneId = (category: string) =>

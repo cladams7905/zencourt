@@ -1,6 +1,7 @@
 import * as React from "react";
 import { toast } from "sonner";
 import { updateListingImageAssignmentsForCurrentUser } from "@web/src/server/actions/listings/image";
+import type { ImageMetadata } from "@shared/types/models";
 
 type UseCategorizeMutationsParams = {
   listingId: string;
@@ -9,6 +10,7 @@ type UseCategorizeMutationsParams = {
 type ImageAssignmentUpdate = {
   id: string;
   category: string | null;
+  metadata?: ImageMetadata | null;
 };
 
 export function useCategorizeMutations({

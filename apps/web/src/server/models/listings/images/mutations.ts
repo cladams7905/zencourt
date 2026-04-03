@@ -29,7 +29,8 @@ async function applyListingImageUpdate(
   await db
     .update(listingImages)
     .set({
-      category: update.category
+      category: update.category,
+      ...(update.metadata !== undefined ? { metadata: update.metadata } : {})
     })
     .where(
       and(
